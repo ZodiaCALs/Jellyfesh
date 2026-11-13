@@ -45,7 +45,8 @@ jobs:
         run: cargo clippy --workspace $EXCLUDE --all-targets -- -D warnings
       - name: Tests
         shell: bash
-        run: cargo test --workspace $EXCLUDE
+        # Every test binary runs even after one fails, so a run lists all its failures.
+        run: cargo test --workspace $EXCLUDE --no-fail-fast
       - run: cargo xtask tokens --check
 
   licences:
