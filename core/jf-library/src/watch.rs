@@ -256,6 +256,8 @@ fn guard<T>(call: impl FnOnce() -> notify::Result<T>) -> notify::Result<T> {
 
 const LIMIT_WATCHES: &str =
     "the system limit on watched folders is reached (on Linux, raise fs.inotify.max_user_watches)";
+// Only Linux and Android report this limit apart (see classify_io).
+#[cfg(any(target_os = "linux", target_os = "android"))]
 const LIMIT_INSTANCES: &str =
     "too many file watchers are open (on Linux, raise fs.inotify.max_user_instances)";
 
