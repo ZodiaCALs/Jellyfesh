@@ -151,10 +151,19 @@ jobs:
         run: |
           yes | sdkmanager --licenses > /dev/null || true
           list=$(sdkmanager --list 2>/dev/null)
+          # API 37's platform is listed as android-37.0 (minor versions 37.x follow),
+          # older repositories as android-37: take the base one the list offers.
+          platforms=$(grep -oE 'platforms;android-37(\.[0-9]+)?' <<< "$list" | sort -uV)
+          platform=$(grep -xE 'platforms;android-37(\.0)?' <<< "$platforms" | head -1)
+          platform=${platform:-$(head -1 <<< "$platforms")}
+          if [ -z "$platform" ]; then
+            echo "::error::The SDK lists no API 37 platform"
+            exit 1
+          fi
           build_tools=$(grep -oE 'build-tools;37\.[0-9.]+' <<< "$list" | sort -V | tail -1)
           ndk=$(grep -oE 'ndk;[0-9]+\.[0-9.]+' <<< "$list" | grep -v rc | sort -V | tail -1)
-          echo "installing platforms;android-37 $build_tools $ndk"
-          sdkmanager --install "platforms;android-37" "$build_tools" "$ndk" > /dev/null
+          echo "installing $platform $build_tools $ndk"
+          sdkmanager --install "$platform" "$build_tools" "$ndk" > /dev/null
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${ndk#ndk;}" >> "$GITHUB_ENV"
           echo "APKSIGNER=$ANDROID_HOME/build-tools/${build_tools#build-tools;}/apksigner" >> "$GITHUB_ENV"
       - uses: Swatinem/rust-cache@v2

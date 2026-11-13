@@ -3,6 +3,8 @@
 
 import AppKit
 
+// AppKit calls every method here, the Dock menu's actions too, on the main thread.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: AppModel { AppModel.shared }
 

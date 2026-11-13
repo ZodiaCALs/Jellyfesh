@@ -44,6 +44,25 @@ fn scan_until(
     reported
 }
 
+/// Whether `reported` names `file` or a folder holding it: the watcher may
+/// report a folder (a new root's own creation, a rescan), which is then
+/// scanned whole.
+fn covers(reported: &[PathBuf], file: &Path) -> bool {
+    reported.iter().any(|path| file.starts_with(path))
+}
+
+/// No report names a path under `root` for a while; reports for other roots
+/// may still come (macOS and Windows can report a change again late).
+fn assert_nothing_under(rx: &Receiver<Vec<PathBuf>>, root: &Path, what: &str) {
+    let end = Instant::now() + DEBOUNCE * 5;
+    while let Some(left) = end.checked_duration_since(Instant::now()) {
+        match rx.recv_timeout(left) {
+            Ok(paths) => assert!(!paths.iter().any(|p| p.starts_with(root)), "{what}: {paths:?}"),
+            Err(_) => break,
+        }
+    }
+}
+
 fn assert_quiet(rx: &Receiver<Vec<PathBuf>>, what: &str) {
     if let Ok(paths) = rx.recv_timeout(DEBOUNCE * 5) {
         panic!("{what}: unexpected report {paths:?}");
@@ -161,7 +180,7 @@ fn each_root_reports_on_its_own_and_roots_can_change() {
     fixtures::wav(&second.join("b.wav"), 50);
     let mut reported: Vec<PathBuf> = Vec::new();
     let deadline = Instant::now() + PATIENCE;
-    while !(reported.contains(&fx.path("a.wav")) && reported.contains(&second.join("b.wav"))) {
+    while !(covers(&reported, &fx.path("a.wav")) && covers(&reported, &second.join("b.wav"))) {
         let paths = rx
             .recv_timeout(deadline.saturating_duration_since(Instant::now()))
             .unwrap_or_else(|err| panic!("no report ({err}); had {reported:?}"));
@@ -171,23 +190,34 @@ fn each_root_reports_on_its_own_and_roots_can_change() {
         reported.extend(paths);
     }
 
-    // The missing root appears; the second root is dropped.
+    // The missing root appears; the second root is dropped. macOS may report
+    // the new root's own creation (the whole folder), and macOS and Windows may
+    // report the first root's files again a little later; nothing may come
+    // from the dropped root.
     fs::create_dir_all(&later).unwrap();
     watcher.set_roots(vec![fx.music.clone(), later.clone()]).unwrap();
     assert!(watcher.unwatched().is_empty());
     fixtures::wav(&second.join("c.wav"), 50);
     fixtures::wav(&later.join("d.wav"), 50);
     let deadline = Instant::now() + PATIENCE;
+    let mut seen: Vec<Vec<PathBuf>> = Vec::new();
     loop {
         let paths = rx
             .recv_timeout(deadline.saturating_duration_since(Instant::now()))
-            .expect("a report for the new root");
-        assert!(paths.iter().all(|p| p.starts_with(&later)), "{paths:?}");
-        if paths.contains(&later.join("d.wav")) {
+            .unwrap_or_else(|err| panic!("a report for the new root ({err}); had {seen:?}"));
+        assert!(
+            paths
+                .iter()
+                .all(|p| p.starts_with(&later) || p.starts_with(&fx.music)),
+            "a report from a root no longer watched: {paths:?}"
+        );
+        let done = covers(&paths, &later.join("d.wav"));
+        seen.push(paths);
+        if done {
             break;
         }
     }
-    assert_quiet(&rx, "a root no longer watched");
+    assert_nothing_under(&rx, &second, "a root no longer watched");
 }
 
 #[test]
