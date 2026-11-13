@@ -9,6 +9,7 @@ namespace Jellyfesh.ViewModels;
 /// </summary>
 public abstract partial class PageViewModel : ObservableObject
 {
+    private readonly SemaphoreSlim _loading = new(1, 1);
     private ulong _revision;
     private bool _active;
 
@@ -58,9 +59,14 @@ public abstract partial class PageViewModel : ObservableObject
 
     protected bool Loaded { get; private set; }
 
-    /// <summary>Loads the page's data; called on activation and after library changes.</summary>
+    /// <summary>
+    /// Loads the page's data; called on activation and after library changes. One load runs at a
+    /// time: a load asked for while another runs waits for it, so two never fill the page's lists
+    /// at once (without a UI thread, as in tests, their continuations could interleave).
+    /// </summary>
     public async Task LoadAsync()
     {
+        await _loading.WaitAsync();
         IsLoading = true;
         try
         {
@@ -70,6 +76,7 @@ public abstract partial class PageViewModel : ObservableObject
         finally
         {
             IsLoading = false;
+            _loading.Release();
         }
     }
 

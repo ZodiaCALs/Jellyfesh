@@ -214,7 +214,9 @@ public class ViewModelTests
 
         placeholder.Load(new Album(7, "Tides", "Band", 2024, 9, "c0ffee"));
         await Poll(() => placeholder.ArtworkUri is not null);
-        Assert.Equal(new Uri("/cache/c0ffee/128.jpg").AbsoluteUri, placeholder.ArtworkUri);
+        Assert.Equal(FileUris.From("/cache/c0ffee/128.jpg"), placeholder.ArtworkUri);
+        Assert.StartsWith("file:///", placeholder.ArtworkUri);
+        Assert.EndsWith("/cache/c0ffee/128.jpg", placeholder.ArtworkUri);
 
         // A recycled row forgets the wish, so a late page does not load for it.
         var recycled = new AlbumItem(1);

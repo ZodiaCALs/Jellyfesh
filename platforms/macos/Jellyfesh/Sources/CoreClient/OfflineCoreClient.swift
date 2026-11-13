@@ -42,7 +42,7 @@ final class OfflineCoreClient: CoreClient {
     func playlists() async throws -> [PlaylistInfo] { try fail() }
     func playlist(id: Int64) async throws -> PlaylistInfo? { try fail() }
     func playlistEntries(id: Int64, offset: Int, limit: Int) async throws -> [PlaylistRow] { try fail() }
-    func exportPlaylist(id: Int64, to path: String) async throws { try fail() }
+    func exportPlaylist(id: Int64, to path: String) async throws { throw CoreClientError.core(reason) }
     func favorites(offset: Int, limit: Int) async throws -> [SongRow] { try fail() }
     func isFavorite(_ track: TrackReference) async throws -> Bool { try fail() }
     func favoriteTracks(among tracks: [TrackReference]) async throws -> Set<TrackReference> { try fail() }

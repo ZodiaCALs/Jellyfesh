@@ -211,6 +211,16 @@ fn attack(env: &Env, url: &str) -> String {
     titles(&env.host, NET, url).remove(0)
 }
 
+/// Like [`attack`], for a request whose answer depends on the network: when
+/// nothing answers at the address (an unroutable one on CI runners), the
+/// call runs out of time, and that is an outcome too.
+fn attack_somewhere(env: &Env, url: &str) -> String {
+    match recv(env.host.search(NET, url, any(), page(50))) {
+        Ok(page) => page.items.into_iter().map(|i| i.title).next().unwrap_or_default(),
+        Err(err) => format!("the call ended: {err:?}"),
+    }
+}
+
 /// Responses over 16 MiB are refused, with or without a content-length.
 #[test]
 fn oversized_responses_are_refused() {
@@ -278,7 +288,7 @@ fn dns_rebinding_is_defeated() {
     // intercepting proxy); it is never the local service.
     env.resolver
         .answer("rebind.test", &[&["203.0.113.7"], &["127.0.0.1"]]);
-    let outcome = attack(&env, "https://rebind.test/");
+    let outcome = attack_somewhere(&env, "https://rebind.test/");
     eprintln!("connecting to the checked public address gave: {outcome}");
     assert_eq!(env.resolver.calls("rebind.test"), 1, "resolved exactly once");
     assert_eq!(local.requests().len(), 0, "the local service was never reached");

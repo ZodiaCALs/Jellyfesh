@@ -112,10 +112,43 @@ public abstract record ArtworkRef
     /// <summary>A URI an image control can load.</summary>
     public string ToUriString() => this switch
     {
-        File f => new Uri(f.Path).AbsoluteUri,
+        File f => FileUris.From(f.Path) ?? string.Empty,
         Url u => u.Address,
         _ => string.Empty,
     };
+}
+
+/// <summary>Local paths as file URIs an image control can load.</summary>
+public static class FileUris
+{
+    /// <summary>
+    /// The file URI of <paramref name="path"/>, or null when it cannot be one. A rooted path
+    /// without a drive (<c>/cache/a.jpg</c>) is completed with the current drive on Windows,
+    /// where <see cref="Uri(string)"/> would throw.
+    /// </summary>
+    public static string? From(string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(path, UriKind.Absolute, out var uri) && uri.IsFile)
+        {
+            return uri.AbsoluteUri;
+        }
+
+        try
+        {
+            return Uri.TryCreate(System.IO.Path.GetFullPath(path), UriKind.Absolute, out var full) && full.IsFile
+                ? full.AbsoluteUri
+                : null;
+        }
+        catch (Exception e) when (e is ArgumentException or NotSupportedException or System.IO.PathTooLongException)
+        {
+            return null;
+        }
+    }
 }
 
 /// <summary>One audio file in the library catalogue.</summary>

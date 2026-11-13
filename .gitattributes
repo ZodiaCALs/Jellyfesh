@@ -1,0 +1,8 @@
+# Line endings: LF in every checkout, Windows included. GitHub's Windows
+# runners otherwise check text out with CRLF, and the contract tests and the
+# tokens check compare committed files byte for byte. Windows-only formats
+# keep CRLF. (core/jf-lyrics/tests/golden has its own byte-exact rule.)
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.sln text eol=crlf

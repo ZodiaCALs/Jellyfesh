@@ -522,9 +522,22 @@ mod tests {
             std::thread::sleep(EPOCH_TICK);
         }
         drop(guard);
-        // The tick in flight when the guard went may still land; then it parks again.
-        std::thread::sleep(EPOCH_TICK * 3);
-        let parked = ticker.ticks();
+        // The tick in flight when the guard went may still land, late on a busy machine;
+        // then it parks again: wait until the count holds still (it must, soon).
+        let settling = Instant::now();
+        let mut parked = ticker.ticks();
+        loop {
+            std::thread::sleep(EPOCH_TICK * 3);
+            let now = ticker.ticks();
+            if now == parked {
+                break;
+            }
+            parked = now;
+            assert!(
+                settling.elapsed() < Duration::from_secs(5),
+                "the epoch keeps advancing after the last guard went"
+            );
+        }
         std::thread::sleep(EPOCH_TICK * 8);
         assert_eq!(ticker.ticks(), parked);
     }

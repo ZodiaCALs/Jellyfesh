@@ -50,14 +50,19 @@ public abstract partial class ArtworkItem : ObservableObject
         try
         {
             var path = await thumbnails.GetAsync(ArtworkHash, ThumbnailService.SizeFor(pixels), cts.Token);
-            if (!cts.IsCancellationRequested && path is not null)
+            if (!cts.IsCancellationRequested && path is not null && FileUris.From(path) is { } uri)
             {
-                ArtworkUri = new Uri(path).AbsoluteUri;
+                ArtworkUri = uri;
             }
         }
         catch (OperationCanceledException)
         {
             // The row scrolled away.
+        }
+        catch (Exception e)
+        {
+            // async void: an exception would end the app. The row keeps its placeholder.
+            System.Diagnostics.Debug.WriteLine($"thumbnail {ArtworkHash}: {e.Message}");
         }
         finally
         {
