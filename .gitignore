@@ -1,0 +1,44 @@
+# Rust
+/target/
+**/target/
+
+# Apple
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+
+# Android / Gradle
+.gradle/
+.kotlin/
+local.properties
+build/
+*.iml
+.idea/
+
+# Windows / .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Generated bindings (regenerated from the core, never edited by hand)
+/platforms/*/generated/
+# cargo xtask bindings / tokens --target (docs/ffi.md)
+/platforms/macos/Generated/
+/platforms/windows/Generated/
+/platforms/android/core-bindings/src/main/kotlin/
+/platforms/android/core-bindings/src/main/jniLibs/
+
+# Python
+__pycache__/
+
+# Release archives of the repository (delivered separately)
+/dist/
+
+# Claude Code agent worktrees
+/.claude/worktrees/
+/.claude/shared-target/
+
+# Generated at release time by tools/licenses/generate.py.
+/THIRD_PARTY_NOTICES.md
