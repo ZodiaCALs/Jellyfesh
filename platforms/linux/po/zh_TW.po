@@ -1,0 +1,1576 @@
+# Chinese (traditional) translation of Jellyfesh.
+# Copyright 2026 the Jellyfesh authors
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: jellyfesh\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-13 14:35+0000\n"
+"PO-Revision-Date: 2026-11-08 12:00+0000\n"
+"Last-Translator: the Jellyfesh authors\n"
+"Language-Team: Chinese (traditional)\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/ui/about.rs:11 src/ui/window.rs:296
+#, no-c-format
+msgid "About Jellyfesh"
+msgstr "關於 Jellyfesh"
+
+#: src/ui/about.rs:22
+#, no-c-format
+msgid "Jellyfesh icon"
+msgstr "Jellyfesh 圖示"
+
+#: src/ui/about.rs:54
+#, no-c-format
+msgid "Version {version}"
+msgstr "版本 {version}"
+
+#: src/ui/about.rs:58
+#, no-c-format
+msgid "An elegant, lightweight music player."
+msgstr "優雅、輕巧的音樂播放器。"
+
+#: src/ui/about.rs:67
+#, no-c-format
+msgid "Design"
+msgstr "設計"
+
+#: src/ui/about.rs:67
+#, no-c-format
+msgid "Designed with the Misty design language."
+msgstr "採用 Misty 設計語言設計。"
+
+#: src/ui/about.rs:69
+#, no-c-format
+msgid "Design tokens"
+msgstr "設計權杖"
+
+#: src/ui/about.rs:70
+#, no-c-format
+msgid ""
+"Derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache "
+"License 2.0."
+msgstr ""
+"源自 Misty 設計語言 1.1 的設計權杖，© 2026 ZodiaCALs，Apache License 2.0。"
+
+#: src/ui/about.rs:73
+#, no-c-format
+msgid "Licence"
+msgstr "授權"
+
+#: src/ui/about.rs:74
+#, no-c-format
+msgid "No licence has been chosen yet: all rights reserved."
+msgstr "尚未選擇授權：保留所有權利。"
+
+#: src/ui/actions.rs:43
+#, no-c-format
+msgid "Plays next"
+msgstr "將接著播放"
+
+#: src/ui/actions.rs:45
+#, no-c-format
+msgid "Added to the queue"
+msgstr "已加入播放佇列"
+
+#: src/ui/actions.rs:100 src/ui/miniplayer.rs:121 src/ui/miniplayer.rs:123
+#: src/ui/pages/detail.rs:82 src/ui/pages/favourites.rs:52
+#: src/ui/transport.rs:28 src/ui/transport.rs:29 src/ui/transport.rs:40
+#, no-c-format
+msgid "Play"
+msgstr "播放"
+
+#: src/ui/actions.rs:105 src/ui/keys.rs:56 src/ui/pages/detail.rs:83
+#: src/ui/pages/favourites.rs:49 src/ui/transport.rs:46
+#, no-c-format
+msgid "Shuffle"
+msgstr "隨機播放"
+
+#: src/ui/actions.rs:108
+#, no-c-format
+msgid "Play Next"
+msgstr "接著播放"
+
+#: src/ui/actions.rs:109
+#, no-c-format
+msgid "Play Last"
+msgstr "最後播放"
+
+#: src/ui/actions.rs:114
+#, no-c-format
+msgid "Add to Playlist…"
+msgstr "加入播放清單…"
+
+#: src/ui/actions.rs:130 src/ui/nowplaying/mod.rs:620 src/ui/rows.rs:381
+#, no-c-format
+msgid "Remove from Favourites"
+msgstr "從最愛移除"
+
+#: src/ui/actions.rs:132 src/ui/nowplaying/mod.rs:176
+#: src/ui/nowplaying/mod.rs:622 src/ui/rows.rs:247 src/ui/rows.rs:383
+#, no-c-format
+msgid "Add to Favourites"
+msgstr "加入最愛"
+
+#: src/ui/actions.rs:139
+#, no-c-format
+msgid "Go to Album"
+msgstr "前往專輯"
+
+#: src/ui/actions.rs:144
+#, no-c-format
+msgid "Go to Artist"
+msgstr "前往藝人"
+
+#: src/ui/actions.rs:147
+#, no-c-format
+msgid "Rename…"
+msgstr "重新命名…"
+
+#: src/ui/actions.rs:148 src/ui/actions.rs:382
+#, no-c-format
+msgid "Delete"
+msgstr "刪除"
+
+#: src/ui/actions.rs:267
+#, no-c-format
+msgid "Add the songs from the source's own page."
+msgstr "請在該來源的頁面中加入歌曲。"
+
+#: src/ui/actions.rs:287
+#, no-c-format
+msgid "Add to Playlist"
+msgstr "加入播放清單"
+
+#: src/ui/actions.rs:288 src/ui/actions.rs:357 src/ui/actions.rs:381
+#: src/ui/nowplaying/queue.rs:229 src/ui/pages/playlists.rs:117
+#: src/ui/sources_ui.rs:362
+#, no-c-format
+msgid "Cancel"
+msgstr "取消"
+
+#: src/ui/actions.rs:289 src/ui/window.rs:336
+#, no-c-format
+msgid "Add"
+msgstr "加入"
+
+#: src/ui/actions.rs:296 src/ui/actions.rs:342 src/ui/pages/playlists.rs:46
+#: src/ui/pages/playlists.rs:59 src/ui/pages/playlists.rs:116
+#: src/ui/pages/playlists.rs:130
+#, no-c-format
+msgid "New Playlist"
+msgstr "新增播放清單"
+
+#: src/ui/actions.rs:302 src/ui/convert.rs:51 src/ui/convert.rs:125
+#: src/ui/nowplaying/queue.rs:209 src/ui/pages/detail.rs:198
+#: src/ui/pages/detail.rs:208 src/ui/pages/detail.rs:464
+#: src/ui/pages/home.rs:197
+msgid "{n} song"
+msgid_plural "{n} songs"
+msgstr[0] "{n} 首歌曲"
+
+#: src/ui/actions.rs:356
+#, no-c-format
+msgid "Rename Playlist"
+msgstr "重新命名播放清單"
+
+#: src/ui/actions.rs:358
+#, no-c-format
+msgid "Rename"
+msgstr "重新命名"
+
+#: src/ui/actions.rs:378
+#, no-c-format
+msgid "Delete Playlist?"
+msgstr "刪除播放清單？"
+
+#: src/ui/actions.rs:379
+#, no-c-format
+msgid "The songs stay in your library."
+msgstr "歌曲仍會保留在資料庫中。"
+
+#: src/ui/convert.rs:14
+#, no-c-format
+msgid "Unknown Artist"
+msgstr "未知藝人"
+
+#: src/ui/convert.rs:18
+#, no-c-format
+msgid "Unknown Album"
+msgstr "未知專輯"
+
+#: src/ui/convert.rs:127
+msgid "{n} min"
+msgid_plural "{n} min"
+msgstr[0] "{n} 分鐘"
+
+#: src/ui/keys.rs:46 src/ui/prefs.rs:616
+#, no-c-format
+msgid "Playback"
+msgstr "播放"
+
+#: src/ui/keys.rs:48
+#, no-c-format
+msgid "Play or pause"
+msgstr "播放或暫停"
+
+#: src/ui/keys.rs:49
+#, no-c-format
+msgid "Next song"
+msgstr "下一首"
+
+#: src/ui/keys.rs:50
+#, no-c-format
+msgid "Previous song"
+msgstr "上一首"
+
+#: src/ui/keys.rs:51
+#, no-c-format
+msgid "Skip forward 5 seconds"
+msgstr "快轉 5 秒"
+
+#: src/ui/keys.rs:52
+#, no-c-format
+msgid "Skip back 5 seconds"
+msgstr "倒轉 5 秒"
+
+#: src/ui/keys.rs:53
+#, no-c-format
+msgid "Volume up"
+msgstr "調高音量"
+
+#: src/ui/keys.rs:54
+#, no-c-format
+msgid "Volume down"
+msgstr "調低音量"
+
+#: src/ui/keys.rs:55 src/ui/transport.rs:140 src/ui/transport.rs:200
+#, no-c-format
+msgid "Mute"
+msgstr "靜音"
+
+#: src/ui/keys.rs:57 src/ui/transport.rs:56
+#, no-c-format
+msgid "Repeat"
+msgstr "重複播放"
+
+#: src/ui/keys.rs:61
+#, no-c-format
+msgid "Views"
+msgstr "檢視"
+
+#: src/ui/keys.rs:63 src/ui/prefs.rs:335
+#, no-c-format
+msgid "Now Playing"
+msgstr "正在播放"
+
+#: src/ui/keys.rs:64 src/ui/nowplaying/info.rs:36
+#: src/ui/nowplaying/lyrics.rs:118 src/ui/nowplaying/mod.rs:117
+#: src/ui/playerbar.rs:100
+#, no-c-format
+msgid "Lyrics"
+msgstr "歌詞"
+
+#: src/ui/keys.rs:65 src/ui/nowplaying/mod.rs:118 src/ui/playerbar.rs:104
+#, no-c-format
+msgid "Queue"
+msgstr "播放佇列"
+
+#: src/ui/keys.rs:66 src/ui/pages/search.rs:63 src/ui/pages/search.rs:88
+#, no-c-format
+msgid "Search"
+msgstr "搜尋"
+
+#: src/ui/keys.rs:67
+#, no-c-format
+msgid "Back to the library"
+msgstr "返回資料庫"
+
+#: src/ui/keys.rs:71
+#, no-c-format
+msgid "General"
+msgstr "一般"
+
+#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:294
+#, no-c-format
+msgid "Preferences"
+msgstr "偏好設定"
+
+#: src/ui/keys.rs:74
+#, no-c-format
+msgid "Keyboard shortcuts"
+msgstr "鍵盤快捷鍵"
+
+#: src/ui/keys.rs:75
+#, no-c-format
+msgid "Close window"
+msgstr "關閉視窗"
+
+#: src/ui/keys.rs:76
+#, no-c-format
+msgid "Quit"
+msgstr "結束"
+
+#: src/ui/miniplayer.rs:51 src/ui/playerbar.rs:66 src/ui/playerbar.rs:167
+#, no-c-format
+msgid "Open Now Playing"
+msgstr "開啟正在播放"
+
+#: src/ui/miniplayer.rs:110 src/ui/playerbar.rs:164
+#, no-c-format
+msgid "Ready to play"
+msgstr "準備播放"
+
+#: src/ui/miniplayer.rs:111 src/ui/playerbar.rs:165
+#, no-c-format
+msgid "Press play to resume"
+msgstr "按下播放即可繼續"
+
+#: src/ui/miniplayer.rs:119
+#, no-c-format
+msgid "Pause, {percent} % played"
+msgstr "暫停，已播放 {percent}%"
+
+#: src/ui/miniplayer.rs:123 src/ui/transport.rs:40
+#, no-c-format
+msgid "Pause"
+msgstr "暫停"
+
+#: src/ui/nowplaying/info.rs:31 src/ui/pages/library.rs:149
+#, no-c-format
+msgid "Title"
+msgstr "標題"
+
+#: src/ui/nowplaying/info.rs:32 src/ui/pages/detail.rs:375
+#: src/ui/pages/detail.rs:422 src/ui/pages/library.rs:150
+#, no-c-format
+msgid "Artist"
+msgstr "藝人"
+
+#: src/ui/nowplaying/info.rs:33 src/ui/pages/detail.rs:223
+#: src/ui/pages/detail.rs:253 src/ui/prefs.rs:676
+#, no-c-format
+msgid "Album"
+msgstr "專輯"
+
+#: src/ui/nowplaying/info.rs:34 src/ui/prefs.rs:693
+#, no-c-format
+msgid "Length"
+msgstr "長度"
+
+#: src/ui/nowplaying/info.rs:35
+#, no-c-format
+msgid "Format"
+msgstr "格式"
+
+#: src/ui/nowplaying/info.rs:37
+#, no-c-format
+msgid "File"
+msgstr "檔案"
+
+#: src/ui/nowplaying/info.rs:48
+#, no-c-format
+msgid "About This Song"
+msgstr "關於這首歌"
+
+#: src/ui/nowplaying/info.rs:87
+msgid "{n} channel"
+msgid_plural "{n} channels"
+msgstr[0] "{n} 聲道"
+
+#: src/ui/nowplaying/info.rs:90
+#, no-c-format
+msgid "gapless"
+msgstr "無縫"
+
+#: src/ui/nowplaying/info.rs:104
+#, no-c-format
+msgid "in the file's tags"
+msgstr "來自檔案標籤"
+
+#: src/ui/nowplaying/info.rs:105
+#, no-c-format
+msgid "None found"
+msgstr "找不到"
+
+#: src/ui/nowplaying/info.rs:122
+#, no-c-format
+msgid "Unsynced"
+msgstr "未同步"
+
+#: src/ui/nowplaying/info.rs:124
+#, no-c-format
+msgid "Word by word"
+msgstr "逐字同步"
+
+#: src/ui/nowplaying/info.rs:126
+#, no-c-format
+msgid "Line by line"
+msgstr "逐行同步"
+
+#: src/ui/nowplaying/lyrics.rs:128 src/ui/nowplaying/lyrics.rs:340
+#, no-c-format
+msgid "No Lyrics"
+msgstr "沒有歌詞"
+
+#: src/ui/nowplaying/lyrics.rs:130 src/ui/nowplaying/lyrics.rs:337
+#, no-c-format
+msgid ""
+"Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or "
+"from its tags."
+msgstr ""
+"Jellyfesh 會顯示歌曲旁的 .lrc、.ttml 或 .vtt 檔案中的歌詞，或檔案標籤中的歌"
+"詞。"
+
+#: src/ui/nowplaying/mod.rs:105 src/ui/pages/search.rs:183 src/ui/prefs.rs:897
+#: src/ui/window.rs:190
+#, no-c-format
+msgid "Library"
+msgstr "資料庫"
+
+#: src/ui/nowplaying/mod.rs:109 src/ui/nowplaying/mod.rs:110
+#, no-c-format
+msgid "Back to Library"
+msgstr "返回資料庫"
+
+#: src/ui/nowplaying/mod.rs:114
+#, no-c-format
+msgid "Now Playing views"
+msgstr "正在播放檢視"
+
+#: src/ui/nowplaying/mod.rs:119
+#, no-c-format
+msgid "Info"
+msgstr "資訊"
+
+#: src/ui/nowplaying/mod.rs:126 src/ui/nowplaying/mod.rs:687
+#, no-c-format
+msgid "Speakers"
+msgstr "喇叭"
+
+#: src/ui/nowplaying/mod.rs:134 src/ui/nowplaying/mod.rs:137
+#, no-c-format
+msgid "Output Device"
+msgstr "輸出裝置"
+
+#: src/ui/nowplaying/mod.rs:186 src/ui/playerbar.rs:88
+#, no-c-format
+msgid "Position"
+msgstr "播放位置"
+
+#: src/ui/nowplaying/mod.rs:573
+#, no-c-format
+msgid "Artwork of {title}"
+msgstr "〈{title}〉的封面"
+
+#: src/ui/nowplaying/mod.rs:578
+#, no-c-format
+msgid "Nothing Playing"
+msgstr "未在播放"
+
+#: src/ui/nowplaying/mod.rs:581
+#, no-c-format
+msgid "Pick a song, an album or a playlist."
+msgstr "選擇一首歌、一張專輯或一個播放清單。"
+
+#: src/ui/nowplaying/mod.rs:657 src/ui/prefs.rs:851
+#, no-c-format
+msgid "System Default"
+msgstr "系統預設"
+
+#: src/ui/nowplaying/queue.rs:137 src/ui/nowplaying/queue.rs:146
+#, no-c-format
+msgid "Up Next"
+msgstr "接下來播放"
+
+#: src/ui/nowplaying/queue.rs:155
+#, no-c-format
+msgid "Clear Queue"
+msgstr "清除播放佇列"
+
+#: src/ui/nowplaying/queue.rs:172
+#, no-c-format
+msgid "Nothing Up Next"
+msgstr "接下來沒有歌曲"
+
+#: src/ui/nowplaying/queue.rs:173
+#, no-c-format
+msgid "Use Play Next or Play Last on any song, album or playlist."
+msgstr "在任何歌曲、專輯或播放清單上使用「接著播放」或「最後播放」。"
+
+#: src/ui/nowplaying/queue.rs:226
+#, no-c-format
+msgid "Clear the Queue?"
+msgstr "清除播放佇列？"
+
+#: src/ui/nowplaying/queue.rs:227
+#, no-c-format
+msgid "Playback stops and every song is removed from the queue."
+msgstr "播放將停止，所有歌曲都會從佇列中移除。"
+
+#: src/ui/nowplaying/queue.rs:230
+#, no-c-format
+msgid "Clear"
+msgstr "清除"
+
+#: src/ui/pages/detail.rs:87 src/ui/pages/detail.rs:91 src/ui/rows.rs:263
+#, no-c-format
+msgid "More"
+msgstr "更多"
+
+#: src/ui/pages/detail.rs:209
+msgid "{n} minute"
+msgid_plural "{n} minutes"
+msgstr[0] "{n} 分鐘"
+
+#: src/ui/pages/detail.rs:206
+#, no-c-format
+msgid "{songs}, {minutes}"
+msgstr "{songs}，{minutes}"
+
+#: src/ui/pages/detail.rs:320
+#, no-c-format
+msgid "This album has no songs left in your library."
+msgstr "這張專輯在資料庫中已沒有歌曲。"
+
+#: src/ui/pages/detail.rs:398 src/ui/pages/library.rs:119
+#: src/ui/pages/library.rs:125 src/ui/pages/library.rs:136
+#: src/ui/pages/search.rs:197
+#, no-c-format
+msgid "Albums"
+msgstr "專輯"
+
+#: src/ui/pages/detail.rs:413 src/ui/pages/library.rs:247
+#: src/ui/pages/library.rs:249 src/ui/pages/library.rs:260
+#: src/ui/pages/search.rs:196
+#, no-c-format
+msgid "Songs"
+msgstr "歌曲"
+
+#: src/ui/pages/favourites.rs:28 src/ui/pages/favourites.rs:30
+#: src/ui/pages/favourites.rs:47
+#, no-c-format
+msgid "Favourites"
+msgstr "最愛"
+
+#: src/ui/pages/favourites.rs:36
+#, no-c-format
+msgid "No Favourites Yet"
+msgstr "還沒有最愛"
+
+#: src/ui/pages/favourites.rs:37
+#, no-c-format
+msgid "Tap the heart next to a song to keep it here."
+msgstr "點一下歌曲旁的愛心，即可加到這裡。"
+
+#: src/ui/pages/favourites.rs:43
+#, no-c-format
+msgid "Could Not Load Favourites"
+msgstr "無法載入最愛"
+
+#: src/ui/pages/home.rs:36 src/ui/pages/home.rs:68 src/ui/pages/home.rs:69
+#, no-c-format
+msgid "Home"
+msgstr "首頁"
+
+#: src/ui/pages/home.rs:46 src/ui/pages/library.rs:152
+#, no-c-format
+msgid "Recently Added"
+msgstr "最近加入"
+
+#: src/ui/pages/home.rs:58 src/ui/pages/home.rs:62
+#, no-c-format
+msgid "Recently Played"
+msgstr "最近播放"
+
+#: src/ui/pages/home.rs:109
+#, no-c-format
+msgid "Welcome to Jellyfesh"
+msgstr "歡迎使用 Jellyfesh"
+
+#: src/ui/pages/home.rs:113
+#, no-c-format
+msgid ""
+"Add the folders that hold your music. Jellyfesh reads their tags, artwork "
+"and lyrics and keeps watching them."
+msgstr ""
+"加入存放音樂的資料夾。Jellyfesh 會讀取其中的標籤、封面與歌詞，並持續留意變"
+"更。"
+
+#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:290
+#, no-c-format
+msgid "Add Music Folder…"
+msgstr "加入音樂資料夾…"
+
+#: src/ui/pages/home.rs:198
+msgid "{n} album"
+msgid_plural "{n} albums"
+msgstr[0] "{n} 張專輯"
+
+#: src/ui/pages/home.rs:199
+msgid "{n} artist"
+msgid_plural "{n} artists"
+msgstr[0] "{n} 位藝人"
+
+#: src/ui/pages/library.rs:130
+#, no-c-format
+msgid "No Albums Yet"
+msgstr "還沒有專輯"
+
+#: src/ui/pages/library.rs:131 src/ui/pages/library.rs:217
+#: src/ui/pages/library.rs:255
+#, no-c-format
+msgid "Add a folder with music to fill your library."
+msgstr "加入含有音樂的資料夾來充實資料庫。"
+
+#: src/ui/pages/library.rs:151
+#, no-c-format
+msgid "Year"
+msgstr "年份"
+
+#: src/ui/pages/library.rs:183 src/ui/pages/library.rs:185
+#, no-c-format
+msgid "Sort Albums"
+msgstr "專輯排序"
+
+#: src/ui/pages/library.rs:205 src/ui/pages/library.rs:211
+#: src/ui/pages/library.rs:222 src/ui/pages/search.rs:198
+#, no-c-format
+msgid "Artists"
+msgstr "藝人"
+
+#: src/ui/pages/library.rs:216
+#, no-c-format
+msgid "No Artists Yet"
+msgstr "還沒有藝人"
+
+#: src/ui/pages/library.rs:254
+#, no-c-format
+msgid "No Songs Yet"
+msgstr "還沒有歌曲"
+
+#: src/ui/pages/library.rs:262
+#, no-c-format
+msgid "Shuffle All"
+msgstr "全部隨機播放"
+
+#: src/ui/pages/playlists.rs:26 src/ui/pages/playlists.rs:32
+#: src/ui/pages/playlists.rs:56 src/ui/pages/playlists.rs:57
+#: src/ui/pages/search.rs:199
+#, no-c-format
+msgid "Playlists"
+msgstr "播放清單"
+
+#: src/ui/pages/playlists.rs:43
+#, no-c-format
+msgid "No Playlists Yet"
+msgstr "還沒有播放清單"
+
+#: src/ui/pages/playlists.rs:44
+#, no-c-format
+msgid "Make one here, or add songs to a new playlist from any song's menu."
+msgstr "在這裡新增，或從任何歌曲的選單把歌曲加入新的播放清單。"
+
+#: src/ui/pages/playlists.rs:53
+#, no-c-format
+msgid "Could Not Load Playlists"
+msgstr "無法載入播放清單"
+
+#: src/ui/pages/playlists.rs:62
+#, no-c-format
+msgid "Import Playlist…"
+msgstr "匯入播放清單…"
+
+#: src/ui/pages/playlists.rs:118
+#, no-c-format
+msgid "Create"
+msgstr "建立"
+
+#: src/ui/pages/playlists.rs:123
+#, no-c-format
+msgid "Name"
+msgstr "名稱"
+
+#: src/ui/pages/playlists.rs:163
+#, no-c-format
+msgid "Playlists (M3U)"
+msgstr "播放清單（M3U）"
+
+#: src/ui/pages/playlists.rs:169
+#, no-c-format
+msgid "Import Playlist"
+msgstr "匯入播放清單"
+
+#: src/ui/pages/playlists.rs:186
+#, no-c-format
+msgid "Export Playlist"
+msgstr "匯出播放清單"
+
+#: src/ui/pages/playlists.rs:200
+#, no-c-format
+msgid "Saved to {path}"
+msgstr "已儲存到 {path}"
+
+#: src/ui/pages/playlists.rs:209 src/ui/pages/playlists.rs:222
+#, no-c-format
+msgid "Playlist"
+msgstr "播放清單"
+
+#: src/ui/pages/playlists.rs:230
+#, no-c-format
+msgid "Export…"
+msgstr "匯出…"
+
+#: src/ui/pages/search.rs:59
+#, no-c-format
+msgid "Songs, albums, artists"
+msgstr "歌曲、專輯、藝人"
+
+#: src/ui/pages/search.rs:74
+#, no-c-format
+msgid "Search Your Music"
+msgstr "搜尋你的音樂"
+
+#: src/ui/pages/search.rs:75
+#, no-c-format
+msgid ""
+"Find songs, albums and artists in your library and in every source you have "
+"enabled."
+msgstr "在資料庫和所有已啟用的來源中尋找歌曲、專輯和藝人。"
+
+#: src/ui/pages/search.rs:83
+#, no-c-format
+msgid "No Results"
+msgstr "沒有結果"
+
+#: src/ui/pages/search.rs:84
+#, no-c-format
+msgid "Try other words."
+msgstr "換個關鍵字試試。"
+
+#: src/ui/pages/search.rs:200
+#, no-c-format
+msgid "Folders"
+msgstr "資料夾"
+
+#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:118
+#, no-c-format
+msgid "Official"
+msgstr "官方"
+
+#: src/ui/pages/sources.rs:24
+#, no-c-format
+msgid "Community · unofficial"
+msgstr "社群 · 非官方"
+
+#: src/ui/pages/sources.rs:27
+#, no-c-format
+msgid "Vendor playback"
+msgstr "由服務方播放"
+
+#: src/ui/pages/sources.rs:35
+#, no-c-format
+msgid "Signed in as {account}"
+msgstr "已登入為 {account}"
+
+#: src/ui/pages/sources.rs:37
+#, no-c-format
+msgid "Not signed in"
+msgstr "未登入"
+
+#: src/ui/pages/sources.rs:45 src/ui/pages/sources.rs:46
+#: src/ui/pages/sources.rs:68 src/ui/pages/sources.rs:69
+#: src/ui/sources_ui.rs:23
+#, no-c-format
+msgid "Sources"
+msgstr "來源"
+
+#: src/ui/pages/sources.rs:57
+#, no-c-format
+msgid "No Sources Yet"
+msgstr "還沒有來源"
+
+#: src/ui/pages/sources.rs:59
+#, no-c-format
+msgid ""
+"Sources bring music from servers and services into Jellyfesh. Install one "
+"from a .jfpkg file in Preferences."
+msgstr ""
+"來源能把伺服器與服務中的音樂帶進 Jellyfesh。請在偏好設定中透過 .jfpkg 檔案安"
+"裝。"
+
+#: src/ui/pages/sources.rs:62
+#, no-c-format
+msgid "Open Sources Settings"
+msgstr "開啟來源設定"
+
+#: src/ui/pages/sources.rs:71
+#, no-c-format
+msgid "Sources Settings"
+msgstr "來源設定"
+
+#: src/ui/pages/sources.rs:101 src/ui/prefs.rs:676
+#, no-c-format
+msgid "Off"
+msgstr "關閉"
+
+#: src/ui/pages/sources.rs:155
+#, no-c-format
+msgid "Load More"
+msgstr "載入更多"
+
+#: src/ui/pages/sources.rs:174
+#, no-c-format
+msgid "This Source Did Not Answer"
+msgstr "這個來源沒有回應"
+
+#: src/ui/playerbar.rs:130
+#, no-c-format
+msgid "Player"
+msgstr "播放器"
+
+#: src/ui/playerbar.rs:159
+#, no-c-format
+msgid "Open Now Playing: {title}"
+msgstr "開啟正在播放：{title}"
+
+#: src/ui/prefs.rs:224
+#, no-c-format
+msgid "Blue"
+msgstr "藍色"
+
+#: src/ui/prefs.rs:225
+#, no-c-format
+msgid "Cyan"
+msgstr "青色"
+
+#: src/ui/prefs.rs:226
+#, no-c-format
+msgid "Teal"
+msgstr "藍綠色"
+
+#: src/ui/prefs.rs:227
+#, no-c-format
+msgid "Green"
+msgstr "綠色"
+
+#: src/ui/prefs.rs:228
+#, no-c-format
+msgid "Olive"
+msgstr "橄欖綠"
+
+#: src/ui/prefs.rs:229
+#, no-c-format
+msgid "Orange"
+msgstr "橙色"
+
+#: src/ui/prefs.rs:230
+#, no-c-format
+msgid "Red"
+msgstr "紅色"
+
+#: src/ui/prefs.rs:231
+#, no-c-format
+msgid "Rose"
+msgstr "玫瑰紅"
+
+#: src/ui/prefs.rs:232
+#, no-c-format
+msgid "Magenta"
+msgstr "洋紅"
+
+#: src/ui/prefs.rs:233
+#, no-c-format
+msgid "Violet"
+msgstr "紫羅蘭色"
+
+#: src/ui/prefs.rs:241
+#, no-c-format
+msgid "Appearance"
+msgstr "外觀"
+
+#: src/ui/prefs.rs:245 src/ui/prefs.rs:252 src/ui/prefs.rs:254
+#, no-c-format
+msgid "Theme"
+msgstr "主題"
+
+#: src/ui/prefs.rs:248
+#, no-c-format
+msgid "System"
+msgstr "跟隨系統"
+
+#: src/ui/prefs.rs:249
+#, no-c-format
+msgid "Light"
+msgstr "淺色"
+
+#: src/ui/prefs.rs:250
+#, no-c-format
+msgid "Dark"
+msgstr "深色"
+
+#: src/ui/prefs.rs:258 src/ui/prefs.rs:274
+#, no-c-format
+msgid "Accent Colour"
+msgstr "強調色"
+
+#: src/ui/prefs.rs:260
+#, no-c-format
+msgid "Follow the Artwork"
+msgstr "跟隨封面"
+
+#: src/ui/prefs.rs:262
+#, no-c-format
+msgid "The accent and the Misty field take the hue of the album cover."
+msgstr "強調色與 Misty 背景採用專輯封面的色相。"
+
+#: src/ui/prefs.rs:286
+#, no-c-format
+msgid "Colour"
+msgstr "顏色"
+
+#: src/ui/prefs.rs:288 src/ui/prefs.rs:293
+#, no-c-format
+msgid "Custom Hue"
+msgstr "自訂色相"
+
+#: src/ui/prefs.rs:300
+#, no-c-format
+msgid "Glass"
+msgstr "玻璃"
+
+#: src/ui/prefs.rs:307 src/ui/prefs.rs:322
+#, no-c-format
+msgid "Transparency"
+msgstr "透明度"
+
+#: src/ui/prefs.rs:308
+msgctxt "transparency"
+msgid "Solid"
+msgstr "不透明"
+
+#: src/ui/prefs.rs:310
+msgctxt "transparency"
+msgid "Clear"
+msgstr "透明"
+
+#: src/ui/prefs.rs:324
+#, no-c-format
+msgid "Reduce Motion and Transparency"
+msgstr "減少動態效果與透明度"
+
+#: src/ui/prefs.rs:326
+#, no-c-format
+msgid "Solid surfaces instead of glass, and short fades instead of motion."
+msgstr "以不透明的表面取代玻璃，以短暫的淡入淡出取代動態效果。"
+
+#: src/ui/prefs.rs:337
+#, no-c-format
+msgid ""
+"Lyrics come from a .ttml, .lrc or .vtt file with the same name as the song, "
+"or from its tags. Word-timed lyrics light up word by word."
+msgstr ""
+"歌詞來自與歌曲同名的 .ttml、.lrc 或 .vtt 檔案，或來自歌曲標籤。逐字計時的歌詞"
+"會一個字一個字地亮起。"
+
+#: src/ui/prefs.rs:341
+#, no-c-format
+msgid "Artwork"
+msgstr "封面"
+
+#: src/ui/prefs.rs:341
+#, no-c-format
+msgid "Misty"
+msgstr "Misty"
+
+#: src/ui/prefs.rs:342 src/ui/prefs.rs:344
+#, no-c-format
+msgid "Background"
+msgstr "背景"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Lyrics Size"
+msgstr "歌詞大小"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Small"
+msgstr "小"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Medium"
+msgstr "中"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Large"
+msgstr "大"
+
+#: src/ui/prefs.rs:347
+#, no-c-format
+msgid "Lyrics Alignment"
+msgstr "歌詞對齊"
+
+#: src/ui/prefs.rs:348
+msgctxt "alignment"
+msgid "Start"
+msgstr "靠左對齊"
+
+#: src/ui/prefs.rs:348
+msgctxt "alignment"
+msgid "Centre"
+msgstr "置中"
+
+#: src/ui/prefs.rs:351
+#, no-c-format
+msgid "Show Translations"
+msgstr "顯示翻譯"
+
+#: src/ui/prefs.rs:353
+#, no-c-format
+msgid ""
+"A line in another language under each lyric line, when the lyrics have one."
+msgstr "歌詞附有翻譯時，在每行歌詞下方顯示另一種語言。"
+
+#: src/ui/prefs.rs:357
+#, no-c-format
+msgid "Show Romanization"
+msgstr "顯示羅馬拼音"
+
+#: src/ui/prefs.rs:359
+#, no-c-format
+msgid "How each line reads in Latin letters, when the lyrics have it."
+msgstr "歌詞附有羅馬拼音時，顯示每行的拉丁字母讀法。"
+
+#: src/ui/prefs.rs:369
+#, no-c-format
+msgid "App Icon"
+msgstr "應用程式圖示"
+
+#: src/ui/prefs.rs:371
+#, no-c-format
+msgid ""
+"Linux shows the Ice icon everywhere: GNOME takes one icon from the app’s "
+"metadata."
+msgstr ""
+"Linux 上各處都顯示 Ice 圖示：GNOME 只會從應用程式中繼資料讀取一個圖示。"
+
+#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:768
+#, no-c-format
+msgid "{percent} %"
+msgstr "{percent}%"
+
+#: src/ui/prefs.rs:620 src/ui/prefs.rs:621
+#, no-c-format
+msgid "Equalizer"
+msgstr "等化器"
+
+#: src/ui/prefs.rs:623
+#, no-c-format
+msgid "Preset"
+msgstr "預設集"
+
+#: src/ui/prefs.rs:626
+#, no-c-format
+msgid "Flat"
+msgstr "平坦"
+
+#: src/ui/prefs.rs:627
+#, no-c-format
+msgid "Bass Boost"
+msgstr "低音增強"
+
+#: src/ui/prefs.rs:628
+#, no-c-format
+msgid "Vocal"
+msgstr "人聲"
+
+#: src/ui/prefs.rs:629
+#, no-c-format
+msgid "Treble"
+msgstr "高音"
+
+#: src/ui/prefs.rs:630
+#, no-c-format
+msgid "Custom"
+msgstr "自訂"
+
+#: src/ui/prefs.rs:649
+#, no-c-format
+msgid "{freq} Hz"
+msgstr "{freq} 赫茲"
+
+#: src/ui/prefs.rs:673
+#, no-c-format
+msgid "Volume Levelling"
+msgstr "音量平衡"
+
+#: src/ui/prefs.rs:674
+#, no-c-format
+msgid "ReplayGain evens out loudness using the tags in your files."
+msgstr "ReplayGain 會依據檔案中的標籤平衡響度。"
+
+#: src/ui/prefs.rs:676
+#, no-c-format
+msgid "ReplayGain"
+msgstr "ReplayGain"
+
+#: src/ui/prefs.rs:676
+#, no-c-format
+msgid "Track"
+msgstr "單曲"
+
+#: src/ui/prefs.rs:678
+#, no-c-format
+msgid "Preamp"
+msgstr "前級增益"
+
+#: src/ui/prefs.rs:679
+#, no-c-format
+msgid "Decibels added to every song"
+msgstr "每首歌增加的分貝數"
+
+#: src/ui/prefs.rs:686 src/ui/prefs.rs:688
+#, no-c-format
+msgid "Crossfade"
+msgstr "淡入淡出"
+
+#: src/ui/prefs.rs:689
+#, no-c-format
+msgid "Blend the end of a song into the next."
+msgstr "讓一首歌的結尾漸漸融入下一首。"
+
+#: src/ui/prefs.rs:694
+#, no-c-format
+msgid "Seconds"
+msgstr "秒"
+
+#: src/ui/prefs.rs:696
+#, no-c-format
+msgid "Album Continuity"
+msgstr "專輯連貫"
+
+#: src/ui/prefs.rs:697
+#, no-c-format
+msgid "Songs of the same album join without a fade."
+msgstr "同一張專輯的歌曲直接銜接，不淡入淡出。"
+
+#: src/ui/prefs.rs:705
+#, no-c-format
+msgid "Output"
+msgstr "輸出"
+
+#: src/ui/prefs.rs:705
+#, no-c-format
+msgid "Where the sound goes."
+msgstr "聲音從哪裡播放。"
+
+#: src/ui/prefs.rs:851
+#, no-c-format
+msgid "Follows the system’s choice"
+msgstr "跟隨系統的選擇"
+
+#: src/ui/prefs.rs:900
+#, no-c-format
+msgid "Music Folders"
+msgstr "音樂資料夾"
+
+#: src/ui/prefs.rs:901
+#, no-c-format
+msgid "Jellyfesh reads every audio file in these folders."
+msgstr "Jellyfesh 會讀取這些資料夾中的所有音訊檔案。"
+
+#: src/ui/prefs.rs:911 src/ui/prefs.rs:912
+#, no-c-format
+msgid "Add Folder"
+msgstr "加入資料夾"
+
+#: src/ui/prefs.rs:917
+#, no-c-format
+msgid "Scanning"
+msgstr "掃描"
+
+#: src/ui/prefs.rs:919 src/ui/window.rs:291
+#, no-c-format
+msgid "Rescan Library"
+msgstr "重新掃描資料庫"
+
+#: src/ui/prefs.rs:920
+#, no-c-format
+msgid "Look for new, changed and removed files."
+msgstr "尋找新增、變更與已移除的檔案。"
+
+#: src/ui/prefs.rs:922
+#, no-c-format
+msgid "Rescan"
+msgstr "重新掃描"
+
+#: src/ui/prefs.rs:937
+#, no-c-format
+msgid "Watch Folders"
+msgstr "監看資料夾"
+
+#: src/ui/prefs.rs:938
+#, no-c-format
+msgid "Update the library when files change."
+msgstr "檔案變更時更新資料庫。"
+
+#: src/ui/prefs.rs:945
+#, no-c-format
+msgid "Startup"
+msgstr "啟動"
+
+#: src/ui/prefs.rs:947
+#, no-c-format
+msgid "Resume Playback"
+msgstr "繼續播放"
+
+#: src/ui/prefs.rs:948
+#, no-c-format
+msgid "Start playing where you left off when Jellyfesh opens."
+msgstr "開啟 Jellyfesh 時從上次停下的地方繼續播放。"
+
+#: src/ui/prefs.rs:993
+#, no-c-format
+msgid "No folders yet"
+msgstr "還沒有資料夾"
+
+#: src/ui/prefs.rs:994
+#, no-c-format
+msgid "Add a folder with music."
+msgstr "加入含有音樂的資料夾。"
+
+#: src/ui/prefs.rs:1008
+#, no-c-format
+msgid "Remove Folder"
+msgstr "移除資料夾"
+
+#: src/ui/prefs.rs:1034
+msgid "{n} file checked"
+msgid_plural "{n} files checked"
+msgstr[0] "已檢查 {n} 個檔案"
+
+#: src/ui/prefs.rs:1041
+#, no-c-format
+msgid "Done: {added} added, {updated} updated, {removed} removed"
+msgstr "完成：新增 {added}，更新 {updated}，移除 {removed}"
+
+#: src/ui/rows.rs:278
+#, no-c-format
+msgid "Remove"
+msgstr "移除"
+
+#: src/ui/rows.rs:603
+#, no-c-format
+msgid "Play {title}"
+msgstr "播放 {title}"
+
+#: src/ui/sources_ui.rs:27
+#, no-c-format
+msgid "Community Plugins"
+msgstr "社群外掛"
+
+#: src/ui/sources_ui.rs:29
+#, no-c-format
+msgid ""
+"Official sources are signed by Jellyfesh. Community plugins are made by "
+"others and are off unless you allow them."
+msgstr ""
+"官方來源由 Jellyfesh 簽署。社群外掛由他人製作，除非你允許，否則會保持關閉。"
+
+#: src/ui/sources_ui.rs:33
+#, no-c-format
+msgid "Allow Community Plugins"
+msgstr "允許社群外掛"
+
+#: src/ui/sources_ui.rs:38
+#, no-c-format
+msgid "Installed"
+msgstr "已安裝"
+
+#: src/ui/sources_ui.rs:39
+#, no-c-format
+msgid "Install from File…"
+msgstr "從檔案安裝…"
+
+#: src/ui/sources_ui.rs:85
+#, no-c-format
+msgid "No sources installed"
+msgstr "尚未安裝來源"
+
+#: src/ui/sources_ui.rs:86
+#, no-c-format
+msgid "Install a source plugin from a .jfpkg file."
+msgstr "從 .jfpkg 檔案安裝來源外掛。"
+
+#: src/ui/sources_ui.rs:119
+#, no-c-format
+msgid "Community"
+msgstr "社群"
+
+#: src/ui/sources_ui.rs:130
+#, no-c-format
+msgid "Enabled"
+msgstr "已啟用"
+
+#: src/ui/sources_ui.rs:165
+#, no-c-format
+msgid "Account"
+msgstr "帳號"
+
+#: src/ui/sources_ui.rs:167
+#, no-c-format
+msgid "No sign-in needed"
+msgstr "不需要登入"
+
+#: src/ui/sources_ui.rs:173
+#, no-c-format
+msgid "Sign Out"
+msgstr "登出"
+
+#: src/ui/sources_ui.rs:183
+#, no-c-format
+msgid "Sign In with QR Code"
+msgstr "掃描 QR 碼登入"
+
+#: src/ui/sources_ui.rs:184
+#, no-c-format
+msgid "Sign In in Browser"
+msgstr "在瀏覽器中登入"
+
+#: src/ui/sources_ui.rs:185
+#, no-c-format
+msgid "Paste Cookies"
+msgstr "貼上 Cookie"
+
+#: src/ui/sources_ui.rs:186 src/ui/sources_ui.rs:502
+#, no-c-format
+msgid "Sign In"
+msgstr "登入"
+
+#: src/ui/sources_ui.rs:187
+#, no-c-format
+msgid "Enter API Key"
+msgstr "輸入 API 金鑰"
+
+#: src/ui/sources_ui.rs:207
+#, no-c-format
+msgid "Settings"
+msgstr "設定"
+
+#: src/ui/sources_ui.rs:209
+#, no-c-format
+msgid "This plugin's settings could not be read: {error}"
+msgstr "無法讀取此外掛的設定：{error}"
+
+#: src/ui/sources_ui.rs:217 src/ui/sources_ui.rs:218
+#, no-c-format
+msgid "Uninstall"
+msgstr "解除安裝"
+
+#: src/ui/sources_ui.rs:326
+#, no-c-format
+msgid "Jellyfesh plugins"
+msgstr "Jellyfesh 外掛"
+
+#: src/ui/sources_ui.rs:331
+#, no-c-format
+msgid "Install Plugin"
+msgstr "安裝外掛"
+
+#: src/ui/sources_ui.rs:348
+#, no-c-format
+msgid "Turn On “{name}”?"
+msgstr "啟用「{name}」？"
+
+#: src/ui/sources_ui.rs:349
+#, no-c-format
+msgid "Allow Community Plugins?"
+msgstr "允許社群外掛？"
+
+#: src/ui/sources_ui.rs:352
+#, no-c-format
+msgid "Community plugins are not made or checked by Jellyfesh."
+msgstr "社群外掛並非由 Jellyfesh 製作或審核。"
+
+#: src/ui/sources_ui.rs:355
+#, no-c-format
+msgid "They may break the terms of the service they connect to."
+msgstr "它們可能違反所連接服務的條款。"
+
+#: src/ui/sources_ui.rs:357
+#, no-c-format
+msgid "They may stop working at any time."
+msgstr "它們可能隨時失效。"
+
+#: src/ui/sources_ui.rs:358
+#, no-c-format
+msgid "Use them for personal use only."
+msgstr "僅限個人使用。"
+
+#: src/ui/sources_ui.rs:363
+#, no-c-format
+msgid "I Understand, Allow"
+msgstr "我了解，允許"
+
+#: src/ui/sources_ui.rs:375
+#, no-c-format
+msgid "Sign In to {name}"
+msgstr "登入 {name}"
+
+#: src/ui/sources_ui.rs:447
+#, no-c-format
+msgid "Sign-in QR code"
+msgstr "登入 QR 碼"
+
+#: src/ui/sources_ui.rs:450
+#, no-c-format
+msgid "Scan the code with the {name} app on your phone."
+msgstr "用手機上的 {name} App 掃描 QR 碼。"
+
+#: src/ui/sources_ui.rs:476
+#, no-c-format
+msgid "Continue in your browser. Come back here when you are done."
+msgstr "請在瀏覽器中繼續，完成後回到這裡。"
+
+#: src/ui/sources_ui.rs:478
+#, no-c-format
+msgid "Open Browser Again"
+msgstr "再次開啟瀏覽器"
+
+#: src/ui/sources_ui.rs:532
+#, no-c-format
+msgid "Signed in as {account}."
+msgstr "已登入為 {account}。"
+
+#: src/ui/sources_ui.rs:533
+#, no-c-format
+msgid "Done"
+msgstr "完成"
+
+#: src/ui/transport.rs:71
+#, no-c-format
+msgid "Next"
+msgstr "下一首"
+
+#: src/ui/transport.rs:73
+#, no-c-format
+msgid "Previous"
+msgstr "上一首"
+
+#: src/ui/transport.rs:106
+#, no-c-format
+msgid "Shuffle, on"
+msgstr "隨機播放：開啟"
+
+#: src/ui/transport.rs:108
+#, no-c-format
+msgid "Shuffle, off"
+msgstr "隨機播放：關閉"
+
+#: src/ui/transport.rs:112
+#, no-c-format
+msgid "Repeat, off"
+msgstr "重複播放：關閉"
+
+#: src/ui/transport.rs:113
+#, no-c-format
+msgid "Repeat all"
+msgstr "全部重複"
+
+#: src/ui/transport.rs:114
+#, no-c-format
+msgid "Repeat one"
+msgstr "單曲重複"
+
+#: src/ui/transport.rs:149
+#, no-c-format
+msgid "Volume"
+msgstr "音量"
+
+#: src/ui/transport.rs:200
+#, no-c-format
+msgid "Unmute"
+msgstr "取消靜音"
+
+#: src/ui/widgets/preview.rs:243
+#, no-c-format
+msgid "{degrees}°"
+msgstr "{degrees}°"
+
+#: src/ui/widgets/seekbar.rs:472
+#, no-c-format
+msgid "{position} of {duration}"
+msgstr "{position}，共 {duration}"
+
+#: src/ui/window.rs:56
+msgctxt "sidebar"
+msgid "Home"
+msgstr "首頁"
+
+#: src/ui/window.rs:57
+msgctxt "sidebar"
+msgid "Albums"
+msgstr "專輯"
+
+#: src/ui/window.rs:58
+msgctxt "sidebar"
+msgid "Artists"
+msgstr "藝人"
+
+#: src/ui/window.rs:59
+msgctxt "sidebar"
+msgid "Songs"
+msgstr "歌曲"
+
+#: src/ui/window.rs:60
+msgctxt "sidebar"
+msgid "Playlists"
+msgstr "播放清單"
+
+#: src/ui/window.rs:61
+msgctxt "sidebar"
+msgid "Favourites"
+msgstr "最愛"
+
+#: src/ui/window.rs:62
+msgctxt "sidebar"
+msgid "Search"
+msgstr "搜尋"
+
+#: src/ui/window.rs:63
+msgctxt "sidebar"
+msgid "Sources"
+msgstr "來源"
+
+#: src/ui/window.rs:147
+#, no-c-format
+msgid "Library sections"
+msgstr "資料庫分區"
+
+#: src/ui/window.rs:295
+#, no-c-format
+msgid "Keyboard Shortcuts"
+msgstr "鍵盤快捷鍵"
+
+#: src/ui/window.rs:302 src/ui/window.rs:307
+#, no-c-format
+msgid "Main Menu"
+msgstr "主選單"
+
+#: src/ui/window.rs:335
+#, no-c-format
+msgid "Add Music Folder"
+msgstr "加入音樂資料夾"
+
+#: src/ui/window.rs:347
+#, no-c-format
+msgid "Adding the folder to your library…"
+msgstr "正在將資料夾加入資料庫…"

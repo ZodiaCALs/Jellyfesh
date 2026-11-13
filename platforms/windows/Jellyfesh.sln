@@ -1,0 +1,61 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.0.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jellyfesh.Shared", "src\Jellyfesh.Shared\Jellyfesh.Shared.csproj", "{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jellyfesh.Interop", "src\Jellyfesh.Interop\Jellyfesh.Interop.csproj", "{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jellyfesh.App", "src\Jellyfesh.App\Jellyfesh.App.csproj", "{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jellyfesh.Shared.Tests", "tests\Jellyfesh.Shared.Tests\Jellyfesh.Shared.Tests.csproj", "{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|ARM64 = Debug|ARM64
+		Release|x64 = Release|x64
+		Release|ARM64 = Release|ARM64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Debug|x64.Build.0 = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Release|x64.ActiveCfg = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Release|x64.Build.0 = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E01}.Release|ARM64.Build.0 = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Debug|x64.Build.0 = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Release|x64.ActiveCfg = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Release|x64.Build.0 = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E02}.Release|ARM64.Build.0 = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Debug|x64.ActiveCfg = Debug|x64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Debug|x64.Build.0 = Debug|x64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Debug|ARM64.Build.0 = Debug|ARM64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Release|x64.ActiveCfg = Release|x64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Release|x64.Build.0 = Release|x64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Release|ARM64.ActiveCfg = Release|ARM64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E03}.Release|ARM64.Build.0 = Release|ARM64
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Debug|x64.Build.0 = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Release|x64.ActiveCfg = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Release|x64.Build.0 = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E04}.Release|ARM64.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6F8B6C34-5E2A-4C7B-9D1E-2A3B4C5D6E00}
+	EndGlobalSection
+EndGlobal

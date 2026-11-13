@@ -1,0 +1,11 @@
+# UniFFI binding settings, read by `uniffi-bindgen` in library mode (`cargo xtask bindings`).
+# Names are fixed in docs/ffi.md; the native shells code against them.
+
+[bindings.kotlin]
+package_name = "org.jellyfesh.ffi"
+cdylib_name = "jf_ffi"
+# Enum `entries` instead of `values()`: the Android shell and the JVM tests use Kotlin 2.
+kotlin_target_version = "2.0.0"
+
+[bindings.swift]
+module_name = "JellyfeshFFI"

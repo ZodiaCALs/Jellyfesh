@@ -1,0 +1,46 @@
+{
+  "language": null,
+  "timing": "line",
+  "offset_ms": 0,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 3000,
+      "end_ms": 6400,
+      "agent": null,
+      "text": "Fields of mustard flicker past",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 6400,
+      "end_ms": 9900,
+      "agent": null,
+      "text": "The conductor whistles out of key",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 9900,
+      "end_ms": null,
+      "agent": null,
+      "text": "And the window holds my face",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "lrc",
+    "origin": null
+  },
+  "metadata": {
+    "ti": "Window Seat"
+  }
+}

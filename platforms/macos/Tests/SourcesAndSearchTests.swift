@@ -1,0 +1,229 @@
+import XCTest
+@testable import Jellyfesh
+
+private let notAvailable = "online sources are not available in this build yet"
+
+@MainActor
+final class SearchStoreTests: XCTestCase {
+    func testKeepsTheLatestSearchAndPutsTheLibraryFirst() {
+        let client = FakeCoreClient()
+        let store = SearchStore(client: client, tracker: CommandTracker())
+        store.search("tide")
+        let request = client.lastCommandID
+        XCTAssertEqual(client.sent.last, .search(query: "tide", area: .all))
+        XCTAssertTrue(store.isWaiting)
+
+        store.apply(SearchBatch(request: request - 1, query: "old", source: SearchStore.library,
+                                items: [Fixture.result("1", source: SearchStore.library)], error: nil, done: true))
+        XCTAssertTrue(store.sections.isEmpty, "answers to an older search are ignored")
+
+        store.apply(SearchBatch(request: request, query: "tide", source: "org.example.subsonic",
+                                items: [Fixture.result("a", source: "org.example.subsonic")], error: nil, done: false))
+        store.apply(SearchBatch(request: request, query: "tide", source: SearchStore.library,
+                                items: [Fixture.result("b", source: SearchStore.library, kind: .album)], error: nil,
+                                done: true))
+        XCTAssertEqual(store.sections.map(\.source), [SearchStore.library, "org.example.subsonic"])
+        XCTAssertTrue(store.done)
+        XCTAssertFalse(store.isWaiting)
+        XCTAssertFalse(store.foundNothing)
+    }
+
+    func testARepeatedSourceReplacesItsSection() {
+        let client = FakeCoreClient()
+        let store = SearchStore(client: client, tracker: CommandTracker())
+        store.search("x")
+        let request = client.lastCommandID
+        store.apply(SearchBatch(request: request, query: "x", source: "p", items: [Fixture.result("1", source: "p")],
+                                error: nil, done: false))
+        store.apply(SearchBatch(request: request, query: "x", source: "p", items: [], error: nil, done: true))
+        XCTAssertEqual(store.sections.count, 1)
+        XCTAssertTrue(store.foundNothing)
+        store.clear()
+        XCTAssertTrue(store.sections.isEmpty)
+        XCTAssertFalse(store.isWaiting)
+    }
+
+    func testGroupsByKindSongsFirst() {
+        let section = SearchSection(source: SearchStore.library, items: [
+            Fixture.result("c", source: SearchStore.library, kind: .artist),
+            Fixture.result("a", source: SearchStore.library, kind: .track),
+            Fixture.result("b", source: SearchStore.library, kind: .track),
+        ], error: nil)
+        XCTAssertEqual(section.kinds, [.track, .artist])
+        XCTAssertEqual(section.items(of: .track).map(\.itemID), ["a", "b"])
+    }
+
+    func testFindsLibraryArtworkWithOneQuery() async {
+        let client = FakeCoreClient()
+        client.librarySearchResult = LibrarySearch(songs: [Fixture.song(7, artwork: "abc")], albums: [], artists: [])
+        let store = SearchStore(client: client, tracker: CommandTracker())
+        store.search("seven")
+        let item = Fixture.result("7", source: SearchStore.library, track: .library(id: 7))
+        store.apply(SearchBatch(request: client.lastCommandID, query: "seven", source: SearchStore.library,
+                                items: [item], error: nil, done: true))
+        await eventually { store.artwork(for: item) == .hash("abc") }
+        XCTAssertEqual(client.librarySearches, ["seven"])
+    }
+
+    func testFallsBackToTheLibraryWhenTheCommandFails() async {
+        let client = FakeCoreClient()
+        client.librarySearchResult = LibrarySearch(songs: [Fixture.song(1), Fixture.song(2)], albums: [], artists: [])
+        let tracker = CommandTracker()
+        let store = SearchStore(client: client, tracker: tracker)
+        store.search("anything")
+        XCTAssertTrue(tracker.fail(client.lastCommandID, message: notAvailable))
+        await eventually { store.done }
+        XCTAssertEqual(store.sections.first?.source, SearchStore.library)
+        XCTAssertEqual(store.sections.first?.items.compactMap(\.track), [.library(id: 1), .library(id: 2)])
+    }
+
+    func testTypingWaitsForAPause() async {
+        let client = FakeCoreClient()
+        let store = SearchStore(client: client, tracker: CommandTracker())
+        store.text = "t"
+        store.textChanged()
+        store.text = "ti"
+        store.textChanged()
+        store.text = "tide"
+        store.textChanged()
+        XCTAssertTrue(client.sent.isEmpty)
+        await eventually { !client.sent.isEmpty }
+        XCTAssertEqual(client.sent, [.search(query: "tide", area: .all)])
+    }
+}
+
+@MainActor
+final class SourcesStoreTests: XCTestCase {
+    func testASignInFlowFollowsTheCoresSteps() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(methods: [.qr])
+        store.beginSignIn(plugin, method: .qr)
+        XCTAssertEqual(client.sent.last, .beginLogin(plugin: plugin.id, method: .qr))
+        XCTAssertNil(store.signIn?.step)
+
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 9, step: .showQR(data: "qr", expiresAtMs: nil)))
+        XCTAssertEqual(store.signIn?.flow, 9)
+        XCTAssertEqual(store.signIn?.step, .showQR(data: "qr", expiresAtMs: nil))
+
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 10, step: .failed("other flow")))
+        XCTAssertEqual(store.signIn?.step, .showQR(data: "qr", expiresAtMs: nil), "another flow's step is ignored")
+        store.apply(signIn: SignInUpdate(plugin: "org.example.other", flow: 9, step: .failed("other plugin")))
+        XCTAssertEqual(store.signIn?.flow, 9)
+
+        store.endSignIn()
+        XCTAssertEqual(client.sent.last, .cancelLogin(plugin: plugin.id, flow: 9))
+        XCTAssertNil(store.signIn)
+    }
+
+    func testAFinishedFlowIsNotCancelled() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin()
+        store.beginSignIn(plugin, method: .passwordExchange)
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 3,
+                                         step: .askFields([SignInField(name: "user", label: "User", secret: false,
+                                                                       placeholder: nil)])))
+        store.submitSignIn(fields: ["user": "ada"])
+        XCTAssertEqual(client.sent.last, .submitLogin(plugin: plugin.id, flow: 3, fields: ["user": "ada"]))
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 3, step: .done(account: "ada")))
+        XCTAssertTrue(store.signIn?.isOver == true)
+        let count = client.sent.count
+        store.endSignIn()
+        XCTAssertEqual(client.sent.count, count)
+    }
+
+    func testNotAvailableIsANoticeNotAnError() {
+        let client = FakeCoreClient()
+        let tracker = CommandTracker()
+        let toasts = ToastCenter()
+        let store = SourcesStore(client: client, tracker: tracker, toasts: toasts)
+        store.install(path: "/tmp/org.jellyfesh.subsonic.jfpkg")
+        XCTAssertTrue(tracker.fail(client.lastCommandID, message: notAvailable))
+        XCTAssertTrue(store.unavailable)
+        XCTAssertNil(toasts.message)
+
+        store.uninstall("org.example.subsonic")
+        XCTAssertTrue(tracker.fail(client.lastCommandID, message: "the plugin is in use"))
+        XCTAssertEqual(toasts.message, "the plugin is in use")
+    }
+
+    func testSignInThatIsNotAvailableEndsTheFlowCalmly() {
+        let client = FakeCoreClient()
+        let tracker = CommandTracker()
+        let store = SourcesStore(client: client, tracker: tracker, toasts: ToastCenter())
+        store.beginSignIn(Fixture.plugin(), method: .apiKey)
+        XCTAssertTrue(tracker.fail(client.lastCommandID, message: notAvailable))
+        XCTAssertEqual(store.signIn?.unavailable, true)
+        XCTAssertTrue(store.signIn?.isOver == true)
+    }
+
+    func testEnablingACommunityPluginAcknowledgesItFirst() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.acknowledgeAndEnable("org.example.netease")
+        XCTAssertEqual(client.sent, [
+            .acknowledgeUnofficial(id: "org.example.netease"),
+            .setPluginEnabled(id: "org.example.netease", enabled: true),
+        ])
+    }
+
+    func testBrowsePagesGoToTheirPage() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let model = BrowseModel(plugin: "p", node: nil)
+        model.start(store)
+        XCTAssertEqual(client.sent.last, .browse(plugin: "p", node: nil, page: 0))
+        XCTAssertTrue(model.isLoading)
+        let request = client.lastCommandID
+        let tracks = [Fixture.result("1", source: "p", track: .library(id: 1)),
+                      Fixture.result("2", source: "p", kind: .folder),
+                      Fixture.result("3", source: "p", track: .library(id: 3))]
+        store.apply(browse: BrowseBatch(request: request + 1, plugin: "p", node: nil, items: tracks, nextPage: nil,
+                                        error: nil))
+        XCTAssertTrue(model.items.isEmpty, "another page's answer")
+        store.apply(browse: BrowseBatch(request: request, plugin: "p", node: nil, items: tracks, nextPage: 1,
+                                        error: nil))
+        XCTAssertEqual(model.items.count, 3)
+        XCTAssertEqual(model.nextPage, 1)
+        XCTAssertFalse(model.isLoading)
+        let queue = model.tracks(startingAt: tracks[2])
+        XCTAssertEqual(queue?.tracks, [.library(id: 1), .library(id: 3)])
+        XCTAssertEqual(queue?.start, 1)
+    }
+
+    func testSourceNames() {
+        let store = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        store.apply(SourcesState(version: 1, plugins: [Fixture.plugin()], allowCommunity: false))
+        XCTAssertEqual(store.name(of: "org.example.subsonic"), "Example")
+        XCTAssertEqual(store.name(of: "org.example.unknown"), "org.example.unknown")
+    }
+}
+
+@MainActor
+final class QueueStoreTests: XCTestCase {
+    func testLibraryTracksAreLookedUpForTheirRows() async {
+        let client = FakeCoreClient()
+        client.songsByID = [1: Fixture.song(1, title: "First"), 2: Fixture.song(2, title: "Second", artwork: "h2")]
+        let store = QueueStore(client: client)
+        let entries = [Fixture.entry(20, track: 2), QueueEntry(uid: 21, track: .file(path: "/Music/Loose/Song.flac"))]
+        store.apply(Fixture.queue(position: 0, length: 3, current: Fixture.entry(10, track: 1), upNext: entries))
+        XCTAssertEqual(store.upNextRows[1].title, "Song", "a file shows its name")
+        await eventually { store.current?.title == "First" && store.upNextRows.first?.title == "Second" }
+        XCTAssertEqual(store.upNextRows.first?.artwork, .hash("h2"))
+        XCTAssertEqual(client.songIDRequests.count, 1, "one trip for the whole batch")
+    }
+
+    func testUpNextPagesPastTheWindow() async {
+        let client = FakeCoreClient()
+        let window = (1...50).map { Fixture.entry(UInt64(100 + $0), track: Int64($0)) }
+        client.queueWindowResult = [Fixture.entry(200, track: 60), Fixture.entry(150, track: 50)]
+        let store = QueueStore(client: client)
+        store.apply(Fixture.queue(position: 0, length: 120, current: Fixture.entry(100, track: 99), upNext: window))
+        XCTAssertTrue(store.hasMore)
+        await store.loadMore()
+        XCTAssertEqual(client.queueWindowRequests.first?.offset, 51)
+        XCTAssertEqual(store.upNext.count, 51, "an entry already shown is not added twice")
+        XCTAssertEqual(store.upNext.last?.uid, 200)
+    }
+}

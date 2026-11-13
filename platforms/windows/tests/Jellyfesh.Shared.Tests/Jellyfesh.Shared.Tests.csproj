@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Tests for Jellyfesh.Shared (view models, the event hub, drawing-time scheduling, formatting,
+    settings models) with a fake ICoreClient, and for Jellyfesh.Interop's mapping against
+    tests/contract/ffi-types.json. No native library is needed.
+    Run: dotnet test platforms/windows/tests/Jellyfesh.Shared.Tests
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Jellyfesh.Tests</RootNamespace>
+    <!-- Test names read as sentences; async tests may block on fakes. -->
+    <NoWarn>$(NoWarn);CA1707;CA1515;CA2007</NoWarn>
+    <JfRepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', '..'))</JfRepoRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Jellyfesh.Shared\Jellyfesh.Shared.csproj" />
+    <ProjectReference Include="..\..\src\Jellyfesh.Interop\Jellyfesh.Interop.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>JfRepoRoot</_Parameter1>
+      <_Parameter2>$(JfRepoRoot)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+</Project>

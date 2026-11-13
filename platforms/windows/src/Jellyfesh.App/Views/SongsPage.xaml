@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every song, virtualised and sorted by the core; choosing one plays it and the songs after it. -->
+<shell:JfPage
+    x:Class="Jellyfesh.App.Views.SongsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    NavigationCacheMode="Enabled">
+
+    <Grid Padding="32,24,32,0" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <ListView
+            x:Name="SongList"
+            x:Uid="Songs_List"
+            Grid.RowSpan="2"
+            Padding="0,0,0,112"
+            AutomationProperties.Name="Songs"
+            IsItemClickEnabled="True"
+            ItemClick="OnSongClick"
+            ItemContainerStyle="{StaticResource JfTrackRowStyle}"
+            ItemTemplate="{StaticResource TrackRowTemplate}"
+            ItemsSource="{x:Bind ViewModel.Songs.Items, Mode=OneWay}"
+            SelectionMode="None">
+            <ListView.Header>
+                <Grid Margin="0,0,0,16" ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Uid="Songs_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Songs" />
+                    <Button x:Uid="Action_ShuffleButton" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.ShuffleCommand}" Content="Shuffle" Style="{StaticResource JfChipButtonStyle}" />
+                    <ComboBox x:Name="SortBox" x:Uid="Songs_Sort" Grid.Column="2" MinWidth="160" VerticalAlignment="Center" AutomationProperties.Name="Sort by" SelectionChanged="OnSortChanged" />
+                </Grid>
+            </ListView.Header>
+        </ListView>
+        <ProgressRing Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
+        <TextBlock x:Uid="Songs_Empty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="No songs yet. Add a music folder in Settings." Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}" />
+    </Grid>
+</shell:JfPage>

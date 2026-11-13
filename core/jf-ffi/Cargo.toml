@@ -1,0 +1,36 @@
+[package]
+name = "jf-ffi"
+description = "Foreign-language bindings for jf-core: UniFFI for Swift and Kotlin, a JSON C ABI for C#."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+name = "jf_ffi"
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-core.workspace = true
+# Only for type names that jf-core does not re-export (TrackRef::Source's SourceTrack, the
+# lyric model's enums, Track's ReplayGain); all behaviour goes through jf-core.
+jf-library.workspace = true
+jf-lyrics.workspace = true
+jf-session.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uniffi.workspace = true
+# Android: the JNI entry that hands the app's Context to ndk-context (src/android.rs). Built on
+# every platform (both are small and pure Rust) so the JVM tests exercise the same code.
+jni-sys.workspace = true
+ndk-context.workspace = true
+
+[dev-dependencies]
+hound.workspace = true
+tempfile.workspace = true

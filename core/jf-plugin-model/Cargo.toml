@@ -1,0 +1,43 @@
+[package]
+name = "jf-plugin-model"
+description = "The plugin host's parts that need no WebAssembly runtime: WIT data types, packages, manifests, settings schemas, trust, allowlists, search merge, answer checks, the login state machine and host crypto."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# Everything here also builds for wasm32-unknown-unknown (Jellyfesh Web, core/jf-web).
+[dependencies]
+url.workspace = true
+zip.workspace = true
+toml.workspace = true
+semver.workspace = true
+ed25519-dalek.workspace = true
+sha2.workspace = true
+base64.workspace = true
+zeroize.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+unicode-normalization.workspace = true
+# The `crypto` import's primitives (feature `crypto`).
+sha1 = { workspace = true, optional = true }
+md-5 = { workspace = true, optional = true }
+hmac = { workspace = true, optional = true }
+aes = { workspace = true, optional = true }
+aes-gcm = { workspace = true, optional = true }
+cbc = { workspace = true, optional = true }
+ecb = { workspace = true, optional = true }
+rsa = { workspace = true, optional = true }
+sha1-for-rsa = { workspace = true, optional = true }
+getrandom = { workspace = true, optional = true }
+
+[features]
+default = []
+# Host crypto for plugins (`crypto` import): hashes, HMAC, AES, RSA public-key encryption.
+crypto = ["dep:sha1", "dep:md-5", "dep:hmac", "dep:aes", "dep:aes-gcm", "dep:cbc", "dep:ecb", "dep:rsa", "dep:sha1-for-rsa", "dep:getrandom"]

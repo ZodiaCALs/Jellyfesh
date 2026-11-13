@@ -1,0 +1,27 @@
+<Project>
+  <!-- Shared by every project under platforms/windows. -->
+  <PropertyGroup>
+    <Version>0.0.4</Version>
+    <Product>Jellyfesh</Product>
+    <Company>The Jellyfesh authors</Company>
+    <Copyright>All rights reserved (ADR-0016)</Copyright>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <SatelliteResourceLanguages>en;zh-Hans;zh-Hant;ja</SatelliteResourceLanguages>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>8.0</AnalysisLevel>
+    <!-- Type names mirror the core (Stop, Next, Queue, Collection) on purpose. -->
+    <NoWarn>$(NoWarn);CA1711;CA1716</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Folders that other scripts write into (git-ignored). -->
+    <JfWindowsRoot>$(MSBuildThisFileDirectory)</JfWindowsRoot>
+    <JfGeneratedDir>$(MSBuildThisFileDirectory)Generated\</JfGeneratedDir>
+    <!-- The C# ports of the drawing-time helpers (DisplayClock, the lyrics cursor). -->
+    <JfSharedCsharpDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\shared\csharp'))\</JfSharedCsharpDir>
+  </PropertyGroup>
+</Project>

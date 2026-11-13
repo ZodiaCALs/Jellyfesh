@@ -1,0 +1,36 @@
+{
+  "language": null,
+  "timing": "line",
+  "offset_ms": -250,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 1250,
+      "end_ms": 5750,
+      "agent": null,
+      "text": "Late again, the trains are slow",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 5750,
+      "end_ms": null,
+      "agent": null,
+      "text": "Platform puddles hold the moon",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "lrc",
+    "origin": null
+  },
+  "metadata": {
+    "offset": "-250"
+  }
+}

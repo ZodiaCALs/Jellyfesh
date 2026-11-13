@@ -1,0 +1,47 @@
+{
+  "language": null,
+  "timing": "line",
+  "offset_ms": 500,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 0,
+      "end_ms": 9500,
+      "agent": null,
+      "text": "Clocks run early in this town",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 9500,
+      "end_ms": 19750,
+      "agent": null,
+      "text": "The bakery opens before the dawn",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 19750,
+      "end_ms": null,
+      "agent": null,
+      "text": "We arrive before we leave",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "lrc",
+    "origin": null
+  },
+  "metadata": {
+    "offset": "+500",
+    "ti": "Early Town"
+  }
+}

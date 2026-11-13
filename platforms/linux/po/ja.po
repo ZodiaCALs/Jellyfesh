@@ -1,0 +1,1583 @@
+# Japanese translation of Jellyfesh.
+# Copyright 2026 the Jellyfesh authors
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: jellyfesh\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-13 14:35+0000\n"
+"PO-Revision-Date: 2026-11-08 12:00+0000\n"
+"Last-Translator: the Jellyfesh authors\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/ui/about.rs:11 src/ui/window.rs:296
+#, no-c-format
+msgid "About Jellyfesh"
+msgstr "Jellyfesh について"
+
+#: src/ui/about.rs:22
+#, no-c-format
+msgid "Jellyfesh icon"
+msgstr "Jellyfesh のアイコン"
+
+#: src/ui/about.rs:54
+#, no-c-format
+msgid "Version {version}"
+msgstr "バージョン {version}"
+
+#: src/ui/about.rs:58
+#, no-c-format
+msgid "An elegant, lightweight music player."
+msgstr "上品で軽やかな音楽プレーヤー。"
+
+#: src/ui/about.rs:67
+#, no-c-format
+msgid "Design"
+msgstr "デザイン"
+
+#: src/ui/about.rs:67
+#, no-c-format
+msgid "Designed with the Misty design language."
+msgstr "Misty デザイン言語でデザインされています。"
+
+#: src/ui/about.rs:69
+#, no-c-format
+msgid "Design tokens"
+msgstr "デザイントークン"
+
+#: src/ui/about.rs:70
+#, no-c-format
+msgid ""
+"Derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache "
+"License 2.0."
+msgstr ""
+"Misty デザイン言語 1.1 のトークンに基づきます。© 2026 ZodiaCALs、Apache "
+"License 2.0。"
+
+#: src/ui/about.rs:73
+#, no-c-format
+msgid "Licence"
+msgstr "ライセンス"
+
+#: src/ui/about.rs:74
+#, no-c-format
+msgid "No licence has been chosen yet: all rights reserved."
+msgstr "ライセンスは未定です。著作権はすべて保有されています。"
+
+#: src/ui/actions.rs:43
+#, no-c-format
+msgid "Plays next"
+msgstr "次に再生します"
+
+#: src/ui/actions.rs:45
+#, no-c-format
+msgid "Added to the queue"
+msgstr "キューに追加しました"
+
+#: src/ui/actions.rs:100 src/ui/miniplayer.rs:121 src/ui/miniplayer.rs:123
+#: src/ui/pages/detail.rs:82 src/ui/pages/favourites.rs:52
+#: src/ui/transport.rs:28 src/ui/transport.rs:29 src/ui/transport.rs:40
+#, no-c-format
+msgid "Play"
+msgstr "再生"
+
+#: src/ui/actions.rs:105 src/ui/keys.rs:56 src/ui/pages/detail.rs:83
+#: src/ui/pages/favourites.rs:49 src/ui/transport.rs:46
+#, no-c-format
+msgid "Shuffle"
+msgstr "シャッフル"
+
+#: src/ui/actions.rs:108
+#, no-c-format
+msgid "Play Next"
+msgstr "次に再生"
+
+#: src/ui/actions.rs:109
+#, no-c-format
+msgid "Play Last"
+msgstr "最後に再生"
+
+#: src/ui/actions.rs:114
+#, no-c-format
+msgid "Add to Playlist…"
+msgstr "プレイリストに追加…"
+
+#: src/ui/actions.rs:130 src/ui/nowplaying/mod.rs:620 src/ui/rows.rs:381
+#, no-c-format
+msgid "Remove from Favourites"
+msgstr "お気に入りから外す"
+
+#: src/ui/actions.rs:132 src/ui/nowplaying/mod.rs:176
+#: src/ui/nowplaying/mod.rs:622 src/ui/rows.rs:247 src/ui/rows.rs:383
+#, no-c-format
+msgid "Add to Favourites"
+msgstr "お気に入りに追加"
+
+#: src/ui/actions.rs:139
+#, no-c-format
+msgid "Go to Album"
+msgstr "アルバムへ移動"
+
+#: src/ui/actions.rs:144
+#, no-c-format
+msgid "Go to Artist"
+msgstr "アーティストへ移動"
+
+#: src/ui/actions.rs:147
+#, no-c-format
+msgid "Rename…"
+msgstr "名前を変更…"
+
+#: src/ui/actions.rs:148 src/ui/actions.rs:382
+#, no-c-format
+msgid "Delete"
+msgstr "削除"
+
+#: src/ui/actions.rs:267
+#, no-c-format
+msgid "Add the songs from the source's own page."
+msgstr "ソースのページから曲を追加してください。"
+
+#: src/ui/actions.rs:287
+#, no-c-format
+msgid "Add to Playlist"
+msgstr "プレイリストに追加"
+
+#: src/ui/actions.rs:288 src/ui/actions.rs:357 src/ui/actions.rs:381
+#: src/ui/nowplaying/queue.rs:229 src/ui/pages/playlists.rs:117
+#: src/ui/sources_ui.rs:362
+#, no-c-format
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: src/ui/actions.rs:289 src/ui/window.rs:336
+#, no-c-format
+msgid "Add"
+msgstr "追加"
+
+#: src/ui/actions.rs:296 src/ui/actions.rs:342 src/ui/pages/playlists.rs:46
+#: src/ui/pages/playlists.rs:59 src/ui/pages/playlists.rs:116
+#: src/ui/pages/playlists.rs:130
+#, no-c-format
+msgid "New Playlist"
+msgstr "新規プレイリスト"
+
+#: src/ui/actions.rs:302 src/ui/convert.rs:51 src/ui/convert.rs:125
+#: src/ui/nowplaying/queue.rs:209 src/ui/pages/detail.rs:198
+#: src/ui/pages/detail.rs:208 src/ui/pages/detail.rs:464
+#: src/ui/pages/home.rs:197
+msgid "{n} song"
+msgid_plural "{n} songs"
+msgstr[0] "{n} 曲"
+
+#: src/ui/actions.rs:356
+#, no-c-format
+msgid "Rename Playlist"
+msgstr "プレイリスト名を変更"
+
+#: src/ui/actions.rs:358
+#, no-c-format
+msgid "Rename"
+msgstr "名前を変更"
+
+#: src/ui/actions.rs:378
+#, no-c-format
+msgid "Delete Playlist?"
+msgstr "プレイリストを削除しますか？"
+
+#: src/ui/actions.rs:379
+#, no-c-format
+msgid "The songs stay in your library."
+msgstr "曲はライブラリに残ります。"
+
+#: src/ui/convert.rs:14
+#, no-c-format
+msgid "Unknown Artist"
+msgstr "不明なアーティスト"
+
+#: src/ui/convert.rs:18
+#, no-c-format
+msgid "Unknown Album"
+msgstr "不明なアルバム"
+
+#: src/ui/convert.rs:127
+msgid "{n} min"
+msgid_plural "{n} min"
+msgstr[0] "{n} 分"
+
+#: src/ui/keys.rs:46 src/ui/prefs.rs:616
+#, no-c-format
+msgid "Playback"
+msgstr "再生"
+
+#: src/ui/keys.rs:48
+#, no-c-format
+msgid "Play or pause"
+msgstr "再生 / 一時停止"
+
+#: src/ui/keys.rs:49
+#, no-c-format
+msgid "Next song"
+msgstr "次の曲"
+
+#: src/ui/keys.rs:50
+#, no-c-format
+msgid "Previous song"
+msgstr "前の曲"
+
+#: src/ui/keys.rs:51
+#, no-c-format
+msgid "Skip forward 5 seconds"
+msgstr "5 秒進む"
+
+#: src/ui/keys.rs:52
+#, no-c-format
+msgid "Skip back 5 seconds"
+msgstr "5 秒戻る"
+
+#: src/ui/keys.rs:53
+#, no-c-format
+msgid "Volume up"
+msgstr "音量を上げる"
+
+#: src/ui/keys.rs:54
+#, no-c-format
+msgid "Volume down"
+msgstr "音量を下げる"
+
+#: src/ui/keys.rs:55 src/ui/transport.rs:140 src/ui/transport.rs:200
+#, no-c-format
+msgid "Mute"
+msgstr "ミュート"
+
+#: src/ui/keys.rs:57 src/ui/transport.rs:56
+#, no-c-format
+msgid "Repeat"
+msgstr "リピート"
+
+#: src/ui/keys.rs:61
+#, no-c-format
+msgid "Views"
+msgstr "表示"
+
+#: src/ui/keys.rs:63 src/ui/prefs.rs:335
+#, no-c-format
+msgid "Now Playing"
+msgstr "再生中"
+
+#: src/ui/keys.rs:64 src/ui/nowplaying/info.rs:36
+#: src/ui/nowplaying/lyrics.rs:118 src/ui/nowplaying/mod.rs:117
+#: src/ui/playerbar.rs:100
+#, no-c-format
+msgid "Lyrics"
+msgstr "歌詞"
+
+#: src/ui/keys.rs:65 src/ui/nowplaying/mod.rs:118 src/ui/playerbar.rs:104
+#, no-c-format
+msgid "Queue"
+msgstr "キュー"
+
+#: src/ui/keys.rs:66 src/ui/pages/search.rs:63 src/ui/pages/search.rs:88
+#, no-c-format
+msgid "Search"
+msgstr "検索"
+
+#: src/ui/keys.rs:67
+#, no-c-format
+msgid "Back to the library"
+msgstr "ライブラリに戻る"
+
+#: src/ui/keys.rs:71
+#, no-c-format
+msgid "General"
+msgstr "一般"
+
+#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:294
+#, no-c-format
+msgid "Preferences"
+msgstr "設定"
+
+#: src/ui/keys.rs:74
+#, no-c-format
+msgid "Keyboard shortcuts"
+msgstr "キーボードショートカット"
+
+#: src/ui/keys.rs:75
+#, no-c-format
+msgid "Close window"
+msgstr "ウインドウを閉じる"
+
+#: src/ui/keys.rs:76
+#, no-c-format
+msgid "Quit"
+msgstr "終了"
+
+#: src/ui/miniplayer.rs:51 src/ui/playerbar.rs:66 src/ui/playerbar.rs:167
+#, no-c-format
+msgid "Open Now Playing"
+msgstr "再生画面を開く"
+
+#: src/ui/miniplayer.rs:110 src/ui/playerbar.rs:164
+#, no-c-format
+msgid "Ready to play"
+msgstr "再生できます"
+
+#: src/ui/miniplayer.rs:111 src/ui/playerbar.rs:165
+#, no-c-format
+msgid "Press play to resume"
+msgstr "再生ボタンで続きから"
+
+#: src/ui/miniplayer.rs:119
+#, no-c-format
+msgid "Pause, {percent} % played"
+msgstr "一時停止、{percent}% 再生済み"
+
+#: src/ui/miniplayer.rs:123 src/ui/transport.rs:40
+#, no-c-format
+msgid "Pause"
+msgstr "一時停止"
+
+#: src/ui/nowplaying/info.rs:31 src/ui/pages/library.rs:149
+#, no-c-format
+msgid "Title"
+msgstr "タイトル"
+
+#: src/ui/nowplaying/info.rs:32 src/ui/pages/detail.rs:375
+#: src/ui/pages/detail.rs:422 src/ui/pages/library.rs:150
+#, no-c-format
+msgid "Artist"
+msgstr "アーティスト"
+
+#: src/ui/nowplaying/info.rs:33 src/ui/pages/detail.rs:223
+#: src/ui/pages/detail.rs:253 src/ui/prefs.rs:676
+#, no-c-format
+msgid "Album"
+msgstr "アルバム"
+
+#: src/ui/nowplaying/info.rs:34 src/ui/prefs.rs:693
+#, no-c-format
+msgid "Length"
+msgstr "長さ"
+
+#: src/ui/nowplaying/info.rs:35
+#, no-c-format
+msgid "Format"
+msgstr "フォーマット"
+
+#: src/ui/nowplaying/info.rs:37
+#, no-c-format
+msgid "File"
+msgstr "ファイル"
+
+#: src/ui/nowplaying/info.rs:48
+#, no-c-format
+msgid "About This Song"
+msgstr "この曲について"
+
+#: src/ui/nowplaying/info.rs:87
+msgid "{n} channel"
+msgid_plural "{n} channels"
+msgstr[0] "{n} チャンネル"
+
+#: src/ui/nowplaying/info.rs:90
+#, no-c-format
+msgid "gapless"
+msgstr "ギャップレス"
+
+#: src/ui/nowplaying/info.rs:104
+#, no-c-format
+msgid "in the file's tags"
+msgstr "ファイルのタグ内"
+
+#: src/ui/nowplaying/info.rs:105
+#, no-c-format
+msgid "None found"
+msgstr "見つかりません"
+
+#: src/ui/nowplaying/info.rs:122
+#, no-c-format
+msgid "Unsynced"
+msgstr "同期なし"
+
+#: src/ui/nowplaying/info.rs:124
+#, no-c-format
+msgid "Word by word"
+msgstr "単語ごと"
+
+#: src/ui/nowplaying/info.rs:126
+#, no-c-format
+msgid "Line by line"
+msgstr "行ごと"
+
+#: src/ui/nowplaying/lyrics.rs:128 src/ui/nowplaying/lyrics.rs:340
+#, no-c-format
+msgid "No Lyrics"
+msgstr "歌詞がありません"
+
+#: src/ui/nowplaying/lyrics.rs:130 src/ui/nowplaying/lyrics.rs:337
+#, no-c-format
+msgid ""
+"Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or "
+"from its tags."
+msgstr ""
+"Jellyfesh は、曲と同じ場所にある .lrc・.ttml・.vtt ファイルや、曲のタグから歌"
+"詞を表示します。"
+
+#: src/ui/nowplaying/mod.rs:105 src/ui/pages/search.rs:183 src/ui/prefs.rs:897
+#: src/ui/window.rs:190
+#, no-c-format
+msgid "Library"
+msgstr "ライブラリ"
+
+#: src/ui/nowplaying/mod.rs:109 src/ui/nowplaying/mod.rs:110
+#, no-c-format
+msgid "Back to Library"
+msgstr "ライブラリに戻る"
+
+#: src/ui/nowplaying/mod.rs:114
+#, no-c-format
+msgid "Now Playing views"
+msgstr "再生画面の表示"
+
+#: src/ui/nowplaying/mod.rs:119
+#, no-c-format
+msgid "Info"
+msgstr "情報"
+
+#: src/ui/nowplaying/mod.rs:126 src/ui/nowplaying/mod.rs:687
+#, no-c-format
+msgid "Speakers"
+msgstr "スピーカー"
+
+#: src/ui/nowplaying/mod.rs:134 src/ui/nowplaying/mod.rs:137
+#, no-c-format
+msgid "Output Device"
+msgstr "出力デバイス"
+
+#: src/ui/nowplaying/mod.rs:186 src/ui/playerbar.rs:88
+#, no-c-format
+msgid "Position"
+msgstr "再生位置"
+
+#: src/ui/nowplaying/mod.rs:573
+#, no-c-format
+msgid "Artwork of {title}"
+msgstr "「{title}」のアートワーク"
+
+#: src/ui/nowplaying/mod.rs:578
+#, no-c-format
+msgid "Nothing Playing"
+msgstr "再生していません"
+
+#: src/ui/nowplaying/mod.rs:581
+#, no-c-format
+msgid "Pick a song, an album or a playlist."
+msgstr "曲、アルバム、プレイリストを選んでください。"
+
+#: src/ui/nowplaying/mod.rs:657 src/ui/prefs.rs:851
+#, no-c-format
+msgid "System Default"
+msgstr "システムの既定"
+
+#: src/ui/nowplaying/queue.rs:137 src/ui/nowplaying/queue.rs:146
+#, no-c-format
+msgid "Up Next"
+msgstr "次に再生"
+
+#: src/ui/nowplaying/queue.rs:155
+#, no-c-format
+msgid "Clear Queue"
+msgstr "キューを消去"
+
+#: src/ui/nowplaying/queue.rs:172
+#, no-c-format
+msgid "Nothing Up Next"
+msgstr "次に再生する曲はありません"
+
+#: src/ui/nowplaying/queue.rs:173
+#, no-c-format
+msgid "Use Play Next or Play Last on any song, album or playlist."
+msgstr ""
+"曲・アルバム・プレイリストで「次に再生」か「最後に再生」を選んでください。"
+
+#: src/ui/nowplaying/queue.rs:226
+#, no-c-format
+msgid "Clear the Queue?"
+msgstr "キューを消去しますか？"
+
+#: src/ui/nowplaying/queue.rs:227
+#, no-c-format
+msgid "Playback stops and every song is removed from the queue."
+msgstr "再生が止まり、キューのすべての曲が取り除かれます。"
+
+#: src/ui/nowplaying/queue.rs:230
+#, no-c-format
+msgid "Clear"
+msgstr "消去"
+
+#: src/ui/pages/detail.rs:87 src/ui/pages/detail.rs:91 src/ui/rows.rs:263
+#, no-c-format
+msgid "More"
+msgstr "その他"
+
+#: src/ui/pages/detail.rs:209
+msgid "{n} minute"
+msgid_plural "{n} minutes"
+msgstr[0] "{n} 分"
+
+#: src/ui/pages/detail.rs:206
+#, no-c-format
+msgid "{songs}, {minutes}"
+msgstr "{songs}、{minutes}"
+
+#: src/ui/pages/detail.rs:320
+#, no-c-format
+msgid "This album has no songs left in your library."
+msgstr "このアルバムの曲はライブラリに残っていません。"
+
+#: src/ui/pages/detail.rs:398 src/ui/pages/library.rs:119
+#: src/ui/pages/library.rs:125 src/ui/pages/library.rs:136
+#: src/ui/pages/search.rs:197
+#, no-c-format
+msgid "Albums"
+msgstr "アルバム"
+
+#: src/ui/pages/detail.rs:413 src/ui/pages/library.rs:247
+#: src/ui/pages/library.rs:249 src/ui/pages/library.rs:260
+#: src/ui/pages/search.rs:196
+#, no-c-format
+msgid "Songs"
+msgstr "曲"
+
+#: src/ui/pages/favourites.rs:28 src/ui/pages/favourites.rs:30
+#: src/ui/pages/favourites.rs:47
+#, no-c-format
+msgid "Favourites"
+msgstr "お気に入り"
+
+#: src/ui/pages/favourites.rs:36
+#, no-c-format
+msgid "No Favourites Yet"
+msgstr "お気に入りはまだありません"
+
+#: src/ui/pages/favourites.rs:37
+#, no-c-format
+msgid "Tap the heart next to a song to keep it here."
+msgstr "曲の横のハートを押すと、ここに追加されます。"
+
+#: src/ui/pages/favourites.rs:43
+#, no-c-format
+msgid "Could Not Load Favourites"
+msgstr "お気に入りを読み込めません"
+
+#: src/ui/pages/home.rs:36 src/ui/pages/home.rs:68 src/ui/pages/home.rs:69
+#, no-c-format
+msgid "Home"
+msgstr "ホーム"
+
+#: src/ui/pages/home.rs:46 src/ui/pages/library.rs:152
+#, no-c-format
+msgid "Recently Added"
+msgstr "最近追加した項目"
+
+#: src/ui/pages/home.rs:58 src/ui/pages/home.rs:62
+#, no-c-format
+msgid "Recently Played"
+msgstr "最近再生した曲"
+
+#: src/ui/pages/home.rs:109
+#, no-c-format
+msgid "Welcome to Jellyfesh"
+msgstr "Jellyfesh へようこそ"
+
+#: src/ui/pages/home.rs:113
+#, no-c-format
+msgid ""
+"Add the folders that hold your music. Jellyfesh reads their tags, artwork "
+"and lyrics and keeps watching them."
+msgstr ""
+"音楽のあるフォルダを追加してください。Jellyfesh がタグ・アートワーク・歌詞を"
+"読み込み、変更も見守ります。"
+
+#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:290
+#, no-c-format
+msgid "Add Music Folder…"
+msgstr "音楽フォルダを追加…"
+
+#: src/ui/pages/home.rs:198
+msgid "{n} album"
+msgid_plural "{n} albums"
+msgstr[0] "{n} 枚のアルバム"
+
+#: src/ui/pages/home.rs:199
+msgid "{n} artist"
+msgid_plural "{n} artists"
+msgstr[0] "{n} 人のアーティスト"
+
+#: src/ui/pages/library.rs:130
+#, no-c-format
+msgid "No Albums Yet"
+msgstr "アルバムはまだありません"
+
+#: src/ui/pages/library.rs:131 src/ui/pages/library.rs:217
+#: src/ui/pages/library.rs:255
+#, no-c-format
+msgid "Add a folder with music to fill your library."
+msgstr "音楽のあるフォルダを追加して、ライブラリを作りましょう。"
+
+#: src/ui/pages/library.rs:151
+#, no-c-format
+msgid "Year"
+msgstr "年"
+
+#: src/ui/pages/library.rs:183 src/ui/pages/library.rs:185
+#, no-c-format
+msgid "Sort Albums"
+msgstr "アルバムの並べ替え"
+
+#: src/ui/pages/library.rs:205 src/ui/pages/library.rs:211
+#: src/ui/pages/library.rs:222 src/ui/pages/search.rs:198
+#, no-c-format
+msgid "Artists"
+msgstr "アーティスト"
+
+#: src/ui/pages/library.rs:216
+#, no-c-format
+msgid "No Artists Yet"
+msgstr "アーティストはまだいません"
+
+#: src/ui/pages/library.rs:254
+#, no-c-format
+msgid "No Songs Yet"
+msgstr "曲はまだありません"
+
+#: src/ui/pages/library.rs:262
+#, no-c-format
+msgid "Shuffle All"
+msgstr "すべてシャッフル"
+
+#: src/ui/pages/playlists.rs:26 src/ui/pages/playlists.rs:32
+#: src/ui/pages/playlists.rs:56 src/ui/pages/playlists.rs:57
+#: src/ui/pages/search.rs:199
+#, no-c-format
+msgid "Playlists"
+msgstr "プレイリスト"
+
+#: src/ui/pages/playlists.rs:43
+#, no-c-format
+msgid "No Playlists Yet"
+msgstr "プレイリストはまだありません"
+
+#: src/ui/pages/playlists.rs:44
+#, no-c-format
+msgid "Make one here, or add songs to a new playlist from any song's menu."
+msgstr "ここで作成するか、曲のメニューから新しいプレイリストに追加できます。"
+
+#: src/ui/pages/playlists.rs:53
+#, no-c-format
+msgid "Could Not Load Playlists"
+msgstr "プレイリストを読み込めません"
+
+#: src/ui/pages/playlists.rs:62
+#, no-c-format
+msgid "Import Playlist…"
+msgstr "プレイリストを読み込む…"
+
+#: src/ui/pages/playlists.rs:118
+#, no-c-format
+msgid "Create"
+msgstr "作成"
+
+#: src/ui/pages/playlists.rs:123
+#, no-c-format
+msgid "Name"
+msgstr "名前"
+
+#: src/ui/pages/playlists.rs:163
+#, no-c-format
+msgid "Playlists (M3U)"
+msgstr "プレイリスト（M3U）"
+
+#: src/ui/pages/playlists.rs:169
+#, no-c-format
+msgid "Import Playlist"
+msgstr "プレイリストを読み込む"
+
+#: src/ui/pages/playlists.rs:186
+#, no-c-format
+msgid "Export Playlist"
+msgstr "プレイリストを書き出す"
+
+#: src/ui/pages/playlists.rs:200
+#, no-c-format
+msgid "Saved to {path}"
+msgstr "{path} に保存しました"
+
+#: src/ui/pages/playlists.rs:209 src/ui/pages/playlists.rs:222
+#, no-c-format
+msgid "Playlist"
+msgstr "プレイリスト"
+
+#: src/ui/pages/playlists.rs:230
+#, no-c-format
+msgid "Export…"
+msgstr "書き出す…"
+
+#: src/ui/pages/search.rs:59
+#, no-c-format
+msgid "Songs, albums, artists"
+msgstr "曲、アルバム、アーティスト"
+
+#: src/ui/pages/search.rs:74
+#, no-c-format
+msgid "Search Your Music"
+msgstr "音楽を検索"
+
+#: src/ui/pages/search.rs:75
+#, no-c-format
+msgid ""
+"Find songs, albums and artists in your library and in every source you have "
+"enabled."
+msgstr ""
+"ライブラリと有効なすべてのソースから、曲・アルバム・アーティストを探します。"
+
+#: src/ui/pages/search.rs:83
+#, no-c-format
+msgid "No Results"
+msgstr "結果はありません"
+
+#: src/ui/pages/search.rs:84
+#, no-c-format
+msgid "Try other words."
+msgstr "別の言葉で試してください。"
+
+#: src/ui/pages/search.rs:200
+#, no-c-format
+msgid "Folders"
+msgstr "フォルダ"
+
+#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:118
+#, no-c-format
+msgid "Official"
+msgstr "公式"
+
+#: src/ui/pages/sources.rs:24
+#, no-c-format
+msgid "Community · unofficial"
+msgstr "コミュニティ · 非公式"
+
+#: src/ui/pages/sources.rs:27
+#, no-c-format
+msgid "Vendor playback"
+msgstr "サービス側で再生"
+
+#: src/ui/pages/sources.rs:35
+#, no-c-format
+msgid "Signed in as {account}"
+msgstr "{account} としてサインイン中"
+
+#: src/ui/pages/sources.rs:37
+#, no-c-format
+msgid "Not signed in"
+msgstr "サインインしていません"
+
+#: src/ui/pages/sources.rs:45 src/ui/pages/sources.rs:46
+#: src/ui/pages/sources.rs:68 src/ui/pages/sources.rs:69
+#: src/ui/sources_ui.rs:23
+#, no-c-format
+msgid "Sources"
+msgstr "ソース"
+
+#: src/ui/pages/sources.rs:57
+#, no-c-format
+msgid "No Sources Yet"
+msgstr "ソースはまだありません"
+
+#: src/ui/pages/sources.rs:59
+#, no-c-format
+msgid ""
+"Sources bring music from servers and services into Jellyfesh. Install one "
+"from a .jfpkg file in Preferences."
+msgstr ""
+"ソースを使うと、サーバーやサービスの音楽を Jellyfesh で聴けます。設定で ."
+"jfpkg ファイルからインストールしてください。"
+
+#: src/ui/pages/sources.rs:62
+#, no-c-format
+msgid "Open Sources Settings"
+msgstr "ソースの設定を開く"
+
+#: src/ui/pages/sources.rs:71
+#, no-c-format
+msgid "Sources Settings"
+msgstr "ソースの設定"
+
+#: src/ui/pages/sources.rs:101 src/ui/prefs.rs:676
+#, no-c-format
+msgid "Off"
+msgstr "オフ"
+
+#: src/ui/pages/sources.rs:155
+#, no-c-format
+msgid "Load More"
+msgstr "さらに読み込む"
+
+#: src/ui/pages/sources.rs:174
+#, no-c-format
+msgid "This Source Did Not Answer"
+msgstr "ソースから応答がありません"
+
+#: src/ui/playerbar.rs:130
+#, no-c-format
+msgid "Player"
+msgstr "プレーヤー"
+
+#: src/ui/playerbar.rs:159
+#, no-c-format
+msgid "Open Now Playing: {title}"
+msgstr "再生画面を開く：{title}"
+
+#: src/ui/prefs.rs:224
+#, no-c-format
+msgid "Blue"
+msgstr "ブルー"
+
+#: src/ui/prefs.rs:225
+#, no-c-format
+msgid "Cyan"
+msgstr "シアン"
+
+#: src/ui/prefs.rs:226
+#, no-c-format
+msgid "Teal"
+msgstr "ティール"
+
+#: src/ui/prefs.rs:227
+#, no-c-format
+msgid "Green"
+msgstr "グリーン"
+
+#: src/ui/prefs.rs:228
+#, no-c-format
+msgid "Olive"
+msgstr "オリーブ"
+
+#: src/ui/prefs.rs:229
+#, no-c-format
+msgid "Orange"
+msgstr "オレンジ"
+
+#: src/ui/prefs.rs:230
+#, no-c-format
+msgid "Red"
+msgstr "レッド"
+
+#: src/ui/prefs.rs:231
+#, no-c-format
+msgid "Rose"
+msgstr "ローズ"
+
+#: src/ui/prefs.rs:232
+#, no-c-format
+msgid "Magenta"
+msgstr "マゼンタ"
+
+#: src/ui/prefs.rs:233
+#, no-c-format
+msgid "Violet"
+msgstr "バイオレット"
+
+#: src/ui/prefs.rs:241
+#, no-c-format
+msgid "Appearance"
+msgstr "外観"
+
+#: src/ui/prefs.rs:245 src/ui/prefs.rs:252 src/ui/prefs.rs:254
+#, no-c-format
+msgid "Theme"
+msgstr "テーマ"
+
+#: src/ui/prefs.rs:248
+#, no-c-format
+msgid "System"
+msgstr "システム"
+
+#: src/ui/prefs.rs:249
+#, no-c-format
+msgid "Light"
+msgstr "ライト"
+
+#: src/ui/prefs.rs:250
+#, no-c-format
+msgid "Dark"
+msgstr "ダーク"
+
+#: src/ui/prefs.rs:258 src/ui/prefs.rs:274
+#, no-c-format
+msgid "Accent Colour"
+msgstr "アクセントカラー"
+
+#: src/ui/prefs.rs:260
+#, no-c-format
+msgid "Follow the Artwork"
+msgstr "アートワークに合わせる"
+
+#: src/ui/prefs.rs:262
+#, no-c-format
+msgid "The accent and the Misty field take the hue of the album cover."
+msgstr "アクセントと Misty の背景がジャケットの色相になります。"
+
+#: src/ui/prefs.rs:286
+#, no-c-format
+msgid "Colour"
+msgstr "色"
+
+#: src/ui/prefs.rs:288 src/ui/prefs.rs:293
+#, no-c-format
+msgid "Custom Hue"
+msgstr "カスタムの色相"
+
+#: src/ui/prefs.rs:300
+#, no-c-format
+msgid "Glass"
+msgstr "ガラス"
+
+#: src/ui/prefs.rs:307 src/ui/prefs.rs:322
+#, no-c-format
+msgid "Transparency"
+msgstr "透明度"
+
+#: src/ui/prefs.rs:308
+msgctxt "transparency"
+msgid "Solid"
+msgstr "不透明"
+
+#: src/ui/prefs.rs:310
+msgctxt "transparency"
+msgid "Clear"
+msgstr "透明"
+
+#: src/ui/prefs.rs:324
+#, no-c-format
+msgid "Reduce Motion and Transparency"
+msgstr "動きと透明度を減らす"
+
+#: src/ui/prefs.rs:326
+#, no-c-format
+msgid "Solid surfaces instead of glass, and short fades instead of motion."
+msgstr "ガラスの代わりに不透明な面を使い、動きの代わりに短いフェードにします。"
+
+#: src/ui/prefs.rs:337
+#, no-c-format
+msgid ""
+"Lyrics come from a .ttml, .lrc or .vtt file with the same name as the song, "
+"or from its tags. Word-timed lyrics light up word by word."
+msgstr ""
+"歌詞は曲と同じ名前の .ttml・.lrc・.vtt ファイル、または曲のタグから読み込みま"
+"す。単語ごとのタイミングがある歌詞は、1 語ずつ光ります。"
+
+#: src/ui/prefs.rs:341
+#, no-c-format
+msgid "Artwork"
+msgstr "アートワーク"
+
+#: src/ui/prefs.rs:341
+#, no-c-format
+msgid "Misty"
+msgstr "Misty"
+
+#: src/ui/prefs.rs:342 src/ui/prefs.rs:344
+#, no-c-format
+msgid "Background"
+msgstr "背景"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Lyrics Size"
+msgstr "歌詞のサイズ"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Small"
+msgstr "小"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Medium"
+msgstr "中"
+
+#: src/ui/prefs.rs:345
+#, no-c-format
+msgid "Large"
+msgstr "大"
+
+#: src/ui/prefs.rs:347
+#, no-c-format
+msgid "Lyrics Alignment"
+msgstr "歌詞の配置"
+
+#: src/ui/prefs.rs:348
+msgctxt "alignment"
+msgid "Start"
+msgstr "左揃え"
+
+#: src/ui/prefs.rs:348
+msgctxt "alignment"
+msgid "Centre"
+msgstr "中央揃え"
+
+#: src/ui/prefs.rs:351
+#, no-c-format
+msgid "Show Translations"
+msgstr "翻訳を表示"
+
+#: src/ui/prefs.rs:353
+#, no-c-format
+msgid ""
+"A line in another language under each lyric line, when the lyrics have one."
+msgstr "歌詞に翻訳があるとき、各行の下に別の言語の行を表示します。"
+
+#: src/ui/prefs.rs:357
+#, no-c-format
+msgid "Show Romanization"
+msgstr "ローマ字を表示"
+
+#: src/ui/prefs.rs:359
+#, no-c-format
+msgid "How each line reads in Latin letters, when the lyrics have it."
+msgstr "歌詞にローマ字があるとき、各行の読みをラテン文字で表示します。"
+
+#: src/ui/prefs.rs:369
+#, no-c-format
+msgid "App Icon"
+msgstr "アプリのアイコン"
+
+#: src/ui/prefs.rs:371
+#, no-c-format
+msgid ""
+"Linux shows the Ice icon everywhere: GNOME takes one icon from the app’s "
+"metadata."
+msgstr ""
+"Linux ではどこでも Ice のアイコンを表示します。GNOME はアプリのメタデータか"
+"ら 1 つのアイコンだけを使います。"
+
+#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:768
+#, no-c-format
+msgid "{percent} %"
+msgstr "{percent}%"
+
+#: src/ui/prefs.rs:620 src/ui/prefs.rs:621
+#, no-c-format
+msgid "Equalizer"
+msgstr "イコライザ"
+
+#: src/ui/prefs.rs:623
+#, no-c-format
+msgid "Preset"
+msgstr "プリセット"
+
+#: src/ui/prefs.rs:626
+#, no-c-format
+msgid "Flat"
+msgstr "フラット"
+
+#: src/ui/prefs.rs:627
+#, no-c-format
+msgid "Bass Boost"
+msgstr "低音強調"
+
+#: src/ui/prefs.rs:628
+#, no-c-format
+msgid "Vocal"
+msgstr "ボーカル"
+
+#: src/ui/prefs.rs:629
+#, no-c-format
+msgid "Treble"
+msgstr "高音"
+
+#: src/ui/prefs.rs:630
+#, no-c-format
+msgid "Custom"
+msgstr "カスタム"
+
+#: src/ui/prefs.rs:649
+#, no-c-format
+msgid "{freq} Hz"
+msgstr "{freq} ヘルツ"
+
+#: src/ui/prefs.rs:673
+#, no-c-format
+msgid "Volume Levelling"
+msgstr "音量の均一化"
+
+#: src/ui/prefs.rs:674
+#, no-c-format
+msgid "ReplayGain evens out loudness using the tags in your files."
+msgstr "ReplayGain はファイルのタグを使って音量を揃えます。"
+
+#: src/ui/prefs.rs:676
+#, no-c-format
+msgid "ReplayGain"
+msgstr "ReplayGain"
+
+#: src/ui/prefs.rs:676
+#, no-c-format
+msgid "Track"
+msgstr "トラック"
+
+#: src/ui/prefs.rs:678
+#, no-c-format
+msgid "Preamp"
+msgstr "プリアンプ"
+
+#: src/ui/prefs.rs:679
+#, no-c-format
+msgid "Decibels added to every song"
+msgstr "すべての曲に加えるデシベル"
+
+#: src/ui/prefs.rs:686 src/ui/prefs.rs:688
+#, no-c-format
+msgid "Crossfade"
+msgstr "クロスフェード"
+
+#: src/ui/prefs.rs:689
+#, no-c-format
+msgid "Blend the end of a song into the next."
+msgstr "曲の終わりを次の曲へ重ねてつなぎます。"
+
+#: src/ui/prefs.rs:694
+#, no-c-format
+msgid "Seconds"
+msgstr "秒"
+
+#: src/ui/prefs.rs:696
+#, no-c-format
+msgid "Album Continuity"
+msgstr "アルバムの連続再生"
+
+#: src/ui/prefs.rs:697
+#, no-c-format
+msgid "Songs of the same album join without a fade."
+msgstr "同じアルバムの曲はフェードせずにつなぎます。"
+
+#: src/ui/prefs.rs:705
+#, no-c-format
+msgid "Output"
+msgstr "出力"
+
+#: src/ui/prefs.rs:705
+#, no-c-format
+msgid "Where the sound goes."
+msgstr "音を出す場所です。"
+
+#: src/ui/prefs.rs:851
+#, no-c-format
+msgid "Follows the system’s choice"
+msgstr "システムの選択に従います"
+
+#: src/ui/prefs.rs:900
+#, no-c-format
+msgid "Music Folders"
+msgstr "音楽フォルダ"
+
+#: src/ui/prefs.rs:901
+#, no-c-format
+msgid "Jellyfesh reads every audio file in these folders."
+msgstr ""
+"Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み込みます。"
+
+#: src/ui/prefs.rs:911 src/ui/prefs.rs:912
+#, no-c-format
+msgid "Add Folder"
+msgstr "フォルダを追加"
+
+#: src/ui/prefs.rs:917
+#, no-c-format
+msgid "Scanning"
+msgstr "スキャン"
+
+#: src/ui/prefs.rs:919 src/ui/window.rs:291
+#, no-c-format
+msgid "Rescan Library"
+msgstr "ライブラリを再スキャン"
+
+#: src/ui/prefs.rs:920
+#, no-c-format
+msgid "Look for new, changed and removed files."
+msgstr "新しいファイル、変更・削除されたファイルを探します。"
+
+#: src/ui/prefs.rs:922
+#, no-c-format
+msgid "Rescan"
+msgstr "再スキャン"
+
+#: src/ui/prefs.rs:937
+#, no-c-format
+msgid "Watch Folders"
+msgstr "フォルダを監視"
+
+#: src/ui/prefs.rs:938
+#, no-c-format
+msgid "Update the library when files change."
+msgstr "ファイルが変わったらライブラリを更新します。"
+
+#: src/ui/prefs.rs:945
+#, no-c-format
+msgid "Startup"
+msgstr "起動"
+
+#: src/ui/prefs.rs:947
+#, no-c-format
+msgid "Resume Playback"
+msgstr "再生を再開"
+
+#: src/ui/prefs.rs:948
+#, no-c-format
+msgid "Start playing where you left off when Jellyfesh opens."
+msgstr "Jellyfesh を開いたときに、前回の続きから再生します。"
+
+#: src/ui/prefs.rs:993
+#, no-c-format
+msgid "No folders yet"
+msgstr "フォルダはまだありません"
+
+#: src/ui/prefs.rs:994
+#, no-c-format
+msgid "Add a folder with music."
+msgstr "音楽のあるフォルダを追加してください。"
+
+#: src/ui/prefs.rs:1008
+#, no-c-format
+msgid "Remove Folder"
+msgstr "フォルダを削除"
+
+#: src/ui/prefs.rs:1034
+msgid "{n} file checked"
+msgid_plural "{n} files checked"
+msgstr[0] "{n} 個のファイルを確認済み"
+
+#: src/ui/prefs.rs:1041
+#, no-c-format
+msgid "Done: {added} added, {updated} updated, {removed} removed"
+msgstr "完了：追加 {added}、更新 {updated}、削除 {removed}"
+
+#: src/ui/rows.rs:278
+#, no-c-format
+msgid "Remove"
+msgstr "削除"
+
+#: src/ui/rows.rs:603
+#, no-c-format
+msgid "Play {title}"
+msgstr "{title} を再生"
+
+#: src/ui/sources_ui.rs:27
+#, no-c-format
+msgid "Community Plugins"
+msgstr "コミュニティプラグイン"
+
+#: src/ui/sources_ui.rs:29
+#, no-c-format
+msgid ""
+"Official sources are signed by Jellyfesh. Community plugins are made by "
+"others and are off unless you allow them."
+msgstr ""
+"公式ソースは Jellyfesh が署名しています。コミュニティプラグインは他の人が作っ"
+"たもので、許可しない限りオフのままです。"
+
+#: src/ui/sources_ui.rs:33
+#, no-c-format
+msgid "Allow Community Plugins"
+msgstr "コミュニティプラグインを許可"
+
+#: src/ui/sources_ui.rs:38
+#, no-c-format
+msgid "Installed"
+msgstr "インストール済み"
+
+#: src/ui/sources_ui.rs:39
+#, no-c-format
+msgid "Install from File…"
+msgstr "ファイルからインストール…"
+
+#: src/ui/sources_ui.rs:85
+#, no-c-format
+msgid "No sources installed"
+msgstr "ソースはインストールされていません"
+
+#: src/ui/sources_ui.rs:86
+#, no-c-format
+msgid "Install a source plugin from a .jfpkg file."
+msgstr ".jfpkg ファイルからソースのプラグインをインストールします。"
+
+#: src/ui/sources_ui.rs:119
+#, no-c-format
+msgid "Community"
+msgstr "コミュニティ"
+
+#: src/ui/sources_ui.rs:130
+#, no-c-format
+msgid "Enabled"
+msgstr "有効"
+
+#: src/ui/sources_ui.rs:165
+#, no-c-format
+msgid "Account"
+msgstr "アカウント"
+
+#: src/ui/sources_ui.rs:167
+#, no-c-format
+msgid "No sign-in needed"
+msgstr "サインインは不要です"
+
+#: src/ui/sources_ui.rs:173
+#, no-c-format
+msgid "Sign Out"
+msgstr "サインアウト"
+
+#: src/ui/sources_ui.rs:183
+#, no-c-format
+msgid "Sign In with QR Code"
+msgstr "QR コードでサインイン"
+
+#: src/ui/sources_ui.rs:184
+#, no-c-format
+msgid "Sign In in Browser"
+msgstr "ブラウザでサインイン"
+
+#: src/ui/sources_ui.rs:185
+#, no-c-format
+msgid "Paste Cookies"
+msgstr "Cookie を貼り付け"
+
+#: src/ui/sources_ui.rs:186 src/ui/sources_ui.rs:502
+#, no-c-format
+msgid "Sign In"
+msgstr "サインイン"
+
+#: src/ui/sources_ui.rs:187
+#, no-c-format
+msgid "Enter API Key"
+msgstr "API キーを入力"
+
+#: src/ui/sources_ui.rs:207
+#, no-c-format
+msgid "Settings"
+msgstr "設定"
+
+#: src/ui/sources_ui.rs:209
+#, no-c-format
+msgid "This plugin's settings could not be read: {error}"
+msgstr "このプラグインの設定を読み込めません：{error}"
+
+#: src/ui/sources_ui.rs:217 src/ui/sources_ui.rs:218
+#, no-c-format
+msgid "Uninstall"
+msgstr "アンインストール"
+
+#: src/ui/sources_ui.rs:326
+#, no-c-format
+msgid "Jellyfesh plugins"
+msgstr "Jellyfesh プラグイン"
+
+#: src/ui/sources_ui.rs:331
+#, no-c-format
+msgid "Install Plugin"
+msgstr "プラグインをインストール"
+
+#: src/ui/sources_ui.rs:348
+#, no-c-format
+msgid "Turn On “{name}”?"
+msgstr "「{name}」をオンにしますか？"
+
+#: src/ui/sources_ui.rs:349
+#, no-c-format
+msgid "Allow Community Plugins?"
+msgstr "コミュニティプラグインを許可しますか？"
+
+#: src/ui/sources_ui.rs:352
+#, no-c-format
+msgid "Community plugins are not made or checked by Jellyfesh."
+msgstr ""
+"コミュニティプラグインは Jellyfesh が作成・確認したものではありません。"
+
+#: src/ui/sources_ui.rs:355
+#, no-c-format
+msgid "They may break the terms of the service they connect to."
+msgstr "接続先サービスの規約に反する場合があります。"
+
+#: src/ui/sources_ui.rs:357
+#, no-c-format
+msgid "They may stop working at any time."
+msgstr "いつ使えなくなるかわかりません。"
+
+#: src/ui/sources_ui.rs:358
+#, no-c-format
+msgid "Use them for personal use only."
+msgstr "個人的な利用に限ってください。"
+
+#: src/ui/sources_ui.rs:363
+#, no-c-format
+msgid "I Understand, Allow"
+msgstr "理解したうえで許可"
+
+#: src/ui/sources_ui.rs:375
+#, no-c-format
+msgid "Sign In to {name}"
+msgstr "{name} にサインイン"
+
+#: src/ui/sources_ui.rs:447
+#, no-c-format
+msgid "Sign-in QR code"
+msgstr "サインイン用 QR コード"
+
+#: src/ui/sources_ui.rs:450
+#, no-c-format
+msgid "Scan the code with the {name} app on your phone."
+msgstr "スマートフォンの {name} アプリでコードを読み取ってください。"
+
+#: src/ui/sources_ui.rs:476
+#, no-c-format
+msgid "Continue in your browser. Come back here when you are done."
+msgstr "ブラウザで続けてください。終わったらここに戻ってください。"
+
+#: src/ui/sources_ui.rs:478
+#, no-c-format
+msgid "Open Browser Again"
+msgstr "ブラウザをもう一度開く"
+
+#: src/ui/sources_ui.rs:532
+#, no-c-format
+msgid "Signed in as {account}."
+msgstr "{account} としてサインインしました。"
+
+#: src/ui/sources_ui.rs:533
+#, no-c-format
+msgid "Done"
+msgstr "完了"
+
+#: src/ui/transport.rs:71
+#, no-c-format
+msgid "Next"
+msgstr "次へ"
+
+#: src/ui/transport.rs:73
+#, no-c-format
+msgid "Previous"
+msgstr "前へ"
+
+#: src/ui/transport.rs:106
+#, no-c-format
+msgid "Shuffle, on"
+msgstr "シャッフル：オン"
+
+#: src/ui/transport.rs:108
+#, no-c-format
+msgid "Shuffle, off"
+msgstr "シャッフル：オフ"
+
+#: src/ui/transport.rs:112
+#, no-c-format
+msgid "Repeat, off"
+msgstr "リピート：オフ"
+
+#: src/ui/transport.rs:113
+#, no-c-format
+msgid "Repeat all"
+msgstr "すべてリピート"
+
+#: src/ui/transport.rs:114
+#, no-c-format
+msgid "Repeat one"
+msgstr "1 曲リピート"
+
+#: src/ui/transport.rs:149
+#, no-c-format
+msgid "Volume"
+msgstr "音量"
+
+#: src/ui/transport.rs:200
+#, no-c-format
+msgid "Unmute"
+msgstr "ミュート解除"
+
+#: src/ui/widgets/preview.rs:243
+#, no-c-format
+msgid "{degrees}°"
+msgstr "{degrees}°"
+
+#: src/ui/widgets/seekbar.rs:472
+#, no-c-format
+msgid "{position} of {duration}"
+msgstr "{position} / {duration}"
+
+#: src/ui/window.rs:56
+msgctxt "sidebar"
+msgid "Home"
+msgstr "ホーム"
+
+#: src/ui/window.rs:57
+msgctxt "sidebar"
+msgid "Albums"
+msgstr "アルバム"
+
+#: src/ui/window.rs:58
+msgctxt "sidebar"
+msgid "Artists"
+msgstr "アーティスト"
+
+#: src/ui/window.rs:59
+msgctxt "sidebar"
+msgid "Songs"
+msgstr "曲"
+
+#: src/ui/window.rs:60
+msgctxt "sidebar"
+msgid "Playlists"
+msgstr "プレイリスト"
+
+#: src/ui/window.rs:61
+msgctxt "sidebar"
+msgid "Favourites"
+msgstr "お気に入り"
+
+#: src/ui/window.rs:62
+msgctxt "sidebar"
+msgid "Search"
+msgstr "検索"
+
+#: src/ui/window.rs:63
+msgctxt "sidebar"
+msgid "Sources"
+msgstr "ソース"
+
+#: src/ui/window.rs:147
+#, no-c-format
+msgid "Library sections"
+msgstr "ライブラリの項目"
+
+#: src/ui/window.rs:295
+#, no-c-format
+msgid "Keyboard Shortcuts"
+msgstr "キーボードショートカット"
+
+#: src/ui/window.rs:302 src/ui/window.rs:307
+#, no-c-format
+msgid "Main Menu"
+msgstr "メインメニュー"
+
+#: src/ui/window.rs:335
+#, no-c-format
+msgid "Add Music Folder"
+msgstr "音楽フォルダを追加"
+
+#: src/ui/window.rs:347
+#, no-c-format
+msgid "Adding the folder to your library…"
+msgstr "フォルダをライブラリに追加しています…"

@@ -1,0 +1,229 @@
+// Sources: the installed source plugins with their badges and accounts, and browsing a source's
+// catalogue page by page. Installing, signing in and settings live in Settings → Sources.
+
+import SwiftUI
+
+struct SourcesView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(SourcesStore.self) private var sources
+    @Environment(\.openSettings) private var openSettings
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        List {
+            PageHeader(title: String(localized: "Sources"), subtitle: nil) {
+                Button {
+                    model.showSettings(.sources, using: openSettings)
+                } label: {
+                    Label("Sources Settings", systemImage: "gearshape")
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.vertical, Tokens.Space.s4)
+            .trackListRow()
+            if sources.unavailable {
+                SourcesUnavailableNotice()
+                    .padding(.bottom, Tokens.Space.s3)
+                    .trackListRow()
+            }
+            ForEach(sources.plugins) { plugin in
+                if plugin.enabled && plugin.canBrowse {
+                    NavigationLink(value: Route.browse(plugin: plugin.id, node: nil, title: plugin.name)) {
+                        SourceRow(plugin: plugin)
+                    }
+                    .trackListRow()
+                } else {
+                    SourceRow(plugin: plugin)
+                        .trackListRow()
+                }
+            }
+        }
+        .fieldList()
+        .overlay {
+            if sources.plugins.isEmpty {
+                ContentUnavailableView {
+                    Label("No Sources Yet", systemImage: "antenna.radiowaves.left.and.right")
+                } description: {
+                    Text("Sources bring music from servers and services into Jellyfesh. Install one from a .jfpkg file in Settings.")
+                } actions: {
+                    Button("Open Sources Settings") {
+                        model.showSettings(.sources, using: openSettings)
+                    }
+                }
+            }
+        }
+        .navigationTitle(Text("Sources"))
+    }
+}
+
+/// A plugin with its badge line and account.
+struct SourceRow: View {
+    var plugin: SourcePlugin
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        HStack(spacing: Tokens.Space.s3) {
+            PluginIcon(plugin: plugin, size: 40)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(plugin.name)
+                    .typography(Tokens.TypeRoles.listTitle)
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                Text(CountText.joined([SourceText.badge(plugin), SourceText.account(plugin)]))
+                    .typography(Tokens.TypeRoles.listSecondary)
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
+            }
+            Spacer(minLength: 0)
+            if !plugin.enabled {
+                Text("Off")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(palette[Tokens.Ink.ink50])
+            }
+        }
+        .frame(height: Tokens.Player.rowHeight)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The plugin's own icon when it has one, else a generic glyph.
+struct PluginIcon: View {
+    var plugin: SourcePlugin
+    var size: CGFloat
+
+    var body: some View {
+        if let path = plugin.iconPath {
+            ArtworkView(source: .file(path), size: size, cornerRadius: Tokens.Radius.rMd,
+                        placeholder: "antenna.radiowaves.left.and.right")
+        } else {
+            ArtworkView(source: nil, size: size, cornerRadius: Tokens.Radius.rMd,
+                        placeholder: "antenna.radiowaves.left.and.right")
+        }
+    }
+}
+
+/// The badge and account lines of a source (ADR-0004, ADR-0012).
+enum SourceText {
+    static func badge(_ plugin: SourcePlugin) -> String {
+        var parts = [plugin.badge == .official ? String(localized: "Official") : String(localized: "Community · unofficial")]
+        if plugin.vendorPlayback {
+            parts.append(String(localized: "Vendor playback"))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    static func account(_ plugin: SourcePlugin) -> String? {
+        if let account = plugin.account {
+            return String(localized: "Signed in as \(account)")
+        }
+        return plugin.signInMethods.isEmpty ? nil : String(localized: "Not signed in")
+    }
+}
+
+/// Said once a source command answered that sources are not in this build of the core yet.
+struct SourcesUnavailableNotice: View {
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Tokens.Space.s3) {
+            Image(systemName: "clock.badge.checkmark")
+                .font(.system(size: 18))
+                .foregroundStyle(palette[Tokens.Semantic.info])
+            VStack(alignment: .leading, spacing: Tokens.Space.s1) {
+                Text("Sources Are on Their Way")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                Text("This build of the player cannot install, sign in to or browse sources yet. They arrive in an update.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(Tokens.Space.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// One container of a source's catalogue (`node` nil is its root), page by page.
+struct BrowseView: View {
+    var plugin: String
+    var node: String?
+    var title: String
+
+    @Environment(SourcesStore.self) private var sources
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(Router.self) private var router
+    @State private var model: BrowseModel?
+
+    var body: some View {
+        let items = model?.items ?? []
+        List {
+            PageHeader(title: title, subtitle: sources.plugin(plugin)?.name)
+                .padding(.vertical, Tokens.Space.s4)
+                .trackListRow()
+            ForEach(items) { item in
+                row(for: item)
+                    .trackListRow()
+            }
+            if let model, model.nextPage != nil {
+                HStack {
+                    Spacer()
+                    Button("Load More") { model.loadMore(sources) }
+                        .disabled(model.isLoading)
+                    Spacer()
+                }
+                .trackListRow()
+            }
+        }
+        .fieldList()
+        .overlay {
+            if let model {
+                if model.unavailable {
+                    SourcesUnavailableNotice()
+                        .frame(maxWidth: 520)
+                        .padding()
+                } else if let error = model.error, items.isEmpty {
+                    EmptyState(title: "This Source Did Not Answer", symbol: "exclamationmark.triangle", error: error)
+                } else if model.isLoading && items.isEmpty {
+                    ProgressView()
+                } else if items.isEmpty {
+                    EmptyState(title: "Nothing Here", symbol: "tray")
+                }
+            }
+        }
+        .navigationTitle(Text(title))
+        .task(id: "\(plugin)\u{1F}\(node ?? "")") {
+            let browse = BrowseModel(plugin: plugin, node: node)
+            model = browse
+            browse.start(sources)
+        }
+    }
+
+    @ViewBuilder private func row(for item: SourceResult) -> some View {
+        if item.kind == .track {
+            TrackRowView(item: TrackItem(result: item, artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) }),
+                         isCurrent: item.track != nil && item.track == playback.nowPlaying?.track,
+                         isPlaying: playback.isPlaying)
+                .onTapGesture(count: 2) { play(from: item) }
+                .contextMenu {
+                    TrackActionsMenu(items: [TrackItem(result: item, artwork: nil)])
+                }
+                .accessibilityAction { play(from: item) }
+        } else {
+            ResultRow(item: item, artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) })
+                .contextMenu {
+                    Button("Play") {
+                        playback.play(.source(plugin: item.source, id: item.itemID))
+                    }
+                    Button("Play Next") {
+                        playback.enqueue(.source(plugin: item.source, id: item.itemID), next: true)
+                    }
+                }
+        }
+    }
+
+    private func play(from item: SourceResult) {
+        guard let queue = model?.tracks(startingAt: item) else { return }
+        playback.play(tracks: queue.tracks, from: queue.start)
+    }
+}

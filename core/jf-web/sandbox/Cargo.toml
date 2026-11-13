@@ -1,0 +1,30 @@
+[package]
+name = "jf-web-sandbox"
+description = "The Rust side of Jellyfesh Web's plugin workers: package reading and signature checks, the crypto import and the network rules, from jf-plugin-model."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Loaded synchronously by every plugin worker (platforms/web/src/lib/plugins/worker.ts): the
+# WIT imports are synchronous, and WebCrypto is not (and lacks MD5, AES-ECB and RSA PKCS #1).
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-model = { workspace = true, features = ["crypto"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+url.workspace = true
+wasm-bindgen.workspace = true
+
+# Randomness for RSA padding and the crypto import: the browser's crypto.getRandomValues
+# (rsa 0.9 is on getrandom 0.2, the model on 0.4).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { workspace = true, features = ["wasm_js"] }
+getrandom02 = { package = "getrandom", version = "0.2.17", features = ["js"] }

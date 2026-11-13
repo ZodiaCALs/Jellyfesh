@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# Builds the macOS app from a clean checkout (docs/macos.md):
+#
+#   1. the Swift bindings and design tokens (cargo xtask bindings / tokens),
+#   2. jf-ffi as a static library for arm64 and x86_64, joined into an XCFramework,
+#   3. the official plugins (dist/plugins/*.jfpkg, made by plugins/release.sh) copied into the
+#      app's resources, which the app hands to the core to install on first start,
+#   4. the Xcode project (XcodeGen),
+#   5. a universal Release build of Jellyfesh.app, ad-hoc signed (ADR-0016: no Developer ID yet),
+#   6. a DMG with the app and a link to /Applications.
+#
+# Needs macOS with Xcode 16 or later, rustup (or both Rust targets installed), CMake (the core
+# builds libopus with it) and XcodeGen (installed with Homebrew when missing).
+#
+# Usage: platforms/macos/scripts/build.sh [--test] [--skip-core]
+#   --test        also run the unit tests (Debug, this Mac's architecture)
+#   --skip-core   reuse Generated/ from an earlier run (faster when only Swift changed)
+# Environment:
+#   JF_MACOS_OUT       output folder (default: platforms/macos/build)
+#   JF_PLUGINS_DIR     where the official .jfpkg packages are (default: dist/plugins)
+#   CARGO_TARGET_DIR   honoured as usual
+#
+# Written for the bash 3.2 that macOS ships.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+macos="$(cd "$here/.." && pwd)"
+root="$(cd "$macos/../.." && pwd)"
+out="${JF_MACOS_OUT:-$macos/build}"
+generated="$macos/Generated"
+targets="aarch64-apple-darwin x86_64-apple-darwin"
+run_tests=0
+skip_core=0
+for arg in "$@"; do
+  case "$arg" in
+    --test) run_tests=1 ;;
+    --skip-core) skip_core=1 ;;
+    -h | --help) sed -n '2,21p' "$0"; exit 0 ;;
+    *) echo "unknown argument: $arg" >&2; exit 2 ;;
+  esac
+done
+
+# The deployment target of the app (project.yml) applies to the Rust and C objects too.
+export MACOSX_DEPLOYMENT_TARGET=14.2
+version="$(sed -n 's/^    MARKETING_VERSION: //p' "$macos/project.yml")"
+mkdir -p "$out"
+
+step() { printf '\n==> %s\n' "$*"; }
+
+cd "$root"
+target_dir="${CARGO_TARGET_DIR:-$root/target}"
+link_flags=""
+
+if [ "$skip_core" -eq 0 ]; then
+  step "Rust targets"
+  if command -v rustup >/dev/null 2>&1; then
+    # shellcheck disable=SC2086
+    rustup target add $targets
+  fi
+  host="$(rustc -vV | sed -n 's/^host: //p')"
+
+  step "Bindings and tokens"
+  # Builds jf-ffi in release for this Mac (target/release) and writes Generated/.
+  cargo xtask bindings --lang swift --release
+  cargo xtask tokens --target swift
+
+  step "Static libraries"
+  libs=""
+  for target in $targets; do
+    if [ "$target" = "$host" ]; then
+      lib="$target_dir/release/libjf_ffi.a"
+    else
+      notes="$out/rustc-$target.log"
+      cargo rustc --release --locked --package jf-ffi --lib --crate-type staticlib \
+        --target "$target" -- --print native-static-libs 2>&1 | tee "$notes"
+      flags="$(sed -n 's/.*native-static-libs: //p' "$notes" | tail -n 1)"
+      if [ -n "$flags" ]; then link_flags="$flags"; fi
+      lib="$target_dir/$target/release/libjf_ffi.a"
+    fi
+    if [ ! -f "$lib" ]; then
+      echo "missing $lib" >&2
+      exit 1
+    fi
+    libs="$libs $lib"
+  done
+
+  step "XCFramework"
+  mkdir -p "$out/universal"
+  # shellcheck disable=SC2086
+  lipo -create $libs -output "$out/universal/libjf_ffi.a"
+  lipo -info "$out/universal/libjf_ffi.a"
+  rm -rf "$generated/JellyfeshCore.xcframework"
+  xcodebuild -create-xcframework -library "$out/universal/libjf_ffi.a" \
+    -output "$generated/JellyfeshCore.xcframework"
+  # The C half of the bindings, as a Clang module the Swift targets import (project.yml).
+  rm -rf "$generated/include"
+  mkdir -p "$generated/include"
+  cp "$generated/JellyfeshFFIFFI.h" "$generated/include/JellyfeshFFIFFI.h"
+  cp "$generated/JellyfeshFFIFFI.modulemap" "$generated/include/module.modulemap"
+  if [ -n "$link_flags" ]; then
+    printf '%s\n' "$link_flags" > "$generated/native-static-libs.txt"
+  fi
+elif [ -f "$generated/native-static-libs.txt" ]; then
+  link_flags="$(cat "$generated/native-static-libs.txt")"
+fi
+
+for file in JellyfeshFFI.swift Tokens.swift include/module.modulemap JellyfeshCore.xcframework; do
+  if [ ! -e "$generated/$file" ]; then
+    echo "Generated/$file is missing: run without --skip-core first" >&2
+    exit 1
+  fi
+done
+
+# Features of the core the generated bindings already have, as Swift compilation conditions
+# (Sources/CoreClient checks them; project.yml adds $(JF_SWIFT_CONDITIONS) to the app's).
+conditions=""
+if grep -q 'bundledPlugins' "$generated/JellyfeshFFI.swift"; then
+  conditions="JF_BUNDLED_PLUGINS"
+fi
+
+step "Official plugins"
+# Bundled in Resources/Plugins (project.yml: Generated/Plugins) and installed by the core on first
+# start; they also ship as separate .jfpkg downloads.
+plugins_dir="${JF_PLUGINS_DIR:-$root/dist/plugins}"
+rm -rf "$generated/Plugins"
+packages=""
+if [ -d "$plugins_dir" ]; then
+  packages="$(find "$plugins_dir" -maxdepth 1 -name '*.jfpkg' -type f | sort)"
+fi
+if [ -n "$packages" ]; then
+  mkdir -p "$generated/Plugins"
+  printf '%s\n' "$packages" | while IFS= read -r package; do
+    cp "$package" "$generated/Plugins/"
+    echo "bundling $(basename "$package")"
+  done
+  if [ -z "$conditions" ]; then
+    echo "note: these bindings have no CoreConfig.bundledPlugins yet; the app carries the" \
+      "packages but cannot hand them to the core" >&2
+  fi
+else
+  echo "note: no official plugins in $plugins_dir (run plugins/release.sh first);" \
+    "building without bundled plugins" >&2
+fi
+
+step "Xcode project"
+if ! command -v xcodegen >/dev/null 2>&1; then
+  brew install xcodegen
+fi
+(cd "$macos" && xcodegen generate --spec project.yml)
+
+# The system libraries rustc reported for the core's static library (project.yml has a default).
+extra=""
+if [ -n "$link_flags" ]; then
+  extra="JF_RUST_LDFLAGS=$link_flags"
+  echo "linking the core with: $link_flags"
+fi
+swift_conditions="JF_SWIFT_CONDITIONS=$conditions"
+if [ -n "$conditions" ]; then
+  echo "Swift conditions: $conditions"
+fi
+
+derived="$out/DerivedData"
+if [ "$run_tests" -eq 1 ]; then
+  step "Unit tests"
+  xcodebuild -project "$macos/Jellyfesh.xcodeproj" -scheme Jellyfesh -configuration Debug \
+    -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath "$derived" \
+    ${extra:+"$extra"} "$swift_conditions" test
+fi
+
+step "Release build"
+xcodebuild -project "$macos/Jellyfesh.xcodeproj" -scheme Jellyfesh -configuration Release \
+  -destination "generic/platform=macOS" -derivedDataPath "$derived" \
+  ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+  CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+  ${extra:+"$extra"} "$swift_conditions" build
+
+app="$derived/Build/Products/Release/Jellyfesh.app"
+echo "architectures: $(lipo -archs "$app/Contents/MacOS/Jellyfesh")"
+codesign --verify --strict --verbose=2 "$app"
+
+step "DMG"
+stage="$out/dmg"
+rm -rf "$stage"
+mkdir -p "$stage"
+ditto "$app" "$stage/Jellyfesh.app"
+ln -s /Applications "$stage/Applications"
+dmg="$out/Jellyfesh-$version.dmg"
+rm -f "$dmg"
+hdiutil create -volname "Jellyfesh $version" -srcfolder "$stage" -ov -format UDZO "$dmg"
+(cd "$out" && shasum -a 256 "$(basename "$dmg")" > "$(basename "$dmg").sha256")
+rm -rf "$stage"
+echo "built $dmg"

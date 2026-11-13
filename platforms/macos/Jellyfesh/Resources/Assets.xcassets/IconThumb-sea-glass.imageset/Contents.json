@@ -1,0 +1,18 @@
+{
+  "images": [
+    {
+      "filename": "thumb-sea-glass-64.png",
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "thumb-sea-glass-128.png",
+      "idiom": "universal",
+      "scale": "2x"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}

@@ -1,0 +1,145 @@
+name: Web
+
+# Jellyfesh Web (docs/web.md). On pull requests and pushes: builds core/jf-web and platforms/web
+# and runs their tests, end to end against mock Subsonic and Jellyfin servers. On pushes to main,
+# and when started by hand or by release.yml after a release: deploys the website
+# (tools/release/build_site.py) to GitHub Pages, with Jellyfesh Web at /app/ and the download list
+# of the latest release. Needs Pages enabled with "GitHub Actions" as the source. Secret:
+# JF_PLUGIN_SIGNING_KEY (as in release.yml); without it the plugins in the deployed app are
+# unsigned and show as Community.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: ALSA headers
+        # jf-web's tests compare its rules with jf-core's and jf-engine's, which link ALSA.
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platforms/web/package-lock.json
+      - name: Rust tests of the web crates and what they build on
+        run: >-
+          cargo test --locked -p jf-web -p jf-web-media -p jf-web-sandbox
+          -p jf-plugin-model -p jf-session
+      - name: wasm-bindgen CLI (the version in Cargo.lock)
+        run: >-
+          cargo install wasm-bindgen-cli --locked
+          --version "$(node platforms/web/scripts/build-wasm.mjs --bindgen-version)"
+      - name: Official plugins (unsigned)
+        run: plugins/release.sh
+      - name: Install
+        working-directory: platforms/web
+        run: npm ci
+      - name: Build (tokens, WebAssembly, plugins, app)
+        working-directory: platforms/web
+        run: npm run build
+      - name: Type check
+        working-directory: platforms/web
+        run: npm run check
+      - name: Unit tests
+        working-directory: platforms/web
+        run: npm test
+      - name: Chromium for the end-to-end tests
+        working-directory: platforms/web
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests against the mock servers
+        working-directory: platforms/web
+        run: npm run test:e2e
+      - name: Test report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: platforms/web/playwright-report
+          retention-days: 7
+
+  deploy:
+    name: Deploy the website
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: platforms/web/package-lock.json
+      - name: wasm-bindgen CLI (the version in Cargo.lock)
+        run: >-
+          cargo install wasm-bindgen-cli --locked
+          --version "$(node platforms/web/scripts/build-wasm.mjs --bindgen-version)"
+      - name: Official plugins, signed when the key is set
+        env:
+          JF_PLUGIN_SIGNING_KEY: ${{ secrets.JF_PLUGIN_SIGNING_KEY }}
+        run: plugins/release.sh
+      - name: Jellyfesh Web
+        working-directory: platforms/web
+        run: npm ci && npm run build
+      - name: Download list of the latest release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml', 'rb'))['workspace']['package']['version'])")
+          releases=""
+          tag=$(gh release list --limit 1 --exclude-drafts --json tagName --jq '.[0].tagName // empty' || true)
+          if [ -n "$tag" ] && gh release download "$tag" --pattern "jellyfesh-site-$tag.zip" --dir release; then
+            unzip -q "release/jellyfesh-site-$tag.zip" site/releases.json -d release
+            version="${tag#v}"
+            releases=release/site/releases.json
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "releases=$releases" >> "$GITHUB_OUTPUT"
+      - name: Third-party notices for the website
+        run: python3 tools/licenses/generate.py
+      - name: Website with Jellyfesh Web at /app/
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          RELEASES: ${{ steps.release.outputs.releases }}
+        shell: bash
+        run: |
+          python3 tools/release/build_site.py "$VERSION" --app platforms/web/dist \
+            ${RELEASES:+--releases "$RELEASES"}
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/site
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,27 @@
+[package]
+name = "jf-web-media"
+description = "Jellyfesh Web's media worker in WebAssembly: theme colours and baked backdrops from artwork, and the tags of dragged-in files."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+# Loaded on demand in a Web Worker by platforms/web (scripts/build-wasm.mjs builds it): image
+# scaling and tag reading are the largest code and are not needed for the first screen.
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-palette.workspace = true
+jf-tokens.workspace = true
+lofty.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+wasm-bindgen.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+image.workspace = true

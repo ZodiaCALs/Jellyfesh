@@ -1,0 +1,8 @@
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" xmlns:itunes="http://music.apple.com/lyric-ttml-internal" itunes:timing="Word" xml:lang="ja">
+  <body>
+    <div>
+      <p begin="00:02.000" end="00:05.000"><span begin="00:02.000" end="00:02.500">夜</span><span begin="00:02.500" end="00:03.000">空</span><span begin="00:03.000" end="00:03.400">に</span><span begin="00:03.400" end="00:04.000">星</span><span begin="00:04.000" end="00:05.000">ひとつ</span><span ttm:role="x-translation" xml:lang="en">One star in the night sky</span><span ttm:role="x-roman" xml:lang="ja-Latn"><span begin="00:02.000" end="00:02.500">yo</span><span begin="00:02.500" end="00:03.000">zora</span> <span begin="00:03.000" end="00:03.400">ni</span> <span begin="00:03.400" end="00:04.000">hoshi</span> <span begin="00:04.000" end="00:05.000">hitotsu</span></span></p>
+      <p begin="00:05.500" end="00:08.000"><span begin="00:05.500" end="00:06.200">雨</span><span begin="00:06.200" end="00:06.600">の</span><span begin="00:06.600" end="00:08.000">音</span><span ttm:role="x-translation" xml:lang="en">The sound of rain</span><span ttm:role="x-roman" xml:lang="ja-Latn">ame no oto</span></p>
+    </div>
+  </body>
+</tt>

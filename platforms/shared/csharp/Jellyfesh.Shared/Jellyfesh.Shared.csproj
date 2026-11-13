@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Reference ports of the drawing-time helpers (docs/core-api.md, "Drawing time") for the
+    Windows shell, on the Jellyfesh.Ffi types. Tested by ../Jellyfesh.Tests.
+
+    The app either references this project, pointing JfFfiProject at its own copy of
+    Jellyfesh.Ffi (platforms/windows/Generated/Jellyfesh.Ffi/Jellyfesh.Ffi.csproj), or compiles
+    the .cs files here directly.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Jellyfesh.Shared</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsAotCompatible>true</IsAotCompatible>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <JfFfiProject Condition="'$(JfFfiProject)' == ''">$(MSBuildThisFileDirectory)../../../../core/jf-ffi/csharp/Jellyfesh.Ffi/Jellyfesh.Ffi.csproj</JfFfiProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(JfFfiProject)" />
+  </ItemGroup>
+
+</Project>

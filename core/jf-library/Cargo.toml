@@ -1,0 +1,29 @@
+[package]
+name = "jf-library"
+description = "Music library: SQLite catalogue, scanner, tag reading, artwork cache and search."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rusqlite.workspace = true
+lofty.workspace = true
+walkdir.workspace = true
+blake3.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+unicode-normalization.workspace = true
+image.workspace = true
+fast_image_resize.workspace = true
+notify.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+hound.workspace = true
+flacenc.workspace = true

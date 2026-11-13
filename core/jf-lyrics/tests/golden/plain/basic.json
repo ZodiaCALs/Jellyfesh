@@ -1,0 +1,54 @@
+{
+  "language": null,
+  "timing": "unsynced",
+  "offset_ms": 0,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": null,
+      "end_ms": null,
+      "agent": null,
+      "text": "Snow on the railway sleepers",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": null,
+      "end_ms": null,
+      "agent": null,
+      "text": "A dog that knows the way home",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": null,
+      "end_ms": null,
+      "agent": null,
+      "text": "",
+      "words": [],
+      "background": [],
+      "direction": "auto"
+    },
+    {
+      "id": 3,
+      "start_ms": null,
+      "end_ms": null,
+      "agent": null,
+      "text": "Bread still warm inside my coat",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "plain",
+    "origin": null
+  },
+  "metadata": {}
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:itunes="http://music.apple.com/lyric-ttml-internal" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" itunes:timing="Line" xml:lang="en">
+  <head>
+    <metadata>
+      <ttm:title>Harbour Lights</ttm:title>
+    </metadata>
+  </head>
+  <body dur="00:00:30.000">
+    <div begin="00:00:01.000" end="00:00:12.000">
+      <p begin="00:00:01.000" end="00:00:04.500">Harbour lights are counting ships</p>
+      <p begin="00:00:04.500" end="00:00:08.000">Salt &amp; tar on every rope</p>
+      <p begin="00:00:09.000" end="00:00:12.000">
+        The tide comes in
+        and the gulls go quiet
+      </p>
+    </div>
+  </body>
+</tt>
