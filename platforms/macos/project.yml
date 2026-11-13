@@ -82,8 +82,9 @@ targets:
         group: Generated
         optional: true
       # Official plugins, installed by the core on first start (CoreConfig.bundledPlugins).
+      # No `group:` here: XcodeGen makes a folder's path relative to a custom group but keeps it
+      # relative to the project, so the app would copy Plugins/ instead of Generated/Plugins/.
       - path: Generated/Plugins
-        group: Generated
         type: folder
         buildPhase: resources
         optional: true

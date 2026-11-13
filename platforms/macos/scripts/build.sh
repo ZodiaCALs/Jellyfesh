@@ -123,12 +123,14 @@ step "Official plugins"
 # start; they also ship as separate .jfpkg downloads.
 plugins_dir="${JF_PLUGINS_DIR:-$root/dist/plugins}"
 rm -rf "$generated/Plugins"
+# The folder is always there, empty without packages: the project copies it into the app, and
+# Xcode fails on a folder that does not exist.
+mkdir -p "$generated/Plugins"
 packages=""
 if [ -d "$plugins_dir" ]; then
   packages="$(find "$plugins_dir" -maxdepth 1 -name '*.jfpkg' -type f | sort)"
 fi
 if [ -n "$packages" ]; then
-  mkdir -p "$generated/Plugins"
   printf '%s\n' "$packages" | while IFS= read -r package; do
     cp "$package" "$generated/Plugins/"
     echo "bundling $(basename "$package")"
