@@ -1,0 +1,58 @@
+[
+  {
+    "id": "classic",
+    "name": "Tide Classic",
+    "idea": "Tide's tile recoloured cyan to deep blue; solid white lines. The baseline to compare against.",
+    "palette": "solid",
+    "notes": ""
+  },
+  {
+    "id": "clearwater",
+    "name": "Clearwater",
+    "idea": "Same tile; the lines are 75% white, so the gradient shows through them.",
+    "palette": "translucent",
+    "notes": ""
+  },
+  {
+    "id": "glass-tide",
+    "name": "Glass Tide",
+    "idea": "Deep blue to cyan, reversed; every line is a frosted tube with a bright rim and a clear core.",
+    "palette": "glass",
+    "notes": ""
+  },
+  {
+    "id": "deep-sea",
+    "name": "Deep Sea",
+    "idea": "Navy lit by a cyan glow from above; glass lines tinted from white to cyan.",
+    "palette": "glass",
+    "notes": ""
+  },
+  {
+    "id": "depth",
+    "name": "Depth",
+    "idea": "Cyan surface falling to deep blue; translucent lines with an open, outlined core like Tide's bell.",
+    "palette": "hollow",
+    "notes": ""
+  },
+  {
+    "id": "midnight",
+    "name": "Midnight",
+    "idea": "Near-black navy with a cyan rim of light; cyan-tinted translucent lines.",
+    "palette": "translucent",
+    "notes": ""
+  },
+  {
+    "id": "aurora",
+    "name": "Aurora",
+    "idea": "Deep blue with cyan and azure glows in the corners, as Misty's field does; glass lines.",
+    "palette": "glass",
+    "notes": ""
+  },
+  {
+    "id": "lagoon",
+    "name": "Lagoon",
+    "idea": "The brightest: cyan to azure; 88% white lines with a deeper shadow for lift.",
+    "palette": "translucent",
+    "notes": ""
+  }
+]

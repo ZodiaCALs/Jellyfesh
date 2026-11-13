@@ -1,0 +1,54 @@
+{
+  "id": "org.jellyfesh.Jellyfesh",
+  "runtime": "org.gnome.Platform",
+  "runtime-version": "51",
+  "sdk": "org.gnome.Sdk",
+  "sdk-extensions": [
+    "org.freedesktop.Sdk.Extension.rust-stable"
+  ],
+  "command": "jellyfesh",
+  "finish-args": [
+    "--share=ipc",
+    "--share=network",
+    "--socket=wayland",
+    "--socket=fallback-x11",
+    "--socket=pulseaudio",
+    "--device=dri",
+    "--filesystem=xdg-music:ro",
+    "--own-name=org.mpris.MediaPlayer2.Jellyfesh",
+    "--talk-name=org.freedesktop.secrets"
+  ],
+  "build-options": {
+    "append-path": "/usr/lib/sdk/rust-stable/bin",
+    "env": {
+      "CARGO_HOME": "/run/build/jellyfesh/cargo",
+      "CARGO_TERM_COLOR": "never"
+    }
+  },
+  "cleanup": [
+    "/include",
+    "/lib/pkgconfig"
+  ],
+  "modules": [
+    {
+      "name": "jellyfesh",
+      "buildsystem": "simple",
+      "build-options": {
+        "//": "CI builds fetch crates over the network; a Flathub submission vendors them with flatpak-cargo-generator instead.",
+        "build-args": [
+          "--share=network"
+        ]
+      },
+      "build-commands": [
+        "cargo build --release --locked -p jellyfesh-gtk",
+        "platforms/linux/packaging/install.sh --binary target/release/jellyfesh --prefix /app"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../../.."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+id = "{{id}}"
+name = "{{title}}"
+version = "0.1.0"
+api_version = "1.0"
+author = "{{author}}"
+description = "A Jellyfesh source plugin"
+capabilities = ["search"]
+playback_mode = "stream"
+
+[network]
+# The address the person enters in the settings. Fixed hosts are written as
+# host names ("api.example.com", https only).
+allow = ["${settings.server_url}"]
+max_rps = 5
+
+[settings]
+schema = "settings.schema.json"

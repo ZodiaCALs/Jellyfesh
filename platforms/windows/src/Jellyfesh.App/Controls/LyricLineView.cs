@@ -1,0 +1,392 @@
+using System.ComponentModel;
+using System.Numerics;
+using Jellyfesh.App.Theming;
+using Jellyfesh.Core;
+using Jellyfesh.Drawing;
+using Microsoft.UI.Text;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Automation.Provider;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
+using Windows.Foundation;
+
+namespace Jellyfesh.App.Controls;
+
+/// <summary>
+/// One lyric line (after Apple Music, docs/design-controls.md "v0.0.4"). Lines still to come are
+/// lyrics.ink-inactive (ink-50), sung ones ink-30, both at lyrics.scale-inactive (96 %) scaled from
+/// their start edge; the active line is ink-90 at full size, and when it has word timing its words
+/// are laid out separately so the word being sung can be swept: a clip slides across a sung-colour
+/// copy of the word with a linear, compositor-run animation over the word's remaining duration
+/// (Misty MOT-06: progress is linear). Scale changes run dur-3 Fluid on the compositor. No app
+/// code runs per frame; the view is told again only when the word, the line or the anchor
+/// changes. Reduced motion lights the whole line at once. Scaling never reflows (lyrics tokens).
+/// </summary>
+public sealed partial class LyricLineView : StackPanel
+{
+    public static readonly DependencyProperty LineProperty =
+        DependencyProperty.Register(nameof(Line), typeof(LyricLineViewModel), typeof(LyricLineView), new PropertyMetadata(null, (d, e) => ((LyricLineView)d).OnLineChanged((LyricLineViewModel?)e.OldValue)));
+
+    public static readonly DependencyProperty LineFontSizeProperty =
+        DependencyProperty.Register(nameof(LineFontSize), typeof(double), typeof(LyricLineView), new PropertyMetadata(30.0, (d, _) => ((LyricLineView)d).ApplyTypography()));
+
+    private readonly TextBlock _plain = new() { TextWrapping = TextWrapping.WrapWholeWords, FontWeight = FontWeights.Bold, LineStackingStrategy = LineStackingStrategy.BlockLineHeight };
+    private readonly WrapPanel _words = new() { Visibility = Visibility.Collapsed };
+    private readonly TextBlock _background = new() { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.SemiBold, Visibility = Visibility.Collapsed };
+    private readonly TextBlock _translation = new() { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Medium };
+    private readonly TextBlock _romanization = new() { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Medium };
+    private readonly List<WordPart> _parts = [];
+    private Storyboard? _sweep;
+    private LyricsAlign _align;
+
+    public LyricLineView()
+    {
+        Spacing = 4;
+        Children.Add(_plain);
+        Children.Add(_words);
+        Children.Add(_background);
+        Children.Add(_romanization);
+        Children.Add(_translation);
+        AutomationProperties.SetAccessibilityView(_words, AccessibilityView.Raw);
+        Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent); // the whole line takes taps
+        Tapped += OnTapped;
+        SizeChanged += (_, _) => ApplyScale(animate: false);
+        ApplyTypography();
+    }
+
+    /// <summary>The person chose this line: seek to its start (ms).</summary>
+    public event EventHandler<uint>? SeekRequested;
+
+    public LyricLineViewModel? Line
+    {
+        get => (LyricLineViewModel?)GetValue(LineProperty);
+        set => SetValue(LineProperty, value);
+    }
+
+    public double LineFontSize
+    {
+        get => (double)GetValue(LineFontSizeProperty);
+        set => SetValue(LineFontSizeProperty, value);
+    }
+
+    /// <summary>Lyrics settings the panel passes down.</summary>
+    public bool ReduceMotion { get; set; }
+
+    /// <summary>The Lyrics alignment setting: the start edge or centred.</summary>
+    public LyricsAlign Align
+    {
+        get => _align;
+        set
+        {
+            if (_align != value)
+            {
+                _align = value;
+                ApplyAlignment();
+            }
+        }
+    }
+
+    /// <summary>Shows the sweep for this line, or ends it.</summary>
+    public void ApplySweep(SweepState? sweep)
+    {
+        StopSweep();
+        var line = Line;
+        if (line is not { IsActive: true } || _parts.Count == 0 || sweep is not { } s || s.Line != line.Index)
+        {
+            return; // what is sung stays as last shown
+        }
+
+        for (var i = 0; i < _parts.Count; i++)
+        {
+            _parts[i].Show(i < s.Word ? 1 : i > s.Word ? 0 : s.Progress);
+        }
+
+        if (s.Running && s.Word < _parts.Count && s.Remaining > TimeSpan.Zero && !ReduceMotion)
+        {
+            _sweep = _parts[s.Word].Animate(s.Remaining);
+            _sweep?.Begin();
+        }
+    }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new LyricLinePeer(this);
+
+    private void OnTapped(object sender, TappedRoutedEventArgs e) => RequestSeek();
+
+    private void RequestSeek()
+    {
+        if (Line?.StartMs is { } start)
+        {
+            SeekRequested?.Invoke(this, start);
+        }
+    }
+
+    private void OnLineChanged(LyricLineViewModel? old)
+    {
+        if (old is not null)
+        {
+            old.PropertyChanged -= OnLinePropertyChanged;
+        }
+
+        StopSweep();
+        _parts.Clear();
+        _words.Children.Clear();
+        var line = Line;
+        if (line is null)
+        {
+            return;
+        }
+
+        line.PropertyChanged += OnLinePropertyChanged;
+        _plain.Text = line.IsInstrumental ? "• • •" : line.Text;
+        _background.Text = line.BackgroundText ?? string.Empty;
+        _background.Visibility = line.BackgroundText is null ? Visibility.Collapsed : Visibility.Visible;
+        _translation.Text = line.Translation ?? string.Empty;
+        _romanization.Text = line.Romanization ?? string.Empty;
+        FlowDirection = line.Direction == TextDirection.Rtl ? FlowDirection.RightToLeft : FlowDirection.LeftToRight;
+        AutomationProperties.SetName(this, line.Text);
+        ApplyAlignment();
+        ApplyTypography();
+        UpdateAuxVisibility();
+        UpdateActive();
+        ApplyScale(animate: false);
+    }
+
+    private void OnLinePropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(LyricLineViewModel.IsActive):
+                UpdateActive();
+                break;
+            case nameof(LyricLineViewModel.Role):
+                UpdateInk();
+                ApplyScale(animate: !ReduceMotion);
+                break;
+            case nameof(LyricLineViewModel.TranslationVisible) or nameof(LyricLineViewModel.RomanizationVisible):
+                UpdateAuxVisibility();
+                break;
+        }
+    }
+
+    private void UpdateAuxVisibility()
+    {
+        _translation.Visibility = Line is { TranslationVisible: true } ? Visibility.Visible : Visibility.Collapsed;
+        _romanization.Visibility = Line is { RomanizationVisible: true } ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void UpdateActive()
+    {
+        var line = Line;
+        var active = line?.IsActive == true;
+        UpdateInk();
+        if (FrameworkElementAutomationPeer.FromElement(this) is { } peer)
+        {
+            peer.RaisePropertyChangedEvent(SelectionItemPatternIdentifiers.IsSelectedProperty, !active, active);
+        }
+
+        if (active && line is { HasWords: true } && !ReduceMotion)
+        {
+            if (_parts.Count == 0)
+            {
+                BuildWords(line);
+            }
+
+            foreach (var part in _parts)
+            {
+                part.Show(0);
+            }
+
+            _plain.Visibility = Visibility.Collapsed;
+            _words.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            StopSweep();
+            _plain.Visibility = Visibility.Visible;
+            _words.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    /// <summary>ink-90 for the active line, ink-30 once sung, lyrics.ink-inactive (ink-50) still to come.</summary>
+    private void UpdateInk()
+    {
+        var res = Application.Current.Resources;
+        var role = Line?.IsActive == true ? LyricLineRole.Active : Line?.Role ?? LyricLineRole.Upcoming;
+        var ink = (Brush)res[role switch
+        {
+            LyricLineRole.Active => "JfInk90",
+            LyricLineRole.Sung => "JfInk30",
+            _ => "JfInk50",
+        }];
+        _plain.Foreground = ink;
+        _translation.Foreground = ink;
+        _romanization.Foreground = ink;
+        _background.Foreground = (Brush)res[role == LyricLineRole.Sung ? "JfInk30" : "JfInk50"];
+    }
+
+    /// <summary>Full size for the active line, 96 % for the others, from the start edge (the centre when centred).</summary>
+    private void ApplyScale(bool animate)
+    {
+        var role = Line?.IsActive == true ? LyricLineRole.Active : Line?.Role ?? LyricLineRole.Upcoming;
+        var x = _align == LyricsAlign.Center ? ActualWidth / 2 : 0; // FlowDirection mirrors the start edge
+        CenterPoint = new Vector3((float)x, (float)(ActualHeight / 2), 0);
+        var duration = animate ? TokenValues.Duration(3) : TimeSpan.Zero;
+        Motion.Scale(this, (float)NowPlayingMotion.LineScale(role), duration, TokenValues.Fluid);
+    }
+
+    /// <summary>The Lyrics alignment setting; a second singer in a duet keeps to the other side when lines start at the edge.</summary>
+    private void ApplyAlignment()
+    {
+        var centre = _align == LyricsAlign.Center;
+        var text = centre ? TextAlignment.Center : TextAlignment.Start;
+        _plain.TextAlignment = _background.TextAlignment = _translation.TextAlignment = _romanization.TextAlignment = text;
+        _words.HorizontalAlignment = centre ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        HorizontalAlignment = !centre && Line?.IsAlternateVoice == true ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        ApplyScale(animate: false);
+    }
+
+    private void BuildWords(LyricLineViewModel line)
+    {
+        var res = Application.Current.Resources;
+        var unsung = (Brush)res["JfInk70"];
+        var sung = (Brush)res["JfInk90"];
+        for (var i = 0; i < line.Words.Count; i++)
+        {
+            var w = line.Words[i];
+            var text = w.JoinsNext || i == line.Words.Count - 1 ? w.Text : w.Text + " ";
+            var part = new WordPart(text, unsung, sung, line.Direction == TextDirection.Rtl);
+            part.Apply(LineFontSize, LineHeight(line));
+            _parts.Add(part);
+            _words.Children.Add(part.Root);
+        }
+    }
+
+    private void ApplyTypography()
+    {
+        var size = LineFontSize;
+        var height = LineHeight(Line);
+        _plain.FontSize = size;
+        _plain.LineHeight = size * height;
+        foreach (var part in _parts)
+        {
+            part.Apply(size, height);
+        }
+
+        // Translation 18 and romanization 15 at a 30 px line, scaled with it (lyrics tokens).
+        _translation.FontSize = Math.Round(size * 0.6);
+        _romanization.FontSize = Math.Round(size * 0.5);
+        _background.FontSize = Math.Round(size * 0.6);
+    }
+
+    private static double LineHeight(LyricLineViewModel? line) => line?.IsCjk == true ? 1.6 : 1.3;
+
+    private void StopSweep()
+    {
+        _sweep?.Stop();
+        _sweep = null;
+    }
+
+    /// <summary>
+    /// Lyric lines read as a list whose current line is selected (architecture §12); selecting a
+    /// line with Narrator seeks to it.
+    /// </summary>
+    private sealed partial class LyricLinePeer(LyricLineView owner) : FrameworkElementAutomationPeer(owner), ISelectionItemProvider
+    {
+        public bool IsSelected => owner.Line?.IsActive == true;
+
+        public IRawElementProviderSimple? SelectionContainer => null;
+
+        public void AddToSelection()
+        {
+        }
+
+        public void RemoveFromSelection()
+        {
+        }
+
+        public void Select() => owner.RequestSeek();
+
+        protected override AutomationControlType GetAutomationControlTypeCore() => AutomationControlType.ListItem;
+
+        protected override string GetClassNameCore() => nameof(LyricLineView);
+
+        protected override object? GetPatternCore(PatternInterface patternInterface) =>
+            patternInterface == PatternInterface.SelectionItem ? this : base.GetPatternCore(patternInterface);
+    }
+
+    /// <summary>A word: an unsung copy and a sung copy whose clip slides open.</summary>
+    private sealed class WordPart
+    {
+        private readonly TextBlock _base;
+        private readonly TextBlock _lit;
+        private readonly TranslateTransform _slide = new();
+        private readonly RectangleGeometry _clip;
+        private readonly bool _rtl;
+        private double _progress;
+
+        public WordPart(string text, Brush unsung, Brush sung, bool rtl)
+        {
+            _rtl = rtl;
+            _base = new TextBlock { Text = text, Foreground = unsung, FontWeight = FontWeights.Bold, LineStackingStrategy = LineStackingStrategy.BlockLineHeight };
+            _lit = new TextBlock { Text = text, Foreground = sung, FontWeight = FontWeights.Bold, LineStackingStrategy = LineStackingStrategy.BlockLineHeight };
+            _clip = new RectangleGeometry { Transform = _slide };
+            _lit.Clip = _clip;
+            Root = new Grid { Children = { _base, _lit } };
+            AutomationProperties.SetAccessibilityView(Root, AccessibilityView.Raw);
+            _lit.SizeChanged += (_, e) =>
+            {
+                _clip.Rect = new Rect(0, 0, e.NewSize.Width, e.NewSize.Height);
+                Show(_progress);
+            };
+        }
+
+        public Grid Root { get; }
+
+        public void Apply(double size, double lineHeight)
+        {
+            _base.FontSize = _lit.FontSize = size;
+            _base.LineHeight = _lit.LineHeight = size * lineHeight;
+        }
+
+        /// <summary>Shows the word sung up to <paramref name="progress"/> (0 to 1), without animation.</summary>
+        public void Show(double progress)
+        {
+            _progress = Math.Clamp(progress, 0, 1);
+            _slide.X = Offset(_progress);
+        }
+
+        /// <summary>A linear sweep from the current progress to the end over <paramref name="remaining"/>.</summary>
+        public Storyboard? Animate(TimeSpan remaining)
+        {
+            var width = _lit.ActualWidth;
+            if (width <= 0)
+            {
+                return null;
+            }
+
+            var animation = new DoubleAnimation
+            {
+                From = Offset(_progress),
+                To = 0,
+                Duration = new Duration(remaining),
+                EnableDependentAnimation = false,
+            };
+            Storyboard.SetTarget(animation, _slide);
+            Storyboard.SetTargetProperty(animation, "X");
+            var storyboard = new Storyboard();
+            storyboard.Children.Add(animation);
+            storyboard.Completed += (_, _) => Show(1);
+            return storyboard;
+        }
+
+        private double Offset(double progress)
+        {
+            var hidden = (1 - progress) * _lit.ActualWidth;
+            return _rtl ? hidden : -hidden;
+        }
+    }
+}

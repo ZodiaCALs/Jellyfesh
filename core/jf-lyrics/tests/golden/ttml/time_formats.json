@@ -1,0 +1,84 @@
+{
+  "language": null,
+  "timing": "line",
+  "offset_ms": 0,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 1250,
+      "end_ms": 2500,
+      "agent": null,
+      "text": "Full clock time",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 3000,
+      "end_ms": 4750,
+      "agent": null,
+      "text": "Minutes and seconds",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 5500,
+      "end_ms": 6125,
+      "agent": null,
+      "text": "Bare seconds",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 3,
+      "start_ms": 7250,
+      "end_ms": 8500,
+      "agent": null,
+      "text": "Offset seconds with a duration in milliseconds",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 4,
+      "start_ms": 9000,
+      "end_ms": 9360,
+      "agent": null,
+      "text": "Offset minutes and hours",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 5,
+      "start_ms": 10200,
+      "end_ms": 11000,
+      "agent": null,
+      "text": "Frames at twenty-five per second",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 6,
+      "start_ms": 12000,
+      "end_ms": null,
+      "agent": null,
+      "text": "An open ending",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "ttml",
+    "origin": null
+  },
+  "metadata": {}
+}

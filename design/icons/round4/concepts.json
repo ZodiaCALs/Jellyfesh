@@ -1,0 +1,122 @@
+[
+  {
+    "id": "original",
+    "name": "Original B",
+    "idea": "Cyan to deep blue; ice-to-cyan lines. The approved construction.",
+    "palette": {
+      "tile_top": "#13c0d4",
+      "tile_bottom": "#0a2a81",
+      "line_top": "#d1f7fb",
+      "line_bottom": "#13c0d4"
+    },
+    "notes": ""
+  },
+  {
+    "id": "navy-tide",
+    "name": "Navy Tide",
+    "idea": "Aqua into navy: darker and more serious, the lines glow more.",
+    "palette": {
+      "tile_top": "#00a5bd",
+      "tile_bottom": "#041d50",
+      "line_top": "#d1f7fb",
+      "line_bottom": "#73dee9"
+    },
+    "notes": ""
+  },
+  {
+    "id": "royal",
+    "name": "Royal",
+    "idea": "Sky cyan into royal blue; the bluest of the set.",
+    "palette": {
+      "tile_top": "#29aed4",
+      "tile_bottom": "#0f278e",
+      "line_top": "#d1f6ff",
+      "line_bottom": "#81d1f1"
+    },
+    "notes": ""
+  },
+  {
+    "id": "teal-deep",
+    "name": "Teal Deep",
+    "idea": "Teal into deep sea blue; greener and calmer.",
+    "palette": {
+      "tile_top": "#2eb4b0",
+      "tile_bottom": "#003958",
+      "line_top": "#d1f8f4",
+      "line_bottom": "#67d2cc"
+    },
+    "notes": ""
+  },
+  {
+    "id": "sea-glass",
+    "name": "Sea Glass",
+    "idea": "Pale aqua into teal-blue; the softest, most Misty-like.",
+    "palette": {
+      "tile_top": "#79d1be",
+      "tile_bottom": "#005874",
+      "line_top": "#e1fcf6",
+      "line_bottom": "#95e3d3"
+    },
+    "notes": ""
+  },
+  {
+    "id": "electric",
+    "name": "Electric",
+    "idea": "Vivid cyan into electric blue; the most saturated, loud in a dock.",
+    "palette": {
+      "tile_top": "#00d7e8",
+      "tile_bottom": "#0049c6",
+      "line_top": "#eafdff",
+      "line_bottom": "#6ce6f3"
+    },
+    "notes": ""
+  },
+  {
+    "id": "steel",
+    "name": "Steel",
+    "idea": "Desaturated blue-grey with cyan lines; quiet and professional.",
+    "palette": {
+      "tile_top": "#7299ab",
+      "tile_bottom": "#192f46",
+      "line_top": "#e1f2f8",
+      "line_bottom": "#7dccda"
+    },
+    "notes": ""
+  },
+  {
+    "id": "abyss",
+    "name": "Abyss (dark)",
+    "idea": "Navy to near-black with a cyan glow: a dark appearance for macOS 26 and themed docks.",
+    "palette": {
+      "tile_top": "#002d5e",
+      "tile_bottom": "#030d1e",
+      "line_top": "#73dee9",
+      "line_bottom": "#13c0d4"
+    },
+    "notes": ""
+  },
+  {
+    "id": "ice",
+    "name": "Ice (light)",
+    "idea": "Ice white to pale cyan with deep blue lines: a light appearance.",
+    "palette": {
+      "tile_top": "#e7f9fd",
+      "tile_bottom": "#a4dcea",
+      "line_top": "#0058a3",
+      "line_bottom": "#032e84"
+    },
+    "notes": ""
+  },
+  {
+    "id": "lagoon",
+    "name": "Lagoon",
+    "idea": "Bright lagoon into azure with white lines and a deeper shadow.",
+    "palette": {
+      "tile_top": "#85e3e8",
+      "tile_bottom": "#0077c2",
+      "line_top": "#ffffff",
+      "line_bottom": "#d1f7fb"
+    },
+    "notes": ""
+  }
+]

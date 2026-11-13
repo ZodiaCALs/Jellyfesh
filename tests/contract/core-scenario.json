@@ -1,0 +1,36 @@
+{
+  "about": "End-to-end scenario every binding replays (Rust through JellyfeshCore and the C ABI, Kotlin through UniFFI on the JVM, C# through the C ABI; Swift once a toolchain runs it). 1. Write the tones as 16-bit stereo WAV files into a folder; start a core with temporary data and cache folders and `config`; set a listener. 2. Send AddRoot for the folder (it adds and scans it) and wait for Scan Finished: report.added is expect.scan_added. 3. tracks sorted by Path gives the library ids; search_library(search.text, search.limit) gives search.titles; roots is the folder. 4. CreatePlaylist(playlist.name, those tracks); the PlaylistCreated event whose request is the id send returned names the playlist: playlist(id) has that name and entry count, playlist_entries(id, 0, 50) gives expect.playlist_titles, playlists contains it. 5. SetFavorite(the track titled `favorite`, true); poll is_favorite (every poll_ms) until true; favorites(0, 50) gives expect.favorite_titles. 6. export_playlist(id, <temporary folder>/playlist.export_file) writes a file containing every playlist.export_contains. 7. PlayCollection(Playlist id, start 0, no shuffle) and wait for a Playback event with expect.final_status. The titles of the non-null NowPlaying events, consecutive repeats of the same uid counted once (a faster-than-real-time output can announce an entry twice), are expect.now_playing_titles. Once no event has arrived for quiet_ms, the last Playback, Queue and NowPlaying events equal the snapshot's slices and queue.len is expect.queue_len. 8. Poll recently_played(50) until its distinct titles, sorted, are expect.played_titles. 9. albums_sorted(Title, false, 0, 50) succeeds (the tones have no album tag, so it is empty) and artwork_thumbnail(unknown_artwork_hash, 128) is null. 10. shutdown: queries fail with ShutDown, send returns 0, snapshot still returns the last state, and no event arrives.",
+  "version": 2,
+  "sample_rate": 44100,
+  "tones": [
+    { "file": "01 Harbor.wav", "frequency_hz": 440.0, "seconds": 0.5 },
+    { "file": "02 Lantern.wav", "frequency_hz": 660.0, "seconds": 0.5 }
+  ],
+  "config": {
+    "output": { "type": "Null", "realtime": false },
+    "buffer_ms": 200,
+    "restore_session": false,
+    "persist_session": false,
+    "watch_folders": false
+  },
+  "search": { "text": "harbor", "limit": 10, "titles": ["01 Harbor"] },
+  "playlist": {
+    "name": "Evening",
+    "export_file": "evening.m3u8",
+    "export_contains": ["#EXTM3U", "01 Harbor.wav", "02 Lantern.wav"]
+  },
+  "favorite": "01 Harbor",
+  "unknown_artwork_hash": "0000000000000000",
+  "expect": {
+    "scan_added": 2,
+    "playlist_titles": ["01 Harbor", "02 Lantern"],
+    "favorite_titles": ["01 Harbor"],
+    "now_playing_titles": ["01 Harbor", "02 Lantern"],
+    "played_titles": ["01 Harbor", "02 Lantern"],
+    "final_status": "Ended",
+    "queue_len": 2
+  },
+  "timeout_ms": 30000,
+  "quiet_ms": 500,
+  "poll_ms": 20
+}

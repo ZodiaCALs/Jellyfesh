@@ -1,0 +1,100 @@
+{
+  "language": null,
+  "timing": "word",
+  "offset_ms": 0,
+  "agents": [
+    {
+      "id": "v1",
+      "name": "Choir",
+      "kind": "person"
+    }
+  ],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 1000,
+      "end_ms": 4000,
+      "agent": null,
+      "text": "Lift your voice up high",
+      "words": [
+        {
+          "start_ms": 1000,
+          "end_ms": 1500,
+          "text": "Lift",
+          "joins_next": false
+        },
+        {
+          "start_ms": 1500,
+          "end_ms": 2000,
+          "text": "your",
+          "joins_next": false
+        },
+        {
+          "start_ms": 2000,
+          "end_ms": 2600,
+          "text": "voice",
+          "joins_next": false
+        },
+        {
+          "start_ms": 2600,
+          "end_ms": 3200,
+          "text": "up",
+          "joins_next": false
+        },
+        {
+          "start_ms": 3200,
+          "end_ms": 4000,
+          "text": "high",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 4500,
+      "end_ms": 7000,
+      "agent": "v1",
+      "text": "声を合わせて",
+      "words": [
+        {
+          "start_ms": 4500,
+          "end_ms": 5000,
+          "text": "声",
+          "joins_next": true
+        },
+        {
+          "start_ms": 5000,
+          "end_ms": 5500,
+          "text": "を",
+          "joins_next": true
+        },
+        {
+          "start_ms": 5500,
+          "end_ms": 7000,
+          "text": "合わせて",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 7500,
+      "end_ms": 9000,
+      "agent": null,
+      "text": "No inline stamps here",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "webvtt",
+    "origin": null
+  },
+  "metadata": {}
+}

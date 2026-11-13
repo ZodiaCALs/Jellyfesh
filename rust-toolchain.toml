@@ -1,0 +1,5 @@
+[toolchain]
+channel = "1.97.0"
+components = ["rustfmt", "clippy"]
+# Plugins and the plugin-host tests build WebAssembly components (ADR-0003).
+targets = ["wasm32-unknown-unknown"]

@@ -1,0 +1,70 @@
+//! {{title}}: a Jellyfesh source plugin.
+//!
+//! It searches a JSON API at the server address from its settings. Replace
+//! the request and the shape of the answer with your service's, then add
+//! capabilities to `manifest.toml` and implement the matching [`Plugin`]
+//! methods (browse, resolve_stream, lyrics, artwork, auth, …). Everything
+//! left out answers `unsupported`.
+
+use std::cell::RefCell;
+
+use jf_plugin_sdk::prelude::*;
+use serde::Deserialize;
+
+struct {{type}};
+
+thread_local! {
+    /// The server address from the settings (`settings.schema.json`). An
+    /// instance can be restarted at any time: keep anything that must last
+    /// in `kv`, and credentials in `kv::secret`.
+    static SERVER: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+fn server() -> Result<String> {
+    let url = SERVER.with(|s| s.borrow().clone());
+    if url.is_empty() {
+        return Err(PluginError::invalid_input(
+            "Enter the server address in this source's settings.",
+        ));
+    }
+    Ok(url.trim_end_matches('/').to_string())
+}
+
+/// One search result as the service sends it.
+#[derive(Deserialize)]
+struct Hit {
+    id: String,
+    title: String,
+    artist: Option<String>,
+    duration_ms: Option<u32>,
+}
+
+impl Plugin for {{type}} {
+    fn capabilities() -> Vec<Capability> {
+        vec![Capability::Search]
+    }
+
+    fn settings_changed(settings: &serde_json::Value) -> Result<()> {
+        let url = settings["server_url"].as_str().unwrap_or_default().to_string();
+        SERVER.with(|s| *s.borrow_mut() = url);
+        Ok(())
+    }
+
+    fn search(query: String, _filters: SearchFilters, page: PageRequest) -> Result<ItemPage> {
+        let hits: Vec<Hit> = http::Request::get(format!("{}/api/search", server()?))
+            .query(&[("q", &query), ("limit", &page.limit.to_string())])
+            .send_json()?;
+        let items = hits
+            .into_iter()
+            .map(|hit| {
+                let mut item = Item::new(ItemKind::Track, hit.id, hit.title);
+                item.artist = hit.artist;
+                item.duration_ms = hit.duration_ms;
+                item
+            })
+            .collect();
+        Ok(ItemPage::new(items))
+    }
+}
+
+jf_plugin_sdk::export_plugin!({{type}});

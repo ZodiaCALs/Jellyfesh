@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English (the source language). Translations: values-zh-rCN, values-zh-rTW, values-ja. Terms
+     follow the Linux app's catalogues (platforms/linux/po) so the platforms read alike. -->
+<resources>
+    <string name="app_name" translatable="false">Jellyfesh</string>
+
+    <!-- Start -->
+    <string name="startup_failed_title">Jellyfesh Could Not Start</string>
+    <string name="startup_failed_body">The music library could not be opened: %1$s</string>
+
+    <!-- Tabs and library sections -->
+    <string name="tab_home">Home</string>
+    <string name="tab_library">Library</string>
+    <string name="tab_search">Search</string>
+    <string name="tab_sources">Sources</string>
+    <string name="section_albums">Albums</string>
+    <string name="section_artists">Artists</string>
+    <string name="section_songs">Songs</string>
+    <string name="section_playlists">Playlists</string>
+    <string name="section_favourites">Favourites</string>
+    <string name="a11y_library_sections">Library sections</string>
+
+    <!-- Actions -->
+    <string name="action_cancel">Cancel</string>
+    <string name="action_more">More</string>
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_done">Done</string>
+    <string name="action_save">Save</string>
+    <string name="action_create">Create</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_retry">Try Again</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_play">Play</string>
+    <string name="action_shuffle">Shuffle</string>
+    <string name="action_play_next">Play Next</string>
+    <string name="action_play_last">Play Last</string>
+    <string name="action_add_to_playlist">Add to Playlist…</string>
+    <string name="action_remove_from_playlist">Remove from Playlist</string>
+    <string name="action_favourite">Add to Favourites</string>
+    <string name="action_unfavourite">Remove from Favourites</string>
+    <string name="action_go_to_album">Go to Album</string>
+    <string name="action_load_more">Load More</string>
+    <string name="action_allow_music">Allow Access to Music</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_add_folder">Add Folder…</string>
+    <string name="action_find">Find</string>
+    <string name="action_rescan">Rescan</string>
+    <string name="action_install_plugin">Install from File…</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="action_sign_out">Sign Out</string>
+
+    <!-- States and messages -->
+    <string name="state_loading">Loading…</string>
+    <string name="state_on">On</string>
+    <string name="state_off">Off</string>
+    <string name="state_selected">Selected</string>
+    <string name="not_available_yet">Not available in this build yet.</string>
+    <string name="query_failed">Could not load this: %1$s</string>
+    <string name="track_missing">File not found</string>
+    <string name="unknown_artist">Unknown Artist</string>
+    <string name="unknown_title">Unknown Song</string>
+    <string name="toast_plays_next">Plays next</string>
+    <string name="toast_added_to_queue">Added to the queue</string>
+    <string name="toast_added_to_playlist">Added to “%1$s”</string>
+    <string name="toast_playlist_created">Playlist created</string>
+    <string name="toast_scan_done">Library updated: %1$d added, %2$d updated, %3$d removed</string>
+    <string name="toast_scan_failed">Scanning stopped: %1$s</string>
+    <string name="toast_no_new_folders">No new music folders found.</string>
+    <plurals name="toast_folders_added">
+        <item quantity="one">%d music folder added</item>
+        <item quantity="other">%d music folders added</item>
+    </plurals>
+    <plurals name="count_songs">
+        <item quantity="one">%d song</item>
+        <item quantity="other">%d songs</item>
+    </plurals>
+    <plurals name="count_albums">
+        <item quantity="one">%d album</item>
+        <item quantity="other">%d albums</item>
+    </plurals>
+    <plurals name="count_artists">
+        <item quantity="one">%d artist</item>
+        <item quantity="other">%d artists</item>
+    </plurals>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="duration_minutes">%1$d min</string>
+
+    <!-- Home -->
+    <string name="home_recently_added">Recently Added</string>
+    <string name="home_recently_played">Recently Played</string>
+    <string name="home_most_played">Most Played</string>
+    <string name="home_welcome_title">Welcome to Jellyfesh</string>
+    <string name="home_welcome_body">Let Jellyfesh find the music on this phone, or choose a folder that holds it. Jellyfesh reads the tags, artwork and lyrics itself.</string>
+
+    <!-- Library -->
+    <string name="albums_empty_title">No Albums Yet</string>
+    <string name="albums_empty_body">Add a folder with music to fill your library.</string>
+    <string name="artists_empty_title">No Artists Yet</string>
+    <string name="songs_empty_title">No Songs Yet</string>
+    <string name="playlists_empty_title">No Playlists Yet</string>
+    <string name="playlists_empty_body">Make one here, or add songs to a new playlist from any song’s menu.</string>
+    <string name="favourites_empty_title">No Favourites Yet</string>
+    <string name="favourites_empty_body">Tap the heart on Now Playing, or use a song’s menu, to keep it here.</string>
+    <string name="sort_albums">Sort albums</string>
+    <string name="sort_title">Title</string>
+    <string name="sort_artist">Artist</string>
+    <string name="sort_year">Year</string>
+    <string name="sort_added">Recently Added</string>
+    <string name="album_empty">This album has no songs left in your library.</string>
+    <string name="album_disc">Disc %1$d</string>
+    <string name="playlist_new_title">New Playlist</string>
+    <string name="playlist_new_with_songs">New Playlist…</string>
+    <string name="playlist_name">Name</string>
+    <string name="playlist_rename_title">Rename Playlist</string>
+    <string name="playlist_delete_title">Delete Playlist?</string>
+    <string name="playlist_delete_body">The songs stay in your library.</string>
+    <string name="playlist_add_title">Add to Playlist</string>
+    <string name="playlist_empty">This playlist is empty.</string>
+
+    <!-- Search -->
+    <string name="search_hint">Songs, albums, artists</string>
+    <string name="search_empty_title">Search Your Music</string>
+    <string name="search_empty_body">Find songs, albums and artists in your library and in your sources.</string>
+    <string name="search_no_results">No Results</string>
+    <string name="search_no_results_body">Try other words.</string>
+    <string name="search_sources_unavailable">Searching your sources is not available in this build yet.</string>
+    <string name="search_source_failed">%1$s did not answer: %2$s</string>
+    <string name="search_searching">Searching your sources…</string>
+    <string name="search_also_in">also in %1$s</string>
+    <string name="a11y_clear_search">Clear search</string>
+    <string name="kind_tracks">Songs</string>
+    <string name="kind_albums">Albums</string>
+    <string name="kind_artists">Artists</string>
+    <string name="kind_playlists">Playlists</string>
+    <string name="kind_folders">Folders</string>
+
+    <!-- Sources -->
+    <string name="sources_subtitle">Music from your servers and services, through plugins.</string>
+    <string name="sources_empty_title">No Sources Yet</string>
+    <string name="sources_empty_body">Install a source plugin from a .jfpkg file.</string>
+    <string name="sources_installed">Installed</string>
+    <string name="sources_bundled_note">The official Subsonic and Jellyfin plugins come with the app and are updated with it.</string>
+    <string name="badge_official">Official</string>
+    <string name="badge_community">Community · unofficial</string>
+    <string name="source_enabled">Enabled</string>
+    <string name="source_disabled">Off</string>
+    <string name="source_signed_in">Signed in as %1$s</string>
+    <string name="source_not_signed_in">Not signed in</string>
+    <string name="source_account">Account</string>
+    <string name="source_no_sign_in">No sign-in needed</string>
+    <string name="source_settings">Settings</string>
+    <string name="source_settings_unreadable">This plugin’s settings could not be read.</string>
+    <string name="source_browse">Browse</string>
+    <string name="source_version">Version %1$s · %2$s</string>
+    <string name="source_vendor_playback">Vendor playback: the service plays these songs itself, so the equalizer, crossfade and volume levelling do not apply.</string>
+    <string name="source_uninstall_title">Uninstall “%1$s”?</string>
+    <string name="source_uninstall_body">Its sign-in and settings are removed too.</string>
+    <string name="source_gone">This source is no longer installed.</string>
+    <string name="source_installing">Installing the plugin…</string>
+    <string name="source_install_failed">The file could not be read.</string>
+    <string name="install_plugin_desc">A .jfpkg file from Jellyfesh or from someone you trust.</string>
+    <string name="browse_empty">Nothing here.</string>
+    <string name="settings_saved">Saved</string>
+    <string name="field_required">Required</string>
+    <string name="field_too_short">Too short</string>
+    <string name="field_too_long">Too long</string>
+    <string name="field_pattern">Not in the expected form</string>
+    <string name="field_not_number">Enter a number</string>
+    <string name="field_not_integer">Enter a whole number</string>
+    <string name="field_below_min">At least %1$s</string>
+    <string name="field_above_max">At most %1$s</string>
+    <string name="field_not_option">Choose one of the options</string>
+
+    <!-- The community-plugin disclosure (ADR-0012) -->
+    <string name="disclosure_allow_title">Allow Community Plugins?</string>
+    <string name="disclosure_enable_title">Turn On “%1$s”?</string>
+    <string name="disclosure_1">Community plugins are not made or checked by Jellyfesh.</string>
+    <string name="disclosure_2">They may break the terms of the service they connect to.</string>
+    <string name="disclosure_3">They may stop working at any time.</string>
+    <string name="disclosure_4">Use them for personal use only.</string>
+    <string name="disclosure_accept">I Understand, Allow</string>
+
+    <!-- Sign-in -->
+    <string name="sign_in_title">Sign In to %1$s</string>
+    <string name="sign_in_qr">Sign In with QR Code</string>
+    <string name="sign_in_browser">Sign In in Browser</string>
+    <string name="sign_in_cookies">Paste Cookies</string>
+    <string name="sign_in_password">Sign In</string>
+    <string name="sign_in_api_key">Enter API Key</string>
+    <string name="sign_in_starting">Starting…</string>
+    <string name="sign_in_waiting">Waiting for the service…</string>
+    <string name="sign_in_qr_body">Scan the code with the %1$s app on your phone.</string>
+    <string name="sign_in_qr_expires">The code expires in %1$s.</string>
+    <string name="sign_in_qr_expired">The code has expired.</string>
+    <string name="a11y_qr">Sign-in QR code</string>
+    <string name="sign_in_browser_body">Continue in your browser. Come back here when you are done.</string>
+    <string name="sign_in_open_again">Open Browser Again</string>
+    <string name="sign_in_submit">Sign In</string>
+    <string name="sign_in_secret_note">Jellyfesh passes this to the plugin once and does not keep it.</string>
+    <string name="sign_in_done">Signed in as %1$s.</string>
+    <string name="sign_in_failed">Sign-in failed: %1$s</string>
+    <string name="sign_in_unavailable">Signing in is not available in this build yet.</string>
+
+    <!-- Now Playing -->
+    <string name="np_close">Close Now Playing</string>
+    <string name="np_views">Now Playing views</string>
+    <string name="np_lyrics">Lyrics</string>
+    <string name="np_queue">Queue</string>
+    <string name="np_info">Info</string>
+    <string name="np_speakers">Speakers</string>
+    <string name="np_output_device">Output Device</string>
+    <string name="np_system_default">System Default</string>
+    <string name="np_follows_system">Follows the system’s choice</string>
+    <string name="np_nothing_title">Nothing Playing</string>
+    <string name="np_nothing_body">Pick a song, an album or a playlist.</string>
+    <string name="np_buffering">Buffering…</string>
+    <string name="a11y_open_now_playing">Open Now Playing</string>
+    <string name="mini_play_progress">%1$s, %2$d%% played</string>
+    <string name="a11y_position">Position</string>
+    <string name="a11y_position_value">%1$s of %2$s</string>
+    <string name="a11y_volume">Volume</string>
+    <string name="a11y_volume_value">%1$d percent</string>
+    <string name="a11y_play">Play</string>
+    <string name="a11y_pause">Pause</string>
+    <string name="a11y_previous">Previous</string>
+    <string name="a11y_next">Next</string>
+    <string name="a11y_shuffle">Shuffle</string>
+    <string name="a11y_repeat">Repeat</string>
+    <string name="a11y_mute">Mute</string>
+    <string name="a11y_unmute">Unmute</string>
+    <string name="a11y_favourite">Favourite</string>
+    <string name="repeat_all">Repeat all</string>
+    <string name="repeat_one">Repeat one</string>
+
+    <!-- Lyrics -->
+    <string name="lyrics_none_title">No Lyrics</string>
+    <string name="lyrics_none_body">Put an .lrc or .ttml file next to the song, or lyrics in its tags.</string>
+    <string name="lyrics_unsynced">These lyrics are not timed.</string>
+
+    <!-- Queue -->
+    <string name="queue_up_next">Up Next</string>
+    <string name="queue_clear">Clear Queue</string>
+    <string name="queue_clear_title">Clear the Queue?</string>
+    <string name="queue_clear_body">Playback stops and every song is removed from the queue.</string>
+    <string name="queue_empty_title">Nothing Up Next</string>
+    <string name="queue_empty_body">Use Play Next or Play Last on any song, album or playlist.</string>
+    <plurals name="queue_more">
+        <item quantity="one">%d more song in the queue</item>
+        <item quantity="other">%d more songs in the queue</item>
+    </plurals>
+    <string name="a11y_drag">Drag to reorder</string>
+    <string name="a11y_move_up">Move up</string>
+    <string name="a11y_move_down">Move down</string>
+
+    <!-- Info -->
+    <string name="info_heading">About This Song</string>
+    <string name="info_title">Title</string>
+    <string name="info_artist">Artist</string>
+    <string name="info_album">Album</string>
+    <string name="info_length">Length</string>
+    <string name="info_format">Format</string>
+    <string name="info_file">File</string>
+    <string name="info_lyrics">Lyrics</string>
+    <string name="info_gapless">gapless</string>
+    <string name="lyrics_source_sidecar">From %1$s</string>
+    <string name="lyrics_source_embedded">In the file’s tags</string>
+    <string name="lyrics_source_none">None found</string>
+    <string name="timing_word">Word by word</string>
+    <string name="timing_line">Line by line</string>
+    <string name="timing_unsynced">Unsynced</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_playback">Playback</string>
+    <string name="settings_library">Library</string>
+    <string name="settings_lyrics">Lyrics</string>
+    <string name="settings_sources">Sources</string>
+    <string name="settings_appearance_desc">Light or dark, backdrop, colour, app icon</string>
+    <string name="settings_playback_desc">Output, crossfade, volume levelling, equalizer</string>
+    <string name="settings_library_desc">Access to music, folders, rescanning</string>
+    <string name="settings_lyrics_desc">Translations and romanization</string>
+    <string name="settings_sources_desc">Plugins and community plugins</string>
+    <string name="about_version">Jellyfesh %1$s</string>
+    <string name="about_design">Designed with the Misty design language.</string>
+
+    <string name="appearance_system">Follow System</string>
+    <string name="appearance_light">Light</string>
+    <string name="appearance_dark">Dark</string>
+    <string name="style_title">Now Playing Backdrop</string>
+    <string name="style_desc">The artwork, blurred, or the Misty field in its colour.</string>
+    <string name="style_artwork">Artwork</string>
+    <string name="style_misty">Misty</string>
+    <string name="colour_hue">Hue</string>
+    <string name="hue_value">%1$d°</string>
+    <string name="reduce_effects">Reduce Motion and Transparency</string>
+    <string name="reduce_effects_desc">Solid surfaces instead of glass, and short fades instead of movement.</string>
+    <string name="app_icon">App Icon</string>
+    <string name="app_icon_desc">Shown on the home screen and in the app list.</string>
+    <string name="app_icon_automatic">Automatic</string>
+    <string name="app_icon_note">Automatic uses Ice: launchers do not reliably follow dark mode for app icons. Some launchers take a few seconds to show a new icon, and some remove home-screen shortcuts to the old one. Android 13 and later can tint the icon to match your wallpaper instead.</string>
+    <string name="app_icon_confirm_title">Change the App Icon?</string>
+    <string name="app_icon_confirm_body">Your launcher may take a few seconds to show it, and may remove the app’s shortcut from the home screen.</string>
+    <string name="app_icon_confirm">Change</string>
+    <string name="icon_ice">Ice</string>
+    <string name="icon_steel">Steel</string>
+    <string name="icon_original">Original</string>
+    <string name="icon_navy_tide">Navy Tide</string>
+    <string name="icon_royal">Royal</string>
+    <string name="icon_teal_deep">Teal Deep</string>
+    <string name="icon_sea_glass">Sea Glass</string>
+    <string name="icon_electric">Electric</string>
+    <string name="icon_abyss">Abyss</string>
+    <string name="icon_lagoon">Lagoon</string>
+
+    <string name="output_title">Output</string>
+    <string name="output_desc">Where the sound goes.</string>
+    <string name="crossfade_title">Crossfade</string>
+    <string name="crossfade_desc">Blend the end of a song into the next.</string>
+    <string name="crossfade_length">Length</string>
+    <string name="seconds_value">%1$d s</string>
+    <string name="album_continuity">Album Continuity</string>
+    <string name="album_continuity_desc">Songs of the same album join without a fade.</string>
+    <string name="replaygain_title">Volume Levelling</string>
+    <string name="replaygain_desc">ReplayGain evens out loudness using the tags in your files.</string>
+    <string name="rg_off">Off</string>
+    <string name="rg_track">Track</string>
+    <string name="rg_album">Album</string>
+    <string name="preamp">Preamp</string>
+    <string name="db_value">%1$s dB</string>
+    <string name="eq_title">Equalizer</string>
+    <string name="eq_reset">Flat</string>
+    <string name="eq_band">%1$sHz</string>
+    <string name="resume_title">Resume Playback</string>
+    <string name="resume_desc">Start playing where you left off when Jellyfesh opens.</string>
+
+    <string name="music_access_title">Music on This Phone</string>
+    <string name="music_access_desc">With access to music, Jellyfesh finds the folders that hold songs at once and reads them itself.</string>
+    <string name="music_access_granted">Jellyfesh can read the music on this phone.</string>
+    <string name="find_music">Find Music on This Phone</string>
+    <string name="find_music_desc">Add the folders the system knows hold music.</string>
+    <string name="folders_title">Music Folders</string>
+    <string name="folders_desc">Jellyfesh reads every audio file in these folders.</string>
+    <string name="folders_empty">No folders yet.</string>
+    <string name="folder_remove_title">Remove “%1$s”?</string>
+    <string name="folder_remove_body">Its songs leave your library; the files stay where they are.</string>
+    <string name="folder_added">Adding the folder to your library…</string>
+    <string name="folder_needs_permission">Added. In this version Jellyfesh reads folders through its access to music: allow it in Library settings.</string>
+    <string name="folder_unreadable">This folder is not on this phone’s storage, so Jellyfesh cannot read it yet.</string>
+    <string name="rescan_title">Rescan Library</string>
+    <string name="rescan_desc">Look for new, changed and removed files.</string>
+    <string name="scanning">Scanning… %1$d files</string>
+    <string name="watch_title">Watch Folders</string>
+    <string name="watch_desc">Update the library when files change.</string>
+
+    <string name="show_translation">Show Translations</string>
+    <string name="show_translation_desc">Under each line, when the lyrics have them.</string>
+    <string name="show_romanization">Show Romanization</string>
+    <string name="show_romanization_desc">How each line reads in Latin letters, when the lyrics have it.</string>
+
+    <string name="allow_community">Allow Community Plugins</string>
+    <string name="allow_community_desc">Plugins not made by Jellyfesh. They may break a service’s terms and stop working at any time.</string>
+
+    <!-- v0.0.4: the player bar, the album page, Appearance (docs/design-controls.md). -->
+    <string name="album_play">Play the Album</string>
+    <string name="album_footer">%1$s, %2$s</string>
+    <string name="length_hours_minutes">%1$s %2$s</string>
+    <string name="appearance_theme">Theme</string>
+    <string name="appearance_theme_desc">Light, dark, or the same as the system.</string>
+    <string name="accent_title">Accent Colour</string>
+    <string name="accent_follow_artwork">Follow the Artwork</string>
+    <string name="accent_desc">The colour of buttons, selections and the Misty field.</string>
+    <string name="accent_custom">Custom</string>
+    <string name="transparency_title">Transparency</string>
+    <string name="transparency_desc">How much of the background shows through the glass.</string>
+    <string name="transparency_solid">Solid</string>
+    <string name="transparency_clear">Clear</string>
+    <string name="transparency_value">%1$d%%</string>
+    <string name="lyrics_size">Lyrics Size</string>
+    <string name="lyrics_size_small">Small</string>
+    <string name="lyrics_size_medium">Medium</string>
+    <string name="lyrics_size_large">Large</string>
+    <string name="lyrics_align">Lyrics Alignment</string>
+    <string name="lyrics_align_start">Start</string>
+    <string name="lyrics_align_centre">Centre</string>
+    <plurals name="count_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name="count_hours">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
+</resources>

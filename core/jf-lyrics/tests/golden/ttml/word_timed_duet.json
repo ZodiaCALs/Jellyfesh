@@ -1,0 +1,166 @@
+{
+  "language": "en",
+  "timing": "word",
+  "offset_ms": 0,
+  "agents": [
+    {
+      "id": "v1",
+      "name": "Mara",
+      "kind": "person"
+    },
+    {
+      "id": "v2",
+      "name": "Tobin",
+      "kind": "person"
+    },
+    {
+      "id": "v1000",
+      "name": null,
+      "kind": "group"
+    }
+  ],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 1000,
+      "end_ms": 3200,
+      "agent": "v1",
+      "text": "Meet me by the ferry",
+      "words": [
+        {
+          "start_ms": 1000,
+          "end_ms": 1400,
+          "text": "Meet",
+          "joins_next": false
+        },
+        {
+          "start_ms": 1400,
+          "end_ms": 1700,
+          "text": "me",
+          "joins_next": false
+        },
+        {
+          "start_ms": 1700,
+          "end_ms": 2000,
+          "text": "by",
+          "joins_next": false
+        },
+        {
+          "start_ms": 2000,
+          "end_ms": 2300,
+          "text": "the",
+          "joins_next": false
+        },
+        {
+          "start_ms": 2300,
+          "end_ms": 3200,
+          "text": "ferry",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 3400,
+      "end_ms": 5600,
+      "agent": "v2",
+      "text": "I'll bring the umbrella",
+      "words": [
+        {
+          "start_ms": 3400,
+          "end_ms": 3800,
+          "text": "I'll",
+          "joins_next": false
+        },
+        {
+          "start_ms": 3800,
+          "end_ms": 4200,
+          "text": "bring",
+          "joins_next": false
+        },
+        {
+          "start_ms": 4200,
+          "end_ms": 4500,
+          "text": "the",
+          "joins_next": false
+        },
+        {
+          "start_ms": 4500,
+          "end_ms": 4900,
+          "text": "um",
+          "joins_next": true
+        },
+        {
+          "start_ms": 4900,
+          "end_ms": 5200,
+          "text": "brel",
+          "joins_next": true
+        },
+        {
+          "start_ms": 5200,
+          "end_ms": 5600,
+          "text": "la",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 5800,
+      "end_ms": 8000,
+      "agent": "v1000",
+      "text": "Rain or shine!",
+      "words": [
+        {
+          "start_ms": 5800,
+          "end_ms": 6400,
+          "text": "Rain",
+          "joins_next": false
+        },
+        {
+          "start_ms": 6400,
+          "end_ms": 6900,
+          "text": "or",
+          "joins_next": false
+        },
+        {
+          "start_ms": 6900,
+          "end_ms": 8000,
+          "text": "shine!",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 3,
+      "start_ms": 7500,
+      "end_ms": 9000,
+      "agent": "v2",
+      "text": "Together",
+      "words": [
+        {
+          "start_ms": 7500,
+          "end_ms": 9000,
+          "text": "Together",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "ttml",
+    "origin": null
+  },
+  "metadata": {
+    "songwriters": "Mara Example, Tobin Example"
+  }
+}

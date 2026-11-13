@@ -1,0 +1,28 @@
+[package]
+name = "jf-cli"
+description = "jf: the Jellyfesh command-line player (Milestone 1)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "jf"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+# The CLI talks only to the core facade, like the native shells will.
+jf-core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+crossbeam-channel.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+# Draws sign-in QR codes in the terminal (the core gives the text to encode).
+qrcode.workspace = true

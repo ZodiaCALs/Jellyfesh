@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Now Playing (design/canvas/NowPlaying-Artwork and -Misty, controls style D). Two backdrops, chosen
+    by Appearance → Style (ADR-0013): Artwork shows the core's baked, contrast-safe blurred artwork,
+    crossfaded over 600 ms; Misty shows the field with its aurora at the artwork hue and the artwork
+    on a Clear frame. A Veil bar holds the way back, the Lyrics | Queue | Info segments and the
+    output chip. The scrubber, times and lyrics draw from the display clock at visible changes only.
+    After Apple Music (v0.0.4): the artwork rests at 88 % while paused and springs back when playing,
+    play and pause morph, the seek bar is a straight line.
+-->
+<UserControl
+    x:Class="Jellyfesh.App.Views.NowPlayingView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Jellyfesh.App.Controls"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:th="using:Jellyfesh.App.Theming"
+    xmlns:views="using:Jellyfesh.App.Views">
+
+    <UserControl.KeyboardAccelerators>
+        <KeyboardAccelerator Key="Escape" Invoked="OnEscape" />
+    </UserControl.KeyboardAccelerators>
+
+    <Grid x:Name="Surface" SizeChanged="OnSizeChanged">
+        <Grid.RenderTransform>
+            <TranslateTransform x:Name="Slide" />
+        </Grid.RenderTransform>
+
+        <!-- Misty style: the field at the artwork hue (and the backdrop of both styles before the bake arrives). -->
+        <Grid x:Name="MistyBackdrop" Background="{ThemeResource JfSky}" IsHitTestVisible="False">
+            <Rectangle Fill="{ThemeResource JfAuroraGlow1}" />
+            <Rectangle Fill="{ThemeResource JfAuroraGlow2}" />
+            <Rectangle Fill="{ThemeResource JfAuroraGlow3}" />
+        </Grid>
+        <!-- Artwork style: the baked backdrop, two images so a new one can crossfade in. -->
+        <Image x:Name="BackdropA" IsHitTestVisible="False" Opacity="0" Stretch="UniformToFill" AutomationProperties.AccessibilityView="Raw" />
+        <Image x:Name="BackdropB" IsHitTestVisible="False" Opacity="0" Stretch="UniformToFill" AutomationProperties.AccessibilityView="Raw" />
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- The Veil bar. -->
+            <Grid
+                MinHeight="56"
+                Padding="12,6"
+                Background="{ThemeResource JfGlassVeil}"
+                BorderBrush="{ThemeResource JfGlassEdgeSoft}"
+                BorderThickness="0,0,0,1"
+                ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    x:Name="BackButton"
+                    x:Uid="NowPlaying_Back"
+                    MinHeight="44"
+                    Padding="8,0,12,0"
+                    HorizontalAlignment="Left"
+                    AutomationProperties.Name="Back to the library"
+                    Click="OnBackClick"
+                    CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}"
+                    Style="{StaticResource JfBareButtonStyle}">
+                    <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Spacing="6">
+                        <controls:StrokeIcon Data="{StaticResource IconBack}" Foreground="{ThemeResource JfInk70}" Size="20" />
+                        <TextBlock x:Uid="NowPlaying_Library" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource JfInk70}" Text="Library" />
+                    </StackPanel>
+                </Button>
+                <Border Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfSegmentGroupStyle}">
+                    <StackPanel x:Name="Segments" Orientation="Horizontal" AutomationProperties.Name="Now Playing views" x:Uid="NowPlaying_Views">
+                        <RadioButton x:Name="PlayerTab" x:Uid="NowPlaying_PlayerTab" Checked="OnViewChecked" Content="Player" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" Visibility="Collapsed" />
+                        <RadioButton x:Name="LyricsTab" x:Uid="NowPlaying_LyricsTab" Checked="OnViewChecked" Content="Lyrics" GroupName="NowPlayingViews" IsChecked="True" Style="{StaticResource JfSegmentStyle}" />
+                        <RadioButton x:Name="QueueTab" x:Uid="NowPlaying_QueueTab" Checked="OnViewChecked" Content="Queue" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" />
+                        <RadioButton x:Name="InfoTab" x:Uid="NowPlaying_InfoTab" Checked="OnViewChecked" Content="Info" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" />
+                    </StackPanel>
+                </Border>
+                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                <Button
+                    x:Uid="NowPlaying_Compact"
+                    AutomationProperties.Name="Mini player"
+                    Click="OnCompactClick"
+                    Style="{StaticResource JfIconButtonStyle}"
+                    ToolTipService.ToolTip="Mini player (Ctrl+M)">
+                    <controls:StrokeIcon Data="{StaticResource IconMiniPlayer}" Size="18" />
+                </Button>
+                <Button
+                    x:Name="SpeakersButton"
+                    x:Uid="NowPlaying_Output"
+                    MaxWidth="240"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="Output device"
+                    Style="{StaticResource JfChipButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <controls:StrokeIcon Data="{StaticResource IconSpeaker}" Size="18" />
+                        <TextBlock Text="{x:Bind Player.SelectedDevice.Name, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <MenuFlyout x:Name="DevicesMenu" Opening="OnDevicesOpening" Placement="BottomEdgeAlignedRight" />
+                    </Button.Flyout>
+                </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- The player and the lyrics, queue or info beside it (one at a time when narrow). -->
+            <Grid x:Name="Body" Grid.Row="1" Padding="48,32,48,40" ColumnSpacing="56">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="PlayerColumn" Width="Auto" />
+                    <ColumnDefinition x:Name="SideColumn" Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <ScrollViewer x:Name="PlayerScroller" HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
+                    <StackPanel x:Name="PlayerPanel" Width="400" VerticalAlignment="Center" Spacing="20">
+                        <!-- Artwork: the hero (Artwork style) or on a Clear frame (Misty style). -->
+                        <Border x:Name="ArtFrame" Padding="12" Background="{ThemeResource JfGlassClear}" BorderBrush="{ThemeResource JfGlassEdgeSoft}" BorderThickness="1" CornerRadius="36" SizeChanged="OnArtSizeChanged">
+                            <Border x:Name="ArtBorder" CornerRadius="{th:Token Key=Artwork.RadiusHero, Kind=Corner}" Background="{ThemeResource JfFill}">
+                                <Grid>
+                                    <controls:StrokeIcon Data="{StaticResource IconLyrics}" Size="64" Foreground="{ThemeResource JfInk30}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <Image x:Name="Art" controls:Artwork.DecodeSize="800" controls:Artwork.Uri="{x:Bind Player.ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" AutomationProperties.Name="{x:Bind Player.Album, Mode=OneWay}" />
+                                </Grid>
+                            </Border>
+                        </Border>
+                        <StackPanel Spacing="4">
+                            <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfNowPlayingTitleText}" Text="{x:Bind Player.Title, Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource JfNowPlayingArtistText}" Text="{x:Bind Player.Subtitle, Mode=OneWay}" />
+                        </StackPanel>
+
+                        <!-- Seek bar with the times at both ends: elapsed, and remaining (−1:23). -->
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock MinWidth="36" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Progress.PositionText, Mode=OneWay}" AutomationProperties.AccessibilityView="Raw" />
+                            <controls:SeekBar
+                                x:Name="Seek"
+                                x:Uid="NowPlaying_Seek"
+                                Grid.Column="1"
+                                AutomationProperties.Name="Position"
+                                ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}"
+                                ValueText="{x:Bind Player.Progress.AccessibleText, Mode=OneWay}" />
+                            <TextBlock Grid.Column="2" MinWidth="36" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Progress.RemainingText, Mode=OneWay}" TextAlignment="Right" AutomationProperties.AccessibilityView="Raw" />
+                        </Grid>
+
+                        <!-- Transport: shuffle, the glass capsule (previous, play, next), repeat. -->
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="16">
+                            <ToggleButton
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="{x:Bind Player.ShuffleLabel, Mode=OneWay}"
+                                Command="{x:Bind Player.ToggleShuffleCommand}"
+                                IsChecked="{x:Bind Player.Shuffle, Mode=OneWay}"
+                                Style="{StaticResource JfToggleIconButtonStyle}"
+                                ToolTipService.ToolTip="{x:Bind Player.ShuffleLabel, Mode=OneWay}">
+                                <controls:StrokeIcon Data="{StaticResource IconShuffle}" />
+                            </ToggleButton>
+                            <Border Padding="6" Style="{StaticResource JfVeilCapsuleStyle}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Button x:Uid="Player_PreviousButton" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+B)">
+                                        <controls:StrokeIcon Data="{StaticResource IconPrevious}" Size="24" />
+                                    </Button>
+                                    <Button
+                                        x:Name="PlayButton"
+                                        AutomationProperties.Name="{x:Bind Player.PlayPauseLabel, Mode=OneWay}"
+                                        Command="{x:Bind Player.PlayPauseCommand}"
+                                        Style="{StaticResource JfPlayButtonStyle}"
+                                        ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
+                                        <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="26" />
+                                    </Button>
+                                    <Button x:Uid="Player_NextButton" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+F)">
+                                        <controls:StrokeIcon Data="{StaticResource IconNext}" Size="24" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                            <ToggleButton
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="{x:Bind Player.RepeatLabel, Mode=OneWay}"
+                                Command="{x:Bind Player.CycleRepeatCommand}"
+                                IsChecked="{x:Bind shell:Bind.RepeatOn(Player.Repeat), Mode=OneWay}"
+                                Style="{StaticResource JfToggleIconButtonStyle}"
+                                ToolTipService.ToolTip="{x:Bind Player.RepeatLabel, Mode=OneWay}">
+                                <controls:StrokeIcon Data="{x:Bind shell:Bind.RepeatGlyph(Player.Repeat), Mode=OneWay}" />
+                            </ToggleButton>
+                        </StackPanel>
+
+                        <!-- Volume: a thin bar between two speaker glyphs; mute and favourite at the ends. -->
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button AutomationProperties.Name="{x:Bind Player.MuteLabel, Mode=OneWay}" Command="{x:Bind Player.ToggleMuteCommand}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="{x:Bind Player.MuteLabel, Mode=OneWay}">
+                                <controls:StrokeIcon Data="{x:Bind shell:Bind.VolumeGlyph(Player.Volume, Player.IsMuted), Mode=OneWay}" Size="18" />
+                            </Button>
+                            <Slider
+                                x:Name="VolumeSlider"
+                                x:Uid="NowPlaying_Volume"
+                                Grid.Column="1"
+                                VerticalAlignment="Center"
+                                AutomationProperties.Name="Volume"
+                                Style="{StaticResource JfThinSliderStyle}"
+                                Value="{x:Bind Player.Volume, Mode=OneWay}"
+                                ValueChanged="OnVolumeChanged" />
+                            <controls:StrokeIcon Grid.Column="2" VerticalAlignment="Center" Data="{StaticResource IconVolumeHigh}" Foreground="{ThemeResource JfInk50}" Size="18" />
+                            <ToggleButton
+                                Grid.Column="3"
+                                AutomationProperties.Name="{x:Bind Player.FavoriteLabel, Mode=OneWay}"
+                                Command="{x:Bind Player.ToggleFavoriteCommand}"
+                                IsChecked="{x:Bind Player.IsFavorite, Mode=OneWay}"
+                                IsEnabled="{x:Bind Player.CanFavorite, Mode=OneWay}"
+                                Style="{StaticResource JfToggleIconButtonStyle}"
+                                ToolTipService.ToolTip="{x:Bind Player.FavoriteLabel, Mode=OneWay}">
+                                <controls:StrokeIcon Data="{StaticResource IconHeart}" Filled="{x:Bind Player.IsFavorite, Mode=OneWay}" Size="18" />
+                            </ToggleButton>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Grid x:Name="SidePanel" Grid.Column="1">
+                    <views:LyricsView x:Name="LyricsPanel" />
+                    <views:QueueView x:Name="QueuePanel" Visibility="Collapsed" />
+                    <ScrollViewer x:Name="InfoPanel" Visibility="Collapsed">
+                        <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="16">
+                            <TextBlock x:Uid="NowPlaying_InfoHeading" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="About this track" />
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="NowPlaying_InfoAlbum" Style="{StaticResource JfCaptionText}" Text="Album" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.Album, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="NowPlaying_InfoFormat" Style="{StaticResource JfCaptionText}" Text="Format" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.FormatText, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="NowPlaying_InfoQueue" Style="{StaticResource JfCaptionText}" Text="In the queue" />
+                                <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Player.QueuePositionText, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="NowPlaying_InfoFile" Style="{StaticResource JfCaptionText}" Text="File" />
+                                <TextBlock x:Name="FileText" IsTextSelectionEnabled="True" Style="{StaticResource JfSecondaryBodyText}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

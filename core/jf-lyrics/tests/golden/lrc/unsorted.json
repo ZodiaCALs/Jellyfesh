@@ -1,0 +1,54 @@
+{
+  "language": null,
+  "timing": "line",
+  "offset_ms": 0,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 5000,
+      "end_ms": 12500,
+      "agent": null,
+      "text": "I found the opening line in a drawer",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 5000,
+      "end_ms": 12500,
+      "agent": null,
+      "text": "And its echo answered from the hall",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 12500,
+      "end_ms": 20000,
+      "agent": null,
+      "text": "The middle hid beneath the stairs",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 3,
+      "start_ms": 20000,
+      "end_ms": null,
+      "agent": null,
+      "text": "The last verse came first to the page",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "lrc",
+    "origin": null
+  },
+  "metadata": {}
+}

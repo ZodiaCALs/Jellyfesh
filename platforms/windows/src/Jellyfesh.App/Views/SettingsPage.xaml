@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Settings (design/canvas/IconSetting.dc.html): Appearance, Playback, Library, Lyrics, Sources and
+    About. Every change goes to the core as a modified Settings slice or its dedicated command; the
+    slice that comes back is what the page shows.
+-->
+<shell:JfPage
+    x:Class="Jellyfesh.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Jellyfesh.App.Controls"
+    xmlns:settings="using:Jellyfesh.Settings"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:vm="using:Jellyfesh.ViewModels">
+
+    <Page.Resources>
+        <!-- An accent swatch: a 32 px circle in a 44 px target, with an ink ring when chosen. -->
+        <Style x:Key="SwatchStyle" TargetType="RadioButton">
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="UseSystemFocusVisuals" Value="True" />
+            <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource JfAccentText}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid Background="Transparent">
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <VisualState x:Name="Normal" />
+                                    <VisualState x:Name="PointerOver">
+                                        <VisualState.Setters>
+                                            <Setter Target="Ring.Opacity" Value="0.4" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Pressed" />
+                                    <VisualState x:Name="Disabled" />
+                                </VisualStateGroup>
+                                <VisualStateGroup x:Name="CheckStates">
+                                    <VisualState x:Name="Checked">
+                                        <VisualState.Setters>
+                                            <Setter Target="Ring.Opacity" Value="1" />
+                                        </VisualState.Setters>
+                                    </VisualState>
+                                    <VisualState x:Name="Unchecked" />
+                                    <VisualState x:Name="Indeterminate" />
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <Ellipse x:Name="Ring" Width="40" Height="40" Opacity="0" Stroke="{ThemeResource JfInk90}" StrokeThickness="2" />
+                            <Ellipse Width="30" Height="30" Fill="{TemplateBinding Background}" Stroke="{ThemeResource JfLineSoft}" StrokeThickness="1" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CardHeading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{ThemeResource JfInk90}" />
+        </Style>
+
+        <DataTemplate x:Key="FieldText" x:DataType="settings:SettingField">
+            <StackPanel Spacing="4">
+                <TextBox Description="{x:Bind Description}" Header="{x:Bind Label}" PlaceholderText="{x:Bind Placeholder}" Text="{x:Bind Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock FontSize="12" Foreground="{ThemeResource JfDanger}" Text="{x:Bind shell:Bind.Text(Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(Error), Mode=OneWay}" />
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="FieldSecret" x:DataType="settings:SettingField">
+            <StackPanel Spacing="4">
+                <PasswordBox Description="{x:Bind Description}" Header="{x:Bind Label}" Password="{x:Bind Text, Mode=TwoWay}" PlaceholderText="{x:Bind Placeholder}" />
+                <TextBlock FontSize="12" Foreground="{ThemeResource JfDanger}" Text="{x:Bind shell:Bind.Text(Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(Error), Mode=OneWay}" />
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="FieldToggle" x:DataType="settings:SettingField">
+            <ToggleSwitch Header="{x:Bind Label}" IsOn="{x:Bind IsOn, Mode=TwoWay}" />
+        </DataTemplate>
+        <DataTemplate x:Key="FieldChoice" x:DataType="settings:SettingField">
+            <ComboBox MinWidth="200" Header="{x:Bind Label}" ItemsSource="{x:Bind Choices}" SelectedItem="{x:Bind Choice, Mode=OneWay}" SelectionChanged="OnFieldChoiceChanged" />
+        </DataTemplate>
+        <shell:SettingFieldTemplates
+            x:Key="FieldTemplates"
+            Choice="{StaticResource FieldChoice}"
+            Secret="{StaticResource FieldSecret}"
+            Text="{StaticResource FieldText}"
+            Toggle="{StaticResource FieldToggle}" />
+    </Page.Resources>
+
+    <Grid Padding="32,24,32,0" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock x:Uid="Settings_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Settings" />
+        <SelectorBar x:Name="Sections" Grid.Row="1" SelectionChanged="OnSectionChanged">
+            <SelectorBarItem x:Name="AppearanceItem" x:Uid="Settings_Appearance" IsSelected="True" Text="Appearance" />
+            <SelectorBarItem x:Name="PlaybackItem" x:Uid="Settings_Playback" Text="Playback" />
+            <SelectorBarItem x:Name="LibraryItem" x:Uid="Settings_Library" Text="Library" />
+            <SelectorBarItem x:Name="LyricsItem" x:Uid="Settings_Lyrics" Text="Lyrics" />
+            <SelectorBarItem x:Name="SourcesItem" x:Uid="Settings_Sources" Text="Sources" />
+            <SelectorBarItem x:Name="AboutItem" x:Uid="Settings_About" Text="About" />
+        </SelectorBar>
+
+        <ScrollViewer x:Name="Scroller" Grid.Row="2">
+            <Grid MaxWidth="880" Padding="0,8,0,112" HorizontalAlignment="Left">
+
+                <!-- ===== Appearance (docs/design-controls.md, "Preferences → Appearance") =====
+                     Grouped cards after Windows Settings; every change applies at once and the core keeps it. -->
+                <StackPanel x:Name="AppearancePanel" Spacing="16">
+                    <!-- Theme: a segmented control with small previews. -->
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                <TextBlock x:Uid="Appearance_Mode" Style="{StaticResource CardHeading}" Text="Theme" />
+                                <TextBlock x:Uid="Appearance_ModeHint" Style="{StaticResource JfSecondaryBodyText}" Text="Light, dark, or the same as Windows." />
+                            </StackPanel>
+                            <Border Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfSegmentGroupStyle}">
+                                <StackPanel x:Uid="Appearance_ModeChoice" AutomationProperties.Name="Theme" Orientation="Horizontal">
+                                    <RadioButton x:Name="SystemMode" x:Uid="Appearance_System" Height="Auto" Padding="10,6" AutomationProperties.Name="Same as Windows" Checked="OnModeChecked" GroupName="AppearanceMode" Style="{StaticResource JfSegmentStyle}">
+                                        <StackPanel Spacing="4">
+                                            <controls:ThemePreview Kind="System" />
+                                            <TextBlock x:Uid="Appearance_SystemLabel" HorizontalAlignment="Center" Text="System" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="LightMode" x:Uid="Appearance_Light" Height="Auto" Padding="10,6" AutomationProperties.Name="Light" Checked="OnModeChecked" GroupName="AppearanceMode" Style="{StaticResource JfSegmentStyle}">
+                                        <StackPanel Spacing="4">
+                                            <controls:ThemePreview Kind="Light" />
+                                            <TextBlock x:Uid="Appearance_LightLabel" HorizontalAlignment="Center" Text="Light" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="DarkMode" x:Uid="Appearance_Dark" Height="Auto" Padding="10,6" AutomationProperties.Name="Dark" Checked="OnModeChecked" GroupName="AppearanceMode" Style="{StaticResource JfSegmentStyle}">
+                                        <StackPanel Spacing="4">
+                                            <controls:ThemePreview Kind="Dark" />
+                                            <TextBlock x:Uid="Appearance_DarkLabel" HorizontalAlignment="Center" Text="Dark" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Accent colour: follow the artwork, or one of ten swatches, or a custom hue. -->
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Appearance_Colour" Style="{StaticResource CardHeading}" Text="Accent colour" />
+                                    <TextBlock x:Uid="Appearance_ColourHint" Style="{StaticResource JfSecondaryBodyText}" Text="The colour of buttons, selections and the Misty field." />
+                                </StackPanel>
+                                <ToggleSwitch x:Uid="Appearance_HueFromArtwork" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Follow the artwork" IsOn="{x:Bind ViewModel.HueFromArtwork, Mode=TwoWay}" OffContent="Follow the artwork" OnContent="Follow the artwork" />
+                            </Grid>
+                            <StackPanel Spacing="12" Visibility="{x:Bind shell:Bind.Collapsed(ViewModel.HueFromArtwork), Mode=OneWay}">
+                                <StackPanel x:Name="SwatchPanel" x:Uid="Appearance_Swatches" AutomationProperties.Name="Accent colour" Orientation="Horizontal" Spacing="4" />
+                                <Grid ColumnSpacing="16">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Uid="Appearance_CustomHue" VerticalAlignment="Center" Style="{StaticResource JfBodyText}" Text="Custom" />
+                                    <Slider
+                                        x:Name="HueSlider"
+                                        x:Uid="Appearance_Hue"
+                                        Grid.Column="1"
+                                        MaxWidth="420"
+                                        AutomationProperties.Name="Hue"
+                                        Style="{StaticResource JfHueSliderStyle}"
+                                        Value="{x:Bind ViewModel.FixedHue, Mode=TwoWay}" />
+                                    <Ellipse x:Name="HuePreview" Grid.Column="2" Width="28" Height="28" Stroke="{ThemeResource JfGlassEdge}" StrokeThickness="2" AutomationProperties.AccessibilityView="Raw" />
+                                </Grid>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Transparency: Solid to Clear with a live preview; Reduce motion and transparency. -->
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Appearance_Transparency" Style="{StaticResource CardHeading}" Text="Transparency" />
+                                    <TextBlock x:Uid="Appearance_TransparencyHint" Style="{StaticResource JfSecondaryBodyText}" Text="How much of the background shows through the glass." />
+                                </StackPanel>
+                                <!-- The live preview: Veil glass over the Misty field. -->
+                                <Grid Grid.Column="1" Width="120" Height="56" CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}" AutomationProperties.AccessibilityView="Raw">
+                                    <Grid Background="{ThemeResource JfSky}">
+                                        <Rectangle Fill="{ThemeResource JfAuroraGlow1}" />
+                                        <Rectangle Fill="{ThemeResource JfAuroraGlow2}" />
+                                        <Ellipse Width="34" Height="34" Margin="12,0,0,0" HorizontalAlignment="Left" Fill="{ThemeResource JfAccent}" />
+                                    </Grid>
+                                    <Border Margin="28,14,8,14" Background="{ThemeResource JfGlassVeil}" BorderBrush="{ThemeResource JfGlassEdgeSoft}" BorderThickness="1" CornerRadius="{th:Token Key=Radius.Sm, Kind=Corner}" />
+                                </Grid>
+                            </Grid>
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="Appearance_TransparencySolid" VerticalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="Solid" />
+                                <Slider
+                                    x:Uid="Appearance_TransparencySlider"
+                                    Grid.Column="1"
+                                    MaxWidth="420"
+                                    AutomationProperties.Name="Transparency"
+                                    IsEnabled="{x:Bind shell:Bind.Not(ViewModel.ReduceEffects), Mode=OneWay}"
+                                    Maximum="100"
+                                    Minimum="0"
+                                    StepFrequency="5"
+                                    Style="{StaticResource JfThinSliderStyle}"
+                                    Value="{x:Bind ViewModel.Transparency, Mode=TwoWay}" />
+                                <TextBlock x:Uid="Appearance_TransparencyClear" Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="Clear" />
+                                <TextBlock Grid.Column="3" MinWidth="40" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Text="{x:Bind ViewModel.TransparencyText, Mode=OneWay}" TextAlignment="Right" />
+                            </Grid>
+                            <ToggleSwitch x:Uid="Appearance_ReduceEffects" Header="Reduce motion and transparency" IsOn="{x:Bind ViewModel.ReduceEffects, Mode=TwoWay}" />
+                            <TextBlock x:Uid="Appearance_ReduceEffectsHint" Style="{StaticResource JfSecondaryBodyText}" Text="Solid surfaces instead of glass, short fades instead of movement, no word sweep and no animated scrolling. Windows' own animation and transparency settings are followed as well." />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Now Playing background: Artwork or Misty, with previews. -->
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <Grid ColumnSpacing="16" RowSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                <TextBlock x:Uid="Appearance_Style" Style="{StaticResource CardHeading}" Text="Now Playing background" />
+                                <TextBlock x:Uid="Appearance_StyleHint" Style="{StaticResource JfSecondaryBodyText}" Text="The artwork, blurred, or the Misty field in its colour." />
+                            </StackPanel>
+                            <Border Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfSegmentGroupStyle}">
+                                <StackPanel x:Uid="Appearance_StyleChoice" AutomationProperties.Name="Now Playing background" Orientation="Horizontal">
+                                    <RadioButton x:Name="ArtworkStyle" x:Uid="Appearance_StyleArtwork" Height="Auto" Padding="10,6" AutomationProperties.Name="Artwork" Checked="OnStyleChecked" GroupName="BackdropStyle" Style="{StaticResource JfSegmentStyle}">
+                                        <StackPanel Spacing="4">
+                                            <Grid Width="64" Height="40" Background="{ThemeResource JfFill}" CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}">
+                                                <Image x:Name="ArtworkStylePreview" Stretch="UniformToFill" />
+                                            </Grid>
+                                            <TextBlock x:Uid="Appearance_StyleArtworkLabel" HorizontalAlignment="Center" Text="Artwork" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                    <RadioButton x:Name="MistyStyle" x:Uid="Appearance_StyleMisty" Height="Auto" Padding="10,6" AutomationProperties.Name="Misty" Checked="OnStyleChecked" GroupName="BackdropStyle" Style="{StaticResource JfSegmentStyle}">
+                                        <StackPanel Spacing="4">
+                                            <Grid Width="64" Height="40" Background="{ThemeResource JfSky}" CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}">
+                                                <Rectangle Fill="{ThemeResource JfAuroraGlow1}" />
+                                                <Rectangle Fill="{ThemeResource JfAuroraGlow2}" />
+                                                <Rectangle Fill="{ThemeResource JfAuroraGlow3}" />
+                                            </Grid>
+                                            <TextBlock x:Uid="Appearance_StyleMistyLabel" HorizontalAlignment="Center" Text="Misty" />
+                                        </StackPanel>
+                                    </RadioButton>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+
+                    <!-- Lyrics: size, alignment, translation and romanization. -->
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Appearance_Lyrics" Style="{StaticResource CardHeading}" Text="Lyrics" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="Appearance_LyricsSize" VerticalAlignment="Center" Style="{StaticResource JfBodyText}" Text="Lyrics size" />
+                                <Border Grid.Column="1" Style="{StaticResource JfSegmentGroupStyle}">
+                                    <StackPanel x:Uid="Appearance_LyricsSizeChoice" AutomationProperties.Name="Lyrics size" Orientation="Horizontal">
+                                        <RadioButton x:Name="LyricsSmall" x:Uid="Appearance_LyricsSmall" Checked="OnLyricsSizeChecked" Content="Small" GroupName="LyricsSize" Style="{StaticResource JfSegmentStyle}" />
+                                        <RadioButton x:Name="LyricsMedium" x:Uid="Appearance_LyricsMedium" Checked="OnLyricsSizeChecked" Content="Medium" GroupName="LyricsSize" Style="{StaticResource JfSegmentStyle}" />
+                                        <RadioButton x:Name="LyricsLarge" x:Uid="Appearance_LyricsLarge" Checked="OnLyricsSizeChecked" Content="Large" GroupName="LyricsSize" Style="{StaticResource JfSegmentStyle}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="Appearance_LyricsAlign" VerticalAlignment="Center" Style="{StaticResource JfBodyText}" Text="Lyrics alignment" />
+                                <Border Grid.Column="1" Style="{StaticResource JfSegmentGroupStyle}">
+                                    <StackPanel x:Uid="Appearance_LyricsAlignChoice" AutomationProperties.Name="Lyrics alignment" Orientation="Horizontal">
+                                        <RadioButton x:Name="LyricsStart" x:Uid="Appearance_LyricsStart" Checked="OnLyricsAlignChecked" Content="Start" GroupName="LyricsAlign" Style="{StaticResource JfSegmentStyle}" />
+                                        <RadioButton x:Name="LyricsCentre" x:Uid="Appearance_LyricsCentre" Checked="OnLyricsAlignChecked" Content="Centre" GroupName="LyricsAlign" Style="{StaticResource JfSegmentStyle}" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                            <ToggleSwitch x:Uid="Appearance_Translation" Header="Show translations under each line" IsOn="{x:Bind ViewModel.ShowTranslation, Mode=TwoWay}" />
+                            <ToggleSwitch x:Uid="Appearance_Romanization" Header="Show romanization under each line" IsOn="{x:Bind ViewModel.ShowRomanization, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="Appearance_Icon" Style="{StaticResource CardHeading}" Text="App icon" />
+                                <TextBlock x:Uid="Appearance_IconHint" Style="{StaticResource JfSecondaryBodyText}" Text="Shown in the title bar, the taskbar and the shortcuts Jellyfesh installed." />
+                            </StackPanel>
+                            <GridView
+                                x:Name="IconGrid"
+                                x:Uid="Appearance_IconChoice"
+                                AutomationProperties.Name="App icon"
+                                ItemsSource="{x:Bind ViewModel.Icons}"
+                                SelectionChanged="OnIconChanged"
+                                SelectionMode="Single">
+                                <GridView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AppIconChoice">
+                                        <StackPanel Width="88" Padding="0,6" Spacing="8" AutomationProperties.Name="{x:Bind Name}">
+                                            <Image Width="64" Height="64" HorizontalAlignment="Center" controls:Artwork.DecodeSize="128" controls:Artwork.Uri="{x:Bind PreviewUri}" />
+                                            <TextBlock HorizontalAlignment="Center" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Name}" TextAlignment="Center" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridView.ItemTemplate>
+                            </GridView>
+                            <TextBlock x:Uid="Appearance_IconLimits" Style="{StaticResource JfSecondaryBodyText}" Text="Automatic uses Ice in light appearance and Steel in dark. A taskbar pin may keep the old icon until Explorer refreshes." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===== Playback ===== -->
+                <StackPanel x:Name="PlaybackPanel" Spacing="16" Visibility="Collapsed">
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Playback_Output" Style="{StaticResource CardHeading}" Text="Output device" />
+                            <ComboBox x:Name="DeviceBox" x:Uid="Playback_OutputChoice" MinWidth="280" AutomationProperties.Name="Output device" ItemsSource="{x:Bind ViewModel.Player.Devices}" SelectionChanged="OnDeviceChanged" />
+                            <ToggleSwitch x:Uid="Playback_Resume" Header="Resume where I left off when Jellyfesh starts" IsOn="{x:Bind ViewModel.ResumeOnLaunch, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Playback_Crossfade" Style="{StaticResource CardHeading}" Text="Crossfade" />
+                            <ToggleSwitch x:Uid="Playback_CrossfadeOn" Header="Fade songs into each other" IsOn="{x:Bind ViewModel.CrossfadeEnabled, Mode=TwoWay}" />
+                            <Slider
+                                x:Uid="Playback_CrossfadeLength"
+                                MaxWidth="420"
+                                HorizontalAlignment="Left"
+                                Header="Length in seconds"
+                                IsEnabled="{x:Bind ViewModel.CrossfadeEnabled, Mode=OneWay}"
+                                Maximum="12"
+                                Minimum="1"
+                                StepFrequency="1"
+                                TickFrequency="1"
+                                TickPlacement="Outside"
+                                Value="{x:Bind ViewModel.CrossfadeSeconds, Mode=TwoWay}" />
+                            <ToggleSwitch x:Uid="Playback_AlbumContinuity" Header="Play albums without gaps or fades" IsEnabled="{x:Bind ViewModel.CrossfadeEnabled, Mode=OneWay}" IsOn="{x:Bind ViewModel.AlbumContinuity, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Playback_ReplayGain" Style="{StaticResource CardHeading}" Text="ReplayGain" />
+                            <RadioButtons x:Uid="Playback_ReplayGainChoice" AutomationProperties.Name="ReplayGain" MaxColumns="3" SelectedIndex="{x:Bind ViewModel.ReplayGainIndex, Mode=TwoWay}">
+                                <RadioButton x:Uid="Playback_ReplayGainOff" Content="Off" />
+                                <RadioButton x:Uid="Playback_ReplayGainTrack" Content="Track" />
+                                <RadioButton x:Uid="Playback_ReplayGainAlbum" Content="Album" />
+                            </RadioButtons>
+                            <Slider x:Uid="Playback_Preamp" MaxWidth="420" HorizontalAlignment="Left" Header="Preamp (dB)" Maximum="15" Minimum="-15" StepFrequency="0.5" Value="{x:Bind ViewModel.ReplayGainPreampDb, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Playback_Eq" Style="{StaticResource CardHeading}" Text="Equalizer" />
+                            <ToggleSwitch x:Uid="Playback_EqOn" Header="Use the equalizer" IsOn="{x:Bind ViewModel.EqEnabled, Mode=TwoWay}" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Presets}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Orientation="Horizontal" Spacing="8" />
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EqPreset">
+                                        <Button Click="OnPresetClick" Content="{x:Bind shell:Bind.Text(NameKey)}" Style="{StaticResource JfChipButtonStyle}" Tag="{x:Bind}" />
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                            <!-- The bands are greyed while the equalizer is off (a disabled parent disables its controls). -->
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto" IsEnabled="{x:Bind ViewModel.EqEnabled, Mode=OneWay}" VerticalScrollMode="Disabled">
+                                <ItemsRepeater ItemsSource="{x:Bind ViewModel.Bands}">
+                                    <ItemsRepeater.Layout>
+                                        <StackLayout Orientation="Horizontal" Spacing="4" />
+                                    </ItemsRepeater.Layout>
+                                    <ItemsRepeater.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:EqBandViewModel">
+                                            <StackPanel Width="52" Spacing="6">
+                                                <Slider Height="160" HorizontalAlignment="Center" AutomationProperties.Name="{x:Bind Label}" Maximum="12" Minimum="-12" Orientation="Vertical" StepFrequency="0.5" Value="{x:Bind GainDb, Mode=TwoWay}" />
+                                                <TextBlock HorizontalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="{x:Bind Label}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsRepeater.ItemTemplate>
+                                </ItemsRepeater>
+                            </ScrollViewer>
+                            <Slider x:Uid="Playback_EqPreamp" MaxWidth="420" HorizontalAlignment="Left" Header="Equalizer preamp (dB)" IsEnabled="{x:Bind ViewModel.EqEnabled, Mode=OneWay}" Maximum="12" Minimum="-12" StepFrequency="0.5" Value="{x:Bind ViewModel.EqPreampDb, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===== Library ===== -->
+                <StackPanel x:Name="LibraryPanel" Spacing="16" Visibility="Collapsed">
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Library_Folders" Style="{StaticResource CardHeading}" Text="Music folders" />
+                            <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.LibraryStats, Mode=OneWay}" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Folders}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="4" />
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Grid Padding="12,6" Background="{ThemeResource JfFill}" ColumnSpacing="12" CornerRadius="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock VerticalAlignment="Center" Style="{StaticResource JfBodyText}" Text="{x:Bind}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
+                                            <Button x:Uid="Library_RemoveFolder" Grid.Column="1" Click="OnRemoveFolderClick" Content="Remove" Style="{StaticResource JfChipButtonStyle}" Tag="{x:Bind}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Uid="Library_AddFolder" Command="{x:Bind ViewModel.AddFolderCommand}" Content="Add a folder…" Style="{StaticResource JfAccentPillStyle}" />
+                                <Button x:Uid="Library_Rescan" Command="{x:Bind ViewModel.RescanCommand}" Content="Scan again" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.IsScanning), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
+                            </StackPanel>
+                            <StackPanel Spacing="6" Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsScanning), Mode=OneWay}">
+                                <ProgressBar IsIndeterminate="True" />
+                                <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind ViewModel.ScanText, Mode=OneWay}" />
+                            </StackPanel>
+                            <ToggleSwitch x:Uid="Library_Watch" Header="Notice changes in these folders by themselves" IsOn="{x:Bind ViewModel.WatchFolders, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===== Lyrics ===== -->
+                <StackPanel x:Name="LyricsSettingsPanel" Spacing="16" Visibility="Collapsed">
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Lyrics_Heading" Style="{StaticResource CardHeading}" Text="Lyrics" />
+                            <ToggleSwitch x:Uid="Lyrics_Translation" Header="Show translations under each line" IsOn="{x:Bind ViewModel.ShowTranslation, Mode=TwoWay}" />
+                            <ToggleSwitch x:Uid="Lyrics_Romanization" Header="Show romanization under each line" IsOn="{x:Bind ViewModel.ShowRomanization, Mode=TwoWay}" />
+                            <TextBlock x:Uid="Lyrics_Hint" Style="{StaticResource JfSecondaryBodyText}" Text="Lyrics come from the song's tags and from .lrc, .ttml and .vtt files next to it. Translations and romanizations appear when the lyrics include them." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===== Sources ===== -->
+                <StackPanel x:Name="SourcesPanel" Spacing="16" Visibility="Collapsed">
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Sources_Installed" Style="{StaticResource CardHeading}" Text="Installed sources" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Plugins}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="12" />
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PluginViewModel">
+                                        <Border Padding="16" Background="{ThemeResource JfCloudSoft}" BorderBrush="{ThemeResource JfLineSoft}" BorderThickness="1" CornerRadius="10">
+                                            <StackPanel Spacing="10">
+                                                <Grid ColumnSpacing="12">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Spacing="2">
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Name, Mode=OneWay}" />
+                                                            <Border Padding="8,1" VerticalAlignment="Center" Background="{ThemeResource JfAccentSoft}" CornerRadius="{StaticResource JfFullRadius}">
+                                                                <TextBlock FontSize="11" FontWeight="Bold" Foreground="{ThemeResource JfAccentText}" Text="{x:Bind BadgeLabel, Mode=OneWay}" />
+                                                            </Border>
+                                                        </StackPanel>
+                                                        <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind Details, Mode=OneWay}" />
+                                                        <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Account, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(IsSignedIn), Mode=OneWay}" />
+                                                    </StackPanel>
+                                                    <ToggleSwitch Grid.Column="1" MinWidth="0" VerticalAlignment="Top" AutomationProperties.Name="{x:Bind Name, Mode=OneWay}" IsOn="{x:Bind IsEnabled, Mode=TwoWay}" OffContent="" OnContent="" />
+                                                </Grid>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Button x:Uid="Source_SignIn" Command="{x:Bind SignInCommand}" Content="Sign in…" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(CanSignIn), Mode=OneWay}" />
+                                                    <Button x:Uid="Source_SignOut" Command="{x:Bind SignOutCommand}" Content="Sign out" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(IsSignedIn), Mode=OneWay}" />
+                                                    <Button x:Uid="Source_Uninstall" Command="{x:Bind UninstallCommand}" Content="Uninstall" Style="{StaticResource JfChipButtonStyle}" />
+                                                </StackPanel>
+                                                <Expander x:Uid="Source_SettingsExpander" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Header="Settings" Visibility="{x:Bind shell:Bind.Visible(HasSettings), Mode=OneWay}">
+                                                    <StackPanel Spacing="12">
+                                                        <ItemsRepeater ItemTemplate="{StaticResource FieldTemplates}" ItemsSource="{x:Bind Form.Fields, Mode=OneWay}">
+                                                            <ItemsRepeater.Layout>
+                                                                <StackLayout Spacing="12" />
+                                                            </ItemsRepeater.Layout>
+                                                        </ItemsRepeater>
+                                                        <Button x:Uid="Source_SaveSettings" Command="{x:Bind SaveSettingsCommand}" Content="Save" Style="{StaticResource JfAccentPillStyle}" />
+                                                    </StackPanel>
+                                                </Expander>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                            <TextBlock x:Uid="Sources_None" Style="{StaticResource JfSecondaryBodyText}" Text="No sources are installed." Visibility="{x:Bind shell:Bind.VisibleIfNone(ViewModel.Plugins.Count), Mode=OneWay}" />
+                            <Button x:Uid="Sources_Install" HorizontalAlignment="Left" Command="{x:Bind ViewModel.InstallPluginCommand}" Content="Install from a file…" Style="{StaticResource JfChipButtonStyle}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Sources_Community" Style="{StaticResource CardHeading}" Text="Community plugins" />
+                            <ToggleSwitch x:Uid="Sources_AllowCommunity" Header="Allow community plugins" IsOn="{x:Bind ViewModel.AllowCommunity, Mode=TwoWay}" />
+                            <TextBlock x:Uid="Sources_CommunityHint" Style="{StaticResource JfSecondaryBodyText}" Text="Community plugins are made by other people, not by Jellyfesh. They may break the terms of the service they reach and may stop working at any time; use them for personal use only. You are asked again before each one is turned on for the first time." />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- ===== About ===== -->
+                <StackPanel x:Name="AboutPanel" Spacing="16" Visibility="Collapsed">
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <Image x:Name="AboutIcon" Width="64" Height="64" />
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock FontSize="20" FontWeight="Bold" Foreground="{ThemeResource JfInk90}" Text="Jellyfesh" />
+                                    <TextBlock x:Name="VersionText" Style="{StaticResource JfSecondaryBodyText}" />
+                                </StackPanel>
+                            </StackPanel>
+                            <TextBlock x:Uid="About_Tagline" Style="{StaticResource JfBodyText}" Text="An elegant, lightweight music player." />
+                            <TextBlock x:Uid="About_Misty" Style="{StaticResource JfSecondaryBodyText}" Text="Designed with the Misty design language. Design tokens derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0." />
+                            <TextBlock x:Uid="About_Rights" Style="{StaticResource JfSecondaryBodyText}" Text="All rights reserved. Third-party licences are listed in the notices file next to the app." />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Uid="About_Logs" Click="OnOpenLogsClick" Content="Open the log folder" Style="{StaticResource JfChipButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</shell:JfPage>

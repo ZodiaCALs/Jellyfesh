@@ -1,0 +1,87 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The WinUI 3 shell (Windows App SDK). Only view code and platform adapters live here
+    (ADR-0001): the core is reached through Jellyfesh.Interop, state lives in Jellyfesh.Shared.
+
+    Default: unpackaged, self-contained (.NET and the Windows App SDK runtime in the folder), for
+    the portable .zip and the installer of ADR-0016. MSIX for later: build with
+    -p:WindowsPackageType=MSIX (uses Package.appxmanifest).
+
+    Needs, from `scripts/build.ps1` or by hand:
+      cargo xtask bindings -\-lang csharp   (Generated/Jellyfesh.Ffi and Generated/native)
+      cargo xtask tokens -\-target csharp   (Generated/Tokens.cs)
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <!-- Windows 10 1809 (ADR-0007). -->
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <RootNamespace>Jellyfesh.App</RootNamespace>
+    <AssemblyName>Jellyfesh</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\Icons\ice.ico</ApplicationIcon>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- Self-contained builds need a RID; take it from the platform when none is given (VS, dotnet build). -->
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == '' and '$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType Condition="'$(WindowsPackageType)' == ''">None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Start-up time first (milestones): precompiled code; no trimming until spike S8 checks WinUI with it. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- CsWinRT: generate the vtables an AOT or trimmed build needs (ADR-0002, spike S8). -->
+    <CsWinRTAotOptimizerEnabled>true</CsWinRTAotOptimizerEnabled>
+    <!-- MVVMTK0045 asks for C# 13 partial properties under AOT; the view models live in Jellyfesh.Shared. -->
+    <NoWarn>$(NoWarn);MVVMTK0045;CA1416</NoWarn>
+    <!-- Program.cs has the entry point (single instance, ahead of the XAML compiler's Main). -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <JfRepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', '..'))</JfRepoRoot>
+    <!-- The official plugins made by the plugin packaging script (plugins/release.sh), shipped inside the app. -->
+    <JfBundledPluginsDir Condition="'$(JfBundledPluginsDir)' == ''">$(JfRepoRoot)dist/plugins/</JfBundledPluginsDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jellyfesh.Shared\Jellyfesh.Shared.csproj" />
+    <ProjectReference Include="..\Jellyfesh.Interop\Jellyfesh.Interop.csproj" />
+  </ItemGroup>
+
+  <!-- The generated Misty tokens (Jellyfesh.Design.Tokens); Theming/TokenValues.cs is the only reader. -->
+  <ItemGroup>
+    <Compile Include="$(JfGeneratedDir)Tokens.cs" Link="Generated\Tokens.cs" Condition="Exists('$(JfGeneratedDir)Tokens.cs')" />
+  </ItemGroup>
+  <Target Name="JfCheckGenerated" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(JfGeneratedDir)Tokens.cs')"
+           Text="platforms/windows/Generated/Tokens.cs is missing: run `cargo xtask tokens --target csharp` (scripts/build.ps1 does)." />
+  </Target>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*.png;Assets\**\*.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!-- Bundled plugins: installed by the core on first start, updated with the app (BundledPlugins). -->
+  <ItemGroup>
+    <Content Include="$(JfBundledPluginsDir)*.jfpkg" Link="Plugins\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- MSIX packaging (later, ADR-0016): the manifest and Visual Studio's package profile. -->
+  <ItemGroup Condition="'$(WindowsPackageType)' == 'MSIX'">
+    <AppxManifest Include="Package.appxmanifest" SubType="Designer" />
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(WindowsPackageType)' != 'MSIX'">
+    <None Include="Package.appxmanifest" />
+  </ItemGroup>
+</Project>

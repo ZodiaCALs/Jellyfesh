@@ -1,0 +1,168 @@
+{
+  "_comment": "Invented library for the mock server, in the shapes of Jellyfin's BaseItemDto, MediaSourceInfo and QueryResult (Jellyfin 12.4 sources: MediaBrowser.Model/Dto). Keys starting with _ are the mock's own bookkeeping and never sent. None of it comes from a real server or account.",
+  "views": [
+    { "Name": "Music", "Id": "f1000000000000000000000000000001", "Type": "CollectionFolder", "CollectionType": "music", "IsFolder": true },
+    { "Name": "Live recordings", "Id": "f1000000000000000000000000000002", "Type": "CollectionFolder", "CollectionType": "music", "IsFolder": true, "_second": true },
+    { "Name": "Playlists", "Id": "f1000000000000000000000000000003", "Type": "ManualPlaylistsFolder", "CollectionType": "playlists", "IsFolder": true },
+    { "Name": "Films", "Id": "f1000000000000000000000000000004", "Type": "CollectionFolder", "CollectionType": "movies", "IsFolder": true }
+  ],
+  "artists": [
+    { "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001", "Type": "MusicArtist", "IsFolder": true, "SortName": "harbour lights", "ImageTags": { "Primary": "art-a1" } },
+    { "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002", "Type": "MusicArtist", "IsFolder": true, "SortName": "quiet tide", "ImageTags": {} },
+    { "Name": "Ünïcode & Friends", "Id": "a2000000000000000000000000000003", "Type": "MusicArtist", "IsFolder": true, "SortName": "unicode & friends", "ImageTags": {} }
+  ],
+  "albums": [
+    {
+      "Name": "Low Water", "Id": "b3000000000000000000000000000001", "Type": "MusicAlbum", "IsFolder": true, "SortName": "low water",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "ProductionYear": 2022, "DateCreated": "2026-01-05T10:00:00.0000000Z", "RunTimeTicks": 7350000000, "ChildCount": 3,
+      "ImageTags": { "Primary": "alb-b1" }, "_library": "f1000000000000000000000000000001"
+    },
+    {
+      "Name": "Sea Fog", "Id": "b3000000000000000000000000000002", "Type": "MusicAlbum", "IsFolder": true, "SortName": "sea fog",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "ProductionYear": 2024, "DateCreated": "2026-03-01T10:00:00.0000000Z", "RunTimeTicks": 4120000000, "ChildCount": 2,
+      "ImageTags": { "Primary": "alb-b2" }, "_library": "f1000000000000000000000000000001"
+    },
+    {
+      "Name": "Driftwood", "Id": "b3000000000000000000000000000003", "Type": "MusicAlbum", "IsFolder": true, "SortName": "driftwood",
+      "AlbumArtist": "The Quiet Tide", "AlbumArtists": [{ "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002" }],
+      "Artists": ["The Quiet Tide"], "ArtistItems": [{ "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002" }],
+      "ProductionYear": 2019, "DateCreated": "2026-02-10T10:00:00.0000000Z", "RunTimeTicks": 1990000000, "ChildCount": 1,
+      "ImageTags": {}, "_library": "f1000000000000000000000000000001"
+    },
+    {
+      "Name": "Live at the Pier", "Id": "b3000000000000000000000000000004", "Type": "MusicAlbum", "IsFolder": true, "SortName": "live at the pier",
+      "AlbumArtist": "Ünïcode & Friends", "AlbumArtists": [{ "Name": "Ünïcode & Friends", "Id": "a2000000000000000000000000000003" }],
+      "Artists": ["Ünïcode & Friends"], "ArtistItems": [{ "Name": "Ünïcode & Friends", "Id": "a2000000000000000000000000000003" }],
+      "ProductionYear": 2025, "DateCreated": "2026-04-01T10:00:00.0000000Z", "RunTimeTicks": 2200000000, "ChildCount": 1,
+      "ImageTags": {}, "_library": "f1000000000000000000000000000002"
+    }
+  ],
+  "songs": [
+    {
+      "Name": "Ebb", "Id": "c4000000000000000000000000000001", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "ebb",
+      "Album": "Low Water", "AlbumId": "b3000000000000000000000000000001", "AlbumPrimaryImageTag": "alb-b1",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "IndexNumber": 1, "ParentIndexNumber": 1, "ProductionYear": 2022, "RunTimeTicks": 2450000000, "LocationType": "FileSystem",
+      "ImageTags": {}, "DateCreated": "2026-01-05T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
+      "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000001", "Type": "Default", "Container": "flac", "Bitrate": 921000, "Name": "Ebb",
+        "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
+        "MediaStreams": [{ "Type": "Audio", "Codec": "flac", "BitRate": 921000, "Channels": 2, "SampleRate": 44100, "BitDepth": 16, "Index": 0 }] }]
+    },
+    {
+      "Name": "Flow", "Id": "c4000000000000000000000000000002", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "flow",
+      "Album": "Low Water", "AlbumId": "b3000000000000000000000000000001", "AlbumPrimaryImageTag": "alb-b1",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights", "The Quiet Tide"],
+      "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }, { "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002" }],
+      "IndexNumber": 2, "ParentIndexNumber": 1, "ProductionYear": 2022, "RunTimeTicks": 2400000000, "LocationType": "FileSystem",
+      "ImageTags": { "Primary": "own-c2" }, "DateCreated": "2026-01-05T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
+      "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000002", "Type": "Default", "Container": "mp3", "Bitrate": 320000, "Name": "Flow",
+        "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
+        "MediaStreams": [{ "Type": "Audio", "Codec": "mp3", "BitRate": 320000, "Channels": 2, "SampleRate": 44100, "Index": 0 }] }]
+    },
+    {
+      "Name": "Slack Tide", "Id": "c4000000000000000000000000000003", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "slack tide",
+      "Album": "Low Water", "AlbumId": "b3000000000000000000000000000001", "AlbumPrimaryImageTag": "alb-b1",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "IndexNumber": 3, "ParentIndexNumber": 1, "ProductionYear": 2022, "RunTimeTicks": 2500000000, "LocationType": "FileSystem",
+      "ImageTags": {}, "DateCreated": "2026-01-05T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
+      "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000003", "Type": "Default", "Container": "m4a", "Bitrate": 256000, "Name": "Slack Tide",
+        "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
+        "MediaStreams": [{ "Type": "Audio", "Codec": "aac", "BitRate": 256000, "Channels": 2, "SampleRate": 44100, "Index": 0 }] }]
+    },
+    {
+      "Name": "Fog Bell", "Id": "c4000000000000000000000000000004", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "fog bell",
+      "Album": "Sea Fog", "AlbumId": "b3000000000000000000000000000002", "AlbumPrimaryImageTag": "alb-b2",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "IndexNumber": 1, "ParentIndexNumber": 1, "ProductionYear": 2024, "RunTimeTicks": 2100000000, "LocationType": "FileSystem",
+      "ImageTags": {}, "DateCreated": "2026-03-01T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
+      "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000004", "Type": "Default", "Container": "asf", "Bitrate": 192000, "Name": "Fog Bell",
+        "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
+        "MediaStreams": [{ "Type": "Audio", "Codec": "wmav2", "BitRate": 192000, "Channels": 2, "SampleRate": 44100, "Index": 0 }] }]
+    },
+    {
+      "Name": "Lost Buoy", "Id": "c4000000000000000000000000000005", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "lost buoy",
+      "Album": "Sea Fog", "AlbumId": "b3000000000000000000000000000002", "AlbumPrimaryImageTag": "alb-b2",
+      "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
+      "IndexNumber": 2, "ParentIndexNumber": 1, "ProductionYear": 2024, "RunTimeTicks": 2020000000, "LocationType": "Virtual",
+      "ImageTags": {}, "DateCreated": "2026-03-01T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
+      "MediaSources": []
+    },
+    {
+      "Name": "Driftwood", "Id": "c4000000000000000000000000000006", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "driftwood",
+      "Album": "Driftwood", "AlbumId": "b3000000000000000000000000000003",
+      "AlbumArtist": "The Quiet Tide", "AlbumArtists": [{ "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002" }],
+      "Artists": ["The Quiet Tide"], "ArtistItems": [{ "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002" }],
+      "IndexNumber": 1, "ParentIndexNumber": 1, "ProductionYear": 2019, "RunTimeTicks": 1990000000, "LocationType": "FileSystem",
+      "ImageTags": {}, "DateCreated": "2026-02-10T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
+      "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000006", "Type": "Default", "Container": "ogg", "Bitrate": 128000, "Name": "Driftwood",
+        "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
+        "MediaStreams": [{ "Type": "Audio", "Codec": "opus", "BitRate": 128000, "Channels": 2, "SampleRate": 48000, "Index": 0 }] }]
+    },
+    {
+      "Name": "Pier Lights", "Id": "c4000000000000000000000000000007", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "pier lights",
+      "Album": "Live at the Pier", "AlbumId": "b3000000000000000000000000000004",
+      "AlbumArtist": "Ünïcode & Friends", "AlbumArtists": [{ "Name": "Ünïcode & Friends", "Id": "a2000000000000000000000000000003" }],
+      "Artists": ["Ünïcode & Friends"], "ArtistItems": [{ "Name": "Ünïcode & Friends", "Id": "a2000000000000000000000000000003" }],
+      "IndexNumber": 1, "ParentIndexNumber": 1, "ProductionYear": 2025, "RunTimeTicks": 2200000000, "LocationType": "FileSystem",
+      "ImageTags": {}, "DateCreated": "2026-04-01T10:00:00.0000000Z", "_library": "f1000000000000000000000000000002",
+      "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000007", "Type": "Default", "Container": "flac", "Bitrate": 900000, "Name": "Pier Lights",
+        "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
+        "MediaStreams": [{ "Type": "Audio", "Codec": "flac", "BitRate": 900000, "Channels": 2, "SampleRate": 48000, "Index": 0 }] }]
+    }
+  ],
+  "playlists": [
+    {
+      "Name": "Night Drive", "Id": "d5000000000000000000000000000001", "Type": "Playlist", "MediaType": "Audio", "IsFolder": true, "SortName": "night drive",
+      "RunTimeTicks": 9340000000, "ChildCount": 4, "ImageTags": { "Primary": "pl-d1" },
+      "_entries": ["c4000000000000000000000000000002", "c4000000000000000000000000000006", "c4000000000000000000000000000001", "c4000000000000000000000000000003"]
+    },
+    {
+      "Name": "Empty", "Id": "d5000000000000000000000000000002", "Type": "Playlist", "MediaType": "Audio", "IsFolder": true, "SortName": "empty",
+      "RunTimeTicks": 0, "ChildCount": 0, "ImageTags": {}, "_entries": []
+    },
+    {
+      "Name": "Clips", "Id": "d5000000000000000000000000000003", "Type": "Playlist", "MediaType": "Video", "IsFolder": true, "SortName": "clips",
+      "RunTimeTicks": 0, "ChildCount": 0, "ImageTags": {}, "_entries": []
+    }
+  ],
+  "favourites": {
+    "songs": ["c4000000000000000000000000000001"],
+    "albums": ["b3000000000000000000000000000003"],
+    "artists": ["a2000000000000000000000000000002"]
+  },
+  "instantMix": [
+    "c4000000000000000000000000000002",
+    "c4000000000000000000000000000001",
+    "c4000000000000000000000000000006",
+    "c4000000000000000000000000000003"
+  ],
+  "lyrics": {
+    "c4000000000000000000000000000001": {
+      "Metadata": { "Artist": "Harbour Lights", "Album": "Low Water", "Title": "Ebb", "Length": 2450000000, "Offset": -1500000, "IsSynced": true },
+      "Lyrics": [
+        { "Text": "Low water, the harbour sleeps", "Start": 12000000, "Cues": [{ "Position": 0, "EndPosition": 3, "Start": 12000000, "End": 18000000 }] },
+        { "Text": "Gulls above the empty pier", "Start": 56504000 },
+        { "Text": "", "Start": 98750000 },
+        { "Text": "Café lights — the tide returns", "Start": 610050000 },
+        { "Text": "An hour later", "Start": 36000100000 }
+      ]
+    },
+    "c4000000000000000000000000000002": {
+      "Metadata": { "Artist": "Harbour Lights", "Title": "Flow", "IsSynced": false },
+      "Lyrics": [
+        { "Text": "The current pulls" },
+        { "Text": "" },
+        { "Text": "and lets go" }
+      ]
+    }
+  }
+}

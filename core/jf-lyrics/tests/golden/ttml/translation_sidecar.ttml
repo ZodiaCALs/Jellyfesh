@@ -1,0 +1,27 @@
+<tt xmlns="http://www.w3.org/ns/ttml" xmlns:itunes="http://music.apple.com/lyric-ttml-internal" xmlns:ttm="http://www.w3.org/ns/ttml#metadata" itunes:timing="Word" xml:lang="ja">
+  <head>
+    <metadata>
+      <iTunesMetadata xmlns="http://music.apple.com/lyric-ttml-internal">
+        <translations>
+          <translation type="subtitle" xml:lang="en">
+            <text for="L1">The morning train is late again</text>
+            <text for="L2">I wait with a paper cup of tea</text>
+          </translation>
+        </translations>
+        <transliterations>
+          <transliteration xml:lang="ja-Latn">
+            <text for="L1"><span begin="1.000" end="1.600">asa</span> <span begin="1.600" end="1.800">no</span> <span begin="1.800" end="2.600">densha</span> <span begin="2.600" end="3.000">wa</span> <span begin="3.000" end="3.600">mata</span> <span begin="3.600" end="4.400">okureru</span></text>
+            <text for="L2">kami koppu no ocha to matsu</text>
+            <text for="L9">There is no line L9</text>
+          </transliteration>
+        </transliterations>
+      </iTunesMetadata>
+    </metadata>
+  </head>
+  <body>
+    <div>
+      <p begin="1.000" end="4.400" itunes:key="L1"><span begin="1.000" end="1.600">朝</span><span begin="1.600" end="1.800">の</span><span begin="1.800" end="2.600">電車</span><span begin="2.600" end="3.000">は</span><span begin="3.000" end="3.600">また</span><span begin="3.600" end="4.400">遅れる</span></p>
+      <p begin="5.000" end="8.000" itunes:key="L2"><span begin="5.000" end="5.800">紙</span><span begin="5.800" end="6.600">コップ</span><span begin="6.600" end="6.900">の</span><span begin="6.900" end="7.300">お茶</span><span begin="7.300" end="7.500">と</span><span begin="7.500" end="8.000">待つ</span></p>
+    </div>
+  </body>
+</tt>

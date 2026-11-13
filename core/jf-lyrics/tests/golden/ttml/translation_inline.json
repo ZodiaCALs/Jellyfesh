@@ -1,0 +1,144 @@
+{
+  "language": "ja",
+  "timing": "word",
+  "offset_ms": 0,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 2000,
+      "end_ms": 5000,
+      "agent": null,
+      "text": "夜空に星ひとつ",
+      "words": [
+        {
+          "start_ms": 2000,
+          "end_ms": 2500,
+          "text": "夜",
+          "joins_next": true
+        },
+        {
+          "start_ms": 2500,
+          "end_ms": 3000,
+          "text": "空",
+          "joins_next": true
+        },
+        {
+          "start_ms": 3000,
+          "end_ms": 3400,
+          "text": "に",
+          "joins_next": true
+        },
+        {
+          "start_ms": 3400,
+          "end_ms": 4000,
+          "text": "星",
+          "joins_next": true
+        },
+        {
+          "start_ms": 4000,
+          "end_ms": 5000,
+          "text": "ひとつ",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 5500,
+      "end_ms": 8000,
+      "agent": null,
+      "text": "雨の音",
+      "words": [
+        {
+          "start_ms": 5500,
+          "end_ms": 6200,
+          "text": "雨",
+          "joins_next": true
+        },
+        {
+          "start_ms": 6200,
+          "end_ms": 6600,
+          "text": "の",
+          "joins_next": true
+        },
+        {
+          "start_ms": 6600,
+          "end_ms": 8000,
+          "text": "音",
+          "joins_next": false
+        }
+      ],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [
+    {
+      "kind": "translation",
+      "language": "en",
+      "lines": {
+        "0": {
+          "text": "One star in the night sky",
+          "words": []
+        },
+        "1": {
+          "text": "The sound of rain",
+          "words": []
+        }
+      }
+    },
+    {
+      "kind": "romanization",
+      "language": "ja-Latn",
+      "lines": {
+        "0": {
+          "text": "yozora ni hoshi hitotsu",
+          "words": [
+            {
+              "start_ms": 2000,
+              "end_ms": 2500,
+              "text": "yo",
+              "joins_next": true
+            },
+            {
+              "start_ms": 2500,
+              "end_ms": 3000,
+              "text": "zora",
+              "joins_next": false
+            },
+            {
+              "start_ms": 3000,
+              "end_ms": 3400,
+              "text": "ni",
+              "joins_next": false
+            },
+            {
+              "start_ms": 3400,
+              "end_ms": 4000,
+              "text": "hoshi",
+              "joins_next": false
+            },
+            {
+              "start_ms": 4000,
+              "end_ms": 5000,
+              "text": "hitotsu",
+              "joins_next": false
+            }
+          ]
+        },
+        "1": {
+          "text": "ame no oto",
+          "words": []
+        }
+      }
+    }
+  ],
+  "source": {
+    "format": "ttml",
+    "origin": null
+  },
+  "metadata": {}
+}

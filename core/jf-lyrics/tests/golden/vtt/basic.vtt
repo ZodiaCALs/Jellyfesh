@@ -1,0 +1,22 @@
+WEBVTT - Kite Season
+Language: en
+
+NOTE This comment block is ignored,
+even across two lines.
+
+intro
+00:00:01.000 --> 00:00:03.500 align:start position:10%
+Kites are tugging at the <c.highlight>evening</c>
+
+00:00:04.000 --> 00:00:06.000
+Strings like pencil lines
+across the field
+
+00:07.000 --> 00:09.500
+We let them go &amp; watch them climb
+
+broken cue
+00:00:10.000 -> 00:00:11.000
+This cue has a broken arrow and is skipped
+
+00:12.000 --> 00:14.000

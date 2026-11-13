@@ -1,0 +1,17 @@
+[package]
+name = "jf-plugin-sdk"
+description = "Guest SDK for Jellyfesh plugins: WIT bindings, HTTP/JSON, storage, crypto and clock helpers, getrandom backend."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+wit-bindgen.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+getrandom.workspace = true

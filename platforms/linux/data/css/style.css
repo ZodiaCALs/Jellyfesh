@@ -1,0 +1,838 @@
+/* Jellyfesh base stylesheet (template).
+ *
+ * build.rs replaces every placeholder (a token path in double braces) with
+ * its value from design/tokens.json. Colours are named colours (@jf_*) that
+ * the app defines at run time from the core's theme slice: the Misty theme
+ * at the artwork hue, light or dark. Glass tints (@jf_tint_clear, _mist,
+ * _veil) are derived theme colours with no token of their own, so they are
+ * named directly. Control styling (seek bar, transport, toggles, volume,
+ * chips, mini-player) lives in controls-d.css so another control style can
+ * replace it. Live glass (backdrop-filter, GTK 4.22+) is in glass-live.css;
+ * this sheet draws glass grades as their tinted or solid fallback. */
+
+/* ---- The Misty field ------------------------------------------------- */
+
+window.jf-window.background {
+  background-color: {{field.sky}};
+  background-image:
+    radial-gradient(ellipse 60% 55% at 10% 8%, alpha({{field.aurora-1}}, 0.45), alpha({{field.aurora-1}}, 0) 70%),
+    radial-gradient(ellipse 55% 55% at 92% 92%, alpha({{field.aurora-2}}, 0.40), alpha({{field.aurora-2}}, 0) 70%),
+    radial-gradient(ellipse 45% 50% at 4% 98%, alpha({{field.aurora-3}}, 0.40), alpha({{field.aurora-3}}, 0) 70%);
+  color: {{ink.ink-90}};
+}
+
+window.jf-window .sidebar-pane {
+  background-color: alpha({{glass.cloud-soft}}, 0.78);
+  box-shadow: inset -1px 0 {{line.line-soft}};
+}
+
+window.jf-window .content-pages,
+window.jf-window .jf-page,
+window.jf-window .jf-page toolbarview,
+window.jf-window headerbar.flat {
+  background: transparent;
+}
+
+window.jf-window .navigation-sidebar > row {
+  min-height: 40px;
+  border-radius: {{radius.r-md}};
+  margin: 1px 6px;
+  padding: 0 10px;
+  color: {{ink.ink-70}};
+}
+
+window.jf-window .navigation-sidebar > row:selected {
+  background-color: {{accent.accent-soft}};
+  color: {{accent.accent-text}};
+}
+
+window.jf-window .navigation-sidebar > row:hover:not(:selected) {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+window.jf-window .navigation-sidebar label {
+  {{type-roles.list-title}};
+  font-weight: 600;
+}
+
+/* ---- Type roles -------------------------------------------------------- */
+
+/* Large titles (design-controls.md, "Library"): text-h2 at the top of each
+ * page's content, text-h1 on windows wide enough for the player bar; they
+ * scroll with the content. */
+.large-title {
+  font-size: {{type.text-h2}};
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+window.jf-window.wide .large-title {
+  font-size: {{type.text-h1}};
+}
+
+/* Over the album grid: in line with its covers. */
+.large-title.title-wide {
+  margin: {{space.s2}} {{space.s6}} 0;
+  padding: 0 {{space.s2}};
+}
+
+/* Over long lists: clamped like the list, in line with its rows. */
+.title-clamp {
+  padding: 0 {{space.s5}};
+}
+
+.title-clamp > .large-title {
+  margin: {{space.s2}} {{space.s3}} {{space.s3}};
+}
+
+.home > .large-title,
+.titled-list > .large-title {
+  margin-top: {{space.s2}};
+}
+
+.titled-list {
+  padding: 0 {{space.s5}} {{space.s7}};
+}
+
+.page-subtitle,
+.detail-meta {
+  {{type-roles.list-secondary}};
+  font-size: 13px;
+  color: {{ink.ink-70}};
+}
+
+.section-heading {
+  {{type-roles.section}};
+  margin-top: {{space.s5}};
+}
+
+.kind-heading,
+.detail-kind {
+  font-size: 12px;
+  font-weight: 700;
+  color: {{ink.ink-50}};
+  margin-top: {{space.s2}};
+}
+
+.source-heading {
+  margin-top: {{space.s6}};
+  color: {{accent.accent-text}};
+}
+
+.error-text {
+  color: {{semantic.danger}};
+}
+
+.numeric {
+  font-feature-settings: "tnum";
+}
+
+/* ---- Pages ------------------------------------------------------------- */
+
+.home,
+.detail,
+.search-results {
+  padding: {{space.s4}} {{space.s7}} {{space.s7}};
+}
+
+.welcome {
+  padding: {{space.s6}};
+  border-radius: {{radius.r-xl}};
+  background-color: {{glass.cloud}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
+}
+
+.welcome-title {
+  {{type-roles.section}};
+}
+
+.welcome-text {
+  color: {{ink.ink-70}};
+}
+
+.shelf {
+  padding: {{space.s1}} 2px {{space.s3}};
+}
+
+.album-grid {
+  padding: {{space.s4}} {{space.s6}} {{space.s7}};
+  background: transparent;
+}
+
+.album-grid > child {
+  padding: 0;
+  border-radius: {{radius.r-lg}};
+}
+
+/* The cover itself shows hover (it lifts), not a tile behind the card. */
+.album-grid > child:hover,
+.album-grid > child:selected,
+.album-flow > flowboxchild:hover,
+.album-flow > flowboxchild:selected {
+  background: none;
+}
+
+.album-grid > child:focus-visible,
+.album-flow > flowboxchild:focus-visible {
+  outline: 2px solid {{accent.accent-text}};
+  outline-offset: -2px;
+}
+
+/* Album covers lift by 2 px on hover with shadow-2 and show a glass play
+ * button; presses scale to 97 %. */
+.card-cover {
+  transition: transform {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+.album-grid > child:hover .card-cover,
+.album-flow > flowboxchild:hover .card-cover,
+.card-button:hover .card-cover {
+  transform: translateY(-2px);
+}
+
+.album-grid > child:active .card-cover,
+.album-flow > flowboxchild:active .card-cover,
+.card-button:active .card-cover {
+  transform: scale(0.97);
+}
+
+.album-grid > child:hover .grid-art,
+.album-flow > flowboxchild:hover .grid-art,
+.card-button:hover .grid-art {
+  box-shadow: {{elevation.shadow-2}};
+}
+
+button.card-play {
+  min-width: 36px;
+  min-height: 36px;
+  margin: {{space.s2}};
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background-color: @jf_tint_veil;
+  color: {{ink.ink-90}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
+  opacity: 0;
+  transition: opacity {{motion.dur-1}} {{motion.ease-fluid}}, transform {{motion.dur-0}} {{motion.ease-spring}};
+}
+
+.album-grid > child:hover button.card-play,
+.album-flow > flowboxchild:hover button.card-play,
+.card-button:hover button.card-play,
+button.card-play:focus-visible {
+  opacity: 1;
+}
+
+button.card-play:active {
+  transform: scale(0.92);
+}
+
+.album-flow > flowboxchild {
+  padding: 0;
+  border-radius: {{radius.r-lg}};
+}
+
+.card-button {
+  border-radius: {{radius.r-lg}};
+}
+
+.card-button:focus-visible {
+  outline: 2px solid {{accent.accent-text}};
+  outline-offset: 2px;
+}
+
+.list-clamp {
+  padding: 0 {{space.s5}};
+}
+
+statuspage.compact {
+  background: transparent;
+}
+
+/* ---- Rows and cards --------------------------------------------------- */
+
+.list-row {
+  min-height: {{player.row-height}};
+  padding: 0 {{space.s3}};
+}
+
+.row-title {
+  {{type-roles.list-title}};
+}
+
+.row-subtitle {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-70}};
+}
+
+.row-detail {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-50}};
+}
+
+.row-number {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-50}};
+  min-width: 24px;
+  transition: opacity {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+/* A track number turns into a play glyph while its row is hovered. */
+.row-play {
+  color: {{ink.ink-90}};
+  opacity: 0;
+  transition: opacity {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+.list-row:hover .row-number {
+  opacity: 0;
+}
+
+.list-row:hover .row-play {
+  opacity: 1;
+}
+
+/* The playing row: accent-soft with accent text, and the level glyph in
+ * place of its number (or over its artwork). */
+.list-row.playing {
+  background-color: {{accent.accent-soft}};
+  border-radius: {{radius.r-md}};
+}
+
+.list-row.playing .row-title {
+  color: {{accent.accent-text}};
+}
+
+.list-row.playing .row-number,
+.list-row.playing .row-play {
+  opacity: 0;
+}
+
+level.row-level {
+  color: {{accent.accent-text}};
+}
+
+level.row-level.over-art {
+  color: white;
+  background-color: alpha(black, 0.4);
+  border-radius: {{artwork.radius-list}};
+}
+
+.row-button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  color: {{ink.ink-50}};
+}
+
+.row-button:hover {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+.row-button.on {
+  color: {{accent.accent-text}};
+}
+
+.drag-handle {
+  color: {{ink.ink-30}};
+}
+
+listview.track-list,
+listview.queue-list,
+list.track-box {
+  background: transparent;
+}
+
+listview.track-list > row,
+listview.queue-list > row,
+list.track-box > row {
+  border-radius: {{radius.r-md}};
+  padding: 0;
+  margin: 1px 0;
+}
+
+listview.track-list > row:hover,
+listview.queue-list > row:hover,
+list.track-box > row:hover {
+  background-color: {{line.fill-hover}};
+}
+
+listview.track-list > row:active,
+list.track-box > row:active {
+  background-color: {{line.fill-press}};
+}
+
+.list-row.drop-above {
+  box-shadow: inset 0 2px {{accent.accent}};
+}
+
+.list-row.drop-below {
+  box-shadow: inset 0 -2px {{accent.accent}};
+}
+
+.list-row.dragging {
+  opacity: 0.5;
+}
+
+.card-tile {
+  padding: {{space.s2}};
+}
+
+.card-title {
+  {{type-roles.list-title}};
+  font-weight: 600;
+  margin-top: {{space.s1}};
+}
+
+.card-subtitle {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-70}};
+}
+
+button.card-button {
+  padding: 0;
+  border-radius: {{radius.r-lg}};
+}
+
+art {
+  background-color: {{glass.cloud-soft}};
+  color: {{ink.ink-30}};
+  border-radius: {{artwork.radius-list}};
+}
+
+art.grid-art {
+  border-radius: {{artwork.radius-grid}};
+  box-shadow: {{elevation.shadow-1}};
+  transition: box-shadow {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+art.hero-art,
+art.np-art {
+  border-radius: {{artwork.radius-hero}};
+}
+
+art.hero-art {
+  box-shadow: {{elevation.shadow-2}};
+}
+
+.avatar {
+  border-radius: {{radius.r-full}};
+  background-color: {{accent.accent-soft}};
+  color: {{accent.accent-text}};
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.avatar-large {
+  font-size: 56px;
+}
+
+/* ---- Detail pages ----------------------------------------------------- */
+
+.detail-header {
+  padding: {{space.s3}} 0 {{space.s2}};
+}
+
+.detail-title {
+  font-size: {{type.text-h2}};
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+/* Phones: the artwork above the text, the whole width. */
+.detail-header.narrow {
+  padding-top: {{space.s3}};
+}
+
+.detail-footer {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-50}};
+  margin: {{space.s1}} {{space.s3}} 0;
+}
+
+button.detail-subtitle {
+  {{type-roles.now-playing-artist}};
+  color: {{accent.accent-text}};
+  padding: 2px 6px;
+  margin-left: -6px;
+  min-height: 0;
+}
+
+.detail-buttons {
+  margin-top: {{space.s3}};
+}
+
+button.action-pill {
+  min-height: 40px;
+  padding: 0 {{space.s5}} 0 {{space.s4}};
+  font-weight: 600;
+  transition: transform {{motion.dur-0}} {{motion.ease-spring}};
+}
+
+button.action-pill:active {
+  transform: scale(0.97);
+}
+
+/* Shuffle beside Play: glass, so Play stays the one accent fill. */
+button.action-pill.glass-pill {
+  background-color: {{glass.cloud}};
+  color: {{ink.ink-90}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
+}
+
+button.action-pill.glass-pill:hover {
+  background-color: {{glass.cloud-soft}};
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: {{radius.r-full}};
+}
+
+.badge.official {
+  background-color: {{accent.accent-soft}};
+  color: {{accent.accent-text}};
+}
+
+.badge.community {
+  background-color: alpha({{semantic.warning}}, 0.16);
+  color: {{semantic.warning}};
+}
+
+/* ---- Now Playing -------------------------------------------------------- */
+
+.now-playing {
+  color: {{ink.ink-90}};
+  background-color: {{field.sky}};
+}
+
+.np-field {
+  background-color: {{field.sky}};
+  background-image:
+    radial-gradient(ellipse 60% 55% at 10% 8%, alpha({{field.aurora-1}}, 0.95), alpha({{field.aurora-1}}, 0) 70%),
+    radial-gradient(ellipse 55% 55% at 92% 92%, alpha({{field.aurora-2}}, 0.90), alpha({{field.aurora-2}}, 0) 70%),
+    radial-gradient(ellipse 45% 50% at 4% 98%, alpha({{field.aurora-3}}, 0.90), alpha({{field.aurora-3}}, 0) 70%),
+    radial-gradient(ellipse 40% 40% at 94% 6%, alpha({{field.aurora-1}}, 0.55), alpha({{field.aurora-1}}, 0) 70%);
+}
+
+.np-topbar {
+  min-height: 56px;
+  padding: 6px {{space.s5}};
+  background-color: @jf_tint_veil;
+  box-shadow: inset 0 -1px {{glass.glass-edge}};
+}
+
+button.np-back {
+  min-height: 40px;
+  padding: 0 12px 0 8px;
+  border-radius: {{radius.r-md}};
+  background: transparent;
+  color: {{ink.ink-70}};
+  font-weight: 600;
+  font-size: 13px;
+}
+
+button.np-back:hover {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+.np-main {
+  padding: {{space.s7}} {{space.s9}} {{space.s7}};
+}
+
+/* Narrow windows: phone gutters (the artwork's fit counts on s4). */
+.now-playing.narrow .np-main {
+  padding: {{space.s5}} {{space.s4}};
+}
+
+.now-playing.narrow .np-topbar {
+  padding: 6px {{space.s3}};
+}
+
+.np-art-frame {
+  border-radius: {{artwork.radius-hero}};
+}
+
+.style-artwork art.np-art {
+  box-shadow: 0 2px 6px alpha(black, 0.25), 0 30px 60px -24px alpha(black, 0.6);
+}
+
+/* Misty: the artwork is hero media on a Clear glass frame. */
+.style-misty .np-art-frame {
+  padding: 12px;
+  border-radius: 36px;
+  background-color: @jf_tint_clear;
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge-soft}}, {{elevation.shadow-1}};
+}
+
+.np-title {
+  {{type-roles.now-playing-title}};
+}
+
+.np-subtitle {
+  {{type-roles.now-playing-artist}};
+  color: {{ink.ink-70}};
+}
+
+/* The seek bar's times are drawn by the widget: 12 px tabular figures. */
+seekbar {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-title {
+  {{type-roles.section}};
+}
+
+.panel-count {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-50}};
+}
+
+.panel-head {
+  padding: 0 {{space.s3}} {{space.s2}};
+}
+
+.queue-panel,
+.info-panel {
+  padding-top: {{space.s3}};
+}
+
+list.np-info {
+  background-color: @jf_tint_mist;
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge-soft}};
+}
+
+list.np-info row {
+  background: transparent;
+}
+
+.now-playing statuspage title,
+.now-playing statuspage .description {
+  color: {{ink.ink-70}};
+}
+
+/* ---- Lyrics ------------------------------------------------------------ */
+
+.lyrics-scroll {
+  background: transparent;
+}
+
+.lyrics-column {
+  padding: 0 {{space.s2}};
+}
+
+.lyric {
+  border-radius: {{radius.r-md}};
+  transition: opacity {{motion.dur-3}} {{motion.ease-fluid}};
+}
+
+.lyric:focus-visible {
+  outline: 2px solid {{accent.accent-text}};
+  outline-offset: 4px;
+}
+
+/* Inactive lines in lyrics.ink-inactive (ink-50), sung ones in ink-30; the
+ * active one in ink-90. Their scale (0.96) is the column's. */
+.lyric-text {
+  {{lyrics.line}};
+  color: {{ink.ink-50}};
+  transition: color {{motion.dur-3}} {{motion.ease-fluid}};
+}
+
+.lyric.past .lyric-text {
+  color: {{ink.ink-30}};
+}
+
+.lyric.active .lyric-text {
+  color: {{ink.ink-90}};
+}
+
+/* Word-timed: the active line's unsung words, the sweep paints sung ones. */
+.lyric.active.swept .lyric-text {
+  color: {{ink.ink-70}};
+}
+
+.lyric.plain .lyric-text {
+  color: {{ink.ink-90}};
+}
+
+.lyric-translation {
+  {{lyrics.translation}};
+  color: {{ink.ink-50}};
+}
+
+.lyric-romanization {
+  {{lyrics.romanization}};
+  color: {{ink.ink-50}};
+}
+
+.lyric.past .lyric-translation,
+.lyric.past .lyric-romanization {
+  color: {{ink.ink-30}};
+}
+
+.lyric.active .lyric-translation,
+.lyric.active .lyric-romanization {
+  color: {{ink.ink-70}};
+}
+
+/* Lyrics size: translation and romanization at 0.8, 1 or 1.2 of their
+ * tokens (lyrics-aux-<translation px>). */
+.lyrics-aux-14 .lyric-translation { font-size: 14px; }
+.lyrics-aux-14 .lyric-romanization { font-size: 12px; }
+.lyrics-aux-18 .lyric-translation { font-size: 18px; }
+.lyrics-aux-18 .lyric-romanization { font-size: 15px; }
+.lyrics-aux-22 .lyric-translation { font-size: 22px; }
+.lyrics-aux-22 .lyric-romanization { font-size: 18px; }
+
+.lyrics-19 .lyric-text { font-size: 19px; }
+.lyrics-20 .lyric-text { font-size: 20px; }
+.lyrics-21 .lyric-text { font-size: 21px; }
+.lyrics-22 .lyric-text { font-size: 22px; }
+.lyrics-23 .lyric-text { font-size: 23px; }
+.lyrics-24 .lyric-text { font-size: 24px; }
+.lyrics-25 .lyric-text { font-size: 25px; }
+.lyrics-26 .lyric-text { font-size: 26px; }
+.lyrics-27 .lyric-text { font-size: 27px; }
+.lyrics-28 .lyric-text { font-size: 28px; }
+.lyrics-29 .lyric-text { font-size: 29px; }
+.lyrics-30 .lyric-text { font-size: 30px; }
+.lyrics-31 .lyric-text { font-size: 31px; }
+.lyrics-32 .lyric-text { font-size: 32px; }
+.lyrics-33 .lyric-text { font-size: 33px; }
+.lyrics-34 .lyric-text { font-size: 34px; }
+.lyrics-35 .lyric-text { font-size: 35px; }
+.lyrics-36 .lyric-text { font-size: 36px; }
+.lyrics-37 .lyric-text { font-size: 37px; }
+.lyrics-38 .lyric-text { font-size: 38px; }
+.lyrics-39 .lyric-text { font-size: 39px; }
+.lyrics-40 .lyric-text { font-size: 40px; }
+.lyrics-41 .lyric-text { font-size: 41px; }
+.lyrics-42 .lyric-text { font-size: 42px; }
+.lyrics-43 .lyric-text { font-size: 43px; }
+.lyrics-44 .lyric-text { font-size: 44px; }
+.lyrics-45 .lyric-text { font-size: 45px; }
+.lyrics-46 .lyric-text { font-size: 46px; }
+.lyrics-47 .lyric-text { font-size: 47px; }
+.lyrics-48 .lyric-text { font-size: 48px; }
+
+/* ---- Preferences ------------------------------------------------------ */
+
+.block-row {
+  padding: {{space.s3}} {{space.s3}} {{space.s4}};
+}
+
+.block-title {
+  margin: 0 {{space.s1}};
+}
+
+/* Theme and Now Playing background: pictures as a segmented choice. */
+button.picture-choice {
+  padding: {{space.s2}};
+  border-radius: {{radius.r-lg}};
+  transition: box-shadow {{motion.dur-1}} {{motion.ease-fluid}}, background-color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+button.picture-choice:checked {
+  background-color: {{accent.accent-soft}};
+  box-shadow: inset 0 0 0 2px {{accent.accent}};
+}
+
+.picture-caption {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+button.picture-choice:checked .picture-caption {
+  color: {{accent.accent-text}};
+}
+
+/* Accent swatches: round dots, a ring around the chosen one. */
+.swatches {
+  margin: 0 -2px;
+}
+
+.swatches > flowboxchild {
+  padding: 0;
+}
+
+button.swatch {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 4px;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  transition: box-shadow {{motion.dur-1}} {{motion.ease-fluid}}, transform {{motion.dur-0}} {{motion.ease-spring}};
+}
+
+button.swatch:hover {
+  background-color: {{line.fill-hover}};
+}
+
+button.swatch:active {
+  transform: scale(0.92);
+}
+
+button.swatch:checked {
+  box-shadow: inset 0 0 0 2px {{ink.ink-90}};
+}
+
+.scale-end {
+  font-size: 12px;
+  color: {{ink.ink-50}};
+}
+
+.pref-segmented > button.segment {
+  padding: 0 {{space.s3}};
+}
+
+.eq-bands {
+  padding: {{space.s4}} {{space.s3}} {{space.s3}};
+}
+
+.eq-label {
+  font-size: 11px;
+  color: {{ink.ink-50}};
+}
+
+.scan-progress {
+  margin: {{space.s3}} {{space.s4}};
+}
+
+.sign-in {
+  padding: {{space.s5}} {{space.s6}} {{space.s7}};
+}
+
+qrcode {
+  margin: 0;
+}
+
+/* ---- About ------------------------------------------------------------ */
+
+.about {
+  padding: {{space.s4}} {{space.s6}} {{space.s7}};
+}
+
+.about-version {
+  {{type-roles.list-secondary}};
+  font-size: 13px;
+  color: {{ink.ink-70}};
+}
+
+.about-summary {
+  color: {{ink.ink-70}};
+}
+
+/* ---- Glass grades (fallback: tinted surfaces without blur) ------------ */
+
+.veil {
+  background-color: @jf_tint_veil;
+}

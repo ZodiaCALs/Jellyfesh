@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "{{title}}",
+  "type": "object",
+  "properties": {
+    "server_url": {
+      "type": "string",
+      "format": "uri",
+      "title": "Server address",
+      "description": "For example https://music.example.com"
+    }
+  },
+  "required": ["server_url"],
+  "additionalProperties": false
+}

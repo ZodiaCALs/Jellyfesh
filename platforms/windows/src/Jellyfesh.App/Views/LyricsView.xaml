@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The lyrics (docs/lyrics-model.md, lyrics tokens, docs/design-controls.md "v0.0.4"): the active
+    line in ink-90 at full size, the others at 96 %, held at 38 % of the viewport by a 380 ms Fluid
+    scroll in which each following line starts 30 ms after the one above (a cascade), the sung word
+    swept linearly while it is sung, translation and romanization under each line, sized and aligned
+    by the Lyrics settings. Scrolling by hand pauses the follow for four seconds; reduced motion
+    jumps and lights whole lines. Selecting a line seeks to it.
+-->
+<UserControl
+    x:Class="Jellyfesh.App.Views.LyricsView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Jellyfesh.App.Controls"
+    xmlns:drawing="using:Jellyfesh.Drawing"
+    xmlns:shell="using:Jellyfesh.App.Shell">
+
+    <Grid>
+        <ScrollView
+            x:Name="Scroller"
+            x:Uid="Lyrics_List"
+            AutomationProperties.Name="Lyrics"
+            ContentOrientation="Vertical"
+            HorizontalScrollMode="Disabled"
+            ScrollAnimationStarting="OnScrollAnimationStarting"
+            SizeChanged="OnScrollerSizeChanged"
+            StateChanged="OnScrollStateChanged"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="{x:Bind shell:Bind.Visible(Presenter.HasLyrics), Mode=OneWay}">
+            <ItemsRepeater
+                x:Name="Lines"
+                ElementClearing="OnElementClearing"
+                ElementPrepared="OnElementPrepared"
+                ItemsSource="{x:Bind Presenter.Lines}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Spacing="20" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="drawing:LyricLineViewModel">
+                        <controls:LyricLineView Line="{x:Bind}" />
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ScrollView>
+        <TextBlock
+            x:Uid="Lyrics_None"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Style="{StaticResource JfSecondaryBodyText}"
+            Text="No lyrics for this song"
+            Visibility="{x:Bind shell:Bind.Collapsed(Presenter.HasLyrics), Mode=OneWay}" />
+    </Grid>
+</UserControl>

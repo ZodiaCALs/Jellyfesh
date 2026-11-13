@@ -1,0 +1,229 @@
+{
+  "_comment": "Invented library for the mock server. Objects follow the shapes in the OpenSubsonic documentation (ArtistID3, AlbumID3, Child, playlist); none of it comes from a real server or account.",
+  "artists": [
+    {
+      "id": "ar-1",
+      "name": "Northern Lights Orchestra",
+      "coverArt": "ar-1_0",
+      "albumCount": 2,
+      "sortName": "Northern Lights Orchestra",
+      "roles": ["artist", "albumartist"]
+    },
+    {
+      "id": "ar-2",
+      "name": "Cassette Lake",
+      "coverArt": "ar-2_0",
+      "albumCount": 1
+    },
+    {
+      "id": "ar-3",
+      "name": "Ünïcode & Friends",
+      "albumCount": 0
+    }
+  ],
+  "albums": [
+    {
+      "id": "al-1",
+      "name": "Polar Night",
+      "artist": "Northern Lights Orchestra",
+      "artistId": "ar-1",
+      "coverArt": "al-1_6501f00d",
+      "songCount": 3,
+      "duration": 728,
+      "created": "2026-01-10T09:00:00Z",
+      "year": 2021,
+      "genre": "Ambient",
+      "explicitStatus": "explicit",
+      "song": [
+        {
+          "id": "tr-1",
+          "parent": "al-1",
+          "isDir": false,
+          "title": "Aurora",
+          "album": "Polar Night",
+          "artist": "Northern Lights Orchestra",
+          "track": 1,
+          "discNumber": 1,
+          "year": 2021,
+          "genre": "Ambient",
+          "coverArt": "al-1_6501f00d",
+          "size": 28181000,
+          "contentType": "audio/flac",
+          "suffix": "flac",
+          "duration": 245,
+          "bitRate": 920,
+          "bitDepth": 16,
+          "samplingRate": 44100,
+          "channelCount": 2,
+          "path": "Northern Lights Orchestra/Polar Night/01 Aurora.flac",
+          "created": "2026-01-10T09:00:00Z",
+          "albumId": "al-1",
+          "artistId": "ar-1",
+          "type": "music",
+          "mediaType": "song",
+          "isVideo": false,
+          "isrc": ["XXJF12100001"],
+          "explicitStatus": ""
+        },
+        {
+          "id": "tr-2",
+          "parent": "al-1",
+          "isDir": false,
+          "title": "Midnight Sun",
+          "album": "Polar Night",
+          "artist": "Northern Lights Orchestra",
+          "track": 2,
+          "discNumber": 1,
+          "year": 2021,
+          "coverArt": "al-1_6501f00d",
+          "size": 9600000,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 240,
+          "bitRate": 320,
+          "path": "Northern Lights Orchestra/Polar Night/02 Midnight Sun.mp3",
+          "albumId": "al-1",
+          "artistId": "ar-1",
+          "type": "music",
+          "isVideo": false,
+          "isrc": []
+        },
+        {
+          "id": "tr-3",
+          "parent": "al-1",
+          "isDir": false,
+          "title": "Snowfall",
+          "album": "Polar Night",
+          "artist": "Northern Lights Orchestra",
+          "track": 3,
+          "discNumber": 1,
+          "year": 2021,
+          "coverArt": "al-1_6501f00d",
+          "size": 3900000,
+          "contentType": "audio/mpeg",
+          "suffix": "mp3",
+          "duration": 243,
+          "bitRate": 128,
+          "albumId": "al-1",
+          "artistId": "ar-1",
+          "type": "music",
+          "isVideo": false,
+          "explicitStatus": "explicit"
+        }
+      ]
+    },
+    {
+      "id": "al-2",
+      "name": "Ice Roads",
+      "artist": "Northern Lights Orchestra",
+      "artistId": "ar-1",
+      "coverArt": "al-2_6501f00e",
+      "songCount": 2,
+      "duration": 412,
+      "created": "2026-02-01T09:00:00Z",
+      "year": 2023,
+      "song": [
+        {
+          "id": "tr-4",
+          "parent": "al-2",
+          "isDir": false,
+          "title": "Glacier",
+          "album": "Ice Roads",
+          "artist": "Northern Lights Orchestra",
+          "track": 1,
+          "discNumber": 1,
+          "year": 2023,
+          "coverArt": "al-2_6501f00e",
+          "contentType": "audio/mp4",
+          "suffix": "m4a",
+          "duration": 200,
+          "bitRate": 256,
+          "albumId": "al-2",
+          "artistId": "ar-1",
+          "type": "music",
+          "isVideo": false
+        },
+        {
+          "id": "tr-5",
+          "parent": "al-2",
+          "isDir": false,
+          "title": "Tundra (live video)",
+          "album": "Ice Roads",
+          "artist": "Northern Lights Orchestra",
+          "track": 2,
+          "discNumber": 1,
+          "coverArt": "al-2_6501f00e",
+          "contentType": "video/mp4",
+          "suffix": "mp4",
+          "duration": 212,
+          "bitRate": 2400,
+          "albumId": "al-2",
+          "artistId": "ar-1",
+          "type": "video",
+          "isVideo": true
+        }
+      ]
+    },
+    {
+      "id": "al-3",
+      "name": "Tape Hiss",
+      "artist": "Cassette Lake",
+      "artistId": "ar-2",
+      "songCount": 1,
+      "duration": 199,
+      "created": "2026-03-01T09:00:00Z",
+      "year": 1998,
+      "song": [
+        {
+          "id": "tr-6",
+          "parent": "al-3",
+          "isDir": false,
+          "title": "Rewind",
+          "album": "Tape Hiss",
+          "artist": "Cassette Lake",
+          "track": 1,
+          "discNumber": 1,
+          "year": 1998,
+          "contentType": "audio/x-ms-wma",
+          "suffix": "wma",
+          "duration": 199,
+          "bitRate": 192,
+          "albumId": "al-3",
+          "artistId": "ar-2",
+          "type": "music",
+          "isVideo": false
+        }
+      ]
+    }
+  ],
+  "playlists": [
+    {
+      "id": "pl-1",
+      "name": "Evening",
+      "owner": "alice",
+      "public": false,
+      "songCount": 2,
+      "duration": 439,
+      "created": "2026-04-01T18:00:00Z",
+      "changed": "2026-04-02T18:00:00Z",
+      "coverArt": "pl-1_0",
+      "entry": ["tr-2", "tr-6"]
+    },
+    {
+      "id": "pl-2",
+      "name": "Empty",
+      "owner": "alice",
+      "songCount": 0,
+      "duration": 0,
+      "created": "2026-04-03T18:00:00Z",
+      "changed": "2026-04-03T18:00:00Z",
+      "entry": []
+    }
+  ],
+  "starred": {
+    "artist": ["ar-2"],
+    "album": ["al-3"],
+    "song": ["tr-1"]
+  },
+  "similar": ["tr-2", "tr-1", "tr-6"]
+}

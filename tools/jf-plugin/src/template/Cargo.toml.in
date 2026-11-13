@@ -1,0 +1,26 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+# A plugin is a cdylib: `jf-plugin build` compiles it for
+# wasm32-unknown-unknown and wraps it into a WebAssembly component.
+crate-type = ["cdylib"]
+
+[dependencies]
+jf-plugin-sdk = { path = "{{sdk}}" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+
+# Small components for `jf-plugin build --release` and `jf-plugin pack --release`.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+
+# The plugin is a workspace of its own. Delete this table to make the crate a
+# member of another workspace instead.
+[workspace]

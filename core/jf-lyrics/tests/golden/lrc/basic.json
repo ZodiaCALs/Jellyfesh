@@ -1,0 +1,64 @@
+{
+  "language": null,
+  "timing": "line",
+  "offset_ms": 0,
+  "agents": [],
+  "lines": [
+    {
+      "id": 0,
+      "start_ms": 12000,
+      "end_ms": 15500,
+      "agent": null,
+      "text": "Paper boats are drifting on the rain",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 1,
+      "start_ms": 15500,
+      "end_ms": 19200,
+      "agent": null,
+      "text": "Every window hums a quiet tune",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 2,
+      "start_ms": 19200,
+      "end_ms": 24750,
+      "agent": null,
+      "text": "",
+      "words": [],
+      "background": [],
+      "direction": "auto"
+    },
+    {
+      "id": 3,
+      "start_ms": 24750,
+      "end_ms": 28100,
+      "agent": null,
+      "text": "Morning folds the city into blue",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    },
+    {
+      "id": 4,
+      "start_ms": 28100,
+      "end_ms": null,
+      "agent": null,
+      "text": "And I keep the lantern burning low",
+      "words": [],
+      "background": [],
+      "direction": "ltr"
+    }
+  ],
+  "tracks": [],
+  "source": {
+    "format": "lrc",
+    "origin": null
+  },
+  "metadata": {}
+}

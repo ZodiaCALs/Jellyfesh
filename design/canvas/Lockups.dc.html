@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jellyfesh lockups and in context</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0059a2}a:hover{color:#00509d}
+</style>
+</helmet>
+<div style="width: 1760px; height: 1040px; box-sizing: border-box; padding: 48px; display: flex; flex-direction: column; gap: 20px; background: #eef3f9; color: rgba(16,24,32,0.92); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto, 'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-size: 28px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em">Lockups and in context</h1>
+<p style="margin: 0; font-size: 16px; line-height: 1.6; color: rgba(16,24,32,0.72)">Icon B with the wordmark: side by side, stacked, and on a website header and an app sidebar. The lockups use option 2 (monoline with bell) and option 4 (type) so you can compare them.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px">
+<div style="display: grid; place-items: center; height: 220px; border-radius: 12px; background: #f9fbfe; box-shadow: inset 0 0 0 1px rgba(16,24,32,0.12)"><img src="/_blob/abe8b2f3b91ca502e821dcbe32000cee" alt="Horizontal lockup, monoline with bell, on light" style="height: 120px"></div>
+<div style="display: grid; place-items: center; height: 220px; border-radius: 12px; background: #12181e"><img src="/_blob/5686cc2e684d640798dbc006eddffd70" alt="Horizontal lockup, monoline with bell, on dark" style="height: 120px"></div>
+<div style="display: grid; place-items: center; height: 300px; border-radius: 12px; background: #f9fbfe; box-shadow: inset 0 0 0 1px rgba(16,24,32,0.12)"><img src="/_blob/ab07c759641ff714fd08e0fc111c0704" alt="Stacked lockup, monoline with bell, on light" style="height: 250px"></div>
+<div style="display: flex; align-items: center; justify-content: center; gap: 26px; height: 300px; border-radius: 12px; background: #12181e">
+<div style="position: relative; width: 104px; height: 104px; border-radius: 23px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.3)"><img src="/_blob/467fb006d658b6860aaba52af37ba550" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/bfc07027df7adcb5ad842bcfcd0a957f" alt="Jellyfesh icon" style="position: absolute; inset: 0; width: 100%; height: 100%"></div>
+<img src="/_blob/c82b03b0f02e15c6297e3de2a91eed89" alt="Jellyfesh, type wordmark" style="height: 66px">
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 72px; padding: 0 24px; border-radius: 12px; background: rgba(251,254,255,0.62); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.55), 0 1px 2px rgba(30,47,65,0.04), 0 10px 28px -18px rgba(4,47,84,0.22)">
+<img src="/_blob/abe8b2f3b91ca502e821dcbe32000cee" alt="Jellyfesh" style="height: 44px">
+<nav aria-label="Example site navigation" style="display: flex; align-items: center; gap: 8px">
+<a href="#" style="padding: 10px 12px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">Features</a>
+<a href="#" style="padding: 10px 12px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">Plugins</a>
+<a href="#" style="padding: 10px 12px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">Docs</a>
+<a href="#" style="padding: 10px 12px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">GitHub</a>
+<a href="#" style="margin-left: 8px; padding: 10px 16px; border-radius: 8px; background: #0059a7; color: #f9fcff; font-size: 14px; font-weight: 600; text-decoration: none">Download</a>
+</nav>
+</div>
+<p style="margin: 0; font-size: 12px; line-height: 1.45; font-weight: 600; color: rgba(16,24,32,0.62)">Website header (placeholder links)</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; flex-direction: column; gap: 6px; padding: 16px 12px; border-radius: 12px; background: #12181e">
+<div style="display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px">
+<div style="position: relative; width: 30px; height: 30px; border-radius: 7px; overflow: hidden"><img src="/_blob/467fb006d658b6860aaba52af37ba550" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/56a6a91afb4dcd1ab8c9f3ec7d4fed3b" alt="Jellyfesh icon" style="position: absolute; inset: 0; width: 100%; height: 100%"></div>
+<img src="/_blob/141a1e31d42da137b108269205063a1b" alt="jellyfesh" style="height: 30px">
+</div>
+<div style="padding: 9px 10px; border-radius: 8px; background: rgba(246,249,252,0.10); color: rgba(246,249,252,0.92); font-size: 14px; font-weight: 600">Library</div>
+<div style="padding: 9px 10px; border-radius: 8px; color: rgba(246,249,252,0.72); font-size: 14px; font-weight: 600">Search</div>
+<div style="padding: 9px 10px; border-radius: 8px; color: rgba(246,249,252,0.72); font-size: 14px; font-weight: 600">Sources</div>
+</div>
+<p style="margin: 0; font-size: 12px; line-height: 1.45; font-weight: 600; color: rgba(16,24,32,0.62)">App sidebar header</p>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1760,"height":1040}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

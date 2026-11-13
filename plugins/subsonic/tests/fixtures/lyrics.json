@@ -1,0 +1,63 @@
+{
+  "_comment": "Invented lyrics in the shapes of the OpenSubsonic documentation: lyricsList (getLyricsBySongId) by song id, and lyrics (getLyrics) by artist and title.",
+  "lyricsList": {
+    "tr-1": {
+      "structuredLyrics": [
+        {
+          "kind": "translation",
+          "lang": "fra",
+          "synced": true,
+          "line": [
+            { "start": 1200, "value": "La lumière danse au-dessus de la glace" }
+          ]
+        },
+        {
+          "displayArtist": "Northern Lights Orchestra",
+          "displayTitle": "Aurora",
+          "lang": "eng",
+          "offset": -150,
+          "synced": true,
+          "line": [
+            { "start": 1200, "value": "Light is dancing over the ice" },
+            { "start": 5650.4, "value": "Green and violet, slow and wide" },
+            { "start": 9875, "value": "" },
+            { "start": 61005, "value": "The sky is still awake — café lights" },
+            { "start": 3600010, "value": "An hour later" }
+          ]
+        },
+        {
+          "displayArtist": "Northern Lights Orchestra",
+          "displayTitle": "Aurora",
+          "lang": "eng",
+          "synced": false,
+          "line": [
+            { "value": "Light is dancing over the ice" }
+          ]
+        }
+      ]
+    },
+    "tr-2": {
+      "structuredLyrics": [
+        {
+          "displayArtist": "Northern Lights Orchestra",
+          "displayTitle": "Midnight Sun",
+          "lang": "xxx",
+          "offset": 100,
+          "synced": false,
+          "line": [
+            { "value": "The sun stays up past midnight" },
+            { "value": "" },
+            { "value": "We walk the shore until it sets" }
+          ]
+        }
+      ]
+    }
+  },
+  "lyrics": {
+    "Northern Lights Orchestra|Snowfall": {
+      "artist": "Northern Lights Orchestra",
+      "title": "Snowfall",
+      "value": "Snow falls on the quiet town\r\nAnd covers every road\r\n"
+    }
+  }
+}

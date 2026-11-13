@@ -1,0 +1,18 @@
+id = "org.jellyfesh.subsonic"
+name = "Subsonic"
+version = "0.0.3"
+api_version = "1.0"
+author = "Jellyfesh"
+description = "Your Navidrome, Gonic, Airsonic or other Subsonic and OpenSubsonic server"
+official = true
+capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations"]
+playback_mode = "stream"
+auth = ["api-key", "password-exchange"]
+
+[network]
+# Only the server the person enters; the host allows it on the local network.
+allow = ["${settings.server_url}"]
+max_rps = 20
+
+[settings]
+schema = "settings.schema.json"

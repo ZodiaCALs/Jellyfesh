@@ -1,0 +1,57 @@
+# Licence and advisory policy (ADR-0016): keep a closed commercial version possible.
+[licenses]
+allow = [
+  "MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause",
+  "ISC", "Zlib", "CC0-1.0", "Unicode-3.0", "Unicode-DFS-2016", "MPL-2.0", "Unlicense", "BSL-1.0",
+]
+confidence-threshold = 0.9
+# The list is a policy, not an inventory: allowances not used yet are fine.
+unused-allowed-license = "allow"
+
+# webpki-root-certs (Mozilla's CA list, CDLA-Permissive-2.0) is a dependency of
+# rustls-platform-verifier only on wasm32 targets; the plugin host never builds
+# for wasm32 and verifies TLS with the operating system's trust store. The
+# exception is scoped to that one crate.
+[[licenses.exceptions]]
+crate = "webpki-root-certs"
+allow = ["CDLA-Permissive-2.0"]
+
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Workspace crates are unpublished path dependencies, not wildcards.
+allow-wildcard-paths = true
+
+[advisories]
+yanked = "deny"
+ignore = [
+  # paste is unmaintained (informational, no vulnerability). It is a
+  # build-time proc-macro pulled in by lofty; revisit when lofty drops it.
+  { id = "RUSTSEC-2024-0436", reason = "build-time macro via lofty; no known vulnerability" },
+  # rsa's Marvin attack is a timing side channel in private-key operations
+  # (decryption, signing). jf-plugin-model's crypto, behind the plugin import
+  # crypto.rsa-encrypt in jf-plugin-host and in Jellyfesh Web's plugin sandbox
+  # (jf-web-sandbox), only encrypts with public keys and never holds an RSA
+  # private key. Revisit when rsa 0.10 (constant-time arithmetic) is stable.
+  { id = "RUSTSEC-2023-0071", reason = "the plugin hosts use RSA public-key encryption only" },
+  # basic-toml is unmaintained (informational, no vulnerability, no upgrade). askama's derive
+  # macro reads its config with it at build time; askama renders UniFFI's binding templates
+  # (uniffi_bindgen, used by jf-ffi-bindgen). Revisit when uniffi_bindgen moves off it.
+  { id = "RUSTSEC-2026-0374", reason = "build-time config parser via askama in uniffi_bindgen; no known vulnerability" },
+  # zvariant, zvariant_derive and zbus_names are unmaintained as separate crates since zbus 6
+  # took them in (informational, no vulnerability). keyring 4.2's Secret Service store (the
+  # Linux keystore of jf-core, ADR-0015) is on secret-service 5.2 and so on zbus 5; checked
+  # 2026-11-09: keyring 4.2.0 and zbus-secret-service-keyring-store 1.0.1 are the newest
+  # releases, secret-service 6 is only a release candidate. Revisit when the store moves to
+  # zbus 6.
+  { id = "RUSTSEC-2026-0370", reason = "zvariant via keyring's Secret Service store (zbus 5); no known vulnerability" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names via keyring's Secret Service store (zbus 5); no known vulnerability" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive via keyring's Secret Service store (zbus 5); no known vulnerability" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

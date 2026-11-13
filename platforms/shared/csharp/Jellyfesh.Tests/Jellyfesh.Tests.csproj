@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    C# contract tests (docs/ffi.md): the drawing-time ports replay tests/contract/lyrics-cursor.json
+    and display-clock.json, Jellyfesh.Ffi reads and writes every sample of ffi-types.json, and the
+    binding runs core-scenario.json against the jf-ffi library built here.
+
+    Run: cargo build -p jf-ffi && dotnet test platforms/shared/csharp/Jellyfesh.Tests
+    JF_FFI_LIBRARY overrides the native library's path.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <JfRepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', '..'))</JfRepoRoot>
+    <JfFfiLibrary Condition="'$(JF_FFI_LIBRARY)' != ''">$(JF_FFI_LIBRARY)</JfFfiLibrary>
+    <JfFfiLibrary Condition="'$(JfFfiLibrary)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">$(JfRepoRoot)target/debug/jf_ffi.dll</JfFfiLibrary>
+    <JfFfiLibrary Condition="'$(JfFfiLibrary)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">$(JfRepoRoot)target/debug/libjf_ffi.dylib</JfFfiLibrary>
+    <JfFfiLibrary Condition="'$(JfFfiLibrary)' == ''">$(JfRepoRoot)target/debug/libjf_ffi.so</JfFfiLibrary>
+  </PropertyGroup>
+
+  <!-- Versions checked against nuget.org on 2026-11-07. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Jellyfesh.Shared/Jellyfesh.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(JfFfiLibrary)" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Condition="Exists('$(JfFfiLibrary)')" />
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>JfRepoRoot</_Parameter1>
+      <_Parameter2>$(JfRepoRoot)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+
+  <!-- The generated C# tokens compile here too when `cargo xtask tokens -\-target csharp` has run. -->
+  <ItemGroup Condition="Exists('$(JfRepoRoot)platforms/windows/Generated/Tokens.cs')">
+    <Compile Include="$(JfRepoRoot)platforms/windows/Generated/Tokens.cs" Link="Generated/Tokens.cs" />
+  </ItemGroup>
+  <PropertyGroup Condition="Exists('$(JfRepoRoot)platforms/windows/Generated/Tokens.cs')">
+    <DefineConstants>$(DefineConstants);JF_TOKENS</DefineConstants>
+  </PropertyGroup>
+
+</Project>

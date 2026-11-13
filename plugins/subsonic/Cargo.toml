@@ -1,0 +1,25 @@
+[package]
+name = "jf-subsonic"
+description = "Jellyfesh source plugin for Subsonic and OpenSubsonic servers: Navidrome, Gonic, Airsonic and others."
+# The plugin's own version: keep it equal to `version` in manifest.toml.
+version = "0.0.3"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-sdk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+jf-plugin-host.workspace = true
+jf-plugin-testkit.workspace = true
+md-5.workspace = true

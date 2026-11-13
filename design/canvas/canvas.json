@@ -1,0 +1,442 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-11-05T21:40:00Z"
+  },
+  "title": "Jellyfesh icon concepts",
+  "launch": {
+    "view": "canvas",
+    "page": "icons"
+  },
+  "pages": [
+    {
+      "id": "icons",
+      "name": "App icon · defaults and setting"
+    },
+    {
+      "id": "brand",
+      "name": "Wordmark · formal and home page"
+    },
+    {
+      "id": "round4",
+      "name": "Round 4 · icon B colours"
+    },
+    {
+      "id": "wordmark",
+      "name": "Wordmark · options and lockups"
+    },
+    {
+      "id": "round3",
+      "name": "Round 3 · Depth × Midnight"
+    },
+    {
+      "id": "controls",
+      "name": "Controls · four styles"
+    },
+    {
+      "id": "round2",
+      "name": "Round 2 · Wavebell × Tide"
+    },
+    {
+      "id": "compare",
+      "name": "Now Playing · two styles"
+    },
+    {
+      "id": "round1",
+      "name": "Round 1 · five concepts"
+    }
+  ],
+  "boards": {
+    "IconDefaults.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1760,
+      "h": 1040,
+      "title": "Defaults: Ice (light), Steel (dark)",
+      "page": "icons"
+    },
+    "IconSetting.dc.html": {
+      "x": 0,
+      "y": 1160,
+      "w": 1280,
+      "h": 860,
+      "title": "Settings · Appearance · App icon",
+      "page": "icons",
+      "expand": "fill"
+    },
+    "WordmarkFormal.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1760,
+      "h": 900,
+      "title": "Formal: spaced capitals in use",
+      "page": "brand"
+    },
+    "Home-Biolume.dc.html": {
+      "x": 0,
+      "y": 1020,
+      "w": 1440,
+      "h": 800,
+      "title": "Home page A · Bioluminescent",
+      "page": "brand",
+      "expand": "fill"
+    },
+    "Home-Tentacle.dc.html": {
+      "x": 1520,
+      "y": 1020,
+      "w": 1440,
+      "h": 800,
+      "title": "Home page B · Tentacle flourish",
+      "page": "brand",
+      "expand": "fill"
+    },
+    "Home-Glass.dc.html": {
+      "x": 3040,
+      "y": 1020,
+      "w": 1440,
+      "h": 800,
+      "title": "Home page C · Aurora glass capitals",
+      "page": "brand",
+      "expand": "fill"
+    },
+    "Round4.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1760,
+      "h": 1120,
+      "title": "Round 4 · ten colour combinations",
+      "page": "round4"
+    },
+    "Wordmark.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1760,
+      "h": 1240,
+      "title": "Wordmark · six options",
+      "page": "wordmark"
+    },
+    "Lockups.dc.html": {
+      "x": 0,
+      "y": 1360,
+      "w": 1760,
+      "h": 1040,
+      "title": "Lockups and in context",
+      "page": "wordmark"
+    },
+    "Round3.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1760,
+      "h": 720,
+      "title": "Round 3 · Depth tile, Midnight lines",
+      "page": "round3"
+    },
+    "Controls-A.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 940,
+      "title": "A · Glass capsules (after Apple)",
+      "page": "controls"
+    },
+    "Controls-B.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 940,
+      "title": "B · Fluent (after Microsoft)",
+      "page": "controls"
+    },
+    "Controls-C.dc.html": {
+      "x": 0,
+      "y": 1060,
+      "w": 1280,
+      "h": 940,
+      "title": "C · Expressive (after Google)",
+      "page": "controls"
+    },
+    "Controls-D.dc.html": {
+      "x": 1360,
+      "y": 1060,
+      "w": 1280,
+      "h": 940,
+      "title": "D · Blend (my pick)",
+      "page": "controls"
+    },
+    "Round2.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1760,
+      "h": 1080,
+      "title": "Round 2 · eight variants",
+      "page": "round2"
+    },
+    "NowPlaying-Artwork.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Style A · Artwork (your brief)",
+      "page": "compare",
+      "expand": "fill"
+    },
+    "NowPlaying-Misty.dc.html": {
+      "x": 1360,
+      "y": 0,
+      "w": 1280,
+      "h": 800,
+      "title": "Style B · Misty (conformant)",
+      "page": "compare",
+      "expand": "fill"
+    },
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1680,
+      "h": 640,
+      "title": "Shortlist",
+      "is_interactive": true,
+      "page": "round1"
+    },
+    "Lumen.dc.html": {
+      "x": 0,
+      "y": 760,
+      "w": 1040,
+      "h": 620,
+      "title": "1 · Lumen",
+      "page": "round1"
+    },
+    "Abyss.dc.html": {
+      "x": 1120,
+      "y": 760,
+      "w": 1040,
+      "h": 620,
+      "title": "2 · Abyss",
+      "page": "round1"
+    },
+    "Wavebell.dc.html": {
+      "x": 0,
+      "y": 1500,
+      "w": 1040,
+      "h": 620,
+      "title": "3 · Wavebell",
+      "page": "round1"
+    },
+    "Verse.dc.html": {
+      "x": 1120,
+      "y": 1500,
+      "w": 1040,
+      "h": 620,
+      "title": "4 · Verse",
+      "page": "round1"
+    },
+    "Tide.dc.html": {
+      "x": 0,
+      "y": 2240,
+      "w": 1040,
+      "h": 620,
+      "title": "5 · Tide",
+      "page": "round1"
+    }
+  },
+  "order": [
+    "IconDefaults.dc.html",
+    "IconSetting.dc.html",
+    "WordmarkFormal.dc.html",
+    "Home-Biolume.dc.html",
+    "Home-Tentacle.dc.html",
+    "Home-Glass.dc.html",
+    "Round4.dc.html",
+    "Wordmark.dc.html",
+    "Lockups.dc.html",
+    "Round3.dc.html",
+    "Controls-A.dc.html",
+    "Controls-B.dc.html",
+    "Controls-C.dc.html",
+    "Controls-D.dc.html",
+    "Round2.dc.html",
+    "NowPlaying-Artwork.dc.html",
+    "NowPlaying-Misty.dc.html",
+    "Main.dc.html",
+    "Lumen.dc.html",
+    "Abyss.dc.html",
+    "Wavebell.dc.html",
+    "Verse.dc.html",
+    "Tide.dc.html"
+  ],
+  "notes": {
+    "r2title": {
+      "x": 0,
+      "y": -300,
+      "text": "Round 2 · Wavebell's shape in Tide's style · deep blue and cyan",
+      "kind": "title1",
+      "maxW": 1760,
+      "page": "round2"
+    },
+    "r2read": {
+      "x": 1840,
+      "y": 0,
+      "w": 420,
+      "fill": "blue",
+      "size": "m",
+      "page": "round2",
+      "text": "How to read round 2\n\n• Shape: Wavebell (two wave arcs, a core, five tentacles as a level meter).\n• Tile: Tide's gradient tile, recoloured in deep blues and cyans.\n• “Transparent lines”, three ways: translucent white (2, 5, 6, 8), glass tubes with a bright rim and a clear core (3, 4, 7), and an outlined core like Tide's bell (5).\n• Translucent and glass lines fade at 16–32 px. The chosen variant gets hand-tuned small sizes with solid lines.\n• My picks: 4 Deep Sea, then 2 Clearwater."
+    },
+    "cmptitle": {
+      "x": 0,
+      "y": -300,
+      "text": "Now Playing · two styles · same placeholder track",
+      "kind": "title1",
+      "maxW": 2640,
+      "page": "compare"
+    },
+    "cmpnote": {
+      "x": 2720,
+      "y": 0,
+      "w": 440,
+      "fill": "blue",
+      "size": "m",
+      "page": "compare",
+      "text": "Compare\n\n• A · Artwork: the cover, blurred and darkened for contrast, fills the screen; the scrubber thumb is the one liquid-glass accent. The most immersive; breaks Misty's MAT-02 and MAT-04.\n• B · Misty: the field's aurora takes the cover's hue and the cover stays a framed object; plain Veil thumb. Calmer, and Misty-conformant.\n• Same layout, tokens and contrast rules in both.\n• Placeholder artwork, title and lyrics were made for this mock-up.\n• In the app both ship behind Appearance → Style from Milestone 2."
+    },
+    "title": {
+      "x": 0,
+      "y": -300,
+      "text": "Jellyfesh · app icon concepts · for approval",
+      "kind": "title1",
+      "maxW": 2160,
+      "page": "round1"
+    },
+    "brief": {
+      "x": 1760,
+      "y": 0,
+      "w": 400,
+      "fill": "blue",
+      "size": "m",
+      "page": "round1",
+      "text": "How to review\n\n• Pick one concept, or two to combine.\n• Each one is drawn in layers (background, foreground, monochrome), so it can become a macOS 26 layered icon, an Android adaptive and themed icon, a GNOME icon with a symbolic version, and a Windows icon.\n• Small sizes are shown as drawn. The chosen concept gets hand-tuned 16 and 32 px versions.\n• Colours come from the Misty OKLCH conversion, so the icon and the interface share one palette."
+    },
+    "dropped": {
+      "x": 1120,
+      "y": 2240,
+      "w": 440,
+      "fill": "gray",
+      "size": "m",
+      "page": "round1",
+      "text": "Explored and dropped\n\n• Flagnote (bell as a note head, tentacle as stem and flag) and J-Drift (bell falling into a J): both read as umbrellas at small sizes.\n• Aurelia (moon jelly seen from above): the four gonad rings read as the ⌘ key, and the rotated version formed hooks. Neither is acceptable."
+    },
+    "risk": {
+      "x": 1640,
+      "y": 2240,
+      "w": 440,
+      "fill": "orange",
+      "size": "m",
+      "page": "round1",
+      "text": "Brand check before we commit\n\n“Jellyfesh” sits close to “Jellyfin”, a media server we will also support as a source, and Jellyfin's own mark is a purple-to-cyan jellyfish-like arch. These concepts avoid that palette and silhouette, but the name needs a trademark search."
+    },
+    "r3title": {
+      "x": 0,
+      "y": -300,
+      "text": "Round 3 · Depth's tile with Midnight's lines",
+      "kind": "title1",
+      "maxW": 1760,
+      "page": "round3"
+    },
+    "r3read": {
+      "x": 1840,
+      "y": 0,
+      "w": 420,
+      "fill": "blue",
+      "size": "m",
+      "page": "round3",
+      "text": "Round 3\n\n• A is exactly what you asked for: Depth's tile with Midnight's cyan-tinted translucent lines.\n• B adds a soft shadow, C uses Depth's outlined core, D starts the tile at aqua so the lines read more clearly.\n• 32 and 16 px use a simplified master: one arc, the core and three tentacles, at full opacity.\n• My pick: B, or D if you want more contrast."
+    },
+    "ctltitle": {
+      "x": 0,
+      "y": -300,
+      "text": "Controls · four styles · same Misty tokens",
+      "kind": "title1",
+      "maxW": 2640,
+      "page": "controls"
+    },
+    "ctlnote": {
+      "x": 2720,
+      "y": 0,
+      "w": 460,
+      "fill": "blue",
+      "size": "m",
+      "page": "controls",
+      "text": "Four control styles, one design language\n\n• A · Glass capsules (after Apple): the calmest; glyph-only transport, a seek bar that thickens while dragging. Its filled previous/next glyphs break Misty's ICO-03 (filled glyphs mark only active states) unless we keep them outlined.\n• B · Fluent (after Microsoft): the most familiar on Windows; quiet square buttons, a precise ringed thumb, times at both ends.\n• C · Expressive (after Google): the most playful; a play button that changes shape, a wavy played track, tonal pills. Adapted to Misty: separate pills instead of joined segments, and shapes change only between radii on Misty's scale.\n• D · Blend (my pick): A's grouping, B's thumb and times, C's wave at half strength, Misty's segmented control.\n• In all four: Misty colours and glass grades, 44 pt targets (48 dp on Android), one accent-filled action per view, motion from Misty's tokens. Waves stop when paused, in reduced motion and in Still mode.\n• Pick one, or mix parts: for example D with C's play button."
+    },
+    "r4title": {
+      "x": 0,
+      "y": -300,
+      "text": "Round 4 · icon B in ten colour combinations",
+      "kind": "title1",
+      "maxW": 1760,
+      "page": "round4"
+    },
+    "r4read": {
+      "x": 1840,
+      "y": 0,
+      "w": 420,
+      "fill": "blue",
+      "size": "m",
+      "page": "round4",
+      "text": "Round 4\n\n• Same construction as B; only the colours change.\n• 8 Abyss and 9 Ice are meant as dark and light appearances: macOS 26 and Android can switch the icon with the system appearance, so one main colour plus these two covers every case.\n• My picks: 1 Original B or 2 Navy Tide as the main icon, with 8 Abyss for dark mode."
+    },
+    "wmtitle": {
+      "x": 0,
+      "y": -300,
+      "text": "Wordmark · options and lockups",
+      "kind": "title1",
+      "maxW": 1760,
+      "page": "wordmark"
+    },
+    "wmread": {
+      "x": 1840,
+      "y": 0,
+      "w": 420,
+      "fill": "blue",
+      "size": "m",
+      "page": "wordmark",
+      "text": "Wordmark\n\n• 1–3 are drawn in the icon's own line style: round strokes, tentacle curls on the j, y and l's. They're unique to Jellyfesh and need no font licence.\n• 4–6 use Inter Display (SIL Open Font License), converted to outlines, so they render identically everywhere.\n• Inside the app, text stays in the system font (Misty TYP-01); the wordmark appears only as artwork: About screen, website, installers, splash.\n• My pick: 2 Monoline with bell, with 4 Type as the plain alternative."
+    },
+    "icontitle": {
+      "x": 0,
+      "y": -300,
+      "text": "App icon · Ice and Steel by default, all ten in Settings",
+      "kind": "title1",
+      "maxW": 1760,
+      "page": "icons"
+    },
+    "iconread": {
+      "x": 1840,
+      "y": 0,
+      "w": 440,
+      "fill": "blue",
+      "size": "m",
+      "page": "icons",
+      "text": "How the app icon setting works\n\n• Automatic (default): Ice in light appearance, Steel in dark.\n• macOS 26: built into the layered icon, so the Dock, Finder and Launchpad follow the system. macOS 14–15: the Dock icon switches while Jellyfesh runs; Finder keeps Ice.\n• Windows: the taskbar icon switches at once; the app updates its Start and desktop shortcuts too.\n• Android: launchers can't follow dark mode reliably, so Automatic means Ice; the other nine are manual choices (a short confirmation, because some launchers move the icon). Android 13+ themed icons use the monochrome layer.\n• Linux: one icon (Ice) from the app's metadata; the picker is hidden."
+    },
+    "brandtitle": {
+      "x": 0,
+      "y": -300,
+      "text": "Wordmark · formal capitals and a fancier home page",
+      "kind": "title1",
+      "maxW": 2960,
+      "page": "brand"
+    },
+    "brandread": {
+      "x": 1840,
+      "y": 0,
+      "w": 440,
+      "fill": "blue",
+      "size": "m",
+      "page": "brand",
+      "text": "Wordmark usage\n\n• Formal (spaced capitals, one colour): About window, installers, documents, legal pages, press.\n• Home page hero: pick one of A, B or C below.\n• A · Bioluminescent: the monoline wordmark as glowing glass tubes in a dark sea.\n• B · Tentacle flourish: the j, the l's and the y trail long tentacles; on the website they can sway slowly (off with reduced motion).\n• C · Aurora glass capitals: the formal capitals in frosted glass over an aurora, tying the two together.\n• My pick: A, or C if you want the home page to match the formal mark."
+    }
+  },
+  "designSystems": []
+}

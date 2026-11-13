@@ -1,0 +1,79 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The one place that names Jellyfesh.Ffi types: FfiCoreClient implements ICoreClient over the
+    binding, and PortDrawingTime wraps the shared drawing-time ports. net10.0, so it builds and is
+    tested on any OS; the native library is only needed at run time.
+
+    Where Jellyfesh.Ffi comes from, first match wins:
+      1. Generated/Jellyfesh.Ffi/Jellyfesh.Ffi.csproj, written by `cargo xtask bindings -\-lang csharp`
+         (it also copies Generated/native/<library> into the output);
+      2. loose .cs files under Generated/ (any layout), compiled into this assembly, with the
+         native libraries found under Generated/ copied next to it;
+      3. the hand-written source in core/jf-ffi/csharp (what xtask copies), so a checkout builds
+         and tests before the bindings were generated.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Jellyfesh.Interop</RootNamespace>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsAotCompatible>true</IsAotCompatible>
+    <JfRepoRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', '..'))</JfRepoRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Jellyfesh.Shared\Jellyfesh.Shared.csproj" />
+    <InternalsVisibleTo Include="Jellyfesh.Shared.Tests" />
+  </ItemGroup>
+
+  <!-- 1: the generated project. -->
+  <ItemGroup>
+    <JfFfiGeneratedProject Include="$(JfGeneratedDir)**\Jellyfesh.Ffi.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'@(JfFfiGeneratedProject)' != ''">
+    <ProjectReference Include="@(JfFfiGeneratedProject)" />
+  </ItemGroup>
+
+  <!-- 2: loose sources (Tokens.cs is the app's, not the binding's). -->
+  <ItemGroup Condition="'@(JfFfiGeneratedProject)' == ''">
+    <JfFfiLooseFile Include="$(JfGeneratedDir)**\*.cs" Exclude="$(JfGeneratedDir)Tokens.cs;$(JfGeneratedDir)**\obj\**;$(JfGeneratedDir)**\bin\**" />
+  </ItemGroup>
+  <ItemGroup Condition="'@(JfFfiLooseFile)' != ''">
+    <Compile Include="@(JfFfiLooseFile)" Link="Ffi\%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="$(JfGeneratedDir)**\*.dll;$(JfGeneratedDir)**\*.so;$(JfGeneratedDir)**\*.dylib"
+          Exclude="$(JfGeneratedDir)**\obj\**;$(JfGeneratedDir)**\bin\**"
+          Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+  <PropertyGroup>
+    <!-- The binding's Native.cs uses pointers when it is compiled in here (case 2). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- 3: the in-repo source when nothing was generated. -->
+  <ItemGroup Condition="'@(JfFfiGeneratedProject)' == '' and '@(JfFfiLooseFile)' == ''">
+    <ProjectReference Include="$(JfRepoRoot)core\jf-ffi\csharp\Jellyfesh.Ffi\Jellyfesh.Ffi.csproj" />
+  </ItemGroup>
+
+  <!--
+    Config.bundled_plugins (the official plugins shipped inside the app, installed or updated by the
+    core at start) is being added to jf-ffi; until the binding has CoreConfig.BundledPlugins,
+    FfiCoreClient leaves it out. The binding's Types.cs is read to decide (JF_FFI_BUNDLED_PLUGINS).
+  -->
+  <PropertyGroup>
+    <JfFfiGeneratedTypes>$([MSBuild]::NormalizePath('$(JfGeneratedDir)', 'Jellyfesh.Ffi', 'Types.cs'))</JfFfiGeneratedTypes>
+    <JfFfiTypesFile Condition="Exists('$(JfFfiGeneratedTypes)')">$(JfFfiGeneratedTypes)</JfFfiTypesFile>
+    <JfFfiTypesFile Condition="'$(JfFfiTypesFile)' == ''">$([MSBuild]::NormalizePath('$(JfRepoRoot)', 'core', 'jf-ffi', 'csharp', 'Jellyfesh.Ffi', 'Types.cs'))</JfFfiTypesFile>
+    <JfFfiTypesText Condition="Exists('$(JfFfiTypesFile)')">$([System.IO.File]::ReadAllText('$(JfFfiTypesFile)'))</JfFfiTypesText>
+    <JfFfiHasBundledPlugins Condition="$(JfFfiTypesText.Contains('BundledPlugins'))">true</JfFfiHasBundledPlugins>
+    <DefineConstants Condition="'$(JfFfiHasBundledPlugins)' == 'true'">$(DefineConstants);JF_FFI_BUNDLED_PLUGINS</DefineConstants>
+  </PropertyGroup>
+
+  <!--
+    The drawing-time ports (platforms/shared/csharp/Jellyfesh.Shared, namespace Jellyfesh.Shared).
+    Their project is also called Jellyfesh.Shared, like this app's own library, so its sources are
+    compiled here instead of referencing it (docs/ffi.md allows either).
+  -->
+  <ItemGroup>
+    <Compile Include="$(JfSharedCsharpDir)Jellyfesh.Shared\*.cs" Link="SharedPorts\%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

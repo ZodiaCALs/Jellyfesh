@@ -1,0 +1,25 @@
+[package]
+name = "jf-plugin"
+description = "The Jellyfesh plugin tool: scaffold, build, pack, sign, verify and inspect plugins."
+version.workspace = true
+edition.workspace = true
+# jf-plugin-host (packages, manifests, signatures) needs Rust 1.95.
+rust-version = "1.95"
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+getrandom.workspace = true
+jf-plugin-build.workspace = true
+jf-plugin-host.workspace = true
+serde_json.workspace = true
+zeroize.workspace = true
+zip.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

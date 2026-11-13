@@ -1,0 +1,14 @@
+# {{title}}
+
+A Jellyfesh source plugin, made with `jf-plugin new`.
+
+```sh
+jf-plugin build              # target/plugins/{{name}}.wasm
+jf-plugin pack --release     # target/plugins/{{id}}-0.1.0.jfpkg
+jf-plugin sign target/plugins/{{id}}-0.1.0.jfpkg --key ~/keys/jellyfesh-signing.key
+jf-plugin inspect target/plugins/{{id}}-0.1.0.jfpkg
+```
+
+Edit `manifest.toml` (id, name, author, capabilities, network allowlist),
+`settings.schema.json` and `src/lib.rs`. The plugin authoring guide in the
+Jellyfesh repository (`docs/plugins/authoring.md`) explains the rest.

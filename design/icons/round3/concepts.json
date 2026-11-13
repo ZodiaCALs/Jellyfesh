@@ -1,0 +1,30 @@
+[
+  {
+    "id": "final",
+    "name": "Depth × Midnight",
+    "idea": "Exactly as asked: Depth's tile with Midnight's cyan-tinted translucent lines.",
+    "palette": "translucent",
+    "notes": ""
+  },
+  {
+    "id": "final-lift",
+    "name": "… with lift",
+    "idea": "The same, with a soft shadow under the glyph so the lines hold on the bright top.",
+    "palette": "translucent",
+    "notes": ""
+  },
+  {
+    "id": "final-outline",
+    "name": "… with outlined core",
+    "idea": "Midnight's lines with Depth's outlined core, closer to Tide's open bell.",
+    "palette": "hollow",
+    "notes": ""
+  },
+  {
+    "id": "final-deep",
+    "name": "… with a deeper top",
+    "idea": "The tile starts at aqua instead of cyan, so the lines read more clearly.",
+    "palette": "translucent",
+    "notes": ""
+  }
+]

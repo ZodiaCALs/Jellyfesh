@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings: app icon picker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0059a2}a:hover{color:#00509d}
+</style>
+</helmet>
+<div style="width: 100%; min-height: 860px; box-sizing: border-box; display: flex; flex-wrap: wrap; background: radial-gradient(55% 60% at 8% 6%, rgba(151,210,255,0.75) 0%, rgba(151,210,255,0) 70%), radial-gradient(50% 55% at 96% 96%, rgba(229,204,255,0.8) 0%, rgba(229,204,255,0) 70%), radial-gradient(40% 50% at 4% 98%, rgba(190,239,228,0.75) 0%, rgba(190,239,228,0) 70%), #eef3f9; color: rgba(16,24,32,0.92); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text', 'Segoe UI', system-ui, Roboto, 'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif">
+
+<nav aria-label="Settings sections" style="flex: 1 1 200px; max-width: 240px; box-sizing: border-box; padding: 28px 16px; display: flex; flex-direction: column; gap: 4px">
+<p style="margin: 0 0 10px 10px; font-size: 20px; line-height: 1.2; font-weight: 700">Settings</p>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">General</a>
+<a href="#" aria-current="page" style="padding: 9px 10px; border-radius: 8px; background: rgba(210,235,255,0.72); color: #0059a2; font-size: 14px; font-weight: 600; text-decoration: none">Appearance</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">Playback</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">Sources</a>
+<a href="#" style="padding: 9px 10px; border-radius: 8px; color: rgba(16,24,32,0.72); font-size: 14px; font-weight: 600; text-decoration: none">Library</a>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 28px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em">Appearance</h1>
+
+<section aria-labelledby="style-h" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; border-radius: 12px; background: #f9fbfe; box-shadow: inset 0 0 0 1px rgba(16,24,32,0.12), 0 1px 2px rgba(30,47,65,0.04)">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="style-h" style="margin: 0; font-size: 16px; line-height: 1.3; font-weight: 650">Style</h2>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: rgba(16,24,32,0.72)">How Now Playing draws its background.</p>
+</div>
+<div role="radiogroup" aria-label="Style" style="display: flex; padding: 3px; border-radius: 10px; background: rgba(16,24,32,0.045); box-shadow: inset 0 0 0 1px rgba(16,24,32,0.07)">
+<button role="radio" aria-checked="true" style="height: 32px; padding: 0 16px; border: 0; border-radius: 7px; background: #f9fbfe; box-shadow: 0 1px 2px rgba(30,47,65,0.12); color: rgba(16,24,32,0.92); font: 600 13px/1.4 inherit; cursor: pointer">Artwork</button>
+<button role="radio" aria-checked="false" style="height: 32px; padding: 0 16px; border: 0; border-radius: 7px; background: transparent; color: rgba(16,24,32,0.72); font: 600 13px/1.4 inherit; cursor: pointer">Misty</button>
+</div>
+</section>
+
+<section aria-labelledby="icon-h" style="display: flex; flex-direction: column; gap: 16px; padding: 20px; border-radius: 12px; background: #f9fbfe; box-shadow: inset 0 0 0 1px rgba(16,24,32,0.12), 0 1px 2px rgba(30,47,65,0.04)">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="icon-h" style="margin: 0; font-size: 16px; line-height: 1.3; font-weight: 650">App icon</h2>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: rgba(16,24,32,0.72)">Shown in the Dock, the taskbar and on the home screen.</p>
+</div>
+<div role="radiogroup" aria-label="App icon" style="display: flex; flex-wrap: wrap; gap: 18px 14px">
+
+<button role="radio" aria-checked="true" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit">
+<span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; box-shadow: 0 0 0 2px #f9fbfe, 0 0 0 4px #0059a7">
+<span style="position: absolute; inset: 0; border-radius: 14px; overflow: hidden"><img src="/_blob/950106203e00f5ace2d1cca44c40b1ef" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/8b3cc9f434b75c89ae589e49e047cbec" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span>
+<span style="position: absolute; inset: 0; border-radius: 14px; overflow: hidden; clip-path: polygon(100% 0, 100% 100%, 0 100%)"><img src="/_blob/9821b0f3015e4ff165b6a255e973f357" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/cd528ca1f9aa4d243cdafef3e33f6603" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span>
+<span style="position: absolute; right: -6px; top: -6px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 999px; background: #0059a7; box-shadow: 0 0 0 2px #f9fbfe"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f9fcff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+</span>
+<span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: #0059a2">Automatic</span>
+</button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/950106203e00f5ace2d1cca44c40b1ef" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/8b3cc9f434b75c89ae589e49e047cbec" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Ice</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/9821b0f3015e4ff165b6a255e973f357" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/cd528ca1f9aa4d243cdafef3e33f6603" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Steel</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/467fb006d658b6860aaba52af37ba550" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/bfc07027df7adcb5ad842bcfcd0a957f" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Original</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/152939ab20da4563cc45c707f6d43b1c" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/dc28d857dc9345164c705b85da26947c" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Navy Tide</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/bc6b0816c58f3f56c94b605461486fd7" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/8e7ff555e4007d22f46dfe78acb90c58" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Royal</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/52ae948ebe2aac4fef87e0485e900014" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/7c77fd703826978cf8cdaae540c7b64e" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Teal Deep</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/6d6b2d019d83cf68c08ba1beef5710db" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/e3ac983bd6a9ded90b83c5970119fae9" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Sea Glass</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/2c393b092e012048742866fd621c4f92" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/10f953c900e01e0a2c68e3006eede2a6" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Electric</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/06350027fd72e24b391551b684401c00" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/e1d1f7a665a81cf4d80861641a79f737" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Abyss</span></button>
+
+<button role="radio" aria-checked="false" style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 88px; padding: 6px 0; border: 0; border-radius: 12px; background: transparent; cursor: pointer; font: inherit; color: inherit"><span style="position: relative; display: block; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(16,24,32,0.18)"><img src="/_blob/9a4df7706e5a771aead951a8a81a1737" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"><img src="/_blob/8751e9a7a29a6854b421673cc6e0d0ec" alt="" style="position: absolute; inset: 0; width: 100%; height: 100%"></span><span style="font-size: 13px; line-height: 1.3; font-weight: 600; color: rgba(16,24,32,0.72)">Lagoon</span></button>
+
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: rgba(16,24,32,0.72)">Automatic uses Ice in light appearance and Steel in dark appearance. Other choices change the Dock icon while Jellyfesh is open.</p>
+</section>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

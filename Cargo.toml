@@ -1,0 +1,174 @@
+[workspace]
+resolver = "3"
+members = [
+    "core/*",
+    "core/jf-ffi/bindgen",
+    "core/jf-web/media",
+    "core/jf-web/sandbox",
+    "core/jf-core/tests/plugins/*",
+    "apps/cli",
+    "platforms/linux",
+    "xtask",
+    "tools/jf-plugin",
+    "tools/jf-plugin/plugin-build",
+    "plugins/sdk",
+    "plugins/testkit",
+    "plugins/subsonic",
+    "plugins/jellyfin",
+    "plugins/test-plugins/*",
+]
+# Guest crates (the plugin SDK and test plugins) target wasm32-unknown-unknown; they also
+# compile for the host, but a plain `cargo build` skips them, and the bindings generator
+# (built by `cargo xtask bindings`).
+default-members = ["core/*", "apps/cli", "xtask", "tools/jf-plugin", "tools/jf-plugin/plugin-build"]
+
+[workspace.package]
+version = "0.0.4"
+edition = "2024"
+rust-version = "1.92"
+authors = ["the Jellyfesh authors"]
+publish = false
+# No licence chosen yet: all rights reserved (ADR-0016).
+
+[workspace.dependencies]
+# Internal crates
+jf-lyrics = { path = "core/jf-lyrics" }
+jf-palette = { path = "core/jf-palette" }
+jf-tokens = { path = "core/jf-tokens" }
+jf-library = { path = "core/jf-library" }
+jf-engine = { path = "core/jf-engine" }
+jf-session = { path = "core/jf-session" }
+jf-core = { path = "core/jf-core" }
+jf-plugin-host = { path = "core/jf-plugin-host" }
+jf-plugin-model = { path = "core/jf-plugin-model" }
+jf-plugin-sdk = { path = "plugins/sdk" }
+jf-plugin-build = { path = "tools/jf-plugin/plugin-build" }
+jf-plugin-testkit = { path = "plugins/testkit" }
+jf-ffi = { path = "core/jf-ffi" }
+
+# Versions checked against crates.io on 2026-11-06 (ADR-0014).
+anyhow = "1.0.104"
+blake3 = "1.8.7"
+clap = { version = "4.6.7", features = ["derive"] }
+cpal = "0.18.2"
+crossbeam-channel = "0.5.17"
+fast_image_resize = "6.1.0"
+flacenc = "0.5.1"
+hound = "3.5.1"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+lofty = "0.25.5"
+# Checked 2026-11-07: 8.2.1 is the newest stable release (9.0 is in release candidates); CC0-1.0.
+notify = "8.2.1"
+parking_lot = "0.13.0"
+png = "0.18.1"
+proptest = "1.12.0"
+quick-xml = "0.42.0"
+rand = "0.10.3"
+ringbuf = "0.6.0"
+rubato = "5.0.1"
+rusqlite = { version = "0.41.1", features = ["bundled"] }
+# TLS for ureq without webpki-roots: ring as the crypto provider, the OS root store for trust.
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-native-certs = "0.8.5"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+symphonia = { version = "0.6.1", default-features = false, features = ["wav", "flac", "pcm", "mp3", "aac", "alac", "isomp4", "ogg", "vorbis", "aiff", "caf", "mkv"] }
+# Opus through libopus 1.6.1, built from source with CMake (ADR-0008).
+symphonia-adapter-libopus = "0.3.0"
+tempfile = "3.27.0"
+thiserror = "2.0.21"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+# FFI bindings (ADR-0002, docs/ffi.md); checked against crates.io on 2026-11-07.
+jni-sys = "0.4.1"
+ndk-context = "0.1.1"
+uniffi = "0.32.2"
+unicode-normalization = "0.1.26"
+# Synchronous HTTP for range streaming; TLS comes from the rustls entry above.
+ureq = { version = "3.5.1", default-features = false, features = ["rustls-no-provider"] }
+walkdir = "2.5.0"
+
+# Plugin system (ADR-0003, ADR-0004): versions checked against crates.io on 2026-11-07.
+# wasmtime stays on the 48.x LTS line; no WASI, no async components, no cache/pooling.
+wasmtime = { version = "48.0.8", default-features = false, features = ["runtime", "component-model", "cranelift", "std"] }
+# Guest bindings; wit-component matches the version wit-bindgen itself embeds with.
+wit-bindgen = { version = "0.63.0", default-features = false, features = ["macros", "realloc", "std"] }
+wit-component = "0.262.0"
+cookie_store = { version = "0.22.1", default-features = false, features = ["serde_json"] }
+cookie = "0.18.2"
+url = "2.5.8"
+zip = { version = "9.4.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+toml = { version = "1.2.1", default-features = false, features = ["parse", "serde", "std"] }
+semver = "1.0.28"
+ed25519-dalek = "3.0.0"
+sha2 = "0.11.1"
+sha1 = "0.11.0"
+md-5 = "0.11.0"
+hmac = "0.13.0"
+aes = "0.9.4"
+aes-gcm = { version = "0.11.1", default-features = false, features = ["aes", "alloc"] }
+cbc = { version = "0.2.1", features = ["alloc"] }
+ecb = { version = "0.2.1", features = ["alloc"] }
+# Public-key encryption only (RUSTSEC-2023-0071 concerns private-key operations; see deny.toml).
+rsa = { version = "0.9.10", default-features = false, features = ["std", "pem", "u64_digit", "sha2", "getrandom"] }
+# rsa 0.9 is on the digest 0.10 line; OAEP with SHA-1 needs the matching sha1.
+sha1-for-rsa = { package = "sha1", version = "0.10.7" }
+getrandom = "0.4.3"
+base64 = "0.23.1"
+zeroize = "1.9.1"
+# Jellyfesh Web (core/jf-web, platforms/web): checked against crates.io on 2026-11-10. Pinned
+# exactly: wasm-bindgen-cli must be the same version (platforms/web/scripts/build-wasm.mjs).
+wasm-bindgen = "=0.2.130"
+# Plugin secrets in the system keystore (ADR-0015); checked against crates.io on 2026-11-08.
+# The default `v1` feature picks Keychain on macOS, Credential Manager on Windows and the
+# Secret Service (zbus, pure Rust) on Linux and the BSDs. MIT OR Apache-2.0.
+keyring = "4.2.0"
+
+# Linux desktop app (platforms/linux), checked against crates.io on 2026-11-07.
+# Features select the oldest GNOME stack the app supports (Ubuntu 24.04, GNOME 46:
+# GTK 4.14, libadwaita 1.5); newer APIs are used behind run-time checks.
+adw = { package = "libadwaita", version = "0.9.2", features = ["v1_5", "gtk_v4_10"] }
+async-channel = "2.5.0"
+gettext-rs = { version = "0.8.0", features = ["gettext-system"] }
+glib-build-tools = "0.22.8"
+gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_46"] }
+mpris-server = "0.11.0"
+qrcode = { version = "0.14.1", default-features = false }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+# Line tables keep backtraces readable at a fraction of full debug info's
+# disk use; several worktrees build at once.
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+# Jellyfesh Web's WebAssembly (core/jf-web, built by platforms/web/scripts/build-wasm.mjs):
+# downloaded by every visitor, so smaller beats faster here.
+[profile.web]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+# wasm-bindgen reads the target-features section; wasm-opt strips the rest afterwards.
+strip = false
+
+# The official plugins favour small components: a plugin mostly waits on HTTP,
+# and the host compiles less code when it installs one (plugins/release.sh).
+[profile.release.package.jf-subsonic]
+opt-level = "s"
+
+[profile.release.package.jf-jellyfin]
+opt-level = "s"

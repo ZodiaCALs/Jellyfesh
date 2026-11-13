@@ -1,0 +1,22 @@
+Jellyfesh (working name)
+Copyright 2026 the Jellyfesh authors
+
+This product includes design tokens derived from the Misty Design Language,
+version 1.1 (tokens/misty.tokens.json), developed by ZodiaCALs and licensed
+under the Apache License, Version 2.0 (LICENSES/Apache-2.0.txt). The derived
+file is design/tokens.json; its header states what was changed.
+
+The NOTICE of the Misty Design Language follows.
+
+----------------------------------------------------------------------------
+Misty Design Language
+Copyright 2026 ZodiaCALs
+
+This product includes the Misty reference stylesheet, design tokens, icons
+and platform packages, developed by ZodiaCALs and licensed under the Apache
+License, Version 2.0.
+
+Misty, Misty Core, Misty Complete and the Misty mark are trademarks of
+ZodiaCALs. The Apache License does not grant permission to use them; see
+TRADEMARKS.md.
+----------------------------------------------------------------------------

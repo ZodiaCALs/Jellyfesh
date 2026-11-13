@@ -1,0 +1,18 @@
+[package]
+name = "jf-plugin-testkit"
+description = "Test support for Jellyfesh plugins: build the component, run it in a real plugin host, and mock the service over local HTTP."
+version.workspace = true
+edition.workspace = true
+rust-version = "1.95"
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-build.workspace = true
+jf-plugin-host.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+url.workspace = true

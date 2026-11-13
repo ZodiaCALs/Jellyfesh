@@ -1,0 +1,37 @@
+[
+  {
+    "id": "lumen",
+    "name": "Lumen",
+    "idea": "A frosted-glass bell lit from behind by Misty's aurora. Its five tapered tentacles fall like a soft waveform.",
+    "palette": "Light field at hue 250 (Misty “Mist”), aurora at +55° and −70°; ink-blue tentacles fading to lilac.",
+    "notes": "The most direct expression of the UI itself: glass over a lit field. Pairs with Abyss as its dark appearance."
+  },
+  {
+    "id": "abyss",
+    "name": "Abyss",
+    "idea": "The bell after dark: a luminous outline drifting in a deep field, tentacles trailing in the current.",
+    "palette": "Dark field at hue 250; light from the hue, lilac (+55°) and mint (−70°).",
+    "notes": "Strongest mood of the set. Thin light lines fade below 32 px, so it needs a hand-hinted small size."
+  },
+  {
+    "id": "wavebell",
+    "name": "Wavebell",
+    "idea": "The bell drawn as sound: two wave arcs over a solid core, tentacles as a level meter. Built to stay legible at 16 px.",
+    "palette": "Warm coral to amber (hues 32° to 78°), after the sea nettle; white glyph.",
+    "notes": "Most legible and most distinctive in a dock of blue icons. It drifts towards a broadcast or fingerprint sign, so check it against podcast and radio app icons."
+  },
+  {
+    "id": "verse",
+    "name": "Verse",
+    "idea": "A jellyfish swims bell-first, and its tentacles trail behind it as lines of lyrics. The current line is the one accent.",
+    "palette": "Pale field at hue 300 (Misty “Violet”); ink lines; one accent line.",
+    "notes": "Puts synced lyrics at the centre of the brand. At 16 px it can read as a list, so the bell must stay heavy."
+  },
+  {
+    "id": "tide",
+    "name": "Tide",
+    "idea": "Misty's own recipe for a product face: one outline glyph with a 2-unit stroke on a tile tinted from the hue to the hue + 55°.",
+    "palette": "Tile from hue 196 to 251; white glyph.",
+    "notes": "The most systematic choice and the easiest to keep consistent. Also the least ownable: it looks like a well-made system glyph."
+  }
+]

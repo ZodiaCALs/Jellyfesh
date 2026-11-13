@@ -1,0 +1,376 @@
+/* Control style D as built in v0.0.4 (docs/design-controls.md, "v0.0.4:
+ * the controls as built"), as a template.
+ *
+ * Apple's glass grouping for the transport and its floating capsule,
+ * Media Player's ringed thumb, inline times and player bar, and Misty's
+ * segmented control. Everything about bars and buttons is in this one
+ * sheet; another control style replaces this file only. The line sliders'
+ * and the progress line's shapes are drawn by their widgets (seekbar.rs,
+ * progressline.rs) from the player tokens; this sheet gives them their
+ * colour.
+ *
+ * COL-04: play/pause is the only accent-filled control on Now Playing and
+ * in the player bar; the mini-player's play button is never accent-filled. */
+
+/* Top bar: Misty's segmented control and the output device chip. */
+.segmented {
+  padding: 3px;
+  border-radius: 10px;
+  background-color: alpha({{ink.ink-90}}, 0.06);
+  box-shadow: inset 0 0 0 1px alpha({{ink.ink-90}}, 0.07);
+}
+
+.segmented > button.segment {
+  min-height: 32px;
+  padding: 0 {{space.s4}};
+  border-radius: 7px;
+  background: transparent;
+  box-shadow: none;
+  color: {{ink.ink-70}};
+  font-weight: 600;
+  font-size: 13px;
+  transition: background-color {{motion.dur-1}} {{motion.ease-fluid}}, color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+.segmented > button.segment:hover {
+  color: {{ink.ink-90}};
+}
+
+.segmented > button.segment:checked {
+  background-color: {{glass.cloud}};
+  color: {{ink.ink-90}};
+  box-shadow: 0 1px 2px alpha(black, 0.25), inset 0 0 0 1px {{glass.glass-edge}};
+}
+
+menubutton.device-chip > button {
+  min-height: 36px;
+  padding: 0 14px 0 10px;
+  border-radius: {{radius.r-full}};
+  background-color: alpha({{ink.ink-90}}, 0.06);
+  box-shadow: inset 0 0 0 1px alpha({{ink.ink-90}}, 0.12);
+  color: {{ink.ink-90}};
+  font-weight: 600;
+  font-size: 13px;
+}
+
+menubutton.device-chip > button:hover {
+  background-color: alpha({{ink.ink-90}}, 0.10);
+}
+
+/* The line sliders: the played part in the CSS colour (ink-90), the rest,
+ * the thumb and the times drawn by the widget from the theme. */
+seekbar,
+volumebar {
+  color: {{ink.ink-90}};
+}
+
+seekbar:focus-visible,
+volumebar:focus-visible {
+  outline: 2px solid {{accent.accent-text}};
+  outline-offset: 2px;
+  border-radius: {{radius.r-md}};
+}
+
+/* Transport: previous, play and next grouped in one glass capsule. */
+.transport {
+  padding: 6px;
+  border-radius: {{radius.r-full}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-2}};
+}
+
+button.np-skip {
+  min-width: 52px;
+  min-height: 52px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  color: {{ink.ink-90}};
+}
+
+button.np-skip:hover {
+  background-color: {{line.fill-hover}};
+}
+
+button.np-skip:active {
+  background-color: {{line.fill-press}};
+  transform: scale(0.92);
+}
+
+button.np-play {
+  min-width: 60px;
+  min-height: 60px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background-color: {{accent.accent}};
+  color: {{accent.on-accent}};
+  box-shadow: 0 6px 16px -8px alpha(black, 0.6);
+  transition: transform {{motion.dur-0}} {{motion.ease-spring}}, box-shadow {{motion.dur-1}} {{motion.ease-fluid}},
+    background-color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+/* Hover adds a soft halo; press scales to 92 %. */
+button.np-play:hover {
+  background-color: {{accent.accent-hover}};
+  box-shadow: 0 0 0 6px {{accent.accent-soft}}, 0 6px 16px -8px alpha(black, 0.6);
+}
+
+button.np-play:active {
+  background-color: {{accent.accent-press}};
+  transform: scale(0.92);
+}
+
+/* Toggles: accent glyph on accent-soft when on. */
+button.np-toggle,
+button.bar-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  color: {{ink.ink-70}};
+}
+
+button.np-toggle:hover,
+button.bar-toggle:hover {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+button.np-toggle.on,
+button.bar-toggle.on {
+  background-color: {{accent.accent-soft}};
+  color: {{accent.accent-text}};
+}
+
+button.np-icon-button,
+button.np-volume-glyph,
+glyph.np-volume-glyph {
+  color: {{ink.ink-50}};
+}
+
+/* 44 px targets (Misty ACC-12), the glyph quiet inside. */
+button.np-icon-button,
+button.np-volume-glyph {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+}
+
+button.np-icon-button:hover,
+button.np-volume-glyph:hover {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+/* Mini-player (under 900 px): a floating glass capsule with one control,
+ * and its progress as a 2 px line along the bottom edge. Solid Cloud
+ * without live glass (MAT-08). */
+.mini-clamp {
+  margin: 0 {{space.s4}} {{space.s4}};
+}
+
+.mini-player {
+  min-height: {{player.mini-height}};
+  padding: 10px;
+  border-radius: {{radius.r-full}};
+  background-color: {{glass.cloud}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, 0 2px 6px alpha(black, 0.12), {{elevation.shadow-2}};
+}
+
+.mini-frame {
+  border-radius: {{radius.r-full}};
+}
+
+progressline {
+  color: {{ink.ink-70}};
+}
+
+button.mini-open {
+  padding: 0 8px 0 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+}
+
+button.mini-open:hover {
+  background-color: {{line.fill}};
+}
+
+.mini-title,
+.bar-title {
+  {{type-roles.list-title}};
+  font-weight: 600;
+}
+
+.mini-artist,
+.bar-artist {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-70}};
+}
+
+button.mini-play {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  color: {{ink.ink-90}};
+  transition: transform {{motion.dur-0}} {{motion.ease-spring}};
+}
+
+button.mini-play:hover {
+  background-color: {{line.fill-hover}};
+}
+
+button.mini-play:active {
+  transform: scale(0.92);
+}
+
+/* The player bar (900 px and wider): a floating Veil bar, 80 px high, r-xl
+ * corners; art and titles, the transport capsule above the seek bar, then
+ * Lyrics, Queue and the volume. Solid Cloud without live glass. */
+.bar-holder {
+  margin: 0 {{space.s4}} {{space.s4}};
+}
+
+.player-bar {
+  min-height: {{player.bar-height}};
+  padding: 0 {{space.s3}};
+  border-radius: {{radius.r-xl}};
+  background-color: {{glass.cloud}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, 0 2px 6px alpha(black, 0.12), {{elevation.shadow-2}};
+}
+
+.player-bar > box {
+  min-height: {{player.bar-height}};
+}
+
+button.bar-open {
+  padding: 4px 10px 4px 4px;
+  border-radius: {{radius.r-md}};
+  background: transparent;
+}
+
+button.bar-open:hover {
+  background-color: {{line.fill-hover}};
+}
+
+.bar-middle {
+  padding: 2px 0 0;
+}
+
+/* The transport capsule in the bar: a quiet fill on the bar's glass (two
+ * glass layers at most, MAT-06). */
+.bar-transport {
+  padding: 2px;
+  border-radius: {{radius.r-full}};
+  background-color: {{line.fill}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge-soft}};
+}
+
+button.bar-skip,
+button.bar-icon {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  color: {{ink.ink-90}};
+}
+
+button.bar-icon {
+  color: {{ink.ink-70}};
+}
+
+button.bar-skip:hover,
+button.bar-icon:hover {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+button.bar-skip:active {
+  background-color: {{line.fill-press}};
+  transform: scale(0.92);
+}
+
+button.bar-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* The only accent fill in the bar (COL-04). */
+button.bar-play {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0 4px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background-color: {{accent.accent}};
+  color: {{accent.on-accent}};
+  box-shadow: 0 4px 12px -6px alpha(black, 0.55);
+  transition: transform {{motion.dur-0}} {{motion.ease-spring}}, box-shadow {{motion.dur-1}} {{motion.ease-fluid}},
+    background-color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+button.bar-play:hover {
+  background-color: {{accent.accent-hover}};
+  box-shadow: 0 0 0 4px {{accent.accent-soft}}, 0 4px 12px -6px alpha(black, 0.55);
+}
+
+button.bar-play:active {
+  background-color: {{accent.accent-press}};
+  transform: scale(0.92);
+}
+
+.bar-seek {
+  margin-top: -2px;
+}
+
+.volume-row volumebar {
+  min-width: 64px;
+}
+
+/* Preferences: the same line for the transparency slider; the thumb shows
+ * on hover and focus only. */
+scale.line-scale {
+  padding: 10px 0;
+}
+
+scale.line-scale > trough {
+  min-height: {{player.scrubber-track}};
+  border-radius: {{radius.r-full}};
+  background-color: {{line.line-strong}};
+  transition: min-height {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+scale.line-scale:hover > trough,
+scale.line-scale:focus-within > trough {
+  min-height: {{player.scrubber-track-hover}};
+}
+
+scale.line-scale > trough > highlight {
+  border-radius: {{radius.r-full}};
+  background-color: {{ink.ink-90}};
+}
+
+scale.line-scale > trough > slider {
+  min-width: {{player.scrubber-thumb}};
+  min-height: {{player.scrubber-thumb}};
+  margin: -5px;
+  border-radius: {{radius.r-full}};
+  background-color: {{ink.ink-90}};
+  box-shadow: inset 0 0 0 2px {{glass.glass-edge}}, {{elevation.shadow-1}};
+  opacity: 0;
+  transition: opacity {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+scale.line-scale:hover > trough > slider,
+scale.line-scale:focus-within > trough > slider {
+  opacity: 1;
+}
+
+scale.line-scale marks indicator {
+  min-height: 4px;
+  color: {{ink.ink-30}};
+}
