@@ -71,7 +71,7 @@ and on github.com; no command line.
    `jellyfesh` folder → Publish repository → name it `jellyfesh`, untick
    "Keep this code private" if the website should work on GitHub Free →
    Publish Repository. GitHub Desktop sends `main` and every tag. CI and Web
-   start at once (Web's deploy fails until step 5; that is expected).
+   start at once (Web skips its deploy, with a warning, until step 5).
 4. **Secrets:** on github.com, the repository's Settings → Secrets and
    variables → Actions → New repository secret, once for each secret in the
    table above (paste each file's text; `ANDROID_KEY_ALIAS` is `jellyfesh`).
