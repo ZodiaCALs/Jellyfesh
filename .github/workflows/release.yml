@@ -1,11 +1,19 @@
 name: Release
 
-# A version tag (vX.Y.Z) builds every release file, publishes them on a
-# GitHub release, builds the website for that release (with Jellyfesh Web at
-# /app/) and then starts web.yml to deploy the website to GitHub Pages. It
-# starts when the tag is pushed on its own (GitHub starts no workflow for a
-# push of more than three tags), or by hand: Actions -> Release -> Run
-# workflow, with the tag (which must already be on GitHub). Secrets:
+# Builds every installation file: jf, the signed plugins, the Linux tarball and
+# Flatpak, the macOS DMG, the Windows zips, the Android APK and Jellyfesh Web.
+#
+# * A version tag (vX.Y.Z) pushed on its own also publishes them as a GitHub
+#   release, builds that release's website (with Jellyfesh Web at /app/) and
+#   starts web.yml to deploy it. (GitHub starts no workflow for a push of more
+#   than three tags.)
+# * By hand, Actions -> Release -> Run workflow: builds the branch chosen
+#   there, or a version tag typed in (it must be on GitHub), and keeps the
+#   files on the run's page as one download, "Jellyfesh-<name>", even when
+#   some platforms fail. Nothing is published unless "Publish a GitHub
+#   release" is ticked, which needs a version tag.
+#
+# Secrets:
 #   JF_PLUGIN_SIGNING_KEY  ed25519 seed (64 hex characters) of the Jellyfesh
 #                          release key; without it the plugins ship unsigned
 #                          and show as Community.
@@ -20,37 +28,80 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The version tag to build and publish, for example v0.0.4 (it must be on GitHub)
-        required: true
+        description: Version tag to build, for example v0.0.4 (it must be on GitHub); leave empty to build the branch chosen above
+        required: false
         type: string
+        default: ""
+      publish:
+        description: Publish a GitHub release with the files (needs a version tag); unticked, they stay on this run's page only
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
 
 env:
   CARGO_TERM_COLOR: always
-  # The tag being released: the one pushed, or the one given to Run workflow.
-  TAG: ${{ inputs.tag || github.ref_name }}
+  # What is built: the tag typed into Run workflow, else the pushed tag's or the
+  # chosen branch's commit.
+  REF: ${{ inputs.tag || github.sha }}
 
 jobs:
   check:
-    name: Check the tag
+    name: What to build
     runs-on: ubuntu-24.04
+    outputs:
+      name: ${{ steps.what.outputs.name }}
+      version: ${{ steps.what.outputs.version }}
     steps:
-      - name: A version tag that is on GitHub
+      - name: The tag is on GitHub
+        if: inputs.tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_TAG: ${{ inputs.tag }}
         shell: bash
         run: |
-          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'$TAG' is not a version tag such as v0.0.4"
+          if ! [[ "$INPUT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$INPUT_TAG' is not a version tag such as v0.0.4 (leave it empty to build a branch)"
             exit 1
           fi
-          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --silent; then
-            echo "::error::There is no tag $TAG on GitHub yet: push it first"
+          if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$INPUT_TAG" --silent; then
+            echo "::error::There is no tag $INPUT_TAG on GitHub yet. Create it (Releases -> Draft a new release -> Choose a tag), or leave the tag empty to build a branch"
             exit 1
           fi
-          echo "Releasing $TAG"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.REF }}
+      - name: The version and the files' name
+        id: what
+        env:
+          LABEL: ${{ inputs.tag || github.ref_name }}
+          PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+        shell: bash
+        run: |
+          version=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml', 'rb'))['workspace']['package']['version'])")
+          if [[ "$LABEL" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            name="$LABEL"
+            version="${LABEL#v}"
+          else
+            # A test build of a branch: the version, the branch and the commit.
+            branch=$(printf '%s' "$LABEL" | tr -c 'A-Za-z0-9.-' '-')
+            name="v$version-$branch-$(git rev-parse --short=7 HEAD)"
+          fi
+          if [ "$PUBLISH" = true ]; then
+            if [ "$name" != "$LABEL" ]; then
+              echo "::error::Publishing a release needs a version tag such as v0.0.4; '$LABEL' is a branch"
+              exit 1
+            fi
+            if [ ! -f "docs/releases/$name.md" ]; then
+              echo "::error::docs/releases/$name.md is missing: the release's text comes from it"
+              exit 1
+            fi
+          fi
+          echo "Building $name (version $version); publish: $PUBLISH"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   cli:
     name: jf ${{ matrix.target }}
@@ -65,10 +116,12 @@ jobs:
           - { os: windows-2025, target: x86_64-pc-windows-msvc, archive: zip }
           - { os: windows-2025, target: aarch64-pc-windows-msvc, archive: zip }
     runs-on: ${{ matrix.os }}
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - name: ALSA headers
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev
@@ -83,7 +136,7 @@ jobs:
         if: matrix.archive == 'tar.gz'
         shell: bash
         run: |
-          name="jf-${TAG}-${{ matrix.target }}"
+          name="jf-${NAME}-${{ matrix.target }}"
           mkdir "$name"
           cp "target/${{ matrix.target }}/release/jf" README.md NOTICE CHANGELOG.md THIRD_PARTY_NOTICES.md "$name/"
           tar czf "$name.tar.gz" "$name"
@@ -92,7 +145,7 @@ jobs:
         if: matrix.archive == 'zip'
         shell: pwsh
         run: |
-          $name = "jf-$env:TAG-${{ matrix.target }}"
+          $name = "jf-$env:NAME-${{ matrix.target }}"
           New-Item -ItemType Directory $name | Out-Null
           Copy-Item "target/${{ matrix.target }}/release/jf.exe", README.md, NOTICE, CHANGELOG.md, THIRD_PARTY_NOTICES.md $name
           Compress-Archive -Path $name -DestinationPath "$name.zip"
@@ -106,10 +159,12 @@ jobs:
     name: Official plugins
     needs: check
     runs-on: ubuntu-24.04
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           targets: wasm32-unknown-unknown
@@ -129,7 +184,7 @@ jobs:
         run: |
           mkdir -p upload
           for id in subsonic jellyfin; do
-            cp "dist/plugins/org.jellyfesh.$id.jfpkg" "upload/org.jellyfesh.$id-${TAG}.jfpkg"
+            cp "dist/plugins/org.jellyfesh.$id.jfpkg" "upload/org.jellyfesh.$id-${NAME}.jfpkg"
           done
           (cd upload && sha256sum ./*.jfpkg | sed 's| \./| |' > plugins.sha256)
       # The apps bundle the packages under these names.
@@ -144,12 +199,14 @@ jobs:
 
   linux-app:
     name: Linux app (tarball)
-    needs: plugins
+    needs: [check, plugins]
     runs-on: ubuntu-24.04
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - name: ALSA, GTK 4 and libadwaita headers
         run: >-
           sudo apt-get update && sudo apt-get install -y libasound2-dev
@@ -166,7 +223,7 @@ jobs:
         shell: bash
         run: |
           out=$(platforms/linux/packaging/make-tarball.sh "" "$PWD/upload" | tail -1)
-          name="jellyfesh-${TAG}-linux-x86_64.tar.gz"
+          name="jellyfesh-${NAME}-linux-x86_64.tar.gz"
           mv "$out" "upload/$name"
           (cd upload && sha256sum "$name" > "$name.sha256")
       - uses: actions/upload-artifact@v7
@@ -176,12 +233,14 @@ jobs:
 
   macos-app:
     name: macOS app (DMG)
-    needs: plugins
+    needs: [check, plugins]
     runs-on: macos-15
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           targets: aarch64-apple-darwin, x86_64-apple-darwin
@@ -195,7 +254,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p upload
-          name="Jellyfesh-${TAG}-macos-universal.dmg"
+          name="Jellyfesh-${NAME}-macos-universal.dmg"
           cp platforms/macos/build/Jellyfesh-*.dmg "upload/$name"
           (cd upload && shasum -a 256 "$name" > "$name.sha256")
       - uses: actions/upload-artifact@v7
@@ -205,12 +264,14 @@ jobs:
 
   windows-app:
     name: Windows app (zip)
-    needs: plugins
+    needs: [check, plugins]
     runs-on: windows-2025
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc
@@ -223,14 +284,16 @@ jobs:
           path: dist/plugins
       - name: Build and pack (platforms/windows/scripts/build.ps1)
         shell: pwsh
-        run: platforms/windows/scripts/build.ps1 -Version ($env:TAG -replace '^v', '')
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        run: platforms/windows/scripts/build.ps1 -Version $env:VERSION
       - name: Name the zips for the release
         shell: pwsh
         run: |
           New-Item -ItemType Directory upload | Out-Null
           foreach ($arch in 'x64', 'arm64') {
             $source = Get-ChildItem "platforms/windows/artifacts/jellyfesh-*-windows-$arch.zip" | Select-Object -First 1
-            $name = "Jellyfesh-$env:TAG-windows-$arch.zip"
+            $name = "Jellyfesh-$env:NAME-windows-$arch.zip"
             Copy-Item $source.FullName "upload/$name"
             $hash = (Get-FileHash "upload/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
             Set-Content -Path "upload/$name.sha256" -Value "$hash  $name" -Encoding ascii -NoNewline
@@ -242,12 +305,14 @@ jobs:
 
   android-app:
     name: Android app (APK)
-    needs: plugins
+    needs: [check, plugins]
     runs-on: ubuntu-24.04
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - name: ALSA headers (host build of the bindings)
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - uses: dtolnay/rust-toolchain@1.97.0
@@ -291,7 +356,7 @@ jobs:
           fi
           umask 077
           base64 -d <<< "$ANDROID_KEYSTORE_BASE64" > "$RUNNER_TEMP/release.keystore"
-          name="Jellyfesh-${TAG}.apk"
+          name="Jellyfesh-${NAME}.apk"
           "$APKSIGNER" sign --ks "$RUNNER_TEMP/release.keystore" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$ANDROID_KEY_ALIAS" \
             --key-pass env:ANDROID_KEY_PASSWORD --out "upload/$name" "$unsigned"
@@ -306,12 +371,14 @@ jobs:
 
   web-app:
     name: Jellyfesh Web (zip)
-    needs: plugins
+    needs: [check, plugins]
     runs-on: ubuntu-24.04
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           targets: wasm32-unknown-unknown
@@ -337,7 +404,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p upload
-          name="jellyfesh-web-${TAG}.zip"
+          name="jellyfesh-web-${NAME}.zip"
           (cd platforms/web/dist && zip -qr "$GITHUB_WORKSPACE/upload/$name" .)
           (cd upload && sha256sum "$name" > "$name.sha256")
       - uses: actions/upload-artifact@v7
@@ -347,15 +414,17 @@ jobs:
 
   flatpak:
     name: Linux app (Flatpak)
-    needs: plugins
+    needs: [check, plugins]
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       # install.sh puts these into the app: the bundled plugins and the notices.
       - uses: actions/download-artifact@v8
         with:
@@ -366,7 +435,7 @@ jobs:
           name: notices
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: org.jellyfesh.Jellyfesh-${{ env.TAG }}.flatpak
+          bundle: org.jellyfesh.Jellyfesh-${{ needs.check.outputs.name }}.flatpak
           manifest-path: platforms/linux/packaging/org.jellyfesh.Jellyfesh.json
           cache-key: flatpak-builder-${{ github.sha }}
           upload-artifact: false
@@ -374,7 +443,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p upload
-          name="org.jellyfesh.Jellyfesh-${TAG}.flatpak"
+          name="org.jellyfesh.Jellyfesh-${NAME}.flatpak"
           mv "$name" upload/
           (cd upload && sha256sum "$name" > "$name.sha256")
       - uses: actions/upload-artifact@v7
@@ -382,17 +451,52 @@ jobs:
           name: release-flatpak
           path: upload/*
 
+  # Run by hand without publishing: every file that was built, as one download
+  # on the run's page, also when some platforms failed.
+  installers:
+    name: All installation files, as one download
+    if: always() && needs.check.result == 'success' && !(github.event_name == 'push' || inputs.publish)
+    needs: [check, cli, plugins, linux-app, flatpak, macos-app, windows-app, android-app, web-app]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: "{jf-*,release-*,notices}"
+          merge-multiple: true
+          path: files
+      - name: What was built
+        env:
+          NAME: ${{ needs.check.outputs.name }}
+        shell: bash
+        run: |
+          ls -l files
+          {
+            echo "### Jellyfesh $NAME"
+            echo
+            echo "Download **Jellyfesh-$NAME** under Artifacts below. Nothing was published."
+            echo
+            (cd files && ls -1) | sed 's/^/* /'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Jellyfesh-${{ needs.check.outputs.name }}
+          path: files/*
+          retention-days: 30
+
   publish:
     name: Publish
-    needs: [cli, plugins, linux-app, flatpak, macos-app, windows-app, android-app, web-app]
+    if: github.event_name == 'push' || inputs.publish
+    needs: [check, cli, plugins, linux-app, flatpak, macos-app, windows-app, android-app, web-app]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
       actions: write # to start web.yml
+    env:
+      NAME: ${{ needs.check.outputs.name }}
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ env.REF }}
       - uses: actions/download-artifact@v8
         with:
           pattern: "{jf-*,release-*}"
@@ -403,15 +507,15 @@ jobs:
       - name: Website
         shell: bash
         run: |
-          python3 tools/release/build_site.py "${TAG#v}" \
-            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/" \
-            --app "dist/jellyfesh-web-${TAG}.zip"
-          (cd dist && zip -qr "jellyfesh-site-${TAG}.zip" site && rm -rf site)
+          python3 tools/release/build_site.py "${NAME#v}" \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${NAME}/" \
+            --app "dist/jellyfesh-web-${NAME}.zip"
+          (cd dist && zip -qr "jellyfesh-site-${NAME}.zip" site && rm -rf site)
       - uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ env.TAG }}
+          tag_name: ${{ needs.check.outputs.name }}
           prerelease: true
-          body_path: docs/releases/${{ env.TAG }}.md
+          body_path: docs/releases/${{ needs.check.outputs.name }}.md
           files: dist/*
       # The website on GitHub Pages lists the latest release's files: deploy it
       # again now (a run started with this token is allowed to start web.yml).
