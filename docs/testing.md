@@ -53,7 +53,7 @@ the speaker and checks the recording:
   the queue ends;
 * **lyric sync:** `jf play --lyrics` runs in a pseudo-terminal while the
   speaker is read on the same clock; every line must appear within 30 ms of
-  being heard.
+  its own tone being heard.
 
 It needs Linux with `pulseaudio pulseaudio-utils libasound2-plugins flac
 lame vorbis-tools python3`, changes nothing outside a temporary folder, and

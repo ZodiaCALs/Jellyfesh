@@ -16,7 +16,7 @@ Checks
     silence, to measure audio lost when playback starts or the queue ends;
   * lyric sync: `jf play --lyrics` runs in a pseudo-terminal while the speaker
     is read as raw audio, both on one monotonic clock; each lyric line must
-    appear within 30 ms of when it is heard.
+    appear within 30 ms of when its own tone is heard.
 """
 import array, fcntl, math, os, pty, resource, select, signal, struct, subprocess, sys, termios, threading, time, wave
 
@@ -155,14 +155,22 @@ if len(measured) == 2:
         print("       200 ms of the same file in this setup, so this is the method, not jf.")
 
 # ---- lyric sync ------------------------------------------------------------------
-# A tone that starts at 0 with four timed lines (invented text). The speaker
-# is read as raw PCM with a 10 ms latency target; every read is timestamped on
-# the same clock as the terminal output, so "shown" and "heard" compare
-# directly.
-print("Lyric sync (line shown on screen minus the moment it is heard)")
-write_wav(f"{WORK}/sync.wav", [0.4 * math.sin(2 * math.pi * 330 * i / SOURCE_RATE) for i in range(int(SOURCE_RATE * 9.0))])
-encode(f"{WORK}/sync.wav", f"{WORK}/sync.flac")
+# Silence with a short tone at each of four timed lines (invented text). The
+# speaker is read as raw PCM with a 10 ms latency target; every read is
+# timestamped on the same clock as the terminal output, so "shown" and "heard"
+# compare directly. Each line is measured against its own tone rather than
+# against the start of playback: the recording misses a varying part of the
+# start (see the edge check above), which would move every "heard" time by as
+# much.
+print("Lyric sync (line shown on screen minus the moment its tone is heard)")
 LINES = [(1.0, "Tide line one"), (3.0, "Tide line two"), (5.5, "Tide line three"), (8.0, "Tide line four")]
+TONE_FRAMES = int(SOURCE_RATE * 0.3)  # 99 whole periods of 330 Hz: each tone starts and ends at zero
+sync = [0.0] * int(SOURCE_RATE * 9.0)
+for at, _ in LINES:
+    start = int(round(at * SOURCE_RATE))
+    sync[start:start + TONE_FRAMES] = [0.4 * math.sin(2 * math.pi * 330 * i / SOURCE_RATE) for i in range(TONE_FRAMES)]
+write_wav(f"{WORK}/sync.wav", sync)
+encode(f"{WORK}/sync.wav", f"{WORK}/sync.flac")
 with open(f"{WORK}/sync.lrc", "w") as f:
     for at, text in LINES:
         f.write(f"[{int(at // 60):02d}:{at % 60:05.2f}]{text}\n")
@@ -203,17 +211,23 @@ else:
     failures.append("lyric sync: jf did not finish")
 os.waitpid(pid, 0)
 time.sleep(0.3); raw.terminate()
-onset = None
+# A tone starts at the first loud sample after at least 50 ms of silence. A
+# sample's time is its read's time, less the samples after it in that read and
+# the 10 ms latency target.
+onsets, quiet = [], DEVICE_RATE
 for t, b in reads:
     s16 = struct.unpack(f"<{len(b) // 2}h", b)
-    hit = next((k for k in range(0, len(s16), 2) if abs(s16[k]) > 300), None)
-    if hit is not None:
-        onset = t - (len(s16) - hit) / 2 / DEVICE_RATE - 0.010
-        break
-if onset is None or len(shown) < len(LINES):
-    failures.append("lyric sync: the tone or a lyric line never appeared")
+    for k in range(0, len(s16), 2):
+        if abs(s16[k]) <= 300:
+            quiet += 1
+            continue
+        if quiet >= DEVICE_RATE // 20:
+            onsets.append(t - (len(s16) - k) / 2 / DEVICE_RATE - 0.010)
+        quiet = 0
+if len(onsets) != len(LINES) or len(shown) < len(LINES):
+    failures.append(f"lyric sync: heard {len(onsets)} of {len(LINES)} tones, saw {len(shown)} of {len(LINES)} lines")
 else:
-    offsets = [1000 * (shown[text] - (onset + at)) for at, text in LINES]
+    offsets = [1000 * (shown[text] - heard) for (_, text), heard in zip(LINES, onsets)]
     ok = all(abs(o) <= 30 for o in offsets)
     print("  " + "  ".join(f"{o:+.0f} ms" for o in offsets) + ("   (limit ±30 ms)" if ok else "   FAIL (limit ±30 ms)"))
     if not ok:
