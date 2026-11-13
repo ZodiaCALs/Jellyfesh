@@ -388,7 +388,10 @@ fn anchor_follows_real_time_playback() {
     sine_wav(&path, 440.0, 44_100, 5 * 44_100, 0.5);
     let config = EngineConfig {
         output: OutputKind::Null { realtime: true },
-        buffer_ms: 100,
+        // Longer than a busy CI machine stalls (macOS runners have stalled the whole test for
+        // 150 ms). A stall longer than the buffer runs the device dry, and until the engine's next
+        // drift check the anchor is ahead of the sound: right, but not what this test measures.
+        buffer_ms: 250,
         ..EngineConfig::default()
     };
     let engine = Engine::new(config).unwrap();
