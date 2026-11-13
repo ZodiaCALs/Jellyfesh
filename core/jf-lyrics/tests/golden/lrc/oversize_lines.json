@@ -1,8 +1,0 @@
-{
-  "error": {
-    "kind": "too_many_lines",
-    "limit": 20000,
-    "lines": 20001
-  },
-  "message": "lyrics have 20001 lines, more than the limit of 20000 lines"
-}

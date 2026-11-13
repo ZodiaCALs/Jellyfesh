@@ -33,7 +33,7 @@ struct ProgressSchedule: TimelineSchedule {
     func entries(from startDate: Date, mode: TimelineScheduleMode) -> Entries {
         var step = stepUs
         if mode == .lowFrequency, let s = step {
-            step = max(s, 1_000_000)
+            step = Swift.max(s, 1_000_000)
         }
         return Entries(startDate: startDate, start: start, stepUs: step, seconds: seconds,
                        running: start.running && active)
@@ -69,7 +69,7 @@ struct ProgressSchedule: TimelineSchedule {
                 target = nextSecondUs(after: previous)
             }
             if let step = stepUs, let next = nextStepUs(after: previous, step: step) {
-                target = min(target ?? next, next)
+                target = Swift.min(target ?? next, next)
             }
             guard let due = target else { return nil }
             last = due
@@ -119,10 +119,10 @@ enum ScheduleClock {
     /// estimate (see `PlaybackSnapshotForSchedule.anchorPositionUs`), a millisecond late so the
     /// drawn position is past the change (as `jf play` does), and never at or before the start.
     static func date(for targetUs: Int64, start: PlaybackSnapshotForSchedule, at startDate: Date) -> Date {
-        let ahead = max(targetUs - start.positionUs, targetUs - start.anchorPositionUs)
+        let ahead = Swift.max(targetUs - start.positionUs, targetUs - start.anchorPositionUs)
         let rate = start.rate > 0 ? start.rate : 1
         let seconds = Double(ahead) / 1_000_000 / rate + 0.001
-        return startDate.addingTimeInterval(max(seconds, 0.001))
+        return startDate.addingTimeInterval(Swift.max(seconds, 0.001))
     }
 }
 
@@ -130,7 +130,7 @@ enum ScheduleClock {
 /// least 100 ms (as the Linux app): a bar redraws when it moves by a pixel, never more often.
 func barStepUs(durationUs: Int64?, lengthPoints: CGFloat, scale: CGFloat) -> Int64? {
     guard let duration = durationUs, duration > 0 else { return nil }
-    let pixels = Double(lengthPoints * max(scale, 1))
+    let pixels = Double(lengthPoints * Swift.max(scale, 1))
     guard pixels.isFinite, pixels >= 1 else { return nil }
-    return max(Int64(Double(duration) / pixels), 100_000)
+    return Swift.max(Int64(Double(duration) / pixels), 100_000)
 }

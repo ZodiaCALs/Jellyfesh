@@ -1,8 +1,0 @@
-{
-  "error": {
-    "kind": "xml",
-    "line": 5,
-    "message": "ill-formed document: expected `</p>`, but `</div>` was found"
-  },
-  "message": "invalid XML at line 5: ill-formed document: expected `</p>`, but `</div>` was found"
-}

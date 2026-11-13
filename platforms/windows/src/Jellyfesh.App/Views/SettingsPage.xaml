@@ -11,6 +11,7 @@
     xmlns:controls="using:Jellyfesh.App.Controls"
     xmlns:settings="using:Jellyfesh.Settings"
     xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:th="using:Jellyfesh.App.Theming"
     xmlns:vm="using:Jellyfesh.ViewModels">
 
     <Page.Resources>

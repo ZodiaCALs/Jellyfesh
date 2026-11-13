@@ -10,7 +10,7 @@ whose **release workflow** builds and publishes each version, and whose
 | --- | --- | --- |
 | `ci.yml` | pushes and pull requests | Rust checks and tests on Linux, macOS and Windows, licences, the audio check, the bindings, and the macOS, Windows and Android app builds |
 | `web.yml` | pushes and pull requests; on `main`, by hand, and after each release it also deploys | Jellyfesh Web's build and tests; the website on GitHub Pages |
-| `release.yml` | a version tag (`v0.0.4`) | every release file, a GitHub release (marked pre-release) with them, and the website for that release |
+| `release.yml` | a version tag (`v0.0.4`), or Run workflow | every installation file; for a pushed tag (or with "Publish" ticked) a GitHub release (marked pre-release) with them and the website for that release, otherwise one download on the run's page |
 
 ## Before you push
 
@@ -135,6 +135,18 @@ and on github.com; no command line.
   ```bash
   git push origin v0.0.4
   ```
+
+## The installation files without a release
+
+Actions → **Release** → Run workflow, leave **tag** empty and **Publish a
+GitHub release** unticked, choose the branch (normally `main`) and run it.
+Every app is built from that branch and nothing is published: when the run
+ends, its page has one download under **Artifacts**,
+`Jellyfesh-v0.0.4-main-<commit>`, with jf, the plugins, the Linux tarball and
+Flatpak, the macOS DMG, the Windows zips, the Android APK and Jellyfesh Web.
+It is there for 30 days, and it holds whatever was built even when some
+platforms failed (their jobs show red). Type a tag such as `v0.0.4` instead
+to build that version without publishing it.
 
 ## Later releases
 

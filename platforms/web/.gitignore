@@ -1,8 +1,0 @@
-# Built or generated; never committed.
-/node_modules/
-/dist/
-/generated/
-/public/plugins/
-/test-results/
-/playwright-report/
-/tests/.artifacts/
