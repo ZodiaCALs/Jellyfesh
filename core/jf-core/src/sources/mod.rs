@@ -1301,8 +1301,7 @@ fn install_bundled(
         return Bundled::Kept(id);
     }
     if let Some(installed) = host.plugin(&id) {
-        let older = semver::Version::parse(&installed.version).is_ok_and(|v| v < package.manifest.version);
-        if !older {
+        if !jf_plugin_host::install::bundled_updates(&installed.version, &package.manifest.version) {
             return Bundled::Kept(id);
         }
         tracing::info!(plugin = %id, from = %installed.version, to = %package.manifest.version, "updating a bundled plugin");
@@ -1316,16 +1315,14 @@ fn install_bundled(
 
 /// Why a community package was refused, naming it when it can be read.
 fn community_refusal(path: &Path, trust: &TrustList) -> String {
-    let named = std::fs::read(path)
+    let package = std::fs::read(path)
         .ok()
-        .and_then(|bytes| jf_plugin_host::package::read(&bytes, trust).ok())
-        .map(|p| format!("{} ({})", p.manifest.name, p.manifest.id));
-    match named {
-        Some(name) => format!(
-            "{name} is a community plugin, and community plugins are turned off: allow them in Sources settings first"
-        ),
-        None => "community plugins are turned off: allow them in Sources settings first".into(),
-    }
+        .and_then(|bytes| jf_plugin_host::package::read(&bytes, trust).ok());
+    jf_plugin_host::install::community_refusal(
+        package
+            .as_ref()
+            .map(|p| (p.manifest.name.as_str(), p.manifest.id.as_str())),
+    )
 }
 
 /// One browse page, fetching the pages before it when their cursors are

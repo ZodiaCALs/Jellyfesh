@@ -17,6 +17,7 @@
 //! * [`sanitize`]: the checks every plugin answer passes before it is used.
 //! * [`merge`]: unified search merging.
 //! * [`auth`]: login flows as a state machine without I/O.
+//! * [`install`]: which packages may be installed, and the words for refusals.
 //! * [`crypto`] (feature `crypto`): the `crypto` import's primitives.
 //! * [`HostError`], [`CallError`]: the host API's errors.
 
@@ -26,6 +27,7 @@ pub mod auth;
 pub mod crypto;
 mod error;
 pub mod http;
+pub mod install;
 pub mod manifest;
 pub mod merge;
 pub mod package;

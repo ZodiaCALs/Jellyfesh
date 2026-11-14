@@ -10,6 +10,7 @@ use parking_lot::RwLock;
 use crate::bindings::exports::jellyfesh::plugin::{catalog, playback};
 use crate::bindings::jellyfesh::plugin::types as wit;
 use crate::error::{CallError, HostError};
+use crate::install::{self, MAX_PACKAGE_FILE};
 use crate::net::{Resolve, SystemResolver};
 use crate::package::{self, Package};
 use crate::plugin::{Job, JobContext, Plugin};
@@ -24,9 +25,6 @@ use crate::types::{
     Capability, ImageRef, Item, ItemPage, LyricPayload, PageRequest, PluginInfo, Quality, Reply,
     SearchFilters, SignatureStatus, StreamInfo,
 };
-
-/// Largest `.jfpkg` the host reads.
-const MAX_PACKAGE_FILE: u64 = 40 * 1024 * 1024;
 
 /// Where the host keeps its files and secrets.
 #[derive(Debug, Clone)]
@@ -209,29 +207,22 @@ impl PluginHost {
         let bytes = read_limited(path)?;
         let package = package::read(&bytes, &self.inner.options.trust)?;
         let official = matches!(package.signature, SignatureStatus::Trusted { .. });
-        if !official && !self.allow_community() {
-            return Err(HostError::CommunityDisabled);
-        }
         let id = package.manifest.id.clone();
-        let signer = signer(&package.signature);
+        let signer = install::signer(&package.signature);
         let paths = PluginPaths::new(&self.inner.config.dir, &id);
         let installed = self.inner.plugins.read().contains_key(&id);
-        let state = match read_json::<PluginState>(&paths.state()) {
-            Some(state) if installed => {
-                if state.signer != signer {
-                    return Err(HostError::KeyChanged(
-                        id,
-                        state.signer.unwrap_or_else(|| "nobody (unsigned)".into()),
-                    ));
-                }
-                state
-            }
-            _ => PluginState {
-                enabled: official,
-                signer,
-                ..PluginState::default()
-            },
-        };
+        let remembered = read_json::<PluginState>(&paths.state()).filter(|_| installed);
+        install::check(
+            &id,
+            &package.signature,
+            remembered.as_ref().map(|state| state.signer.as_deref()),
+            self.allow_community(),
+        )?;
+        let state = remembered.unwrap_or_else(|| PluginState {
+            enabled: official,
+            signer,
+            ..PluginState::default()
+        });
 
         let prepared = self.inner.runtime.prepare(&package.wasm)?;
         let plugin = Arc::new(self.make_plugin(package, state, Some(prepared.clone())));
@@ -664,15 +655,6 @@ fn check_enabled(plugin: &Plugin) -> Result<(), CallError> {
                 .disabled_reason
                 .unwrap_or_else(|| "turned off in Sources settings".into()),
         ))
-    }
-}
-
-fn signer(signature: &SignatureStatus) -> Option<String> {
-    match signature {
-        SignatureStatus::Unsigned => None,
-        SignatureStatus::Trusted { key_id, .. } | SignatureStatus::Community { key_id } => {
-            Some(key_id.clone())
-        }
     }
 }
 
