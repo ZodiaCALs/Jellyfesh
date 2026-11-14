@@ -204,11 +204,13 @@ fn recently_added_lists_the_newest_tracks_first() {
     // Updating a track keeps when it was added: backdated, it stays the oldest.
     let conn = rusqlite::Connection::open(fx.dir.path().join("db").join("library.db")).unwrap();
     let rg = fx.path(standard::RG);
-    conn.execute(
-        "UPDATE tracks SET added_at = 1 WHERE path = ?1",
-        [rg.to_str().unwrap()],
-    )
-    .unwrap();
+    // By id: the stored path is spelled as the scanner found it (on Windows with
+    // backslashes only), which a path built here need not match as text.
+    let id = fx.track_at(standard::RG).id;
+    let backdated = conn
+        .execute("UPDATE tracks SET added_at = 1 WHERE id = ?1", [id])
+        .unwrap();
+    assert_eq!(backdated, 1);
     fixtures::tag(&rg, |t| t.set_title("Retitled".to_owned()));
     fixtures::touch(&rg, 60);
     assert_eq!(fx.scan().updated, 1);
