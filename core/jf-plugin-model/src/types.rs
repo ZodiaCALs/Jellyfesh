@@ -452,6 +452,10 @@ pub struct PluginInfo {
     /// The settings schema (JSON Schema subset, see [`crate::schema`]); `{}`
     /// when the package has none.
     pub settings_schema: serde_json::Value,
+    /// The same schema as the package wrote it, with the properties in the
+    /// plugin's order (the order settings forms show them in).
+    #[serde(default)]
+    pub settings_schema_text: String,
     /// Current settings values, defaults filled in.
     pub settings: serde_json::Value,
     /// `[content_policy]` from the manifest.

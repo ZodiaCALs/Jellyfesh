@@ -203,7 +203,8 @@ fn installs_plugins_and_publishes_the_sources_slice() {
             AuthMethod::ApiKey
         ]
     );
-    assert!(echo.settings_schema_json.contains("server_url"));
+    // As the package wrote it, so forms list the settings in the plugin's order.
+    assert_eq!(echo.settings_schema_json, common::SCHEMA);
     assert!(!echo.vendor_playback);
     let icon_path = echo.icon.clone().expect("an icon file");
     assert_eq!(std::fs::read(&icon_path).unwrap(), icon, "the package's icon.png");

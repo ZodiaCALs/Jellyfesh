@@ -324,6 +324,7 @@ impl PluginHost {
             disabled_reason: state.disabled_reason,
             account: state.account,
             settings_schema: plugin.schema.json().clone(),
+            settings_schema_text: plugin.schema.text().to_owned(),
             settings: plugin.services.settings(),
             content_policy: manifest.content_policy.clone(),
             has_icon: plugin.icon.is_some(),

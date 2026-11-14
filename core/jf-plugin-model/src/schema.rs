@@ -43,6 +43,8 @@ const MAX_SETTINGS_BYTES: usize = 64 * 1024;
 #[derive(Debug, Clone, PartialEq)]
 pub struct SettingsSchema {
     raw: Value,
+    /// The file as the package wrote it: `raw` with the properties in their order.
+    text: String,
     properties: Vec<Property>,
     required: Vec<String>,
 }
@@ -93,6 +95,7 @@ impl SettingsSchema {
     pub fn empty() -> SettingsSchema {
         SettingsSchema {
             raw: Value::Object(Map::new()),
+            text: "{}".to_owned(),
             properties: Vec::new(),
             required: Vec::new(),
         }
@@ -160,14 +163,21 @@ impl SettingsSchema {
 
         Ok(SettingsSchema {
             raw,
+            text: text.to_owned(),
             properties,
             required,
         })
     }
 
-    /// The schema as JSON, for the UI.
+    /// The schema as JSON. Its maps are sorted by key; settings forms use [`Self::text`].
     pub fn json(&self) -> &Value {
         &self.raw
+    }
+
+    /// The schema as the package wrote it (checked by [`Self::parse`]), for settings forms: the
+    /// same JSON as [`Self::json`], with the properties in the order the plugin lists them.
+    pub fn text(&self) -> &str {
+        &self.text
     }
 
     /// The properties.
@@ -453,6 +463,15 @@ mod tests {
         "required": ["server_url"],
         "additionalProperties": false
     }"#;
+
+    #[test]
+    fn forms_get_the_text_with_the_plugins_order() {
+        let schema = SettingsSchema::parse(SCHEMA).unwrap();
+        assert_eq!(schema.text(), SCHEMA);
+        let at = |name: &str| schema.text().find(&format!("\"{name}\"")).unwrap();
+        assert!(at("server_url") < at("max_bitrate") && at("max_bitrate") < at("transcode"));
+        assert_eq!(SettingsSchema::empty().text(), "{}");
+    }
 
     #[test]
     fn validates_and_fills_defaults() {

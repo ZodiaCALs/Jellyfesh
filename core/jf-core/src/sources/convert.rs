@@ -359,7 +359,12 @@ pub(crate) fn summary(
         account: info.account.clone(),
         needs_disclosure: !info.official && !acknowledged,
         attribution: info.content_policy.attribution.clone(),
-        settings_schema_json: info.settings_schema.to_string(),
+        // The text keeps the plugin's order of settings; the parsed value sorts them by key.
+        settings_schema_json: if info.settings_schema_text.is_empty() {
+            info.settings_schema.to_string()
+        } else {
+            info.settings_schema_text.clone()
+        },
         settings_json: info.settings.to_string(),
         icon,
     }
