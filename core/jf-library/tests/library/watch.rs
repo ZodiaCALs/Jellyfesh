@@ -63,6 +63,13 @@ fn assert_nothing_under(rx: &Receiver<Vec<PathBuf>>, root: &Path, what: &str) {
     }
 }
 
+/// Lets reports of changes made before the watch began go by: FSEvents (macOS) can deliver
+/// events from just before a stream starts, such as the fixture's own files.
+fn settle(rx: &Receiver<Vec<PathBuf>>) {
+    let end = Instant::now() + PATIENCE;
+    while Instant::now() < end && rx.recv_timeout(DEBOUNCE * 5).is_ok() {}
+}
+
 fn assert_quiet(rx: &Receiver<Vec<PathBuf>>, what: &str) {
     if let Ok(paths) = rx.recv_timeout(DEBOUNCE * 5) {
         panic!("{what}: unexpected report {paths:?}");
@@ -149,6 +156,7 @@ fn reads_hidden_folders_and_other_files_are_not_reported() {
     standard::build(&fx);
     fx.scan();
     let (_watcher, rx) = watch(vec![fx.music.clone()]);
+    settle(&rx);
 
     // Reading files, as the player and the scanner do, changes nothing.
     fs::read(fx.path(standard::COVER_A)).unwrap();
