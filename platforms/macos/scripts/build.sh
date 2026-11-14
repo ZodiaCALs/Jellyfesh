@@ -71,9 +71,11 @@ if [ "$skip_core" -eq 0 ]; then
       lib="$target_dir/release/libjf_ffi.a"
     else
       notes="$out/rustc-$target.log"
-      cargo rustc --release --locked --package jf-ffi --lib --crate-type staticlib \
+      # Without colour (CI sets CARGO_TERM_COLOR=always): the flags are read from this output,
+      # and a colour code after the last one would reach the linker as part of a library name.
+      cargo rustc --color never --release --locked --package jf-ffi --lib --crate-type staticlib \
         --target "$target" -- --print native-static-libs 2>&1 | tee "$notes"
-      flags="$(sed -n 's/.*native-static-libs: //p' "$notes" | tail -n 1)"
+      flags="$(tr -d '\033' < "$notes" | sed -n 's/.*native-static-libs: //p' | sed 's/\[[0-9;]*m//g' | tail -n 1)"
       if [ -n "$flags" ]; then link_flags="$flags"; fi
       lib="$target_dir/$target/release/libjf_ffi.a"
     fi
