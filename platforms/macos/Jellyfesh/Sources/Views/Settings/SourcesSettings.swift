@@ -200,8 +200,8 @@ struct PluginSettingsForm: View {
     }
 }
 
-/// One setting. Text is sent when Return is pressed; toggles, steppers and choices at once.
-/// Secrets never show the stored value.
+/// One setting. Text is sent on Return, when its field loses focus and before a sign-in starts;
+/// toggles, steppers and choices at once. Secrets never show the stored value.
 private struct SchemaFieldRow: View {
     var plugin: SourcePlugin
     var field: SchemaField
@@ -210,19 +210,14 @@ private struct SchemaFieldRow: View {
     @State private var text = ""
     @State private var number: Double = 0
     @State private var loaded = false
+    @FocusState private var focused: Bool
 
     var body: some View {
         let current = SchemaForm.current(settingsJSON: plugin.settingsJSON, field: field)
         Group {
             switch field.kind {
             case .text(let secret, _):
-                if secret {
-                    SecureField(field.title, text: $text)
-                        .onSubmit { save(.string(text)) }
-                } else {
-                    TextField(field.title, text: $text)
-                        .onSubmit { save(.string(text)) }
-                }
+                textField(secret: secret)
             case .toggle:
                 Toggle(field.title, isOn: Binding(get: { current?.boolValue ?? false }, set: { save(.bool($0)) }))
             case .integer(let low, let high, let step):
@@ -268,11 +263,40 @@ private struct SchemaFieldRow: View {
             }
             number = current?.doubleValue ?? 0
         }
+        .onChange(of: focused) { _, isFocused in
+            if !isFocused { sources.commitSettings(plugin.id) }
+        }
+        .onDisappear { sources.commitSettings(plugin.id) }
+    }
+
+    /// A text setting in a bordered field, so an empty one still shows where to type, with the
+    /// plugin's description under its name (where it gives an example address, for one).
+    @ViewBuilder private func textField(secret: Bool) -> some View {
+        let binding = Binding(get: { text }, set: { value in
+            text = value
+            sources.editSetting(plugin.id, key: field.key, value: .string(value))
+        })
+        Group {
+            if secret {
+                SecureField(text: binding, prompt: nil) { fieldLabel }
+            } else {
+                TextField(text: binding, prompt: nil) { fieldLabel }
+            }
+        }
+        .textFieldStyle(.roundedBorder)
+        .focused($focused)
+        .onSubmit { sources.commitSettings(plugin.id) }
+    }
+
+    @ViewBuilder private var fieldLabel: some View {
+        Text(field.title)
+        if let description = field.description, !description.isEmpty {
+            Text(description)
+        }
     }
 
     private func save(_ value: JSONValue) {
-        sources.saveSettings(plugin.id, json: SchemaForm.withValue(settingsJSON: plugin.settingsJSON, key: field.key,
-                                                                   value: value))
+        sources.setSetting(plugin.id, key: field.key, value: value)
     }
 }
 

@@ -46,6 +46,13 @@ final class SourcesStore {
 
     @ObservationIgnored private var browseHandlers: [CommandID: (BrowseBatch) -> Void] = [:]
     @ObservationIgnored private var browseOrder: [CommandID] = []
+    /// Values typed into plugin settings and not sent yet, by plugin and key. Text fields send them
+    /// on Return, when they lose focus, and before a sign-in starts, so an address typed and then
+    /// followed by a click on Sign In is the one used.
+    @ObservationIgnored private var editedSettings: [String: [String: JSONValue]] = [:]
+    /// Settings sent and not yet reported back, by plugin, so a quick second change builds on the
+    /// first instead of on the older settings.
+    @ObservationIgnored private var sentSettings: [String: String] = [:]
 
     init(client: CoreClient, tracker: CommandTracker, toasts: ToastCenter) {
         self.client = client
@@ -55,6 +62,7 @@ final class SourcesStore {
 
     func apply(_ state: SourcesState) {
         sources = state
+        sentSettings = [:]
     }
 
     var plugins: [SourcePlugin] { sources.plugins }
@@ -94,6 +102,31 @@ final class SourcesStore {
         send(.setPluginSettings(id: id, json: json))
     }
 
+    /// Notes a value typed into one of a plugin's settings; `commitSettings` sends it.
+    func editSetting(_ id: String, key: String, value: JSONValue) {
+        editedSettings[id, default: [:]][key] = value
+    }
+
+    /// Sets one of a plugin's settings at once (switches, choices, numbers), with anything typed.
+    func setSetting(_ id: String, key: String, value: JSONValue) {
+        editSetting(id, key: key, value: value)
+        commitSettings(id)
+    }
+
+    /// Sends what was typed into a plugin's settings, when it changes anything.
+    func commitSettings(_ id: String) {
+        guard let edits = editedSettings.removeValue(forKey: id), !edits.isEmpty,
+              let base = sentSettings[id] ?? plugin(id)?.settingsJSON
+        else { return }
+        var json = base
+        for (key, value) in edits.sorted(by: { $0.key < $1.key }) {
+            json = SchemaForm.withValue(settingsJSON: json, key: key, value: value)
+        }
+        guard (try? JSONValue.parse(json)) != (try? JSONValue.parse(base)) else { return }
+        sentSettings[id] = json
+        saveSettings(id, json: json)
+    }
+
     func logout(_ id: String) {
         send(.logout(plugin: id))
     }
@@ -101,6 +134,8 @@ final class SourcesStore {
     // MARK: Sign-in
 
     func beginSignIn(_ plugin: SourcePlugin, method: SignInMethod) {
+        // The core handles commands in order: an address still in its field arrives first.
+        commitSettings(plugin.id)
         if let current = signIn, !current.isOver, let flow = current.flow {
             client.send(.cancelLogin(plugin: current.plugin, flow: flow))
         }

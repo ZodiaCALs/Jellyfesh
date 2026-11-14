@@ -192,6 +192,44 @@ final class SourcesStoreTests: XCTestCase {
         XCTAssertEqual(queue?.start, 1)
     }
 
+    func testAnAddressStillInItsFieldIsSentBeforeSignIn() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(settings: #"{"quality":"app"}"#)
+        store.apply(SourcesState(version: 1, plugins: [plugin], allowCommunity: false))
+        // Typed, but neither Return nor a click elsewhere yet.
+        store.editSetting(plugin.id, key: "server_url", value: .string("https://music.example"))
+        XCTAssertTrue(client.sent.isEmpty)
+        store.beginSignIn(plugin, method: .passwordExchange)
+        XCTAssertEqual(client.sent, [
+            .setPluginSettings(id: plugin.id, json: #"{"quality":"app","server_url":"https://music.example"}"#),
+            .beginLogin(plugin: plugin.id, method: .passwordExchange),
+        ])
+    }
+
+    func testUnchangedSettingsAreNotSentAgain() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(settings: #"{"server_url":"https://music.example"}"#)
+        store.apply(SourcesState(version: 1, plugins: [plugin], allowCommunity: false))
+        store.editSetting(plugin.id, key: "server_url", value: .string("https://music.example"))
+        store.commitSettings(plugin.id)
+        store.commitSettings(plugin.id)
+        XCTAssertTrue(client.sent.isEmpty)
+    }
+
+    func testQuickChangesBuildOnEachOther() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(settings: "{}")
+        store.apply(SourcesState(version: 1, plugins: [plugin], allowCommunity: false))
+        store.setSetting(plugin.id, key: "quality", value: .string("high"))
+        // The core has not reported the first change back yet.
+        store.setSetting(plugin.id, key: "transcode_format", value: .string("opus"))
+        XCTAssertEqual(client.sent.last,
+                       .setPluginSettings(id: plugin.id, json: #"{"quality":"high","transcode_format":"opus"}"#))
+    }
+
     func testSourceNames() {
         let store = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
         store.apply(SourcesState(version: 1, plugins: [Fixture.plugin()], allowCommunity: false))
