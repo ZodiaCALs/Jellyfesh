@@ -530,9 +530,19 @@ extension SourcePlugin {
     }
 }
 
+extension SourcePreset {
+    // The generated record has the same name: in this module `SourcePreset` is the app's own.
+    init(_ p: JellyfeshFFI.SourcePreset) {
+        self.init(id: p.id, name: p.name, plugin: p.plugin, signInMethods: p.authMethods.map(SignInMethod.init),
+                  needsAddress: p.needsAddress, address: p.address, addressExample: p.addressExample,
+                  account: p.account)
+    }
+}
+
 extension SourcesState {
     init(_ s: SourcesSnapshot) {
-        self.init(version: s.version, plugins: s.plugins.map(SourcePlugin.init), allowCommunity: s.allowCommunity)
+        self.init(version: s.version, plugins: s.plugins.map(SourcePlugin.init),
+                  presets: s.presets.map(SourcePreset.init), allowCommunity: s.allowCommunity)
     }
 }
 
@@ -685,6 +695,8 @@ extension CoreCommand {
         case .setPluginSettings(let id, let json): return .setPluginSettings(id: id, settingsJson: json)
         case .acknowledgeUnofficial(let id): return .acknowledgeUnofficial(id: id)
         case .beginLogin(let plugin, let method): return .beginLogin(plugin: plugin, method: method.ffi)
+        case .connectSource(let preset, let address, let method):
+            return .connectSource(preset: preset, address: address, method: method.ffi)
         case .submitLogin(let plugin, let flow, let fields): return .submitLogin(plugin: plugin, flow: flow, fields: fields)
         case .cancelLogin(let plugin, let flow): return .cancelLogin(plugin: plugin, flow: flow)
         case .logout(let plugin): return .logout(plugin: plugin)

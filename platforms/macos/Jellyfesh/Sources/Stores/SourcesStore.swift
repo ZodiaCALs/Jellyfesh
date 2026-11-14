@@ -1,7 +1,8 @@
-// Sources (docs/core-api.md): installed plugins with their badges, enabling, sign-in flows,
-// settings, installing and browsing. The core drives every flow; this keeps what it reported and
-// sends the person's choices. Source commands answer "not available in this build yet" until the
-// core integrates them during v0.0.3; that answer shows as a calm notice, not an error.
+// Sources (docs/core-api.md): installed plugins with their badges, enabling, sign-in flows, the
+// services of Add a Source, settings, installing and browsing. The core drives every flow; this
+// keeps what it reported and sends the person's choices. Source commands answer "not available in
+// this build yet" until the core integrates them during v0.0.3; that answer shows as a calm
+// notice, not an error.
 
 import Foundation
 import Observation
@@ -66,6 +67,8 @@ final class SourcesStore {
     }
 
     var plugins: [SourcePlugin] { sources.plugins }
+    /// The services Add a Source offers.
+    var presets: [SourcePreset] { sources.presets }
 
     func plugin(_ id: String) -> SourcePlugin? {
         sources.plugins.first { $0.id == id }
@@ -136,12 +139,39 @@ final class SourcesStore {
     func beginSignIn(_ plugin: SourcePlugin, method: SignInMethod) {
         // The core handles commands in order: an address still in its field arrives first.
         commitSettings(plugin.id)
+        let flowID = startFlow(plugin: plugin.id, pluginName: plugin.name, method: method)
+        watchSignIn(client.send(.beginLogin(plugin: plugin.id, method: method)), flow: flowID)
+    }
+
+    /// Whether `connect` can go ahead: a service on the person's own server needs its address.
+    func canConnect(_ preset: SourcePreset, address: String) -> Bool {
+        !preset.needsAddress || !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Connects to a service from Add a Source. The core sets the address, turns the plugin on and
+    /// signs in as for `beginSignIn`, so the sign-in sheet follows the same steps, under the
+    /// service's name.
+    func connect(_ preset: SourcePreset, address: String, method: SignInMethod) {
+        guard canConnect(preset, address: address) else { return }
+        // Anything still typed into the plugin's settings goes first, so it cannot replace this
+        // address afterwards.
+        commitSettings(preset.plugin)
+        let flowID = startFlow(plugin: preset.plugin, pluginName: preset.name, method: method)
+        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+        let command = CoreCommand.connectSource(preset: preset.id, address: preset.needsAddress ? trimmed : nil,
+                                                method: method)
+        watchSignIn(client.send(command), flow: flowID)
+    }
+
+    /// Shows a new flow in the sign-in sheet and returns its id. A flow the core is still running
+    /// is cancelled first: the sheet follows one flow at a time.
+    private func startFlow(plugin: String, pluginName: String, method: SignInMethod) -> UUID {
         if let current = signIn, !current.isOver, let flow = current.flow {
             client.send(.cancelLogin(plugin: current.plugin, flow: flow))
         }
         let flowID = UUID()
-        signIn = SignInFlow(id: flowID, plugin: plugin.id, pluginName: plugin.name, method: method)
-        watchSignIn(client.send(.beginLogin(plugin: plugin.id, method: method)), flow: flowID)
+        signIn = SignInFlow(id: flowID, plugin: plugin, pluginName: pluginName, method: method)
+        return flowID
     }
 
     /// A failed sign-in command ends its flow with the reason (or the "not available" notice).

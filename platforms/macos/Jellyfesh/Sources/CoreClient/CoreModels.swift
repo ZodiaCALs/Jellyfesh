@@ -492,10 +492,34 @@ struct SourcePlugin: Identifiable, Hashable, Sendable {
     var canSearch: Bool { capabilities.contains("search") }
 }
 
+/// A music service offered in Add a Source while its official plugin is installed
+/// (`SourcePreset`). `.connectSource` connects to it.
+struct SourcePreset: Identifiable, Hashable, Sendable {
+    /// Stable name: `jellyfin`, `navidrome`, `subsonic`.
+    var id: String
+    /// The service's own name.
+    var name: String
+    /// The plugin that connects to it; sign-in steps arrive under this id.
+    var plugin: String
+    /// The plugin's sign-in methods, in its order.
+    var signInMethods: [SignInMethod]
+    /// The person types the server's address (a self-hosted server).
+    var needsAddress: Bool
+    /// The address set now, to fill the field with.
+    var address: String?
+    /// An address to show as an example in that field.
+    var addressExample: String?
+    /// The plugin's signed-in account.
+    var account: String?
+}
+
 /// The `Sources` slice.
 struct SourcesState: Hashable, Sendable {
     var version: UInt64
     var plugins: [SourcePlugin]
+    /// The services Add a Source offers, in their order. Empty by default, so a state built from
+    /// plugins alone (tests, the frames before the core's snapshot) needs no services.
+    var presets: [SourcePreset] = []
     var allowCommunity: Bool
 
     static let empty = SourcesState(version: 0, plugins: [], allowCommunity: false)
@@ -655,6 +679,9 @@ enum CoreCommand: Equatable, Sendable {
     case setPluginSettings(id: String, json: String)
     case acknowledgeUnofficial(id: String)
     case beginLogin(plugin: String, method: SignInMethod)
+    /// Sets the service's server address (nil when it needs none), turns its plugin on and signs
+    /// in as `.beginLogin` does; the steps arrive for the preset's plugin.
+    case connectSource(preset: String, address: String?, method: SignInMethod)
     case submitLogin(plugin: String, flow: UInt64, fields: [String: String])
     case cancelLogin(plugin: String, flow: UInt64)
     case logout(plugin: String)

@@ -84,13 +84,14 @@ struct SourceRow: View {
     }
 }
 
-/// The plugin's own icon when it has one, else a generic glyph.
+/// The plugin's own icon when it has one, else a generic glyph (also when there is no plugin, for
+/// a service in Add a Source whose plugin is not listed).
 struct PluginIcon: View {
-    var plugin: SourcePlugin
+    var plugin: SourcePlugin?
     var size: CGFloat
 
     var body: some View {
-        if let path = plugin.iconPath {
+        if let path = plugin?.iconPath {
             ArtworkView(source: .file(path), size: size, cornerRadius: Tokens.Radius.rMd,
                         placeholder: "antenna.radiowaves.left.and.right")
         } else {
@@ -100,7 +101,7 @@ struct PluginIcon: View {
     }
 }
 
-/// The badge and account lines of a source (ADR-0004, ADR-0012).
+/// The badge and account lines of a source (ADR-0004, ADR-0012), and of a service to add.
 enum SourceText {
     static func badge(_ plugin: SourcePlugin) -> String {
         var parts = [plugin.badge == .official ? String(localized: "Official") : String(localized: "Community · unofficial")]
@@ -115,6 +116,20 @@ enum SourceText {
             return String(localized: "Signed in as \(account)")
         }
         return plugin.signInMethods.isEmpty ? nil : String(localized: "Not signed in")
+    }
+
+    /// The line under a service in Add a Source: its account once signed in, else what it is
+    /// (by the service's id; one without a description has no line).
+    static func detail(_ preset: SourcePreset) -> String? {
+        if let account = preset.account {
+            return String(localized: "Signed in as \(account)")
+        }
+        switch preset.id {
+        case "jellyfin": return String(localized: "Your Jellyfin server")
+        case "navidrome": return String(localized: "Your Navidrome server")
+        case "subsonic": return String(localized: "Airsonic, Gonic and other Subsonic servers")
+        default: return nil
+        }
     }
 }
 

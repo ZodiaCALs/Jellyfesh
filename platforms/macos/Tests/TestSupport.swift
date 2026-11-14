@@ -178,6 +178,16 @@ enum Fixture {
                      needsDisclosure: needsDisclosure, settingsSchemaJSON: schema, settingsJSON: settings, iconPath: nil)
     }
 
+    /// Navidrome as the core offers it in Add a Source: through the Subsonic plugin, on a server
+    /// whose address the person types.
+    static func preset(_ id: String = "navidrome", name: String = "Navidrome",
+                       plugin: String = "org.jellyfesh.subsonic",
+                       methods: [SignInMethod] = [.apiKey, .passwordExchange],
+                       needsAddress: Bool = true) -> SourcePreset {
+        SourcePreset(id: id, name: name, plugin: plugin, signInMethods: methods, needsAddress: needsAddress,
+                     address: nil, addressExample: needsAddress ? "http://192.168.1.20:4533" : nil, account: nil)
+    }
+
     static func result(_ id: String, source: String, kind: ResultKind = .track,
                        track: TrackReference? = nil) -> SourceResult {
         SourceResult(source: source, kind: kind, itemID: id, title: "Item \(id)", subtitle: nil, album: nil,

@@ -1,6 +1,7 @@
-// Sources: the community-plugin switch with ADR-0012's disclosure, and every installed plugin with
-// its badge, enabling, account and sign-in flows, settings from its JSON Schema, and uninstalling;
-// plus installing a `.jfpkg` file.
+// Sources: the community-plugin switch with ADR-0012's disclosure; the services to add, each
+// connected from a sheet with its server's address and a sign-in method; every installed plugin
+// with its badge, enabling, account and sign-in flows, settings from its JSON Schema, and
+// uninstalling; plus installing a `.jfpkg` file.
 
 import SwiftUI
 
@@ -8,6 +9,10 @@ struct SourcesSettings: View {
     @Environment(SourcesStore.self) private var sources
     @Environment(SettingsStore.self) private var settings
     @State private var disclosure: CommunityDisclosure?
+    /// The service whose Connect sheet is open.
+    @State private var connecting: SourcePreset?
+    /// What was chosen in that sheet, acted on once it has gone (`connectChosen`).
+    @State private var chosen: ConnectChoice?
 
     var body: some View {
         Form {
@@ -33,6 +38,18 @@ struct SourcesSettings: View {
                 }
             } header: {
                 Text("Community Plugins")
+            }
+
+            if !sources.presets.isEmpty {
+                Section {
+                    ForEach(sources.presets) { preset in
+                        PresetRow(preset: preset, plugin: sources.plugin(preset.plugin)) {
+                            connecting = preset
+                        }
+                    }
+                } header: {
+                    Text("Add a Source")
+                }
             }
 
             Section {
@@ -67,10 +84,125 @@ struct SourcesSettings: View {
                 settings.setAllowCommunityPlugins(true)
             }
         }
+        .sheet(item: $connecting, onDismiss: connectChosen) { preset in
+            ConnectSourceSheet(preset: preset) { address, method in
+                chosen = ConnectChoice(preset: preset, address: address, method: method)
+            }
+        }
         .sheet(item: Binding(get: { sources.signIn }, set: { flow in
             if flow == nil { sources.endSignIn() }
         })) { _ in
             SignInSheet()
+        }
+    }
+
+    /// Starts the sign-in chosen in the Connect sheet. Only once that sheet has gone: a window
+    /// shows one sheet at a time, and the sign-in sheet opens as soon as the flow starts.
+    private func connectChosen() {
+        guard let choice = chosen else { return }
+        chosen = nil
+        sources.connect(choice.preset, address: choice.address, method: choice.method)
+    }
+}
+
+/// A sign-in method chosen in the Connect sheet, with the address typed there.
+private struct ConnectChoice {
+    var preset: SourcePreset
+    var address: String
+    var method: SignInMethod
+}
+
+/// A service in Add a Source: its plugin's icon, its name, and what it is or its account.
+private struct PresetRow: View {
+    var preset: SourcePreset
+    var plugin: SourcePlugin?
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Tokens.Space.s3) {
+                PluginIcon(plugin: plugin, size: 28)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(preset.name)
+                    if let detail = SourceText.detail(preset) {
+                        Text(detail)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
+            // The whole row answers a click, the space between included.
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Connecting to a service: its server's address when it needs one, then a button per sign-in
+/// method. `choose` gets the address and the method as the sheet closes; the sign-in sheet takes
+/// over from there.
+private struct ConnectSourceSheet: View {
+    var preset: SourcePreset
+    var choose: (String, SignInMethod) -> Void
+
+    @Environment(SourcesStore.self) private var sources
+    @Environment(\.dismiss) private var dismiss
+    @State private var address: String
+
+    init(preset: SourcePreset, choose: @escaping (String, SignInMethod) -> Void) {
+        self.preset = preset
+        self.choose = choose
+        _address = State(initialValue: preset.address ?? "")
+    }
+
+    var body: some View {
+        VStack(spacing: Tokens.Space.s5) {
+            Text("Connect to \(preset.name)")
+                .font(.system(size: 20, weight: .bold))
+                .accessibilityAddTraits(.isHeader)
+            if preset.needsAddress {
+                VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                    // Outside a form a field shows only its prompt, so the label goes above it; the
+                    // field keeps its own for VoiceOver.
+                    Text("Server address")
+                        .accessibilityHidden(true)
+                    TextField("Server address", text: $address, prompt: preset.addressExample.map { Text($0) })
+                        .textFieldStyle(.roundedBorder)
+                        .labelsHidden()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                ForEach(preset.signInMethods, id: \.self) { method in
+                    methodButton(method)
+                }
+            }
+        }
+        .padding(Tokens.Space.s6)
+        .frame(width: 440)
+    }
+
+    /// One sign-in method, once the address is there. Signing in with a password is the default.
+    @ViewBuilder private func methodButton(_ method: SignInMethod) -> some View {
+        let button = Button(PluginSettingsRow.title(of: method)) {
+            choose(address, method)
+            dismiss()
+        }
+        .disabled(!sources.canConnect(preset, address: address))
+        if method == .passwordExchange {
+            button.keyboardShortcut(.defaultAction)
+        } else {
+            button
         }
     }
 }
@@ -157,6 +289,7 @@ private struct PluginSettingsRow: View {
         }
     }
 
+    /// A sign-in method's button, here and in the Connect sheet.
     static func title(of method: SignInMethod) -> LocalizedStringKey {
         switch method {
         case .qr: return "Sign In with QR Code"

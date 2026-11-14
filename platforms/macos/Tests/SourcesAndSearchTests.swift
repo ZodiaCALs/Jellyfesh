@@ -230,6 +230,70 @@ final class SourcesStoreTests: XCTestCase {
                        .setPluginSettings(id: plugin.id, json: #"{"quality":"high","transcode_format":"opus"}"#))
     }
 
+    func testConnectingToAServiceSignsInThroughItsPlugin() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let preset = Fixture.preset()
+        store.apply(SourcesState(version: 1, plugins: [], presets: [preset], allowCommunity: false))
+        XCTAssertEqual(store.presets, [preset])
+        store.connect(preset, address: "  http://192.168.1.20:4533\n", method: .passwordExchange)
+        XCTAssertEqual(client.sent, [
+            .connectSource(preset: "navidrome", address: "http://192.168.1.20:4533", method: .passwordExchange),
+        ])
+        XCTAssertEqual(store.signIn?.plugin, "org.jellyfesh.subsonic")
+        XCTAssertEqual(store.signIn?.pluginName, "Navidrome")
+        XCTAssertNil(store.signIn?.step)
+        // The steps arrive for the plugin, as after BeginLogin.
+        store.apply(signIn: SignInUpdate(plugin: "org.jellyfesh.subsonic", flow: 4, step: .waiting("Connecting")))
+        XCTAssertEqual(store.signIn?.flow, 4)
+    }
+
+    func testAServerNeedsItsAddress() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let preset = Fixture.preset()
+        XCTAssertFalse(store.canConnect(preset, address: " \n"))
+        store.connect(preset, address: " \n", method: .passwordExchange)
+        XCTAssertTrue(client.sent.isEmpty)
+        XCTAssertNil(store.signIn)
+        // A service that is not on a server of the person's own is sent no address.
+        let service = Fixture.preset("example", needsAddress: false)
+        XCTAssertTrue(store.canConnect(service, address: ""))
+        store.connect(service, address: "ignored", method: .oauth)
+        XCTAssertEqual(client.sent, [.connectSource(preset: "example", address: nil, method: .oauth)])
+    }
+
+    func testConnectingCancelsTheFlowStillRunning() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(methods: [.qr])
+        store.beginSignIn(plugin, method: .qr)
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 9, step: .showQR(data: "qr", expiresAtMs: nil)))
+        store.connect(Fixture.preset(), address: "http://192.168.1.20:4533", method: .passwordExchange)
+        XCTAssertEqual(client.sent, [
+            .beginLogin(plugin: plugin.id, method: .qr),
+            .cancelLogin(plugin: plugin.id, flow: 9),
+            .connectSource(preset: "navidrome", address: "http://192.168.1.20:4533", method: .passwordExchange),
+        ])
+        XCTAssertEqual(store.signIn?.plugin, "org.jellyfesh.subsonic")
+        XCTAssertNil(store.signIn?.flow, "the new flow waits for its own first step")
+    }
+
+    func testSettingsStillBeingTypedGoBeforeTheConnection() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin("org.jellyfesh.subsonic")
+        let preset = Fixture.preset()
+        store.apply(SourcesState(version: 1, plugins: [plugin], presets: [preset], allowCommunity: false))
+        store.editSetting(plugin.id, key: "server_url", value: .string("http://old.example"))
+        store.connect(preset, address: "http://192.168.1.20:4533", method: .passwordExchange)
+        // The address given to connect arrives last, so it is the one the plugin keeps.
+        XCTAssertEqual(client.sent, [
+            .setPluginSettings(id: plugin.id, json: #"{"server_url":"http://old.example"}"#),
+            .connectSource(preset: "navidrome", address: "http://192.168.1.20:4533", method: .passwordExchange),
+        ])
+    }
+
     func testSourceNames() {
         let store = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
         store.apply(SourcesState(version: 1, plugins: [Fixture.plugin()], allowCommunity: false))

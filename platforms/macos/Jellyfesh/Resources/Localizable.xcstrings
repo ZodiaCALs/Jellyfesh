@@ -781,6 +781,28 @@
         }
       }
     },
+    "Add a Source": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースを追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加来源"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增來源"
+          }
+        }
+      }
+    },
     "Add songs from their menu with Add to Playlist.": {
       "localizations": {
         "ja": {
@@ -887,6 +909,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增 %1$llu，更新 %2$llu，移除 %3$llu"
+          }
+        }
+      }
+    },
+    "Airsonic, Gonic and other Subsonic servers": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airsonic、Gonic などの Subsonic サーバー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airsonic、Gonic 等 Subsonic 服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airsonic、Gonic 等 Subsonic 伺服器"
           }
         }
       }
@@ -1685,6 +1729,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "社群 · 非官方"
+          }
+        }
+      }
+    },
+    "Connect to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に接続"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接到 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線至 %@"
           }
         }
       }
@@ -5407,6 +5473,28 @@
         }
       }
     },
+    "Server address": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーのアドレス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器地址"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器位址"
+          }
+        }
+      }
+    },
     "Show Now Playing": {
       "localizations": {
         "ja": {
@@ -7141,6 +7229,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "是"
+          }
+        }
+      }
+    },
+    "Your Jellyfin server": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いの Jellyfin サーバー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 Jellyfin 服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 Jellyfin 伺服器"
+          }
+        }
+      }
+    },
+    "Your Navidrome server": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いの Navidrome サーバー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 Navidrome 服务器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 Navidrome 伺服器"
           }
         }
       }

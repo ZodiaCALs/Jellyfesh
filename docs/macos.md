@@ -304,6 +304,10 @@ this revision (UniFFI 0.32.2) except `CoreConfig.bundledPlugins`.
   `AuxTrack.lines: [UInt32: AuxLine]`, `Line.direction` (`.ltr`, `.rtl`, `.auto`), `Format.webVtt`.
 * `Settings.transparency: Float`, `Settings.lyricsSize: LyricsSize` (`.small`, `.medium`,
   `.large`) and `Settings.lyricsAlign: LyricsAlign` (`.start`, `.center`).
+* **Assumed, not yet checked against a generated file:** `SourcesSnapshot.presets`, the record
+  `SourcePreset` (`id`, `name`, `plugin`, `authMethods`, `needsAddress`, `address`,
+  `addressExample`, `account`; the app's own model has the same name, so the conversion writes
+  `JellyfeshFFI.SourcePreset`) and `Command.connectSource(preset:address:method:)`.
 * Shared ports (`platforms/shared/swift`): `DisplayClock()`, `update(_:nowNs:)`, `positionUs(nowNs:)`,
   `isRunning`, `waitUntilUs(targetUs:nowNs:)`, `anchor`; `PlaybackAnchor.positionAt(_:)`;
   `nextSecond(_:)`, `nextStep(_:step:)`; `LyricTimeline.cursor(_:)` (`LyricCursor`) and
