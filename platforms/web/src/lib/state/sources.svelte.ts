@@ -87,8 +87,30 @@ export async function explain(error: unknown, plugin?: Plugin): Promise<string> 
   return error instanceof Error ? error.message : String(error);
 }
 
+/** A service in Sources → Add a Source (the list the apps share, `source_presets`). */
+export interface PresetView {
+  id: string;
+  name: string;
+  /** The bundled official plugin that connects to it. */
+  plugin: string;
+  /** An address to show as an example in the server field. */
+  example: string | null;
+  account: string | null;
+}
+
+interface PresetDef {
+  id: string;
+  name: string;
+  plugin: string;
+  address_setting: string | null;
+  address_example: string | null;
+}
+
 export class Sources {
   list = $state.raw<SourceView[]>([]);
+  /** The services offered in Add a Source: those whose official plugin is bundled. */
+  presets = $state.raw<PresetView[]>([]);
+  private presetDefs: PresetDef[] | null = null;
   /** Bumps when accounts or availability change, so views reload what they show. */
   revision = $state(0);
   /** Community plugins may run (after the disclosure). */
@@ -126,6 +148,12 @@ export class Sources {
         server: serverOf(p),
         ready: p.info !== null,
       };
+    });
+    this.presetDefs ??= JSON.parse(this.jf.source_presets()) as PresetDef[];
+    this.presets = this.presetDefs.flatMap((def) => {
+      const plugin = this.host.plugins.find((p) => p.id === def.plugin && p.official);
+      if (!plugin) return [];
+      return [{ id: def.id, name: def.name, plugin: def.plugin, example: def.address_example, account: plugin.state.account }];
     });
     this.allowCommunity = this.host.allowCommunity;
     this.revision += 1;

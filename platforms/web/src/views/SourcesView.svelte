@@ -8,10 +8,12 @@
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
   import type { Plugin } from '../lib/plugins/host';
-  import { explain, type SourceView } from '../lib/state/sources.svelte';
+  import { explain, type PresetView, type SourceView } from '../lib/state/sources.svelte';
 
   const app = useApp();
   let signingIn = $state<Plugin | null>(null);
+  /** The service chosen in Add a Source, while its sign-in sheet is open. */
+  let signingAs = $state<PresetView | null>(null);
   let editing = $state<Plugin | null>(null);
   let editError = $state<string | null>(null);
   let disclosing = $state<Plugin | null>(null);
@@ -47,6 +49,29 @@
     editing = plugin;
   }
 
+  function presetLine(preset: PresetView): string {
+    if (preset.account) return t('Signed in as {account}', { account: preset.account });
+    switch (preset.id) {
+      case 'jellyfin':
+        return t('Your Jellyfin server');
+      case 'navidrome':
+        return t('Your Navidrome server');
+      case 'subsonic':
+        return t('Airsonic, Gonic and other Subsonic servers');
+      default:
+        return '';
+    }
+  }
+
+  /** A service from Add a Source: its plugin on, then the sign-in sheet (address first). */
+  async function connect(preset: PresetView) {
+    const plugin = app.sources.get(preset.plugin);
+    if (!plugin) return;
+    if (!plugin.state.enabled) await plugin.setEnabled(true);
+    signingAs = preset;
+    signingIn = plugin;
+  }
+
   async function signIn(source: SourceView) {
     const plugin = app.sources.get(source.id);
     if (!plugin) return;
@@ -55,6 +80,7 @@
       return;
     }
     if (!source.enabled) await plugin.setEnabled(true);
+    signingAs = null;
     signingIn = plugin;
   }
 </script>
@@ -78,6 +104,26 @@
       <h2>{t('No Sources Yet')}</h2>
       <p>{t('This copy of Jellyfesh Web was built without source plugins.')}</p>
     </div>
+  {/if}
+
+  {#if app.sources.presets.length > 0}
+    <section class="add" aria-labelledby="add-title">
+      <h2 id="add-title">{t('Add a Source')}</h2>
+      <ul class="presets">
+        {#each app.sources.presets as preset (preset.id)}
+          <li>
+            <button class="preset" onclick={() => connect(preset)}>
+              <Icon name="globe" size={22} />
+              <span class="text">
+                <span class="title">{preset.name}</span>
+                {#if presetLine(preset)}<span class="sub">{presetLine(preset)}</span>{/if}
+              </span>
+              <Icon name="forward" size={18} />
+            </button>
+          </li>
+        {/each}
+      </ul>
+    </section>
   {/if}
 
   <ul class="list">
@@ -154,7 +200,14 @@
 </section>
 
 {#if signingIn}
-  <SignInSheet plugin={signingIn} onclose={() => (signingIn = null)} />
+  <SignInSheet
+    plugin={signingIn}
+    preset={signingAs}
+    onclose={() => {
+      signingIn = null;
+      signingAs = null;
+    }}
+  />
 {/if}
 
 {#if editing}
@@ -210,6 +263,49 @@
     border-radius: var(--jf-radius-r-md);
     background: var(--jf-fill);
     color: var(--jf-ink-70);
+  }
+  .add {
+    margin: 0 0 var(--jf-space-s6);
+    max-width: var(--jf-layout-reading);
+  }
+  .add h2 {
+    margin: 0 0 var(--jf-space-s3);
+    font-size: var(--jf-type-roles-section-size);
+  }
+  .presets {
+    display: grid;
+    gap: var(--jf-space-s2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .preset {
+    display: flex;
+    gap: var(--jf-space-s3);
+    align-items: center;
+    width: 100%;
+    padding: var(--jf-space-s3) var(--jf-space-s4);
+    border: 1px solid var(--jf-line);
+    border-radius: var(--jf-radius-r-md);
+    background: var(--jf-fill);
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  .preset:hover {
+    background: var(--jf-fill-hover);
+  }
+  .preset .text {
+    display: grid;
+    flex: 1;
+    gap: 2px;
+  }
+  .preset .title {
+    font-weight: 600;
+  }
+  .preset .sub {
+    color: var(--jf-ink-70);
+    font-size: 0.875em;
   }
   .list {
     display: grid;

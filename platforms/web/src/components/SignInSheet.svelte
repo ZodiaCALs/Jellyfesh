@@ -7,12 +7,21 @@
   import type { AuthKind, AuthStep, FieldSpec } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
   import type { Plugin } from '../lib/plugins/host';
-  import { explain, SignInFlow } from '../lib/state/sources.svelte';
+  import { explain, type PresetView, SignInFlow } from '../lib/state/sources.svelte';
   import Icon from './Icon.svelte';
   import SettingsForm from './SettingsForm.svelte';
   import Sheet from './Sheet.svelte';
 
-  let { plugin, onclose }: { plugin: Plugin; onclose: () => void } = $props();
+  let {
+    plugin,
+    preset = null,
+    onclose,
+  }: {
+    plugin: Plugin;
+    /** The service chosen in Add a Source, for the title and the example address. */
+    preset?: PresetView | null;
+    onclose: () => void;
+  } = $props();
   const app = useApp();
   let flow = $state<SignInFlow | null>(null);
   let loadError = $state<string | null>(null);
@@ -72,7 +81,7 @@
   }
 </script>
 
-<Sheet title={t('Sign In to {name}', { name: plugin.name })} {onclose}>
+<Sheet title={preset ? t('Connect to {name}', { name: preset.name }) : t('Sign In to {name}', { name: plugin.name })} {onclose}>
   {#if loadError}
     <p class="error" role="alert">{loadError}</p>
   {:else if !flow}
@@ -86,6 +95,7 @@
         submitLabel={t('Continue')}
         busy={view.busy}
         error={view.error}
+        placeholders={preset?.example ? { server_url: preset.example } : {}}
         onsubmit={(values) => flow?.saveSettings(values)}
       />
     {:else if view.stage === 'choose'}

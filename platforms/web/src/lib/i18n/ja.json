@@ -250,5 +250,10 @@
   "{n} minute": "{n} 分",
   "{n} song": "{n} 曲",
   "{position} of {duration}": "{position} / {duration}",
-  "{songs}, {duration}": "{songs}、{duration}"
+  "{songs}, {duration}": "{songs}、{duration}",
+  "Add a Source": "ソースを追加",
+  "Connect to {name}": "{name} に接続",
+  "Your Jellyfin server": "お使いの Jellyfin サーバー",
+  "Your Navidrome server": "お使いの Navidrome サーバー",
+  "Airsonic, Gonic and other Subsonic servers": "Airsonic、Gonic などの Subsonic サーバー"
 }

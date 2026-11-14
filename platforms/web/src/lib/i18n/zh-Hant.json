@@ -250,5 +250,10 @@
   "{n} minute": "{n} 分鐘",
   "{n} song": "{n} 首歌曲",
   "{position} of {duration}": "{position}，共 {duration}",
-  "{songs}, {duration}": "{songs}，{duration}"
+  "{songs}, {duration}": "{songs}，{duration}",
+  "Add a Source": "新增來源",
+  "Connect to {name}": "連線至 {name}",
+  "Your Jellyfin server": "你的 Jellyfin 伺服器",
+  "Your Navidrome server": "你的 Navidrome 伺服器",
+  "Airsonic, Gonic and other Subsonic servers": "Airsonic、Gonic 等 Subsonic 伺服器"
 }

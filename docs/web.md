@@ -30,6 +30,11 @@ secret).
   browser offers it (Chrome, Edge), or the browser's own "Add to Home
   Screen" / "Add to Dock" (Safari). It then opens in its own window and
   starts without a connection; your server still has to be reachable.
+* **Add a source**: Sources → Add a Source lists the services this copy's
+  official plugins connect to (Jellyfin, Navidrome, other Subsonic servers);
+  choosing one opens the sign-in below with the service's name and an
+  example address. Plugins that are not signed with the release key are not
+  listed there (sign in from their own card instead).
 * **Sign in**: Sources → Sign In on Subsonic or Jellyfin. Enter the address
   you open your server at; Jellyfesh Web checks that this page can reach it
   (see the next section) and then offers the plugin's ways to sign in:

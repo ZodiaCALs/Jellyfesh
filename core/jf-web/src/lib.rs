@@ -302,6 +302,26 @@ impl Core {
 
 // ---- playback rules --------------------------------------------------------------------------
 
+/// The services offered in Sources → Add a Source (`jf_plugin_model::presets`, the list the apps
+/// share), in order: `[{"id", "name", "plugin", "address_setting", "address_example"}, …]`. The
+/// page offers each while its official plugin is bundled.
+#[wasm_bindgen]
+pub fn source_presets() -> String {
+    let list: Vec<Value> = jf_plugin_model::presets::PRESETS
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "id": p.id,
+                "name": p.name,
+                "plugin": p.plugin,
+                "address_setting": p.address_setting,
+                "address_example": p.address_example,
+            })
+        })
+        .collect();
+    json(&list)
+}
+
 /// The equaliser presets: `[[name, EqSettings], …]`.
 #[wasm_bindgen]
 pub fn eq_presets() -> String {

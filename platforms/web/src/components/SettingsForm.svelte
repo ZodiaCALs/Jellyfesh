@@ -10,6 +10,7 @@
     submitLabel,
     busy = false,
     error = null,
+    placeholders = {},
     onsubmit,
   }: {
     schema: SettingsSchema;
@@ -17,6 +18,8 @@
     submitLabel: string;
     busy?: boolean;
     error?: string | null;
+    /** Examples to show in empty text fields, by setting name (a service's example address). */
+    placeholders?: Record<string, string>;
     onsubmit: (values: Record<string, unknown>) => void;
   } = $props();
 
@@ -71,7 +74,7 @@
           maxlength={spec.maxLength}
           min={spec.minimum}
           max={spec.maximum}
-          placeholder={spec.format === 'uri' ? 'https://' : undefined}
+          placeholder={placeholders[name] ?? (spec.format === 'uri' ? 'https://' : undefined)}
           autocomplete={spec.format === 'uri' ? 'url' : 'off'}
           autocapitalize="off"
           spellcheck="false"
