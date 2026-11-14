@@ -110,6 +110,12 @@
     <string name="sources_empty_body">从 .jfpkg 文件安装来源插件。</string>
     <string name="sources_installed">已安装</string>
     <string name="sources_bundled_note">官方的 Subsonic 和 Jellyfin 插件随应用提供，并随应用一起更新。</string>
+    <string name="sources_add">添加来源</string>
+    <string name="sources_add_jellyfin">你的 Jellyfin 服务器</string>
+    <string name="sources_add_navidrome">你的 Navidrome 服务器</string>
+    <string name="sources_add_subsonic">Airsonic、Gonic 等 Subsonic 服务器</string>
+    <string name="sources_connect_title">连接到 %1$s</string>
+    <string name="sources_connect_address">服务器地址</string>
     <string name="badge_official">官方</string>
     <string name="badge_community">社区 · 非官方</string>
     <string name="source_enabled">已启用</string>

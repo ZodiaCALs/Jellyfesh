@@ -59,6 +59,12 @@ sealed interface Command {
     /** The person accepted the community-plugin disclosure for this plugin (ADR-0012). */
     data class AcknowledgeUnofficial(val id: String) : Command
     data class BeginLogin(val plugin: String, val method: AuthMethod) : Command
+    /**
+     * Connects to a service from [SourcesSnapshot.presets]: sets the server's address (null for a
+     * service that takes none), turns its plugin on and starts signing in, as [BeginLogin] does.
+     * The steps arrive as Auth events for the service's plugin.
+     */
+    data class ConnectSource(val preset: String, val address: String?, val method: AuthMethod) : Command
     /** Secrets pass through once and are never stored (ADR-0015). */
     data class SubmitLogin(val plugin: String, val flow: Long, val fields: Map<String, String>) : Command
     data class CancelLogin(val plugin: String, val flow: Long) : Command

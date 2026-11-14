@@ -110,6 +110,12 @@
     <string name="sources_empty_body">.jfpkg ファイルからソースのプラグインをインストールします。</string>
     <string name="sources_installed">インストール済み</string>
     <string name="sources_bundled_note">公式の Subsonic と Jellyfin のプラグインはアプリに含まれ、アプリと一緒に更新されます。</string>
+    <string name="sources_add">ソースを追加</string>
+    <string name="sources_add_jellyfin">お使いの Jellyfin サーバー</string>
+    <string name="sources_add_navidrome">お使いの Navidrome サーバー</string>
+    <string name="sources_add_subsonic">Airsonic、Gonic などの Subsonic サーバー</string>
+    <string name="sources_connect_title">%1$s に接続</string>
+    <string name="sources_connect_address">サーバーのアドレス</string>
     <string name="badge_official">公式</string>
     <string name="badge_community">コミュニティ · 非公式</string>
     <string name="source_enabled">有効</string>

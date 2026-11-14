@@ -110,6 +110,12 @@
     <string name="sources_empty_body">從 .jfpkg 檔案安裝來源外掛。</string>
     <string name="sources_installed">已安裝</string>
     <string name="sources_bundled_note">官方的 Subsonic 與 Jellyfin 外掛隨 App 提供，並隨 App 一起更新。</string>
+    <string name="sources_add">新增來源</string>
+    <string name="sources_add_jellyfin">你的 Jellyfin 伺服器</string>
+    <string name="sources_add_navidrome">你的 Navidrome 伺服器</string>
+    <string name="sources_add_subsonic">Airsonic、Gonic 等 Subsonic 伺服器</string>
+    <string name="sources_connect_title">連線至 %1$s</string>
+    <string name="sources_connect_address">伺服器位址</string>
     <string name="badge_official">官方</string>
     <string name="badge_community">社群 · 非官方</string>
     <string name="source_enabled">已啟用</string>

@@ -48,8 +48,10 @@ import org.jellyfesh.android.ui.theme.JfTextField
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.AuthStep
+import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.PluginSummary
+import org.jellyfesh.logic.core.SourcePreset
 import org.jellyfesh.logic.format.TimeFormat
 import org.jellyfesh.logic.qr.QrMatrix
 import org.jellyfesh.logic.sources.AuthFlow
@@ -62,9 +64,24 @@ import org.jellyfesh.logic.sources.AuthSession
  */
 @Stable
 class SignIn internal constructor(private val overlays: Overlays, private val context: android.content.Context) {
+    /** Signs in to an installed plugin (the sign-in rows on its page). */
     fun start(plugin: PluginSummary, method: AuthMethod) {
-        overlays.showSheet(context.getString(R.string.sign_in_title, plugin.name)) { dismiss ->
-            SignInContent(plugin, method, dismiss)
+        show(plugin.name, AuthFlow.begin(plugin.id, method))
+    }
+
+    /**
+     * Connects to a service from Add a Source with the address typed for it: the same sheet and
+     * steps, begun with `ConnectSource` for the service's plugin. Nothing opens while the service
+     * needs an address and none was typed, as the core would only fail the command.
+     */
+    fun connect(preset: SourcePreset, address: String, method: AuthMethod) {
+        AuthFlow.connect(preset, address, method)?.let { show(preset.name, it) }
+    }
+
+    /** [name] is what the person chose (a plugin or a service); [start] begins the flow, and again on Retry. */
+    private fun show(name: String, start: Pair<AuthSession, Command>) {
+        overlays.showSheet(context.getString(R.string.sign_in_title, name)) { dismiss ->
+            SignInContent(name, start, dismiss)
         }
     }
 }
@@ -77,21 +94,21 @@ fun rememberSignIn(): SignIn {
 }
 
 @Composable
-private fun SignInContent(plugin: PluginSummary, method: AuthMethod, dismiss: () -> Unit) {
+private fun SignInContent(name: String, start: Pair<AuthSession, Command>, dismiss: () -> Unit) {
     val graph = LocalGraph.current
     val context = LocalContext.current
     val redirects = LocalAuthRedirects.current
+    val (started, begin) = start
     var session by remember { mutableStateOf<AuthSession?>(null) }
     var failure by remember { mutableStateOf<String?>(null) }
     var commandId by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(plugin.id, method) {
-        val (started, command) = AuthFlow.begin(plugin.id, method)
+    LaunchedEffect(start) {
         session = started
-        commandId = graph.send(command)
+        commandId = graph.send(begin)
         if (commandId == 0L) failure = context.getString(R.string.sign_in_unavailable)
     }
-    LaunchedEffect(plugin.id) {
+    LaunchedEffect(started.plugin) {
         graph.store.signals.collect { event ->
             when (event) {
                 is CoreEvent.Auth -> session = AuthFlow.onUpdate(session, event.update)
@@ -127,7 +144,7 @@ private fun SignInContent(plugin: PluginSummary, method: AuthMethod, dismiss: ()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { JfButton(stringResource(R.string.action_close), dismiss) }
             }
             step == null -> JfText(stringResource(R.string.sign_in_starting), style = JfType.small, color = Jf.colors.ink70)
-            step is AuthStep.ShowQr -> QrStep(plugin, step)
+            step is AuthStep.ShowQr -> QrStep(name, step)
             step is AuthStep.OpenUrl -> {
                 JfText(stringResource(R.string.sign_in_browser_body), style = JfType.small, color = Jf.colors.ink90)
                 JfButton(stringResource(R.string.sign_in_open_again), { openInBrowser(context, step.url) }, icon = R.drawable.ic_external)
@@ -149,9 +166,8 @@ private fun SignInContent(plugin: PluginSummary, method: AuthMethod, dismiss: ()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                     JfButton(stringResource(R.string.action_close), dismiss, style = ButtonStyle.Quiet)
                     JfButton(stringResource(R.string.action_retry), {
-                        val (started, command) = AuthFlow.begin(plugin.id, method)
                         session = started
-                        commandId = graph.send(command)
+                        commandId = graph.send(begin)
                     }, style = ButtonStyle.Accent)
                 }
             }
@@ -164,7 +180,7 @@ private fun openInBrowser(context: android.content.Context, url: String) {
 }
 
 @Composable
-private fun QrStep(plugin: PluginSummary, step: AuthStep.ShowQr) {
+private fun QrStep(name: String, step: AuthStep.ShowQr) {
     val matrix = remember(step.data) { QrMatrix.encode(step.data) }
     // A countdown that ticks once a second while the sheet is open (only with an expiry).
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -199,7 +215,7 @@ private fun QrStep(plugin: PluginSummary, step: AuthStep.ShowQr) {
                 }
             }
         }
-        JfText(stringResource(R.string.sign_in_qr_body, plugin.name), style = JfType.small, textAlign = TextAlign.Center)
+        JfText(stringResource(R.string.sign_in_qr_body, name), style = JfType.small, textAlign = TextAlign.Center)
         if (left != null) {
             JfText(
                 if (left > 0) stringResource(R.string.sign_in_qr_expires, TimeFormat.clock(left * 1_000)) else stringResource(R.string.sign_in_qr_expired),

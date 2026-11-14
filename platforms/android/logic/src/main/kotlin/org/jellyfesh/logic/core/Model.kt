@@ -166,9 +166,37 @@ data class PluginSummary(
     val icon: String?,
 )
 
-data class SourcesSnapshot(val version: Long, val plugins: List<PluginSummary>, val allowCommunity: Boolean) {
+/**
+ * A service offered in Sources → Add a Source. The core lists one only while its official plugin is
+ * installed, so the list grows with the plugins and every app offers the same services.
+ */
+data class SourcePreset(
+    /** Stable name (`jellyfin`, `navidrome`, `subsonic`): the app keys the service's description by it. */
+    val id: String,
+    val name: String,
+    /** The plugin that connects to it. Several services can share one (Navidrome and Subsonic do). */
+    val plugin: String,
+    /** The plugin's sign-in methods, in its order. */
+    val authMethods: List<AuthMethod>,
+    /** Whether the person types the server's address (a self-hosted server). */
+    val needsAddress: Boolean,
+    /** The address set now, to fill the field with. */
+    val address: String?,
+    /** An address to show as an example in that field. */
+    val addressExample: String?,
+    /** The plugin's signed-in account, if any. */
+    val account: String?,
+)
+
+data class SourcesSnapshot(
+    val version: Long,
+    val plugins: List<PluginSummary>,
+    /** The services offered in Add a Source, in the core's order. */
+    val presets: List<SourcePreset>,
+    val allowCommunity: Boolean,
+) {
     companion object {
-        val Empty = SourcesSnapshot(0, emptyList(), false)
+        val Empty = SourcesSnapshot(0, emptyList(), emptyList(), false)
     }
 }
 

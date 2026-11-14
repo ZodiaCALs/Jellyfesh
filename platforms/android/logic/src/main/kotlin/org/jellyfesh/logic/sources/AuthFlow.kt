@@ -7,6 +7,7 @@ import org.jellyfesh.logic.core.AuthUpdate
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
+import org.jellyfesh.logic.core.SourcePreset
 
 /**
  * A sign-in flow as the sheet shows it. The core runs the flow (ADR-0004); the shell renders each
@@ -34,6 +35,25 @@ object AuthFlow {
     /** Starts a flow: the session and the command to send. */
     fun begin(plugin: String, method: AuthMethod): Pair<AuthSession, Command> =
         AuthSession(plugin, method) to Command.BeginLogin(plugin, method)
+
+    /**
+     * Whether a service from Add a Source can be connected to with [address] in its field: a
+     * self-hosted server needs one, and the core fails `ConnectSource` without it.
+     */
+    fun canConnect(preset: SourcePreset, address: String): Boolean = !preset.needsAddress || address.isNotBlank()
+
+    /**
+     * Starts a flow for a service from Add a Source: the session and the command to send, or null
+     * while the service needs an address and [address] is blank. One `ConnectSource` sets the
+     * address, turns the plugin on and begins signing in, so the sign-in never starts before the
+     * address is set. The session is the plugin's, as [begin] makes it, because the steps arrive
+     * as Auth events for the plugin, not for the service.
+     */
+    fun connect(preset: SourcePreset, address: String, method: AuthMethod): Pair<AuthSession, Command>? {
+        if (!canConnect(preset, address)) return null
+        val server = address.trim().takeIf { preset.needsAddress }
+        return AuthSession(preset.plugin, method) to Command.ConnectSource(preset.id, server, method)
+    }
 
     /** Applies a step from the core; steps for other plugins or flows are ignored. */
     fun onUpdate(session: AuthSession?, update: AuthUpdate): AuthSession? {

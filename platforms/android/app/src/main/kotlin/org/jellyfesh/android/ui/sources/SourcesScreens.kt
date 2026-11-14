@@ -2,6 +2,7 @@ package org.jellyfesh.android.ui.sources
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,10 +28,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.jellyfesh.android.R
+import org.jellyfesh.android.images.ArtKey
+import org.jellyfesh.android.images.rememberArtwork
 import org.jellyfesh.android.ui.components.BackBar
 import org.jellyfesh.android.ui.components.Divider
 import org.jellyfesh.android.ui.components.EmptyState
@@ -56,6 +62,7 @@ import org.jellyfesh.android.ui.theme.ButtonStyle
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfButton
 import org.jellyfesh.android.ui.theme.JfSwitch
+import org.jellyfesh.android.ui.theme.JfTextField
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.android.ui.theme.topEdgeFade
@@ -66,17 +73,24 @@ import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.core.SourceItem
+import org.jellyfesh.logic.core.SourcePreset
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.nav.SettingsSection
+import org.jellyfesh.logic.sources.AuthFlow
 import org.jellyfesh.logic.sources.Disclosure
 import org.jellyfesh.logic.state.CoreState
 
-/** The installed sources: Official and Community plugins, their state, and installing a new one. */
+/**
+ * The services to add (Add a Source), the installed sources (Official and Community plugins) and
+ * their state, and installing a new one.
+ */
 @Composable
 fun SourcesScreen(state: CoreState) {
     val nav = LocalNav.current
     val install = rememberPluginInstaller()
+    val connect = rememberConnectSheet()
     val plugins = state.sources.plugins
+    val presets = state.sources.presets
     LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "title") {
             ScreenTitle(
@@ -90,6 +104,20 @@ fun SourcesScreen(state: CoreState) {
                 JfButton(stringResource(R.string.action_install_plugin), install, icon = R.drawable.ic_add)
                 JfButton(stringResource(R.string.settings_title), { nav.openSettings(SettingsSection.Sources) }, style = ButtonStyle.Quiet, icon = R.drawable.ic_settings)
             }
+        }
+        // The services Jellyfesh offers, each while its official plugin is installed. With them
+        // above, the plugins get their own heading, so a service and its plugin do not read as one list.
+        if (presets.isNotEmpty()) {
+            item(key = "add-h") { SectionHeader(stringResource(R.string.sources_add)) }
+            items(presets, key = { "preset:${it.id}" }) { preset ->
+                NavRow(
+                    title = preset.name,
+                    subtitle = presetDescription(preset),
+                    onClick = { connect.open(preset) },
+                    leading = { PresetIcon(preset.name, plugins.firstOrNull { it.id == preset.plugin }?.icon) },
+                )
+            }
+            item(key = "installed-h") { SectionHeader(stringResource(R.string.sources_installed)) }
         }
         if (plugins.isEmpty()) {
             item(key = "empty") { EmptyState(R.drawable.ic_sources, stringResource(R.string.sources_empty_title), stringResource(R.string.sources_empty_body)) }
@@ -116,6 +144,42 @@ private fun pluginStatus(plugin: PluginSummary): String {
         else -> stringResource(R.string.source_enabled)
     }
     return "$badge · $state"
+}
+
+/** The line under a service in Add a Source: the account once signed in, else what the service is. */
+@Composable
+private fun presetDescription(preset: SourcePreset): String? {
+    val account = preset.account
+    val about = presetAbout(preset.id)
+    return when {
+        account != null -> stringResource(R.string.source_signed_in, account)
+        about != null -> stringResource(about)
+        else -> null
+    }
+}
+
+/** What a service is, by its stable id; null for one this version of the app does not know yet. */
+private fun presetAbout(id: String): Int? = when (id) {
+    "jellyfin" -> R.string.sources_add_jellyfin
+    "navidrome" -> R.string.sources_add_navidrome
+    "subsonic" -> R.string.sources_add_subsonic
+    else -> null
+}
+
+/**
+ * A service's picture: its plugin's icon (a file in the core's cache), drawn as the package made
+ * it, since it comes shaped already; the sources glyph while it loads or when the package has none.
+ */
+@Composable
+private fun PresetIcon(name: String, icon: String?) {
+    val size = 44.dp
+    val px = with(LocalDensity.current) { size.roundToPx() }
+    val image = rememberArtwork(LocalGraph.current.images, icon?.let { ArtKey.File(it) }, px)
+    if (image != null) {
+        Image(image, contentDescription = null, modifier = Modifier.size(size))
+    } else {
+        InitialTile(name, size, icon = R.drawable.ic_sources)
+    }
 }
 
 /**
@@ -171,6 +235,66 @@ fun rememberDisclosures(): Disclosures {
     val overlays = LocalOverlays.current
     val context = LocalContext.current
     return remember(overlays, context) { Disclosures(overlays, context) }
+}
+
+/**
+ * "Connect to …" for a service in Add a Source: its server's address (for a self-hosted server)
+ * and one button per way to sign in. A button closes the sheet and starts the sign-in, whose
+ * steps the sign-in sheet then shows.
+ */
+@Stable
+class ConnectSheet internal constructor(
+    private val overlays: Overlays,
+    private val context: android.content.Context,
+    private val signIn: SignIn,
+) {
+    fun open(preset: SourcePreset) {
+        overlays.showSheet(context.getString(R.string.sources_connect_title, preset.name)) { dismiss ->
+            ConnectContent(preset, dismiss) { address, method -> signIn.connect(preset, address, method) }
+        }
+    }
+}
+
+@Composable
+fun rememberConnectSheet(): ConnectSheet {
+    val overlays = LocalOverlays.current
+    val context = LocalContext.current
+    val signIn = rememberSignIn()
+    return remember(overlays, context, signIn) { ConnectSheet(overlays, context, signIn) }
+}
+
+@Composable
+private fun ConnectContent(preset: SourcePreset, dismiss: () -> Unit, connect: (address: String, method: AuthMethod) -> Unit) {
+    // Starts from the address the plugin has now, so connecting again only needs a sign-in method.
+    var address by remember { mutableStateOf(preset.address.orEmpty()) }
+    val ready = AuthFlow.canConnect(preset, address)
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (preset.needsAddress) {
+            JfTextField(
+                value = address,
+                onValueChange = { address = it },
+                label = stringResource(R.string.sources_connect_address),
+                placeholder = preset.addressExample,
+                keyboard = KeyboardType.Uri,
+            )
+        }
+        preset.authMethods.forEach { method ->
+            JfButton(
+                stringResource(signInLabel(method)),
+                {
+                    dismiss()
+                    connect(address, method)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                style = if (method == AuthMethod.PasswordExchange) ButtonStyle.Accent else ButtonStyle.Tonal,
+                icon = signInIcon(method),
+                enabled = ready,
+            )
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            JfButton(stringResource(R.string.action_cancel), dismiss, style = ButtonStyle.Quiet)
+        }
+    }
 }
 
 /** One plugin: its badge, switch, account and sign-in, settings, browsing and removal. */

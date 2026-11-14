@@ -144,7 +144,10 @@ class UniffiCoreClientTest {
             Command.ImportPlaylist("/p.m3u"), Command.SetFavorite(TrackRef.Library(1), true),
             Command.InstallPlugin("/x.jfpkg"), Command.UninstallPlugin("p"), Command.SetPluginEnabled("p", true),
             Command.SetPluginSettings("p", "{}"), Command.AcknowledgeUnofficial("p"),
-            Command.BeginLogin("p", org.jellyfesh.logic.core.AuthMethod.Qr), Command.SubmitLogin("p", 1, mapOf("a" to "b")),
+            Command.BeginLogin("p", org.jellyfesh.logic.core.AuthMethod.Qr),
+            Command.ConnectSource("navidrome", "https://music.example", org.jellyfesh.logic.core.AuthMethod.PasswordExchange),
+            Command.ConnectSource("hosted", null, org.jellyfesh.logic.core.AuthMethod.Oauth),
+            Command.SubmitLogin("p", 1, mapOf("a" to "b")),
             Command.CancelLogin("p", 1), Command.Logout("p"),
             Command.Search("tide", org.jellyfesh.logic.core.SearchScope.Plugin("p")), Command.Browse("p", null, 0),
         )

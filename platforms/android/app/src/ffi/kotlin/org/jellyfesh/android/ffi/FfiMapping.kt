@@ -58,6 +58,7 @@ import org.jellyfesh.ffi.SearchUpdate as FSearchUpdate
 import org.jellyfesh.ffi.Settings as FSettings
 import org.jellyfesh.ffi.Snapshot as FSnapshot
 import org.jellyfesh.ffi.SourceItem as FSourceItem
+import org.jellyfesh.ffi.SourcePreset as FSourcePreset
 import org.jellyfesh.ffi.SourceTrack as FSourceTrack
 import org.jellyfesh.ffi.SourcesSnapshot as FSourcesSnapshot
 import org.jellyfesh.ffi.Status as FStatus
@@ -127,6 +128,7 @@ import org.jellyfesh.logic.core.SearchScope
 import org.jellyfesh.logic.core.SearchUpdate
 import org.jellyfesh.logic.core.Settings
 import org.jellyfesh.logic.core.SourceItem
+import org.jellyfesh.logic.core.SourcePreset
 import org.jellyfesh.logic.core.SourceTrack
 import org.jellyfesh.logic.core.SourcesSnapshot
 import org.jellyfesh.logic.core.Status
@@ -188,6 +190,7 @@ object FfiMapping {
         is Command.SetPluginSettings -> FCommand.SetPluginSettings(id = command.id, settingsJson = command.settingsJson)
         is Command.AcknowledgeUnofficial -> FCommand.AcknowledgeUnofficial(id = command.id)
         is Command.BeginLogin -> FCommand.BeginLogin(plugin = command.plugin, method = ffi(command.method))
+        is Command.ConnectSource -> FCommand.ConnectSource(preset = command.preset, address = command.address, method = ffi(command.method))
         is Command.SubmitLogin -> FCommand.SubmitLogin(plugin = command.plugin, flow = command.flow.toULong(), fields = command.fields)
         is Command.CancelLogin -> FCommand.CancelLogin(plugin = command.plugin, flow = command.flow.toULong())
         is Command.Logout -> FCommand.Logout(plugin = command.plugin)
@@ -643,8 +646,19 @@ object FfiMapping {
         icon = icon,
     )
 
+    fun FSourcePreset.toLogic(): SourcePreset = SourcePreset(
+        id = id,
+        name = name,
+        plugin = plugin,
+        authMethods = authMethods.map { it.toLogic() },
+        needsAddress = needsAddress,
+        address = address,
+        addressExample = addressExample,
+        account = account,
+    )
+
     fun FSourcesSnapshot.toLogic(): SourcesSnapshot =
-        SourcesSnapshot(version.toLong(), plugins.map { it.toLogic() }, allowCommunity)
+        SourcesSnapshot(version.toLong(), plugins.map { it.toLogic() }, presets.map { it.toLogic() }, allowCommunity)
 
     private fun FAuthField.toLogic(): AuthField = AuthField(name, label, secret, placeholder)
 

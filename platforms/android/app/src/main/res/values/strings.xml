@@ -144,6 +144,12 @@
     <string name="sources_empty_body">Install a source plugin from a .jfpkg file.</string>
     <string name="sources_installed">Installed</string>
     <string name="sources_bundled_note">The official Subsonic and Jellyfin plugins come with the app and are updated with it.</string>
+    <string name="sources_add">Add a Source</string>
+    <string name="sources_add_jellyfin">Your Jellyfin server</string>
+    <string name="sources_add_navidrome">Your Navidrome server</string>
+    <string name="sources_add_subsonic">Airsonic, Gonic and other Subsonic servers</string>
+    <string name="sources_connect_title">Connect to %1$s</string>
+    <string name="sources_connect_address">Server address</string>
     <string name="badge_official">Official</string>
     <string name="badge_community">Community · unofficial</string>
     <string name="source_enabled">Enabled</string>

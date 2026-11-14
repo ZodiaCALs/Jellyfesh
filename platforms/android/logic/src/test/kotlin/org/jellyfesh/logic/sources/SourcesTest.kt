@@ -15,6 +15,7 @@ import org.jellyfesh.logic.core.AuthUpdate
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
+import org.jellyfesh.logic.core.SourcePreset
 
 class AuthFlowTest {
     private val fields = listOf(AuthField("server", "Server", false, "https://"), AuthField("password", "Password", true, null))
@@ -31,6 +32,38 @@ class AuthFlowTest {
         val (sent, command) = AuthFlow.submit(session)!!
         assertEquals(Command.SubmitLogin("org.jellyfesh.subsonic", 5, mapOf("server" to "https://music.example", "password" to "hunter2")), command)
         assertTrue(sent.values.isEmpty(), "secrets never stay in the shell")
+    }
+
+    private val navidrome = SourcePreset(
+        id = "navidrome",
+        name = "Navidrome",
+        plugin = "org.jellyfesh.subsonic",
+        authMethods = listOf(AuthMethod.PasswordExchange),
+        needsAddress = true,
+        address = null,
+        addressExample = "http://192.168.1.20:4533",
+        account = null,
+    )
+
+    @Test
+    fun aServiceConnectsWithTheTrimmedAddressAndSignsInToItsPlugin() {
+        val (session, command) = AuthFlow.connect(navidrome, "  https://music.example \n", AuthMethod.PasswordExchange)!!
+        assertEquals(Command.ConnectSource("navidrome", "https://music.example", AuthMethod.PasswordExchange), command)
+        // The plugin's own sign-in session, so the steps the plugin sends reach it.
+        assertEquals(AuthFlow.begin("org.jellyfesh.subsonic", AuthMethod.PasswordExchange).first, session)
+        val asked = AuthFlow.onUpdate(session, AuthUpdate("org.jellyfesh.subsonic", 7, AuthStep.AskFields(fields)))!!
+        assertEquals(7L, asked.flow)
+    }
+
+    @Test
+    fun anEmptyAddressSendsNothing() {
+        assertFalse(AuthFlow.canConnect(navidrome, " "))
+        assertNull(AuthFlow.connect(navidrome, "", AuthMethod.PasswordExchange))
+        assertNull(AuthFlow.connect(navidrome, " \t ", AuthMethod.PasswordExchange))
+        // A service that takes no address connects without one, whatever the field holds.
+        val hosted = navidrome.copy(id = "hosted", needsAddress = false, addressExample = null)
+        assertTrue(AuthFlow.canConnect(hosted, ""))
+        assertEquals(Command.ConnectSource("hosted", null, AuthMethod.Qr), AuthFlow.connect(hosted, "https://music.example", AuthMethod.Qr)?.second)
     }
 
     @Test
