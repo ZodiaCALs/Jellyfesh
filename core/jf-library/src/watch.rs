@@ -263,18 +263,24 @@ const LIMIT_INSTANCES: &str =
 
 /// A [`LibraryError::Watch`] for `err`, about its own path or else `path`.
 pub(crate) fn watch_error(err: &notify::Error, path: Option<&Path>) -> LibraryError {
+    let path = err.paths.first().cloned().or_else(|| path.map(Path::to_path_buf));
     let (kind, message) = match &err.kind {
         notify::ErrorKind::MaxFilesWatch => (WatchErrorKind::LimitReached, LIMIT_WATCHES.to_owned()),
         notify::ErrorKind::PathNotFound => (WatchErrorKind::NotFound, "the folder does not exist".to_owned()),
         notify::ErrorKind::Io(io) => classify_io(io),
+        // notify's Windows backend reports a folder that does not exist as a generic error.
+        notify::ErrorKind::Generic(_) if path.as_deref().is_some_and(is_missing) => {
+            (WatchErrorKind::NotFound, "the folder does not exist".to_owned())
+        }
         notify::ErrorKind::Generic(message) => (WatchErrorKind::Other, message.clone()),
         _ => (WatchErrorKind::Other, err.to_string()),
     };
-    LibraryError::Watch {
-        kind,
-        path: err.paths.first().cloned().or_else(|| path.map(Path::to_path_buf)),
-        message,
-    }
+    LibraryError::Watch { kind, path, message }
+}
+
+/// Whether nothing is at `path` (a dangling link counts as nothing).
+fn is_missing(path: &Path) -> bool {
+    matches!(std::fs::metadata(path), Err(err) if err.kind() == io::ErrorKind::NotFound)
 }
 
 fn classify_io(err: &io::Error) -> (WatchErrorKind, String) {
@@ -695,5 +701,19 @@ mod tests {
             assert!(instances.to_string().starts_with("cannot watch folders: "));
         }
         assert_eq!(kind_of(notify::Error::generic("boom")), WatchErrorKind::Other);
+        // As notify reports a missing folder on Windows: by what is (not) at the path.
+        let dir = tempfile::tempdir().unwrap();
+        let generic = |path: PathBuf| {
+            notify::Error::generic("Input watch path is neither a file nor a directory.").add_path(path)
+        };
+        assert_eq!(
+            kind_of(generic(dir.path().join("gone"))),
+            WatchErrorKind::NotFound
+        );
+        assert_eq!(kind_of(generic(dir.path().to_path_buf())), WatchErrorKind::Other);
+        match watch_error(&notify::Error::generic("boom"), Some(&dir.path().join("gone"))) {
+            LibraryError::Watch { kind, .. } => assert_eq!(kind, WatchErrorKind::NotFound),
+            other => panic!("{other:?}"),
+        }
     }
 }
