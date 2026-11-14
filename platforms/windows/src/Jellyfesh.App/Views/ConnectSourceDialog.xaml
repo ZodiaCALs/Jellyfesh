@@ -20,17 +20,17 @@
             Header="Server address"
             InputScope="Url"
             IsSpellCheckEnabled="False"
-            PlaceholderText="{x:Bind Connect.AddressExample}"
-            Text="{x:Bind Connect.Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-            Visibility="{x:Bind shell:Bind.Visible(Connect.NeedsAddress)}" />
+            PlaceholderText="{x:Bind ViewModel.AddressExample}"
+            Text="{x:Bind ViewModel.Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            Visibility="{x:Bind shell:Bind.Visible(ViewModel.NeedsAddress)}" />
 
         <!-- The other ways to sign in; disabled with this control while a needed address is empty. -->
         <ContentControl
             HorizontalContentAlignment="Stretch"
-            IsEnabled="{x:Bind Connect.CanConnect, Mode=OneWay}"
+            IsEnabled="{x:Bind ViewModel.CanConnect, Mode=OneWay}"
             IsTabStop="False"
-            Visibility="{x:Bind shell:Bind.Visible(Connect.HasOthers)}">
-            <ItemsRepeater ItemsSource="{x:Bind Connect.Others}">
+            Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasOthers)}">
+            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Others}">
                 <ItemsRepeater.Layout>
                     <StackLayout Spacing="8" />
                 </ItemsRepeater.Layout>
