@@ -78,7 +78,8 @@ pub fn page() -> adw::PreferencesPage {
         let allow = allow.downgrade();
         let guard = guard.clone();
         move || {
-            let (Some(installed), Some(add), Some(allow)) = (installed.upgrade(), add.upgrade(), allow.upgrade())
+            let (Some(installed), Some(add), Some(allow)) =
+                (installed.upgrade(), add.upgrade(), allow.upgrade())
             else {
                 return;
             };
@@ -337,7 +338,10 @@ fn connect_dialog(from: &adw::ActionRow, preset: &SourcePreset) {
             from.downgrade(),
         );
         b.connect_clicked(move |_| {
-            let typed = entry.upgrade().map(|e| e.text().trim().to_owned()).unwrap_or_default();
+            let typed = entry
+                .upgrade()
+                .map(|e| e.text().trim().to_owned())
+                .unwrap_or_default();
             if let Some(dialog) = dialog_weak.upgrade() {
                 dialog.close();
             }
