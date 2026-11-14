@@ -33,6 +33,7 @@ use jf_plugin_model::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_json::value::RawValue;
 use url::Url;
 use wasm_bindgen::prelude::*;
 
@@ -154,7 +155,9 @@ pub struct PackageInfo {
     pub playback_mode: PlaybackMode,
     pub allow: Vec<AllowRule>,
     pub max_rps: u32,
-    pub settings_schema: Value,
+    /// The schema as the package wrote it, so forms list the settings in the plugin's order
+    /// (a parsed value would sort them by key).
+    pub settings_schema: Box<RawValue>,
     pub settings_defaults: Value,
     pub content_policy: ContentPolicy,
     /// Lowercase hex SHA-256 of `plugin.wasm`, to match the transpiled
@@ -183,7 +186,8 @@ pub fn read_package(bytes: &[u8]) -> Result<(PackageInfo, Vec<u8>), String> {
         playback_mode: manifest.playback_mode,
         allow: manifest.allow.clone(),
         max_rps: manifest.max_rps,
-        settings_schema: package.settings_schema.json().clone(),
+        settings_schema: RawValue::from_string(package.settings_schema.text().to_owned())
+            .map_err(|e| e.to_string())?,
         settings_defaults: package.settings_schema.defaults(),
         content_policy: manifest.content_policy.clone(),
         wasm_sha256: sha256_hex(&package.wasm),
@@ -324,6 +328,13 @@ schema = "settings.schema.json"
         assert_eq!(info.signature, SignatureStatus::Unsigned);
         assert_eq!(info.allow, vec![AllowRule::Setting("server_url".into())]);
         assert_eq!(info.settings_defaults, json!({"quality": "app"}));
+        // The schema keeps the plugin's order of settings (server_url before quality).
+        let text = json(&info);
+        let schema = &text[text.find("\"settings_schema\":").unwrap()..];
+        assert!(
+            schema.find("\"server_url\"").unwrap() < schema.find("\"quality\"").unwrap(),
+            "{schema}"
+        );
         assert_eq!(wasm, b"\0asm-test");
         assert_eq!(info.wasm_sha256.len(), 64);
         assert!(read_package(b"junk").is_err());

@@ -18,7 +18,8 @@ workspace = true
 [dependencies]
 jf-plugin-model = { workspace = true, features = ["crypto"] }
 serde.workspace = true
-serde_json.workspace = true
+# raw_value: package info embeds the settings schema as the package wrote it.
+serde_json = { workspace = true, features = ["raw_value"] }
 sha2.workspace = true
 url.workspace = true
 wasm-bindgen.workspace = true
