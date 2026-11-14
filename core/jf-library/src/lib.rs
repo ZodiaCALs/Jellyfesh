@@ -932,6 +932,16 @@ mod tests {
     #[test]
     fn root_keys_are_clean() {
         let key = root_key(Path::new("/music/./rock/")).unwrap();
-        assert_eq!(PathBuf::from(key), PathBuf::from("/music/rock"));
+        // On Windows the current drive comes first: D:\music\rock.
+        let expected = std::path::absolute("/music/rock").unwrap();
+        assert_eq!(PathBuf::from(&key), expected);
+        assert!(!key.ends_with(['/', '\\']), "{key}");
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn root_keys_keep_the_drive() {
+        let key = root_key(Path::new(r"C:\music\.\rock\")).unwrap();
+        assert_eq!(key, r"C:\music\rock");
     }
 }
