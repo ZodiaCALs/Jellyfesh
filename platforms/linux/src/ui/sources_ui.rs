@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{AuthMethod, AuthStep, Command, PluginBadge, PluginSummary};
+use jf_core::{AuthMethod, AuthStep, Command, PluginBadge, PluginSummary, SourcePreset};
 use serde_json::Value;
 
 use crate::logic::schema::{self, FieldKind};
@@ -34,6 +34,14 @@ pub fn page() -> adw::PreferencesPage {
         .build();
     community.add(&allow);
     p.add(&community);
+
+    // The services Jellyfesh offers, each while its official plugin is installed.
+    let add = adw::PreferencesGroup::builder()
+        .title(tr("Add a Source"))
+        .visible(false)
+        .build();
+    p.add(&add);
+    let preset_rows: Rc<RefCell<Vec<gtk::Widget>>> = Rc::new(RefCell::new(Vec::new()));
 
     let installed = adw::PreferencesGroup::builder().title(tr("Installed")).build();
     let install = gtk::Button::with_label(&tr("Install from File…"));
@@ -66,10 +74,12 @@ pub fn page() -> adw::PreferencesPage {
 
     let rebuild = {
         let installed = installed.downgrade();
+        let add = add.downgrade();
         let allow = allow.downgrade();
         let guard = guard.clone();
         move || {
-            let (Some(installed), Some(allow)) = (installed.upgrade(), allow.upgrade()) else {
+            let (Some(installed), Some(add), Some(allow)) = (installed.upgrade(), add.upgrade(), allow.upgrade())
+            else {
                 return;
             };
             let a = app();
@@ -80,6 +90,20 @@ pub fn page() -> adw::PreferencesPage {
                 installed.remove(&w);
             }
             let sources = a.sources.borrow().clone();
+            for w in preset_rows.borrow_mut().drain(..) {
+                add.remove(&w);
+            }
+            add.set_visible(!sources.presets.is_empty());
+            for preset in &sources.presets {
+                let icon = sources
+                    .plugins
+                    .iter()
+                    .find(|p| p.id == preset.plugin)
+                    .and_then(|p| p.icon.clone());
+                let row = preset_row(preset, icon.as_deref());
+                add.add(&row);
+                preset_rows.borrow_mut().push(row.upcast());
+            }
             if sources.plugins.is_empty() {
                 let row = adw::ActionRow::builder()
                     .title(tr("No sources installed"))
@@ -179,17 +203,16 @@ fn plugin_row(plugin: &PluginSummary, allow_community: bool) -> adw::ExpanderRow
         account.add_suffix(&out);
     } else {
         for method in &plugin.auth_methods {
-            let label = match method {
-                AuthMethod::Qr => tr("Sign In with QR Code"),
-                AuthMethod::Oauth => tr("Sign In in Browser"),
-                AuthMethod::CookieImport => tr("Paste Cookies"),
-                AuthMethod::PasswordExchange => tr("Sign In"),
-                AuthMethod::ApiKey => tr("Enter API Key"),
-            };
-            let b = gtk::Button::with_label(&label);
+            let b = gtk::Button::with_label(&method_label(*method));
             b.set_valign(gtk::Align::Center);
             let (id, name, method) = (plugin.id.clone(), plugin.name.clone(), *method);
-            b.connect_clicked(move |b| sign_in(b, &id, &name, method));
+            b.connect_clicked(move |b| {
+                let start = Command::BeginLogin {
+                    plugin: id.clone(),
+                    method,
+                };
+                sign_in(b, &id, &name, start);
+            });
             account.add_suffix(&b);
         }
     }
@@ -225,6 +248,122 @@ fn plugin_row(plugin: &PluginSummary, allow_community: bool) -> adw::ExpanderRow
     remove.add_suffix(&b);
     row.add_row(&remove);
     row
+}
+
+/// The label of the button that signs in with `method`.
+fn method_label(method: AuthMethod) -> String {
+    match method {
+        AuthMethod::Qr => tr("Sign In with QR Code"),
+        AuthMethod::Oauth => tr("Sign In in Browser"),
+        AuthMethod::CookieImport => tr("Paste Cookies"),
+        AuthMethod::PasswordExchange => tr("Sign In"),
+        AuthMethod::ApiKey => tr("Enter API Key"),
+    }
+}
+
+/// What a service in Add a Source is, for the line under its name.
+fn preset_description(preset: &SourcePreset) -> String {
+    if let Some(account) = &preset.account {
+        return trf("Signed in as {account}", &[("account", account)]);
+    }
+    match preset.id.as_str() {
+        "jellyfin" => tr("Your Jellyfin server"),
+        "navidrome" => tr("Your Navidrome server"),
+        "subsonic" => tr("Airsonic, Gonic and other Subsonic servers"),
+        _ => String::new(),
+    }
+}
+
+/// A service in Add a Source; activating it asks for the address and how to sign in.
+fn preset_row(preset: &SourcePreset, icon: Option<&std::path::Path>) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(glib::markup_escape_text(&preset.name).as_str())
+        .subtitle(glib::markup_escape_text(&preset_description(preset)).as_str())
+        .activatable(true)
+        .build();
+    let picture = match icon {
+        Some(path) => gtk::Image::from_file(path),
+        None => gtk::Image::from_icon_name("network-server-symbolic"),
+    };
+    picture.set_pixel_size(32);
+    row.add_prefix(&picture);
+    row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    let preset = preset.clone();
+    row.connect_activated(move |row| connect_dialog(row, &preset));
+    row
+}
+
+/// "Connect to …": the server's address (for self-hosted servers) and one button per way to sign
+/// in. A button closes it and starts the sign-in, whose steps the sign-in dialog shows.
+fn connect_dialog(from: &adw::ActionRow, preset: &SourcePreset) {
+    let dialog = adw::Dialog::builder()
+        .title(trf("Connect to {name}", &[("name", &preset.name)]))
+        .content_width(420)
+        .build();
+    let body = gtk::Box::new(gtk::Orientation::Vertical, 18);
+    body.set_margin_top(12);
+    body.set_margin_bottom(24);
+    body.set_margin_start(24);
+    body.set_margin_end(24);
+    let view = adw::ToolbarView::new();
+    view.add_top_bar(&adw::HeaderBar::new());
+    view.set_content(Some(&body));
+    dialog.set_child(Some(&view));
+
+    let address = adw::EntryRow::builder().title(tr("Server address")).build();
+    if preset.needs_address {
+        let group = adw::PreferencesGroup::new();
+        if let Some(example) = &preset.address_example {
+            group.set_description(Some(&trf("For example {address}", &[("address", example)])));
+        }
+        address.set_text(preset.address.as_deref().unwrap_or_default());
+        address.set_input_purpose(gtk::InputPurpose::Url);
+        group.add(&address);
+        body.append(&group);
+    }
+    let buttons = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    let mut all = Vec::new();
+    for method in &preset.auth_methods {
+        let b = gtk::Button::with_label(&method_label(*method));
+        b.add_css_class("pill");
+        if *method == AuthMethod::PasswordExchange {
+            b.add_css_class("suggested-action");
+        }
+        let (dialog_weak, entry, preset, method, from) = (
+            dialog.downgrade(),
+            address.downgrade(),
+            preset.clone(),
+            *method,
+            from.downgrade(),
+        );
+        b.connect_clicked(move |_| {
+            let typed = entry.upgrade().map(|e| e.text().trim().to_owned()).unwrap_or_default();
+            if let Some(dialog) = dialog_weak.upgrade() {
+                dialog.close();
+            }
+            let Some(from) = from.upgrade() else { return };
+            let start = Command::ConnectSource {
+                preset: preset.id.clone(),
+                address: preset.needs_address.then_some(typed),
+                method,
+            };
+            sign_in(&from, &preset.plugin, &preset.name, start);
+        });
+        buttons.append(&b);
+        all.push(b);
+    }
+    body.append(&buttons);
+    if preset.needs_address {
+        let ready = move |entry: &adw::EntryRow| {
+            let filled = !entry.text().trim().is_empty();
+            for b in &all {
+                b.set_sensitive(filled);
+            }
+        };
+        ready(&address);
+        address.connect_changed(ready);
+    }
+    dialog.present(Some(from));
 }
 
 fn field_row(plugin: &PluginSummary, field: &schema::Field) -> gtk::Widget {
@@ -369,7 +508,9 @@ async fn disclosure(plugin: Option<&str>) -> bool {
 }
 
 /// A sign-in flow: the core drives the steps, the dialog renders each.
-fn sign_in(from: &gtk::Button, plugin: &str, name: &str, method: AuthMethod) {
+/// The sign-in dialog for `plugin`: sends `start` (`BeginLogin` or `ConnectSource`) and shows
+/// the steps that follow.
+fn sign_in(from: &impl IsA<gtk::Widget>, plugin: &str, name: &str, start: Command) {
     let a = app();
     let dialog = adw::Dialog::builder()
         .title(trf("Sign In to {name}", &[("name", name)]))
@@ -419,10 +560,7 @@ fn sign_in(from: &gtk::Button, plugin: &str, name: &str, method: AuthMethod) {
             });
         }
     });
-    a.send(Command::BeginLogin {
-        plugin: plugin_id,
-        method,
-    });
+    a.send(start);
     dialog.present(Some(from));
 }
 

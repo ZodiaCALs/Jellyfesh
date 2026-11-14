@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jellyfesh\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 14:35+0000\n"
+"POT-Creation-Date: 2026-11-14 18:19+0000\n"
 "PO-Revision-Date: 2026-11-08 12:00+0000\n"
 "Last-Translator: the Jellyfesh authors\n"
 "Language-Team: Chinese (simplified)\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/ui/about.rs:11 src/ui/window.rs:296
+#: src/ui/about.rs:11 src/ui/window.rs:294
 #, no-c-format
 msgid "About Jellyfesh"
 msgstr "关于 Jellyfesh"
@@ -149,12 +149,12 @@ msgstr "添加到歌单"
 
 #: src/ui/actions.rs:288 src/ui/actions.rs:357 src/ui/actions.rs:381
 #: src/ui/nowplaying/queue.rs:229 src/ui/pages/playlists.rs:117
-#: src/ui/sources_ui.rs:362
+#: src/ui/sources_ui.rs:501
 #, no-c-format
 msgid "Cancel"
 msgstr "取消"
 
-#: src/ui/actions.rs:289 src/ui/window.rs:336
+#: src/ui/actions.rs:289 src/ui/window.rs:334
 #, no-c-format
 msgid "Add"
 msgstr "添加"
@@ -296,7 +296,7 @@ msgstr "返回资料库"
 msgid "General"
 msgstr "常规"
 
-#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:294
+#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:292
 #, no-c-format
 msgid "Preferences"
 msgstr "偏好设置"
@@ -428,7 +428,7 @@ msgstr ""
 "词。"
 
 #: src/ui/nowplaying/mod.rs:105 src/ui/pages/search.rs:183 src/ui/prefs.rs:897
-#: src/ui/window.rs:190
+#: src/ui/window.rs:189
 #, no-c-format
 msgid "Library"
 msgstr "资料库"
@@ -602,7 +602,7 @@ msgstr ""
 "添加存放音乐的文件夹。Jellyfesh 会读取其中的标签、封面和歌词，并持续关注变"
 "化。"
 
-#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:290
+#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:288
 #, no-c-format
 msgid "Add Music Folder…"
 msgstr "添加音乐文件夹…"
@@ -758,7 +758,7 @@ msgstr "换个关键词试试。"
 msgid "Folders"
 msgstr "文件夹"
 
-#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:118
+#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:142
 #, no-c-format
 msgid "Official"
 msgstr "官方"
@@ -773,7 +773,7 @@ msgstr "社区 · 非官方"
 msgid "Vendor playback"
 msgstr "由服务方播放"
 
-#: src/ui/pages/sources.rs:35
+#: src/ui/pages/sources.rs:35 src/ui/sources_ui.rs:267
 #, no-c-format
 msgid "Signed in as {account}"
 msgstr "已登录为 {account}"
@@ -1061,7 +1061,7 @@ msgid ""
 "metadata."
 msgstr "Linux 上各处都显示 Ice 图标：GNOME 只会从应用元数据中读取一个图标。"
 
-#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:768
+#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:783
 #, no-c-format
 msgid "{percent} %"
 msgstr "{percent}%"
@@ -1196,7 +1196,7 @@ msgstr "添加文件夹"
 msgid "Scanning"
 msgstr "扫描"
 
-#: src/ui/prefs.rs:919 src/ui/window.rs:291
+#: src/ui/prefs.rs:919 src/ui/window.rs:289
 #, no-c-format
 msgid "Rescan Library"
 msgstr "重新扫描资料库"
@@ -1289,167 +1289,202 @@ msgstr ""
 msgid "Allow Community Plugins"
 msgstr "允许社区插件"
 
-#: src/ui/sources_ui.rs:38
+#: src/ui/sources_ui.rs:40
+#, no-c-format
+msgid "Add a Source"
+msgstr "添加来源"
+
+#: src/ui/sources_ui.rs:46
 #, no-c-format
 msgid "Installed"
 msgstr "已安装"
 
-#: src/ui/sources_ui.rs:39
+#: src/ui/sources_ui.rs:47
 #, no-c-format
 msgid "Install from File…"
 msgstr "从文件安装…"
 
-#: src/ui/sources_ui.rs:85
+#: src/ui/sources_ui.rs:109
 #, no-c-format
 msgid "No sources installed"
 msgstr "尚未安装来源"
 
-#: src/ui/sources_ui.rs:86
+#: src/ui/sources_ui.rs:110
 #, no-c-format
 msgid "Install a source plugin from a .jfpkg file."
 msgstr "从 .jfpkg 文件安装来源插件。"
 
-#: src/ui/sources_ui.rs:119
+#: src/ui/sources_ui.rs:143
 #, no-c-format
 msgid "Community"
 msgstr "社区"
 
-#: src/ui/sources_ui.rs:130
+#: src/ui/sources_ui.rs:154
 #, no-c-format
 msgid "Enabled"
 msgstr "已启用"
 
-#: src/ui/sources_ui.rs:165
+#: src/ui/sources_ui.rs:189
 #, no-c-format
 msgid "Account"
 msgstr "账号"
 
-#: src/ui/sources_ui.rs:167
+#: src/ui/sources_ui.rs:191
 #, no-c-format
 msgid "No sign-in needed"
 msgstr "无需登录"
 
-#: src/ui/sources_ui.rs:173
+#: src/ui/sources_ui.rs:197
 #, no-c-format
 msgid "Sign Out"
 msgstr "退出登录"
 
-#: src/ui/sources_ui.rs:183
-#, no-c-format
-msgid "Sign In with QR Code"
-msgstr "扫码登录"
-
-#: src/ui/sources_ui.rs:184
-#, no-c-format
-msgid "Sign In in Browser"
-msgstr "在浏览器中登录"
-
-#: src/ui/sources_ui.rs:185
-#, no-c-format
-msgid "Paste Cookies"
-msgstr "粘贴 Cookie"
-
-#: src/ui/sources_ui.rs:186 src/ui/sources_ui.rs:502
-#, no-c-format
-msgid "Sign In"
-msgstr "登录"
-
-#: src/ui/sources_ui.rs:187
-#, no-c-format
-msgid "Enter API Key"
-msgstr "输入 API 密钥"
-
-#: src/ui/sources_ui.rs:207
+#: src/ui/sources_ui.rs:230
 #, no-c-format
 msgid "Settings"
 msgstr "设置"
 
-#: src/ui/sources_ui.rs:209
+#: src/ui/sources_ui.rs:232
 #, no-c-format
 msgid "This plugin's settings could not be read: {error}"
 msgstr "无法读取此插件的设置：{error}"
 
-#: src/ui/sources_ui.rs:217 src/ui/sources_ui.rs:218
+#: src/ui/sources_ui.rs:240 src/ui/sources_ui.rs:241
 #, no-c-format
 msgid "Uninstall"
 msgstr "卸载"
 
-#: src/ui/sources_ui.rs:326
+#: src/ui/sources_ui.rs:256
+#, no-c-format
+msgid "Sign In with QR Code"
+msgstr "扫码登录"
+
+#: src/ui/sources_ui.rs:257
+#, no-c-format
+msgid "Sign In in Browser"
+msgstr "在浏览器中登录"
+
+#: src/ui/sources_ui.rs:258
+#, no-c-format
+msgid "Paste Cookies"
+msgstr "粘贴 Cookie"
+
+#: src/ui/sources_ui.rs:259 src/ui/sources_ui.rs:640
+#, no-c-format
+msgid "Sign In"
+msgstr "登录"
+
+#: src/ui/sources_ui.rs:260
+#, no-c-format
+msgid "Enter API Key"
+msgstr "输入 API 密钥"
+
+#: src/ui/sources_ui.rs:270
+#, no-c-format
+msgid "Your Jellyfin server"
+msgstr "你的 Jellyfin 服务器"
+
+#: src/ui/sources_ui.rs:271
+#, no-c-format
+msgid "Your Navidrome server"
+msgstr "你的 Navidrome 服务器"
+
+#: src/ui/sources_ui.rs:272
+#, no-c-format
+msgid "Airsonic, Gonic and other Subsonic servers"
+msgstr "Airsonic、Gonic 等 Subsonic 服务器"
+
+#: src/ui/sources_ui.rs:300
+#, no-c-format
+msgid "Connect to {name}"
+msgstr "连接到 {name}"
+
+#: src/ui/sources_ui.rs:313
+#, no-c-format
+msgid "Server address"
+msgstr "服务器地址"
+
+#: src/ui/sources_ui.rs:317
+#, no-c-format
+msgid "For example {address}"
+msgstr "例如 {address}"
+
+#: src/ui/sources_ui.rs:465
 #, no-c-format
 msgid "Jellyfesh plugins"
 msgstr "Jellyfesh 插件"
 
-#: src/ui/sources_ui.rs:331
+#: src/ui/sources_ui.rs:470
 #, no-c-format
 msgid "Install Plugin"
 msgstr "安装插件"
 
-#: src/ui/sources_ui.rs:348
+#: src/ui/sources_ui.rs:487
 #, no-c-format
 msgid "Turn On “{name}”?"
 msgstr "启用“{name}”？"
 
-#: src/ui/sources_ui.rs:349
+#: src/ui/sources_ui.rs:488
 #, no-c-format
 msgid "Allow Community Plugins?"
 msgstr "允许社区插件？"
 
-#: src/ui/sources_ui.rs:352
+#: src/ui/sources_ui.rs:491
 #, no-c-format
 msgid "Community plugins are not made or checked by Jellyfesh."
 msgstr "社区插件并非由 Jellyfesh 制作或审核。"
 
-#: src/ui/sources_ui.rs:355
+#: src/ui/sources_ui.rs:494
 #, no-c-format
 msgid "They may break the terms of the service they connect to."
 msgstr "它们可能违反所连接服务的条款。"
 
-#: src/ui/sources_ui.rs:357
+#: src/ui/sources_ui.rs:496
 #, no-c-format
 msgid "They may stop working at any time."
 msgstr "它们可能随时失效。"
 
-#: src/ui/sources_ui.rs:358
+#: src/ui/sources_ui.rs:497
 #, no-c-format
 msgid "Use them for personal use only."
 msgstr "仅限个人使用。"
 
-#: src/ui/sources_ui.rs:363
+#: src/ui/sources_ui.rs:502
 #, no-c-format
 msgid "I Understand, Allow"
 msgstr "我已了解，允许"
 
-#: src/ui/sources_ui.rs:375
+#: src/ui/sources_ui.rs:516
 #, no-c-format
 msgid "Sign In to {name}"
 msgstr "登录 {name}"
 
-#: src/ui/sources_ui.rs:447
+#: src/ui/sources_ui.rs:585
 #, no-c-format
 msgid "Sign-in QR code"
 msgstr "登录二维码"
 
-#: src/ui/sources_ui.rs:450
+#: src/ui/sources_ui.rs:588
 #, no-c-format
 msgid "Scan the code with the {name} app on your phone."
 msgstr "用手机上的 {name} 应用扫描二维码。"
 
-#: src/ui/sources_ui.rs:476
+#: src/ui/sources_ui.rs:614
 #, no-c-format
 msgid "Continue in your browser. Come back here when you are done."
 msgstr "请在浏览器中继续，完成后回到这里。"
 
-#: src/ui/sources_ui.rs:478
+#: src/ui/sources_ui.rs:616
 #, no-c-format
 msgid "Open Browser Again"
 msgstr "再次打开浏览器"
 
-#: src/ui/sources_ui.rs:532
+#: src/ui/sources_ui.rs:670
 #, no-c-format
 msgid "Signed in as {account}."
 msgstr "已登录为 {account}。"
 
-#: src/ui/sources_ui.rs:533
+#: src/ui/sources_ui.rs:671
 #, no-c-format
 msgid "Done"
 msgstr "完成"
@@ -1504,7 +1539,7 @@ msgstr "取消静音"
 msgid "{degrees}°"
 msgstr "{degrees}°"
 
-#: src/ui/widgets/seekbar.rs:472
+#: src/ui/widgets/seekbar.rs:487
 #, no-c-format
 msgid "{position} of {duration}"
 msgstr "{position}，共 {duration}"
@@ -1549,27 +1584,27 @@ msgctxt "sidebar"
 msgid "Sources"
 msgstr "来源"
 
-#: src/ui/window.rs:147
+#: src/ui/window.rs:146
 #, no-c-format
 msgid "Library sections"
 msgstr "资料库分区"
 
-#: src/ui/window.rs:295
+#: src/ui/window.rs:293
 #, no-c-format
 msgid "Keyboard Shortcuts"
 msgstr "键盘快捷键"
 
-#: src/ui/window.rs:302 src/ui/window.rs:307
+#: src/ui/window.rs:300 src/ui/window.rs:305
 #, no-c-format
 msgid "Main Menu"
 msgstr "主菜单"
 
-#: src/ui/window.rs:335
+#: src/ui/window.rs:333
 #, no-c-format
 msgid "Add Music Folder"
 msgstr "添加音乐文件夹"
 
-#: src/ui/window.rs:347
+#: src/ui/window.rs:345
 #, no-c-format
 msgid "Adding the folder to your library…"
 msgstr "正在把文件夹加入资料库…"

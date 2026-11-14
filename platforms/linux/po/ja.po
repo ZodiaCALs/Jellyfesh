@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jellyfesh\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 14:35+0000\n"
+"POT-Creation-Date: 2026-11-14 18:19+0000\n"
 "PO-Revision-Date: 2026-11-08 12:00+0000\n"
 "Last-Translator: the Jellyfesh authors\n"
 "Language-Team: Japanese\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/ui/about.rs:11 src/ui/window.rs:296
+#: src/ui/about.rs:11 src/ui/window.rs:294
 #, no-c-format
 msgid "About Jellyfesh"
 msgstr "Jellyfesh について"
@@ -150,12 +150,12 @@ msgstr "プレイリストに追加"
 
 #: src/ui/actions.rs:288 src/ui/actions.rs:357 src/ui/actions.rs:381
 #: src/ui/nowplaying/queue.rs:229 src/ui/pages/playlists.rs:117
-#: src/ui/sources_ui.rs:362
+#: src/ui/sources_ui.rs:501
 #, no-c-format
 msgid "Cancel"
 msgstr "キャンセル"
 
-#: src/ui/actions.rs:289 src/ui/window.rs:336
+#: src/ui/actions.rs:289 src/ui/window.rs:334
 #, no-c-format
 msgid "Add"
 msgstr "追加"
@@ -297,7 +297,7 @@ msgstr "ライブラリに戻る"
 msgid "General"
 msgstr "一般"
 
-#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:294
+#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:292
 #, no-c-format
 msgid "Preferences"
 msgstr "設定"
@@ -429,7 +429,7 @@ msgstr ""
 "詞を表示します。"
 
 #: src/ui/nowplaying/mod.rs:105 src/ui/pages/search.rs:183 src/ui/prefs.rs:897
-#: src/ui/window.rs:190
+#: src/ui/window.rs:189
 #, no-c-format
 msgid "Library"
 msgstr "ライブラリ"
@@ -604,7 +604,7 @@ msgstr ""
 "音楽のあるフォルダを追加してください。Jellyfesh がタグ・アートワーク・歌詞を"
 "読み込み、変更も見守ります。"
 
-#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:290
+#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:288
 #, no-c-format
 msgid "Add Music Folder…"
 msgstr "音楽フォルダを追加…"
@@ -761,7 +761,7 @@ msgstr "別の言葉で試してください。"
 msgid "Folders"
 msgstr "フォルダ"
 
-#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:118
+#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:142
 #, no-c-format
 msgid "Official"
 msgstr "公式"
@@ -776,7 +776,7 @@ msgstr "コミュニティ · 非公式"
 msgid "Vendor playback"
 msgstr "サービス側で再生"
 
-#: src/ui/pages/sources.rs:35
+#: src/ui/pages/sources.rs:35 src/ui/sources_ui.rs:267
 #, no-c-format
 msgid "Signed in as {account}"
 msgstr "{account} としてサインイン中"
@@ -1066,7 +1066,7 @@ msgstr ""
 "Linux ではどこでも Ice のアイコンを表示します。GNOME はアプリのメタデータか"
 "ら 1 つのアイコンだけを使います。"
 
-#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:768
+#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:783
 #, no-c-format
 msgid "{percent} %"
 msgstr "{percent}%"
@@ -1202,7 +1202,7 @@ msgstr "フォルダを追加"
 msgid "Scanning"
 msgstr "スキャン"
 
-#: src/ui/prefs.rs:919 src/ui/window.rs:291
+#: src/ui/prefs.rs:919 src/ui/window.rs:289
 #, no-c-format
 msgid "Rescan Library"
 msgstr "ライブラリを再スキャン"
@@ -1296,168 +1296,203 @@ msgstr ""
 msgid "Allow Community Plugins"
 msgstr "コミュニティプラグインを許可"
 
-#: src/ui/sources_ui.rs:38
+#: src/ui/sources_ui.rs:40
+#, no-c-format
+msgid "Add a Source"
+msgstr "ソースを追加"
+
+#: src/ui/sources_ui.rs:46
 #, no-c-format
 msgid "Installed"
 msgstr "インストール済み"
 
-#: src/ui/sources_ui.rs:39
+#: src/ui/sources_ui.rs:47
 #, no-c-format
 msgid "Install from File…"
 msgstr "ファイルからインストール…"
 
-#: src/ui/sources_ui.rs:85
+#: src/ui/sources_ui.rs:109
 #, no-c-format
 msgid "No sources installed"
 msgstr "ソースはインストールされていません"
 
-#: src/ui/sources_ui.rs:86
+#: src/ui/sources_ui.rs:110
 #, no-c-format
 msgid "Install a source plugin from a .jfpkg file."
 msgstr ".jfpkg ファイルからソースのプラグインをインストールします。"
 
-#: src/ui/sources_ui.rs:119
+#: src/ui/sources_ui.rs:143
 #, no-c-format
 msgid "Community"
 msgstr "コミュニティ"
 
-#: src/ui/sources_ui.rs:130
+#: src/ui/sources_ui.rs:154
 #, no-c-format
 msgid "Enabled"
 msgstr "有効"
 
-#: src/ui/sources_ui.rs:165
+#: src/ui/sources_ui.rs:189
 #, no-c-format
 msgid "Account"
 msgstr "アカウント"
 
-#: src/ui/sources_ui.rs:167
+#: src/ui/sources_ui.rs:191
 #, no-c-format
 msgid "No sign-in needed"
 msgstr "サインインは不要です"
 
-#: src/ui/sources_ui.rs:173
+#: src/ui/sources_ui.rs:197
 #, no-c-format
 msgid "Sign Out"
 msgstr "サインアウト"
 
-#: src/ui/sources_ui.rs:183
-#, no-c-format
-msgid "Sign In with QR Code"
-msgstr "QR コードでサインイン"
-
-#: src/ui/sources_ui.rs:184
-#, no-c-format
-msgid "Sign In in Browser"
-msgstr "ブラウザでサインイン"
-
-#: src/ui/sources_ui.rs:185
-#, no-c-format
-msgid "Paste Cookies"
-msgstr "Cookie を貼り付け"
-
-#: src/ui/sources_ui.rs:186 src/ui/sources_ui.rs:502
-#, no-c-format
-msgid "Sign In"
-msgstr "サインイン"
-
-#: src/ui/sources_ui.rs:187
-#, no-c-format
-msgid "Enter API Key"
-msgstr "API キーを入力"
-
-#: src/ui/sources_ui.rs:207
+#: src/ui/sources_ui.rs:230
 #, no-c-format
 msgid "Settings"
 msgstr "設定"
 
-#: src/ui/sources_ui.rs:209
+#: src/ui/sources_ui.rs:232
 #, no-c-format
 msgid "This plugin's settings could not be read: {error}"
 msgstr "このプラグインの設定を読み込めません：{error}"
 
-#: src/ui/sources_ui.rs:217 src/ui/sources_ui.rs:218
+#: src/ui/sources_ui.rs:240 src/ui/sources_ui.rs:241
 #, no-c-format
 msgid "Uninstall"
 msgstr "アンインストール"
 
-#: src/ui/sources_ui.rs:326
+#: src/ui/sources_ui.rs:256
+#, no-c-format
+msgid "Sign In with QR Code"
+msgstr "QR コードでサインイン"
+
+#: src/ui/sources_ui.rs:257
+#, no-c-format
+msgid "Sign In in Browser"
+msgstr "ブラウザでサインイン"
+
+#: src/ui/sources_ui.rs:258
+#, no-c-format
+msgid "Paste Cookies"
+msgstr "Cookie を貼り付け"
+
+#: src/ui/sources_ui.rs:259 src/ui/sources_ui.rs:640
+#, no-c-format
+msgid "Sign In"
+msgstr "サインイン"
+
+#: src/ui/sources_ui.rs:260
+#, no-c-format
+msgid "Enter API Key"
+msgstr "API キーを入力"
+
+#: src/ui/sources_ui.rs:270
+#, no-c-format
+msgid "Your Jellyfin server"
+msgstr "お使いの Jellyfin サーバー"
+
+#: src/ui/sources_ui.rs:271
+#, no-c-format
+msgid "Your Navidrome server"
+msgstr "お使いの Navidrome サーバー"
+
+#: src/ui/sources_ui.rs:272
+#, no-c-format
+msgid "Airsonic, Gonic and other Subsonic servers"
+msgstr "Airsonic、Gonic などの Subsonic サーバー"
+
+#: src/ui/sources_ui.rs:300
+#, no-c-format
+msgid "Connect to {name}"
+msgstr "{name} に接続"
+
+#: src/ui/sources_ui.rs:313
+#, no-c-format
+msgid "Server address"
+msgstr "サーバーのアドレス"
+
+#: src/ui/sources_ui.rs:317
+#, no-c-format
+msgid "For example {address}"
+msgstr "例: {address}"
+
+#: src/ui/sources_ui.rs:465
 #, no-c-format
 msgid "Jellyfesh plugins"
 msgstr "Jellyfesh プラグイン"
 
-#: src/ui/sources_ui.rs:331
+#: src/ui/sources_ui.rs:470
 #, no-c-format
 msgid "Install Plugin"
 msgstr "プラグインをインストール"
 
-#: src/ui/sources_ui.rs:348
+#: src/ui/sources_ui.rs:487
 #, no-c-format
 msgid "Turn On “{name}”?"
 msgstr "「{name}」をオンにしますか？"
 
-#: src/ui/sources_ui.rs:349
+#: src/ui/sources_ui.rs:488
 #, no-c-format
 msgid "Allow Community Plugins?"
 msgstr "コミュニティプラグインを許可しますか？"
 
-#: src/ui/sources_ui.rs:352
+#: src/ui/sources_ui.rs:491
 #, no-c-format
 msgid "Community plugins are not made or checked by Jellyfesh."
 msgstr ""
 "コミュニティプラグインは Jellyfesh が作成・確認したものではありません。"
 
-#: src/ui/sources_ui.rs:355
+#: src/ui/sources_ui.rs:494
 #, no-c-format
 msgid "They may break the terms of the service they connect to."
 msgstr "接続先サービスの規約に反する場合があります。"
 
-#: src/ui/sources_ui.rs:357
+#: src/ui/sources_ui.rs:496
 #, no-c-format
 msgid "They may stop working at any time."
 msgstr "いつ使えなくなるかわかりません。"
 
-#: src/ui/sources_ui.rs:358
+#: src/ui/sources_ui.rs:497
 #, no-c-format
 msgid "Use them for personal use only."
 msgstr "個人的な利用に限ってください。"
 
-#: src/ui/sources_ui.rs:363
+#: src/ui/sources_ui.rs:502
 #, no-c-format
 msgid "I Understand, Allow"
 msgstr "理解したうえで許可"
 
-#: src/ui/sources_ui.rs:375
+#: src/ui/sources_ui.rs:516
 #, no-c-format
 msgid "Sign In to {name}"
 msgstr "{name} にサインイン"
 
-#: src/ui/sources_ui.rs:447
+#: src/ui/sources_ui.rs:585
 #, no-c-format
 msgid "Sign-in QR code"
 msgstr "サインイン用 QR コード"
 
-#: src/ui/sources_ui.rs:450
+#: src/ui/sources_ui.rs:588
 #, no-c-format
 msgid "Scan the code with the {name} app on your phone."
 msgstr "スマートフォンの {name} アプリでコードを読み取ってください。"
 
-#: src/ui/sources_ui.rs:476
+#: src/ui/sources_ui.rs:614
 #, no-c-format
 msgid "Continue in your browser. Come back here when you are done."
 msgstr "ブラウザで続けてください。終わったらここに戻ってください。"
 
-#: src/ui/sources_ui.rs:478
+#: src/ui/sources_ui.rs:616
 #, no-c-format
 msgid "Open Browser Again"
 msgstr "ブラウザをもう一度開く"
 
-#: src/ui/sources_ui.rs:532
+#: src/ui/sources_ui.rs:670
 #, no-c-format
 msgid "Signed in as {account}."
 msgstr "{account} としてサインインしました。"
 
-#: src/ui/sources_ui.rs:533
+#: src/ui/sources_ui.rs:671
 #, no-c-format
 msgid "Done"
 msgstr "完了"
@@ -1512,7 +1547,7 @@ msgstr "ミュート解除"
 msgid "{degrees}°"
 msgstr "{degrees}°"
 
-#: src/ui/widgets/seekbar.rs:472
+#: src/ui/widgets/seekbar.rs:487
 #, no-c-format
 msgid "{position} of {duration}"
 msgstr "{position} / {duration}"
@@ -1557,27 +1592,27 @@ msgctxt "sidebar"
 msgid "Sources"
 msgstr "ソース"
 
-#: src/ui/window.rs:147
+#: src/ui/window.rs:146
 #, no-c-format
 msgid "Library sections"
 msgstr "ライブラリの項目"
 
-#: src/ui/window.rs:295
+#: src/ui/window.rs:293
 #, no-c-format
 msgid "Keyboard Shortcuts"
 msgstr "キーボードショートカット"
 
-#: src/ui/window.rs:302 src/ui/window.rs:307
+#: src/ui/window.rs:300 src/ui/window.rs:305
 #, no-c-format
 msgid "Main Menu"
 msgstr "メインメニュー"
 
-#: src/ui/window.rs:335
+#: src/ui/window.rs:333
 #, no-c-format
 msgid "Add Music Folder"
 msgstr "音楽フォルダを追加"
 
-#: src/ui/window.rs:347
+#: src/ui/window.rs:345
 #, no-c-format
 msgid "Adding the folder to your library…"
 msgstr "フォルダをライブラリに追加しています…"
