@@ -4,6 +4,19 @@ Every version is an annotated git tag, delivered as a `.zip` snapshot and a
 `.bundle` with the full history (`git clone jellyfesh-<tag>.bundle
 jellyfesh`). See ADR-0016.
 
+## Unreleased
+
+* **Add a Source** in Sources on every app and in Jellyfesh Web: pick
+  Jellyfin, Navidrome or another Subsonic server, enter its address and sign
+  in. A service is listed only while a plugin signed by Jellyfesh for it is
+  installed; more services join the list as their plugins are ready
+  (`jf_plugin_model::presets`, `Command::ConnectSource`).
+* Settings forms list a plugin's settings in the plugin's own order (the
+  server address first), on every app.
+* macOS: a plugin's text settings show a bordered field with the plugin's
+  description, and what is typed is saved without pressing Return, also
+  just before signing in.
+
 ## v0.0.4 — 2026-11-13
 
 Jellyfesh Web, a design pass on every app after Apple Music and Windows
