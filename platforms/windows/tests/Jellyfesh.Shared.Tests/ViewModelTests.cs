@@ -1,5 +1,7 @@
+using System.Globalization;
 using Jellyfesh.Collections;
 using Jellyfesh.Core;
+using Jellyfesh.Formatting;
 using Jellyfesh.Services;
 using Jellyfesh.Tests.Support;
 using Jellyfesh.ViewModels;
@@ -232,7 +234,7 @@ public class ViewModelTests
     public async Task Settings_send_modified_copies_and_confirm_the_community_disclosure()
     {
         using var h = new AppHarness();
-        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [Plugin("org.x", PluginBadge.Community, needsDisclosure: true)], false) };
+        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [Plugin("org.x", PluginBadge.Community, needsDisclosure: true)], [], false) };
         h.Started();
         var settings = h.App.CreateSettings(_ => null);
         Assert.Equal(11, settings.Icons.Count);
@@ -312,13 +314,149 @@ public class ViewModelTests
     }
 
     [Fact]
+    public void Add_a_source_lists_the_presets_of_the_snapshot()
+    {
+        using var h = new AppHarness();
+        var subsonic = Plugin("org.jellyfesh.subsonic", PluginBadge.Official, false) with { Name = "Subsonic", Icon = "/cache/plugin-icons/sub.png" };
+        var signedIn = Navidrome() with { Id = "subsonic", Name = "Subsonic", Account = "ana" };
+        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [subsonic], [Navidrome(), signedIn], false) };
+        h.Started();
+        var settings = h.App.CreateSettings(_ => null);
+        settings.Activate();
+
+        Assert.Equal(["Navidrome", "Subsonic"], settings.SourcePresets.Select(p => p.Name));
+        var navidrome = settings.SourcePresets[0];
+        Assert.Equal(("navidrome", "org.jellyfesh.subsonic"), (navidrome.Id, navidrome.PluginId));
+        Assert.Equal("SourcePreset_Navidrome", navidrome.Description);
+        Assert.Null(navidrome.AccountLine);
+        Assert.Equal("SourcePreset_Navidrome", navidrome.Subtitle);
+        Assert.Equal("/cache/plugin-icons/sub.png", navidrome.IconPath); // the matching plugin's icon
+        Assert.Equal(FileUris.From("/cache/plugin-icons/sub.png"), navidrome.IconUri);
+        Assert.True(navidrome.HasIcon);
+        Assert.Equal([AuthMethod.PasswordExchange, AuthMethod.ApiKey], navidrome.AuthMethods);
+        Assert.Equal(["SignIn_MethodPassword", "SignIn_MethodApiKey"], navidrome.Methods.Select(m => m.Title));
+        Assert.True(navidrome.NeedsAddress);
+        Assert.Equal(("https://music.example.com", "http://192.168.1.20:4533"), (navidrome.Address, navidrome.AddressExample));
+        Assert.Equal("SourcePreset_Subsonic", settings.SourcePresets[1].Description);
+        Assert.Equal("SignIn_Done", settings.SourcePresets[1].Subtitle); // the account instead of the description
+        Assert.Empty(h.Core.Sent);
+
+        // The strings: a description by id, "Signed in as …" once there is an account.
+        var l = new TableLocalizer(new()
+        {
+            ["SourcePreset_Jellyfin"] = "Your Jellyfin server",
+            ["SignIn_Done"] = "Signed in as {0}.",
+            ["Connect_Title"] = "Connect to {0}",
+        });
+        var jellyfin = new SourcePresetViewModel(Navidrome() with { Id = "jellyfin", Name = "Jellyfin", Plugin = "org.jellyfesh.jellyfin" }, null, l);
+        Assert.Equal(("Your Jellyfin server", "Your Jellyfin server", "Connect to Jellyfin"), (jellyfin.Description, jellyfin.Subtitle, jellyfin.ConnectTitle));
+        Assert.False(jellyfin.HasIcon); // its plugin has no icon
+        Assert.Equal("Signed in as ana.", new SourcePresetViewModel(Navidrome() with { Id = "jellyfin", Account = "ana" }, null, l).Subtitle);
+
+        // A slice without presets empties the list, which hides the section.
+        h.Emit(new CoreEvent.Sources(new SourcesState(2, [subsonic], [], false)));
+        Assert.Empty(settings.SourcePresets);
+        settings.Deactivate();
+    }
+
+    [Fact]
+    public void Connecting_a_preset_sends_connect_source_and_shows_the_plugins_sign_in()
+    {
+        using var h = new AppHarness();
+        var subsonic = Plugin("org.jellyfesh.subsonic", PluginBadge.Official, false) with { Name = "Subsonic" };
+        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [subsonic], [Navidrome()], false) };
+        h.Started();
+        var settings = h.App.CreateSettings(_ => null);
+        SignInViewModel? flow = null;
+        settings.SignInRequested += f => flow = f;
+
+        settings.Connect(settings.SourcePresets[0], "  http://192.168.1.20:4533 \n", AuthMethod.PasswordExchange);
+        Assert.Equal(new CoreCommand.ConnectSource("navidrome", "http://192.168.1.20:4533", AuthMethod.PasswordExchange), h.Core.Sent[^1]);
+        Assert.NotNull(flow);
+        Assert.Equal("org.jellyfesh.subsonic", flow.Plugin.Id);
+        Assert.Equal("Navidrome", flow.Name); // "Sign in to Navidrome", not to the plugin
+        Assert.Equal(AuthMethod.PasswordExchange, flow.Method);
+        Assert.Equal(SignInStage.Starting, flow.Stage);
+
+        // The steps arrive as the plugin's Auth events, as for its own Sign in.
+        h.Emit(new CoreEvent.Auth(new AuthUpdate("org.jellyfesh.subsonic", 4, new AuthStep.AskFields([new AuthField("username", "Username", false, null)]))));
+        Assert.Equal(SignInStage.AskFields, flow.Stage);
+        flow.Fields[0].Value = "ana";
+        flow.SubmitCommand.Execute(null);
+        Assert.Equal("org.jellyfesh.subsonic", h.Core.LastSent<CoreCommand.SubmitLogin>().Plugin);
+
+        // A connection the core refuses fails that flow, and only its dialog says so.
+        settings.Connect(settings.SourcePresets[0], "https://music.example", AuthMethod.ApiKey);
+        var refused = flow;
+        h.Emit(new CoreEvent.CommandFailed((ulong)h.Core.Sent.Count, "Enter the address of your Navidrome server."));
+        Assert.Equal(SignInStage.Failed, refused.Stage);
+        Assert.Equal("Enter the address of your Navidrome server.", refused.Message);
+        Assert.Empty(h.App.Notifications.Items);
+    }
+
+    [Fact]
+    public void Connecting_without_a_needed_address_sends_nothing()
+    {
+        using var h = new AppHarness();
+        var jellyfin = Plugin("org.jellyfesh.jellyfin", PluginBadge.Official, false) with { Name = "Jellyfin" };
+        var preset = new SourcePreset("jellyfin", "Jellyfin", "org.jellyfesh.jellyfin", [AuthMethod.Qr, AuthMethod.PasswordExchange], true, null, "http://192.168.1.20:8096", null);
+        var hosted = preset with { Id = "hosted", Name = "Hosted", NeedsAddress = false, AddressExample = null };
+        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [jellyfin], [preset, hosted], false) };
+        h.Started();
+        var settings = h.App.CreateSettings(_ => null);
+        var requested = 0;
+        settings.SignInRequested += _ => requested++;
+
+        settings.Connect(settings.SourcePresets[0], " \t ", AuthMethod.Qr);
+        settings.Connect(settings.SourcePresets[0], null, AuthMethod.PasswordExchange);
+        Assert.Empty(h.Core.Sent);
+        Assert.Equal(0, requested);
+
+        // A service without a server address of its own sends none, whatever was typed.
+        settings.Connect(settings.SourcePresets[1], "ignored", AuthMethod.Qr);
+        Assert.Equal(new CoreCommand.ConnectSource("hosted", null, AuthMethod.Qr), h.Core.Sent[^1]);
+        Assert.Equal(1, requested);
+    }
+
+    [Fact]
+    public void Connect_dialog_waits_for_an_address_and_offers_password_exchange_first()
+    {
+        var preset = new SourcePresetViewModel(Navidrome() with { AuthMethods = [AuthMethod.ApiKey, AuthMethod.PasswordExchange] }, null, KeyLocalizer.Instance);
+        var connect = new ConnectSourceViewModel(preset);
+        Assert.Equal("Connect_Title", connect.Title);
+        Assert.Equal("https://music.example.com", connect.Address); // the address set now
+        Assert.Equal("http://192.168.1.20:4533", connect.AddressExample);
+        Assert.Equal(AuthMethod.PasswordExchange, connect.Primary?.Method);
+        Assert.Equal([AuthMethod.ApiKey], connect.Others.Select(m => m.Method));
+        Assert.True(connect.HasOthers);
+        Assert.True(connect.CanConnect);
+
+        var changes = new List<string?>();
+        connect.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        connect.Address = "  ";
+        Assert.False(connect.CanConnect);
+        Assert.Contains(nameof(ConnectSourceViewModel.CanConnect), changes);
+        Assert.False(connect.Choose(AuthMethod.PasswordExchange));
+        Assert.Null(connect.Chosen);
+
+        connect.Address = "http://192.168.1.20:4533";
+        Assert.True(connect.Choose(AuthMethod.ApiKey));
+        Assert.Equal(AuthMethod.ApiKey, connect.Chosen);
+
+        // Without password exchange the first way is the primary button.
+        var qrOnly = new ConnectSourceViewModel(new SourcePresetViewModel(Navidrome() with { AuthMethods = [AuthMethod.Qr] }, null, KeyLocalizer.Instance));
+        Assert.Equal(AuthMethod.Qr, qrOnly.Primary?.Method);
+        Assert.False(qrOnly.HasOthers);
+    }
+
+    [Fact]
     public async Task Search_answers_from_the_library_then_shows_the_merged_source_results()
     {
         using var h = new AppHarness();
         h.Core.TrackRows.Add(Samples.Track(1, "Harbour Lights"));
         var sub = Plugin("org.sub", PluginBadge.Official, false) with { Enabled = true };
         var jelly = Plugin("org.jelly", PluginBadge.Official, false) with { Name = "Jelly", Enabled = true };
-        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [sub, jelly], false) };
+        h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [sub, jelly], [], false) };
         h.Started();
         var search = h.App.CreateSearch();
         search.Activate();
@@ -404,6 +542,10 @@ public class ViewModelTests
     private static PluginInfo Plugin(string id, PluginBadge badge, bool needsDisclosure) =>
         new(id, "Sub", "1.0.0", "Someone", badge, false, ["search", "browse"], [AuthMethod.Qr, AuthMethod.PasswordExchange], false, null, needsDisclosure, "{}", "{}", null);
 
+    /// <summary>Navidrome as tests/contract/ffi-types.json offers it.</summary>
+    private static SourcePreset Navidrome() =>
+        new("navidrome", "Navidrome", "org.jellyfesh.subsonic", [AuthMethod.PasswordExchange, AuthMethod.ApiKey], true, "https://music.example.com", "http://192.168.1.20:4533", null);
+
     private static async Task Poll(Func<bool> condition)
     {
         for (var i = 0; i < 500 && !condition(); i++)
@@ -412,5 +554,12 @@ public class ViewModelTests
         }
 
         Assert.True(condition());
+    }
+
+    private sealed class TableLocalizer(Dictionary<string, string> table) : ILocalizer
+    {
+        public CultureInfo Culture => CultureInfo.InvariantCulture;
+
+        public string Get(string key) => table.TryGetValue(key, out var value) ? value : key;
     }
 }

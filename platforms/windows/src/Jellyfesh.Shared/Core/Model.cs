@@ -295,6 +295,26 @@ public sealed record PluginInfo(
     string SettingsJson,
     string? Icon);
 
+/// <summary>
+/// A music service offered in Settings → Sources → Add a Source, listed while its official plugin
+/// is installed; <see cref="CoreCommand.ConnectSource"/> connects to it.
+/// </summary>
+/// <param name="Id">Stable name the app keys the description by: jellyfin, navidrome, subsonic.</param>
+/// <param name="Plugin">The plugin that connects to it; the sign-in steps arrive as its Auth events.</param>
+/// <param name="NeedsAddress">Whether the person types the server's address (a self-hosted server).</param>
+/// <param name="Address">The address set now, to fill the field with.</param>
+/// <param name="AddressExample">An address to show as an example in that field.</param>
+/// <param name="Account">The account the plugin is signed in with.</param>
+public sealed record SourcePreset(
+    string Id,
+    string Name,
+    string Plugin,
+    IReadOnlyList<AuthMethod> AuthMethods,
+    bool NeedsAddress,
+    string? Address,
+    string? AddressExample,
+    string? Account);
+
 /// <summary>A field to ask for during sign-in.</summary>
 public sealed record AuthField(string Name, string Label, bool Secret, string? Placeholder);
 

@@ -2,9 +2,28 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Jellyfesh.Core;
+using Jellyfesh.Formatting;
 using Jellyfesh.Qr;
 
 namespace Jellyfesh.ViewModels;
+
+/// <summary>A way to sign in as a button: the method and its title ("Sign in with a QR code").</summary>
+public sealed record SignInMethodChoice(AuthMethod Method, string Title)
+{
+    public static SignInMethodChoice For(AuthMethod method, ILocalizer l) => new(method, l.Get(TitleKey(method)));
+
+    /// <summary>The string key of the button that signs in with <paramref name="method"/>.</summary>
+    public static string TitleKey(AuthMethod method) => method switch
+    {
+        AuthMethod.Qr => "SignIn_MethodQr",
+        AuthMethod.Oauth => "SignIn_MethodOauth",
+        AuthMethod.CookieImport => "SignIn_MethodCookies",
+        AuthMethod.PasswordExchange => "SignIn_MethodPassword",
+        _ => "SignIn_MethodApiKey",
+    };
+
+    public override string ToString() => Title;
+}
 
 public enum SignInStage
 {
@@ -39,6 +58,7 @@ public sealed partial class SignInField(AuthField field) : ObservableObject
 public sealed partial class SignInViewModel : ObservableObject, IDisposable
 {
     private readonly ShellServices _s;
+    private readonly CoreCommand _start;
     private ulong _request;
     private ulong? _flow;
     private bool _openedUrl;
@@ -65,14 +85,28 @@ public sealed partial class SignInViewModel : ObservableObject, IDisposable
     private DateTimeOffset? _expiresAt;
 
     public SignInViewModel(ShellServices services, PluginInfo plugin, AuthMethod method)
+        : this(services, plugin, method, plugin.Name, new CoreCommand.BeginLogin(plugin.Id, method))
+    {
+    }
+
+    /// <summary>
+    /// A flow that <paramref name="start"/> begins instead of BeginLogin (ConnectSource, from Add a
+    /// Source), titled with <paramref name="name"/>; its steps still arrive as the plugin's Auth events.
+    /// </summary>
+    public SignInViewModel(ShellServices services, PluginInfo plugin, AuthMethod method, string name, CoreCommand start)
     {
         _s = services;
         Plugin = plugin;
         Method = method;
+        Name = name;
+        _start = start;
         _s.Hub.Notification += OnNotification;
     }
 
     public PluginInfo Plugin { get; }
+
+    /// <summary>What the dialog's title names: the plugin, or the service chosen in Add a Source.</summary>
+    public string Name { get; }
 
     public AuthMethod Method { get; }
 
@@ -86,7 +120,7 @@ public sealed partial class SignInViewModel : ObservableObject, IDisposable
     public void Begin()
     {
         Stage = SignInStage.Starting;
-        _request = _s.SendHandled(new CoreCommand.BeginLogin(Plugin.Id, Method));
+        _request = _s.SendHandled(_start);
     }
 
     [RelayCommand]

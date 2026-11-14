@@ -296,6 +296,26 @@ public sealed partial class SettingsPage : JfPage
         flow.Dispose();
     }
 
+    /// <summary>
+    /// A service in Add a Source: "Connect to …" asks for the address and how to sign in. Connect
+    /// runs only once that dialog has closed, so the sign-in dialog it opens can show: WinUI allows
+    /// one ContentDialog at a time and ShellPlatform refuses a second.
+    /// </summary>
+    private async void OnSourcePresetClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not SourcePresetViewModel preset)
+        {
+            return;
+        }
+
+        var connect = new ConnectSourceViewModel(preset);
+        await AppHost.Platform.ShowAsync(new ConnectSourceDialog(connect));
+        if (connect.Chosen is { } method)
+        {
+            ViewModel.Connect(preset, connect.Address, method);
+        }
+    }
+
     private void OnOpenLogsClick(object sender, RoutedEventArgs e)
     {
         Directory.CreateDirectory(AppLog.Folder);

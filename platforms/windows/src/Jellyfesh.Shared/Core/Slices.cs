@@ -170,10 +170,10 @@ public sealed record DevicesState(ulong Version, IReadOnlyList<DeviceInfo> Devic
     public static DevicesState Initial { get; } = new(0, [], null);
 }
 
-/// <summary>The <c>Sources</c> slice.</summary>
-public sealed record SourcesState(ulong Version, IReadOnlyList<PluginInfo> Plugins, bool AllowCommunity)
+/// <summary>The <c>Sources</c> slice: the installed plugins and the services Add a Source offers, in order.</summary>
+public sealed record SourcesState(ulong Version, IReadOnlyList<PluginInfo> Plugins, IReadOnlyList<SourcePreset> Presets, bool AllowCommunity)
 {
-    public static SourcesState Initial { get; } = new(0, [], false);
+    public static SourcesState Initial { get; } = new(0, [], [], false);
 }
 
 /// <summary>Everything a UI mirrors; each slice carries its own version where the core has one.</summary>

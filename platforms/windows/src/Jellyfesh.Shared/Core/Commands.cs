@@ -106,6 +106,12 @@ public abstract record CoreCommand
 
     public sealed record BeginLogin(string Plugin, AuthMethod Method) : CoreCommand;
 
+    /// <summary>
+    /// Connects to a service from <see cref="SourcesState.Presets"/>: sets its server's address when
+    /// it needs one (null otherwise), turns its plugin on and signs in as BeginLogin does.
+    /// </summary>
+    public sealed record ConnectSource(string Preset, string? Address, AuthMethod Method) : CoreCommand;
+
     /// <summary>Answers an ask-fields step. Secrets pass through once and are never stored (ADR-0015).</summary>
     public sealed record SubmitLogin(string Plugin, ulong Flow, IReadOnlyList<KeyValuePair<string, string>> Fields) : CoreCommand;
 

@@ -290,6 +290,12 @@
   <data name="Compact_Expand.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>返回完整窗口</value>
   </data>
+  <data name="Connect_Address.Header" xml:space="preserve">
+    <value>服务器地址</value>
+  </data>
+  <data name="Connect_Title" xml:space="preserve">
+    <value>连接到 {0}</value>
+  </data>
   <data name="Count_Albums_One" xml:space="preserve">
     <value>{0} 张专辑</value>
   </data>
@@ -881,6 +887,21 @@
   <data name="SignIn_Failed" xml:space="preserve">
     <value>登录未成功：{0}</value>
   </data>
+  <data name="SignIn_MethodApiKey" xml:space="preserve">
+    <value>输入 API 密钥</value>
+  </data>
+  <data name="SignIn_MethodCookies" xml:space="preserve">
+    <value>粘贴 Cookie</value>
+  </data>
+  <data name="SignIn_MethodOauth" xml:space="preserve">
+    <value>在浏览器中登录</value>
+  </data>
+  <data name="SignIn_MethodPassword" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="SignIn_MethodQr" xml:space="preserve">
+    <value>扫码登录</value>
+  </data>
   <data name="SignIn_OpenAgain.Content" xml:space="preserve">
     <value>再次打开页面</value>
   </data>
@@ -932,6 +953,15 @@
   <data name="Sort_Year" xml:space="preserve">
     <value>年份</value>
   </data>
+  <data name="SourcePreset_Jellyfin" xml:space="preserve">
+    <value>你的 Jellyfin 服务器</value>
+  </data>
+  <data name="SourcePreset_Navidrome" xml:space="preserve">
+    <value>你的 Navidrome 服务器</value>
+  </data>
+  <data name="SourcePreset_Subsonic" xml:space="preserve">
+    <value>Airsonic、Gonic 等 Subsonic 服务器</value>
+  </data>
   <data name="Source_Community" xml:space="preserve">
     <value>社区</value>
   </data>
@@ -961,6 +991,9 @@
   </data>
   <data name="Source_UninstallTitle" xml:space="preserve">
     <value>卸载 {0}？</value>
+  </data>
+  <data name="Sources_Add.Text" xml:space="preserve">
+    <value>添加来源</value>
   </data>
   <data name="Sources_AllowCommunity.Header" xml:space="preserve">
     <value>允许社区插件</value>

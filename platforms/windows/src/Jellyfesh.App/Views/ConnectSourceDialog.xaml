@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    "Connect to …" for a service in Settings → Sources → Add a Source: the server's address, when the
+    service is self-hosted, and a button per way to sign in, password exchange as the primary button.
+    Choosing one closes this dialog; the page then starts the sign-in, whose steps SignInDialog shows
+    (WinUI shows one ContentDialog at a time).
+-->
+<ContentDialog
+    x:Class="Jellyfesh.App.Views.ConnectSourceDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:vm="using:Jellyfesh.ViewModels"
+    DefaultButton="Primary"
+    PrimaryButtonClick="OnPrimaryClick">
+
+    <StackPanel MinWidth="360" MaxWidth="440" Spacing="16">
+        <TextBox
+            x:Uid="Connect_Address"
+            Header="Server address"
+            InputScope="Url"
+            IsSpellCheckEnabled="False"
+            PlaceholderText="{x:Bind Connect.AddressExample}"
+            Text="{x:Bind Connect.Address, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+            Visibility="{x:Bind shell:Bind.Visible(Connect.NeedsAddress)}" />
+
+        <!-- The other ways to sign in; disabled with this control while a needed address is empty. -->
+        <ContentControl
+            HorizontalContentAlignment="Stretch"
+            IsEnabled="{x:Bind Connect.CanConnect, Mode=OneWay}"
+            IsTabStop="False"
+            Visibility="{x:Bind shell:Bind.Visible(Connect.HasOthers)}">
+            <ItemsRepeater ItemsSource="{x:Bind Connect.Others}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Spacing="8" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SignInMethodChoice">
+                        <Button HorizontalAlignment="Left" Click="OnMethodClick" Content="{x:Bind Title}" Style="{StaticResource JfChipButtonStyle}" Tag="{x:Bind}" />
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+        </ContentControl>
+    </StackPanel>
+</ContentDialog>

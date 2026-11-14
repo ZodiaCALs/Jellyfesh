@@ -290,6 +290,12 @@
   <data name="Compact_Expand.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Back to the full window</value>
   </data>
+  <data name="Connect_Address.Header" xml:space="preserve">
+    <value>Server address</value>
+  </data>
+  <data name="Connect_Title" xml:space="preserve">
+    <value>Connect to {0}</value>
+  </data>
   <data name="Count_Albums_One" xml:space="preserve">
     <value>{0} album</value>
   </data>
@@ -881,6 +887,21 @@
   <data name="SignIn_Failed" xml:space="preserve">
     <value>Signing in did not work: {0}</value>
   </data>
+  <data name="SignIn_MethodApiKey" xml:space="preserve">
+    <value>Enter an API key</value>
+  </data>
+  <data name="SignIn_MethodCookies" xml:space="preserve">
+    <value>Paste cookies</value>
+  </data>
+  <data name="SignIn_MethodOauth" xml:space="preserve">
+    <value>Sign in in your browser</value>
+  </data>
+  <data name="SignIn_MethodPassword" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="SignIn_MethodQr" xml:space="preserve">
+    <value>Sign in with a QR code</value>
+  </data>
   <data name="SignIn_OpenAgain.Content" xml:space="preserve">
     <value>Open the page again</value>
   </data>
@@ -932,6 +953,15 @@
   <data name="Sort_Year" xml:space="preserve">
     <value>Year</value>
   </data>
+  <data name="SourcePreset_Jellyfin" xml:space="preserve">
+    <value>Your Jellyfin server</value>
+  </data>
+  <data name="SourcePreset_Navidrome" xml:space="preserve">
+    <value>Your Navidrome server</value>
+  </data>
+  <data name="SourcePreset_Subsonic" xml:space="preserve">
+    <value>Airsonic, Gonic and other Subsonic servers</value>
+  </data>
   <data name="Source_Community" xml:space="preserve">
     <value>Community</value>
   </data>
@@ -961,6 +991,9 @@
   </data>
   <data name="Source_UninstallTitle" xml:space="preserve">
     <value>Uninstall {0}?</value>
+  </data>
+  <data name="Sources_Add.Text" xml:space="preserve">
+    <value>Add a Source</value>
   </data>
   <data name="Sources_AllowCommunity.Header" xml:space="preserve">
     <value>Allow community plugins</value>

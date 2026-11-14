@@ -14,7 +14,7 @@ public sealed partial class SignInDialog : ContentDialog
         Flow = flow;
         InitializeComponent();
         var l = AppHost.L;
-        Title = l.Format("SignIn_Title", flow.Plugin.Name);
+        Title = l.Format("SignIn_Title", flow.Name);
         CloseButtonText = l.Get("Action_Cancel");
         Flow.PropertyChanged += OnFlowChanged;
         Flow.Finished += OnFinished;

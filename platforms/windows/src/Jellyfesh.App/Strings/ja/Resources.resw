@@ -290,6 +290,12 @@
   <data name="Compact_Expand.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>通常のウインドウに戻る</value>
   </data>
+  <data name="Connect_Address.Header" xml:space="preserve">
+    <value>サーバーのアドレス</value>
+  </data>
+  <data name="Connect_Title" xml:space="preserve">
+    <value>{0} に接続</value>
+  </data>
   <data name="Count_Albums_One" xml:space="preserve">
     <value>{0} 枚のアルバム</value>
   </data>
@@ -881,6 +887,21 @@
   <data name="SignIn_Failed" xml:space="preserve">
     <value>サインインできませんでした：{0}</value>
   </data>
+  <data name="SignIn_MethodApiKey" xml:space="preserve">
+    <value>API キーを入力</value>
+  </data>
+  <data name="SignIn_MethodCookies" xml:space="preserve">
+    <value>Cookie を貼り付け</value>
+  </data>
+  <data name="SignIn_MethodOauth" xml:space="preserve">
+    <value>ブラウザでサインイン</value>
+  </data>
+  <data name="SignIn_MethodPassword" xml:space="preserve">
+    <value>サインイン</value>
+  </data>
+  <data name="SignIn_MethodQr" xml:space="preserve">
+    <value>QR コードでサインイン</value>
+  </data>
   <data name="SignIn_OpenAgain.Content" xml:space="preserve">
     <value>ページをもう一度開く</value>
   </data>
@@ -932,6 +953,15 @@
   <data name="Sort_Year" xml:space="preserve">
     <value>年</value>
   </data>
+  <data name="SourcePreset_Jellyfin" xml:space="preserve">
+    <value>お使いの Jellyfin サーバー</value>
+  </data>
+  <data name="SourcePreset_Navidrome" xml:space="preserve">
+    <value>お使いの Navidrome サーバー</value>
+  </data>
+  <data name="SourcePreset_Subsonic" xml:space="preserve">
+    <value>Airsonic、Gonic などの Subsonic サーバー</value>
+  </data>
   <data name="Source_Community" xml:space="preserve">
     <value>コミュニティ</value>
   </data>
@@ -961,6 +991,9 @@
   </data>
   <data name="Source_UninstallTitle" xml:space="preserve">
     <value>{0} をアンインストールしますか？</value>
+  </data>
+  <data name="Sources_Add.Text" xml:space="preserve">
+    <value>ソースを追加</value>
   </data>
   <data name="Sources_AllowCommunity.Header" xml:space="preserve">
     <value>コミュニティプラグインを許可</value>

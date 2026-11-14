@@ -212,7 +212,11 @@ public static class FfiMapping
 
     public static M.DeviceInfo ToModel(F.DeviceInfo d) => new(d.Id, d.Name, d.IsDefault, d.SampleRates.ToArray());
 
-    public static M.SourcesState ToModel(F.SourcesSnapshot s) => new(s.Version, List(s.Plugins, ToModel), s.AllowCommunity);
+    public static M.SourcesState ToModel(F.SourcesSnapshot s) =>
+        new(s.Version, List(s.Plugins, ToModel), List(s.Presets, ToModel), s.AllowCommunity);
+
+    public static M.SourcePreset ToModel(F.SourcePreset p) => new(
+        p.Id, p.Name, p.Plugin, List(p.AuthMethods, ToModel), p.NeedsAddress, p.Address, p.AddressExample, p.Account);
 
     public static M.PluginInfo ToModel(F.PluginSummary p) => new(
         p.Id, p.Name, p.Version, p.Author,
@@ -341,6 +345,7 @@ public static class FfiMapping
         M.CoreCommand.SetPluginSettings p => new F.Command.SetPluginSettings(p.Id, p.SettingsJson),
         M.CoreCommand.AcknowledgeUnofficial a => new F.Command.AcknowledgeUnofficial(a.Id),
         M.CoreCommand.BeginLogin b => new F.Command.BeginLogin(b.Plugin, ToFfi(b.Method)),
+        M.CoreCommand.ConnectSource cs => new F.Command.ConnectSource(cs.Preset, cs.Address, ToFfi(cs.Method)),
         M.CoreCommand.SubmitLogin s => new F.Command.SubmitLogin(
             s.Plugin, s.Flow, s.Fields.GroupBy(kv => kv.Key).ToDictionary(g => g.Key, g => g.Last().Value)),
         M.CoreCommand.CancelLogin x => new F.Command.CancelLogin(x.Plugin, x.Flow),

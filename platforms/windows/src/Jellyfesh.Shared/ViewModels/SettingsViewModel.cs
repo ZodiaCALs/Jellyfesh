@@ -214,6 +214,9 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public ObservableCollection<PluginViewModel> Plugins { get; } = [];
 
+    /// <summary>The services Add a Source offers (SourcesState.Presets), in the core's order; empty hides the section.</summary>
+    public ObservableCollection<SourcePresetViewModel> SourcePresets { get; } = [];
+
     /// <summary>Raised when a source's sign-in should open (the app shows it in a dialog).</summary>
     public event Action<SignInViewModel>? SignInRequested;
 
@@ -453,9 +456,34 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
     }
 
-    internal void RequestSignIn(PluginInfo plugin, AuthMethod method)
+    internal void RequestSignIn(PluginInfo plugin, AuthMethod method) => StartSignIn(new SignInViewModel(S, plugin, method));
+
+    /// <summary>
+    /// Connects to a service from Add a Source (Command.ConnectSource): the core sets the address,
+    /// turns the plugin on and signs in as BeginLogin does, so the steps arrive as the plugin's Auth
+    /// events and the sign-in dialog shows them as for the plugin's own Sign in. Nothing is sent
+    /// while the service needs an address and none was typed.
+    /// </summary>
+    public void Connect(SourcePresetViewModel preset, string? address, AuthMethod method)
     {
-        var flow = new SignInViewModel(S, plugin, method);
+        var typed = address?.Trim() ?? string.Empty;
+        if (preset.NeedsAddress && typed.Length == 0)
+        {
+            return;
+        }
+
+        // A service is listed only while its plugin is installed.
+        if (S.Hub.State.Sources.Plugins.FirstOrDefault(p => p.Id == preset.PluginId) is not { } plugin)
+        {
+            return;
+        }
+
+        var start = new CoreCommand.ConnectSource(preset.Id, preset.NeedsAddress ? typed : null, method);
+        StartSignIn(new SignInViewModel(S, plugin, method, preset.Name, start));
+    }
+
+    private void StartSignIn(SignInViewModel flow)
+    {
         SignInRequested?.Invoke(flow);
         flow.Begin();
     }
@@ -575,6 +603,7 @@ public sealed partial class SettingsViewModel : PageViewModel
             }
 
             SyncPlugins(state.Sources);
+            SyncPresets(state.Sources);
         }
         finally
         {
@@ -593,6 +622,15 @@ public sealed partial class SettingsViewModel : PageViewModel
             var vm = byId.TryGetValue(info.Id, out var existing) ? existing : new PluginViewModel(S, this);
             vm.Update(info);
             Plugins.Add(vm);
+        }
+    }
+
+    private void SyncPresets(SourcesState sources)
+    {
+        SourcePresets.Clear();
+        foreach (var preset in sources.Presets)
+        {
+            SourcePresets.Add(new SourcePresetViewModel(preset, sources.Plugins.FirstOrDefault(p => p.Id == preset.Plugin), S.L));
         }
     }
 }
@@ -709,5 +747,131 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
         {
             s.Send(new CoreCommand.UninstallPlugin(info.Id));
         }
+    }
+}
+
+/// <summary>
+/// A service in Settings → Sources → Add a Source (SourcesState.Presets), offered while its official
+/// plugin is installed: its name, what it is (or the account signed in), the plugin's icon and the
+/// ways to sign in.
+/// </summary>
+public sealed class SourcePresetViewModel
+{
+    public SourcePresetViewModel(SourcePreset preset, PluginInfo? plugin, ILocalizer l)
+    {
+        Preset = preset;
+        Description = DescriptionKey(preset.Id) is { } key ? l.Get(key) : string.Empty;
+        AccountLine = preset.Account is { } account ? l.Format("SignIn_Done", account) : null;
+        IconPath = plugin?.Icon;
+        IconUri = IconPath is null ? null : FileUris.From(IconPath);
+        Methods = preset.AuthMethods.Select(m => SignInMethodChoice.For(m, l)).ToArray();
+        ConnectTitle = l.Format("Connect_Title", preset.Name);
+    }
+
+    public SourcePreset Preset { get; }
+
+    public string Id => Preset.Id;
+
+    public string Name => Preset.Name;
+
+    /// <summary>The plugin that connects to the service; the sign-in steps arrive as its Auth events.</summary>
+    public string PluginId => Preset.Plugin;
+
+    /// <summary>What the service is: "Your Jellyfin server".</summary>
+    public string Description { get; }
+
+    /// <summary>"Signed in as …" while the plugin has an account, otherwise null.</summary>
+    public string? AccountLine { get; }
+
+    /// <summary>The line under the name: the account when signed in, otherwise the description.</summary>
+    public string Subtitle => AccountLine ?? Description;
+
+    /// <summary>The icon of the plugin that connects to it (PluginInfo.Icon), when it has one.</summary>
+    public string? IconPath { get; }
+
+    /// <summary><see cref="IconPath"/> as a URI an image control loads.</summary>
+    public string? IconUri { get; }
+
+    /// <summary>False shows a generic glyph instead of the plugin's icon.</summary>
+    public bool HasIcon => IconUri is not null;
+
+    public IReadOnlyList<AuthMethod> AuthMethods => Preset.AuthMethods;
+
+    /// <summary>The ways to sign in as buttons, in the plugin's order.</summary>
+    public IReadOnlyList<SignInMethodChoice> Methods { get; }
+
+    public bool NeedsAddress => Preset.NeedsAddress;
+
+    public string? Address => Preset.Address;
+
+    public string? AddressExample => Preset.AddressExample;
+
+    /// <summary>"Connect to Navidrome".</summary>
+    public string ConnectTitle { get; }
+
+    public override string ToString() => Name;
+
+    /// <summary>The string key of what a service is, by its stable id.</summary>
+    private static string? DescriptionKey(string id) => id switch
+    {
+        "jellyfin" => "SourcePreset_Jellyfin",
+        "navidrome" => "SourcePreset_Navidrome",
+        "subsonic" => "SourcePreset_Subsonic",
+        _ => null,
+    };
+}
+
+/// <summary>
+/// "Connect to …" for a service in Add a Source: the server's address (filled with the one set now)
+/// when the service needs one, and a button per way to sign in, password exchange as the primary
+/// one. Choosing a way only records it: the page calls <see cref="SettingsViewModel.Connect"/> once
+/// this dialog has closed, so the sign-in dialog never opens over it.
+/// </summary>
+public sealed partial class ConnectSourceViewModel : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanConnect))]
+    private string _address = string.Empty;
+
+    public ConnectSourceViewModel(SourcePresetViewModel preset)
+    {
+        Preset = preset;
+        Address = preset.Address ?? string.Empty;
+        Primary = preset.Methods.FirstOrDefault(m => m.Method == AuthMethod.PasswordExchange) ?? preset.Methods.FirstOrDefault();
+        Others = preset.Methods.Where(m => m != Primary).ToArray();
+    }
+
+    public SourcePresetViewModel Preset { get; }
+
+    public string Title => Preset.ConnectTitle;
+
+    public bool NeedsAddress => Preset.NeedsAddress;
+
+    public string AddressExample => Preset.AddressExample ?? string.Empty;
+
+    /// <summary>Signing in waits for an address while the service needs one.</summary>
+    public bool CanConnect => !NeedsAddress || !string.IsNullOrWhiteSpace(Address);
+
+    /// <summary>The dialog's primary button: password exchange when offered, otherwise the first way.</summary>
+    public SignInMethodChoice? Primary { get; }
+
+    /// <summary>The other ways to sign in, as buttons in the dialog.</summary>
+    public IReadOnlyList<SignInMethodChoice> Others { get; }
+
+    public bool HasOthers => Others.Count > 0;
+
+    /// <summary>The way the person chose; null while none was (or the dialog was cancelled).</summary>
+    public AuthMethod? Chosen { get; private set; }
+
+    /// <summary>Records <paramref name="method"/>; false, choosing nothing, while a needed address is empty.</summary>
+    public bool Choose(AuthMethod method)
+    {
+        if (!CanConnect)
+        {
+            return false;
+        }
+
+        Chosen = method;
+        return true;
     }
 }

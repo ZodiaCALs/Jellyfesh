@@ -458,6 +458,47 @@
 
                 <!-- ===== Sources ===== -->
                 <StackPanel x:Name="SourcesPanel" Spacing="16" Visibility="Collapsed">
+                    <!-- Add a Source: the services Jellyfesh offers (SourcesState.Presets), each while its official
+                         plugin is installed. A row opens "Connect to …"; the sign-in dialog then shows the steps. -->
+                    <Border Style="{StaticResource JfCardStyle}" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.SourcePresets.Count), Mode=OneWay}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Sources_Add" Style="{StaticResource CardHeading}" Text="Add a Source" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.SourcePresets}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="8" />
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SourcePresetViewModel">
+                                        <Button
+                                            Padding="12"
+                                            HorizontalAlignment="Stretch"
+                                            AutomationProperties.HelpText="{x:Bind Subtitle}"
+                                            AutomationProperties.Name="{x:Bind Name}"
+                                            Background="{ThemeResource JfCloudSoft}"
+                                            Click="OnSourcePresetClick"
+                                            CornerRadius="10"
+                                            Style="{StaticResource JfBareButtonStyle}"
+                                            Tag="{x:Bind}">
+                                            <Grid ColumnSpacing="12">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="32" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <!-- The plugin's icon; the Sources glyph when it has none. -->
+                                                <FontIcon VerticalAlignment="Center" FontSize="24" Foreground="{ThemeResource JfInk70}" Glyph="&#xE753;" Visibility="{x:Bind shell:Bind.Collapsed(HasIcon)}" />
+                                                <Image Width="32" Height="32" VerticalAlignment="Center" controls:Artwork.DecodeSize="64" controls:Artwork.Uri="{x:Bind IconUri}" AutomationProperties.AccessibilityView="Raw" Visibility="{x:Bind shell:Bind.Visible(HasIcon)}" />
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                                    <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Name}" />
+                                                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Subtitle}" Visibility="{x:Bind shell:Bind.VisibleIf(Subtitle)}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </StackPanel>
+                    </Border>
+
                     <Border Style="{StaticResource JfCardStyle}">
                         <StackPanel Spacing="12">
                             <TextBlock x:Uid="Sources_Installed" Style="{StaticResource CardHeading}" Text="Installed sources" />

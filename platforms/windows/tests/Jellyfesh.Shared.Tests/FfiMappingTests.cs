@@ -96,6 +96,32 @@ public class FfiMappingTests
     }
 
     [Fact]
+    public void Presets_map_from_the_sources_slice_and_connect_source_goes_back()
+    {
+        using var contract = Contract.Read("ffi-types.json");
+        var json = contract.RootElement.GetProperty("samples").EnumerateArray()
+            .Where(s => s.GetProperty("name").GetString() == "Event")
+            .Select(s => s.GetProperty("json"))
+            .First(j => j.GetProperty("type").GetString() == "Sources");
+        var sources = Assert.IsType<M.CoreEvent.Sources>(FfiMapping.ToModel(json.Deserialize(F.JellyfeshJsonContext.Default.Event)!)).State;
+        var preset = Assert.Single(sources.Presets);
+        Assert.Equal(("navidrome", "Navidrome", "org.jellyfesh.subsonic"), (preset.Id, preset.Name, preset.Plugin));
+        Assert.Equal([M.AuthMethod.PasswordExchange, M.AuthMethod.ApiKey], preset.AuthMethods);
+        Assert.True(preset.NeedsAddress);
+        Assert.Equal(("https://music.example.com", "http://192.168.1.20:4533"), (preset.Address, preset.AddressExample));
+        Assert.Null(preset.Account);
+        Assert.Single(sources.Plugins);
+
+        string Json(M.CoreCommand c) => JsonSerializer.Serialize(FfiMapping.ToFfi(c), F.JellyfeshJsonContext.Default.Command);
+        Assert.Equal(
+            """{"type":"ConnectSource","preset":"navidrome","address":"http://192.168.1.20:4533","method":"PasswordExchange"}""",
+            Json(new M.CoreCommand.ConnectSource("navidrome", "http://192.168.1.20:4533", M.AuthMethod.PasswordExchange)));
+        Assert.Equal(
+            """{"type":"ConnectSource","preset":"jellyfin","address":null,"method":"Qr"}""",
+            Json(new M.CoreCommand.ConnectSource("jellyfin", null, M.AuthMethod.Qr)));
+    }
+
+    [Fact]
     public void Settings_round_trip_through_the_binding()
     {
         var settings = M.AppSettings.Default with
@@ -205,6 +231,7 @@ public class FfiMappingTests
         F.Command.SetPluginSettings p => new M.CoreCommand.SetPluginSettings(p.Id, p.SettingsJson),
         F.Command.AcknowledgeUnofficial a => new M.CoreCommand.AcknowledgeUnofficial(a.Id),
         F.Command.BeginLogin b => new M.CoreCommand.BeginLogin(b.Plugin, FfiMapping.ToModel(b.Method)),
+        F.Command.ConnectSource cs => new M.CoreCommand.ConnectSource(cs.Preset, cs.Address, FfiMapping.ToModel(cs.Method)),
         F.Command.SubmitLogin s => new M.CoreCommand.SubmitLogin(s.Plugin, s.Flow, s.Fields.ToArray()),
         F.Command.CancelLogin x => new M.CoreCommand.CancelLogin(x.Plugin, x.Flow),
         F.Command.Logout l => new M.CoreCommand.Logout(l.Plugin),
