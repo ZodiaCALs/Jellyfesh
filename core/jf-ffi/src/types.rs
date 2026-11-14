@@ -214,6 +214,13 @@ pub enum Command {
         plugin: String,
         method: AuthMethod,
     },
+    /// Connect to a service from `SourcesSnapshot::presets`: sets the server's address when the
+    /// service asks for one, turns its plugin on and starts signing in, as `BeginLogin` does.
+    ConnectSource {
+        preset: String,
+        address: Option<String>,
+        method: AuthMethod,
+    },
     /// Answer an `AuthStep::AskFields` step: field name to value. Secrets pass through once and
     /// are never stored.
     SubmitLogin {
@@ -516,6 +523,28 @@ pub struct PluginSummary {
     pub icon: Option<String>,
 }
 
+/// A music service the apps offer in Sources → Add a Source, listed while its official plugin
+/// is installed. `CoreCommand::ConnectSource` connects to it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct SourcePreset {
+    /// Stable name: `jellyfin`, `navidrome`, `subsonic`.
+    pub id: String,
+    /// The service's own name.
+    pub name: String,
+    /// The plugin that connects to it.
+    pub plugin: String,
+    /// The plugin's sign-in methods, in its order.
+    pub auth_methods: Vec<AuthMethod>,
+    /// Whether the person types the server's address (a self-hosted server).
+    pub needs_address: bool,
+    /// The address set now, to fill the field with.
+    pub address: Option<String>,
+    /// An address to show as an example in that field.
+    pub address_example: Option<String>,
+    /// The plugin's signed-in account, if any.
+    pub account: Option<String>,
+}
+
 /// Where sign-ins are kept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
 pub enum SecretStorage {
@@ -530,6 +559,8 @@ pub enum SecretStorage {
 pub struct SourcesSnapshot {
     pub version: u64,
     pub plugins: Vec<PluginSummary>,
+    /// The services offered in Sources → Add a Source, in their order.
+    pub presets: Vec<SourcePreset>,
     pub allow_community: bool,
     /// Whether sign-ins outlive this run.
     pub secret_storage: SecretStorage,

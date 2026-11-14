@@ -40,7 +40,7 @@ per-source search deadline, 8 s) and `bundled_plugins: Vec<PathBuf>` (see
 | `theme` | `Theme` | hue, light and dark Misty themes, baked backdrops (light, dark) |
 | `settings: Settings` | `Settings` | all preferences (below) |
 | `devices: DevicesSnapshot` | `Devices` | output devices and the selected one (`None` = system default) |
-| `sources: SourcesSnapshot` | `Sources` | installed plugins (badge, signing key, capabilities, sign-in methods, account, settings schema and values, icon, why one is off), community allowed, where sign-ins are kept, why sources are unavailable |
+| `sources: SourcesSnapshot` | `Sources` | installed plugins (badge, signing key, capabilities, sign-in methods, account, settings schema and values, icon, why one is off), the services offered in Add a Source (`presets`), community allowed, where sign-ins are kept, why sources are unavailable |
 | `muted`, `scanning`, `library_revision` | `LibraryChanged`, `Scan` | `LibraryChanged` after any catalogue, playlist, favourite or play-count change: lists query again |
 
 Other events: `PlaylistCreated { request, id }` (after `CreatePlaylist` and
@@ -66,7 +66,8 @@ on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`.
   `Config::watch_folders`), changed folders are scanned by themselves.
 * **Sources:** `InstallPlugin`, `UninstallPlugin`, `SetPluginEnabled`,
   `SetPluginSettings`, `AcknowledgeUnofficial` (community disclosure),
-  `BeginLogin`, `SubmitLogin`, `CancelLogin`, `Logout`, `Search` (library and
+  `BeginLogin`, `ConnectSource` (a service from `presets`), `SubmitLogin`,
+  `CancelLogin`, `Logout`, `Search` (library and
   sources, merged and de-duplicated), `Browse`; `PlayCollection` and
   `EnqueueCollection` with `Collection::Source`. See "Online sources".
 
@@ -162,7 +163,16 @@ or hanging plugin never holds up a command or a snapshot.
   gets a new path; load it like any image file.
 * **Settings.** `SetPluginSettings { id, settings_json }` takes JSON that
   matches `settings_schema_json` (a flat JSON Schema subset: strings, numbers,
-  booleans, enums); the core validates it.
+  booleans, enums); the core validates it. `settings_schema_json` is the
+  package's own text, so forms list the settings in the plugin's order.
+* **Adding a service.** `SourcesSnapshot::presets` lists the services the
+  apps offer in Sources → Add a Source (`jf_plugin_model::presets`: Jellyfin,
+  Navidrome, Subsonic for now), each only while its plugin is installed and
+  signed by Jellyfesh: id, name, plugin, sign-in methods, whether a server
+  address is needed (with the one set now and an example), the account.
+  `ConnectSource { preset, address, method }` sets the address, turns the
+  plugin on and starts a sign-in exactly as `BeginLogin` does; a missing
+  address or a service that is not offered fails the command.
 * **Signing in.** `BeginLogin { plugin, method }` starts a flow; every step
   arrives as `Auth(AuthUpdate { plugin, flow, step })`, the first carrying the
   flow number `SubmitLogin` and `CancelLogin` take. Steps: `ShowQr { data,

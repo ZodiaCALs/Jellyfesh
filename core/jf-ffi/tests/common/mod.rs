@@ -249,6 +249,16 @@ pub fn commands() -> Vec<jf::Command> {
             plugin: "org.x".into(),
             method: jf::AuthMethod::PasswordExchange,
         },
+        ConnectSource {
+            preset: "navidrome".into(),
+            address: Some("http://192.168.1.20:4533".into()),
+            method: jf::AuthMethod::PasswordExchange,
+        },
+        ConnectSource {
+            preset: "jellyfin".into(),
+            address: None,
+            method: jf::AuthMethod::Qr,
+        },
         SubmitLogin {
             plugin: "org.x".into(),
             flow: 3,
@@ -586,6 +596,16 @@ pub fn sources() -> jf::SourcesSnapshot {
             settings_schema_json: r#"{"type":"object"}"#.into(),
             settings_json: "{}".into(),
             icon: Some("/cache/plugin-icons/0123456789abcdef.png".into()),
+        }],
+        presets: vec![jf::SourcePreset {
+            id: "navidrome".into(),
+            name: "Navidrome".into(),
+            plugin: "org.jellyfesh.subsonic".into(),
+            auth_methods: vec![jf::AuthMethod::PasswordExchange, jf::AuthMethod::ApiKey],
+            needs_address: true,
+            address: Some("https://music.example.com".into()),
+            address_example: Some("http://192.168.1.20:4533".into()),
+            account: None,
         }],
         allow_community: true,
         secret_storage: jf::SecretStorage::SessionOnly,

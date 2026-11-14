@@ -101,6 +101,7 @@ public abstract record OutputKind
 [JsonDerivedType(typeof(Command.SetPluginSettings), "SetPluginSettings")]
 [JsonDerivedType(typeof(Command.AcknowledgeUnofficial), "AcknowledgeUnofficial")]
 [JsonDerivedType(typeof(Command.BeginLogin), "BeginLogin")]
+[JsonDerivedType(typeof(Command.ConnectSource), "ConnectSource")]
 [JsonDerivedType(typeof(Command.SubmitLogin), "SubmitLogin")]
 [JsonDerivedType(typeof(Command.CancelLogin), "CancelLogin")]
 [JsonDerivedType(typeof(Command.Logout), "Logout")]
@@ -207,6 +208,10 @@ public abstract record Command
     public sealed record AcknowledgeUnofficial(string Id) : Command;
 
     public sealed record BeginLogin(string Plugin, AuthMethod Method) : Command;
+
+    /// <summary>Connect to a service from SourcesSnapshot.Presets: sets the server's address when the
+    /// service asks for one, turns its plugin on and starts signing in, as BeginLogin does.</summary>
+    public sealed record ConnectSource(string Preset, string? Address, AuthMethod Method) : Command;
 
     /// <summary>Answer an AuthStep.AskFields step: field name to value.</summary>
     public sealed record SubmitLogin(string Plugin, ulong Flow, IReadOnlyDictionary<string, string> Fields) : Command;
@@ -463,12 +468,30 @@ public enum SecretStorage
     SessionOnly,
 }
 
+/// <summary>A music service the apps offer in Sources → Add a Source, listed while its official
+/// plugin is installed. Command.ConnectSource connects to it.</summary>
+/// <param name="Id">Stable name: jellyfin, navidrome, subsonic.</param>
+/// <param name="NeedsAddress">Whether the person types the server's address (a self-hosted server).</param>
+/// <param name="Address">The address set now, to fill the field with.</param>
+/// <param name="AddressExample">An address to show as an example in that field.</param>
+public sealed record SourcePreset(
+    string Id,
+    string Name,
+    string Plugin,
+    IReadOnlyList<AuthMethod> AuthMethods,
+    bool NeedsAddress,
+    string? Address,
+    string? AddressExample,
+    string? Account);
+
 /// <summary>The Sources slice.</summary>
+/// <param name="Presets">The services offered in Sources → Add a Source, in their order.</param>
 /// <param name="SecretStorage">Whether sign-ins outlive this run.</param>
 /// <param name="Unavailable">Set when online sources cannot run at all.</param>
 public sealed record SourcesSnapshot(
     ulong Version,
     IReadOnlyList<PluginSummary> Plugins,
+    IReadOnlyList<SourcePreset> Presets,
     bool AllowCommunity,
     SecretStorage SecretStorage,
     string? Unavailable);

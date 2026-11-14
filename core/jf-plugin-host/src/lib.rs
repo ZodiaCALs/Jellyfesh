@@ -137,7 +137,7 @@ pub mod types;
 // (shared with Jellyfesh Web); it is re-exported here under the paths the
 // core and the tools have always used.
 pub(crate) use jf_plugin_model::{allow, sanitize};
-pub use jf_plugin_model::{manifest, merge, package, schema, trust};
+pub use jf_plugin_model::{manifest, merge, package, presets, schema, trust};
 
 /// The host API's errors (defined in `jf-plugin-model`).
 pub(crate) mod error {

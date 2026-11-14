@@ -214,6 +214,7 @@ impl Shared {
                 sources: Arc::new(SourcesSnapshot {
                     version: 0,
                     plugins: Vec::new(),
+                    presets: Vec::new(),
                     allow_community: false,
                     secret_storage: Default::default(),
                     unavailable: None,
@@ -767,6 +768,15 @@ impl Actor {
                 result?;
             }
             Command::BeginLogin { plugin, method } => self.sources.begin_login(&plugin, method)?,
+            Command::ConnectSource {
+                preset,
+                address,
+                method,
+            } => {
+                let result = self.sources.connect(&preset, address.as_deref(), method);
+                self.publish_sources(true);
+                result?;
+            }
             Command::SubmitLogin { plugin, flow, fields } => {
                 self.sources.submit_login(&plugin, flow, fields)?
             }

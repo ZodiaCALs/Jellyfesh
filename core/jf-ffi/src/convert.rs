@@ -290,6 +290,7 @@ mirror_enum!(CoreCommand => Command {
     SetPluginSettings { id, settings_json },
     AcknowledgeUnofficial { id },
     BeginLogin { plugin, method },
+    ConnectSource { preset, address, method },
     SubmitLogin { plugin, flow, fields },
     CancelLogin { plugin, flow },
     Logout { plugin },
@@ -429,9 +430,21 @@ mirror_struct!(jf::PluginSummary => PluginSummary {
 use jf::SecretStorage as CoreSecretStorage;
 mirror_enum!(CoreSecretStorage => SecretStorage { Keystore, SessionOnly });
 
+mirror_struct!(jf::SourcePreset => SourcePreset {
+    id,
+    name,
+    plugin,
+    auth_methods,
+    needs_address,
+    address,
+    address_example,
+    account,
+});
+
 mirror_struct!(jf::SourcesSnapshot => SourcesSnapshot {
     version,
     plugins,
+    presets,
     allow_community,
     secret_storage,
     unavailable,

@@ -29,6 +29,7 @@ pub mod http;
 pub mod manifest;
 pub mod merge;
 pub mod package;
+pub mod presets;
 pub mod sanitize;
 pub mod schema;
 pub mod trust;

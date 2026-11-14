@@ -908,6 +908,97 @@ fn files_contain(dir: &Path, needle: &str) -> bool {
 }
 
 #[test]
+fn presets_offer_ready_services_and_connecting_signs_in() {
+    const SUBSONIC: &str = "org.jellyfesh.subsonic";
+    let env = Env::new();
+    assert!(env.sources().presets.is_empty(), "no plugins, no services");
+
+    // Unsigned, our Subsonic plugin is not offered: only plugins Jellyfesh signed are.
+    let settings = Settings {
+        allow_community_plugins: true,
+        ..(*env.core.snapshot().settings).clone()
+    };
+    env.run(
+        Command::SetSettings { settings },
+        |e| matches!(e, Event::Sources(s) if s.allow_community),
+    );
+    // The test plugin, under our Subsonic plugin's id.
+    let subsonic = echo_manifest().replace(ECHO, SUBSONIC);
+    env.install("echo", &subsonic, SUBSONIC, false, None);
+    assert!(env.sources().presets.is_empty());
+    env.run(
+        Command::UninstallPlugin { id: SUBSONIC.into() },
+        |e| matches!(e, Event::Sources(s) if s.plugins.is_empty()),
+    );
+
+    // Signed: Navidrome and Subsonic appear, Jellyfin (not installed) does not.
+    env.install("echo", &subsonic, SUBSONIC, true, None);
+    let presets = env.sources().presets.clone();
+    let ids: Vec<&str> = presets.iter().map(|p| p.id.as_str()).collect();
+    assert_eq!(ids, ["navidrome", "subsonic"]);
+    let navidrome = &presets[0];
+    assert_eq!(
+        (navidrome.name.as_str(), navidrome.plugin.as_str()),
+        ("Navidrome", SUBSONIC)
+    );
+    assert_eq!(
+        navidrome.auth_methods,
+        [
+            AuthMethod::Qr,
+            AuthMethod::Oauth,
+            AuthMethod::PasswordExchange,
+            AuthMethod::ApiKey
+        ]
+    );
+    assert!(navidrome.needs_address && navidrome.address.is_none() && navidrome.account.is_none());
+    assert_eq!(
+        navidrome.address_example.as_deref(),
+        Some("http://192.168.1.20:4533")
+    );
+
+    let connect = |preset: &str, address: Option<&str>| Command::ConnectSource {
+        preset: preset.into(),
+        address: address.map(Into::into),
+        method: AuthMethod::PasswordExchange,
+    };
+    let error = env.fails(connect("navidrome", Some("  ")));
+    assert!(
+        error.contains("Enter the address of your Navidrome server"),
+        "{error}"
+    );
+    let error = env.fails(connect("nothing", None));
+    assert!(error.contains("no service \"nothing\""), "{error}");
+    let error = env.fails(connect("jellyfin", Some("http://127.0.0.1:9")));
+    assert!(error.contains("Jellyfin needs its plugin"), "{error}");
+
+    // Connecting sets the address, turns the plugin on and starts the sign-in.
+    env.run(
+        Command::SetPluginEnabled {
+            id: SUBSONIC.into(),
+            enabled: false,
+        },
+        |e| plugin_in(e, SUBSONIC).is_some_and(|p| !p.enabled),
+    );
+    let server = echo_server();
+    env.core.send(connect("navidrome", Some(&server.url())));
+    let steps = auth_steps(&env, SUBSONIC, |s| matches!(s, AuthStep::AskFields { .. }));
+    assert!(matches!(steps.last().unwrap().1, AuthStep::AskFields { .. }));
+    let summary = env.summary(SUBSONIC);
+    assert!(summary.enabled);
+    assert!(
+        summary.settings_json.contains(&server.url()),
+        "{}",
+        summary.settings_json
+    );
+    let presets = env.sources().presets.clone();
+    assert!(
+        presets
+            .iter()
+            .all(|p| p.address.as_deref() == Some(server.url().as_str()))
+    );
+}
+
+#[test]
 fn community_plugins_wait_for_the_disclosure() {
     let env = Env::new();
     let server = echo_server();

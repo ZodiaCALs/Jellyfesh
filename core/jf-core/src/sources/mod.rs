@@ -38,6 +38,7 @@ use std::time::Duration;
 use crossbeam_channel::{Sender, unbounded};
 use jf_engine::{HttpSource, StreamResolver};
 use jf_lyrics::LyricDoc;
+use jf_plugin_host::presets;
 use jf_plugin_host::trust::TrustList;
 use jf_plugin_host::{
     AuthFlow, CallError, Capability, FieldValue, HostConfig, HostError, ImageRef, Item, ItemKind as HostKind,
@@ -679,9 +680,11 @@ impl Sources {
                 ));
             }
         }
+        let presets = convert::presets(&plugins);
         let mut snapshot = SourcesSnapshot {
             version: self.version,
             plugins,
+            presets,
             allow_community,
             secret_storage: self
                 .secrets
@@ -936,6 +939,43 @@ impl Sources {
             },
         );
         Ok(())
+    }
+
+    /// `Command::ConnectSource`: the server's address (for self-hosted
+    /// servers), the plugin on, then a login as `begin_login` starts it.
+    pub(crate) fn connect(
+        &mut self,
+        preset: &str,
+        address: Option<&str>,
+        method: AuthMethod,
+    ) -> Result<(), CoreError> {
+        let preset = presets::preset(preset)
+            .ok_or_else(|| CoreError::Other(format!("there is no service {preset:?} to connect to")))?;
+        let ctx = self.require()?.clone();
+        let info = ctx
+            .host
+            .plugin(preset.plugin)
+            .filter(|info| info.official)
+            .ok_or_else(|| {
+                CoreError::Other(format!(
+                    "{} needs its plugin, which is not installed",
+                    preset.name
+                ))
+            })?;
+        if let Some(key) = preset.address_setting {
+            let address = address.map(str::trim).filter(|a| !a.is_empty()).ok_or_else(|| {
+                CoreError::Other(format!("Enter the address of your {} server.", preset.name))
+            })?;
+            let mut settings = info.settings.as_object().cloned().unwrap_or_default();
+            settings.insert(key.to_owned(), serde_json::Value::String(address.to_owned()));
+            ctx.host
+                .set_settings(preset.plugin, &serde_json::Value::Object(settings).to_string())
+                .map_err(host_error)?;
+        }
+        if !info.enabled {
+            ctx.host.set_enabled(preset.plugin, true).map_err(host_error)?;
+        }
+        self.begin_login(preset.plugin, method)
     }
 
     fn login(&self, plugin: &str, flow: u64) -> Result<&Login, CoreError> {

@@ -10,7 +10,7 @@ use jf_session::{SourceTrack, TrackRef};
 
 use crate::types::{
     ArtworkRef, AuthField, AuthFieldKind, AuthMethod, AuthStep, ItemKind, PluginBadge, PluginSummary,
-    SourceItem,
+    SourceItem, SourcePreset,
 };
 
 /// The `source` of library results.
@@ -318,6 +318,34 @@ fn entry(
 }
 
 /// A plugin as the `Sources` slice shows it.
+/// The services of `jf_plugin_model::presets` whose official plugin is
+/// installed, in the list's order.
+pub(crate) fn presets(plugins: &[PluginSummary]) -> Vec<SourcePreset> {
+    jf_plugin_host::presets::PRESETS
+        .iter()
+        .filter_map(|preset| {
+            let plugin = plugins
+                .iter()
+                .find(|p| p.id == preset.plugin && p.badge == PluginBadge::Official)?;
+            let address = preset.address_setting.and_then(|key| {
+                let settings: serde_json::Value = serde_json::from_str(&plugin.settings_json).ok()?;
+                let address = settings.get(key)?.as_str()?.trim();
+                (!address.is_empty()).then(|| address.to_owned())
+            });
+            Some(SourcePreset {
+                id: preset.id.to_owned(),
+                name: preset.name.to_owned(),
+                plugin: plugin.id.clone(),
+                auth_methods: plugin.auth_methods.clone(),
+                needs_address: preset.address_setting.is_some(),
+                address,
+                address_example: preset.address_example.map(str::to_owned),
+                account: plugin.account.clone(),
+            })
+        })
+        .collect()
+}
+
 pub(crate) fn summary(
     info: &PluginInfo,
     allow_community: bool,
