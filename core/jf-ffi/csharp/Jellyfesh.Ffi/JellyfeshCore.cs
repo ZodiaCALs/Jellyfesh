@@ -361,6 +361,10 @@ public static class JellyfeshMethods
     public static IReadOnlyList<DeviceInfo> OutputDevices() =>
         Results.Unwrap(Native.TakeString(Native.jf_output_devices()), JellyfeshJsonContext.Default.IReadOnlyListDeviceInfo)!;
 
+    /// <summary>The equalizer presets, in the order every app lists them. Applying one sets Settings.Eq.</summary>
+    public static IReadOnlyList<EqPreset> EqPresets() =>
+        Results.Unwrap(Native.TakeString(Native.jf_eq_presets()), JellyfeshJsonContext.Default.IReadOnlyListEqPreset)!;
+
     /// <summary>Nanoseconds on the clock playback anchors are stamped with (for DisplayClock).</summary>
     public static ulong MonotonicNowNs() => Native.jf_monotonic_now_ns();
 

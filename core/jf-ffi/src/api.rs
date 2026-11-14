@@ -342,6 +342,12 @@ pub fn output_devices() -> Result<Vec<DeviceInfo>, CoreFfiError> {
     Ok(jf::output_devices()?.conv())
 }
 
+/// The equalizer presets, in the order every app lists them. Applying one sets `Settings.eq`.
+#[uniffi::export]
+pub fn eq_presets() -> Vec<EqPreset> {
+    jf::eq_presets().conv()
+}
+
 /// Nanoseconds on the monotonic clock that playback anchors are stamped with. Read it for
 /// `DisplayClock` (it is the same clock in the same process).
 #[uniffi::export]

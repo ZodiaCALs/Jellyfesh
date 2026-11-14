@@ -348,6 +348,18 @@ pub fn output_devices() -> Result<Vec<DeviceInfo>, CoreError> {
     Ok(jf_engine::list_devices()?)
 }
 
+/// The equalizer presets every app offers, in their order. Applying one sets
+/// [`Settings::eq`] to its settings (keeping the person's preamp is up to the app).
+pub fn eq_presets() -> Vec<EqPreset> {
+    EqSettings::presets()
+        .into_iter()
+        .map(|(id, settings)| EqPreset {
+            id: id.to_owned(),
+            settings,
+        })
+        .collect()
+}
+
 impl Drop for Core {
     fn drop(&mut self) {
         self.stop();

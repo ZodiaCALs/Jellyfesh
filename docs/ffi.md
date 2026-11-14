@@ -78,7 +78,9 @@ The shells code against these names; they follow the Rust ones.
 `shutdown()`. Swift and Kotlin use lowerCamelCase (`searchLibrary`,
 `artworkThumbnail(hash:sizePx:)`), C# PascalCase (`SearchLibrary`).
 
-**Free functions:** `output_devices()` (throws), `monotonic_now_ns()`,
+**Free functions:** `output_devices()` (throws), `eq_presets()` (the equalizer
+presets every app lists: `flat`, `bass_boost`, `vocal`, `treble`, shown as
+"Flat", "Bass Boost", "Vocal", "Treble"), `monotonic_now_ns()`,
 `default_data_dir()`, `default_cache_dir()`, `library_version()`.
 
 **Config:** `CoreConfig { data_dir, cache_dir, output: OutputKind, buffer_ms
@@ -299,6 +301,7 @@ char *jf_core_<query>(const JellyfeshCore *core, const char *args_json);    /* o
 void jf_core_shutdown(const JellyfeshCore *core);
 void jf_core_free(JellyfeshCore *core);                      /* shuts down if needed */
 char *jf_output_devices(void);                               /* {"ok"} or {"error"} */
+char *jf_eq_presets(void);                                   /* {"ok": [EqPreset]} */
 uint64_t jf_monotonic_now_ns(void);
 char *jf_default_data_dir(void);  char *jf_default_cache_dir(void);  char *jf_library_version(void);
 void jf_string_free(char *s);

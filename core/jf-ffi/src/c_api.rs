@@ -519,6 +519,15 @@ pub extern "C" fn jf_output_devices() -> *mut c_char {
     into_c(envelope(guard(crate::api::output_devices, || Err(panicked()))))
 }
 
+/// `{"ok": [EqPreset]}`.
+#[unsafe(no_mangle)]
+pub extern "C" fn jf_eq_presets() -> *mut c_char {
+    into_c(envelope(guard(
+        || Ok(crate::api::eq_presets()),
+        || Err(panicked()),
+    )))
+}
+
 /// See `monotonic_now_ns` in `docs/ffi.md`.
 #[unsafe(no_mangle)]
 pub extern "C" fn jf_monotonic_now_ns() -> u64 {

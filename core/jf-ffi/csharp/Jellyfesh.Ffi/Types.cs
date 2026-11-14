@@ -408,6 +408,10 @@ public sealed record EqSettings(bool Enabled, float PreampDb, IReadOnlyList<EqBa
 
 public sealed record EqBand(BandKind Kind, float FreqHz, float GainDb, float Q, bool Enabled);
 
+/// <summary>An equalizer preset (JellyfeshMethods.EqPresets). Id is flat, bass_boost, vocal or treble: show it
+/// translated ("Flat", "Bass Boost", "Vocal", "Treble").</summary>
+public sealed record EqPreset(string Id, EqSettings Settings);
+
 [JsonConverter(typeof(JsonStringEnumConverter<BandKind>))]
 public enum BandKind
 {

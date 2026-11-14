@@ -49,6 +49,20 @@ fn events_and_snapshots_convert_both_ways() {
 }
 
 #[test]
+fn eq_presets_come_from_the_engine() {
+    let presets = eq_presets();
+    let ids: Vec<&str> = presets.iter().map(|p| p.id.as_str()).collect();
+    assert_eq!(ids, ["flat", "bass_boost", "vocal", "treble"]);
+    for preset in jf::eq_presets() {
+        check::<jf::EqPreset, EqPreset>(preset);
+    }
+    assert_eq!(
+        EqSettings::from(jf::EqSettings::bass_boost()),
+        presets[1].settings
+    );
+}
+
+#[test]
 fn query_results_and_arguments_convert_both_ways() {
     check::<jf::Track, Track>(common::track());
     check::<jf::Album, Album>(common::album());
@@ -251,6 +265,7 @@ fn contract() -> String {
         "DeviceInfo",
         &DeviceInfo::from(common::devices().devices[0].clone()),
     );
+    add("EqPreset", &EqPreset::from(jf::eq_presets()[1].clone()));
 
     let mut out = String::from("{\n");
     out += "  \"about\": \"JSON contract of the jf-ffi C ABI. Each sample is one mirror type as the C ABI \

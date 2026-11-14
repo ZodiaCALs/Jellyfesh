@@ -27,8 +27,8 @@ mod secrets;
 pub mod types;
 
 pub use api::{
-    CoreListener, JellyfeshCore, default_cache_dir, default_data_dir, library_version, monotonic_now_ns,
-    output_devices,
+    CoreListener, JellyfeshCore, default_cache_dir, default_data_dir, eq_presets, library_version,
+    monotonic_now_ns, output_devices,
 };
 pub use error::CoreFfiError;
 pub use secrets::{SecretStore, SecretStoreError};

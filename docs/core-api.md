@@ -78,7 +78,7 @@ on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`.
 `recently_added`, `recently_played`, `most_played`, `playlists`, `playlist`,
 `playlist_entries`, `favorites`, `is_favorite`, `artwork_thumbnail(hash, size)`,
 `export_playlist(id, path)`, `roots`, `stats`, `queue_window`, `history`,
-`tracks_for_query`; free function `output_devices()`. They are cheap enough
+`tracks_for_query`; free functions `output_devices()` and `eq_presets()`. They are cheap enough
 for list views but are not for per-frame use; call them off the UI thread.
 
 Track lists (playlists, favourites, history) come as `TrackRow`s: what to

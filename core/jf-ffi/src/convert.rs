@@ -394,6 +394,7 @@ mirror_enum!(CoreReplayGainMode => ReplayGainMode { Off, Track, Album });
 
 mirror_struct!(jf::EqSettings => EqSettings { enabled, preamp_db, bands });
 mirror_struct!(jf::EqBand => EqBand { kind, freq_hz, gain_db, q, enabled });
+mirror_struct!(jf::EqPreset => EqPreset { id, settings });
 
 use jf::BandKind as CoreBandKind;
 mirror_enum!(CoreBandKind => BandKind { Peaking, LowShelf, HighShelf });

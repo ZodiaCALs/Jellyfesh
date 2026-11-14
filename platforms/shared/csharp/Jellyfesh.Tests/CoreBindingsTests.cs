@@ -196,6 +196,9 @@ public sealed class CoreBindingsTests : IDisposable
         Assert.Null(core.Playlist(99));
         Assert.Null(core.Track(12345));
         Assert.False(string.IsNullOrEmpty(JellyfeshMethods.LibraryVersion()));
+        IReadOnlyList<EqPreset> presets = JellyfeshMethods.EqPresets();
+        Assert.Equal(["flat", "bass_boost", "vocal", "treble"], presets.Select(p => p.Id));
+        Assert.All(presets, p => Assert.Equal(10, p.Settings.Bands.Count));
         ulong a = JellyfeshMethods.MonotonicNowNs();
         Thread.Sleep(2);
         Assert.True(JellyfeshMethods.MonotonicNowNs() >= a + 1_000_000);

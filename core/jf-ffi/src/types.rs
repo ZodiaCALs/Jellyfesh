@@ -456,6 +456,16 @@ pub enum BandKind {
 
 // ---- devices and sources ------------------------------------------------------------------------
 
+/// An equalizer preset: every app offers the same ones, in this order.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct EqPreset {
+    /// Stable name: `flat`, `bass_boost`, `vocal`, `treble`. Show it translated ("Flat", "Bass
+    /// Boost", "Vocal", "Treble").
+    pub id: String,
+    /// Its bands, switched on, with a 0 dB preamp.
+    pub settings: EqSettings,
+}
+
 /// A sound output device.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
 pub struct DeviceInfo {

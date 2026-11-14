@@ -104,6 +104,17 @@ impl EqSettings {
         Self::graphic([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.5, 3.0, 4.5, 6.0])
     }
 
+    /// The presets every app offers, in their order, by name: `flat`, `bass_boost`, `vocal`,
+    /// `treble` (the apps show "Flat", "Bass Boost", "Vocal" and "Treble").
+    pub fn presets() -> Vec<(&'static str, EqSettings)> {
+        vec![
+            ("flat", Self::flat()),
+            ("bass_boost", Self::bass_boost()),
+            ("vocal", Self::vocal()),
+            ("treble", Self::treble()),
+        ]
+    }
+
     fn graphic(gains: [f32; MAX_BANDS]) -> Self {
         let bands = PRESET_FREQS
             .iter()

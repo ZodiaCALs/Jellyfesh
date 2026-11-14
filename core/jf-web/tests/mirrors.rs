@@ -27,6 +27,10 @@ fn equaliser_presets_match_the_engine() {
         assert_eq!(ours.is_active(), engine.is_active());
     }
     assert_eq!(rules::MAX_BANDS, jf_engine::dsp::MAX_BANDS);
+    assert_eq!(
+        as_json(&EqSettings::presets()),
+        as_json(&jf_engine::EqSettings::presets())
+    );
 }
 
 #[test]

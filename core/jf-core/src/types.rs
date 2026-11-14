@@ -481,6 +481,16 @@ impl Default for Settings {
     }
 }
 
+/// An equalizer preset ([`crate::eq_presets`]).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EqPreset {
+    /// Stable name: `flat`, `bass_boost`, `vocal`, `treble`. Apps show it translated ("Flat",
+    /// "Bass Boost", "Vocal", "Treble").
+    pub id: String,
+    /// Its bands, switched on, with a 0 dB preamp.
+    pub settings: EqSettings,
+}
+
 /// The `Devices` slice.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DevicesSnapshot {

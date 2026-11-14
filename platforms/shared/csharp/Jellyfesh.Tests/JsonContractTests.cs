@@ -39,6 +39,7 @@ public class JsonContractTests
                 "QueueItem" => RoundTrip(json, JellyfeshJsonContext.Default.QueueItem),
                 "HistoryEntry" => RoundTrip(json, JellyfeshJsonContext.Default.HistoryEntry),
                 "DeviceInfo" => RoundTrip(json, JellyfeshJsonContext.Default.DeviceInfo),
+                "EqPreset" => RoundTrip(json, JellyfeshJsonContext.Default.EqPreset),
                 _ => throw new Xunit.Sdk.XunitException($"no C# type for sample {name}"),
             };
             using JsonDocument back = JsonDocument.Parse(written);
@@ -47,7 +48,7 @@ public class JsonContractTests
             count++;
         }
         Assert.True(count > 100, $"only {count} samples");
-        Assert.Equal(17, seen.Count);
+        Assert.Equal(18, seen.Count);
     }
 
     [Fact]
