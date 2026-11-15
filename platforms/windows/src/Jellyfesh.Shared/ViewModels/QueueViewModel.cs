@@ -167,8 +167,15 @@ public sealed partial class QueueViewModel : ObservableObject
         }
     }
 
+    /// <summary>Clear Queue asks first: playback stops and every song leaves the queue.</summary>
     [RelayCommand]
-    private void Clear() => _s.Send(new CoreCommand.ClearQueue());
+    private async Task Clear()
+    {
+        if (!IsEmpty && await _s.Platform.ConfirmAsync(_s.L.Get("Queue_ClearTitle"), _s.L.Get("Queue_ClearBody"), _s.L.Get("Action_Clear"), _s.L.Get("Action_Cancel")))
+        {
+            _s.Send(new CoreCommand.ClearQueue());
+        }
+    }
 
     /// <summary>
     /// The person dropped <paramref name="item"/> at <paramref name="upNextIndex"/> in the up-next

@@ -54,7 +54,7 @@ public class QrAndSettingsTests
               "required": ["server_url", "username"],
               "properties": {
                 "server_url": { "type": "string", "format": "uri", "title": "Server" },
-                "username": { "type": "string", "title": "User name" },
+                "username": { "type": "string", "title": "User Name" },
                 "api_key": { "type": "string", "format": "password" },
                 "bitrate": { "type": "integer", "minimum": 64, "maximum": 320, "default": 192 },
                 "transcode": { "type": "boolean", "default": true },

@@ -1,3 +1,4 @@
+using Jellyfesh.App.Views;
 using Jellyfesh.Core;
 using Jellyfesh.ViewModels;
 using Microsoft.UI.Xaml.Controls;
@@ -5,29 +6,32 @@ using Microsoft.UI.Xaml.Controls;
 namespace Jellyfesh.App.Shell;
 
 /// <summary>
-/// The context menu of a track row: play next, add to the queue, add to a playlist (or a new one),
-/// favourite, and an optional removal (from a playlist, from favourites). It only sends commands.
-/// One menu serves every row of a list; it reads its row when it opens.
+/// The song menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to Favourites or Remove
+/// from Favourites, Go to Album, Go to Artist and Show in Explorer, and an optional removal (from a
+/// playlist, from favourites). It only sends commands and opens pages. One menu serves every row of
+/// a list; it reads its row when it opens.
 /// </summary>
 internal sealed class TrackMenu
 {
     private readonly ShellServices _s;
-    private readonly MenuFlyoutItem _favorite;
+    private readonly MenuFlyoutItem _playNext;
+    private readonly MenuFlyoutItem _playLast;
     private readonly MenuFlyoutSubItem _playlists;
+    private readonly MenuFlyoutItem _favorite;
+    private readonly MenuFlyoutItem _goToAlbum;
+    private readonly MenuFlyoutItem _goToArtist;
+    private readonly MenuFlyoutItem _showFile;
     private readonly MenuFlyoutItem? _remove;
-    private readonly Action<TrackItem>? _onRemove;
     private TrackItem? _item;
 
     public TrackMenu(ShellServices services, string? removeKey = null, Action<TrackItem>? onRemove = null)
     {
         _s = services;
-        _onRemove = onRemove;
         var l = services.L;
         Flyout = new MenuFlyout();
-        Flyout.Items.Add(Item(l.Get("Menu_PlayNext"), () => TrackActions.PlayNext(_s, Items())));
-        Flyout.Items.Add(Item(l.Get("Menu_AddToQueue"), () => TrackActions.PlayLast(_s, Items())));
+        _playNext = Item(l.Get("Menu_PlayNext"), () => TrackActions.PlayNext(_s, Items()));
+        _playLast = Item(l.Get("Menu_PlayLast"), () => TrackActions.PlayLast(_s, Items()));
         _playlists = new MenuFlyoutSubItem { Text = l.Get("Menu_AddToPlaylist") };
-        Flyout.Items.Add(_playlists);
         _favorite = Item(l.Get("Menu_Favorite"), () =>
         {
             if (_item is not null)
@@ -35,7 +39,17 @@ internal sealed class TrackMenu
                 TrackActions.ToggleFavorite(_s, _item);
             }
         });
+        _goToAlbum = Item(l.Get("Menu_GoToAlbum"), GoToAlbum);
+        _goToArtist = Item(l.Get("Menu_GoToArtist"), GoToArtist);
+        _showFile = Item(l.Get("Menu_ShowInExplorer"), ShowFile);
+        Flyout.Items.Add(_playNext);
+        Flyout.Items.Add(_playLast);
+        Flyout.Items.Add(_playlists);
         Flyout.Items.Add(_favorite);
+        Flyout.Items.Add(new MenuFlyoutSeparator());
+        Flyout.Items.Add(_goToAlbum);
+        Flyout.Items.Add(_goToArtist);
+        Flyout.Items.Add(_showFile);
         if (removeKey is not null && onRemove is not null)
         {
             Flyout.Items.Add(new MenuFlyoutSeparator());
@@ -43,7 +57,7 @@ internal sealed class TrackMenu
             {
                 if (_item is not null)
                 {
-                    _onRemove?.Invoke(_item);
+                    onRemove(_item);
                 }
             });
             Flyout.Items.Add(_remove);
@@ -63,42 +77,49 @@ internal sealed class TrackMenu
         return item;
     }
 
+    private async void GoToAlbum()
+    {
+        if (_item is { } item && await TrackPlaces.AlbumAsync(_s, item) is { } album)
+        {
+            AppHost.Window.Navigate(typeof(AlbumPage), album);
+        }
+    }
+
+    private async void GoToArtist()
+    {
+        if (_item is { } item && await TrackPlaces.ArtistAsync(_s, item) is { } artist)
+        {
+            AppHost.Window.Navigate(typeof(ArtistPage), artist);
+        }
+    }
+
+    private async void ShowFile()
+    {
+        if (_item is { } item)
+        {
+            await TrackPlaces.ShowInExplorerAsync(_s, item);
+        }
+    }
+
     private async void OnOpening(object? sender, object e)
     {
         _item = Lists.ItemOf<TrackItem>(Flyout);
-        var l = _s.L;
+        var loaded = _item is { IsLoaded: true };
         var playable = _item is { IsLoaded: true, IsPlayable: true };
-        foreach (var entry in Flyout.Items.OfType<MenuFlyoutItem>())
+        _playNext.IsEnabled = playable;
+        _playLast.IsEnabled = playable;
+        _favorite.Text = _s.L.Get(_item?.IsFavorite == true ? "Menu_Unfavorite" : "Menu_Favorite");
+        _favorite.IsEnabled = loaded && _item?.Ref is TrackRef.Library or TrackRef.Source;
+        _goToAlbum.IsEnabled = loaded && TrackPlaces.HasPages(_item!);
+        _goToArtist.IsEnabled = _goToAlbum.IsEnabled;
+        _showFile.IsEnabled = loaded && TrackPlaces.HasFile(_item!);
+        if (_remove is not null)
         {
-            entry.IsEnabled = _item is { IsLoaded: true };
+            _remove.IsEnabled = loaded;
         }
 
-        Flyout.Items.OfType<MenuFlyoutItem>().Take(2).ToList().ForEach(i => i.IsEnabled = playable);
-        _favorite.Text = l.Get(_item?.IsFavorite == true ? "Menu_Unfavorite" : "Menu_Favorite");
-        _favorite.IsEnabled = _item?.Ref is TrackRef.Library or TrackRef.Source;
-        _playlists.IsEnabled = _item is { IsLoaded: true, Ref: not null };
-
-        _playlists.Items.Clear();
-        var create = new MenuFlyoutItem { Text = l.Get("Menu_NewPlaylist") };
-        create.Click += async (_, _) =>
-        {
-            var item = _item;
-            var name = await AppHost.Platform.PromptTextAsync(l.Get("Playlist_NewTitle"), l.Get("Playlist_DefaultName"), l.Get("Action_Create"));
-            if (!string.IsNullOrWhiteSpace(name) && item?.Ref is { } r)
-            {
-                _s.Send(new CoreCommand.CreatePlaylist(name.Trim(), [r]));
-            }
-        };
-        _playlists.Items.Add(create);
-        var lists = await _s.QueryAsync(c => c.Playlists());
-        if (lists.IsOk && lists.Value!.Count > 0)
-        {
-            _playlists.Items.Add(new MenuFlyoutSeparator());
-            foreach (var p in lists.Value!)
-            {
-                var id = p.Id;
-                _playlists.Items.Add(Item(p.Name, () => TrackActions.AddToPlaylist(_s, id, Items())));
-            }
-        }
+        var item = _item;
+        _playlists.IsEnabled = item is { IsLoaded: true, Ref: not null };
+        await PlaylistMenu.FillAsync(_playlists, _s, () => Task.FromResult<IReadOnlyList<TrackRef>>(item?.Ref is { } r ? [r] : []));
     }
 }

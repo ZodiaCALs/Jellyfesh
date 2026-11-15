@@ -91,7 +91,7 @@ public sealed record AppSettings(
         CrossfadeSettings.Default,
         ReplayGainMode.Off,
         PreampDb: 0f,
-        EqSettings.Flat,
+        EqSettings.None,
         OutputDevice: null,
         ResumeOnLaunch: false,
         WatchFolders: true,

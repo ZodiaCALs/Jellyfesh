@@ -14,6 +14,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="About_Licences.Content" xml:space="preserve">
+    <value>サードパーティのライセンス</value>
+  </data>
   <data name="About_Logs.Content" xml:space="preserve">
     <value>ログフォルダを開く</value>
   </data>
@@ -32,6 +35,9 @@
   <data name="Action_Cancel" xml:space="preserve">
     <value>キャンセル</value>
   </data>
+  <data name="Action_Clear" xml:space="preserve">
+    <value>消去</value>
+  </data>
   <data name="Action_Close" xml:space="preserve">
     <value>閉じる</value>
   </data>
@@ -44,6 +50,9 @@
   <data name="Action_PlayButton.Content" xml:space="preserve">
     <value>再生</value>
   </data>
+  <data name="Action_RemoveFolder" xml:space="preserve">
+    <value>フォルダを外す</value>
+  </data>
   <data name="Action_Rename" xml:space="preserve">
     <value>名前を変更</value>
   </data>
@@ -53,23 +62,11 @@
   <data name="Action_Uninstall" xml:space="preserve">
     <value>アンインストール</value>
   </data>
-  <data name="Album_AddToQueueItem.Text" xml:space="preserve">
-    <value>キューに追加</value>
-  </data>
   <data name="Album_ArtistYear" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
-  <data name="Album_More.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>その他</value>
-  </data>
-  <data name="Album_More.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>その他</value>
-  </data>
   <data name="Album_PlayAlbum" xml:space="preserve">
     <value>アルバムを再生</value>
-  </data>
-  <data name="Album_PlayNextItem.Text" xml:space="preserve">
-    <value>次に再生</value>
   </data>
   <data name="Album_Summary" xml:space="preserve">
     <value>{0}、{1}</value>
@@ -78,13 +75,19 @@
     <value>トラック</value>
   </data>
   <data name="Albums_Empty.Text" xml:space="preserve">
-    <value>アルバムはまだありません。設定で音楽フォルダを追加してください。</value>
+    <value>音楽フォルダを追加すると、ここにアルバムが表示されます。</value>
+  </data>
+  <data name="Albums_EmptyTitle.Text" xml:space="preserve">
+    <value>アルバムはまだありません</value>
   </data>
   <data name="Albums_Grid.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>アルバム</value>
   </data>
   <data name="Albums_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>並べ替え</value>
+    <value>アルバムの並べ替え</value>
+  </data>
+  <data name="Albums_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>アルバムの並べ替え</value>
   </data>
   <data name="Albums_Title.Text" xml:space="preserve">
     <value>アルバム</value>
@@ -146,6 +149,9 @@
   <data name="Appearance_LyricsCentre.Content" xml:space="preserve">
     <value>中央揃え</value>
   </data>
+  <data name="Appearance_LyricsHint.Text" xml:space="preserve">
+    <value>歌詞は曲のタグと、曲と同じ場所にある .lrc・.ttml・.vtt ファイルから読み込みます。翻訳とローマ字は歌詞に含まれている場合に表示されます。</value>
+  </data>
   <data name="Appearance_LyricsLarge.Content" xml:space="preserve">
     <value>大</value>
   </data>
@@ -180,10 +186,10 @@
     <value>ガラスの代わりに不透明な面を使い、動きの代わりに短いフェードにし、歌詞の単語ごとのハイライトとスクロールのアニメーションをなくします。Windows 自体のアニメーションと透明効果の設定にも従います。</value>
   </data>
   <data name="Appearance_Romanization.Header" xml:space="preserve">
-    <value>各行の下にローマ字を表示する</value>
+    <value>ローマ字を表示</value>
   </data>
   <data name="Appearance_Style.Text" xml:space="preserve">
-    <value>再生画面の背景</value>
+    <value>再生中画面の背景</value>
   </data>
   <data name="Appearance_StyleArtwork.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>アートワーク</value>
@@ -192,7 +198,7 @@
     <value>アートワーク</value>
   </data>
   <data name="Appearance_StyleChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>再生画面の背景</value>
+    <value>再生中画面の背景</value>
   </data>
   <data name="Appearance_StyleHint.Text" xml:space="preserve">
     <value>ぼかしたアートワーク、または同じ色の Misty の背景です。</value>
@@ -210,13 +216,13 @@
     <value>アクセントカラー</value>
   </data>
   <data name="Appearance_System.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Windows に合わせる</value>
+    <value>システム</value>
   </data>
   <data name="Appearance_SystemLabel.Text" xml:space="preserve">
     <value>システム</value>
   </data>
   <data name="Appearance_Translation.Header" xml:space="preserve">
-    <value>各行の下に翻訳を表示する</value>
+    <value>翻訳を表示</value>
   </data>
   <data name="Appearance_Transparency.Text" xml:space="preserve">
     <value>透明度</value>
@@ -249,7 +255,10 @@
     <value>曲</value>
   </data>
   <data name="Artists_Empty.Text" xml:space="preserve">
-    <value>アーティストはまだいません。</value>
+    <value>音楽フォルダを追加すると、ここにアーティストが表示されます。</value>
+  </data>
+  <data name="Artists_EmptyTitle.Text" xml:space="preserve">
+    <value>アーティストはまだいません</value>
   </data>
   <data name="Artists_Grid.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>アーティスト</value>
@@ -268,6 +277,9 @@
   </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>キュー</value>
+  </data>
+  <data name="Common_AddMusicFolder.Content" xml:space="preserve">
+    <value>音楽フォルダを追加…</value>
   </data>
   <data name="Common_NotAvailable.Text" xml:space="preserve">
     <value>今後のビルドで対応します。</value>
@@ -332,6 +344,9 @@
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>低音強調</value>
   </data>
+  <data name="Eq_Custom" xml:space="preserve">
+    <value>カスタム</value>
+  </data>
   <data name="Eq_Flat" xml:space="preserve">
     <value>フラット</value>
   </data>
@@ -353,6 +368,9 @@
   <data name="Favorites_Empty.Text" xml:space="preserve">
     <value>ハートを付けた曲がここに表示されます。</value>
   </data>
+  <data name="Favorites_EmptyTitle.Text" xml:space="preserve">
+    <value>お気に入りはまだありません</value>
+  </data>
   <data name="Favorites_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>お気に入り</value>
   </data>
@@ -368,14 +386,17 @@
   <data name="Format_WithBitrate" xml:space="preserve">
     <value>{0} · {1} kbps</value>
   </data>
-  <data name="Home_AddFolder.Content" xml:space="preserve">
-    <value>音楽フォルダを追加</value>
+  <data name="Home_AddSource.Content" xml:space="preserve">
+    <value>ソースを追加</value>
   </data>
   <data name="Home_EmptyBody.Text" xml:space="preserve">
-    <value>音楽のフォルダを追加すると、Jellyfesh が曲・アルバム・歌詞を見つけます。</value>
+    <value>音楽フォルダを追加するか、「ソース」でサーバーに接続してください。</value>
   </data>
   <data name="Home_EmptyTitle.Text" xml:space="preserve">
-    <value>ライブラリは空です</value>
+    <value>Jellyfesh へようこそ</value>
+  </data>
+  <data name="Home_LibrarySize" xml:space="preserve">
+    <value>{0} · {1} · {2}</value>
   </data>
   <data name="Home_MostPlayed.Text" xml:space="preserve">
     <value>よく再生する曲</value>
@@ -383,17 +404,11 @@
   <data name="Home_MostPlayedList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>よく再生する曲</value>
   </data>
-  <data name="Home_Playlists.Text" xml:space="preserve">
-    <value>プレイリスト</value>
-  </data>
-  <data name="Home_PlaylistsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>プレイリスト</value>
-  </data>
   <data name="Home_RecentlyAdded.Text" xml:space="preserve">
-    <value>最近追加した曲</value>
+    <value>最近追加した項目</value>
   </data>
   <data name="Home_RecentlyAddedList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>最近追加した曲</value>
+    <value>最近追加した項目</value>
   </data>
   <data name="Home_RecentlyPlayed.Text" xml:space="preserve">
     <value>最近再生した曲</value>
@@ -458,14 +473,32 @@
   <data name="Library_Folders.Text" xml:space="preserve">
     <value>音楽フォルダ</value>
   </data>
+  <data name="Library_LastScan.Text" xml:space="preserve">
+    <value>前回のスキャン</value>
+  </data>
   <data name="Library_MissingTrack" xml:space="preserve">
     <value>見つからない曲</value>
   </data>
   <data name="Library_RemoveFolder.Content" xml:space="preserve">
-    <value>削除</value>
+    <value>フォルダを外す…</value>
+  </data>
+  <data name="Library_RemoveFolderBody" xml:space="preserve">
+    <value>フォルダ内の曲はライブラリとプレイリストから外れます。ファイルはそのまま残ります。</value>
+  </data>
+  <data name="Library_RemoveFolderTitle" xml:space="preserve">
+    <value>「{0}」をライブラリから外しますか？</value>
   </data>
   <data name="Library_Rescan.Content" xml:space="preserve">
-    <value>再スキャン</value>
+    <value>ライブラリを再スキャン</value>
+  </data>
+  <data name="Library_RescanHint.Text" xml:space="preserve">
+    <value>新しいファイル、変更・削除されたファイルを探します。</value>
+  </data>
+  <data name="Library_RescanTitle.Text" xml:space="preserve">
+    <value>ライブラリを再スキャン</value>
+  </data>
+  <data name="Library_ShowFolder.Content" xml:space="preserve">
+    <value>エクスプローラーで表示</value>
   </data>
   <data name="Library_StatsLine" xml:space="preserve">
     <value>{0}、{1}、{2} · {3}</value>
@@ -473,14 +506,32 @@
   <data name="Library_UnknownArtist" xml:space="preserve">
     <value>不明なアーティスト</value>
   </data>
-  <data name="Library_Watch.Header" xml:space="preserve">
-    <value>これらのフォルダの変更を自動で反映する</value>
+  <data name="Library_Watch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>フォルダを監視</value>
   </data>
-  <data name="Lyrics_Heading.Text" xml:space="preserve">
-    <value>歌詞</value>
+  <data name="Library_WatchHint.Text" xml:space="preserve">
+    <value>ファイルが変わったらライブラリを更新します。</value>
   </data>
-  <data name="Lyrics_Hint.Text" xml:space="preserve">
-    <value>歌詞は曲のタグと、曲と同じ場所にある .lrc・.ttml・.vtt ファイルから読み込みます。翻訳とローマ字は歌詞に含まれている場合に表示されます。</value>
+  <data name="Library_WatchTitle.Text" xml:space="preserve">
+    <value>フォルダを監視</value>
+  </data>
+  <data name="Lyrics_InfoFrom" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Lyrics_InfoLine" xml:space="preserve">
+    <value>行ごと</value>
+  </data>
+  <data name="Lyrics_InfoNone" xml:space="preserve">
+    <value>見つかりません</value>
+  </data>
+  <data name="Lyrics_InfoTags" xml:space="preserve">
+    <value>ファイルのタグ内</value>
+  </data>
+  <data name="Lyrics_InfoUnsynced" xml:space="preserve">
+    <value>同期なし</value>
+  </data>
+  <data name="Lyrics_InfoWord" xml:space="preserve">
+    <value>単語ごと</value>
   </data>
   <data name="Lyrics_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌詞</value>
@@ -488,23 +539,20 @@
   <data name="Lyrics_None.Text" xml:space="preserve">
     <value>この曲には歌詞がありません</value>
   </data>
-  <data name="Lyrics_Romanization.Header" xml:space="preserve">
-    <value>各行の下にローマ字を表示する</value>
-  </data>
-  <data name="Lyrics_Translation.Header" xml:space="preserve">
-    <value>各行の下に翻訳を表示する</value>
-  </data>
   <data name="Menu_AddToPlaylist" xml:space="preserve">
-    <value>プレイリストに追加</value>
-  </data>
-  <data name="Menu_AddToQueue" xml:space="preserve">
-    <value>キューに追加</value>
+    <value>プレイリストに追加…</value>
   </data>
   <data name="Menu_DeletePlaylist" xml:space="preserve">
-    <value>プレイリストを削除</value>
+    <value>プレイリストを削除…</value>
   </data>
   <data name="Menu_Favorite" xml:space="preserve">
     <value>お気に入りに追加</value>
+  </data>
+  <data name="Menu_GoToAlbum" xml:space="preserve">
+    <value>アルバムへ移動</value>
+  </data>
+  <data name="Menu_GoToArtist" xml:space="preserve">
+    <value>アーティストへ移動</value>
   </data>
   <data name="Menu_NewPlaylist" xml:space="preserve">
     <value>新規プレイリスト…</value>
@@ -512,14 +560,20 @@
   <data name="Menu_Play" xml:space="preserve">
     <value>再生</value>
   </data>
+  <data name="Menu_PlayLast" xml:space="preserve">
+    <value>最後に再生</value>
+  </data>
   <data name="Menu_PlayNext" xml:space="preserve">
     <value>次に再生</value>
   </data>
   <data name="Menu_RemoveFromPlaylist" xml:space="preserve">
-    <value>このプレイリストから削除</value>
+    <value>プレイリストから削除</value>
   </data>
   <data name="Menu_RemoveFromQueue" xml:space="preserve">
     <value>キューから削除</value>
+  </data>
+  <data name="Menu_ShowInExplorer" xml:space="preserve">
+    <value>エクスプローラーで表示</value>
   </data>
   <data name="Menu_Shuffle" xml:space="preserve">
     <value>シャッフル</value>
@@ -532,6 +586,30 @@
   </data>
   <data name="Mini_Open.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>再生画面を開く</value>
+  </data>
+  <data name="More_AddToPlaylist.Text" xml:space="preserve">
+    <value>プレイリストに追加…</value>
+  </data>
+  <data name="More_Button.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>その他</value>
+  </data>
+  <data name="More_Button.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>その他</value>
+  </data>
+  <data name="More_Delete.Text" xml:space="preserve">
+    <value>プレイリストを削除…</value>
+  </data>
+  <data name="More_Export.Text" xml:space="preserve">
+    <value>プレイリストを書き出す…</value>
+  </data>
+  <data name="More_PlayLast.Text" xml:space="preserve">
+    <value>最後に再生</value>
+  </data>
+  <data name="More_PlayNext.Text" xml:space="preserve">
+    <value>次に再生</value>
+  </data>
+  <data name="More_Rename.Text" xml:space="preserve">
+    <value>名前を変更…</value>
   </data>
   <data name="Nav_Albums.Content" xml:space="preserve">
     <value>アルバム</value>
@@ -569,6 +647,9 @@
   <data name="NowPlaying_InfoAlbum.Text" xml:space="preserve">
     <value>アルバム</value>
   </data>
+  <data name="NowPlaying_InfoArtist.Text" xml:space="preserve">
+    <value>アーティスト</value>
+  </data>
   <data name="NowPlaying_InfoFile.Text" xml:space="preserve">
     <value>ファイル</value>
   </data>
@@ -578,11 +659,20 @@
   <data name="NowPlaying_InfoHeading.Text" xml:space="preserve">
     <value>この曲について</value>
   </data>
-  <data name="NowPlaying_InfoQueue.Text" xml:space="preserve">
-    <value>キュー内の位置</value>
+  <data name="NowPlaying_InfoLength.Text" xml:space="preserve">
+    <value>長さ</value>
+  </data>
+  <data name="NowPlaying_InfoLyrics.Text" xml:space="preserve">
+    <value>歌詞</value>
   </data>
   <data name="NowPlaying_InfoTab.Content" xml:space="preserve">
     <value>情報</value>
+  </data>
+  <data name="NowPlaying_InfoTitle.Text" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="NowPlaying_InfoYear.Text" xml:space="preserve">
+    <value>年</value>
   </data>
   <data name="NowPlaying_Library.Text" xml:space="preserve">
     <value>ライブラリ</value>
@@ -611,44 +701,74 @@
   <data name="Picker_Playlist" xml:space="preserve">
     <value>プレイリスト</value>
   </data>
-  <data name="Playback_AlbumContinuity.Header" xml:space="preserve">
-    <value>アルバムは途切れずフェードなしで再生する</value>
+  <data name="Playback_AlbumContinuity.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>アルバムの連続再生</value>
+  </data>
+  <data name="Playback_AlbumContinuityHint.Text" xml:space="preserve">
+    <value>同じアルバムの曲はフェードせずにつなぎます。</value>
+  </data>
+  <data name="Playback_AlbumContinuityTitle.Text" xml:space="preserve">
+    <value>アルバムの連続再生</value>
   </data>
   <data name="Playback_Crossfade.Text" xml:space="preserve">
     <value>クロスフェード</value>
   </data>
-  <data name="Playback_CrossfadeLength.Header" xml:space="preserve">
-    <value>長さ（秒）</value>
+  <data name="Playback_CrossfadeHint.Text" xml:space="preserve">
+    <value>曲の終わりを次の曲へ重ねてつなぎます。</value>
   </data>
-  <data name="Playback_CrossfadeOn.Header" xml:space="preserve">
-    <value>曲と曲を重ねてつなぐ</value>
+  <data name="Playback_CrossfadeLength.Header" xml:space="preserve">
+    <value>長さ</value>
+  </data>
+  <data name="Playback_CrossfadeOn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>クロスフェード</value>
+  </data>
+  <data name="Playback_DecibelValue" xml:space="preserve">
+    <value>{0} dB</value>
   </data>
   <data name="Playback_Eq.Text" xml:space="preserve">
     <value>イコライザ</value>
   </data>
-  <data name="Playback_EqOn.Header" xml:space="preserve">
-    <value>イコライザを使う</value>
+  <data name="Playback_EqOn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>イコライザ</value>
   </data>
   <data name="Playback_EqPreamp.Header" xml:space="preserve">
-    <value>イコライザのプリアンプ（dB）</value>
+    <value>プリアンプ</value>
+  </data>
+  <data name="Playback_EqPreset.Header" xml:space="preserve">
+    <value>プリセット</value>
+  </data>
+  <data name="Playback_EqPreset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>プリセット</value>
+  </data>
+  <data name="Playback_EqReset.Content" xml:space="preserve">
+    <value>フラットに戻す</value>
   </data>
   <data name="Playback_Output.Text" xml:space="preserve">
+    <value>出力</value>
+  </data>
+  <data name="Playback_OutputChoice.Header" xml:space="preserve">
     <value>出力デバイス</value>
   </data>
   <data name="Playback_OutputChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>出力デバイス</value>
   </data>
   <data name="Playback_Preamp.Header" xml:space="preserve">
-    <value>プリアンプ（dB）</value>
+    <value>プリアンプ</value>
   </data>
   <data name="Playback_ReplayGain.Text" xml:space="preserve">
-    <value>ReplayGain</value>
+    <value>音量の均一化</value>
   </data>
   <data name="Playback_ReplayGainAlbum.Content" xml:space="preserve">
     <value>アルバム</value>
   </data>
+  <data name="Playback_ReplayGainChoice.Header" xml:space="preserve">
+    <value>ReplayGain</value>
+  </data>
   <data name="Playback_ReplayGainChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>ReplayGain</value>
+  </data>
+  <data name="Playback_ReplayGainHint.Text" xml:space="preserve">
+    <value>ファイルの ReplayGain タグを使って音量を揃えます。</value>
   </data>
   <data name="Playback_ReplayGainOff.Content" xml:space="preserve">
     <value>オフ</value>
@@ -656,8 +776,20 @@
   <data name="Playback_ReplayGainTrack.Content" xml:space="preserve">
     <value>トラック</value>
   </data>
-  <data name="Playback_Resume.Header" xml:space="preserve">
-    <value>Jellyfesh の起動時に前回の続きから再生する</value>
+  <data name="Playback_Resume.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>再生を再開</value>
+  </data>
+  <data name="Playback_ResumeHint.Text" xml:space="preserve">
+    <value>Jellyfesh を開いたときに、前回の続きから再生します。</value>
+  </data>
+  <data name="Playback_ResumeTitle.Text" xml:space="preserve">
+    <value>再生を再開</value>
+  </data>
+  <data name="Playback_SecondsValue" xml:space="preserve">
+    <value>{0} 秒</value>
+  </data>
+  <data name="Playback_Startup.Text" xml:space="preserve">
+    <value>起動</value>
   </data>
   <data name="Player_ArtistAlbum" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -675,7 +807,7 @@
     <value>次へ</value>
   </data>
   <data name="Player_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>次へ (Ctrl+F)</value>
+    <value>次へ (Ctrl+→)</value>
   </data>
   <data name="Player_Pause" xml:space="preserve">
     <value>一時停止</value>
@@ -693,7 +825,7 @@
     <value>前へ</value>
   </data>
   <data name="Player_PreviousButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>前へ (Ctrl+B)</value>
+    <value>前へ (Ctrl+←)</value>
   </data>
   <data name="Player_RepeatAll" xml:space="preserve">
     <value>すべてリピート</value>
@@ -731,17 +863,11 @@
   <data name="Playlist_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>このプレイリストの曲</value>
   </data>
-  <data name="Playlist_ExportButton.Content" xml:space="preserve">
-    <value>書き出す…</value>
-  </data>
   <data name="Playlist_Exported" xml:space="preserve">
     <value>プレイリストを書き出しました</value>
   </data>
   <data name="Playlist_NewTitle" xml:space="preserve">
     <value>新規プレイリスト</value>
-  </data>
-  <data name="Playlist_RenameButton.Content" xml:space="preserve">
-    <value>名前を変更</value>
   </data>
   <data name="Playlist_RenameTitle" xml:space="preserve">
     <value>プレイリスト名を変更</value>
@@ -750,25 +876,37 @@
     <value>{0}、{1}</value>
   </data>
   <data name="Playlists_Empty.Text" xml:space="preserve">
-    <value>プレイリストはまだありません。作成するか、どのリストからでも新しいプレイリストに曲を追加できます。</value>
+    <value>プレイリストを作って曲をまとめましょう。</value>
+  </data>
+  <data name="Playlists_EmptyNew.Content" xml:space="preserve">
+    <value>新規プレイリスト…</value>
+  </data>
+  <data name="Playlists_EmptyTitle.Text" xml:space="preserve">
+    <value>プレイリストはまだありません</value>
   </data>
   <data name="Playlists_Grid.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>プレイリスト</value>
   </data>
   <data name="Playlists_Import.Content" xml:space="preserve">
-    <value>読み込む…</value>
+    <value>プレイリストを読み込む…</value>
   </data>
   <data name="Playlists_New.Content" xml:space="preserve">
-    <value>新規プレイリスト</value>
+    <value>新規プレイリスト…</value>
   </data>
   <data name="Playlists_Title.Text" xml:space="preserve">
     <value>プレイリスト</value>
   </data>
   <data name="Queue_Clear.Content" xml:space="preserve">
-    <value>消去</value>
+    <value>キューを消去</value>
+  </data>
+  <data name="Queue_ClearBody" xml:space="preserve">
+    <value>再生が止まり、キューのすべての曲が取り除かれます。</value>
+  </data>
+  <data name="Queue_ClearTitle" xml:space="preserve">
+    <value>キューを消去しますか？</value>
   </data>
   <data name="Queue_Empty.Text" xml:space="preserve">
-    <value>この曲のあとに再生する曲はありません</value>
+    <value>次に再生する曲はありません</value>
   </data>
   <data name="Queue_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>次に再生</value>
@@ -813,16 +951,10 @@
     <value>ライブラリ</value>
   </data>
   <data name="Search_NothingFound.Text" xml:space="preserve">
-    <value>見つかりませんでした。</value>
+    <value>結果はありません</value>
   </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>ソースから</value>
-  </data>
-  <data name="Search_OnlineEntries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>ソースのアルバムとプレイリスト</value>
-  </data>
-  <data name="Search_OnlineSongs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>ソースの曲</value>
   </data>
   <data name="Search_PlayAll.Content" xml:space="preserve">
     <value>すべて再生</value>
@@ -847,9 +979,6 @@
   </data>
   <data name="Settings_Library.Text" xml:space="preserve">
     <value>ライブラリ</value>
-  </data>
-  <data name="Settings_Lyrics.Text" xml:space="preserve">
-    <value>歌詞</value>
   </data>
   <data name="Settings_NotANumber" xml:space="preserve">
     <value>数値を入力してください。</value>
@@ -921,13 +1050,19 @@
     <value>{0} にサインイン</value>
   </data>
   <data name="Songs_Empty.Text" xml:space="preserve">
-    <value>曲はまだありません。設定で音楽フォルダを追加してください。</value>
+    <value>音楽フォルダを追加すると、ここに曲が表示されます。</value>
+  </data>
+  <data name="Songs_EmptyTitle.Text" xml:space="preserve">
+    <value>曲はまだありません</value>
   </data>
   <data name="Songs_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>曲</value>
   </data>
   <data name="Songs_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>並べ替え</value>
+    <value>曲の並べ替え</value>
+  </data>
+  <data name="Songs_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>曲の並べ替え</value>
   </data>
   <data name="Songs_Title.Text" xml:space="preserve">
     <value>曲</value>
@@ -940,6 +1075,9 @@
   </data>
   <data name="Sort_Artist" xml:space="preserve">
     <value>アーティスト</value>
+  </data>
+  <data name="Sort_Descending" xml:space="preserve">
+    <value>降順</value>
   </data>
   <data name="Sort_Duration" xml:space="preserve">
     <value>長さ</value>
@@ -963,10 +1101,16 @@
     <value>Airsonic、Gonic などの Subsonic サーバー</value>
   </data>
   <data name="Source_Community" xml:space="preserve">
-    <value>コミュニティ</value>
+    <value>コミュニティ · 非公式</value>
   </data>
   <data name="Source_Details" xml:space="preserve">
     <value>バージョン {0} · {1}</value>
+  </data>
+  <data name="Source_Enabled.Header" xml:space="preserve">
+    <value>有効</value>
+  </data>
+  <data name="Source_NotSignedIn" xml:space="preserve">
+    <value>サインインしていません</value>
   </data>
   <data name="Source_Official" xml:space="preserve">
     <value>公式</value>
@@ -977,22 +1121,28 @@
   <data name="Source_SettingsExpander.Header" xml:space="preserve">
     <value>設定</value>
   </data>
-  <data name="Source_SignIn.Content" xml:space="preserve">
-    <value>サインイン…</value>
-  </data>
   <data name="Source_SignOut.Content" xml:space="preserve">
     <value>サインアウト</value>
   </data>
+  <data name="Source_SignedInAs" xml:space="preserve">
+    <value>{0} としてサインイン中</value>
+  </data>
+  <data name="Source_StatusOff" xml:space="preserve">
+    <value>オフ</value>
+  </data>
   <data name="Source_Uninstall.Content" xml:space="preserve">
-    <value>アンインストール</value>
+    <value>アンインストール…</value>
   </data>
   <data name="Source_UninstallBody" xml:space="preserve">
-    <value>設定、サインイン情報、ダウンロードしたデータが削除されます。</value>
+    <value>設定とサインイン情報は削除されます。</value>
   </data>
   <data name="Source_UninstallTitle" xml:space="preserve">
     <value>{0} をアンインストールしますか？</value>
   </data>
   <data name="Sources_Add.Text" xml:space="preserve">
+    <value>ソースを追加</value>
+  </data>
+  <data name="Sources_AddHeading.Text" xml:space="preserve">
     <value>ソースを追加</value>
   </data>
   <data name="Sources_AllowCommunity.Header" xml:space="preserve">
@@ -1002,13 +1152,16 @@
     <value>コミュニティプラグイン</value>
   </data>
   <data name="Sources_CommunityHint.Text" xml:space="preserve">
-    <value>コミュニティプラグインは Jellyfesh ではなく、ほかの人が作ったものです。接続先サービスの規約に反する場合があり、いつ使えなくなるかわかりません。個人的な利用に限ってください。それぞれのプラグインを初めてオンにする前に、もう一度確認します。</value>
+    <value>公式ソースは Jellyfesh が署名しています。コミュニティプラグインは他の人が作ったもので、許可しない限りオフのままです。</value>
+  </data>
+  <data name="Sources_Crumb" xml:space="preserve">
+    <value>ソース</value>
   </data>
   <data name="Sources_EmptyBody.Text" xml:space="preserve">
-    <value>ソースを使うと、サーバーやサービスの音楽を Jellyfesh で聴けます。設定でソースをオンにする、サインインする、またはインストールしてください。</value>
+    <value>.jfpkg ファイルからソースのプラグインをインストールします。</value>
   </data>
   <data name="Sources_EmptyTitle.Text" xml:space="preserve">
-    <value>ソースはまだありません</value>
+    <value>ソースはインストールされていません</value>
   </data>
   <data name="Sources_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>フォルダ、アルバム、プレイリスト</value>
@@ -1017,28 +1170,31 @@
     <value>ファイルからインストール…</value>
   </data>
   <data name="Sources_Installed.Text" xml:space="preserve">
-    <value>インストール済みのソース</value>
+    <value>インストール済み</value>
+  </data>
+  <data name="Sources_Intro.Text" xml:space="preserve">
+    <value>ソースを使うと、サーバーやサービスの音楽を Jellyfesh で聴けます。</value>
   </data>
   <data name="Sources_Manage.Content" xml:space="preserve">
-    <value>ソースを管理</value>
+    <value>ソースの設定…</value>
   </data>
   <data name="Sources_More.Content" xml:space="preserve">
     <value>さらに表示</value>
   </data>
   <data name="Sources_None.Text" xml:space="preserve">
-    <value>ソースはインストールされていません。</value>
+    <value>ソースはインストールされていません</value>
   </data>
-  <data name="Sources_Picker.PlaceholderText" xml:space="preserve">
-    <value>ソースを選択</value>
-  </data>
-  <data name="Sources_Picker.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>ソース</value>
+  <data name="Sources_NoneHint.Text" xml:space="preserve">
+    <value>.jfpkg ファイルからソースのプラグインをインストールします。</value>
   </data>
   <data name="Sources_Title.Text" xml:space="preserve">
     <value>ソース</value>
   </data>
   <data name="Sources_Tracks.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>曲</value>
+  </data>
+  <data name="Sources_Yours.Text" xml:space="preserve">
+    <value>マイソース</value>
   </data>
   <data name="Startup_FailedBody" xml:space="preserve">
     <value>音楽エンジンを起動できませんでした。Jellyfesh を再インストールすると直ることがあります。詳細は以下のとおりです。</value>

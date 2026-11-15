@@ -61,7 +61,7 @@
                     MinHeight="44"
                     Padding="8,0,12,0"
                     HorizontalAlignment="Left"
-                    AutomationProperties.Name="Back to the library"
+                    AutomationProperties.Name="Back to the Library"
                     Click="OnBackClick"
                     CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}"
                     Style="{StaticResource JfBareButtonStyle}">
@@ -71,7 +71,7 @@
                     </StackPanel>
                 </Button>
                 <Border Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfSegmentGroupStyle}">
-                    <StackPanel x:Name="Segments" Orientation="Horizontal" AutomationProperties.Name="Now Playing views" x:Uid="NowPlaying_Views">
+                    <StackPanel x:Name="Segments" Orientation="Horizontal" AutomationProperties.Name="Now Playing Views" x:Uid="NowPlaying_Views">
                         <RadioButton x:Name="PlayerTab" x:Uid="NowPlaying_PlayerTab" Checked="OnViewChecked" Content="Player" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" Visibility="Collapsed" />
                         <RadioButton x:Name="LyricsTab" x:Uid="NowPlaying_LyricsTab" Checked="OnViewChecked" Content="Lyrics" GroupName="NowPlayingViews" IsChecked="True" Style="{StaticResource JfSegmentStyle}" />
                         <RadioButton x:Name="QueueTab" x:Uid="NowPlaying_QueueTab" Checked="OnViewChecked" Content="Queue" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" />
@@ -81,10 +81,10 @@
                 <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
                 <Button
                     x:Uid="NowPlaying_Compact"
-                    AutomationProperties.Name="Mini player"
+                    AutomationProperties.Name="Mini Player"
                     Click="OnCompactClick"
                     Style="{StaticResource JfIconButtonStyle}"
-                    ToolTipService.ToolTip="Mini player (Ctrl+M)">
+                    ToolTipService.ToolTip="Mini Player (Ctrl+M)">
                     <controls:StrokeIcon Data="{StaticResource IconMiniPlayer}" Size="18" />
                 </Button>
                 <Button
@@ -92,7 +92,7 @@
                     x:Uid="NowPlaying_Output"
                     MaxWidth="240"
                     VerticalAlignment="Center"
-                    AutomationProperties.Name="Output device"
+                    AutomationProperties.Name="Output Device"
                     Style="{StaticResource JfChipButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <controls:StrokeIcon Data="{StaticResource IconSpeaker}" Size="18" />
@@ -159,7 +159,7 @@
                             </ToggleButton>
                             <Border Padding="6" Style="{StaticResource JfVeilCapsuleStyle}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Button x:Uid="Player_PreviousButton" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+B)">
+                                    <Button x:Uid="Player_PreviousButton" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+←)">
                                         <controls:StrokeIcon Data="{StaticResource IconPrevious}" Size="24" />
                                     </Button>
                                     <Button
@@ -170,7 +170,7 @@
                                         ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
                                         <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="26" />
                                     </Button>
-                                    <Button x:Uid="Player_NextButton" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+F)">
+                                    <Button x:Uid="Player_NextButton" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+→)">
                                         <controls:StrokeIcon Data="{StaticResource IconNext}" Size="24" />
                                     </Button>
                                 </StackPanel>
@@ -224,24 +224,41 @@
                 <Grid x:Name="SidePanel" Grid.Column="1">
                     <views:LyricsView x:Name="LyricsPanel" />
                     <views:QueueView x:Name="QueuePanel" Visibility="Collapsed" />
+                    <!-- About This Song: Title, Artist, Album, Year, Length, Format, Lyrics and File (a row shows when it has a value). -->
                     <ScrollViewer x:Name="InfoPanel" Visibility="Collapsed">
                         <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="16">
-                            <TextBlock x:Uid="NowPlaying_InfoHeading" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="About this track" />
+                            <TextBlock x:Uid="NowPlaying_InfoHeading" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="About This Song" />
                             <StackPanel Spacing="2">
+                                <TextBlock x:Uid="NowPlaying_InfoTitle" Style="{StaticResource JfCaptionText}" Text="Title" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.Title, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="NowPlaying_InfoArtist" Style="{StaticResource JfCaptionText}" Text="Artist" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.Artist, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIf(Player.Album), Mode=OneWay}">
                                 <TextBlock x:Uid="NowPlaying_InfoAlbum" Style="{StaticResource JfCaptionText}" Text="Album" />
                                 <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.Album, Mode=OneWay}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIf(Player.Year), Mode=OneWay}">
+                                <TextBlock x:Uid="NowPlaying_InfoYear" Style="{StaticResource JfCaptionText}" Text="Year" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.Year, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIf(Player.LengthText), Mode=OneWay}">
+                                <TextBlock x:Uid="NowPlaying_InfoLength" Style="{StaticResource JfCaptionText}" Text="Length" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.LengthText, Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIf(Player.FormatText), Mode=OneWay}">
                                 <TextBlock x:Uid="NowPlaying_InfoFormat" Style="{StaticResource JfCaptionText}" Text="Format" />
                                 <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.FormatText, Mode=OneWay}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
-                                <TextBlock x:Uid="NowPlaying_InfoQueue" Style="{StaticResource JfCaptionText}" Text="In the queue" />
-                                <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Player.QueuePositionText, Mode=OneWay}" />
+                            <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIf(Player.LyricsText), Mode=OneWay}">
+                                <TextBlock x:Uid="NowPlaying_InfoLyrics" Style="{StaticResource JfCaptionText}" Text="Lyrics" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Player.LyricsText, Mode=OneWay}" />
                             </StackPanel>
-                            <StackPanel Spacing="2">
+                            <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIf(Player.FilePath), Mode=OneWay}">
                                 <TextBlock x:Uid="NowPlaying_InfoFile" Style="{StaticResource JfCaptionText}" Text="File" />
-                                <TextBlock x:Name="FileText" IsTextSelectionEnabled="True" Style="{StaticResource JfSecondaryBodyText}" />
+                                <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Player.FilePath, Mode=OneWay}" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

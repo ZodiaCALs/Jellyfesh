@@ -73,6 +73,12 @@ public interface ICoreClient : IDisposable
     /// <summary>Audio output devices, for a device picker.</summary>
     IReadOnlyList<DeviceInfo> OutputDevices();
 
+    /// <summary>
+    /// The equalizer presets (the core's eq_presets()), in the order every app lists them. Applying
+    /// one sends its settings as Settings.Eq; no app keeps a copy of the gains.
+    /// </summary>
+    IReadOnlyList<EqPreset> EqPresets();
+
     /// <summary>The clock anchors are stamped with, in nanoseconds. Not for per-frame use: see CoreClock.</summary>
     ulong MonotonicNowNs();
 

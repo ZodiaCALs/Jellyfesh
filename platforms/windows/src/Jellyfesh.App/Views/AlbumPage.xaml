@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One album: its cover, title, artist and details, the page's one accent action (Play), its tracks and their total. -->
+<!--
+    One album: its cover, title, artist and details, the page's one accent action (Play), Shuffle and More
+    (Play Next, Play Last, Add to Playlist…), its tracks and their total.
+-->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.AlbumPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -46,12 +49,13 @@
                     <StackPanel Margin="0,12,0,0" Orientation="Horizontal" Spacing="8">
                         <Button x:Uid="Action_PlayButton" Command="{x:Bind ViewModel.PlayCommand}" Content="Play" Style="{StaticResource JfAccentPillStyle}" />
                         <Button x:Uid="Action_ShuffleButton" Background="{ThemeResource JfGlassMist}" BorderBrush="{ThemeResource JfGlassEdge}" Command="{x:Bind ViewModel.ShuffleCommand}" Content="Shuffle" Style="{StaticResource JfChipButtonStyle}" />
-                        <Button x:Uid="Album_More" Width="36" Height="36" AutomationProperties.Name="More" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="More">
+                        <Button x:Uid="More_Button" Width="36" Height="36" AutomationProperties.Name="More" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="More">
                             <controls:StrokeIcon Data="{StaticResource IconMore}" Size="18" />
                             <Button.Flyout>
-                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
-                                    <MenuFlyoutItem x:Uid="Album_PlayNextItem" Command="{x:Bind ViewModel.PlayNextCommand}" Text="Play next" />
-                                    <MenuFlyoutItem x:Uid="Album_AddToQueueItem" Command="{x:Bind ViewModel.PlayLastCommand}" Text="Add to queue" />
+                                <MenuFlyout Opening="OnMoreOpening" Placement="BottomEdgeAlignedLeft">
+                                    <MenuFlyoutItem x:Uid="More_PlayNext" Command="{x:Bind ViewModel.PlayNextCommand}" Text="Play Next" />
+                                    <MenuFlyoutItem x:Uid="More_PlayLast" Command="{x:Bind ViewModel.PlayLastCommand}" Text="Play Last" />
+                                    <MenuFlyoutSubItem x:Name="AddToPlaylistItem" x:Uid="More_AddToPlaylist" Text="Add to Playlist…" />
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>

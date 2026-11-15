@@ -36,6 +36,7 @@ public class FfiMappingTests
                 "QueueItem" => FfiMapping.ToModel(json.Deserialize(F.JellyfeshJsonContext.Default.QueueItem)!),
                 "HistoryEntry" => FfiMapping.ToModel(json.Deserialize(F.JellyfeshJsonContext.Default.HistoryEntry)!),
                 "DeviceInfo" => FfiMapping.ToModel(json.Deserialize(F.JellyfeshJsonContext.Default.DeviceInfo)!),
+                "EqPreset" => FfiMapping.ToModel(json.Deserialize(F.JellyfeshJsonContext.Default.EqPreset)!),
                 "TrackQuery" => FfiMapping.ToFfi(new M.TrackQuery()),
                 "CoreConfig" => json.Deserialize(F.JellyfeshJsonContext.Default.CoreConfig)!,
                 _ => throw new Xunit.Sdk.XunitException($"unmapped sample {name}"),
@@ -47,6 +48,22 @@ public class FfiMappingTests
 
         Assert.True(mapped["Event"] >= 17, "every event variant has a sample");
         Assert.True(mapped["Command"] >= 40, "every command variant has a sample");
+    }
+
+    [Fact]
+    public void Eq_presets_map_from_the_binding_with_their_ids_and_bands()
+    {
+        using var contract = Contract.Read("ffi-types.json");
+        var json = contract.RootElement.GetProperty("samples").EnumerateArray()
+            .First(s => s.GetProperty("name").GetString() == "EqPreset")
+            .GetProperty("json");
+        var preset = FfiMapping.ToModel(json.Deserialize(F.JellyfeshJsonContext.Default.EqPreset)!);
+        Assert.Equal("bass_boost", preset.Id);
+        Assert.True(preset.Settings.Enabled);
+        Assert.Equal(0f, preset.Settings.PreampDb);
+        Assert.Equal(10, preset.Settings.Bands.Count);
+        Assert.Equal(new M.EqBand(M.EqBandKind.Peaking, 31f, 6f, 1.41f, true), preset.Settings.Bands[0]);
+        Assert.Equal(16_000f, preset.Settings.Bands[^1].FreqHz);
     }
 
     [Fact]
@@ -134,7 +151,7 @@ public class FfiMappingTests
             LyricsSize = M.LyricsSize.Large,
             LyricsAlign = M.LyricsAlign.Center,
             Crossfade = new M.CrossfadeSettings(true, 4_000, false),
-            Eq = M.EqSettings.Graphic([6, 5, 4]),
+            Eq = Samples.Eq(true, -1.5f, 6, 5, 4),
             OutputDevice = "wasapi:speakers",
         };
         var back = FfiMapping.ToModel(FfiMapping.ToFfi(settings));

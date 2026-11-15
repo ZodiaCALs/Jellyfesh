@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    The person's playlists: New Playlist… (it asks for the name first) and Import Playlist… (M3U8); a tile's
+    menu has Delete Playlist…, which asks first. Empty: No Playlists Yet and New Playlist….
+-->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.PlaylistsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -31,8 +35,8 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Uid="Playlists_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Playlists" />
-                    <Button x:Uid="Playlists_New" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.CreateCommand}" Content="New playlist" Style="{StaticResource JfAccentPillStyle}" />
-                    <Button x:Uid="Playlists_Import" Grid.Column="2" VerticalAlignment="Center" Command="{x:Bind ViewModel.ImportCommand}" Content="Import…" Style="{StaticResource JfChipButtonStyle}" />
+                    <Button x:Uid="Playlists_New" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.CreateCommand}" Content="New Playlist…" Style="{StaticResource JfAccentPillStyle}" />
+                    <Button x:Uid="Playlists_Import" Grid.Column="2" VerticalAlignment="Center" Command="{x:Bind ViewModel.ImportCommand}" Content="Import Playlist…" Style="{StaticResource JfChipButtonStyle}" />
                 </Grid>
             </GridView.Header>
             <GridView.ItemsPanel>
@@ -41,7 +45,11 @@
                 </ItemsPanelTemplate>
             </GridView.ItemsPanel>
         </GridView>
-        <TextBlock x:Uid="Playlists_Empty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="No playlists yet. Make one, or add songs to a new one from any list." Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}" />
+        <StackPanel Grid.Row="1" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}">
+            <TextBlock x:Uid="Playlists_EmptyTitle" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="No Playlists Yet" />
+            <TextBlock x:Uid="Playlists_Empty" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Make a playlist to keep songs together." TextAlignment="Center" />
+            <Button x:Uid="Playlists_EmptyNew" HorizontalAlignment="Center" Command="{x:Bind ViewModel.CreateCommand}" Content="New Playlist…" Style="{StaticResource JfAccentPillStyle}" />
+        </StackPanel>
         <TextBlock x:Uid="Common_NotAvailable" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Coming in a later build." Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsNotAvailable), Mode=OneWay}" />
     </Grid>
 </shell:JfPage>

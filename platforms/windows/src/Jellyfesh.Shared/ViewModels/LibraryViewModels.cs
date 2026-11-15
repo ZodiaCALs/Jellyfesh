@@ -60,20 +60,142 @@ public static class CollectionActions
         s.Send(new CoreCommand.EnqueueCollection(collection, false));
 }
 
+/// <summary>Add Music Folder… (Home, the empty library pages) and Add Folder… (Settings › Library).</summary>
+public static class LibraryActions
+{
+    /// <summary>Asks for a folder and adds it to the library; false when the person cancelled.</summary>
+    public static async Task<bool> AddFolderAsync(ShellServices s)
+    {
+        var folder = await s.Platform.PickFolderAsync();
+        if (folder is null)
+        {
+            return false;
+        }
+
+        s.Send(new CoreCommand.AddRoot(folder));
+        return true;
+    }
+}
+
+/// <summary>New Playlist… (it asks for the name first) and Add to Playlist… for songs, albums, artists and playlists.</summary>
+public static class PlaylistActions
+{
+    /// <summary>Asks for a name, then makes the playlist with <paramref name="tracks"/> (none for an empty one); nothing when cancelled.</summary>
+    public static async Task CreateAsync(ShellServices s, IReadOnlyList<TrackRef> tracks)
+    {
+        var name = await s.Platform.PromptTextAsync(s.L.Get("Playlist_NewTitle"), s.L.Get("Playlist_DefaultName"), s.L.Get("Action_Create"));
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            s.Send(new CoreCommand.CreatePlaylist(name.Trim(), tracks));
+        }
+    }
+
+    public static void AddTo(ShellServices s, long playlistId, IReadOnlyList<TrackRef> tracks)
+    {
+        if (tracks.Count > 0)
+        {
+            s.Send(new CoreCommand.AddToPlaylist(playlistId, tracks));
+        }
+    }
+}
+
+/// <summary>Where a song lives, for the song menu's Go to Album, Go to Artist and Show in Explorer.</summary>
+public static class TrackPlaces
+{
+    private const uint SearchLimit = 50;
+
+    /// <summary>Library songs have an album and an artist page.</summary>
+    public static bool HasPages(TrackItem item) => item.Ref is TrackRef.Library;
+
+    /// <summary>Library songs and plain files have a file to show.</summary>
+    public static bool HasFile(TrackItem item) => item.Ref is TrackRef.Library or TrackRef.File;
+
+    /// <summary>The library album of a library song, or null.</summary>
+    public static async Task<Album?> AlbumAsync(ShellServices s, TrackItem item)
+    {
+        if (item.Ref is not TrackRef.Library song)
+        {
+            return null;
+        }
+
+        var found = await s.QueryAsync(c =>
+        {
+            var track = c.Track(song.Id);
+            return track is { AlbumId: { } albumId, Album: { Length: > 0 } title }
+                ? c.SearchLibrary(title, SearchLimit).Albums.FirstOrDefault(a => a.Id == albumId)
+                : null;
+        });
+        return found.Value;
+    }
+
+    /// <summary>The library artist of a library song (its artist, else its album artist), or null.</summary>
+    public static async Task<Artist?> ArtistAsync(ShellServices s, TrackItem item)
+    {
+        if (item.Ref is not TrackRef.Library song)
+        {
+            return null;
+        }
+
+        var found = await s.QueryAsync(c => c.Track(song.Id) is { } track ? FindArtist(c, track.Artist ?? track.AlbumArtist) : null);
+        return found.Value;
+    }
+
+    /// <summary>The song's file, or null for a song from a source.</summary>
+    public static async Task<string?> FileAsync(ShellServices s, TrackItem item) => item.Ref switch
+    {
+        TrackRef.File file => file.Path,
+        TrackRef.Library song => (await s.QueryAsync(c => c.Track(song.Id)?.Path)).Value,
+        _ => null,
+    };
+
+    /// <summary>Show in Explorer: the song's file, selected in its folder.</summary>
+    public static async Task ShowInExplorerAsync(ShellServices s, TrackItem item)
+    {
+        if (await FileAsync(s, item) is { } path)
+        {
+            s.Platform.ShowInExplorer(path);
+        }
+    }
+
+    /// <summary>The library artist named <paramref name="name"/> (exactly, else ignoring case), through the core's search.</summary>
+    internal static Artist? FindArtist(ICoreClient core, string? name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return null;
+        }
+
+        var artists = core.SearchLibrary(name, SearchLimit).Artists;
+        return artists.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.Ordinal))
+            ?? artists.FirstOrDefault(a => string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+}
+
+/// <summary>
+/// Home: the library's size, then Recently Added (albums), Recently Played and Most Played (songs);
+/// with nothing in the library and no source signed in, the welcome instead.
+/// </summary>
 public sealed partial class HomeViewModel(ShellServices services) : PageViewModel(services)
 {
     private const uint SectionSize = 12;
+    private ulong? _songs;
 
     [ObservableProperty]
     private bool _playStatsAvailable = true;
 
-    public ObservableCollection<TrackItem> RecentlyAdded { get; } = [];
+    /// <summary>"1,204 songs · 96 albums · 41 artists"; empty while the library is empty.</summary>
+    [ObservableProperty]
+    private string _librarySize = string.Empty;
+
+    /// <summary>The welcome instead of the shelves: nothing in the library and no source signed in.</summary>
+    [ObservableProperty]
+    private bool _showWelcome;
+
+    public ObservableCollection<AlbumItem> RecentlyAdded { get; } = [];
 
     public ObservableCollection<TrackItem> RecentlyPlayed { get; } = [];
 
     public ObservableCollection<TrackItem> MostPlayed { get; } = [];
-
-    public ObservableCollection<PlaylistItem> Playlists { get; } = [];
 
     [RelayCommand]
     private void Play(TrackItem? item)
@@ -84,20 +206,40 @@ public sealed partial class HomeViewModel(ShellServices services) : PageViewMode
         }
     }
 
+    /// <summary>The welcome's Add Music Folder….</summary>
+    [RelayCommand]
+    private Task AddFolder() => LibraryActions.AddFolderAsync(S);
+
     protected override async Task LoadCoreAsync()
     {
         var l = S.L;
-        var added = await S.QueryAsync(c => c.RecentlyAdded(SectionSize));
-        Fill(RecentlyAdded, added.IsOk ? added.Value!.Select((t, i) => Item(i, x => x.Load(t))) : []);
+        var stats = await S.QueryAsync(c => c.Stats());
+        var st = stats.Value;
+        _songs = st?.Tracks ?? 0;
+        LibrarySize = st is { Tracks: > 0 }
+            ? l.Format("Home_LibrarySize", l.Plural("Count_Songs", (long)st.Tracks), l.Plural("Count_Albums", (long)st.Albums), l.Plural("Count_Artists", (long)st.Artists))
+            : string.Empty;
+        var added = await S.QueryAsync(c => c.AlbumsSorted(AlbumSort.Added, true, 0, SectionSize));
+        Fill(RecentlyAdded, added.IsOk ? added.Value!.Select(a => new AlbumItem(a, l)) : []);
         var played = await S.QueryAsync(c => c.RecentlyPlayed(SectionSize));
         var most = await S.QueryAsync(c => c.MostPlayed(SectionSize));
         PlayStatsAvailable = !played.IsNotAvailable && !most.IsNotAvailable;
         Fill(RecentlyPlayed, played.IsOk ? played.Value!.Select((r, i) => Item(i, x => x.Load(r))) : []);
         Fill(MostPlayed, most.IsOk ? most.Value!.Select((r, i) => Item(i, x => x.Load(r))) : []);
-        var playlists = await S.QueryAsync(c => c.Playlists());
-        Fill(Playlists, playlists.IsOk ? playlists.Value!.Take(8).Select(p => new PlaylistItem(p, l)) : []);
-        IsEmpty = RecentlyAdded.Count == 0 && RecentlyPlayed.Count == 0 && Playlists.Count == 0;
+        IsEmpty = RecentlyAdded.Count == 0 && RecentlyPlayed.Count == 0 && MostPlayed.Count == 0;
+        UpdateWelcome(S.Hub.State.Sources);
     }
+
+    protected override void OnSlices(SliceChange changes, CoreSnapshot state)
+    {
+        if (changes.HasFlag(SliceChange.Sources))
+        {
+            UpdateWelcome(state.Sources); // signing in to a source ends the welcome
+        }
+    }
+
+    private void UpdateWelcome(SourcesState sources) =>
+        ShowWelcome = _songs == 0 && !sources.Plugins.Any(p => p.Account is not null);
 
     private TrackItem Item(int index, Action<TrackItem> load)
     {
@@ -119,15 +261,43 @@ public sealed partial class HomeViewModel(ShellServices services) : PageViewMode
 /// <summary>The album grid: every album as a placeholder at once, pages filled as they scroll in.</summary>
 public sealed partial class AlbumsViewModel(ShellServices services) : PageViewModel(services)
 {
+    private bool _choosing;
+
     [ObservableProperty]
     private PagedList<AlbumItem, Album>? _albums;
 
     [ObservableProperty]
     private AlbumSort _sort = AlbumSort.Title;
 
+    /// <summary>The sort menu's Descending; each order starts in its own direction (newest first for Year and Recently Added).</summary>
+    [ObservableProperty]
+    private bool _descending;
+
+    /// <summary>The sort menu, in the order every app lists it: Title, Artist, Year, Recently Added.</summary>
     public IReadOnlyList<AlbumSort> Sorts { get; } = [AlbumSort.Title, AlbumSort.Artist, AlbumSort.Year, AlbumSort.Added];
 
-    partial void OnSortChanged(AlbumSort value) => _ = LoadAsync();
+    /// <summary>Whether an order starts descending: newest first for Year and Recently Added, A to Z otherwise.</summary>
+    public static bool DescendsFirst(AlbumSort sort) => sort is AlbumSort.Year or AlbumSort.Added;
+
+    partial void OnSortChanged(AlbumSort value)
+    {
+        _choosing = true;
+        Descending = DescendsFirst(value);
+        _choosing = false;
+        _ = LoadAsync();
+    }
+
+    partial void OnDescendingChanged(bool value)
+    {
+        if (!_choosing)
+        {
+            _ = LoadAsync();
+        }
+    }
+
+    /// <summary>The empty page's Add Music Folder….</summary>
+    [RelayCommand]
+    private Task AddFolder() => LibraryActions.AddFolderAsync(S);
 
     protected override async Task LoadCoreAsync()
     {
@@ -138,10 +308,11 @@ public sealed partial class AlbumsViewModel(ShellServices services) : PageViewMo
         }
 
         var sort = Sort;
+        var descending = Descending;
         var list = new PagedList<AlbumItem, Album>(
             (long)stats.Value!.Albums,
             i => new AlbumItem(i) { Localizer = S.L },
-            (offset, limit) => S.Core.AlbumsSorted(sort, sort is AlbumSort.Added or AlbumSort.Year, (uint)offset, (uint)limit),
+            (offset, limit) => S.Core.AlbumsSorted(sort, descending, (uint)offset, (uint)limit),
             S.Ui);
         list.Start();
         Albums?.Invalidate();
@@ -249,13 +420,25 @@ public sealed partial class AlbumDetailViewModel : PageViewModel
             return;
         }
 
-        var results = await S.QueryAsync(c => c.SearchLibrary(ArtistName, 20));
-        var artist = results.Value?.Artists.FirstOrDefault(a => string.Equals(a.Name, ArtistName, StringComparison.Ordinal))
-            ?? results.Value?.Artists.FirstOrDefault(a => string.Equals(a.Name, ArtistName, StringComparison.OrdinalIgnoreCase));
-        if (artist is not null)
+        var name = ArtistName;
+        var artist = await S.QueryAsync(c => TrackPlaces.FindArtist(c, name));
+        if (artist.Value is { } found)
         {
-            ArtistRequested?.Invoke(artist);
+            ArtistRequested?.Invoke(found);
         }
+    }
+
+    /// <summary>The album's songs, for More › Add to Playlist….</summary>
+    public async Task<IReadOnlyList<TrackRef>> TracksAsync()
+    {
+        if (Tracks.Count > 0)
+        {
+            return Tracks.Select(t => t.Ref).OfType<TrackRef>().ToArray();
+        }
+
+        var id = Album.Id;
+        var tracks = await S.QueryAsync(c => c.AlbumTracks(id));
+        return tracks.Value?.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray() ?? [];
     }
 
     [RelayCommand]
@@ -284,6 +467,10 @@ public sealed partial class ArtistsViewModel(ShellServices services) : PageViewM
 {
     [ObservableProperty]
     private PagedList<ArtistItem, Artist>? _artists;
+
+    /// <summary>The empty page's Add Music Folder….</summary>
+    [RelayCommand]
+    private Task AddFolder() => LibraryActions.AddFolderAsync(S);
 
     protected override async Task LoadCoreAsync()
     {
@@ -347,6 +534,21 @@ public sealed partial class ArtistDetailViewModel(ShellServices services, Artist
     private void Shuffle() => S.Send(new CoreCommand.PlayCollection(new Collection.Artist(Artist.Id), 0, true));
 
     [RelayCommand]
+    private void PlayNext() => CollectionActions.PlayNext(S, new Collection.Artist(Artist.Id));
+
+    [RelayCommand]
+    private void PlayLast() => CollectionActions.PlayLast(S, new Collection.Artist(Artist.Id));
+
+    /// <summary>All of the artist's songs, for More › Add to Playlist….</summary>
+    public async Task<IReadOnlyList<TrackRef>> TracksAsync()
+    {
+        var id = Artist.Id;
+        var limit = Math.Max(Artist.TrackCount, TopSongs);
+        var tracks = await S.QueryAsync(c => c.Tracks(new TrackQuery(0, limit, TrackSort.Album, false, null, id)));
+        return tracks.Value?.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray() ?? [];
+    }
+
+    [RelayCommand]
     private void PlayTrack(TrackItem? item)
     {
         if (item?.Ref is not null)
@@ -356,18 +558,45 @@ public sealed partial class ArtistDetailViewModel(ShellServices services, Artist
     }
 }
 
-/// <summary>Every song, virtualised and sorted by the core.</summary>
+/// <summary>Every song, virtualised and sorted by the core: Play and Shuffle, then the list.</summary>
 public sealed partial class SongsViewModel(ShellServices services) : PageViewModel(services)
 {
+    /// <summary>How many songs Play and Shuffle queue (a command carries its track list, so it is capped).</summary>
+    public const uint WholeList = TrackActions.FollowingTracks * 4;
+
+    private bool _choosing;
+
     [ObservableProperty]
     private PagedList<TrackItem, Track>? _songs;
 
     [ObservableProperty]
-    private TrackSort _sort = TrackSort.Artist;
+    private TrackSort _sort = TrackSort.Title;
 
-    public IReadOnlyList<TrackSort> Sorts { get; } = [TrackSort.Artist, TrackSort.Title, TrackSort.Album, TrackSort.Year, TrackSort.Duration, TrackSort.Added];
+    /// <summary>The sort menu's Descending; each order starts in its own direction (newest first for Year and Recently Added).</summary>
+    [ObservableProperty]
+    private bool _descending;
 
-    partial void OnSortChanged(TrackSort value) => _ = LoadAsync();
+    /// <summary>The sort menu, in the order every app lists it: Title, Artist, Album, Year, Recently Added.</summary>
+    public IReadOnlyList<TrackSort> Sorts { get; } = [TrackSort.Title, TrackSort.Artist, TrackSort.Album, TrackSort.Year, TrackSort.Added];
+
+    /// <summary>Whether an order starts descending: newest first for Year and Recently Added, A to Z otherwise.</summary>
+    public static bool DescendsFirst(TrackSort sort) => sort is TrackSort.Year or TrackSort.Added;
+
+    partial void OnSortChanged(TrackSort value)
+    {
+        _choosing = true;
+        Descending = DescendsFirst(value);
+        _choosing = false;
+        _ = LoadAsync();
+    }
+
+    partial void OnDescendingChanged(bool value)
+    {
+        if (!_choosing)
+        {
+            _ = LoadAsync();
+        }
+    }
 
     protected override async Task LoadCoreAsync()
     {
@@ -378,7 +607,7 @@ public sealed partial class SongsViewModel(ShellServices services) : PageViewMod
         }
 
         var sort = Sort;
-        var descending = sort == TrackSort.Added;
+        var descending = Descending;
         var list = new PagedList<TrackItem, Track>(
             (long)stats.Value!.Tracks,
             i => new TrackItem(i) { Localizer = S.L },
@@ -399,23 +628,44 @@ public sealed partial class SongsViewModel(ShellServices services) : PageViewMod
             return;
         }
 
-        var sort = Sort;
-        var page = await S.QueryAsync(c => c.Tracks(new TrackQuery((uint)item.Index, TrackActions.FollowingTracks, sort, sort == TrackSort.Added)));
-        if (page.IsOk && page.Value!.Count > 0)
+        var refs = await PageAsync((uint)item.Index, TrackActions.FollowingTracks);
+        if (refs.Length > 0)
         {
-            S.Send(new CoreCommand.PlayTracks(page.Value!.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray(), 0));
+            S.Send(new CoreCommand.PlayTracks(refs, 0));
         }
     }
 
-    /// <summary>Shuffles the most recently added songs (a command carries its track list, so it is capped).</summary>
+    /// <summary>Play: the songs from the top, in this order.</summary>
+    [RelayCommand]
+    private async Task Play()
+    {
+        var refs = await PageAsync(0, WholeList);
+        if (refs.Length > 0)
+        {
+            S.Send(new CoreCommand.PlayTracks(refs, 0));
+        }
+    }
+
+    /// <summary>Shuffle: the same songs in random order.</summary>
     [RelayCommand]
     private async Task Shuffle()
     {
-        var page = await S.QueryAsync(c => c.Tracks(new TrackQuery(0, TrackActions.FollowingTracks * 4, TrackSort.Added, true)));
-        if (page.IsOk && page.Value!.Count > 0)
+        var refs = await PageAsync(0, WholeList);
+        if (refs.Length > 0)
         {
-            S.Send(new CoreCommand.PlayCollection(new Collection.Tracks(page.Value!.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray()), 0, true));
+            S.Send(new CoreCommand.PlayCollection(new Collection.Tracks(refs), 0, true));
         }
+    }
+
+    /// <summary>The empty page's Add Music Folder….</summary>
+    [RelayCommand]
+    private Task AddFolder() => LibraryActions.AddFolderAsync(S);
+
+    private async Task<TrackRef[]> PageAsync(uint offset, uint limit)
+    {
+        var query = new TrackQuery(offset, limit, Sort, Descending);
+        var page = await S.QueryAsync(c => c.Tracks(query));
+        return page.IsOk ? page.Value!.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray() : [];
     }
 }
 
@@ -436,15 +686,9 @@ public sealed partial class PlaylistsViewModel(ShellServices services) : PageVie
         IsEmpty = Playlists.Count == 0 && !IsNotAvailable;
     }
 
+    /// <summary>New Playlist… asks for the name before it makes anything.</summary>
     [RelayCommand]
-    private async Task Create()
-    {
-        var name = await S.Platform.PromptTextAsync(S.L.Get("Playlist_NewTitle"), S.L.Get("Playlist_DefaultName"), S.L.Get("Action_Create"));
-        if (!string.IsNullOrWhiteSpace(name))
-        {
-            S.Send(new CoreCommand.CreatePlaylist(name.Trim(), []));
-        }
-    }
+    private Task Create() => PlaylistActions.CreateAsync(S, []);
 
     [RelayCommand]
     private async Task Import()
@@ -496,6 +740,9 @@ public sealed partial class PlaylistDetailViewModel : PageViewModel
 
     public PlaylistSummary Playlist { get; private set; }
 
+    /// <summary>Raised after Delete Playlist… removed this playlist (the page goes back).</summary>
+    public event Action? Deleted;
+
     protected override async Task LoadCoreAsync()
     {
         var fresh = await S.QueryAsync(c => c.Playlist(Playlist.Id));
@@ -532,11 +779,37 @@ public sealed partial class PlaylistDetailViewModel : PageViewModel
     private void Shuffle() => S.Send(new CoreCommand.PlayCollection(new Collection.Playlist(Playlist.Id), 0, true));
 
     [RelayCommand]
+    private void PlayNext() => CollectionActions.PlayNext(S, new Collection.Playlist(Playlist.Id));
+
+    [RelayCommand]
+    private void PlayLast() => CollectionActions.PlayLast(S, new Collection.Playlist(Playlist.Id));
+
+    [RelayCommand]
     private void PlayTrack(TrackItem? item)
     {
         if (item is { Index: >= 0 })
         {
             S.Send(new CoreCommand.PlayCollection(new Collection.Playlist(Playlist.Id), (uint)item.Index, false));
+        }
+    }
+
+    /// <summary>The playlist's songs, for More › Add to Playlist….</summary>
+    public async Task<IReadOnlyList<TrackRef>> TracksAsync()
+    {
+        var (id, count) = (Playlist.Id, Playlist.EntryCount);
+        var entries = await S.QueryAsync(c => c.PlaylistEntries(id, 0, count));
+        return entries.Value?.Select(e => e.Row.Track).ToArray() ?? [];
+    }
+
+    /// <summary>Delete Playlist… asks first; the songs stay in the library.</summary>
+    [RelayCommand]
+    private async Task Delete()
+    {
+        if (await S.Platform.ConfirmAsync(
+                S.L.Format("Playlist_DeleteTitle", Name), S.L.Get("Playlist_DeleteBody"), S.L.Get("Action_Delete"), S.L.Get("Action_Cancel")))
+        {
+            S.Send(new CoreCommand.DeletePlaylist(Playlist.Id));
+            Deleted?.Invoke();
         }
     }
 

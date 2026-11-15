@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Every artist, as a virtualised list (docs/ui.md). Empty: No Artists Yet and Add Music Folder…. -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.ArtistsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -11,28 +12,27 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <GridView
-            x:Name="ArtistGrid"
+        <ListView
+            x:Name="ArtistList"
             x:Uid="Artists_Grid"
             Grid.RowSpan="2"
             Padding="0,0,0,112"
             AutomationProperties.Name="Artists"
             IsItemClickEnabled="True"
             ItemClick="OnArtistClick"
-            ItemContainerStyle="{StaticResource JfGridTileStyle}"
-            ItemTemplate="{StaticResource ArtistTileTemplate}"
+            ItemContainerStyle="{StaticResource JfTrackRowStyle}"
+            ItemTemplate="{StaticResource ArtistRowTemplate}"
             ItemsSource="{x:Bind ViewModel.Artists.Items, Mode=OneWay}"
             SelectionMode="None">
-            <GridView.Header>
+            <ListView.Header>
                 <TextBlock Margin="0,0,0,16" x:Uid="Artists_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Artists" />
-            </GridView.Header>
-            <GridView.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <ItemsWrapGrid ItemHeight="200" ItemWidth="152" Orientation="Horizontal" />
-                </ItemsPanelTemplate>
-            </GridView.ItemsPanel>
-        </GridView>
+            </ListView.Header>
+        </ListView>
         <ProgressRing Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />
-        <TextBlock x:Uid="Artists_Empty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="No artists yet." Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}" />
+        <StackPanel Grid.Row="1" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}">
+            <TextBlock x:Uid="Artists_EmptyTitle" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="No Artists Yet" />
+            <TextBlock x:Uid="Artists_Empty" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Add a music folder to see your artists here." TextAlignment="Center" />
+            <Button x:Uid="Common_AddMusicFolder" HorizontalAlignment="Center" Command="{x:Bind ViewModel.AddFolderCommand}" Content="Add Music Folder…" Style="{StaticResource JfAccentPillStyle}" />
+        </StackPanel>
     </Grid>
 </shell:JfPage>

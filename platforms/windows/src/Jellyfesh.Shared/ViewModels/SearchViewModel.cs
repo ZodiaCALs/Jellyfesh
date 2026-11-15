@@ -23,12 +23,32 @@ public sealed partial class SourceSearchState(string source, string name) : Obse
     partial void OnErrorChanged(string? value) => OnPropertyChanged(nameof(HasError));
 }
 
+/// <summary>From Your Sources: one source's results (docs/ui.md, "Search"), in the core's merged order.</summary>
+public sealed class SourceResultGroup(string source, string name)
+{
+    public string Source { get; } = source;
+
+    /// <summary>The source's name, the group's heading.</summary>
+    public string Name { get; } = name;
+
+    /// <summary>Playable songs only online sources have.</summary>
+    public ObservableCollection<TrackItem> Tracks { get; } = [];
+
+    /// <summary>Albums, artists, playlists and folders.</summary>
+    public ObservableCollection<SourceEntryItem> Entries { get; } = [];
+
+    public bool HasTracks => Tracks.Count > 0;
+
+    public bool HasEntries => Entries.Count > 0;
+}
+
 /// <summary>
 /// Unified search. As you type, the library answers at once (SearchLibrary, a fast synchronous
 /// query); the same text goes to every enabled source (Command.Search). Each SearchResults update
 /// carries the whole list so far, merged and de-duplicated by the core across the library and the
 /// sources that answered, so the newest update replaces the online results shown; entries the
-/// library has stay in the library section, with the other sources named on them.
+/// library has stay in the library section, with the other sources named on them. Library results
+/// come first (Songs, Albums, Artists), then From Your Sources, one group per source.
 /// </summary>
 public sealed partial class SearchViewModel(ShellServices services) : PageViewModel(services)
 {
@@ -63,11 +83,8 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
 
     public ObservableCollection<ArtistItem> Artists { get; } = [];
 
-    /// <summary>Playable tracks only online sources have (merged across sources).</summary>
-    public ObservableCollection<TrackItem> OnlineTracks { get; } = [];
-
-    /// <summary>Albums, artists, playlists and folders from online sources.</summary>
-    public ObservableCollection<SourceEntryItem> OnlineEntries { get; } = [];
+    /// <summary>From Your Sources: the online results, one group per source (each item under the source that gave it).</summary>
+    public ObservableCollection<SourceResultGroup> OnlineGroups { get; } = [];
 
     /// <summary>Each enabled source and whether it has answered (or why not).</summary>
     public ObservableCollection<SourceSearchState> SourceStates { get; } = [];
@@ -162,20 +179,26 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         }
 
         // The update is the merged list so far: it replaces what is shown.
-        OnlineTracks.Clear();
-        OnlineEntries.Clear();
+        OnlineGroups.Clear();
         foreach (var item in u.Items.Where(i => i.Source != LibrarySource))
         {
+            var group = OnlineGroups.FirstOrDefault(g => g.Source == item.Source);
+            if (group is null)
+            {
+                group = new SourceResultGroup(item.Source, SourceName(item.Source));
+                OnlineGroups.Add(group);
+            }
+
             if (item.Kind == ItemKind.Track)
             {
-                var track = new TrackItem(OnlineTracks.Count) { Localizer = S.L };
+                var track = new TrackItem(group.Tracks.Count) { Localizer = S.L };
                 track.Load(item);
                 track.Origin = Origin(item);
-                OnlineTracks.Add(track);
+                group.Tracks.Add(track);
             }
             else
             {
-                OnlineEntries.Add(new SourceEntryItem(item, S.L) { Origin = Origin(item) });
+                group.Entries.Add(new SourceEntryItem(item, S.L) { Origin = Origin(item) });
             }
         }
 
@@ -293,14 +316,13 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
 
     private void ClearOnline()
     {
-        OnlineTracks.Clear();
-        OnlineEntries.Clear();
+        OnlineGroups.Clear();
         SourceStates.Clear();
     }
 
     private void UpdateHasResults()
     {
-        HasOnlineResults = OnlineTracks.Count > 0 || OnlineEntries.Count > 0;
+        HasOnlineResults = OnlineGroups.Count > 0;
         HasResults = Tracks.Count > 0 || Albums.Count > 0 || Artists.Count > 0 || HasOnlineResults;
     }
 }

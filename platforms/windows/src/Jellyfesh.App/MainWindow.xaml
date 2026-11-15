@@ -11,16 +11,24 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:views="using:Jellyfesh.App.Views">
 
-    <Grid x:Name="Root">
+    <Grid x:Name="Root" PreviewKeyDown="OnRootPreviewKeyDown">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Groove and Windows Media Player keys, so typing in a text box never triggers them. -->
+        <!--
+            The keys every Jellyfesh app shares (docs/ui.md, "Keyboard"): Space plays or pauses, Ctrl+F
+            searches and Esc goes back (closing Now Playing first); Ctrl+Right and Ctrl+Left, Ctrl+Up and
+            Ctrl+Down, Shift+Right and Shift+Left are handled in OnRootPreviewKeyDown, ahead of lists and
+            sliders. None of them acts while a text box has focus. The Groove and Windows Media Player keys
+            below reuse none of them.
+        -->
         <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="Space" Invoked="OnSpaceKey" />
+            <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="OnSearchKey" />
+            <KeyboardAccelerator Key="Escape" Invoked="OnEscapeKey" />
             <KeyboardAccelerator Key="P" Modifiers="Control" Invoked="OnPlayPauseKey" />
-            <KeyboardAccelerator Key="F" Modifiers="Control" Invoked="OnNextKey" />
             <KeyboardAccelerator Key="B" Modifiers="Control" Invoked="OnPreviousKey" />
             <KeyboardAccelerator Key="E" Modifiers="Control" Invoked="OnSearchKey" />
             <KeyboardAccelerator Key="L" Modifiers="Control" Invoked="OnNowPlayingKey" />

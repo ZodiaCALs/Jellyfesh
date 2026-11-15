@@ -15,6 +15,9 @@ public interface IShellPlatform
     /// <summary>Opens a web address in the default browser (sign-in flows, links).</summary>
     void OpenUrl(string url);
 
+    /// <summary>Show in Explorer: opens a folder, or the folder of a file with the file selected.</summary>
+    void ShowInExplorer(string path);
+
     void CopyText(string text);
 
     /// <summary>Asks a yes/no question with a localised title and body; true for the primary answer.</summary>

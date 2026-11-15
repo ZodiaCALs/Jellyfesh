@@ -47,7 +47,7 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Style="{StaticResource JfSecondaryBodyText}"
-            Text="No lyrics for this song"
+            Text="No Lyrics for This Song"
             Visibility="{x:Bind shell:Bind.Collapsed(Presenter.HasLyrics), Mode=OneWay}" />
     </Grid>
 </UserControl>

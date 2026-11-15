@@ -65,30 +65,35 @@ public enum EqBandKind
 
 public sealed record EqBand(EqBandKind Kind, float FreqHz, float GainDb, float Q, bool Enabled);
 
+/// <summary>
+/// The equalizer: on or off, a preamp and the core's bands. The band layout and the presets come
+/// from the core (Settings.Eq and <see cref="ICoreClient.EqPresets"/>), never from a copy here.
+/// </summary>
 public sealed record EqSettings(bool Enabled, float PreampDb, IReadOnlyList<EqBand> Bands)
 {
-    /// <summary>The ISO octave centres the core's presets use.</summary>
-    public static readonly float[] PresetFrequencies =
-        [31f, 62f, 125f, 250f, 500f, 1_000f, 2_000f, 4_000f, 8_000f, 16_000f];
-
-    /// <summary>One octave wide, as in jf-engine's presets.</summary>
-    public const float PresetQ = 1.41f;
-
-    /// <summary>Ten one-octave peaking bands at 0 dB, switched off (jf-engine's default).</summary>
-    public static EqSettings Flat { get; } = Graphic(new float[10]) with { Enabled = false };
-
-    /// <summary>A ten-band graphic EQ at the preset frequencies.</summary>
-    public static EqSettings Graphic(IReadOnlyList<float> gainsDb) =>
-        new(true, 0f, PresetFrequencies
-            .Select((f, i) => new EqBand(EqBandKind.Peaking, f, i < gainsDb.Count ? gainsDb[i] : 0f, PresetQ, true))
-            .ToArray());
+    /// <summary>Off and without bands: the placeholder until the core's settings arrive.</summary>
+    public static EqSettings None { get; } = new(false, 0f, []);
 
     public bool ContentEquals(EqSettings? other) =>
         other is not null
         && Enabled == other.Enabled
         && PreampDb.Equals(other.PreampDb)
         && Bands.SequenceEqual(other.Bands);
+
+    /// <summary>
+    /// Whether the bands have the gains of <paramref name="other"/>'s, band by band (to 0.05 dB),
+    /// whatever the preamp and the switch: how the Preset menu tells a preset from Custom.
+    /// </summary>
+    public bool SameGains(EqSettings other) =>
+        Bands.Count == other.Bands.Count
+        && Bands.Zip(other.Bands).All(p => Math.Abs(p.First.GainDb - p.Second.GainDb) < 0.05f);
 }
+
+/// <summary>
+/// An equalizer preset from the core (<see cref="ICoreClient.EqPresets"/>), in the order every app
+/// lists it. <see cref="Id"/> is flat, bass_boost, vocal or treble; the app shows it translated.
+/// </summary>
+public sealed record EqPreset(string Id, EqSettings Settings);
 
 public enum ReplayGainMode
 {

@@ -35,19 +35,26 @@ public sealed class AccentSwatch(int index, float hue, string name)
     public Rgba Dark { get; } = AccentChoices.Accent(hue, dark: true);
 }
 
-/// <summary>One band of the graphic EQ.</summary>
-public sealed partial class EqBandViewModel(int index, float frequencyHz, Action<EqBandViewModel> changed) : ObservableObject
+/// <summary>One band of the equalizer, as the core's settings have it (kind, frequency, Q); the slider moves its gain.</summary>
+public sealed partial class EqBandViewModel(int index, EqBand band, Action<EqBandViewModel> changed) : ObservableObject
 {
     [ObservableProperty]
-    private double _gainDb;
+    private double _gainDb = band.GainDb;
 
     public int Index { get; } = index;
 
-    public float FrequencyHz { get; } = frequencyHz;
+    /// <summary>The core's band; a change sends it back with the slider's gain.</summary>
+    public EqBand Band { get; } = band;
+
+    public float FrequencyHz => Band.FreqHz;
 
     public string Label => FrequencyHz >= 1000 ? $"{FrequencyHz / 1000:0.#}k" : $"{FrequencyHz:0}";
 
     internal bool Syncing { get; set; }
+
+    /// <summary>Whether <paramref name="other"/> is this band apart from its gain.</summary>
+    internal bool SameShape(EqBand other) =>
+        Band.Kind == other.Kind && Band.FreqHz.Equals(other.FreqHz) && Band.Q.Equals(other.Q) && Band.Enabled == other.Enabled;
 
     partial void OnGainDbChanged(double value)
     {
@@ -58,22 +65,65 @@ public sealed partial class EqBandViewModel(int index, float frequencyHz, Action
     }
 }
 
-/// <summary>An EQ preset: the gains jf-engine's presets use.</summary>
-public sealed record EqPreset(string NameKey, float[] Gains)
+/// <summary>
+/// A choice in the equalizer's Preset menu: one of the core's presets (<see cref="ICoreClient.EqPresets"/>),
+/// or Custom, which the menu lists only once a band no longer matches a preset.
+/// </summary>
+public sealed class EqPresetChoice
 {
-    public static IReadOnlyList<EqPreset> All { get; } =
-    [
-        new("Eq_Flat", [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-        new("Eq_BassBoost", [6, 5, 4, 2, 0.5f, 0, 0, 0, 0, 0]),
-        new("Eq_Vocal", [-2, -2, -1, 0, 1.5f, 3, 3, 2, 0, -1]),
-        new("Eq_Treble", [0, 0, 0, 0, 0, 0, 1.5f, 3, 4.5f, 6]),
-    ];
+    private EqPresetChoice(string id, string name, EqSettings? settings)
+    {
+        Id = id;
+        Name = name;
+        Settings = settings;
+    }
+
+    public string Id { get; }
+
+    /// <summary>"Flat", "Bass Boost", "Vocal", "Treble" or "Custom", translated.</summary>
+    public string Name { get; }
+
+    /// <summary>The core's settings for the preset; null for Custom.</summary>
+    public EqSettings? Settings { get; }
+
+    public bool IsCustom => Settings is null;
+
+    public static EqPresetChoice For(EqPreset preset, ILocalizer l) =>
+        new(preset.Id, NameKey(preset.Id) is { } key ? l.Get(key) : preset.Id, preset.Settings);
+
+    public static EqPresetChoice Custom(ILocalizer l) => new("custom", l.Get("Eq_Custom"), null);
+
+    public override string ToString() => Name;
+
+    /// <summary>The string key of a preset's name, by the core's stable id.</summary>
+    private static string? NameKey(string id) => id switch
+    {
+        "flat" => "Eq_Flat",
+        "bass_boost" => "Eq_BassBoost",
+        "vocal" => "Eq_Vocal",
+        "treble" => "Eq_Treble",
+        _ => null,
+    };
+}
+
+/// <summary>A music folder in Settings › Library: where it is and the name its row and Remove Folder… show.</summary>
+public sealed record FolderItem(string Path)
+{
+    /// <summary>The folder's own name ("Music"), or the whole path for a drive.</summary>
+    public string Name { get; } = NameOf(Path);
+
+    private static string NameOf(string path)
+    {
+        var name = System.IO.Path.GetFileName(path.TrimEnd('/', '\\'));
+        return string.IsNullOrEmpty(name) ? path : name;
+    }
 }
 
 /// <summary>
-/// Settings. Every change sends the core a modified copy of its Settings slice (or the dedicated
-/// command for EQ, ReplayGain, crossfade and output); the slice coming back is the truth. While a
-/// slider moves, echoes of older values are ignored for a moment so the thumb does not jump.
+/// Settings: Appearance, Playback, Library, Sources and About (docs/ui.md, "Settings"). Every change
+/// sends the core a modified copy of its Settings slice (or the dedicated command for EQ,
+/// ReplayGain, crossfade and output); the slice coming back is the truth. While a slider moves,
+/// echoes of older values are ignored for a moment so the thumb does not jump.
 /// </summary>
 public sealed partial class SettingsViewModel : PageViewModel
 {
@@ -82,6 +132,8 @@ public sealed partial class SettingsViewModel : PageViewModel
     private bool _syncing;
     private long _lastAudioEditMs = long.MinValue / 2;
     private long _lastLookEditMs = long.MinValue / 2;
+    private IReadOnlyList<EqPreset> _eqPresets = [];
+    private EqPresetChoice? _custom;
 
     // ---- appearance ----
     [ObservableProperty]
@@ -107,6 +159,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     [ObservableProperty]
     private bool _reduceEffects;
 
+    // Appearance › Lyrics: the only place the lyrics settings live.
     [ObservableProperty]
     private int _lyricsSizeIndex = 1;
 
@@ -114,32 +167,38 @@ public sealed partial class SettingsViewModel : PageViewModel
     private int _lyricsAlignIndex;
 
     [ObservableProperty]
-    private AppIconChoice? _selectedIcon;
-
-    // ---- lyrics ----
-    [ObservableProperty]
     private bool _showTranslation;
 
     [ObservableProperty]
     private bool _showRomanization;
+
+    [ObservableProperty]
+    private AppIconChoice? _selectedIcon;
 
     // ---- playback ----
     [ObservableProperty]
     private bool _eqEnabled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EqPreampText))]
     private double _eqPreampDb;
+
+    /// <summary>The Preset menu's choice: the core's preset the bands match, or Custom.</summary>
+    [ObservableProperty]
+    private EqPresetChoice? _selectedPreset;
 
     [ObservableProperty]
     private int _replayGainIndex;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ReplayGainPreampText))]
     private double _replayGainPreampDb;
 
     [ObservableProperty]
     private bool _crossfadeEnabled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CrossfadeText))]
     private double _crossfadeSeconds = 6;
 
     [ObservableProperty]
@@ -161,17 +220,20 @@ public sealed partial class SettingsViewModel : PageViewModel
     [ObservableProperty]
     private string _scanText = string.Empty;
 
+    /// <summary>How this session's last scan ended ("12 added, 3 updated, 0 removed, 0 problems"); empty before one.</summary>
+    [ObservableProperty]
+    private string _lastScanText = string.Empty;
+
     // ---- sources ----
     [ObservableProperty]
     private bool _allowCommunity;
-
-    [ObservableProperty]
-    private bool _sourcesNotAvailable;
 
     public SettingsViewModel(ShellServices services, PlayerViewModel player, Func<string, string?> iconPreview)
         : base(services)
     {
         Player = player;
+        SignIns = new SourceSignIns(services);
+        SignIns.Requested += flow => SignInRequested?.Invoke(flow);
         Icons.Add(new AppIconChoice(AppIcons.Automatic, services.L.Get("Icon_Automatic"), iconPreview(AppIcons.Automatic), true));
         foreach (var option in AppIcons.All)
         {
@@ -182,11 +244,6 @@ public sealed partial class SettingsViewModel : PageViewModel
         {
             var hue = AccentChoices.SwatchHues[i];
             Swatches.Add(new AccentSwatch(i, hue, services.L.Format("Appearance_SwatchName", hue)));
-        }
-
-        for (var i = 0; i < EqSettings.PresetFrequencies.Length; i++)
-        {
-            Bands.Add(new EqBandViewModel(i, EqSettings.PresetFrequencies[i], _ => SendEq()));
         }
 
         Apply(services.Hub.State);
@@ -206,27 +263,56 @@ public sealed partial class SettingsViewModel : PageViewModel
     /// <summary>"Hue 212": the custom hue slider's value.</summary>
     public string HueText => S.L.Format("Appearance_SwatchName", (int)Math.Round(FixedHue));
 
+    /// <summary>The bands of the core's equalizer settings, in its order.</summary>
     public ObservableCollection<EqBandViewModel> Bands { get; } = [];
 
-    public IReadOnlyList<EqPreset> Presets => EqPreset.All;
+    /// <summary>The Preset menu: the core's presets (eq_presets) in its order, then Custom while the bands match none.</summary>
+    public ObservableCollection<EqPresetChoice> Presets { get; } = [];
 
-    public ObservableCollection<string> Folders { get; } = [];
+    /// <summary>"6 s": the crossfade length beside its slider.</summary>
+    public string CrossfadeText => S.L.Format("Playback_SecondsValue", (int)Math.Round(CrossfadeSeconds));
+
+    /// <summary>"+1.5 dB": Volume Levelling's preamp beside its slider.</summary>
+    public string ReplayGainPreampText => Decibels(ReplayGainPreampDb);
+
+    /// <summary>"−2.0 dB": the equalizer's preamp beside its slider.</summary>
+    public string EqPreampText => Decibels(EqPreampDb);
+
+    public ObservableCollection<FolderItem> Folders { get; } = [];
 
     public ObservableCollection<PluginViewModel> Plugins { get; } = [];
 
     /// <summary>The services Add a Source offers (SourcesState.Presets), in the core's order; empty hides the section.</summary>
     public ObservableCollection<SourcePresetViewModel> SourcePresets { get; } = [];
 
+    public SourceSignIns SignIns { get; }
+
     /// <summary>Raised when a source's sign-in should open (the app shows it in a dialog).</summary>
     public event Action<SignInViewModel>? SignInRequested;
 
     protected override async Task LoadCoreAsync()
     {
+        if (_eqPresets.Count == 0)
+        {
+            var presets = await S.QueryAsync(c => c.EqPresets());
+            if (presets.IsOk && presets.Value!.Count > 0)
+            {
+                _eqPresets = presets.Value!;
+                Presets.Clear();
+                foreach (var preset in _eqPresets)
+                {
+                    Presets.Add(EqPresetChoice.For(preset, S.L));
+                }
+
+                UpdatePresetChoice();
+            }
+        }
+
         var roots = await S.QueryAsync(c => c.Roots());
         Folders.Clear();
         foreach (var r in roots.Value ?? [])
         {
-            Folders.Add(r);
+            Folders.Add(new FolderItem(r));
         }
 
         var stats = await S.QueryAsync(c => c.Stats());
@@ -255,11 +341,17 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
     }
 
-    /// <summary>The scan's progress line (from the hub's latest progress).</summary>
+    /// <summary>The scan's progress line (from the hub's latest progress) and how the last scan ended.</summary>
     public void UpdateScan(ScanProgress? progress)
     {
         IsScanning = progress is not null;
         ScanText = progress is null ? string.Empty : S.L.Format("Scan_Progress", progress.FilesSeen, progress.FilesChanged);
+        LastScanText = S.Hub.LastScan switch
+        {
+            ScanStatus.Finished f => S.L.Format("Scan_Report", f.Report.Added, f.Report.Updated, f.Report.Removed, f.Report.Errors.Count),
+            ScanStatus.Failed x => x.Message,
+            _ => string.Empty,
+        };
     }
 
     // ---- appearance ----
@@ -340,6 +432,10 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     partial void OnLyricsAlignIndexChanged(int value) => Change(s => s with { LyricsAlign = value == 1 ? LyricsAlign.Center : LyricsAlign.Start });
 
+    partial void OnShowTranslationChanged(bool value) => Change(s => s with { ShowTranslation = value });
+
+    partial void OnShowRomanizationChanged(bool value) => Change(s => s with { ShowRomanization = value });
+
     partial void OnSelectedIconChanged(AppIconChoice? value)
     {
         if (value is not null)
@@ -348,33 +444,31 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
     }
 
-    // ---- lyrics ----
-    partial void OnShowTranslationChanged(bool value) => Change(s => s with { ShowTranslation = value });
-
-    partial void OnShowRomanizationChanged(bool value) => Change(s => s with { ShowRomanization = value });
-
     // ---- playback ----
     partial void OnEqEnabledChanged(bool value) => SendEq();
 
     partial void OnEqPreampDbChanged(double value) => SendEq();
 
-    [RelayCommand]
-    private void ApplyPreset(EqPreset? preset)
+    /// <summary>
+    /// A preset chosen in the menu: its bands and preamp (the core's settings) with the switch as it
+    /// is. Custom is only a label for bands that match no preset, so choosing it changes nothing.
+    /// </summary>
+    partial void OnSelectedPresetChanged(EqPresetChoice? value)
     {
-        if (preset is null)
+        if (!_syncing && value?.Settings is { } preset)
         {
-            return;
+            ApplyEq(preset);
         }
+    }
 
-        foreach (var band in Bands)
-        {
-            band.Syncing = true;
-            band.GainDb = preset.Gains[band.Index];
-            band.Syncing = false;
-        }
-
-        EqEnabled = true;
-        SendEq();
+    /// <summary>Reset to Flat: the core's flat preset (every gain and the preamp at 0 dB), the switch as it is.</summary>
+    [RelayCommand]
+    private void ResetToFlat()
+    {
+        var flat = _eqPresets.FirstOrDefault(p => p.Id == "flat")?.Settings
+            ?? CurrentEq() with { PreampDb = 0f, Bands = Bands.Select(b => b.Band with { GainDb = 0f }).ToArray() };
+        ApplyEq(flat);
+        UpdatePresetChoice();
     }
 
     partial void OnReplayGainIndexChanged(int value) => SendReplayGain();
@@ -392,23 +486,29 @@ public sealed partial class SettingsViewModel : PageViewModel
     // ---- library ----
     partial void OnWatchFoldersChanged(bool value) => Change(s => s with { WatchFolders = value });
 
+    /// <summary>Add Folder…: a folder the person picks joins the library.</summary>
     [RelayCommand]
-    private async Task AddFolder()
+    private Task AddFolder() => LibraryActions.AddFolderAsync(S);
+
+    /// <summary>Remove Folder… asks first: its songs leave the library and its playlists; the files stay.</summary>
+    [RelayCommand]
+    private async Task RemoveFolder(FolderItem? folder)
     {
-        var folder = await S.Platform.PickFolderAsync();
-        if (folder is not null)
+        if (folder is not null && await S.Platform.ConfirmAsync(
+                S.L.Format("Library_RemoveFolderTitle", folder.Name), S.L.Get("Library_RemoveFolderBody"), S.L.Get("Action_RemoveFolder"), S.L.Get("Action_Cancel")))
         {
-            S.Send(new CoreCommand.AddRoot(folder));
+            S.Send(new CoreCommand.RemoveRoot(folder.Path));
+            Folders.Remove(folder);
         }
     }
 
+    /// <summary>Show in Explorer for a music folder.</summary>
     [RelayCommand]
-    private void RemoveFolder(string? folder)
+    private void ShowFolder(FolderItem? folder)
     {
         if (folder is not null)
         {
-            S.Send(new CoreCommand.RemoveRoot(folder));
-            Folders.Remove(folder);
+            S.Platform.ShowInExplorer(folder.Path);
         }
     }
 
@@ -446,6 +546,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
     }
 
+    /// <summary>Install from File…: a .jfpkg the person picks.</summary>
     [RelayCommand]
     private async Task InstallPlugin()
     {
@@ -456,37 +557,10 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
     }
 
-    internal void RequestSignIn(PluginInfo plugin, AuthMethod method) => StartSignIn(new SignInViewModel(S, plugin, method));
+    internal void RequestSignIn(PluginInfo plugin, AuthMethod method) => SignIns.SignIn(plugin, method);
 
-    /// <summary>
-    /// Connects to a service from Add a Source (Command.ConnectSource): the core sets the address,
-    /// turns the plugin on and signs in as BeginLogin does, so the steps arrive as the plugin's Auth
-    /// events and the sign-in dialog shows them as for the plugin's own Sign in. Nothing is sent
-    /// while the service needs an address and none was typed.
-    /// </summary>
-    public void Connect(SourcePresetViewModel preset, string? address, AuthMethod method)
-    {
-        var typed = address?.Trim() ?? string.Empty;
-        if (preset.NeedsAddress && typed.Length == 0)
-        {
-            return;
-        }
-
-        // A service is listed only while its plugin is installed.
-        if (S.Hub.State.Sources.Plugins.FirstOrDefault(p => p.Id == preset.PluginId) is not { } plugin)
-        {
-            return;
-        }
-
-        var start = new CoreCommand.ConnectSource(preset.Id, preset.NeedsAddress ? typed : null, method);
-        StartSignIn(new SignInViewModel(S, plugin, method, preset.Name, start));
-    }
-
-    private void StartSignIn(SignInViewModel flow)
-    {
-        SignInRequested?.Invoke(flow);
-        flow.Begin();
-    }
+    /// <summary>Connects to a service from Add a Source; see <see cref="SourceSignIns.Connect"/>.</summary>
+    public void Connect(SourcePresetViewModel preset, string? address, AuthMethod method) => SignIns.Connect(preset, address, method);
 
     private void Change(Func<AppSettings, AppSettings> edit)
     {
@@ -498,6 +572,21 @@ public sealed partial class SettingsViewModel : PageViewModel
         S.Send(new CoreCommand.SetSettings(edit(S.Hub.State.Settings)));
     }
 
+    private string Decibels(double db) =>
+        S.L.Format("Playback_DecibelValue", Math.Round(db, 1).ToString("+0.0;−0.0;0.0", S.L.Culture));
+
+    /// <summary>The equalizer as the page shows it: the switch, the preamp and the core's bands with the sliders' gains.</summary>
+    private EqSettings CurrentEq() => new(
+        EqEnabled,
+        (float)Math.Round(EqPreampDb, 1),
+        Bands.Select(b => b.Band with { GainDb = (float)Math.Round(b.GainDb, 1) }).ToArray());
+
+    private void OnBandChanged(EqBandViewModel band)
+    {
+        SendEq();
+        UpdatePresetChoice();
+    }
+
     private void SendEq()
     {
         if (_syncing)
@@ -506,8 +595,101 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
 
         _lastAudioEditMs = Environment.TickCount64;
-        var bands = Bands.Select(b => new EqBand(EqBandKind.Peaking, b.FrequencyHz, (float)Math.Round(b.GainDb, 1), EqSettings.PresetQ, true)).ToArray();
-        S.Send(new CoreCommand.SetEq(new EqSettings(EqEnabled, (float)Math.Round(EqPreampDb, 1), bands)));
+        S.Send(new CoreCommand.SetEq(CurrentEq()));
+    }
+
+    /// <summary>Shows <paramref name="eq"/>'s gains and preamp and sends it with the switch as it is.</summary>
+    private void ApplyEq(EqSettings eq)
+    {
+        _syncing = true;
+        try
+        {
+            EqPreampDb = eq.PreampDb;
+            if (Bands.Count == eq.Bands.Count)
+            {
+                foreach (var band in Bands)
+                {
+                    band.Syncing = true;
+                    band.GainDb = eq.Bands[band.Index].GainDb;
+                    band.Syncing = false;
+                }
+            }
+            else
+            {
+                SyncBands(eq);
+            }
+        }
+        finally
+        {
+            _syncing = false;
+        }
+
+        _lastAudioEditMs = Environment.TickCount64;
+        S.Send(new CoreCommand.SetEq(eq with { Enabled = EqEnabled }));
+    }
+
+    /// <summary>
+    /// The Preset menu follows the bands: the core's preset whose gains they have, else Custom, which
+    /// is listed only then. Never called while the menu changes its own selection.
+    /// </summary>
+    private void UpdatePresetChoice()
+    {
+        if (_eqPresets.Count == 0)
+        {
+            return;
+        }
+
+        var current = CurrentEq();
+        var match = Presets.FirstOrDefault(p => p.Settings is { } s && current.SameGains(s));
+        var wasSyncing = _syncing;
+        _syncing = true;
+        try
+        {
+            if (match is not null)
+            {
+                SelectedPreset = match;
+                if (_custom is not null)
+                {
+                    Presets.Remove(_custom);
+                }
+            }
+            else
+            {
+                _custom ??= EqPresetChoice.Custom(S.L);
+                if (!Presets.Contains(_custom))
+                {
+                    Presets.Add(_custom);
+                }
+
+                SelectedPreset = _custom;
+            }
+        }
+        finally
+        {
+            _syncing = wasSyncing;
+        }
+    }
+
+    /// <summary>The sliders take the core's bands: new ones when the layout changed, else only their gains.</summary>
+    private void SyncBands(EqSettings eq)
+    {
+        if (Bands.Count != eq.Bands.Count || Bands.Zip(eq.Bands).Any(p => !p.First.SameShape(p.Second)))
+        {
+            Bands.Clear();
+            for (var i = 0; i < eq.Bands.Count; i++)
+            {
+                Bands.Add(new EqBandViewModel(i, eq.Bands[i], OnBandChanged));
+            }
+
+            return;
+        }
+
+        foreach (var band in Bands)
+        {
+            band.Syncing = true;
+            band.GainDb = eq.Bands[band.Index].GainDb;
+            band.Syncing = false;
+        }
     }
 
     private void SendReplayGain()
@@ -583,13 +765,7 @@ public sealed partial class SettingsViewModel : PageViewModel
             {
                 EqEnabled = s.Eq.Enabled;
                 EqPreampDb = s.Eq.PreampDb;
-                foreach (var band in Bands)
-                {
-                    band.Syncing = true;
-                    band.GainDb = s.Eq.Bands.ElementAtOrDefault(band.Index)?.GainDb ?? 0;
-                    band.Syncing = false;
-                }
-
+                SyncBands(s.Eq);
                 ReplayGainIndex = s.ReplayGainMode switch
                 {
                     ReplayGainMode.Track => 1,
@@ -602,8 +778,9 @@ public sealed partial class SettingsViewModel : PageViewModel
                 AlbumContinuity = s.Crossfade.AlbumContinuity;
             }
 
+            UpdatePresetChoice();
             SyncPlugins(state.Sources);
-            SyncPresets(state.Sources);
+            SourceSignIns.Sync(SourcePresets, state.Sources, S.L);
         }
         finally
         {
@@ -624,18 +801,25 @@ public sealed partial class SettingsViewModel : PageViewModel
             Plugins.Add(vm);
         }
     }
-
-    private void SyncPresets(SourcesState sources)
-    {
-        SourcePresets.Clear();
-        foreach (var preset in sources.Presets)
-        {
-            SourcePresets.Add(new SourcePresetViewModel(preset, sources.Plugins.FirstOrDefault(p => p.Id == preset.Plugin), S.L));
-        }
-    }
 }
 
-/// <summary>One installed source in Settings → Sources.</summary>
+/// <summary>A sign-in button of an installed source: the method's title ("Sign In with QR Code") and the command that starts it.</summary>
+public sealed class SignInAction(SignInMethodChoice choice, Action start)
+{
+    public string Title => choice.Title;
+
+    public AuthMethod Method => choice.Method;
+
+    public IRelayCommand Command { get; } = new RelayCommand(start);
+
+    public override string ToString() => Title;
+}
+
+/// <summary>
+/// One installed source in Settings › Sources › Installed: its name, badge and status; Enabled, a
+/// sign-in button for each method it offers (or Sign Out), its own settings, "Version · Author" and
+/// Uninstall…, which asks first.
+/// </summary>
 public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel owner) : ObservableObject
 {
     private bool _syncing;
@@ -653,13 +837,23 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
 
     public string Name => Info?.Name ?? string.Empty;
 
+    /// <summary>"Version 1.2.0 · Author".</summary>
     public string Details => Info is null ? string.Empty : s.L.Format("Source_Details", Info.Version, Info.Author);
 
     public bool IsOfficial => Info?.Badge == PluginBadge.Official;
 
+    /// <summary>"Official" or "Community · unofficial".</summary>
     public string BadgeLabel => s.L.Get(IsOfficial ? "Source_Official" : "Source_Community");
 
     public string? Account => Info?.Account;
+
+    /// <summary>"Signed in as …" or "Not signed in"; empty for a source that never signs in.</summary>
+    public string Status => Info switch
+    {
+        { Account: { } account } => s.L.Format("Source_SignedInAs", account),
+        { AuthMethods.Count: > 0 } => s.L.Get("Source_NotSignedIn"),
+        _ => string.Empty,
+    };
 
     public bool IsSignedIn => Info?.Account is not null;
 
@@ -669,6 +863,9 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
 
     public IReadOnlyList<AuthMethod> AuthMethods => Info?.AuthMethods ?? [];
 
+    /// <summary>A button for each way the source signs in, in its order, with the shared labels.</summary>
+    public IReadOnlyList<SignInAction> SignInActions { get; private set; } = [];
+
     public bool HasSettings => Form is { IsEmpty: false };
 
     internal void Update(PluginInfo info)
@@ -677,6 +874,7 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
         Info = info;
         IsEnabled = info.Enabled;
         Form = PluginSettingsForm.Create(info.SettingsSchemaJson, info.SettingsJson);
+        SignInActions = info.AuthMethods.Select(m => new SignInAction(SignInMethodChoice.For(m, s.L), () => SignIn(m))).ToArray();
         _syncing = false;
         OnPropertyChanged(string.Empty);
     }
@@ -712,12 +910,13 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
         }
     }
 
+    /// <summary>Signs in with <paramref name="method"/>, one of the methods the source offers.</summary>
     [RelayCommand]
-    private void SignIn(AuthMethod? method)
+    private void SignIn(AuthMethod method)
     {
-        if (Info is { } info && (method ?? info.AuthMethods.FirstOrDefault()) is var m && info.AuthMethods.Count > 0)
+        if (Info is { } info && info.AuthMethods.Contains(method))
         {
-            owner.RequestSignIn(info, m);
+            owner.RequestSignIn(info, method);
         }
     }
 
@@ -739,6 +938,7 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
         }
     }
 
+    /// <summary>Uninstall… asks "Uninstall Name?" first: its settings and sign-in are removed.</summary>
     [RelayCommand]
     private async Task Uninstall()
     {
@@ -747,131 +947,5 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
         {
             s.Send(new CoreCommand.UninstallPlugin(info.Id));
         }
-    }
-}
-
-/// <summary>
-/// A service in Settings → Sources → Add a Source (SourcesState.Presets), offered while its official
-/// plugin is installed: its name, what it is (or the account signed in), the plugin's icon and the
-/// ways to sign in.
-/// </summary>
-public sealed class SourcePresetViewModel
-{
-    public SourcePresetViewModel(SourcePreset preset, PluginInfo? plugin, ILocalizer l)
-    {
-        Preset = preset;
-        Description = DescriptionKey(preset.Id) is { } key ? l.Get(key) : string.Empty;
-        AccountLine = preset.Account is { } account ? l.Format("SignIn_Done", account) : null;
-        IconPath = plugin?.Icon;
-        IconUri = IconPath is null ? null : FileUris.From(IconPath);
-        Methods = preset.AuthMethods.Select(m => SignInMethodChoice.For(m, l)).ToArray();
-        ConnectTitle = l.Format("Connect_Title", preset.Name);
-    }
-
-    public SourcePreset Preset { get; }
-
-    public string Id => Preset.Id;
-
-    public string Name => Preset.Name;
-
-    /// <summary>The plugin that connects to the service; the sign-in steps arrive as its Auth events.</summary>
-    public string PluginId => Preset.Plugin;
-
-    /// <summary>What the service is: "Your Jellyfin server".</summary>
-    public string Description { get; }
-
-    /// <summary>"Signed in as …" while the plugin has an account, otherwise null.</summary>
-    public string? AccountLine { get; }
-
-    /// <summary>The line under the name: the account when signed in, otherwise the description.</summary>
-    public string Subtitle => AccountLine ?? Description;
-
-    /// <summary>The icon of the plugin that connects to it (PluginInfo.Icon), when it has one.</summary>
-    public string? IconPath { get; }
-
-    /// <summary><see cref="IconPath"/> as a URI an image control loads.</summary>
-    public string? IconUri { get; }
-
-    /// <summary>False shows a generic glyph instead of the plugin's icon.</summary>
-    public bool HasIcon => IconUri is not null;
-
-    public IReadOnlyList<AuthMethod> AuthMethods => Preset.AuthMethods;
-
-    /// <summary>The ways to sign in as buttons, in the plugin's order.</summary>
-    public IReadOnlyList<SignInMethodChoice> Methods { get; }
-
-    public bool NeedsAddress => Preset.NeedsAddress;
-
-    public string? Address => Preset.Address;
-
-    public string? AddressExample => Preset.AddressExample;
-
-    /// <summary>"Connect to Navidrome".</summary>
-    public string ConnectTitle { get; }
-
-    public override string ToString() => Name;
-
-    /// <summary>The string key of what a service is, by its stable id.</summary>
-    private static string? DescriptionKey(string id) => id switch
-    {
-        "jellyfin" => "SourcePreset_Jellyfin",
-        "navidrome" => "SourcePreset_Navidrome",
-        "subsonic" => "SourcePreset_Subsonic",
-        _ => null,
-    };
-}
-
-/// <summary>
-/// "Connect to …" for a service in Add a Source: the server's address (filled with the one set now)
-/// when the service needs one, and a button per way to sign in, password exchange as the primary
-/// one. Choosing a way only records it: the page calls <see cref="SettingsViewModel.Connect"/> once
-/// this dialog has closed, so the sign-in dialog never opens over it.
-/// </summary>
-public sealed partial class ConnectSourceViewModel : ObservableObject
-{
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanConnect))]
-    private string _address = string.Empty;
-
-    public ConnectSourceViewModel(SourcePresetViewModel preset)
-    {
-        Preset = preset;
-        Address = preset.Address ?? string.Empty;
-        Primary = preset.Methods.FirstOrDefault(m => m.Method == AuthMethod.PasswordExchange) ?? preset.Methods.FirstOrDefault();
-        Others = preset.Methods.Where(m => m != Primary).ToArray();
-    }
-
-    public SourcePresetViewModel Preset { get; }
-
-    public string Title => Preset.ConnectTitle;
-
-    public bool NeedsAddress => Preset.NeedsAddress;
-
-    public string AddressExample => Preset.AddressExample ?? string.Empty;
-
-    /// <summary>Signing in waits for an address while the service needs one.</summary>
-    public bool CanConnect => !NeedsAddress || !string.IsNullOrWhiteSpace(Address);
-
-    /// <summary>The dialog's primary button: password exchange when offered, otherwise the first way.</summary>
-    public SignInMethodChoice? Primary { get; }
-
-    /// <summary>The other ways to sign in, as buttons in the dialog.</summary>
-    public IReadOnlyList<SignInMethodChoice> Others { get; }
-
-    public bool HasOthers => Others.Count > 0;
-
-    /// <summary>The way the person chose; null while none was (or the dialog was cancelled).</summary>
-    public AuthMethod? Chosen { get; private set; }
-
-    /// <summary>Records <paramref name="method"/>; false, choosing nothing, while a needed address is empty.</summary>
-    public bool Choose(AuthMethod method)
-    {
-        if (!CanConnect)
-        {
-            return false;
-        }
-
-        Chosen = method;
-        return true;
     }
 }

@@ -17,13 +17,12 @@ using Microsoft.UI.Xaml.Navigation;
 
 namespace Jellyfesh.App.Views;
 
-/// <summary>A section of Settings, for links that open one directly.</summary>
+/// <summary>A section of Settings, for links that open one directly (Sources Settings…).</summary>
 public enum SettingsSection
 {
     Appearance,
     Playback,
     Library,
-    Lyrics,
     Sources,
     About,
 }
@@ -48,11 +47,15 @@ public sealed partial class SettingsPage : JfPage
             SyncChoices();
         };
         Unloaded += (_, _) => AppHost.App.ThemeChanged -= OnThemeChanged;
+        LicencesButton.Visibility = Bind.Visible(File.Exists(NoticesPath));
         VersionText.Text = Version();
         AboutIcon.Source = new BitmapImage(AppAssets.IconPng(AppHost.App.AppIcon, 64));
     }
 
     public SettingsViewModel ViewModel { get; }
+
+    /// <summary>The third-party notices the build puts next to the app (scripts/build.ps1).</summary>
+    private static string NoticesPath => Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.md");
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -62,7 +65,6 @@ public sealed partial class SettingsPage : JfPage
             {
                 SettingsSection.Playback => PlaybackItem,
                 SettingsSection.Library => LibraryItem,
-                SettingsSection.Lyrics => LyricsItem,
                 SettingsSection.Sources => SourcesItem,
                 SettingsSection.About => AboutItem,
                 _ => AppearanceItem,
@@ -105,7 +107,6 @@ public sealed partial class SettingsPage : JfPage
         AppearancePanel.Visibility = Bind.Visible(selected == AppearanceItem);
         PlaybackPanel.Visibility = Bind.Visible(selected == PlaybackItem);
         LibraryPanel.Visibility = Bind.Visible(selected == LibraryItem);
-        LyricsSettingsPanel.Visibility = Bind.Visible(selected == LyricsItem);
         SourcesPanel.Visibility = Bind.Visible(selected == SourcesItem);
         AboutPanel.Visibility = Bind.Visible(selected == AboutItem);
         Scroller.ChangeView(null, 0, null, disableAnimation: true);
@@ -137,6 +138,7 @@ public sealed partial class SettingsPage : JfPage
             }
             IconGrid.SelectedItem = ViewModel.SelectedIcon;
             DeviceBox.SelectedItem = ViewModel.Player.SelectedDevice;
+            PresetBox.SelectedItem = ViewModel.SelectedPreset;
         }
         finally
         {
@@ -148,7 +150,8 @@ public sealed partial class SettingsPage : JfPage
     {
         if (e.PropertyName is nameof(SettingsViewModel.StyleIndex) or nameof(SettingsViewModel.SelectedIcon)
             or nameof(SettingsViewModel.AppearanceIndex) or nameof(SettingsViewModel.SwatchIndex)
-            or nameof(SettingsViewModel.LyricsSizeIndex) or nameof(SettingsViewModel.LyricsAlignIndex))
+            or nameof(SettingsViewModel.LyricsSizeIndex) or nameof(SettingsViewModel.LyricsAlignIndex)
+            or nameof(SettingsViewModel.SelectedPreset))
         {
             SyncChoices();
         }
@@ -277,9 +280,18 @@ public sealed partial class SettingsPage : JfPage
         }
     }
 
-    private void OnPresetClick(object sender, RoutedEventArgs e) => ViewModel.ApplyPresetCommand.Execute((sender as FrameworkElement)?.Tag as EqPreset);
+    /// <summary>A preset chosen in the Preset menu (Custom only labels bands that match none).</summary>
+    private void OnPresetChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_syncing && PresetBox.SelectedItem is EqPresetChoice choice && !ReferenceEquals(choice, ViewModel.SelectedPreset))
+        {
+            ViewModel.SelectedPreset = choice;
+        }
+    }
 
-    private void OnRemoveFolderClick(object sender, RoutedEventArgs e) => ViewModel.RemoveFolderCommand.Execute((sender as FrameworkElement)?.Tag as string);
+    private void OnShowFolderClick(object sender, RoutedEventArgs e) => ViewModel.ShowFolderCommand.Execute((sender as FrameworkElement)?.Tag as FolderItem);
+
+    private void OnRemoveFolderClick(object sender, RoutedEventArgs e) => ViewModel.RemoveFolderCommand.Execute((sender as FrameworkElement)?.Tag as FolderItem);
 
     private void OnFieldChoiceChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -289,30 +301,22 @@ public sealed partial class SettingsPage : JfPage
         }
     }
 
-    private async void OnSignInRequested(SignInViewModel flow)
-    {
-        var dialog = new SignInDialog(flow);
-        await AppHost.Platform.ShowAsync(dialog);
-        flow.Dispose();
-    }
+    private void OnSignInRequested(SignInViewModel flow) => SourceDialogs.ShowSignIn(flow);
 
-    /// <summary>
-    /// A service in Add a Source: "Connect to …" asks for the address and how to sign in. Connect
-    /// runs only once that dialog has closed, so the sign-in dialog it opens can show: WinUI allows
-    /// one ContentDialog at a time and ShellPlatform refuses a second.
-    /// </summary>
+    /// <summary>A service in Add a Source: "Connect to …", then the sign-in dialog.</summary>
     private async void OnSourcePresetClick(object sender, RoutedEventArgs e)
     {
-        if ((sender as FrameworkElement)?.Tag is not SourcePresetViewModel preset)
+        if ((sender as FrameworkElement)?.Tag is SourcePresetViewModel preset)
         {
-            return;
+            await SourceDialogs.ConnectAsync(preset, ViewModel.Connect);
         }
+    }
 
-        var connect = new ConnectSourceViewModel(preset);
-        await AppHost.Platform.ShowAsync(new ConnectSourceDialog(connect));
-        if (connect.Chosen is { } method)
+    private void OnLicencesClick(object sender, RoutedEventArgs e)
+    {
+        if (File.Exists(NoticesPath))
         {
-            ViewModel.Connect(preset, connect.Address, method);
+            Process.Start(new ProcessStartInfo(NoticesPath) { UseShellExecute = true });
         }
     }
 

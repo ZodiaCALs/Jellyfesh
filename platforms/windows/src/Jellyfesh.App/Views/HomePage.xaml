@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Home (docs/ui.md): the library's size, then Recently Added (albums), Recently Played and Most Played
+    (songs). With nothing in the library and no source signed in, the welcome instead, with Add Music
+    Folder… and Add a Source.
+-->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.HomePage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -29,32 +34,33 @@
 
     <ScrollViewer>
         <StackPanel Padding="32,24,32,112" Spacing="28">
-            <TextBlock x:Uid="Home_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Home" />
+            <StackPanel Spacing="4">
+                <TextBlock x:Uid="Home_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Home" />
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.LibrarySize, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.LibrarySize), Mode=OneWay}" />
+            </StackPanel>
 
-            <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}">
-                <TextBlock x:Uid="Home_EmptyTitle" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Your library is empty" />
-                <TextBlock x:Uid="Home_EmptyBody" Style="{StaticResource JfSecondaryBodyText}" Text="Add a folder of music and Jellyfesh will find your songs, albums and lyrics." />
-                <Button x:Uid="Home_AddFolder" HorizontalAlignment="Left" Click="OnAddFolder" Content="Add a music folder" Style="{StaticResource JfAccentPillStyle}" />
+            <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.ShowWelcome, ViewModel.IsLoading), Mode=OneWay}">
+                <TextBlock x:Uid="Home_EmptyTitle" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Welcome to Jellyfesh" />
+                <TextBlock x:Uid="Home_EmptyBody" Style="{StaticResource JfSecondaryBodyText}" Text="Add your music folders, or connect a server in Sources." />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Uid="Common_AddMusicFolder" Command="{x:Bind ViewModel.AddFolderCommand}" Content="Add Music Folder…" Style="{StaticResource JfAccentPillStyle}" />
+                    <Button x:Uid="Home_AddSource" Click="OnAddSource" Content="Add a Source" Style="{StaticResource JfChipButtonStyle}" />
+                </StackPanel>
             </StackPanel>
 
             <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.RecentlyAdded.Count), Mode=OneWay}">
-                <TextBlock x:Uid="Home_RecentlyAdded" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently added" />
-                <GridView x:Name="AddedShelf" x:Uid="Home_RecentlyAddedList" AutomationProperties.Name="Recently added" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyAdded}" Style="{StaticResource ShelfStyle}" />
+                <TextBlock x:Uid="Home_RecentlyAdded" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently Added" />
+                <GridView x:Name="AddedShelf" x:Uid="Home_RecentlyAddedList" Height="252" AutomationProperties.Name="Recently Added" ItemClick="OnAlbumClick" ItemTemplate="{StaticResource AlbumTileTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyAdded}" Style="{StaticResource ShelfStyle}" />
             </StackPanel>
 
             <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.RecentlyPlayed.Count), Mode=OneWay}">
-                <TextBlock x:Uid="Home_RecentlyPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently played" />
-                <GridView x:Name="PlayedShelf" x:Uid="Home_RecentlyPlayedList" AutomationProperties.Name="Recently played" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyPlayed}" Style="{StaticResource ShelfStyle}" />
+                <TextBlock x:Uid="Home_RecentlyPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently Played" />
+                <GridView x:Name="PlayedShelf" x:Uid="Home_RecentlyPlayedList" AutomationProperties.Name="Recently Played" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyPlayed}" Style="{StaticResource ShelfStyle}" />
             </StackPanel>
 
             <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.MostPlayed.Count), Mode=OneWay}">
-                <TextBlock x:Uid="Home_MostPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Most played" />
-                <GridView x:Name="MostShelf" x:Uid="Home_MostPlayedList" AutomationProperties.Name="Most played" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.MostPlayed}" Style="{StaticResource ShelfStyle}" />
-            </StackPanel>
-
-            <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Playlists.Count), Mode=OneWay}">
-                <TextBlock x:Uid="Home_Playlists" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Playlists" />
-                <GridView x:Name="PlaylistShelf" x:Uid="Home_PlaylistsList" Height="252" AutomationProperties.Name="Playlists" ItemClick="OnPlaylistClick" ItemTemplate="{StaticResource PlaylistTileTemplate}" ItemsSource="{x:Bind ViewModel.Playlists}" Style="{StaticResource ShelfStyle}" />
+                <TextBlock x:Uid="Home_MostPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Most Played" />
+                <GridView x:Name="MostShelf" x:Uid="Home_MostPlayedList" AutomationProperties.Name="Most Played" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.MostPlayed}" Style="{StaticResource ShelfStyle}" />
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

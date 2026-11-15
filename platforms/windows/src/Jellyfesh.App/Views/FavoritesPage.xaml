@@ -36,7 +36,10 @@
                 </Grid>
             </ListView.Header>
         </ListView>
-        <TextBlock x:Uid="Favorites_Empty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Songs you mark with the heart appear here." Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}" />
+        <StackPanel Grid.Row="1" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}">
+            <TextBlock x:Uid="Favorites_EmptyTitle" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="No Favourites Yet" />
+            <TextBlock x:Uid="Favorites_Empty" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Songs you mark with the heart appear here." TextAlignment="Center" />
+        </StackPanel>
         <TextBlock x:Uid="Common_NotAvailable" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Coming in a later build." Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsNotAvailable), Mode=OneWay}" />
     </Grid>
 </shell:JfPage>

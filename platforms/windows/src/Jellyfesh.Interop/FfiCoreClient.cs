@@ -139,6 +139,9 @@ public sealed class FfiCoreClient : ICoreClient
     public IReadOnlyList<DeviceInfo> OutputDevices() =>
         Query(() => F.JellyfeshMethods.OutputDevices().Select(FfiMapping.ToModel).ToArray());
 
+    public IReadOnlyList<EqPreset> EqPresets() =>
+        Query(() => F.JellyfeshMethods.EqPresets().Select(FfiMapping.ToModel).ToArray());
+
     public ulong MonotonicNowNs() => F.JellyfeshMethods.MonotonicNowNs();
 
     public void Shutdown() => _core.Shutdown();

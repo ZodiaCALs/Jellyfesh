@@ -57,6 +57,9 @@ public sealed class CoreHub : IDisposable
     /// <summary>The latest scan progress while a scan runs.</summary>
     public ScanProgress? ScanProgress { get; private set; }
 
+    /// <summary>How the last scan of this session ended (finished or failed), for Settings › Library's Last Scan.</summary>
+    public ScanStatus? LastScan { get; private set; }
+
     /// <summary>Raised on the UI thread after a batch of slices was applied.</summary>
     public event Action<SliceChange>? Changed;
 
@@ -135,6 +138,7 @@ public sealed class CoreHub : IDisposable
         else if (batch.Scan is not null)
         {
             ScanProgress = null;
+            LastScan = batch.Scan;
         }
 
         State = state;

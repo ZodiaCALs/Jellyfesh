@@ -2,6 +2,7 @@ using Jellyfesh.App.Shell;
 using Jellyfesh.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Windows.System;
 
@@ -9,15 +10,16 @@ namespace Jellyfesh.App.Views;
 
 public sealed partial class SearchPage : JfPage
 {
+    /// <summary>The song menu, shared by the library's songs and every source's.</summary>
+    private readonly FlyoutBase _menu;
+
     public SearchPage()
     {
         ViewModel = AppHost.App.CreateSearch();
         PageModel = ViewModel;
         InitializeComponent();
-        var menu = new TrackMenu(AppHost.Services).Flyout;
-        Lists.Attach(TrackList, 40, menu: menu);
-        Lists.Attach(OnlineTrackList, 40, menu: menu);
-        Lists.Attach(OnlineEntryList, 40);
+        _menu = new TrackMenu(AppHost.Services).Flyout;
+        Lists.Attach(TrackList, 40, menu: _menu);
         Lists.Attach(AlbumShelf, 168);
         Lists.Attach(ArtistShelf, 0);
         Loaded += (_, _) => FocusBox();
@@ -41,6 +43,26 @@ public sealed partial class SearchPage : JfPage
     }
 
     private void OnTrackClick(object sender, ItemClickEventArgs e) => ViewModel.PlayTrackCommand.Execute(e.ClickedItem as TrackItem);
+
+    /// <summary>A source's group of songs (From Your Sources): thumbnails and the song menu, once per list.</summary>
+    private void OnOnlineTracksLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is ListView { Tag: null } list)
+        {
+            list.Tag = this;
+            Lists.Attach(list, 40, menu: _menu);
+        }
+    }
+
+    /// <summary>A source's group of albums, artists, playlists and folders: thumbnails, once per list.</summary>
+    private void OnOnlineEntriesLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is ListView { Tag: null } list)
+        {
+            list.Tag = this;
+            Lists.Attach(list, 40);
+        }
+    }
 
     private void OnOnlineTrackClick(object sender, ItemClickEventArgs e) => ViewModel.PlayTrackCommand.Execute(e.ClickedItem as TrackItem);
 

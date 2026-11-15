@@ -57,6 +57,21 @@ internal sealed class ShellPlatform(Window window, ILocalizer l) : IShellPlatfor
         }
     }
 
+    /// <summary>Explorer at a folder, or at a file's folder with the file selected; nothing for a path that is gone.</summary>
+    public void ShowInExplorer(string path)
+    {
+        if (!Path.IsPathFullyQualified(path))
+        {
+            return;
+        }
+
+        var arguments = Directory.Exists(path) ? $"\"{path}\"" : File.Exists(path) ? $"/select,\"{path}\"" : null;
+        if (arguments is not null)
+        {
+            Process.Start(new ProcessStartInfo("explorer.exe", arguments) { UseShellExecute = false });
+        }
+    }
+
     public void CopyText(string text)
     {
         var package = new DataPackage();

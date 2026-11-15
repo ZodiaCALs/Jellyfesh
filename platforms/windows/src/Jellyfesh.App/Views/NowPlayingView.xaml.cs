@@ -70,7 +70,6 @@ public sealed partial class NowPlayingView : UserControl
         ShowPanel(panel);
         ApplyTheme();
         SyncSeek();
-        UpdateFile();
         ScaleArtwork(animate: false);
         Animate(opening: true, animate);
         StartArtworkAnimation(animate);
@@ -380,18 +379,11 @@ public sealed partial class NowPlayingView : UserControl
 
     private void OnPlayerChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(PlayerViewModel.Title) or nameof(PlayerViewModel.HasTrack))
-        {
-            UpdateFile();
-        }
-
         if (e.PropertyName == nameof(PlayerViewModel.IsPlaying))
         {
             ScaleArtwork(animate: true);
         }
     }
-
-    private void UpdateFile() => FileText.Text = Player.NowPlaying?.Path ?? string.Empty;
 
     private void OnBackClick(object sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
 

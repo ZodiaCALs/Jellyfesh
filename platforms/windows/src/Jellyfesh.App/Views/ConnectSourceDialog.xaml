@@ -17,7 +17,7 @@
     <StackPanel MinWidth="360" MaxWidth="440" Spacing="16">
         <TextBox
             x:Uid="Connect_Address"
-            Header="Server address"
+            Header="Server Address"
             InputScope="Url"
             IsSpellCheckEnabled="False"
             PlaceholderText="{x:Bind ViewModel.AddressExample}"

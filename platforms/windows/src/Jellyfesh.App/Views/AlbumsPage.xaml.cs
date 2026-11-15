@@ -12,21 +12,12 @@ public sealed partial class AlbumsPage : JfPage
         ViewModel = AppHost.App.CreateAlbums();
         PageModel = ViewModel;
         InitializeComponent();
-        SortBox.ItemsSource = ViewModel.Sorts.Select(s => AppHost.L.Get("Sort_" + s)).ToList();
-        SortBox.SelectedIndex = ViewModel.Sorts.ToList().IndexOf(ViewModel.Sort);
+        _ = new SortMenu<AlbumSort>(SortButton, SortText, ViewModel.Sorts, () => ViewModel.Sort, s => ViewModel.Sort = s, () => ViewModel.Descending, d => ViewModel.Descending = d);
         var menu = new CollectionMenu(AppHost.Services, o => o is AlbumItem { IsLoaded: true } a ? new Collection.Album(a.Id) : null);
         Lists.Attach(AlbumGrid, 168, i => ViewModel.Albums?.Realize(i), menu.Flyout);
     }
 
     public AlbumsViewModel ViewModel { get; }
-
-    private void OnSortChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (SortBox.SelectedIndex >= 0 && SortBox.SelectedIndex < ViewModel.Sorts.Count)
-        {
-            ViewModel.Sort = ViewModel.Sorts[SortBox.SelectedIndex];
-        }
-    }
 
     private void OnAlbumClick(object sender, ItemClickEventArgs e)
     {

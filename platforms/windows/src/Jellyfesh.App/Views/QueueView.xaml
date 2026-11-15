@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The queue in playback order: drag a row to reorder it (or Alt+Up and Alt+Down), Delete removes
-    it, selecting it jumps there. The core's next Queue slice is always the truth.
+    The queue in playback order: "Up Next", Clear Queue (it asks first), "Nothing Up Next" when empty.
+    Drag a row to reorder it (or Alt+Up and Alt+Down), Delete removes it, selecting it jumps there. The
+    core's next Queue slice is always the truth.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.QueueView"
@@ -20,9 +21,9 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock x:Uid="Queue_UpNext" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Up next" />
+            <TextBlock x:Uid="Queue_UpNext" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Up Next" />
             <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="{x:Bind Queue.Summary, Mode=OneWay}" />
-            <Button x:Uid="Queue_Clear" Grid.Column="2" Command="{x:Bind Queue.ClearCommand}" Content="Clear" IsEnabled="{x:Bind shell:Bind.Not(Queue.IsEmpty), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
+            <Button x:Uid="Queue_Clear" Grid.Column="2" Command="{x:Bind Queue.ClearCommand}" Content="Clear Queue" IsEnabled="{x:Bind shell:Bind.Not(Queue.IsEmpty), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
         </Grid>
         <ListView
             x:Name="List"
@@ -30,7 +31,7 @@
             Grid.Row="1"
             Padding="0,0,0,24"
             AllowDrop="True"
-            AutomationProperties.Name="Up next"
+            AutomationProperties.Name="Up Next"
             CanDragItems="True"
             CanReorderItems="True"
             DragItemsCompleted="OnDragItemsCompleted"
@@ -52,7 +53,7 @@
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Style="{StaticResource JfSecondaryBodyText}"
-            Text="Nothing comes after this song"
+            Text="Nothing Up Next"
             Visibility="{x:Bind shell:Bind.Visible(Queue.IsEmpty), Mode=OneWay}" />
     </Grid>
 </UserControl>

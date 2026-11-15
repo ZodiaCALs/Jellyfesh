@@ -96,6 +96,26 @@
         </StackPanel>
     </DataTemplate>
 
+    <!-- The Artists page is a list (docs/ui.md): a round monogram, the name and the song count. -->
+    <DataTemplate x:Key="ArtistRowTemplate" x:DataType="vm:ArtistItem">
+        <Grid Height="{th:Token Key=Player.RowHeight}" ColumnSpacing="12" Background="Transparent"
+              AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="40" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Width="40" Height="40">
+                <Ellipse Fill="{ThemeResource JfAccentSoft}" />
+                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" FontWeight="Bold"
+                           Foreground="{ThemeResource JfAccentText}" Text="{x:Bind Monogram, Mode=OneWay}" />
+            </Grid>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Name, Mode=OneWay}" />
+                <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
     <DataTemplate x:Key="PlaylistTileTemplate" x:DataType="vm:PlaylistItem">
         <StackPanel Width="168" Spacing="8" AutomationProperties.Name="{x:Bind Name}">
             <Grid Width="168" Height="168" CornerRadius="{th:Token Key=Artwork.RadiusGrid, Kind=Corner}" Background="{ThemeResource JfAccentSoft}">

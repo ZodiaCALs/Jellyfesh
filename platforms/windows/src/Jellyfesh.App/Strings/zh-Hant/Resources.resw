@@ -14,6 +14,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="About_Licences.Content" xml:space="preserve">
+    <value>第三方授權</value>
+  </data>
   <data name="About_Logs.Content" xml:space="preserve">
     <value>開啟記錄資料夾</value>
   </data>
@@ -32,6 +35,9 @@
   <data name="Action_Cancel" xml:space="preserve">
     <value>取消</value>
   </data>
+  <data name="Action_Clear" xml:space="preserve">
+    <value>清除</value>
+  </data>
   <data name="Action_Close" xml:space="preserve">
     <value>關閉</value>
   </data>
@@ -44,6 +50,9 @@
   <data name="Action_PlayButton.Content" xml:space="preserve">
     <value>播放</value>
   </data>
+  <data name="Action_RemoveFolder" xml:space="preserve">
+    <value>移除資料夾</value>
+  </data>
   <data name="Action_Rename" xml:space="preserve">
     <value>重新命名</value>
   </data>
@@ -53,23 +62,11 @@
   <data name="Action_Uninstall" xml:space="preserve">
     <value>解除安裝</value>
   </data>
-  <data name="Album_AddToQueueItem.Text" xml:space="preserve">
-    <value>加入播放佇列</value>
-  </data>
   <data name="Album_ArtistYear" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
-  <data name="Album_More.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>更多</value>
-  </data>
-  <data name="Album_More.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>更多</value>
-  </data>
   <data name="Album_PlayAlbum" xml:space="preserve">
     <value>播放專輯</value>
-  </data>
-  <data name="Album_PlayNextItem.Text" xml:space="preserve">
-    <value>接著播放</value>
   </data>
   <data name="Album_Summary" xml:space="preserve">
     <value>{0}，{1}</value>
@@ -78,13 +75,19 @@
     <value>曲目</value>
   </data>
   <data name="Albums_Empty.Text" xml:space="preserve">
-    <value>還沒有專輯。請在設定中加入音樂資料夾。</value>
+    <value>加入音樂資料夾後，你的專輯會顯示在這裡。</value>
+  </data>
+  <data name="Albums_EmptyTitle.Text" xml:space="preserve">
+    <value>還沒有專輯</value>
   </data>
   <data name="Albums_Grid.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>專輯</value>
   </data>
   <data name="Albums_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>排序方式</value>
+    <value>專輯排序</value>
+  </data>
+  <data name="Albums_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>專輯排序</value>
   </data>
   <data name="Albums_Title.Text" xml:space="preserve">
     <value>專輯</value>
@@ -146,6 +149,9 @@
   <data name="Appearance_LyricsCentre.Content" xml:space="preserve">
     <value>置中</value>
   </data>
+  <data name="Appearance_LyricsHint.Text" xml:space="preserve">
+    <value>歌詞來自歌曲的標籤，以及歌曲旁邊的 .lrc、.ttml 和 .vtt 檔案。歌詞附有翻譯和羅馬拼音時才會顯示。</value>
+  </data>
   <data name="Appearance_LyricsLarge.Content" xml:space="preserve">
     <value>大</value>
   </data>
@@ -180,10 +186,10 @@
     <value>以純色表面取代玻璃效果，以短暫的淡入淡出取代移動，不逐字標示歌詞，也不使用捲動動畫。也會同時遵循 Windows 本身的動畫和透明效果設定。</value>
   </data>
   <data name="Appearance_Romanization.Header" xml:space="preserve">
-    <value>在每行下方顯示羅馬拼音</value>
+    <value>顯示羅馬拼音</value>
   </data>
   <data name="Appearance_Style.Text" xml:space="preserve">
-    <value>正在播放的背景</value>
+    <value>正在播放背景</value>
   </data>
   <data name="Appearance_StyleArtwork.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>封面</value>
@@ -192,7 +198,7 @@
     <value>封面</value>
   </data>
   <data name="Appearance_StyleChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>正在播放的背景</value>
+    <value>正在播放背景</value>
   </data>
   <data name="Appearance_StyleHint.Text" xml:space="preserve">
     <value>模糊的封面，或同一顏色的 Misty 背景。</value>
@@ -210,13 +216,13 @@
     <value>強調色</value>
   </data>
   <data name="Appearance_System.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>跟隨 Windows</value>
+    <value>系統</value>
   </data>
   <data name="Appearance_SystemLabel.Text" xml:space="preserve">
     <value>系統</value>
   </data>
   <data name="Appearance_Translation.Header" xml:space="preserve">
-    <value>在每行下方顯示翻譯</value>
+    <value>顯示翻譯</value>
   </data>
   <data name="Appearance_Transparency.Text" xml:space="preserve">
     <value>透明度</value>
@@ -249,7 +255,10 @@
     <value>歌曲</value>
   </data>
   <data name="Artists_Empty.Text" xml:space="preserve">
-    <value>還沒有藝人。</value>
+    <value>加入音樂資料夾後，你的藝人會顯示在這裡。</value>
+  </data>
+  <data name="Artists_EmptyTitle.Text" xml:space="preserve">
+    <value>還沒有藝人</value>
   </data>
   <data name="Artists_Grid.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>藝人</value>
@@ -268,6 +277,9 @@
   </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>播放佇列</value>
+  </data>
+  <data name="Common_AddMusicFolder.Content" xml:space="preserve">
+    <value>加入音樂資料夾…</value>
   </data>
   <data name="Common_NotAvailable.Text" xml:space="preserve">
     <value>將在之後的版本中提供。</value>
@@ -332,6 +344,9 @@
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>低音增強</value>
   </data>
+  <data name="Eq_Custom" xml:space="preserve">
+    <value>自訂</value>
+  </data>
   <data name="Eq_Flat" xml:space="preserve">
     <value>平坦</value>
   </data>
@@ -353,6 +368,9 @@
   <data name="Favorites_Empty.Text" xml:space="preserve">
     <value>以愛心標記的歌曲會顯示在這裡。</value>
   </data>
+  <data name="Favorites_EmptyTitle.Text" xml:space="preserve">
+    <value>還沒有最愛</value>
+  </data>
   <data name="Favorites_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>最愛</value>
   </data>
@@ -368,26 +386,23 @@
   <data name="Format_WithBitrate" xml:space="preserve">
     <value>{0} · {1} kbps</value>
   </data>
-  <data name="Home_AddFolder.Content" xml:space="preserve">
-    <value>加入音樂資料夾</value>
+  <data name="Home_AddSource.Content" xml:space="preserve">
+    <value>新增來源</value>
   </data>
   <data name="Home_EmptyBody.Text" xml:space="preserve">
-    <value>加入一個音樂資料夾，Jellyfesh 會找出其中的歌曲、專輯和歌詞。</value>
+    <value>加入你的音樂資料夾，或在「來源」中連線至伺服器。</value>
   </data>
   <data name="Home_EmptyTitle.Text" xml:space="preserve">
-    <value>資料庫還是空的</value>
+    <value>歡迎使用 Jellyfesh</value>
+  </data>
+  <data name="Home_LibrarySize" xml:space="preserve">
+    <value>{0} · {1} · {2}</value>
   </data>
   <data name="Home_MostPlayed.Text" xml:space="preserve">
     <value>最常播放</value>
   </data>
   <data name="Home_MostPlayedList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>最常播放</value>
-  </data>
-  <data name="Home_Playlists.Text" xml:space="preserve">
-    <value>播放清單</value>
-  </data>
-  <data name="Home_PlaylistsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>播放清單</value>
   </data>
   <data name="Home_RecentlyAdded.Text" xml:space="preserve">
     <value>最近加入</value>
@@ -458,14 +473,32 @@
   <data name="Library_Folders.Text" xml:space="preserve">
     <value>音樂資料夾</value>
   </data>
+  <data name="Library_LastScan.Text" xml:space="preserve">
+    <value>上次掃描</value>
+  </data>
   <data name="Library_MissingTrack" xml:space="preserve">
     <value>找不到的歌曲</value>
   </data>
   <data name="Library_RemoveFolder.Content" xml:space="preserve">
-    <value>移除</value>
+    <value>移除資料夾…</value>
+  </data>
+  <data name="Library_RemoveFolderBody" xml:space="preserve">
+    <value>其中的歌曲將離開資料庫及其播放清單。檔案仍保留在原處。</value>
+  </data>
+  <data name="Library_RemoveFolderTitle" xml:space="preserve">
+    <value>要從資料庫中移除「{0}」嗎？</value>
   </data>
   <data name="Library_Rescan.Content" xml:space="preserve">
-    <value>重新掃描</value>
+    <value>重新掃描資料庫</value>
+  </data>
+  <data name="Library_RescanHint.Text" xml:space="preserve">
+    <value>尋找新增、變更與已移除的檔案。</value>
+  </data>
+  <data name="Library_RescanTitle.Text" xml:space="preserve">
+    <value>重新掃描資料庫</value>
+  </data>
+  <data name="Library_ShowFolder.Content" xml:space="preserve">
+    <value>在檔案總管中顯示</value>
   </data>
   <data name="Library_StatsLine" xml:space="preserve">
     <value>{0}，{1}，{2} · {3}</value>
@@ -473,14 +506,32 @@
   <data name="Library_UnknownArtist" xml:space="preserve">
     <value>未知藝人</value>
   </data>
-  <data name="Library_Watch.Header" xml:space="preserve">
-    <value>自動偵測這些資料夾中的變更</value>
+  <data name="Library_Watch.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>監看資料夾</value>
   </data>
-  <data name="Lyrics_Heading.Text" xml:space="preserve">
-    <value>歌詞</value>
+  <data name="Library_WatchHint.Text" xml:space="preserve">
+    <value>檔案變更時更新資料庫。</value>
   </data>
-  <data name="Lyrics_Hint.Text" xml:space="preserve">
-    <value>歌詞來自歌曲的標籤，以及歌曲旁邊的 .lrc、.ttml 和 .vtt 檔案。歌詞附有翻譯和羅馬拼音時才會顯示。</value>
+  <data name="Library_WatchTitle.Text" xml:space="preserve">
+    <value>監看資料夾</value>
+  </data>
+  <data name="Lyrics_InfoFrom" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Lyrics_InfoLine" xml:space="preserve">
+    <value>逐行同步</value>
+  </data>
+  <data name="Lyrics_InfoNone" xml:space="preserve">
+    <value>找不到</value>
+  </data>
+  <data name="Lyrics_InfoTags" xml:space="preserve">
+    <value>來自檔案標籤</value>
+  </data>
+  <data name="Lyrics_InfoUnsynced" xml:space="preserve">
+    <value>未同步</value>
+  </data>
+  <data name="Lyrics_InfoWord" xml:space="preserve">
+    <value>逐字同步</value>
   </data>
   <data name="Lyrics_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌詞</value>
@@ -488,23 +539,20 @@
   <data name="Lyrics_None.Text" xml:space="preserve">
     <value>這首歌沒有歌詞</value>
   </data>
-  <data name="Lyrics_Romanization.Header" xml:space="preserve">
-    <value>在每行下方顯示羅馬拼音</value>
-  </data>
-  <data name="Lyrics_Translation.Header" xml:space="preserve">
-    <value>在每行下方顯示翻譯</value>
-  </data>
   <data name="Menu_AddToPlaylist" xml:space="preserve">
-    <value>加入播放清單</value>
-  </data>
-  <data name="Menu_AddToQueue" xml:space="preserve">
-    <value>加入播放佇列</value>
+    <value>加入播放清單…</value>
   </data>
   <data name="Menu_DeletePlaylist" xml:space="preserve">
-    <value>刪除播放清單</value>
+    <value>刪除播放清單…</value>
   </data>
   <data name="Menu_Favorite" xml:space="preserve">
     <value>加入最愛</value>
+  </data>
+  <data name="Menu_GoToAlbum" xml:space="preserve">
+    <value>前往專輯</value>
+  </data>
+  <data name="Menu_GoToArtist" xml:space="preserve">
+    <value>前往藝人</value>
   </data>
   <data name="Menu_NewPlaylist" xml:space="preserve">
     <value>新增播放清單…</value>
@@ -512,14 +560,20 @@
   <data name="Menu_Play" xml:space="preserve">
     <value>播放</value>
   </data>
+  <data name="Menu_PlayLast" xml:space="preserve">
+    <value>最後播放</value>
+  </data>
   <data name="Menu_PlayNext" xml:space="preserve">
     <value>接著播放</value>
   </data>
   <data name="Menu_RemoveFromPlaylist" xml:space="preserve">
-    <value>從此播放清單移除</value>
+    <value>從播放清單移除</value>
   </data>
   <data name="Menu_RemoveFromQueue" xml:space="preserve">
     <value>從播放佇列移除</value>
+  </data>
+  <data name="Menu_ShowInExplorer" xml:space="preserve">
+    <value>在檔案總管中顯示</value>
   </data>
   <data name="Menu_Shuffle" xml:space="preserve">
     <value>隨機播放</value>
@@ -532,6 +586,30 @@
   </data>
   <data name="Mini_Open.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>開啟正在播放</value>
+  </data>
+  <data name="More_AddToPlaylist.Text" xml:space="preserve">
+    <value>加入播放清單…</value>
+  </data>
+  <data name="More_Button.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="More_Button.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="More_Delete.Text" xml:space="preserve">
+    <value>刪除播放清單…</value>
+  </data>
+  <data name="More_Export.Text" xml:space="preserve">
+    <value>匯出播放清單…</value>
+  </data>
+  <data name="More_PlayLast.Text" xml:space="preserve">
+    <value>最後播放</value>
+  </data>
+  <data name="More_PlayNext.Text" xml:space="preserve">
+    <value>接著播放</value>
+  </data>
+  <data name="More_Rename.Text" xml:space="preserve">
+    <value>重新命名…</value>
   </data>
   <data name="Nav_Albums.Content" xml:space="preserve">
     <value>專輯</value>
@@ -569,6 +647,9 @@
   <data name="NowPlaying_InfoAlbum.Text" xml:space="preserve">
     <value>專輯</value>
   </data>
+  <data name="NowPlaying_InfoArtist.Text" xml:space="preserve">
+    <value>藝人</value>
+  </data>
   <data name="NowPlaying_InfoFile.Text" xml:space="preserve">
     <value>檔案</value>
   </data>
@@ -578,11 +659,20 @@
   <data name="NowPlaying_InfoHeading.Text" xml:space="preserve">
     <value>關於這首歌</value>
   </data>
-  <data name="NowPlaying_InfoQueue.Text" xml:space="preserve">
-    <value>在播放佇列中</value>
+  <data name="NowPlaying_InfoLength.Text" xml:space="preserve">
+    <value>長度</value>
+  </data>
+  <data name="NowPlaying_InfoLyrics.Text" xml:space="preserve">
+    <value>歌詞</value>
   </data>
   <data name="NowPlaying_InfoTab.Content" xml:space="preserve">
     <value>資訊</value>
+  </data>
+  <data name="NowPlaying_InfoTitle.Text" xml:space="preserve">
+    <value>標題</value>
+  </data>
+  <data name="NowPlaying_InfoYear.Text" xml:space="preserve">
+    <value>年份</value>
   </data>
   <data name="NowPlaying_Library.Text" xml:space="preserve">
     <value>資料庫</value>
@@ -611,44 +701,74 @@
   <data name="Picker_Playlist" xml:space="preserve">
     <value>播放清單</value>
   </data>
-  <data name="Playback_AlbumContinuity.Header" xml:space="preserve">
-    <value>專輯內無縫銜接，不淡入淡出</value>
+  <data name="Playback_AlbumContinuity.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>專輯連貫</value>
+  </data>
+  <data name="Playback_AlbumContinuityHint.Text" xml:space="preserve">
+    <value>同一張專輯的歌曲直接銜接，不淡入淡出。</value>
+  </data>
+  <data name="Playback_AlbumContinuityTitle.Text" xml:space="preserve">
+    <value>專輯連貫</value>
   </data>
   <data name="Playback_Crossfade.Text" xml:space="preserve">
     <value>淡入淡出</value>
   </data>
-  <data name="Playback_CrossfadeLength.Header" xml:space="preserve">
-    <value>長度（秒）</value>
+  <data name="Playback_CrossfadeHint.Text" xml:space="preserve">
+    <value>讓一首歌的結尾漸漸融入下一首。</value>
   </data>
-  <data name="Playback_CrossfadeOn.Header" xml:space="preserve">
-    <value>讓歌曲之間淡入淡出</value>
+  <data name="Playback_CrossfadeLength.Header" xml:space="preserve">
+    <value>長度</value>
+  </data>
+  <data name="Playback_CrossfadeOn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>淡入淡出</value>
+  </data>
+  <data name="Playback_DecibelValue" xml:space="preserve">
+    <value>{0} dB</value>
   </data>
   <data name="Playback_Eq.Text" xml:space="preserve">
     <value>等化器</value>
   </data>
-  <data name="Playback_EqOn.Header" xml:space="preserve">
-    <value>使用等化器</value>
+  <data name="Playback_EqOn.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>等化器</value>
   </data>
   <data name="Playback_EqPreamp.Header" xml:space="preserve">
-    <value>等化器前級增益（dB）</value>
+    <value>前級增益</value>
+  </data>
+  <data name="Playback_EqPreset.Header" xml:space="preserve">
+    <value>預設集</value>
+  </data>
+  <data name="Playback_EqPreset.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>預設集</value>
+  </data>
+  <data name="Playback_EqReset.Content" xml:space="preserve">
+    <value>重設為平坦</value>
   </data>
   <data name="Playback_Output.Text" xml:space="preserve">
+    <value>輸出</value>
+  </data>
+  <data name="Playback_OutputChoice.Header" xml:space="preserve">
     <value>輸出裝置</value>
   </data>
   <data name="Playback_OutputChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>輸出裝置</value>
   </data>
   <data name="Playback_Preamp.Header" xml:space="preserve">
-    <value>前級增益（dB）</value>
+    <value>前級增益</value>
   </data>
   <data name="Playback_ReplayGain.Text" xml:space="preserve">
-    <value>ReplayGain</value>
+    <value>音量平衡</value>
   </data>
   <data name="Playback_ReplayGainAlbum.Content" xml:space="preserve">
     <value>專輯</value>
   </data>
+  <data name="Playback_ReplayGainChoice.Header" xml:space="preserve">
+    <value>ReplayGain</value>
+  </data>
   <data name="Playback_ReplayGainChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>ReplayGain</value>
+  </data>
+  <data name="Playback_ReplayGainHint.Text" xml:space="preserve">
+    <value>依據檔案中的 ReplayGain 標籤平衡響度。</value>
   </data>
   <data name="Playback_ReplayGainOff.Content" xml:space="preserve">
     <value>關閉</value>
@@ -656,8 +776,20 @@
   <data name="Playback_ReplayGainTrack.Content" xml:space="preserve">
     <value>單曲</value>
   </data>
-  <data name="Playback_Resume.Header" xml:space="preserve">
-    <value>開啟 Jellyfesh 時從上次停下的地方繼續</value>
+  <data name="Playback_Resume.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>繼續播放</value>
+  </data>
+  <data name="Playback_ResumeHint.Text" xml:space="preserve">
+    <value>開啟 Jellyfesh 時從上次停下的地方繼續播放。</value>
+  </data>
+  <data name="Playback_ResumeTitle.Text" xml:space="preserve">
+    <value>繼續播放</value>
+  </data>
+  <data name="Playback_SecondsValue" xml:space="preserve">
+    <value>{0} 秒</value>
+  </data>
+  <data name="Playback_Startup.Text" xml:space="preserve">
+    <value>啟動</value>
   </data>
   <data name="Player_ArtistAlbum" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -675,7 +807,7 @@
     <value>下一首</value>
   </data>
   <data name="Player_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>下一首 (Ctrl+F)</value>
+    <value>下一首 (Ctrl+→)</value>
   </data>
   <data name="Player_Pause" xml:space="preserve">
     <value>暫停</value>
@@ -693,7 +825,7 @@
     <value>上一首</value>
   </data>
   <data name="Player_PreviousButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>上一首 (Ctrl+B)</value>
+    <value>上一首 (Ctrl+←)</value>
   </data>
   <data name="Player_RepeatAll" xml:space="preserve">
     <value>全部重複</value>
@@ -731,17 +863,11 @@
   <data name="Playlist_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>此播放清單中的歌曲</value>
   </data>
-  <data name="Playlist_ExportButton.Content" xml:space="preserve">
-    <value>匯出…</value>
-  </data>
   <data name="Playlist_Exported" xml:space="preserve">
     <value>播放清單已匯出</value>
   </data>
   <data name="Playlist_NewTitle" xml:space="preserve">
     <value>新增播放清單</value>
-  </data>
-  <data name="Playlist_RenameButton.Content" xml:space="preserve">
-    <value>重新命名</value>
   </data>
   <data name="Playlist_RenameTitle" xml:space="preserve">
     <value>重新命名播放清單</value>
@@ -750,25 +876,37 @@
     <value>{0}，{1}</value>
   </data>
   <data name="Playlists_Empty.Text" xml:space="preserve">
-    <value>還沒有播放清單。新增一個，或從任何清單把歌曲加入新的播放清單。</value>
+    <value>建立播放清單，把歌曲收在一起。</value>
+  </data>
+  <data name="Playlists_EmptyNew.Content" xml:space="preserve">
+    <value>新增播放清單…</value>
+  </data>
+  <data name="Playlists_EmptyTitle.Text" xml:space="preserve">
+    <value>還沒有播放清單</value>
   </data>
   <data name="Playlists_Grid.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>播放清單</value>
   </data>
   <data name="Playlists_Import.Content" xml:space="preserve">
-    <value>匯入…</value>
+    <value>匯入播放清單…</value>
   </data>
   <data name="Playlists_New.Content" xml:space="preserve">
-    <value>新增播放清單</value>
+    <value>新增播放清單…</value>
   </data>
   <data name="Playlists_Title.Text" xml:space="preserve">
     <value>播放清單</value>
   </data>
   <data name="Queue_Clear.Content" xml:space="preserve">
-    <value>清除</value>
+    <value>清除播放佇列</value>
+  </data>
+  <data name="Queue_ClearBody" xml:space="preserve">
+    <value>播放將停止，所有歌曲都會從佇列中移除。</value>
+  </data>
+  <data name="Queue_ClearTitle" xml:space="preserve">
+    <value>清除播放佇列？</value>
   </data>
   <data name="Queue_Empty.Text" xml:space="preserve">
-    <value>這首歌之後沒有歌曲</value>
+    <value>接下來沒有歌曲</value>
   </data>
   <data name="Queue_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>接下來播放</value>
@@ -813,16 +951,10 @@
     <value>資料庫</value>
   </data>
   <data name="Search_NothingFound.Text" xml:space="preserve">
-    <value>找不到結果。</value>
+    <value>沒有結果</value>
   </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>來自你的來源</value>
-  </data>
-  <data name="Search_OnlineEntries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>來自你的來源的專輯和播放清單</value>
-  </data>
-  <data name="Search_OnlineSongs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>來自你的來源的歌曲</value>
   </data>
   <data name="Search_PlayAll.Content" xml:space="preserve">
     <value>全部播放</value>
@@ -847,9 +979,6 @@
   </data>
   <data name="Settings_Library.Text" xml:space="preserve">
     <value>資料庫</value>
-  </data>
-  <data name="Settings_Lyrics.Text" xml:space="preserve">
-    <value>歌詞</value>
   </data>
   <data name="Settings_NotANumber" xml:space="preserve">
     <value>請輸入數字。</value>
@@ -921,13 +1050,19 @@
     <value>登入 {0}</value>
   </data>
   <data name="Songs_Empty.Text" xml:space="preserve">
-    <value>還沒有歌曲。請在設定中加入音樂資料夾。</value>
+    <value>加入音樂資料夾後，你的歌曲會顯示在這裡。</value>
+  </data>
+  <data name="Songs_EmptyTitle.Text" xml:space="preserve">
+    <value>還沒有歌曲</value>
   </data>
   <data name="Songs_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌曲</value>
   </data>
   <data name="Songs_Sort.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>排序方式</value>
+    <value>歌曲排序</value>
+  </data>
+  <data name="Songs_Sort.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>歌曲排序</value>
   </data>
   <data name="Songs_Title.Text" xml:space="preserve">
     <value>歌曲</value>
@@ -940,6 +1075,9 @@
   </data>
   <data name="Sort_Artist" xml:space="preserve">
     <value>藝人</value>
+  </data>
+  <data name="Sort_Descending" xml:space="preserve">
+    <value>遞減</value>
   </data>
   <data name="Sort_Duration" xml:space="preserve">
     <value>長度</value>
@@ -963,10 +1101,16 @@
     <value>Airsonic、Gonic 等 Subsonic 伺服器</value>
   </data>
   <data name="Source_Community" xml:space="preserve">
-    <value>社群</value>
+    <value>社群 · 非官方</value>
   </data>
   <data name="Source_Details" xml:space="preserve">
     <value>版本 {0} · {1}</value>
+  </data>
+  <data name="Source_Enabled.Header" xml:space="preserve">
+    <value>已啟用</value>
+  </data>
+  <data name="Source_NotSignedIn" xml:space="preserve">
+    <value>未登入</value>
   </data>
   <data name="Source_Official" xml:space="preserve">
     <value>官方</value>
@@ -977,22 +1121,28 @@
   <data name="Source_SettingsExpander.Header" xml:space="preserve">
     <value>設定</value>
   </data>
-  <data name="Source_SignIn.Content" xml:space="preserve">
-    <value>登入…</value>
-  </data>
   <data name="Source_SignOut.Content" xml:space="preserve">
     <value>登出</value>
   </data>
+  <data name="Source_SignedInAs" xml:space="preserve">
+    <value>已登入為 {0}</value>
+  </data>
+  <data name="Source_StatusOff" xml:space="preserve">
+    <value>關閉</value>
+  </data>
   <data name="Source_Uninstall.Content" xml:space="preserve">
-    <value>解除安裝</value>
+    <value>解除安裝…</value>
   </data>
   <data name="Source_UninstallBody" xml:space="preserve">
-    <value>它的設定、登入資訊和已下載的資料都會被刪除。</value>
+    <value>其設定與登入資訊將被移除。</value>
   </data>
   <data name="Source_UninstallTitle" xml:space="preserve">
     <value>解除安裝 {0}？</value>
   </data>
   <data name="Sources_Add.Text" xml:space="preserve">
+    <value>新增來源</value>
+  </data>
+  <data name="Sources_AddHeading.Text" xml:space="preserve">
     <value>新增來源</value>
   </data>
   <data name="Sources_AllowCommunity.Header" xml:space="preserve">
@@ -1002,13 +1152,16 @@
     <value>社群外掛</value>
   </data>
   <data name="Sources_CommunityHint.Text" xml:space="preserve">
-    <value>社群外掛由其他人製作，並非 Jellyfesh。它們可能違反所連接服務的條款，也可能隨時失效，僅限個人使用。每個外掛第一次啟用前都會再次詢問你。</value>
+    <value>官方來源由 Jellyfesh 簽署。社群外掛由他人製作，除非你允許，否則會保持關閉。</value>
+  </data>
+  <data name="Sources_Crumb" xml:space="preserve">
+    <value>來源</value>
   </data>
   <data name="Sources_EmptyBody.Text" xml:space="preserve">
-    <value>來源可以把伺服器和音樂服務中的音樂帶進 Jellyfesh。請在設定中啟用、登入或安裝來源。</value>
+    <value>從 .jfpkg 檔案安裝來源外掛。</value>
   </data>
   <data name="Sources_EmptyTitle.Text" xml:space="preserve">
-    <value>還沒有來源</value>
+    <value>尚未安裝來源</value>
   </data>
   <data name="Sources_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>資料夾、專輯和播放清單</value>
@@ -1017,28 +1170,31 @@
     <value>從檔案安裝…</value>
   </data>
   <data name="Sources_Installed.Text" xml:space="preserve">
-    <value>已安裝的來源</value>
+    <value>已安裝</value>
+  </data>
+  <data name="Sources_Intro.Text" xml:space="preserve">
+    <value>來源可以把伺服器和音樂服務中的音樂帶進 Jellyfesh。</value>
   </data>
   <data name="Sources_Manage.Content" xml:space="preserve">
-    <value>管理來源</value>
+    <value>來源設定…</value>
   </data>
   <data name="Sources_More.Content" xml:space="preserve">
     <value>顯示更多</value>
   </data>
   <data name="Sources_None.Text" xml:space="preserve">
-    <value>尚未安裝來源。</value>
+    <value>尚未安裝來源</value>
   </data>
-  <data name="Sources_Picker.PlaceholderText" xml:space="preserve">
-    <value>選擇來源</value>
-  </data>
-  <data name="Sources_Picker.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>來源</value>
+  <data name="Sources_NoneHint.Text" xml:space="preserve">
+    <value>從 .jfpkg 檔案安裝來源外掛。</value>
   </data>
   <data name="Sources_Title.Text" xml:space="preserve">
     <value>來源</value>
   </data>
   <data name="Sources_Tracks.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌曲</value>
+  </data>
+  <data name="Sources_Yours.Text" xml:space="preserve">
+    <value>我的來源</value>
   </data>
   <data name="Startup_FailedBody" xml:space="preserve">
     <value>音樂引擎未能啟動。重新安裝 Jellyfesh 通常可以解決；詳細資訊如下。</value>

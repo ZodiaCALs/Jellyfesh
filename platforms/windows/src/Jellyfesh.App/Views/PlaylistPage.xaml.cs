@@ -23,7 +23,13 @@ public sealed partial class PlaylistPage : JfPage
     {
         if (e.Parameter is PlaylistSummary playlist && ViewModel?.Playlist.Id != playlist.Id)
         {
+            if (ViewModel is not null)
+            {
+                ViewModel.Deleted -= OnDeleted;
+            }
+
             ViewModel = AppHost.App.CreatePlaylist(playlist);
+            ViewModel.Deleted += OnDeleted;
             PageModel = ViewModel;
             Bindings.Update();
         }
@@ -32,6 +38,22 @@ public sealed partial class PlaylistPage : JfPage
     }
 
     private void OnEntryClick(object sender, ItemClickEventArgs e) => ViewModel.PlayTrackCommand.Execute(e.ClickedItem as TrackItem);
+
+    /// <summary>More › Add to Playlist…: New Playlist… and the playlists, with this playlist's songs.</summary>
+    private async void OnMoreOpening(object? sender, object e) => await PlaylistMenu.FillAsync(AddToPlaylistItem, AppHost.Services, ViewModel.TracksAsync);
+
+    /// <summary>Delete Playlist… removed this playlist: back to where the person came from.</summary>
+    private void OnDeleted()
+    {
+        if (Frame?.CanGoBack == true)
+        {
+            Frame.GoBack();
+        }
+        else
+        {
+            AppHost.Window.Navigate(typeof(PlaylistsPage));
+        }
+    }
 
     private void OnDragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
     {

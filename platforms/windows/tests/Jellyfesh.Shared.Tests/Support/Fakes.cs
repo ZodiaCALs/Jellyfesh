@@ -33,6 +33,15 @@ internal sealed class FakeCore : ICoreClient
 
     public LibraryStats StatsValue { get; set; } = new(0, 0, 0, 0, 0, 0, 0);
 
+    /// <summary>What EqPresets answers: the core's four presets, as tests/contract/ffi-types.json has them.</summary>
+    public List<EqPreset> EqPresetRows { get; } = Samples.EqPresets().ToList();
+
+    /// <summary>The order the last AlbumsSorted asked for.</summary>
+    public (AlbumSort Sort, bool Descending)? LastAlbumSort { get; private set; }
+
+    /// <summary>Every Tracks query, in order (pages load in the background, so tests look for theirs).</summary>
+    public List<TrackQuery> TrackQueries { get; } = [];
+
     public Func<string, uint, string?> Thumbnail { get; set; } = (hash, size) => $"/cache/{hash}/{size}.jpg";
 
     public CoreQueryException? FailQueriesWith { get; set; }
@@ -66,12 +75,21 @@ internal sealed class FakeCore : ICoreClient
 
     public IReadOnlyList<Album> Albums(uint offset, uint limit) => Page(AlbumRows, offset, limit);
 
-    public IReadOnlyList<Album> AlbumsSorted(AlbumSort sort, bool descending, uint offset, uint limit) => Page(AlbumRows, offset, limit);
+    public IReadOnlyList<Album> AlbumsSorted(AlbumSort sort, bool descending, uint offset, uint limit)
+    {
+        LastAlbumSort = (sort, descending);
+        return Page(AlbumRows, offset, limit);
+    }
 
     public IReadOnlyList<Artist> Artists(uint offset, uint limit) => Page(ArtistRows, offset, limit);
 
     public IReadOnlyList<Track> Tracks(TrackQuery query)
     {
+        lock (TrackQueries)
+        {
+            TrackQueries.Add(query);
+        }
+
         var rows = TrackRows.Where(t =>
             (query.AlbumId is null || t.AlbumId == query.AlbumId)).ToList();
         return Page(rows, query.Offset, query.Limit);
@@ -159,6 +177,12 @@ internal sealed class FakeCore : ICoreClient
     }
 
     public IReadOnlyList<DeviceInfo> OutputDevices() => [];
+
+    public IReadOnlyList<EqPreset> EqPresets()
+    {
+        Count();
+        return EqPresetRows.ToArray();
+    }
 
     public ulong MonotonicNowNs() => NowNs;
 
@@ -319,6 +343,22 @@ internal static class Contract
 
 internal static class Samples
 {
+    /// <summary>The core's ten one-octave bands (jf-engine's preset layout), for building EQ settings in tests.</summary>
+    public static readonly float[] BandFrequencies = [31f, 62f, 125f, 250f, 500f, 1_000f, 2_000f, 4_000f, 8_000f, 16_000f];
+
+    /// <summary>Ten peaking bands at <see cref="BandFrequencies"/> with these gains (missing ones at 0 dB).</summary>
+    public static EqSettings Eq(bool enabled, float preampDb, params float[] gains) =>
+        new(enabled, preampDb, BandFrequencies.Select((f, i) => new EqBand(EqBandKind.Peaking, f, i < gains.Length ? gains[i] : 0f, 1.41f, true)).ToArray());
+
+    /// <summary>The presets eq_presets() returns (core/jf-engine/src/dsp/eq.rs), as the fake core answers them.</summary>
+    public static IEnumerable<EqPreset> EqPresets() =>
+    [
+        new("flat", Eq(true, 0f)),
+        new("bass_boost", Eq(true, 0f, 6, 5, 4, 2, 0.5f)),
+        new("vocal", Eq(true, 0f, -2, -2, -1, 0, 1.5f, 3, 3, 2, 0, -1)),
+        new("treble", Eq(true, 0f, 0, 0, 0, 0, 0, 0, 1.5f, 3, 4.5f, 6)),
+    ];
+
     public static Track Track(long id, string title, long? albumId = 1, ulong? durationMs = 200_000, string? hash = null) =>
         new(id, $"/music/{id}.flac", title, "Artist", "Album", "Artist", albumId, (uint)id, 1, 2024, null, durationMs, "flac", hash);
 

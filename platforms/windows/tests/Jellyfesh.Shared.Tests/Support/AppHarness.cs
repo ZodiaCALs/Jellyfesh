@@ -25,6 +25,11 @@ internal sealed class FakePlatform : IShellPlatform
 
     public List<string> Confirmations { get; } = [];
 
+    /// <summary>The (title, body, primary) of each confirmation, in order.</summary>
+    public List<(string Title, string Body, string Primary)> Asked { get; } = [];
+
+    public List<string> Shown { get; } = [];
+
     public Task<string?> PickFolderAsync() => Task.FromResult(Folder);
 
     public Task<string?> PickFileAsync(IReadOnlyList<string> extensions) => Task.FromResult(File);
@@ -33,11 +38,14 @@ internal sealed class FakePlatform : IShellPlatform
 
     public void OpenUrl(string url) => Opened.Add(url);
 
+    public void ShowInExplorer(string path) => Shown.Add(path);
+
     public void CopyText(string text) => Copied.Add(text);
 
     public Task<bool> ConfirmAsync(string title, string body, string primary, string secondary)
     {
         Confirmations.Add(title);
+        Asked.Add((title, body, primary));
         return Task.FromResult(Confirm);
     }
 

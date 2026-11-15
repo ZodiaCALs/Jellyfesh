@@ -24,14 +24,14 @@
         <StackPanel x:Name="QrPanel" Spacing="12" Visibility="Collapsed">
             <TextBlock x:Uid="SignIn_ScanQr" Style="{StaticResource JfBodyText}" Text="Scan this code with the service's app on your phone." />
             <controls:QrCodeView Width="248" Height="248" HorizontalAlignment="Center" AutomationProperties.Name="QR code" x:Uid="SignIn_QrCode" Code="{x:Bind Flow.Qr, Mode=OneWay}" />
-            <Button x:Uid="SignIn_CopyLink" HorizontalAlignment="Center" Command="{x:Bind Flow.CopyLinkCommand}" Content="Copy the link instead" Style="{StaticResource JfChipButtonStyle}" />
+            <Button x:Uid="SignIn_CopyLink" HorizontalAlignment="Center" Command="{x:Bind Flow.CopyLinkCommand}" Content="Copy the Link Instead" Style="{StaticResource JfChipButtonStyle}" />
         </StackPanel>
 
         <StackPanel x:Name="UrlPanel" Spacing="12" Visibility="Collapsed">
             <TextBlock x:Uid="SignIn_Browser" Style="{StaticResource JfBodyText}" Text="Finish signing in in your browser. Jellyfesh continues by itself when you are done." />
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button x:Uid="SignIn_OpenAgain" Command="{x:Bind Flow.OpenBrowserCommand}" Content="Open the page again" Style="{StaticResource JfChipButtonStyle}" />
-                <Button x:Uid="SignIn_CopyLinkShort" Command="{x:Bind Flow.CopyLinkCommand}" Content="Copy the link" Style="{StaticResource JfChipButtonStyle}" />
+                <Button x:Uid="SignIn_OpenAgain" Command="{x:Bind Flow.OpenBrowserCommand}" Content="Open the Page Again" Style="{StaticResource JfChipButtonStyle}" />
+                <Button x:Uid="SignIn_CopyLinkShort" Command="{x:Bind Flow.CopyLinkCommand}" Content="Copy the Link" Style="{StaticResource JfChipButtonStyle}" />
             </StackPanel>
         </StackPanel>
 

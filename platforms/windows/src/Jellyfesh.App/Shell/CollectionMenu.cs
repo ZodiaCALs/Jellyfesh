@@ -5,8 +5,8 @@ using Microsoft.UI.Xaml.Controls;
 namespace Jellyfesh.App.Shell;
 
 /// <summary>
-/// The context menu of an album, artist or playlist tile: play, shuffle, play next, add to the
-/// queue, and an optional extra action (delete a playlist). One menu serves a whole grid.
+/// The context menu of an album, artist or playlist tile: Play, Shuffle, Play Next, Play Last, and
+/// an optional extra action (Delete Playlist…). One menu serves a whole grid.
 /// </summary>
 internal sealed class CollectionMenu
 {
@@ -23,7 +23,7 @@ internal sealed class CollectionMenu
         Add(l.Get("Menu_Play"), c => CollectionActions.Play(_s, c));
         Add(l.Get("Menu_Shuffle"), c => CollectionActions.Play(_s, c, shuffle: true));
         Add(l.Get("Menu_PlayNext"), c => CollectionActions.PlayNext(_s, c));
-        Add(l.Get("Menu_AddToQueue"), c => CollectionActions.PlayLast(_s, c));
+        Add(l.Get("Menu_PlayLast"), c => CollectionActions.PlayLast(_s, c));
         if (extraKey is not null && extra is not null)
         {
             Flyout.Items.Add(new MenuFlyoutSeparator());

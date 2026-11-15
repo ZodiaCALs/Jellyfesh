@@ -74,6 +74,24 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private string _formatText = string.Empty;
 
+    // Now Playing › Info, "About This Song": Title, Artist, Album, Year, Length, Format, Lyrics and File.
+
+    /// <summary>The song's year, for library songs that have one.</summary>
+    [ObservableProperty]
+    private string _year = string.Empty;
+
+    /// <summary>"3:52".</summary>
+    [ObservableProperty]
+    private string _lengthText = string.Empty;
+
+    /// <summary>How the lyrics are timed and where they come from ("Word by word · song.lrc"), or that none were found.</summary>
+    [ObservableProperty]
+    private string _lyricsText = string.Empty;
+
+    /// <summary>The file playing; empty for a song from a source.</summary>
+    [ObservableProperty]
+    private string _filePath = string.Empty;
+
     [ObservableProperty]
     private bool _canGoNext;
 
@@ -147,6 +165,11 @@ public sealed partial class PlayerViewModel : ObservableObject
         if (changes.HasFlag(SliceChange.NowPlaying))
         {
             ApplyNowPlaying(state.NowPlaying);
+        }
+
+        if (changes.HasFlag(SliceChange.NowPlaying) || changes.HasFlag(SliceChange.Lyrics))
+        {
+            LyricsText = DescribeLyrics(state.Lyrics);
         }
 
         if (changes.HasFlag(SliceChange.Queue))
@@ -295,6 +318,11 @@ public sealed partial class PlayerViewModel : ObservableObject
         ArtworkUri = np?.Artwork?.ToUriString();
         ArtworkPath = np?.Artwork is ArtworkRef.File f ? f.Path : null;
         FormatText = np?.Format is { } fmt ? Describe(fmt) : string.Empty;
+        FilePath = np?.Path ?? string.Empty;
+        LengthText = np is null ? string.Empty
+            : np.DurationMs is { } length ? TimeFormat.ClockMs(length)
+            : !changedTrack && Progress.DurationUs > 0 ? TimeFormat.Clock(Progress.DurationUs)
+            : string.Empty;
         CanFavorite = np?.Track is TrackRef.Library or TrackRef.Source;
         if (np?.DurationMs is { } ms && Progress.DurationUs == 0)
         {
@@ -304,8 +332,53 @@ public sealed partial class PlayerViewModel : ObservableObject
         if (changedTrack)
         {
             IsBuffering = false;
+            Year = string.Empty;
             _ = RefreshFavoriteAsync(np);
+            _ = RefreshYearAsync(np);
         }
+    }
+
+    /// <summary>The year comes from the library's copy of the song; songs from sources and files have none here.</summary>
+    private async Task RefreshYearAsync(NowPlayingInfo? np)
+    {
+        if (np?.Track is not TrackRef.Library song)
+        {
+            return;
+        }
+
+        var track = await _s.QueryAsync(c => c.Track(song.Id));
+        if (NowPlaying?.Uid == np.Uid)
+        {
+            Year = track.Value?.Year?.ToString(_s.L.Culture) ?? string.Empty;
+        }
+    }
+
+    /// <summary>Lyrics in About This Song: their timing and their file (or the file's tags), or "None found".</summary>
+    private string DescribeLyrics(LyricsState? lyrics)
+    {
+        if (NowPlaying is not { } np || lyrics is null || lyrics.Uid != np.Uid)
+        {
+            return string.Empty; // not looked up yet
+        }
+
+        if (lyrics.Doc is not { } doc)
+        {
+            return _s.L.Get("Lyrics_InfoNone");
+        }
+
+        var timing = _s.L.Get(doc.Timing switch
+        {
+            LyricTiming.Word => "Lyrics_InfoWord",
+            LyricTiming.Line => "Lyrics_InfoLine",
+            _ => "Lyrics_InfoUnsynced",
+        });
+        var source = lyrics.Source switch
+        {
+            LyricsOrigin.Sidecar sidecar => Path.GetFileName(sidecar.Path),
+            LyricsOrigin.Embedded => _s.L.Get("Lyrics_InfoTags"),
+            _ => null,
+        };
+        return string.IsNullOrEmpty(source) ? timing : _s.L.Format("Lyrics_InfoFrom", timing, source);
     }
 
     private async Task RefreshFavoriteAsync(NowPlayingInfo? np)
@@ -329,6 +402,10 @@ public sealed partial class PlayerViewModel : ObservableObject
         Progress.SetDuration(duration);
         BarProgress.SetDuration(duration);
         MiniProgress.SetDuration(duration);
+        if (duration > 0 && HasTrack)
+        {
+            LengthText = TimeFormat.Clock(duration);
+        }
     }
 
     private string Describe(TrackFormat f)

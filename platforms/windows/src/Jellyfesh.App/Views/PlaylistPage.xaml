@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One playlist: play, shuffle, rename, export; drag rows (or Alt+Up and Alt+Down) to reorder. -->
+<!--
+    One playlist: Play, Shuffle and More (Play Next, Play Last, Add to Playlist…, Rename…, Export Playlist…,
+    Delete Playlist…); drag rows (or Alt+Up and Alt+Down) to reorder.
+-->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.PlaylistPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Jellyfesh.App.Controls"
     xmlns:shell="using:Jellyfesh.App.Shell">
 
     <Grid Padding="32,24,32,0" RowSpacing="16">
@@ -17,8 +21,20 @@
             <StackPanel Margin="0,10,0,0" Orientation="Horizontal" Spacing="8">
                 <Button x:Uid="Action_PlayButton" Command="{x:Bind ViewModel.PlayCommand}" Content="Play" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.IsEmpty), Mode=OneWay}" Style="{StaticResource JfAccentPillStyle}" />
                 <Button x:Uid="Action_ShuffleButton" Command="{x:Bind ViewModel.ShuffleCommand}" Content="Shuffle" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.IsEmpty), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
-                <Button x:Uid="Playlist_RenameButton" Command="{x:Bind ViewModel.RenameCommand}" Content="Rename" Style="{StaticResource JfChipButtonStyle}" />
-                <Button x:Uid="Playlist_ExportButton" Command="{x:Bind ViewModel.ExportCommand}" Content="Export…" Style="{StaticResource JfChipButtonStyle}" />
+                <Button x:Uid="More_Button" Width="36" Height="36" AutomationProperties.Name="More" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="More">
+                    <controls:StrokeIcon Data="{StaticResource IconMore}" Size="18" />
+                    <Button.Flyout>
+                        <MenuFlyout Opening="OnMoreOpening" Placement="BottomEdgeAlignedLeft">
+                            <MenuFlyoutItem x:Uid="More_PlayNext" Command="{x:Bind ViewModel.PlayNextCommand}" Text="Play Next" />
+                            <MenuFlyoutItem x:Uid="More_PlayLast" Command="{x:Bind ViewModel.PlayLastCommand}" Text="Play Last" />
+                            <MenuFlyoutSubItem x:Name="AddToPlaylistItem" x:Uid="More_AddToPlaylist" Text="Add to Playlist…" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem x:Uid="More_Rename" Command="{x:Bind ViewModel.RenameCommand}" Text="Rename…" />
+                            <MenuFlyoutItem x:Uid="More_Export" Command="{x:Bind ViewModel.ExportCommand}" Text="Export Playlist…" />
+                            <MenuFlyoutItem x:Uid="More_Delete" Command="{x:Bind ViewModel.DeleteCommand}" Text="Delete Playlist…" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
             </StackPanel>
         </StackPanel>
         <ListView

@@ -21,6 +21,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Windows.UI.ViewManagement;
 using WinRT.Interop;
+using VirtualKey = Windows.System.VirtualKey;
 
 namespace Jellyfesh.App;
 
@@ -31,6 +32,9 @@ namespace Jellyfesh.App;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
+    /// <summary>Shift+Right and Shift+Left skip this far (docs/ui.md, "Keyboard").</summary>
+    private const double SkipSeconds = 5;
+
     private static readonly Dictionary<string, Type> TopPages = new()
     {
         ["home"] = typeof(HomePage),
@@ -498,6 +502,10 @@ public sealed partial class MainWindow : Window
         {
             CloseNowPlaying();
         }
+        else if (ContentFrame.Content is SourcesPage sources && sources.GoUp())
+        {
+            // Up a level of the browsed source, then back to the list of sources.
+        }
         else if (ContentFrame.CanGoBack)
         {
             ContentFrame.GoBack();
@@ -520,9 +528,71 @@ public sealed partial class MainWindow : Window
 
     // ---- keys (also listed in docs/windows.md) ----
 
-    private void OnPlayPauseKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _vm.Player.PlayPauseCommand.Execute);
+    /// <summary>Text boxes keep their keys: Space types, Esc and the arrows edit (docs/ui.md, "Keyboard").</summary>
+    private static bool IsTextInput(object? element) => element is TextBox or PasswordBox or RichEditBox or AutoSuggestBox;
 
-    private void OnNextKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _vm.Player.NextCommand.Execute);
+    /// <summary>Whether a text box has focus, in the window or in a dialog over it.</summary>
+    private bool IsTyping() => Root.XamlRoot is { } root && IsTextInput(FocusManager.GetFocusedElement(root));
+
+    private static bool IsDown(VirtualKey key) =>
+        Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(key).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+
+    /// <summary>
+    /// Ctrl+Right and Ctrl+Left (next and previous song), Ctrl+Up and Ctrl+Down (volume), Shift+Right
+    /// and Shift+Left (skip 5 seconds). They are read before the focused control sees them, so a
+    /// list or slider with focus does not take them, except a text box, which keeps its own.
+    /// </summary>
+    private void OnRootPreviewKeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Handled || e.Key is not (VirtualKey.Left or VirtualKey.Right or VirtualKey.Up or VirtualKey.Down) || IsTextInput(e.OriginalSource))
+        {
+            return;
+        }
+
+        var ctrl = IsDown(VirtualKey.Control);
+        var shift = IsDown(VirtualKey.Shift);
+        if (ctrl == shift || IsDown(VirtualKey.Menu))
+        {
+            return; // exactly one of Ctrl and Shift
+        }
+
+        var player = _vm.Player;
+        Action? action = (e.Key, ctrl) switch
+        {
+            (VirtualKey.Right, true) when player.HasTrack => () => player.NextCommand.Execute(null),
+            (VirtualKey.Left, true) when player.HasTrack => () => player.PreviousCommand.Execute(null),
+            (VirtualKey.Up, true) => () => player.VolumeUpCommand.Execute(null),
+            (VirtualKey.Down, true) => () => player.VolumeDownCommand.Execute(null),
+            (VirtualKey.Right, false) when player.HasTrack => () => player.SeekBy(SkipSeconds),
+            (VirtualKey.Left, false) when player.HasTrack => () => player.SeekBy(-SkipSeconds),
+            _ => null,
+        };
+        if (action is not null)
+        {
+            action();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Space plays or pauses, unless a text box has focus (a focused button or list takes Space first).</summary>
+    private void OnSpaceKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (!IsTyping())
+        {
+            Run(args, _vm.Player.PlayPauseCommand.Execute);
+        }
+    }
+
+    /// <summary>Esc goes back (closing Now Playing first), unless a text box has focus.</summary>
+    private void OnEscapeKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (!IsTyping())
+        {
+            Run(args, _ => GoBack());
+        }
+    }
+
+    private void OnPlayPauseKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _vm.Player.PlayPauseCommand.Execute);
 
     private void OnPreviousKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _vm.Player.PreviousCommand.Execute);
 

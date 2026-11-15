@@ -11,7 +11,7 @@ public sealed record PlaybackState(
     float PreampDb)
 {
     public static PlaybackState Initial { get; } =
-        new(0, PlaybackStatus.Stopped, default, 1f, EqSettings.Flat, ReplayGainMode.Off, 0f);
+        new(0, PlaybackStatus.Stopped, default, 1f, EqSettings.None, ReplayGainMode.Off, 0f);
 }
 
 /// <summary>The <c>Queue</c> slice: the current entry and the next entries (at most 50).</summary>

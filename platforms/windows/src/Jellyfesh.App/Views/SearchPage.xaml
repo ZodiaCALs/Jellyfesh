@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Unified search: the library answers as you type; the same words go to every enabled source,
-    whose merged results stream in below with each source's state.
+    Unified search (docs/ui.md): one field; the library answers as you type (Songs, Albums, Artists); the
+    same words go to every enabled source, whose merged results stream in below under From Your Sources,
+    one group per source, with each source's state. Nothing found: No Results.
 -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.SearchPage"
@@ -57,7 +58,7 @@
                     KeyDown="OnBoxKeyDown"
                     PlaceholderText="Songs, albums and artists"
                     Text="{x:Bind ViewModel.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <Button x:Uid="Search_PlayAll" Grid.Column="1" Command="{x:Bind ViewModel.PlayAllCommand}" Content="Play all" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Tracks.Count), Mode=OneWay}" />
+                <Button x:Uid="Search_PlayAll" Grid.Column="1" Command="{x:Bind ViewModel.PlayAllCommand}" Content="Play All" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Tracks.Count), Mode=OneWay}" />
             </Grid>
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.SourceStates}">
                 <ItemsRepeater.Layout>
@@ -91,12 +92,24 @@
                     <TextBlock x:Uid="Search_Artists" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Artists" />
                     <GridView x:Name="ArtistShelf" x:Uid="Search_ArtistList" Height="212" AutomationProperties.Name="Artists" ItemClick="OnArtistClick" ItemTemplate="{StaticResource ArtistTileTemplate}" ItemsSource="{x:Bind ViewModel.Artists}" Style="{StaticResource ShelfStyle}" />
                 </StackPanel>
-                <StackPanel Spacing="4" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasOnlineResults), Mode=OneWay}">
-                    <TextBlock x:Uid="Search_Online" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="From your sources" />
-                    <ListView x:Name="OnlineTrackList" x:Uid="Search_OnlineSongs" AutomationProperties.Name="Songs from your sources" ItemClick="OnOnlineTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.OnlineTracks}" Style="{StaticResource InlineListStyle}" />
-                    <ListView x:Name="OnlineEntryList" x:Uid="Search_OnlineEntries" AutomationProperties.Name="Albums and playlists from your sources" ItemClick="OnEntryClick" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind ViewModel.OnlineEntries}" Style="{StaticResource InlineListStyle}" />
+                <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasOnlineResults), Mode=OneWay}">
+                    <TextBlock x:Uid="Search_Online" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="From Your Sources" />
+                    <ItemsRepeater ItemsSource="{x:Bind ViewModel.OnlineGroups}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="16" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SourceResultGroup">
+                                <StackPanel Spacing="4">
+                                    <TextBlock AutomationProperties.HeadingLevel="Level3" Style="{StaticResource JfListTitleText}" FontWeight="SemiBold" Text="{x:Bind Name}" />
+                                    <ListView AutomationProperties.Name="{x:Bind Name}" ItemClick="OnOnlineTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind Tracks}" Loaded="OnOnlineTracksLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(HasTracks)}" />
+                                    <ListView AutomationProperties.Name="{x:Bind Name}" ItemClick="OnEntryClick" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind Entries}" Loaded="OnOnlineEntriesLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(HasEntries)}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
                 </StackPanel>
-                <TextBlock x:Uid="Search_NothingFound" Style="{StaticResource JfSecondaryBodyText}" Text="Nothing found." Visibility="{x:Bind shell:Bind.VisibleIfNothingFound(ViewModel.SearchedText, ViewModel.HasResults, ViewModel.IsSearchingSources), Mode=OneWay}" />
+                <TextBlock x:Uid="Search_NothingFound" Style="{StaticResource JfSecondaryBodyText}" Text="No Results" Visibility="{x:Bind shell:Bind.VisibleIfNothingFound(ViewModel.SearchedText, ViewModel.HasResults, ViewModel.IsSearchingSources), Mode=OneWay}" />
                 <TextBlock x:Uid="Search_SourcesNotAvailable" Style="{StaticResource JfSecondaryBodyText}" Text="Searching your online sources comes in a later build; your library is searched now." Visibility="{x:Bind shell:Bind.Visible(ViewModel.SourcesNotAvailable), Mode=OneWay}" />
             </StackPanel>
         </ScrollViewer>

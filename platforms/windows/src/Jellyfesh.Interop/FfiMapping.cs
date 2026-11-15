@@ -98,6 +98,8 @@ public static class FfiMapping
 
     public static M.EqSettings ToModel(F.EqSettings e) => new(e.Enabled, e.PreampDb, List(e.Bands, ToModel));
 
+    public static M.EqPreset ToModel(F.EqPreset p) => new(p.Id, ToModel(p.Settings));
+
     public static M.EqBand ToModel(F.EqBand b) => new(ToModel(b.Kind), b.FreqHz, b.GainDb, b.Q, b.Enabled);
 
     public static M.EqBandKind ToModel(F.BandKind k) => k switch

@@ -39,17 +39,17 @@
                 </StackPanel>
                 <Grid>
                     <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
-                        <Button x:Uid="Player_PreviousButton" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+B)">
+                        <Button x:Uid="Player_PreviousButton" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+←)">
                             <controls:StrokeIcon Data="{StaticResource IconPrevious}" />
                         </Button>
                         <Button AutomationProperties.Name="{x:Bind Player.PlayPauseLabel, Mode=OneWay}" Command="{x:Bind Player.PlayPauseCommand}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
                             <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="18" />
                         </Button>
-                        <Button x:Uid="Player_NextButton" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+F)">
+                        <Button x:Uid="Player_NextButton" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+→)">
                             <controls:StrokeIcon Data="{StaticResource IconNext}" />
                         </Button>
                     </StackPanel>
-                    <Button x:Uid="Compact_Expand" HorizontalAlignment="Right" AutomationProperties.Name="Back to the full window" Click="OnExpandClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Back to the full window">
+                    <Button x:Uid="Compact_Expand" HorizontalAlignment="Right" AutomationProperties.Name="Back to the Full Window" Click="OnExpandClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Back to the Full Window">
                         <controls:StrokeIcon Data="{StaticResource IconExpand}" Size="18" />
                     </Button>
                 </Grid>

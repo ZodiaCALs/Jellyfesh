@@ -13,7 +13,7 @@ public sealed partial class ArtistsPage : JfPage
         PageModel = ViewModel;
         InitializeComponent();
         var menu = new CollectionMenu(AppHost.Services, o => o is ArtistItem { IsLoaded: true } a ? new Collection.Artist(a.Id) : null);
-        Lists.Attach(ArtistGrid, 0, i => ViewModel.Artists?.Realize(i), menu.Flyout);
+        Lists.Attach(ArtistList, 0, i => ViewModel.Artists?.Realize(i), menu.Flyout);
     }
 
     public ArtistsViewModel ViewModel { get; }

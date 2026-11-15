@@ -63,7 +63,7 @@
                         ToolTipService.ToolTip="{x:Bind Player.ShuffleLabel, Mode=OneWay}">
                         <controls:StrokeIcon Data="{StaticResource IconShuffle}" Size="16" />
                     </ToggleButton>
-                    <Button x:Uid="Player_PreviousButton" Width="36" Height="36" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+B)">
+                    <Button x:Uid="Player_PreviousButton" Width="36" Height="36" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+←)">
                         <controls:StrokeIcon Data="{StaticResource IconPrevious}" Size="18" />
                     </Button>
                     <Button
@@ -75,7 +75,7 @@
                         ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
                         <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="18" />
                     </Button>
-                    <Button x:Uid="Player_NextButton" Width="36" Height="36" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+F)">
+                    <Button x:Uid="Player_NextButton" Width="36" Height="36" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+→)">
                         <controls:StrokeIcon Data="{StaticResource IconNext}" Size="18" />
                     </Button>
                     <ToggleButton

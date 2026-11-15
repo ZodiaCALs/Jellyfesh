@@ -246,11 +246,6 @@ public class ViewModelTests
         settings.SelectedIcon = settings.Icons.First(i => i.Id == "lagoon");
         Assert.Equal("lagoon", h.Core.LastSent<CoreCommand.SetSettings>().Settings.AppIcon);
 
-        settings.ApplyPresetCommand.Execute(EqPreset.All[1]);
-        var eq = h.Core.LastSent<CoreCommand.SetEq>().Eq;
-        Assert.True(eq.Enabled);
-        Assert.Equal(6f, eq.Bands[0].GainDb);
-
         settings.CrossfadeSeconds = 40; // clamped to the core's range
         Assert.Equal(12_000u, h.Core.LastSent<CoreCommand.SetCrossfade>().Crossfade.DurationMs);
 
@@ -275,11 +270,88 @@ public class ViewModelTests
         h.Started();
         var settings = h.App.CreateSettings(_ => null);
         await settings.LoadAsync();
-        Assert.Equal(new[] { "/music" }, settings.Folders);
+        Assert.Equal(new[] { "/music" }, settings.Folders.Select(f => f.Path));
+        Assert.Equal("music", settings.Folders[0].Name);
         await settings.AddFolderCommand.ExecuteAsync(null);
         Assert.Equal(new CoreCommand.AddRoot("/music/new"), h.Core.Sent[^1]);
         settings.RescanCommand.Execute(null);
         Assert.IsType<CoreCommand.Rescan>(h.Core.Sent[^1]);
+
+        // Show in Explorer opens the folder; Remove Folder… asks first, with the folder's name.
+        settings.ShowFolderCommand.Execute(settings.Folders[0]);
+        Assert.Equal(["/music"], h.Platform.Shown);
+        h.Platform.Confirm = false;
+        await settings.RemoveFolderCommand.ExecuteAsync(settings.Folders[0]);
+        Assert.Equal(("Library_RemoveFolderTitle", "Library_RemoveFolderBody", "Action_RemoveFolder"), h.Platform.Asked[^1]);
+        Assert.DoesNotContain(h.Core.Sent, c => c is CoreCommand.RemoveRoot);
+        Assert.Single(settings.Folders);
+        h.Platform.Confirm = true;
+        await settings.RemoveFolderCommand.ExecuteAsync(settings.Folders[0]);
+        Assert.Equal(new CoreCommand.RemoveRoot("/music"), h.Core.Sent[^1]);
+        Assert.Empty(settings.Folders);
+
+        // A drive has no folder name of its own: the row and the question show the path.
+        Assert.Equal("/", new FolderItem("/").Name);
+        Assert.Equal("Jazz", new FolderItem("/music/Jazz/").Name);
+
+        // Last Scan: how this session's last scan ended.
+        Assert.Equal(string.Empty, settings.LastScanText);
+        settings.Activate();
+        h.Emit(new CoreEvent.Scan(new ScanStatus.Finished(new ScanReport(12, 3, 1, 40, []))));
+        Assert.Equal("Scan_Report", settings.LastScanText);
+        h.Emit(new CoreEvent.Scan(new ScanStatus.Failed("the folder is gone")));
+        Assert.Equal("the folder is gone", settings.LastScanText);
+        settings.Deactivate();
+    }
+
+    [Fact]
+    public async Task Equalizer_presets_come_from_the_core_with_custom_once_a_band_moves()
+    {
+        using var h = new AppHarness();
+        var bass = h.Core.EqPresetRows[1].Settings;
+        h.Core.State = CoreSnapshot.Initial with { Settings = AppSettings.Default with { Eq = h.Core.EqPresetRows[0].Settings with { Enabled = false } } };
+        h.Started();
+        var settings = h.App.CreateSettings(_ => null);
+        Assert.Equal(10, settings.Bands.Count); // the core's band layout, not a copy
+        Assert.Equal("31", settings.Bands[0].Label);
+        Assert.Equal("16k", settings.Bands[9].Label);
+        Assert.Empty(settings.Presets); // until the core answered eq_presets()
+
+        await settings.LoadAsync();
+        Assert.Equal(["flat", "bass_boost", "vocal", "treble"], settings.Presets.Select(p => p.Id));
+        Assert.Equal(["Eq_Flat", "Eq_BassBoost", "Eq_Vocal", "Eq_Treble"], settings.Presets.Select(p => p.Name));
+        Assert.Equal("flat", settings.SelectedPreset?.Id); // flat bands are the Flat preset
+        Assert.Empty(h.Core.Sent);
+
+        // Choosing a preset sends the core's settings for it, with the switch as it is.
+        settings.SelectedPreset = settings.Presets[1];
+        Assert.Equal(bass with { Enabled = false }, h.Core.LastSent<CoreCommand.SetEq>().Eq);
+        Assert.Equal(6, settings.Bands[0].GainDb);
+        settings.EqEnabled = true;
+        Assert.True(h.Core.LastSent<CoreCommand.SetEq>().Eq.Enabled);
+
+        // A band that moves makes it Custom, which is listed only then; its gain goes to the core on the band's own terms.
+        settings.Bands[9].GainDb = 3;
+        var custom = settings.SelectedPreset!;
+        Assert.True(custom.IsCustom);
+        Assert.Equal("Eq_Custom", custom.Name);
+        Assert.Equal(5, settings.Presets.Count);
+        var sent = h.Core.LastSent<CoreCommand.SetEq>().Eq;
+        Assert.Equal(bass.Bands[9] with { GainDb = 3f }, sent.Bands[9]);
+        Assert.Equal(bass.Bands[0], sent.Bands[0]);
+        Assert.Equal("Playback_DecibelValue", settings.EqPreampText); // "+0.0 dB" with the strings
+
+        // Reset to Flat: the core's flat preset; Custom leaves the menu.
+        settings.ResetToFlatCommand.Execute(null);
+        Assert.Equal(h.Core.EqPresetRows[0].Settings with { Enabled = true }, h.Core.LastSent<CoreCommand.SetEq>().Eq);
+        Assert.Equal("flat", settings.SelectedPreset?.Id);
+        Assert.Equal(4, settings.Presets.Count);
+
+        // The slice coming back keeps the menu on the preset the bands match.
+        settings.Activate();
+        h.Emit(new CoreEvent.Settings(AppSettings.Default with { Eq = h.Core.EqPresetRows[3].Settings }));
+        settings.Deactivate();
+        Assert.Equal(["flat", "bass_boost", "vocal", "treble"], settings.Presets.Select(p => p.Id));
     }
 
     [Fact]
@@ -338,20 +410,20 @@ public class ViewModelTests
         Assert.True(navidrome.NeedsAddress);
         Assert.Equal(("https://music.example.com", "http://192.168.1.20:4533"), (navidrome.Address, navidrome.AddressExample));
         Assert.Equal("SourcePreset_Subsonic", settings.SourcePresets[1].Description);
-        Assert.Equal("SignIn_Done", settings.SourcePresets[1].Subtitle); // the account instead of the description
+        Assert.Equal("Source_SignedInAs", settings.SourcePresets[1].Subtitle); // the account instead of the description
         Assert.Empty(h.Core.Sent);
 
         // The strings: a description by id, "Signed in as …" once there is an account.
         var l = new TableLocalizer(new()
         {
             ["SourcePreset_Jellyfin"] = "Your Jellyfin server",
-            ["SignIn_Done"] = "Signed in as {0}.",
+            ["Source_SignedInAs"] = "Signed in as {0}",
             ["Connect_Title"] = "Connect to {0}",
         });
         var jellyfin = new SourcePresetViewModel(Navidrome() with { Id = "jellyfin", Name = "Jellyfin", Plugin = "org.jellyfesh.jellyfin" }, null, l);
         Assert.Equal(("Your Jellyfin server", "Your Jellyfin server", "Connect to Jellyfin"), (jellyfin.Description, jellyfin.Subtitle, jellyfin.ConnectTitle));
         Assert.False(jellyfin.HasIcon); // its plugin has no icon
-        Assert.Equal("Signed in as ana.", new SourcePresetViewModel(Navidrome() with { Id = "jellyfin", Account = "ana" }, null, l).Subtitle);
+        Assert.Equal("Signed in as ana", new SourcePresetViewModel(Navidrome() with { Id = "jellyfin", Account = "ana" }, null, l).Subtitle);
 
         // A slice without presets empties the list, which hides the section.
         h.Emit(new CoreEvent.Sources(new SourcesState(2, [subsonic], [], false)));
@@ -379,7 +451,7 @@ public class ViewModelTests
         Assert.Equal(SignInStage.Starting, flow.Stage);
 
         // The steps arrive as the plugin's Auth events, as for its own Sign in.
-        h.Emit(new CoreEvent.Auth(new AuthUpdate("org.jellyfesh.subsonic", 4, new AuthStep.AskFields([new AuthField("username", "Username", false, null)]))));
+        h.Emit(new CoreEvent.Auth(new AuthUpdate("org.jellyfesh.subsonic", 4, new AuthStep.AskFields([new AuthField("username", "User Name", false, null)]))));
         Assert.Equal(SignInStage.AskFields, flow.Stage);
         flow.Fields[0].Value = "ana";
         flow.SubmitCommand.Execute(null);
@@ -474,13 +546,13 @@ public class ViewModelTests
         var library = new SourceItem("library", ItemKind.Track, "1", "Harbour Lights", "Band", null, 180_000, null, true, null,
             new TrackRef.Library(1), []);
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "library", [library], null, false)));
-        Assert.Empty(search.OnlineTracks);
+        Assert.Empty(search.OnlineGroups);
         Assert.False(search.HasOnlineResults);
 
         // Each source's update carries the whole merged list so far, so it replaces the last one.
         var live = Live("org.sub", []);
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [library, live], null, false)));
-        var first = Assert.Single(search.OnlineTracks);
+        var first = Assert.Single(Assert.Single(search.OnlineGroups).Tracks);
         Assert.Equal("Sub", first.Origin);
         Assert.True(search.SourceStates[0].IsDone);
         Assert.False(search.SourceStates[1].IsDone);
@@ -489,9 +561,14 @@ public class ViewModelTests
         var withLibrary = library with { AlsoIn = ["org.jelly"] };
         var album = new SourceItem("org.jelly", ItemKind.Album, "a7", "Harbour", "Band", null, null, null, true, null, null, []);
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.jelly", [withLibrary, merged, album], "slow", true)));
-        var only = Assert.Single(search.OnlineTracks);
+
+        // From Your Sources: one group per source, each item under the source that gave it.
+        Assert.Equal(["Sub", "Jelly"], search.OnlineGroups.Select(g => g.Name));
+        var only = Assert.Single(search.OnlineGroups[0].Tracks);
         Assert.Equal("Sub · Jelly", only.Origin);
-        Assert.Single(search.OnlineEntries);
+        Assert.Empty(search.OnlineGroups[0].Entries);
+        Assert.Equal("Harbour", Assert.Single(search.OnlineGroups[1].Entries).Title);
+        Assert.False(search.OnlineGroups[1].HasTracks);
         Assert.Equal("Jelly", search.Tracks[0].Origin);
         Assert.Equal("slow", search.SourceStates[1].Error);
         Assert.False(search.IsSearchingSources);
@@ -501,7 +578,7 @@ public class ViewModelTests
         await search.SubmitCommand.ExecuteAsync(null);
         var next = (ulong)h.Core.Sent.Count;
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [live], null, true))); // an old request
-        Assert.Empty(search.OnlineTracks);
+        Assert.Empty(search.OnlineGroups);
         h.Emit(new CoreEvent.CommandFailed(next, "sources are not available in this build yet"));
         Assert.True(search.SourcesNotAvailable);
         Assert.Empty(h.App.Notifications.Items);

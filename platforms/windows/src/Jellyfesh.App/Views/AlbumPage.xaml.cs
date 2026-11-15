@@ -37,5 +37,8 @@ public sealed partial class AlbumPage : JfPage
 
     private void OnTrackClick(object sender, ItemClickEventArgs e) => ViewModel.PlayTrackCommand.Execute(e.ClickedItem as TrackItem);
 
+    /// <summary>More › Add to Playlist…: New Playlist… and the playlists, with the album's songs.</summary>
+    private async void OnMoreOpening(object? sender, object e) => await PlaylistMenu.FillAsync(AddToPlaylistItem, AppHost.Services, ViewModel.TracksAsync);
+
     private static void OnArtistRequested(Artist artist) => AppHost.Window.Navigate(typeof(ArtistPage), artist);
 }

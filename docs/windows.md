@@ -53,12 +53,13 @@ the app only draws them.
   pages, Now Playing and theme colours only fade, over dur-1: the artwork
   keeps its size, the level glyph stands still and lyrics jump. Flyouts and
   dialogs keep WinUI's own transitions.
-* **Settings → Appearance:** Theme (System, Light and Dark with previews), the
-  accent colour (Follow the artwork, ten swatches and a Custom hue on a
+* **Settings → Appearance:** Theme (System, Light and Dark with previews),
+  Accent Colour (Follow the Artwork, ten swatches and a Custom hue on a
   hue-gradient track with a preview), Transparency from Solid to Clear with a
-  live preview, Reduce motion and transparency, the Now Playing background
-  with previews, Lyrics size and alignment, translation and romanization,
-  and the app icon. Each change is one `SetSettings` and applies at once.
+  live preview and Reduce Motion and Transparency, Now Playing Backdrop
+  (Artwork, Misty, with previews), Lyrics (Lyrics Size, Lyrics Alignment, Show
+  Translations, Show Romanization: the only place they live) and App Icon.
+  Each change is one `SetSettings` and applies at once.
 * **Transparency on Acrylic:** the glass brushes' `TintOpacity` comes from
   the shared glass-alpha port (`platforms/shared/csharp/.../Glass.cs`): the
   tokens' alphas at 50 %, opaque toward Solid, halved toward Clear; at 0 %,
@@ -71,6 +72,71 @@ compiler's classes, and every XAML file passes the metadata check (0 errors,
 0 warnings, 214 `x:Uid` entries). The XAML compiler, the composition and
 connected animations, Acrylic's look at each transparency and everything
 else at run time first run on Windows in CI.
+
+## One app with the others (docs/ui.md)
+
+The Windows app follows the shared specification in [`ui.md`](ui.md): its
+words in Title Case (titles, buttons, menu items, switches, tabs and group
+headings; descriptions and messages stay sentences), its pages, its Settings
+order and the steps that ask first. Where Windows keeps its own mechanics, it
+is the navigation pane, cards in Settings, ContentDialogs for questions and
+plugin settings applied with **Save**.
+
+* **Home:** the library's size ("1,204 songs · 96 albums · 41 artists"), then
+  Recently Added (albums, newest first from the core's `AlbumsSorted`),
+  Recently Played and Most Played (songs). With nothing in the library and no
+  source signed in, "Welcome to Jellyfesh" with **Add Music Folder…** (it adds
+  the folder directly) and **Add a Source** (the Sources page).
+* **Library pages:** Albums is a grid and Artists a list; Songs has **Play**
+  and **Shuffle**. Albums and Songs sort from a menu (Title, Artist, Year,
+  Recently Added; Songs also Album) with **Descending**; each order starts in
+  its own direction (newest first for Year and Recently Added). Empty pages
+  say "No Albums Yet", "No Artists Yet" or "No Songs Yet" with **Add Music
+  Folder…**; Playlists says "No Playlists Yet" with **New Playlist…**,
+  Favourites "No Favourites Yet".
+* **Album, artist and playlist pages:** Play, Shuffle and a More menu: Play
+  Next, Play Last, Add to Playlist… (New Playlist… or a playlist); a playlist
+  also has Rename…, Export Playlist… and Delete Playlist…, which asks first and
+  then goes back.
+* **Song menu:** Play Next, Play Last, Add to Playlist…, Add to Favourites or
+  Remove from Favourites, Go to Album, Go to Artist and Show in Explorer
+  (library songs; the core's search finds the album and artist).
+* **Search:** library results first (Songs, Albums, Artists), then **From Your
+  Sources**, one group per source; "No Results" when nothing is found.
+* **Sources:** the intro line, **Add a Source** (the core's presets; a service
+  opens "Connect to …" for the Server Address and how to sign in, then the
+  sign-in dialog), **Your Sources** (every installed source with its badge
+  and "Signed in as …", "Not signed in" or "Off"; choosing one that is on
+  browses it, behind a breadcrumb whose first crumb, Esc or Back lead back to
+  the list) and **Sources Settings…**, which opens Settings › Sources.
+* **Now Playing:** Queue has "Up Next", **Clear Queue** (it asks first) and
+  "Nothing Up Next"; Info is "About This Song" with Title, Artist, Album, Year
+  (library songs), Length, Format, Lyrics (timing and file, or "None found")
+  and File.
+* **Settings:** Appearance, Playback, Library, Sources and About; no separate
+  Lyrics section. Playback: Output (Output Device), Crossfade (Crossfade,
+  Length, Album Continuity), Volume Levelling (ReplayGain, Preamp), Equalizer
+  (Equalizer, Preset from the core's `EqPresets()` with Custom once a band
+  moves, Preamp, the bands as the core's settings have them, **Reset to
+  Flat**) and Startup (Resume Playback). Library: Music Folders (each with
+  Show in Explorer and **Remove Folder…**, which asks first; then **Add
+  Folder…**), Watch Folders and Rescan Library with the scan's progress and
+  Last Scan. Sources: Add a Source, Installed (**Install from File…** in its
+  heading; each source's badge, status, Enabled, a sign-in button for each
+  method it offers or Sign Out, its settings, "Version · Author" and
+  **Uninstall…**, which asks first; "No Sources Installed" when empty) and
+  Community Plugins (Allow Community Plugins shows the disclosure first).
+  About: the version from the build, Third-Party Licences (the notices file
+  next to the app) and the log folder.
+
+**Checked here, not built (this alignment):** the portable tests pass (105);
+the view models carry the behaviour above and are tested with the fake core
+(`tests/.../UiSpecTests.cs`). The app's C# compiles against the Windows App SDK
+2.6.5 reference assemblies with generated stand-ins for the XAML compiler's
+members, every XAML event handler against its event's delegate and every
+`x:Bind` (436) as a typed assignment; a script checked that every `x:Uid` has
+resources in the four languages, every resource an `x:Uid`, and every resource
+key a definition. The XAML compiler itself first runs on Windows in CI.
 
 ## Layout (`platforms/windows/`)
 
@@ -176,8 +242,8 @@ app's own log is `%LOCALAPPDATA%\Jellyfesh\logs\app.log`.
   animation over its remaining time, so no app code runs per frame even then.
   The window's monotonic clock is `Stopwatch` with an offset measured once
   against `MonotonicNowNs()` (both count QueryPerformanceCounter ticks).
-* **Lists.** Albums and artists are `GridView`s with fixed tile sizes, songs,
-  playlists and favourites `ListView`s; every row is a placeholder until its
+* **Lists.** Albums and playlists are `GridView`s with fixed tile sizes,
+  artists, songs and favourites `ListView`s; every row is a placeholder until its
   page of the core's query arrives, and thumbnails are requested at the drawn
   size, two at a time, off the UI thread, and cancelled when a row scrolls away.
 * **Look.** Colours come from the core's Theme slice into shared brushes
@@ -203,21 +269,37 @@ app's own log is `%LOCALAPPDATA%\Jellyfesh\logs\app.log`.
 
 ## Keys
 
+The keys every Jellyfesh app shares ([`ui.md`](ui.md), "Keyboard"):
+
+| Key | Action |
+| --- | --- |
+| Space | Play or pause |
+| Ctrl+Right / Ctrl+Left | Next / previous song |
+| Shift+Right / Shift+Left | Skip 5 seconds forward / back |
+| Ctrl+Up / Ctrl+Down | Volume up / down |
+| Ctrl+F | Search |
+| Esc | Back (closes Now Playing first; on the Sources page, up a level, then to the list) |
+
+None of them acts while a text box has focus, in the window or in a dialog.
+The arrow keys are read before the focused control (`PreviewKeyDown` on the
+window's root), so a list or slider with focus does not take them; Space
+leaves a focused button or list its own Space. The Groove and Windows Media
+Player keys that reuse none of these stay:
+
 | Key | Action |
 | --- | --- |
 | Ctrl+P | Play or pause |
-| Ctrl+F / Ctrl+B | Next / previous |
+| Ctrl+B | Previous |
+| Ctrl+E | Search |
 | Ctrl+H / Ctrl+T | Shuffle / repeat |
 | F8 / F9 / F10 | Mute / volume down / volume up |
 | Ctrl+L | Open or close Now Playing |
 | Ctrl+M | The compact mini player (always on top) and back |
-| Ctrl+E | Search |
-| Esc, Alt+Left, mouse back | Back (closes Now Playing first) |
+| Alt+Left, mouse back | Back |
 | Alt+Up / Alt+Down, Delete | Move or remove the selected queue or playlist row |
 | Left / Right on the seek bar | Seek 5 s (Page Up / Page Down: 30 s; Home / End: start / end) |
 
-They follow Groove and Windows Media Player, so none of them is taken from a
-text box. Media keys reach the app through the media transport controls.
+Media keys reach the app through the media transport controls.
 
 ## Verified here, and not
 
