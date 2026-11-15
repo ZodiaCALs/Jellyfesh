@@ -2382,7 +2382,7 @@ dependencies = [
 
 [[package]]
 name = "jf-jellyfin"
-version = "0.0.3"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-host",
  "jf-plugin-sdk",
@@ -2553,7 +2553,7 @@ dependencies = [
 
 [[package]]
 name = "jf-subsonic"
-version = "0.0.3"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-host",
  "jf-plugin-sdk",

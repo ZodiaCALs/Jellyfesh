@@ -2,7 +2,7 @@
 name = "jf-jellyfin"
 description = "Jellyfesh source plugin for Jellyfin servers."
 # The plugin's own version: keep it equal to `version` in manifest.toml.
-version = "0.0.3"
+version = "0.0.5"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

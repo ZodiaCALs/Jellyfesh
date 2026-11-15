@@ -120,7 +120,7 @@ fn installs_with_its_manifest() {
     let env = env_for(&server);
     let info = env.host.plugin(ID).unwrap();
     assert_eq!(info.name, "Jellyfin");
-    assert_eq!(info.version, "0.0.3");
+    assert_eq!(info.version, "0.0.5");
     assert!(info.official, "signed with the test key, which this host trusts");
     assert_eq!(info.capabilities.len(), 7);
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr, AuthKind::PasswordExchange]);
@@ -149,7 +149,7 @@ fn password_sign_in_keeps_only_the_token() {
     let first = auth_of(&server, "/Users/AuthenticateByName");
     assert_eq!(first["Client"], "Jellyfesh");
     assert_eq!(first["Device"], "Jellyfesh");
-    assert_eq!(first["Version"], "0.0.3");
+    assert_eq!(first["Version"], "0.0.5");
     let device_id = first["DeviceId"].clone();
     assert_eq!(device_id.len(), 32);
     assert!(device_id.bytes().all(|b| b.is_ascii_hexdigit()));

@@ -1,6 +1,6 @@
 id = "org.jellyfesh.subsonic"
 name = "Subsonic"
-version = "0.0.3"
+version = "0.0.5"
 api_version = "1.0"
 author = "Jellyfesh"
 description = "Your Navidrome, Gonic, Airsonic or other Subsonic and OpenSubsonic server"
