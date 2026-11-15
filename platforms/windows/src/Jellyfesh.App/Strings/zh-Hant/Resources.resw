@@ -854,6 +854,9 @@
   <data name="Playlist_DeleteBody" xml:space="preserve">
     <value>歌曲仍會保留在資料庫中。</value>
   </data>
+  <data name="Playlist_DeleteConfirm" xml:space="preserve">
+    <value>刪除播放清單</value>
+  </data>
   <data name="Playlist_DeleteTitle" xml:space="preserve">
     <value>刪除「{0}」？</value>
   </data>
@@ -901,6 +904,9 @@
   </data>
   <data name="Queue_ClearBody" xml:space="preserve">
     <value>播放將停止，所有歌曲都會從佇列中移除。</value>
+  </data>
+  <data name="Queue_ClearConfirm" xml:space="preserve">
+    <value>清除播放佇列</value>
   </data>
   <data name="Queue_ClearTitle" xml:space="preserve">
     <value>清除播放佇列？</value>

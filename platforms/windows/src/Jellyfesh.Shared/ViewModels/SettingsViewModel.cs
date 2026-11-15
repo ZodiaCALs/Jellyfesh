@@ -130,6 +130,13 @@ public sealed partial class SettingsViewModel : PageViewModel
     private static readonly TimeSpan EchoGuard = TimeSpan.FromMilliseconds(700);
 
     private bool _syncing;
+
+    /// <summary>
+    /// The Preset menu is changing its own selection (<see cref="UpdatePresetChoice"/>), so the
+    /// change applies no preset. Its own flag: the menu is refreshed after the presets load, which
+    /// without a UI thread (tests) can run beside other edits that <see cref="_syncing"/> would drop.
+    /// </summary>
+    private bool _choosingPreset;
     private long _lastAudioEditMs = long.MinValue / 2;
     private long _lastLookEditMs = long.MinValue / 2;
     private IReadOnlyList<EqPreset> _eqPresets = [];
@@ -455,7 +462,7 @@ public sealed partial class SettingsViewModel : PageViewModel
     /// </summary>
     partial void OnSelectedPresetChanged(EqPresetChoice? value)
     {
-        if (!_syncing && value?.Settings is { } preset)
+        if (!_syncing && !_choosingPreset && value?.Settings is { } preset)
         {
             ApplyEq(preset);
         }
@@ -641,8 +648,7 @@ public sealed partial class SettingsViewModel : PageViewModel
 
         var current = CurrentEq();
         var match = Presets.FirstOrDefault(p => p.Settings is { } s && current.SameGains(s));
-        var wasSyncing = _syncing;
-        _syncing = true;
+        _choosingPreset = true;
         try
         {
             if (match is not null)
@@ -666,7 +672,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         }
         finally
         {
-            _syncing = wasSyncing;
+            _choosingPreset = false;
         }
     }
 

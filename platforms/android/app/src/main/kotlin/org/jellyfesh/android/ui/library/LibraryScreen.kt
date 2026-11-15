@@ -267,7 +267,7 @@ private fun ArtistsList(state: CoreState, header: @Composable () -> Unit) {
     val artists = rememberPagedSource(listState, state.libraryRevision, rowOffset = 1) { core, offset, limit -> core.artists(offset, limit) }
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "header") { header() }
-        pagedStates(artists, R.drawable.ic_artist, R.string.artists_empty_title, R.string.albums_empty_body) { LibraryAccessButtons() }
+        pagedStates(artists, R.drawable.ic_artist, R.string.artists_empty_title, R.string.artists_empty_body) { LibraryAccessButtons() }
         items(artists.count, key = { i -> artists[i]?.id ?: "pending-$i" }) { i ->
             val artist = artists[i]
             if (artist != null) {
@@ -321,7 +321,7 @@ private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
                 }
             }
         }
-        pagedStates(songs, R.drawable.ic_song, R.string.songs_empty_title, R.string.albums_empty_body) { LibraryAccessButtons() }
+        pagedStates(songs, R.drawable.ic_song, R.string.songs_empty_title, R.string.songs_empty_body) { LibraryAccessButtons() }
         items(songs.count, key = { i -> songs[i]?.id ?: "pending-$i" }) { i ->
             val track = songs[i]
             if (track != null) {

@@ -81,6 +81,8 @@
     <string name="home_welcome_body">音楽フォルダを追加するか、「ソース」でサーバーに接続してください。</string>
     <string name="albums_empty_title">アルバムはまだありません</string>
     <string name="albums_empty_body">音楽フォルダを追加すると、ここにアルバムが表示されます。</string>
+    <string name="artists_empty_body">音楽フォルダを追加すると、ここにアーティストが表示されます。</string>
+    <string name="songs_empty_body">音楽フォルダを追加すると、ここに曲が表示されます。</string>
     <string name="artists_empty_title">アーティストはまだいません</string>
     <string name="songs_empty_title">曲はまだありません</string>
     <string name="playlists_empty_title">プレイリストはまだありません</string>

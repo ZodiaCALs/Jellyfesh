@@ -854,6 +854,9 @@
   <data name="Playlist_DeleteBody" xml:space="preserve">
     <value>The songs stay in your library.</value>
   </data>
+  <data name="Playlist_DeleteConfirm" xml:space="preserve">
+    <value>Delete Playlist</value>
+  </data>
   <data name="Playlist_DeleteTitle" xml:space="preserve">
     <value>Delete “{0}”?</value>
   </data>
@@ -901,6 +904,9 @@
   </data>
   <data name="Queue_ClearBody" xml:space="preserve">
     <value>Playback stops and every song is removed from the queue.</value>
+  </data>
+  <data name="Queue_ClearConfirm" xml:space="preserve">
+    <value>Clear Queue</value>
   </data>
   <data name="Queue_ClearTitle" xml:space="preserve">
     <value>Clear the Queue?</value>

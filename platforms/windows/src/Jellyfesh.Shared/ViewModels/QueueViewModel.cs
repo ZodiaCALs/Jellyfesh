@@ -171,7 +171,7 @@ public sealed partial class QueueViewModel : ObservableObject
     [RelayCommand]
     private async Task Clear()
     {
-        if (!IsEmpty && await _s.Platform.ConfirmAsync(_s.L.Get("Queue_ClearTitle"), _s.L.Get("Queue_ClearBody"), _s.L.Get("Action_Clear"), _s.L.Get("Action_Cancel")))
+        if (!IsEmpty && await _s.Platform.ConfirmAsync(_s.L.Get("Queue_ClearTitle"), _s.L.Get("Queue_ClearBody"), _s.L.Get("Queue_ClearConfirm"), _s.L.Get("Action_Cancel")))
         {
             _s.Send(new CoreCommand.ClearQueue());
         }

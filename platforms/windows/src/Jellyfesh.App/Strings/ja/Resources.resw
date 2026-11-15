@@ -854,6 +854,9 @@
   <data name="Playlist_DeleteBody" xml:space="preserve">
     <value>曲はライブラリに残ります。</value>
   </data>
+  <data name="Playlist_DeleteConfirm" xml:space="preserve">
+    <value>プレイリストを削除</value>
+  </data>
   <data name="Playlist_DeleteTitle" xml:space="preserve">
     <value>「{0}」を削除しますか？</value>
   </data>
@@ -901,6 +904,9 @@
   </data>
   <data name="Queue_ClearBody" xml:space="preserve">
     <value>再生が止まり、キューのすべての曲が取り除かれます。</value>
+  </data>
+  <data name="Queue_ClearConfirm" xml:space="preserve">
+    <value>キューを消去</value>
   </data>
   <data name="Queue_ClearTitle" xml:space="preserve">
     <value>キューを消去しますか？</value>

@@ -154,7 +154,7 @@ public class UiSpecTests
         h.Platform.Confirm = true;
         await playlist.DeleteCommand.ExecuteAsync(null);
         Assert.Equal(new CoreCommand.DeletePlaylist(5), h.Core.Sent[^1]);
-        Assert.Equal(("Playlist_DeleteTitle", "Playlist_DeleteBody", "Action_Delete"), h.Platform.Asked[^1]);
+        Assert.Equal(("Playlist_DeleteTitle", "Playlist_DeleteBody", "Playlist_DeleteConfirm"), h.Platform.Asked[^1]);
         Assert.Equal(1, deleted);
     }
 
@@ -169,7 +169,7 @@ public class UiSpecTests
         h.Emit(new CoreEvent.Queue(QueueState.Initial with { Version = 1, Length = 1, Position = 0, Current = new QueueItem(1, new TrackRef.File("/music/a.flac")) }));
         h.Platform.Confirm = false;
         await queue.ClearCommand.ExecuteAsync(null);
-        Assert.Equal(("Queue_ClearTitle", "Queue_ClearBody", "Action_Clear"), h.Platform.Asked[^1]);
+        Assert.Equal(("Queue_ClearTitle", "Queue_ClearBody", "Queue_ClearConfirm"), h.Platform.Asked[^1]);
         Assert.DoesNotContain(h.Core.Sent, c => c is CoreCommand.ClearQueue);
         h.Platform.Confirm = true;
         await queue.ClearCommand.ExecuteAsync(null);

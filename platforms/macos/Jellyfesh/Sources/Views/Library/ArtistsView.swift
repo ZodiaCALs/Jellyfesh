@@ -51,7 +51,7 @@ struct ArtistsView: View {
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
                 EmptyState(title: "No Artists Yet", symbol: "music.mic",
-                           message: "Add a music folder to see your albums here.", error: list.error) {
+                           message: "Add a music folder to see your artists here.", error: list.error) {
                     AddMusicFolderButton()
                 }
             }

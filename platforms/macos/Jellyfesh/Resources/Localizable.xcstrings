@@ -847,6 +847,50 @@
         }
       }
     },
+    "Add a music folder to see your artists here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダを追加すると、ここにアーティストが表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加音乐文件夹后，你的艺人会显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入音樂資料夾後，你的藝人會顯示在這裡。"
+          }
+        }
+      }
+    },
+    "Add a music folder to see your songs here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダを追加すると、ここに曲が表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加音乐文件夹后，你的歌曲会显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入音樂資料夾後，你的歌曲會顯示在這裡。"
+          }
+        }
+      }
+    },
     "Add songs from their menu with Add to Playlist.": {
       "localizations": {
         "ja": {

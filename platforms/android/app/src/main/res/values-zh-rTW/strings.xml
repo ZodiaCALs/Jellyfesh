@@ -81,6 +81,8 @@
     <string name="home_welcome_body">加入你的音樂資料夾，或在「來源」中連線伺服器。</string>
     <string name="albums_empty_title">還沒有專輯</string>
     <string name="albums_empty_body">加入音樂資料夾後，你的專輯會顯示在這裡。</string>
+    <string name="artists_empty_body">加入音樂資料夾後，你的藝人會顯示在這裡。</string>
+    <string name="songs_empty_body">加入音樂資料夾後，你的歌曲會顯示在這裡。</string>
     <string name="artists_empty_title">還沒有藝人</string>
     <string name="songs_empty_title">還沒有歌曲</string>
     <string name="playlists_empty_title">還沒有播放清單</string>

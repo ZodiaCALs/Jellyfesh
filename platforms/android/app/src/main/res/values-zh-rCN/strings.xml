@@ -81,6 +81,8 @@
     <string name="home_welcome_body">添加你的音乐文件夹，或在“来源”中连接服务器。</string>
     <string name="albums_empty_title">还没有专辑</string>
     <string name="albums_empty_body">添加音乐文件夹后，你的专辑会显示在这里。</string>
+    <string name="artists_empty_body">添加音乐文件夹后，你的艺人会显示在这里。</string>
+    <string name="songs_empty_body">添加音乐文件夹后，你的歌曲会显示在这里。</string>
     <string name="artists_empty_title">还没有艺人</string>
     <string name="songs_empty_title">还没有歌曲</string>
     <string name="playlists_empty_title">还没有歌单</string>

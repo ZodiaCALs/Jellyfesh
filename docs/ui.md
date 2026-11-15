@@ -71,11 +71,12 @@ Sources.", buttons **Add Music Folder…** and **Add a Source**.
 **Descending**. Empty: "No Albums Yet", "Add a music folder to see your
 albums here.", **Add Music Folder…**.
 
-**Artists.** A list. Empty: "No Artists Yet", same text and button.
+**Artists.** A list. Empty: "No Artists Yet", "Add a music folder to see
+your artists here.", **Add Music Folder…**.
 
 **Songs.** **Play** and **Shuffle**, then the list. Sort menu: Title, Artist,
-Album, Year, Recently Added, and **Descending**. Empty: "No Songs Yet", same
-text and button.
+Album, Year, Recently Added, and **Descending**. Empty: "No Songs Yet", "Add a
+music folder to see your songs here.", **Add Music Folder…**.
 
 **Album, artist and playlist pages.** Artwork and facts, **Play**,
 **Shuffle**, and a More menu (Play Next, Play Last, Add to Playlist…; on a
@@ -172,7 +173,15 @@ the third-party licences.
 ## Steps that ask first
 
 Remove Folder…, Uninstall…, Delete Playlist… and Clear Queue ask for
-confirmation in every app. Turning on a community plugin, or Allow
+confirmation in every app, with these words (Cancel, then the action):
+
+| Step | Title | Message | Action |
+|---|---|---|---|
+| Remove Folder… | Remove “Name” from the library? | Its songs leave the library and its playlists. The files stay where they are. | Remove Folder |
+| Uninstall… | Uninstall Name? | Its settings and sign-in are removed. | Uninstall |
+| Delete Playlist… | Delete “Name”? | The songs stay in your library. | Delete Playlist |
+| Clear Queue | Clear the Queue? | Playback stops and every song is removed from the queue. | Clear Queue |
+ Turning on a community plugin, or Allow
 Community Plugins, shows the disclosure (ADR-0012). New Playlist… asks for
 the name before it creates anything.
 
@@ -186,7 +195,8 @@ conventions and must not reuse these keys.
 
 ## Allowed differences
 
-* **Web:** no Playlists, Favourites or history (so Home has no Recently
+* **Web:** Remove Folder… says only "Its songs leave the library." (it has
+  no playlists). No Playlists, Favourites or history (so Home has no Recently
   Played or Most Played; it shows each signed-in source's start page
   instead), and no Output Device (a browser decides where sound goes). Its
   Settings also list the keyboard shortcuts. Its library is folders the browser may

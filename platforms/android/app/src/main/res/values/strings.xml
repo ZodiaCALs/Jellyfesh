@@ -111,6 +111,8 @@
     <!-- Library -->
     <string name="albums_empty_title">No Albums Yet</string>
     <string name="albums_empty_body">Add a music folder to see your albums here.</string>
+    <string name="artists_empty_body">Add a music folder to see your artists here.</string>
+    <string name="songs_empty_body">Add a music folder to see your songs here.</string>
     <string name="artists_empty_title">No Artists Yet</string>
     <string name="songs_empty_title">No Songs Yet</string>
     <string name="playlists_empty_title">No Playlists Yet</string>

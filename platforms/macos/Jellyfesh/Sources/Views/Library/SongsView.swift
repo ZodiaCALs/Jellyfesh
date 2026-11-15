@@ -42,7 +42,7 @@ struct SongsView: View {
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
                 EmptyState(title: "No Songs Yet", symbol: "music.note",
-                           message: "Add a music folder to see your albums here.", error: list.error) {
+                           message: "Add a music folder to see your songs here.", error: list.error) {
                     AddMusicFolderButton()
                 }
             }

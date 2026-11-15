@@ -713,7 +713,7 @@ public sealed partial class PlaylistsViewModel(ShellServices services) : PageVie
     private async Task Delete(PlaylistItem? item)
     {
         if (item is not null && await S.Platform.ConfirmAsync(
-                S.L.Format("Playlist_DeleteTitle", item.Name), S.L.Get("Playlist_DeleteBody"), S.L.Get("Action_Delete"), S.L.Get("Action_Cancel")))
+                S.L.Format("Playlist_DeleteTitle", item.Name), S.L.Get("Playlist_DeleteBody"), S.L.Get("Playlist_DeleteConfirm"), S.L.Get("Action_Cancel")))
         {
             S.Send(new CoreCommand.DeletePlaylist(item.Id));
         }
@@ -806,7 +806,7 @@ public sealed partial class PlaylistDetailViewModel : PageViewModel
     private async Task Delete()
     {
         if (await S.Platform.ConfirmAsync(
-                S.L.Format("Playlist_DeleteTitle", Name), S.L.Get("Playlist_DeleteBody"), S.L.Get("Action_Delete"), S.L.Get("Action_Cancel")))
+                S.L.Format("Playlist_DeleteTitle", Name), S.L.Get("Playlist_DeleteBody"), S.L.Get("Playlist_DeleteConfirm"), S.L.Get("Action_Cancel")))
         {
             S.Send(new CoreCommand.DeletePlaylist(Playlist.Id));
             Deleted?.Invoke();
