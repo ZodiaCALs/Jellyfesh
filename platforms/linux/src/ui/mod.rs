@@ -270,8 +270,8 @@ fn install_actions(application: &adw::Application) {
         window::close_now_playing();
         window::show_section(window::Section::Search);
     });
-    simple(application, "preferences", &["<Primary>comma"], || {
-        window::show_preferences(None)
+    simple(application, "settings", &["<Primary>comma"], || {
+        window::show_settings(None)
     });
     simple(
         application,
@@ -311,8 +311,9 @@ fn install_actions(application: &adw::Application) {
 }
 
 /// `section`, `album:<id>`, `artist:<id>`, `playlist:<id>`,
-/// `now-playing[:lyrics|queue|info]`, `preferences[:<page>]`,
-/// `search:<words>`, `about`, `shortcuts`.
+/// `now-playing[:lyrics|queue|info]`, `settings[:<page>]` (also
+/// `preferences[:<page>]`, its earlier name), `search:<words>`, `about`,
+/// `shortcuts`.
 fn show_view(spec: &str) {
     let (kind, arg) = spec.split_once(':').unwrap_or((spec, ""));
     let id = arg.parse::<i64>().ok();
@@ -327,7 +328,7 @@ fn show_view(spec: &str) {
             _ => None,
         }),
         ("library", _) => window::close_now_playing(),
-        ("preferences", _) => window::show_preferences((!arg.is_empty()).then_some(arg)),
+        ("settings" | "preferences", _) => window::show_settings((!arg.is_empty()).then_some(arg)),
         ("search", _) => {
             window::close_now_playing();
             window::show_section(window::Section::Search);

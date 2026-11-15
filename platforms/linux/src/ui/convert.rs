@@ -69,6 +69,7 @@ pub fn track(t: &Track) -> ItemData {
         art: t.artwork_hash.clone().map(ArtKey::Hash),
         track: Some(TrackRef::Library(t.id)),
         album_id: t.album_id,
+        artist: t.artist.clone(),
         playable: true,
         ..ItemData::default()
     }
@@ -102,6 +103,9 @@ pub fn track_row(r: &TrackRow) -> ItemData {
             .map(ArtKey::Hash)
             .or_else(|| art_of(r.artwork.as_ref())),
         track: Some(r.track.clone()),
+        artist: matches!(r.track, TrackRef::Library(_))
+            .then(|| r.artist.clone())
+            .flatten(),
         favorite: r.favorite,
         playable: !r.missing,
         ..ItemData::default()
@@ -158,6 +162,7 @@ pub fn source_item(s: &SourceItem) -> ItemData {
         track: s.track.clone(),
         album_id: (kind == Kind::Album).then_some(id),
         artist_id: (kind == Kind::Artist).then_some(id),
+        artist: (kind == Kind::Track).then(|| s.subtitle.clone()).flatten(),
         playable: s.playable,
         source: Some(Box::new(s.clone())),
         ..ItemData::default()

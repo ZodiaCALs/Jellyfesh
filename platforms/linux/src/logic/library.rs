@@ -1,10 +1,53 @@
-//! Library view decisions (design-controls.md, "Library"): the album page's
-//! facts and footer, and the level glyph on the playing row. Nothing here
-//! sorts or filters library data; it only shows what the core returned.
+//! Library view decisions (design-controls.md, "Library"): the sort menus'
+//! choices, the album page's facts and footer, and the level glyph on the
+//! playing row. Nothing here sorts or filters library data: the menus name
+//! one of the core's orders (`AlbumSort`, `TrackSort` with `descending`),
+//! and the rest only shows what the core returned.
 
 use std::f64::consts::TAU;
 
+use jf_core::{AlbumSort, TrackSort};
+
 use crate::logic::format;
+
+/// The Albums sort menu, in its order (docs/ui.md, "Albums"), by menu key.
+pub const ALBUM_SORTS: [(&str, AlbumSort); 4] = [
+    ("title", AlbumSort::Title),
+    ("artist", AlbumSort::Artist),
+    ("year", AlbumSort::Year),
+    ("added", AlbumSort::Added),
+];
+
+/// The Songs sort menu, in its order (docs/ui.md, "Songs"), by menu key.
+pub const SONG_SORTS: [(&str, TrackSort); 5] = [
+    ("title", TrackSort::Title),
+    ("artist", TrackSort::Artist),
+    ("album", TrackSort::Album),
+    ("year", TrackSort::Year),
+    ("added", TrackSort::Added),
+];
+
+/// The core's album order for a menu key (Title for an unknown one).
+pub fn album_sort(key: &str) -> AlbumSort {
+    ALBUM_SORTS
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map_or(AlbumSort::Title, |(_, s)| *s)
+}
+
+/// The core's song order for a menu key (Title for an unknown one).
+pub fn song_sort(key: &str) -> TrackSort {
+    SONG_SORTS
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map_or(TrackSort::Title, |(_, s)| *s)
+}
+
+/// Whether choosing a sort turns Descending on: years and Recently Added
+/// show the newest first; names read from A. The person can then flip it.
+pub fn starts_descending(key: &str) -> bool {
+    matches!(key, "year" | "added")
+}
 
 /// Songs and whole minutes of a track list, for "12 songs, 48 minutes".
 pub fn totals(durations: impl IntoIterator<Item = Option<u64>>) -> (u64, u64) {
@@ -56,6 +99,31 @@ pub fn level_bars(t: f64) -> [f64; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn sort_keys_name_the_cores_orders() {
+        for (key, sort) in ALBUM_SORTS {
+            assert_eq!(album_sort(key), sort);
+        }
+        for (key, sort) in SONG_SORTS {
+            assert_eq!(song_sort(key), sort);
+        }
+        assert_eq!(album_sort("nonsense"), AlbumSort::Title);
+        assert_eq!(song_sort("nonsense"), TrackSort::Title);
+        let keys: Vec<&str> = SONG_SORTS.iter().map(|(k, _)| *k).collect();
+        assert_eq!(keys, ["title", "artist", "album", "year", "added"]);
+        let keys: Vec<&str> = ALBUM_SORTS.iter().map(|(k, _)| *k).collect();
+        assert_eq!(keys, ["title", "artist", "year", "added"]);
+    }
+
+    #[test]
+    fn newest_first_for_years_and_recently_added() {
+        assert!(starts_descending("year"));
+        assert!(starts_descending("added"));
+        assert!(!starts_descending("title"));
+        assert!(!starts_descending("artist"));
+        assert!(!starts_descending("album"));
+    }
 
     #[test]
     fn totals_count_songs_and_round_minutes() {

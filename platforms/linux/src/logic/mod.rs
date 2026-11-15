@@ -18,6 +18,7 @@ pub mod lru;
 pub mod lyrics;
 pub mod motion;
 pub mod paging;
+pub mod playback;
 pub mod queue;
 pub mod schedule;
 pub mod schema;

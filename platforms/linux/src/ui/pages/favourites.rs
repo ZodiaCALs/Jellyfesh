@@ -34,7 +34,7 @@ pub fn page() -> adw::NavigationPage {
         &status(
             "starred-symbolic",
             &tr("No Favourites Yet"),
-            &tr("Tap the heart next to a song to keep it here."),
+            &tr("Songs you mark with the heart appear here."),
         ),
         Some("empty"),
     );

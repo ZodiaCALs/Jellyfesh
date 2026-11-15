@@ -227,7 +227,7 @@ fn confirm_clear() {
             Some(&tr("Playback stops and every song is removed from the queue.")),
         );
         dialog.add_response("cancel", &tr("Cancel"));
-        dialog.add_response("clear", &tr("Clear"));
+        dialog.add_response("clear", &tr("Clear Queue"));
         dialog.set_response_appearance("clear", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let parent = a.window.borrow().upgrade();

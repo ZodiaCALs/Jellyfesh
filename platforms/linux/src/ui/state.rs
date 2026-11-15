@@ -64,6 +64,9 @@ pub struct App {
     pub muted: Cell<bool>,
     pub library_revision: Cell<u64>,
     pub scanning: Cell<bool>,
+    /// How the last scan ended (finished or failed) in this run, for
+    /// Settings › Library's Last Scan.
+    pub last_scan: RefCell<Option<ScanStatus>>,
     pub buffering: Cell<bool>,
     /// The main window, for toasts and dialogs.
     pub window: RefCell<glib::WeakRef<adw::ApplicationWindow>>,
@@ -130,6 +133,7 @@ impl App {
             muted: Cell::new(snapshot.muted),
             library_revision: Cell::new(snapshot.library_revision),
             scanning: Cell::new(snapshot.scanning),
+            last_scan: RefCell::new(None),
             buffering: Cell::new(false),
             window: RefCell::new(glib::WeakRef::new()),
             toasts: RefCell::new(glib::WeakRef::new()),
@@ -302,6 +306,9 @@ impl App {
             }
             Event::Scan(status) => {
                 self.scanning.set(matches!(status, ScanStatus::Progress(_)));
+                if !matches!(status, ScanStatus::Progress(_)) {
+                    *self.last_scan.borrow_mut() = Some(status.clone());
+                }
                 self.emit(&Change::Scan(&status));
             }
             Event::Auth(update) => self.emit(&Change::Auth(&update)),

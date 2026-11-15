@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jellyfesh\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-14 18:19+0000\n"
+"POT-Creation-Date: 2026-11-15 17:52+0000\n"
 "PO-Revision-Date: 2026-11-08 12:00+0000\n"
 "Last-Translator: the Jellyfesh authors\n"
 "Language-Team: Chinese (simplified)\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/ui/about.rs:11 src/ui/window.rs:294
+#: src/ui/about.rs:11 src/ui/window.rs:303
 #, no-c-format
 msgid "About Jellyfesh"
 msgstr "关于 Jellyfesh"
@@ -25,7 +25,7 @@ msgstr "关于 Jellyfesh"
 msgid "Jellyfesh icon"
 msgstr "Jellyfesh 图标"
 
-#: src/ui/about.rs:54
+#: src/ui/about.rs:54 src/ui/sources_ui.rs:240
 #, no-c-format
 msgid "Version {version}"
 msgstr "版本 {version}"
@@ -47,7 +47,7 @@ msgstr "采用 Misty 设计语言设计。"
 
 #: src/ui/about.rs:69
 #, no-c-format
-msgid "Design tokens"
+msgid "Design Tokens"
 msgstr "设计令牌"
 
 #: src/ui/about.rs:70
@@ -68,131 +68,139 @@ msgstr "许可"
 msgid "No licence has been chosen yet: all rights reserved."
 msgstr "尚未选择许可：保留所有权利。"
 
-#: src/ui/actions.rs:43
+#: src/ui/actions.rs:46
 #, no-c-format
 msgid "Plays next"
 msgstr "将在下一首播放"
 
-#: src/ui/actions.rs:45
+#: src/ui/actions.rs:48
 #, no-c-format
 msgid "Added to the queue"
 msgstr "已加入播放队列"
 
-#: src/ui/actions.rs:100 src/ui/miniplayer.rs:121 src/ui/miniplayer.rs:123
+#: src/ui/actions.rs:118 src/ui/miniplayer.rs:121 src/ui/miniplayer.rs:123
 #: src/ui/pages/detail.rs:82 src/ui/pages/favourites.rs:52
-#: src/ui/transport.rs:28 src/ui/transport.rs:29 src/ui/transport.rs:40
+#: src/ui/pages/mod.rs:237 src/ui/transport.rs:28 src/ui/transport.rs:29
+#: src/ui/transport.rs:40
 #, no-c-format
 msgid "Play"
 msgstr "播放"
 
-#: src/ui/actions.rs:105 src/ui/keys.rs:56 src/ui/pages/detail.rs:83
-#: src/ui/pages/favourites.rs:49 src/ui/transport.rs:46
+#: src/ui/actions.rs:123 src/ui/keys.rs:59 src/ui/pages/detail.rs:83
+#: src/ui/pages/favourites.rs:49 src/ui/pages/mod.rs:238 src/ui/transport.rs:46
 #, no-c-format
 msgid "Shuffle"
 msgstr "随机播放"
 
-#: src/ui/actions.rs:108
+#: src/ui/actions.rs:126
 #, no-c-format
 msgid "Play Next"
 msgstr "下一首播放"
 
-#: src/ui/actions.rs:109
+#: src/ui/actions.rs:127
 #, no-c-format
 msgid "Play Last"
 msgstr "最后播放"
 
-#: src/ui/actions.rs:114
+#: src/ui/actions.rs:132
 #, no-c-format
 msgid "Add to Playlist…"
 msgstr "添加到歌单…"
 
-#: src/ui/actions.rs:130 src/ui/nowplaying/mod.rs:620 src/ui/rows.rs:381
+#: src/ui/actions.rs:148 src/ui/nowplaying/mod.rs:620 src/ui/rows.rs:381
 #, no-c-format
 msgid "Remove from Favourites"
 msgstr "取消收藏"
 
-#: src/ui/actions.rs:132 src/ui/nowplaying/mod.rs:176
+#: src/ui/actions.rs:150 src/ui/nowplaying/mod.rs:176
 #: src/ui/nowplaying/mod.rs:622 src/ui/rows.rs:247 src/ui/rows.rs:383
 #, no-c-format
 msgid "Add to Favourites"
 msgstr "收藏"
 
-#: src/ui/actions.rs:139
+#: src/ui/actions.rs:158
 #, no-c-format
 msgid "Go to Album"
 msgstr "前往专辑"
 
-#: src/ui/actions.rs:144
+#: src/ui/actions.rs:162 src/ui/actions.rs:166
 #, no-c-format
 msgid "Go to Artist"
 msgstr "前往艺人"
 
-#: src/ui/actions.rs:147
+#: src/ui/actions.rs:173
 #, no-c-format
 msgid "Rename…"
 msgstr "重命名…"
 
-#: src/ui/actions.rs:148 src/ui/actions.rs:382
+#: src/ui/actions.rs:176
 #, no-c-format
-msgid "Delete"
-msgstr "删除"
+msgid "Delete Playlist…"
+msgstr "删除歌单…"
 
-#: src/ui/actions.rs:267
+#: src/ui/actions.rs:191 src/ui/prefs.rs:1159 src/ui/prefs.rs:1160
+#, no-c-format
+msgid "Show in Files"
+msgstr "在“文件”中显示"
+
+#: src/ui/actions.rs:349
 #, no-c-format
 msgid "Add the songs from the source's own page."
 msgstr "请在该来源的页面中添加歌曲。"
 
-#: src/ui/actions.rs:287
+#: src/ui/actions.rs:369
 #, no-c-format
 msgid "Add to Playlist"
 msgstr "添加到歌单"
 
-#: src/ui/actions.rs:288 src/ui/actions.rs:357 src/ui/actions.rs:381
+#: src/ui/actions.rs:370 src/ui/actions.rs:439 src/ui/actions.rs:470
 #: src/ui/nowplaying/queue.rs:229 src/ui/pages/playlists.rs:117
-#: src/ui/sources_ui.rs:501
+#: src/ui/prefs.rs:1175 src/ui/sources_ui.rs:272 src/ui/sources_ui.rs:537
 #, no-c-format
 msgid "Cancel"
 msgstr "取消"
 
-#: src/ui/actions.rs:289 src/ui/window.rs:334
+#: src/ui/actions.rs:371 src/ui/window.rs:343
 #, no-c-format
 msgid "Add"
 msgstr "添加"
 
-#: src/ui/actions.rs:296 src/ui/actions.rs:342 src/ui/pages/playlists.rs:46
-#: src/ui/pages/playlists.rs:59 src/ui/pages/playlists.rs:116
+#: src/ui/actions.rs:378 src/ui/actions.rs:424 src/ui/pages/playlists.rs:116
 #: src/ui/pages/playlists.rs:130
 #, no-c-format
 msgid "New Playlist"
 msgstr "新建歌单"
 
-#: src/ui/actions.rs:302 src/ui/convert.rs:51 src/ui/convert.rs:125
+#: src/ui/actions.rs:384 src/ui/convert.rs:51 src/ui/convert.rs:129
 #: src/ui/nowplaying/queue.rs:209 src/ui/pages/detail.rs:198
-#: src/ui/pages/detail.rs:208 src/ui/pages/detail.rs:464
-#: src/ui/pages/home.rs:197
+#: src/ui/pages/detail.rs:208 src/ui/pages/detail.rs:455
+#: src/ui/pages/home.rs:244
 msgid "{n} song"
 msgid_plural "{n} songs"
 msgstr[0] "{n} 首歌曲"
 
-#: src/ui/actions.rs:356
+#: src/ui/actions.rs:438
 #, no-c-format
 msgid "Rename Playlist"
 msgstr "重命名歌单"
 
-#: src/ui/actions.rs:358
+#: src/ui/actions.rs:440
 #, no-c-format
 msgid "Rename"
 msgstr "重命名"
 
-#: src/ui/actions.rs:378
-#, no-c-format
-msgid "Delete Playlist?"
-msgstr "删除歌单？"
+#: src/ui/actions.rs:467
+msgid "Delete “{name}”?"
+msgstr "要删除“{name}”吗？"
 
-#: src/ui/actions.rs:379
+#: src/ui/actions.rs:468
 #, no-c-format
 msgid "The songs stay in your library."
 msgstr "歌曲仍保留在资料库中。"
+
+#: src/ui/actions.rs:471
+msgid "Delete Playlist"
+msgstr "删除播放列表"
 
 #: src/ui/convert.rs:14
 #, no-c-format
@@ -204,114 +212,115 @@ msgstr "未知艺人"
 msgid "Unknown Album"
 msgstr "未知专辑"
 
-#: src/ui/convert.rs:127
+#: src/ui/convert.rs:131
 msgid "{n} min"
 msgid_plural "{n} min"
 msgstr[0] "{n} 分钟"
 
-#: src/ui/keys.rs:46 src/ui/prefs.rs:616
+#: src/ui/keys.rs:49 src/ui/prefs.rs:647
 #, no-c-format
 msgid "Playback"
 msgstr "播放"
 
-#: src/ui/keys.rs:48
-#, no-c-format
-msgid "Play or pause"
-msgstr "播放或暂停"
-
-#: src/ui/keys.rs:49
-#, no-c-format
-msgid "Next song"
-msgstr "下一首"
-
-#: src/ui/keys.rs:50
-#, no-c-format
-msgid "Previous song"
-msgstr "上一首"
-
 #: src/ui/keys.rs:51
 #, no-c-format
-msgid "Skip forward 5 seconds"
-msgstr "快进 5 秒"
+msgid "Play or Pause"
+msgstr "播放或暂停"
 
 #: src/ui/keys.rs:52
 #, no-c-format
-msgid "Skip back 5 seconds"
-msgstr "后退 5 秒"
+msgid "Next Song"
+msgstr "下一首"
 
 #: src/ui/keys.rs:53
 #, no-c-format
-msgid "Volume up"
-msgstr "提高音量"
+msgid "Previous Song"
+msgstr "上一首"
 
 #: src/ui/keys.rs:54
 #, no-c-format
-msgid "Volume down"
+msgid "Skip Forward 5 Seconds"
+msgstr "快进 5 秒"
+
+#: src/ui/keys.rs:55
+#, no-c-format
+msgid "Skip Back 5 Seconds"
+msgstr "后退 5 秒"
+
+#: src/ui/keys.rs:56
+#, no-c-format
+msgid "Volume Up"
+msgstr "提高音量"
+
+#: src/ui/keys.rs:57
+#, no-c-format
+msgid "Volume Down"
 msgstr "降低音量"
 
-#: src/ui/keys.rs:55 src/ui/transport.rs:140 src/ui/transport.rs:200
+#: src/ui/keys.rs:58 src/ui/transport.rs:140 src/ui/transport.rs:200
 #, no-c-format
 msgid "Mute"
 msgstr "静音"
 
-#: src/ui/keys.rs:57 src/ui/transport.rs:56
+#: src/ui/keys.rs:60 src/ui/transport.rs:56
 #, no-c-format
 msgid "Repeat"
 msgstr "循环"
 
-#: src/ui/keys.rs:61
+#: src/ui/keys.rs:64
 #, no-c-format
 msgid "Views"
 msgstr "视图"
 
-#: src/ui/keys.rs:63 src/ui/prefs.rs:335
+#: src/ui/keys.rs:66
 #, no-c-format
 msgid "Now Playing"
 msgstr "正在播放"
 
-#: src/ui/keys.rs:64 src/ui/nowplaying/info.rs:36
+#: src/ui/keys.rs:67 src/ui/nowplaying/info.rs:46
 #: src/ui/nowplaying/lyrics.rs:118 src/ui/nowplaying/mod.rs:117
-#: src/ui/playerbar.rs:100
+#: src/ui/playerbar.rs:100 src/ui/prefs.rs:345
 #, no-c-format
 msgid "Lyrics"
 msgstr "歌词"
 
-#: src/ui/keys.rs:65 src/ui/nowplaying/mod.rs:118 src/ui/playerbar.rs:104
+#: src/ui/keys.rs:68 src/ui/nowplaying/mod.rs:118 src/ui/playerbar.rs:104
 #, no-c-format
 msgid "Queue"
 msgstr "播放队列"
 
-#: src/ui/keys.rs:66 src/ui/pages/search.rs:63 src/ui/pages/search.rs:88
+#: src/ui/keys.rs:69 src/ui/pages/search.rs:64 src/ui/pages/search.rs:89
 #, no-c-format
 msgid "Search"
 msgstr "搜索"
 
-#: src/ui/keys.rs:67
+#: src/ui/keys.rs:70
 #, no-c-format
-msgid "Back to the library"
-msgstr "返回资料库"
+msgid "Back"
+msgstr "返回"
 
-#: src/ui/keys.rs:71
+#: src/ui/keys.rs:74
 #, no-c-format
 msgid "General"
 msgstr "常规"
 
-#: src/ui/keys.rs:73 src/ui/prefs.rs:29 src/ui/window.rs:292
+#: src/ui/keys.rs:76 src/ui/prefs.rs:31 src/ui/sources_ui.rs:229
+#: src/ui/window.rs:301
 #, no-c-format
-msgid "Preferences"
-msgstr "偏好设置"
+msgid "Settings"
+msgstr "设置"
 
-#: src/ui/keys.rs:74
+#: src/ui/keys.rs:77 src/ui/keys.rs:87 src/ui/window.rs:302
 #, no-c-format
-msgid "Keyboard shortcuts"
+msgid "Keyboard Shortcuts"
 msgstr "键盘快捷键"
 
-#: src/ui/keys.rs:75
+#: src/ui/keys.rs:78
 #, no-c-format
-msgid "Close window"
+msgid "Close Window"
 msgstr "关闭窗口"
 
-#: src/ui/keys.rs:76
+#: src/ui/keys.rs:79
 #, no-c-format
 msgid "Quit"
 msgstr "退出"
@@ -341,74 +350,79 @@ msgstr "暂停，已播放 {percent}%"
 msgid "Pause"
 msgstr "暂停"
 
-#: src/ui/nowplaying/info.rs:31 src/ui/pages/library.rs:149
+#: src/ui/nowplaying/info.rs:40 src/ui/pages/library.rs:103
 #, no-c-format
 msgid "Title"
 msgstr "标题"
 
-#: src/ui/nowplaying/info.rs:32 src/ui/pages/detail.rs:375
-#: src/ui/pages/detail.rs:422 src/ui/pages/library.rs:150
+#: src/ui/nowplaying/info.rs:41 src/ui/pages/detail.rs:364
+#: src/ui/pages/detail.rs:413 src/ui/pages/library.rs:104
 #, no-c-format
 msgid "Artist"
 msgstr "艺人"
 
-#: src/ui/nowplaying/info.rs:33 src/ui/pages/detail.rs:223
-#: src/ui/pages/detail.rs:253 src/ui/prefs.rs:676
+#: src/ui/nowplaying/info.rs:42 src/ui/pages/detail.rs:223
+#: src/ui/pages/detail.rs:255 src/ui/pages/library.rs:105 src/ui/prefs.rs:683
 #, no-c-format
 msgid "Album"
 msgstr "专辑"
 
-#: src/ui/nowplaying/info.rs:34 src/ui/prefs.rs:693
+#: src/ui/nowplaying/info.rs:43 src/ui/pages/library.rs:106
+#, no-c-format
+msgid "Year"
+msgstr "年份"
+
+#: src/ui/nowplaying/info.rs:44 src/ui/prefs.rs:667
 #, no-c-format
 msgid "Length"
 msgstr "时长"
 
-#: src/ui/nowplaying/info.rs:35
+#: src/ui/nowplaying/info.rs:45
 #, no-c-format
 msgid "Format"
 msgstr "格式"
 
-#: src/ui/nowplaying/info.rs:37
+#: src/ui/nowplaying/info.rs:47
 #, no-c-format
 msgid "File"
 msgstr "文件"
 
-#: src/ui/nowplaying/info.rs:48
+#: src/ui/nowplaying/info.rs:58
 #, no-c-format
 msgid "About This Song"
 msgstr "关于这首歌"
 
-#: src/ui/nowplaying/info.rs:87
+#: src/ui/nowplaying/info.rs:103
 msgid "{n} channel"
 msgid_plural "{n} channels"
 msgstr[0] "{n} 声道"
 
-#: src/ui/nowplaying/info.rs:90
+#: src/ui/nowplaying/info.rs:106
 #, no-c-format
 msgid "gapless"
 msgstr "无缝"
 
-#: src/ui/nowplaying/info.rs:104
+#: src/ui/nowplaying/info.rs:120
 #, no-c-format
 msgid "in the file's tags"
 msgstr "来自文件标签"
 
-#: src/ui/nowplaying/info.rs:105
+#: src/ui/nowplaying/info.rs:121
 #, no-c-format
 msgid "None found"
 msgstr "未找到"
 
-#: src/ui/nowplaying/info.rs:122
+#: src/ui/nowplaying/info.rs:174
 #, no-c-format
 msgid "Unsynced"
 msgstr "未同步"
 
-#: src/ui/nowplaying/info.rs:124
+#: src/ui/nowplaying/info.rs:176
 #, no-c-format
 msgid "Word by word"
 msgstr "逐字同步"
 
-#: src/ui/nowplaying/info.rs:126
+#: src/ui/nowplaying/info.rs:178
 #, no-c-format
 msgid "Line by line"
 msgstr "逐行同步"
@@ -427,8 +441,7 @@ msgstr ""
 "Jellyfesh 会显示歌曲旁的 .lrc、.ttml 或 .vtt 文件中的歌词，或文件标签中的歌"
 "词。"
 
-#: src/ui/nowplaying/mod.rs:105 src/ui/pages/search.rs:183 src/ui/prefs.rs:897
-#: src/ui/window.rs:189
+#: src/ui/nowplaying/mod.rs:105 src/ui/prefs.rs:990 src/ui/window.rs:198
 #, no-c-format
 msgid "Library"
 msgstr "资料库"
@@ -454,6 +467,7 @@ msgid "Speakers"
 msgstr "扬声器"
 
 #: src/ui/nowplaying/mod.rs:134 src/ui/nowplaying/mod.rs:137
+#: src/ui/prefs.rs:653
 #, no-c-format
 msgid "Output Device"
 msgstr "输出设备"
@@ -478,7 +492,7 @@ msgstr "未在播放"
 msgid "Pick a song, an album or a playlist."
 msgstr "选择一首歌、一张专辑或一个歌单。"
 
-#: src/ui/nowplaying/mod.rs:657 src/ui/prefs.rs:851
+#: src/ui/nowplaying/mod.rs:657 src/ui/prefs.rs:952
 #, no-c-format
 msgid "System Default"
 msgstr "系统默认"
@@ -488,7 +502,7 @@ msgstr "系统默认"
 msgid "Up Next"
 msgstr "接下来播放"
 
-#: src/ui/nowplaying/queue.rs:155
+#: src/ui/nowplaying/queue.rs:155 src/ui/nowplaying/queue.rs:230
 #, no-c-format
 msgid "Clear Queue"
 msgstr "清空播放队列"
@@ -504,7 +518,6 @@ msgid "Use Play Next or Play Last on any song, album or playlist."
 msgstr "在任意歌曲、专辑或歌单上使用“下一首播放”或“最后播放”。"
 
 #: src/ui/nowplaying/queue.rs:226
-#, no-c-format
 msgid "Clear the Queue?"
 msgstr "清空播放队列？"
 
@@ -512,11 +525,6 @@ msgstr "清空播放队列？"
 #, no-c-format
 msgid "Playback stops and every song is removed from the queue."
 msgstr "播放将停止，所有歌曲都会从队列中移除。"
-
-#: src/ui/nowplaying/queue.rs:230
-#, no-c-format
-msgid "Clear"
-msgstr "清空"
 
 #: src/ui/pages/detail.rs:87 src/ui/pages/detail.rs:91 src/ui/rows.rs:263
 #, no-c-format
@@ -533,21 +541,21 @@ msgstr[0] "{n} 分钟"
 msgid "{songs}, {minutes}"
 msgstr "{songs}，{minutes}"
 
-#: src/ui/pages/detail.rs:320
+#: src/ui/pages/detail.rs:309
 #, no-c-format
 msgid "This album has no songs left in your library."
 msgstr "这张专辑在资料库中已没有歌曲。"
 
-#: src/ui/pages/detail.rs:398 src/ui/pages/library.rs:119
-#: src/ui/pages/library.rs:125 src/ui/pages/library.rs:136
-#: src/ui/pages/search.rs:197
+#: src/ui/pages/detail.rs:389 src/ui/pages/library.rs:216
+#: src/ui/pages/library.rs:222 src/ui/pages/library.rs:233
+#: src/ui/pages/search.rs:195
 #, no-c-format
 msgid "Albums"
 msgstr "专辑"
 
-#: src/ui/pages/detail.rs:413 src/ui/pages/library.rs:247
-#: src/ui/pages/library.rs:249 src/ui/pages/library.rs:260
-#: src/ui/pages/search.rs:196
+#: src/ui/pages/detail.rs:404 src/ui/pages/library.rs:331
+#: src/ui/pages/library.rs:340 src/ui/pages/library.rs:355
+#: src/ui/pages/search.rs:194
 #, no-c-format
 msgid "Songs"
 msgstr "歌曲"
@@ -565,103 +573,119 @@ msgstr "还没有收藏"
 
 #: src/ui/pages/favourites.rs:37
 #, no-c-format
-msgid "Tap the heart next to a song to keep it here."
-msgstr "点击歌曲旁的心形图标，即可收藏到这里。"
+msgid "Songs you mark with the heart appear here."
+msgstr "你用爱心标记的歌曲会出现在这里。"
 
 #: src/ui/pages/favourites.rs:43
 #, no-c-format
 msgid "Could Not Load Favourites"
 msgstr "无法载入收藏"
 
-#: src/ui/pages/home.rs:36 src/ui/pages/home.rs:68 src/ui/pages/home.rs:69
+#: src/ui/pages/home.rs:89 src/ui/pages/home.rs:116 src/ui/pages/home.rs:117
 #, no-c-format
 msgid "Home"
 msgstr "首页"
 
-#: src/ui/pages/home.rs:46 src/ui/pages/library.rs:152
+#: src/ui/pages/home.rs:99 src/ui/pages/library.rs:107
 #, no-c-format
 msgid "Recently Added"
 msgstr "最近添加"
 
-#: src/ui/pages/home.rs:58 src/ui/pages/home.rs:62
+#: src/ui/pages/home.rs:111
 #, no-c-format
 msgid "Recently Played"
 msgstr "最近播放"
 
-#: src/ui/pages/home.rs:109
+#: src/ui/pages/home.rs:112
+#, no-c-format
+msgid "Most Played"
+msgstr "最常播放"
+
+#: src/ui/pages/home.rs:146
 #, no-c-format
 msgid "Welcome to Jellyfesh"
 msgstr "欢迎使用 Jellyfesh"
 
-#: src/ui/pages/home.rs:113
+#: src/ui/pages/home.rs:150
 #, no-c-format
-msgid ""
-"Add the folders that hold your music. Jellyfesh reads their tags, artwork "
-"and lyrics and keeps watching them."
-msgstr ""
-"添加存放音乐的文件夹。Jellyfesh 会读取其中的标签、封面和歌词，并持续关注变"
-"化。"
+msgid "Add your music folders, or connect a server in Sources."
+msgstr "添加你的音乐文件夹，或在“来源”中连接服务器。"
 
-#: src/ui/pages/home.rs:118 src/ui/pages/library.rs:78 src/ui/window.rs:288
+#: src/ui/pages/home.rs:155 src/ui/pages/library.rs:84 src/ui/window.rs:297
 #, no-c-format
 msgid "Add Music Folder…"
 msgstr "添加音乐文件夹…"
 
-#: src/ui/pages/home.rs:198
+#: src/ui/pages/home.rs:159 src/ui/pages/sources.rs:58
+#: src/ui/pages/sources.rs:64 src/ui/sources_ui.rs:29
+#, no-c-format
+msgid "Add a Source"
+msgstr "添加来源"
+
+#: src/ui/pages/home.rs:245
 msgid "{n} album"
 msgid_plural "{n} albums"
 msgstr[0] "{n} 张专辑"
 
-#: src/ui/pages/home.rs:199
+#: src/ui/pages/home.rs:246
 msgid "{n} artist"
 msgid_plural "{n} artists"
 msgstr[0] "{n} 位艺人"
 
 #: src/ui/pages/library.rs:130
 #, no-c-format
+msgid "Descending"
+msgstr "降序"
+
+#: src/ui/pages/library.rs:227
+#, no-c-format
 msgid "No Albums Yet"
 msgstr "还没有专辑"
 
-#: src/ui/pages/library.rs:131 src/ui/pages/library.rs:217
-#: src/ui/pages/library.rs:255
+#: src/ui/pages/library.rs:228
 #, no-c-format
-msgid "Add a folder with music to fill your library."
-msgstr "添加一个含有音乐的文件夹来充实资料库。"
+msgid "Add a music folder to see your albums here."
+msgstr "添加音乐文件夹后，你的专辑会显示在这里。"
 
-#: src/ui/pages/library.rs:151
-#, no-c-format
-msgid "Year"
-msgstr "年份"
-
-#: src/ui/pages/library.rs:183 src/ui/pages/library.rs:185
+#: src/ui/pages/library.rs:242
 #, no-c-format
 msgid "Sort Albums"
 msgstr "专辑排序"
 
-#: src/ui/pages/library.rs:205 src/ui/pages/library.rs:211
-#: src/ui/pages/library.rs:222 src/ui/pages/search.rs:198
+#: src/ui/pages/library.rs:262 src/ui/pages/library.rs:268
+#: src/ui/pages/library.rs:279 src/ui/pages/search.rs:196
 #, no-c-format
 msgid "Artists"
 msgstr "艺人"
 
-#: src/ui/pages/library.rs:216
+#: src/ui/pages/library.rs:273
 #, no-c-format
 msgid "No Artists Yet"
 msgstr "还没有艺人"
 
-#: src/ui/pages/library.rs:254
+#: src/ui/pages/library.rs:274
+#, no-c-format
+msgid "Add a music folder to see your artists here."
+msgstr "添加音乐文件夹后，你的艺人会显示在这里。"
+
+#: src/ui/pages/library.rs:349
 #, no-c-format
 msgid "No Songs Yet"
 msgstr "还没有歌曲"
 
-#: src/ui/pages/library.rs:262
+#: src/ui/pages/library.rs:350
 #, no-c-format
-msgid "Shuffle All"
-msgstr "全部随机播放"
+msgid "Add a music folder to see your songs here."
+msgstr "添加音乐文件夹后，你的歌曲会显示在这里。"
+
+#: src/ui/pages/library.rs:364
+#, no-c-format
+msgid "Sort Songs"
+msgstr "歌曲排序"
 
 #: src/ui/pages/playlists.rs:26 src/ui/pages/playlists.rs:32
 #: src/ui/pages/playlists.rs:56 src/ui/pages/playlists.rs:57
-#: src/ui/pages/search.rs:199
+#: src/ui/pages/search.rs:197
 #, no-c-format
 msgid "Playlists"
 msgstr "歌单"
@@ -673,8 +697,13 @@ msgstr "还没有歌单"
 
 #: src/ui/pages/playlists.rs:44
 #, no-c-format
-msgid "Make one here, or add songs to a new playlist from any song's menu."
-msgstr "在这里新建，或从任意歌曲的菜单把歌曲添加到新歌单。"
+msgid "Make a playlist to keep songs together."
+msgstr "创建歌单，把歌曲收在一起。"
+
+#: src/ui/pages/playlists.rs:46 src/ui/pages/playlists.rs:59
+#, no-c-format
+msgid "New Playlist…"
+msgstr "新建歌单…"
 
 #: src/ui/pages/playlists.rs:53
 #, no-c-format
@@ -723,108 +752,113 @@ msgstr "歌单"
 
 #: src/ui/pages/playlists.rs:230
 #, no-c-format
-msgid "Export…"
-msgstr "导出…"
+msgid "Export Playlist…"
+msgstr "导出歌单…"
 
-#: src/ui/pages/search.rs:59
+#: src/ui/pages/search.rs:60
 #, no-c-format
-msgid "Songs, albums, artists"
-msgstr "歌曲、专辑、艺人"
+msgid "Songs, albums and artists"
+msgstr "歌曲、专辑和艺人"
 
-#: src/ui/pages/search.rs:74
+#: src/ui/pages/search.rs:75
 #, no-c-format
 msgid "Search Your Music"
 msgstr "搜索你的音乐"
 
-#: src/ui/pages/search.rs:75
+#: src/ui/pages/search.rs:76
 #, no-c-format
 msgid ""
 "Find songs, albums and artists in your library and in every source you have "
 "enabled."
 msgstr "在资料库和所有已启用的来源中查找歌曲、专辑和艺人。"
 
-#: src/ui/pages/search.rs:83
+#: src/ui/pages/search.rs:84
 #, no-c-format
 msgid "No Results"
 msgstr "没有结果"
 
-#: src/ui/pages/search.rs:84
+#: src/ui/pages/search.rs:85
 #, no-c-format
 msgid "Try other words."
 msgstr "换个关键词试试。"
 
-#: src/ui/pages/search.rs:200
+#: src/ui/pages/search.rs:198
 #, no-c-format
 msgid "Folders"
 msgstr "文件夹"
 
-#: src/ui/pages/sources.rs:23 src/ui/sources_ui.rs:142
+#: src/ui/pages/search.rs:230
+#, no-c-format
+msgid "From Your Sources"
+msgstr "来自我的来源"
+
+#: src/ui/pages/sources.rs:25 src/ui/sources_ui.rs:141
 #, no-c-format
 msgid "Official"
 msgstr "官方"
 
-#: src/ui/pages/sources.rs:24
+#: src/ui/pages/sources.rs:26
 #, no-c-format
 msgid "Community · unofficial"
 msgstr "社区 · 非官方"
 
-#: src/ui/pages/sources.rs:27
+#: src/ui/pages/sources.rs:29
 #, no-c-format
 msgid "Vendor playback"
 msgstr "由服务方播放"
 
-#: src/ui/pages/sources.rs:35 src/ui/sources_ui.rs:267
+#: src/ui/pages/sources.rs:37 src/ui/sources_ui.rs:294
 #, no-c-format
 msgid "Signed in as {account}"
 msgstr "已登录为 {account}"
 
-#: src/ui/pages/sources.rs:37
+#: src/ui/pages/sources.rs:39
 #, no-c-format
 msgid "Not signed in"
 msgstr "未登录"
 
-#: src/ui/pages/sources.rs:45 src/ui/pages/sources.rs:46
-#: src/ui/pages/sources.rs:68 src/ui/pages/sources.rs:69
-#: src/ui/sources_ui.rs:23
+#: src/ui/pages/sources.rs:48 src/ui/pages/sources.rs:88
+#: src/ui/pages/sources.rs:89 src/ui/sources_ui.rs:24
 #, no-c-format
 msgid "Sources"
 msgstr "来源"
 
-#: src/ui/pages/sources.rs:57
+#: src/ui/pages/sources.rs:51
 #, no-c-format
-msgid "No Sources Yet"
-msgstr "还没有来源"
+msgid "Sources bring music from servers and services into Jellyfesh."
+msgstr "来源可将服务器和服务中的音乐带入 Jellyfesh。"
 
-#: src/ui/pages/sources.rs:59
+#: src/ui/pages/sources.rs:66 src/ui/pages/sources.rs:70
 #, no-c-format
-msgid ""
-"Sources bring music from servers and services into Jellyfesh. Install one "
-"from a .jfpkg file in Preferences."
-msgstr ""
-"来源可以把服务器和服务中的音乐带进 Jellyfesh。请在偏好设置中通过 .jfpkg 文件"
-"安装。"
+msgid "Your Sources"
+msgstr "我的来源"
 
-#: src/ui/pages/sources.rs:62
+#: src/ui/pages/sources.rs:72
 #, no-c-format
-msgid "Open Sources Settings"
-msgstr "打开来源设置"
+msgid "Sources Settings…"
+msgstr "来源设置…"
 
-#: src/ui/pages/sources.rs:71
+#: src/ui/pages/sources.rs:112 src/ui/sources_ui.rs:106
 #, no-c-format
-msgid "Sources Settings"
-msgstr "来源设置"
+msgid "No Sources Installed"
+msgstr "尚未安装来源"
 
-#: src/ui/pages/sources.rs:101 src/ui/prefs.rs:676
+#: src/ui/pages/sources.rs:113 src/ui/sources_ui.rs:107
+#, no-c-format
+msgid "Install a source plugin from a .jfpkg file."
+msgstr "从 .jfpkg 文件安装来源插件。"
+
+#: src/ui/pages/sources.rs:154 src/ui/prefs.rs:683
 #, no-c-format
 msgid "Off"
 msgstr "关"
 
-#: src/ui/pages/sources.rs:155
+#: src/ui/pages/sources.rs:193
 #, no-c-format
 msgid "Load More"
 msgstr "加载更多"
 
-#: src/ui/pages/sources.rs:174
+#: src/ui/pages/sources.rs:212
 #, no-c-format
 msgid "This Source Did Not Answer"
 msgstr "该来源没有响应"
@@ -839,137 +873,157 @@ msgstr "播放器"
 msgid "Open Now Playing: {title}"
 msgstr "打开正在播放：{title}"
 
-#: src/ui/prefs.rs:224
+#: src/ui/prefs.rs:226
 #, no-c-format
 msgid "Blue"
 msgstr "蓝色"
 
-#: src/ui/prefs.rs:225
+#: src/ui/prefs.rs:227
 #, no-c-format
 msgid "Cyan"
 msgstr "青色"
 
-#: src/ui/prefs.rs:226
+#: src/ui/prefs.rs:228
 #, no-c-format
 msgid "Teal"
 msgstr "蓝绿色"
 
-#: src/ui/prefs.rs:227
+#: src/ui/prefs.rs:229
 #, no-c-format
 msgid "Green"
 msgstr "绿色"
 
-#: src/ui/prefs.rs:228
+#: src/ui/prefs.rs:230
 #, no-c-format
 msgid "Olive"
 msgstr "橄榄绿"
 
-#: src/ui/prefs.rs:229
+#: src/ui/prefs.rs:231
 #, no-c-format
 msgid "Orange"
 msgstr "橙色"
 
-#: src/ui/prefs.rs:230
+#: src/ui/prefs.rs:232
 #, no-c-format
 msgid "Red"
 msgstr "红色"
 
-#: src/ui/prefs.rs:231
+#: src/ui/prefs.rs:233
 #, no-c-format
 msgid "Rose"
 msgstr "玫瑰红"
 
-#: src/ui/prefs.rs:232
+#: src/ui/prefs.rs:234
 #, no-c-format
 msgid "Magenta"
 msgstr "洋红"
 
-#: src/ui/prefs.rs:233
+#: src/ui/prefs.rs:235
 #, no-c-format
 msgid "Violet"
 msgstr "紫罗兰色"
 
-#: src/ui/prefs.rs:241
+#: src/ui/prefs.rs:242
 #, no-c-format
 msgid "Appearance"
 msgstr "外观"
 
-#: src/ui/prefs.rs:245 src/ui/prefs.rs:252 src/ui/prefs.rs:254
+#: src/ui/prefs.rs:246 src/ui/prefs.rs:253 src/ui/prefs.rs:255
 #, no-c-format
 msgid "Theme"
 msgstr "主题"
 
-#: src/ui/prefs.rs:248
+#: src/ui/prefs.rs:246
+#, no-c-format
+msgid "Light, dark, or the same as the system."
+msgstr "浅色、深色或跟随系统。"
+
+#: src/ui/prefs.rs:249
 #, no-c-format
 msgid "System"
 msgstr "跟随系统"
 
-#: src/ui/prefs.rs:249
+#: src/ui/prefs.rs:250
 #, no-c-format
 msgid "Light"
 msgstr "浅色"
 
-#: src/ui/prefs.rs:250
+#: src/ui/prefs.rs:251
 #, no-c-format
 msgid "Dark"
 msgstr "深色"
 
-#: src/ui/prefs.rs:258 src/ui/prefs.rs:274
+#: src/ui/prefs.rs:259 src/ui/prefs.rs:275
 #, no-c-format
 msgid "Accent Colour"
 msgstr "强调色"
 
-#: src/ui/prefs.rs:260
+#: src/ui/prefs.rs:261
 #, no-c-format
 msgid "Follow the Artwork"
 msgstr "跟随封面"
 
-#: src/ui/prefs.rs:262
+#: src/ui/prefs.rs:263
 #, no-c-format
 msgid "The accent and the Misty field take the hue of the album cover."
 msgstr "强调色和 Misty 背景采用专辑封面的色相。"
 
-#: src/ui/prefs.rs:286
+#: src/ui/prefs.rs:287
 #, no-c-format
 msgid "Colour"
 msgstr "颜色"
 
-#: src/ui/prefs.rs:288 src/ui/prefs.rs:293
+#: src/ui/prefs.rs:289
 #, no-c-format
 msgid "Custom Hue"
 msgstr "自定义色相"
 
-#: src/ui/prefs.rs:300
+#: src/ui/prefs.rs:294 src/ui/prefs.rs:909
 #, no-c-format
-msgid "Glass"
-msgstr "玻璃"
+msgid "Custom"
+msgstr "自定义"
 
-#: src/ui/prefs.rs:307 src/ui/prefs.rs:322
+#: src/ui/prefs.rs:301 src/ui/prefs.rs:308 src/ui/prefs.rs:323
 #, no-c-format
 msgid "Transparency"
 msgstr "透明度"
 
-#: src/ui/prefs.rs:308
+#: src/ui/prefs.rs:309
 msgctxt "transparency"
 msgid "Solid"
 msgstr "不透明"
 
-#: src/ui/prefs.rs:310
+#: src/ui/prefs.rs:311
 msgctxt "transparency"
 msgid "Clear"
 msgstr "透明"
 
-#: src/ui/prefs.rs:324
+#: src/ui/prefs.rs:325
 #, no-c-format
 msgid "Reduce Motion and Transparency"
 msgstr "减少动态效果和透明度"
 
-#: src/ui/prefs.rs:326
+#: src/ui/prefs.rs:327
 #, no-c-format
 msgid "Solid surfaces instead of glass, and short fades instead of motion."
 msgstr "用不透明的表面代替玻璃，用短暂的淡入淡出代替动态效果。"
 
+#: src/ui/prefs.rs:335 src/ui/prefs.rs:338 src/ui/prefs.rs:340
+#, no-c-format
+msgid "Now Playing Backdrop"
+msgstr "正在播放背景"
+
 #: src/ui/prefs.rs:337
+#, no-c-format
+msgid "Artwork"
+msgstr "封面"
+
+#: src/ui/prefs.rs:337
+#, no-c-format
+msgid "Misty"
+msgstr "Misty"
+
+#: src/ui/prefs.rs:347
 #, no-c-format
 msgid ""
 "Lyrics come from a .ttml, .lrc or .vtt file with the same name as the song, "
@@ -978,288 +1032,289 @@ msgstr ""
 "歌词来自与歌曲同名的 .ttml、.lrc 或 .vtt 文件，或来自歌曲标签。逐字计时的歌词"
 "会一个字一个字地亮起。"
 
-#: src/ui/prefs.rs:341
-#, no-c-format
-msgid "Artwork"
-msgstr "封面"
-
-#: src/ui/prefs.rs:341
-#, no-c-format
-msgid "Misty"
-msgstr "Misty"
-
-#: src/ui/prefs.rs:342 src/ui/prefs.rs:344
-#, no-c-format
-msgid "Background"
-msgstr "背景"
-
-#: src/ui/prefs.rs:345
+#: src/ui/prefs.rs:350
 #, no-c-format
 msgid "Lyrics Size"
 msgstr "歌词大小"
 
-#: src/ui/prefs.rs:345
+#: src/ui/prefs.rs:350
 #, no-c-format
 msgid "Small"
 msgstr "小"
 
-#: src/ui/prefs.rs:345
+#: src/ui/prefs.rs:350
 #, no-c-format
 msgid "Medium"
 msgstr "中"
 
-#: src/ui/prefs.rs:345
+#: src/ui/prefs.rs:350
 #, no-c-format
 msgid "Large"
 msgstr "大"
 
-#: src/ui/prefs.rs:347
+#: src/ui/prefs.rs:352
 #, no-c-format
 msgid "Lyrics Alignment"
 msgstr "歌词对齐"
 
-#: src/ui/prefs.rs:348
+#: src/ui/prefs.rs:353
 msgctxt "alignment"
 msgid "Start"
 msgstr "左对齐"
 
-#: src/ui/prefs.rs:348
+#: src/ui/prefs.rs:353
 msgctxt "alignment"
 msgid "Centre"
 msgstr "居中"
 
-#: src/ui/prefs.rs:351
+#: src/ui/prefs.rs:356
 #, no-c-format
 msgid "Show Translations"
 msgstr "显示翻译"
 
-#: src/ui/prefs.rs:353
+#: src/ui/prefs.rs:358
 #, no-c-format
 msgid ""
 "A line in another language under each lyric line, when the lyrics have one."
 msgstr "歌词附有翻译时，在每行歌词下方显示另一种语言。"
 
-#: src/ui/prefs.rs:357
+#: src/ui/prefs.rs:362
 #, no-c-format
 msgid "Show Romanization"
 msgstr "显示罗马字"
 
-#: src/ui/prefs.rs:359
+#: src/ui/prefs.rs:364
 #, no-c-format
 msgid "How each line reads in Latin letters, when the lyrics have it."
 msgstr "歌词附有罗马字时，显示每行的拉丁字母读法。"
 
-#: src/ui/prefs.rs:369
+#: src/ui/prefs.rs:374
 #, no-c-format
 msgid "App Icon"
 msgstr "应用图标"
 
-#: src/ui/prefs.rs:371
+#: src/ui/prefs.rs:376
 #, no-c-format
 msgid ""
 "Linux shows the Ice icon everywhere: GNOME takes one icon from the app’s "
 "metadata."
 msgstr "Linux 上各处都显示 Ice 图标：GNOME 只会从应用元数据中读取一个图标。"
 
-#: src/ui/prefs.rs:432 src/ui/widgets/seekbar.rs:783
+#: src/ui/prefs.rs:437 src/ui/widgets/seekbar.rs:783
 #, no-c-format
 msgid "{percent} %"
 msgstr "{percent}%"
 
-#: src/ui/prefs.rs:620 src/ui/prefs.rs:621
-#, no-c-format
-msgid "Equalizer"
-msgstr "均衡器"
-
 #: src/ui/prefs.rs:623
-#, no-c-format
-msgid "Preset"
-msgstr "预设"
-
-#: src/ui/prefs.rs:626
 #, no-c-format
 msgid "Flat"
 msgstr "平直"
 
-#: src/ui/prefs.rs:627
+#: src/ui/prefs.rs:624
 #, no-c-format
 msgid "Bass Boost"
 msgstr "低音增强"
 
-#: src/ui/prefs.rs:628
+#: src/ui/prefs.rs:625
 #, no-c-format
 msgid "Vocal"
 msgstr "人声"
 
-#: src/ui/prefs.rs:629
+#: src/ui/prefs.rs:626
 #, no-c-format
 msgid "Treble"
 msgstr "高音"
 
-#: src/ui/prefs.rs:630
+#: src/ui/prefs.rs:639
 #, no-c-format
-msgid "Custom"
-msgstr "自定义"
+msgid "{n} s"
+msgstr "{n} 秒"
 
-#: src/ui/prefs.rs:649
-#, no-c-format
-msgid "{freq} Hz"
-msgstr "{freq} 赫兹"
-
-#: src/ui/prefs.rs:673
-#, no-c-format
-msgid "Volume Levelling"
-msgstr "音量均衡"
-
-#: src/ui/prefs.rs:674
-#, no-c-format
-msgid "ReplayGain evens out loudness using the tags in your files."
-msgstr "ReplayGain 会根据文件中的标签平衡响度。"
-
-#: src/ui/prefs.rs:676
-#, no-c-format
-msgid "ReplayGain"
-msgstr "ReplayGain"
-
-#: src/ui/prefs.rs:676
-#, no-c-format
-msgid "Track"
-msgstr "单曲"
-
-#: src/ui/prefs.rs:678
-#, no-c-format
-msgid "Preamp"
-msgstr "前置增益"
-
-#: src/ui/prefs.rs:679
-#, no-c-format
-msgid "Decibels added to every song"
-msgstr "每首歌增加的分贝数"
-
-#: src/ui/prefs.rs:686 src/ui/prefs.rs:688
-#, no-c-format
-msgid "Crossfade"
-msgstr "淡入淡出"
-
-#: src/ui/prefs.rs:689
-#, no-c-format
-msgid "Blend the end of a song into the next."
-msgstr "让一首歌的结尾渐渐融入下一首。"
-
-#: src/ui/prefs.rs:694
-#, no-c-format
-msgid "Seconds"
-msgstr "秒"
-
-#: src/ui/prefs.rs:696
-#, no-c-format
-msgid "Album Continuity"
-msgstr "专辑连贯"
-
-#: src/ui/prefs.rs:697
-#, no-c-format
-msgid "Songs of the same album join without a fade."
-msgstr "同一专辑的歌曲直接衔接，不淡入淡出。"
-
-#: src/ui/prefs.rs:705
+#: src/ui/prefs.rs:651
 #, no-c-format
 msgid "Output"
 msgstr "输出"
 
-#: src/ui/prefs.rs:705
+#: src/ui/prefs.rs:654
 #, no-c-format
 msgid "Where the sound goes."
 msgstr "声音从哪里播放。"
 
-#: src/ui/prefs.rs:851
+#: src/ui/prefs.rs:660 src/ui/prefs.rs:662
 #, no-c-format
-msgid "Follows the system’s choice"
-msgstr "跟随系统的选择"
+msgid "Crossfade"
+msgstr "淡入淡出"
 
-#: src/ui/prefs.rs:900
+#: src/ui/prefs.rs:663
 #, no-c-format
-msgid "Music Folders"
-msgstr "音乐文件夹"
+msgid "Blend the end of a song into the next."
+msgstr "让一首歌的结尾渐渐融入下一首。"
 
-#: src/ui/prefs.rs:901
+#: src/ui/prefs.rs:670
 #, no-c-format
-msgid "Jellyfesh reads every audio file in these folders."
-msgstr "Jellyfesh 会读取这些文件夹中的所有音频文件。"
+msgid "Album Continuity"
+msgstr "专辑连贯"
 
-#: src/ui/prefs.rs:911 src/ui/prefs.rs:912
+#: src/ui/prefs.rs:671
 #, no-c-format
-msgid "Add Folder"
-msgstr "添加文件夹"
+msgid "Songs of the same album join without a fade."
+msgstr "同一专辑的歌曲直接衔接，不淡入淡出。"
 
-#: src/ui/prefs.rs:917
+#: src/ui/prefs.rs:680
 #, no-c-format
-msgid "Scanning"
-msgstr "扫描"
+msgid "Volume Levelling"
+msgstr "音量均衡"
 
-#: src/ui/prefs.rs:919 src/ui/window.rs:289
+#: src/ui/prefs.rs:681
 #, no-c-format
-msgid "Rescan Library"
-msgstr "重新扫描资料库"
+msgid "Evens out loudness using the ReplayGain tags in your files."
+msgstr "根据文件中的 ReplayGain 标签平衡响度。"
 
-#: src/ui/prefs.rs:920
+#: src/ui/prefs.rs:683
 #, no-c-format
-msgid "Look for new, changed and removed files."
-msgstr "查找新增、改动和已删除的文件。"
+msgid "ReplayGain"
+msgstr "ReplayGain"
 
-#: src/ui/prefs.rs:922
+#: src/ui/prefs.rs:683
 #, no-c-format
-msgid "Rescan"
-msgstr "重新扫描"
+msgid "Track"
+msgstr "单曲"
 
-#: src/ui/prefs.rs:937
+#: src/ui/prefs.rs:685 src/ui/prefs.rs:701
 #, no-c-format
-msgid "Watch Folders"
-msgstr "监视文件夹"
+msgid "Preamp"
+msgstr "前置增益"
 
-#: src/ui/prefs.rs:938
+#: src/ui/prefs.rs:686
 #, no-c-format
-msgid "Update the library when files change."
-msgstr "文件变动时更新资料库。"
+msgid "Decibels added to every song"
+msgstr "每首歌增加的分贝数"
 
-#: src/ui/prefs.rs:945
+#: src/ui/prefs.rs:694 src/ui/prefs.rs:695
+#, no-c-format
+msgid "Equalizer"
+msgstr "均衡器"
+
+#: src/ui/prefs.rs:698
+#, no-c-format
+msgid "Preset"
+msgstr "预设"
+
+#: src/ui/prefs.rs:702
+#, no-c-format
+msgid "Decibels added before the bands"
+msgstr "在各频段之前增加的分贝数"
+
+#: src/ui/prefs.rs:715
+#, no-c-format
+msgid "{freq} Hz"
+msgstr "{freq} 赫兹"
+
+#: src/ui/prefs.rs:727
+#, no-c-format
+msgid "Reset to Flat"
+msgstr "重置为平直"
+
+#: src/ui/prefs.rs:748
 #, no-c-format
 msgid "Startup"
 msgstr "启动"
 
-#: src/ui/prefs.rs:947
+#: src/ui/prefs.rs:750
 #, no-c-format
 msgid "Resume Playback"
 msgstr "继续播放"
 
-#: src/ui/prefs.rs:948
+#: src/ui/prefs.rs:751
 #, no-c-format
 msgid "Start playing where you left off when Jellyfesh opens."
 msgstr "打开 Jellyfesh 时从上次停下的地方继续播放。"
 
 #: src/ui/prefs.rs:993
 #, no-c-format
-msgid "No folders yet"
-msgstr "还没有文件夹"
+msgid "Music Folders"
+msgstr "音乐文件夹"
 
 #: src/ui/prefs.rs:994
+#, no-c-format
+msgid "Jellyfesh reads every audio file in these folders."
+msgstr "Jellyfesh 会读取这些文件夹中的所有音频文件。"
+
+#: src/ui/prefs.rs:1004
+#, no-c-format
+msgid "Watch Folders"
+msgstr "监视文件夹"
+
+#: src/ui/prefs.rs:1005
+#, no-c-format
+msgid "Update the library when files change."
+msgstr "文件变动时更新资料库。"
+
+#: src/ui/prefs.rs:1012 src/ui/window.rs:298
+#, no-c-format
+msgid "Rescan Library"
+msgstr "重新扫描资料库"
+
+#: src/ui/prefs.rs:1013
+#, no-c-format
+msgid "Look for new, changed and removed files."
+msgstr "查找新增、改动和已删除的文件。"
+
+#: src/ui/prefs.rs:1015
+#, no-c-format
+msgid "Rescan"
+msgstr "重新扫描"
+
+#: src/ui/prefs.rs:1030
+#, no-c-format
+msgid "Last Scan"
+msgstr "上次扫描"
+
+#: src/ui/prefs.rs:1070
+#, no-c-format
+msgid "No Folders Yet"
+msgstr "还没有文件夹"
+
+#: src/ui/prefs.rs:1071
 #, no-c-format
 msgid "Add a folder with music."
 msgstr "添加一个含有音乐的文件夹。"
 
-#: src/ui/prefs.rs:1008
+#: src/ui/prefs.rs:1079
 #, no-c-format
-msgid "Remove Folder"
-msgstr "移除文件夹"
+msgid "Add Folder…"
+msgstr "添加文件夹…"
 
-#: src/ui/prefs.rs:1034
+#: src/ui/prefs.rs:1111
 msgid "{n} file checked"
 msgid_plural "{n} files checked"
 msgstr[0] "已检查 {n} 个文件"
 
-#: src/ui/prefs.rs:1041
+#: src/ui/prefs.rs:1120
 #, no-c-format
-msgid "Done: {added} added, {updated} updated, {removed} removed"
-msgstr "完成：新增 {added}，更新 {updated}，移除 {removed}"
+msgid "{added} added, {updated} updated, {removed} removed"
+msgstr "新增 {added}，更新 {updated}，移除 {removed}"
+
+#: src/ui/prefs.rs:1164
+#, no-c-format
+msgid "Remove Folder…"
+msgstr "移除文件夹…"
+
+#: src/ui/prefs.rs:1170
+#, no-c-format
+msgid "Remove “{name}” from the library?"
+msgstr "要从资料库中移除“{name}”吗？"
+
+#: src/ui/prefs.rs:1172
+#, no-c-format
+msgid ""
+"Its songs leave the library and its playlists. The files stay where they are."
+msgstr "其中的歌曲将离开资料库及其歌单。文件仍保留在原处。"
+
+#: src/ui/prefs.rs:1176
+#, no-c-format
+msgid "Remove Folder"
+msgstr "移除文件夹"
 
 #: src/ui/rows.rs:278
 #, no-c-format
@@ -1271,12 +1326,22 @@ msgstr "移除"
 msgid "Play {title}"
 msgstr "播放 {title}"
 
-#: src/ui/sources_ui.rs:27
+#: src/ui/sources_ui.rs:35
+#, no-c-format
+msgid "Installed"
+msgstr "已安装"
+
+#: src/ui/sources_ui.rs:36
+#, no-c-format
+msgid "Install from File…"
+msgstr "从文件安装…"
+
+#: src/ui/sources_ui.rs:44
 #, no-c-format
 msgid "Community Plugins"
 msgstr "社区插件"
 
-#: src/ui/sources_ui.rs:29
+#: src/ui/sources_ui.rs:46
 #, no-c-format
 msgid ""
 "Official sources are signed by Jellyfesh. Community plugins are made by "
@@ -1284,207 +1349,192 @@ msgid ""
 msgstr ""
 "官方来源由 Jellyfesh 签名。社区插件由他人制作，除非你允许，否则保持关闭。"
 
-#: src/ui/sources_ui.rs:33
+#: src/ui/sources_ui.rs:50
 #, no-c-format
 msgid "Allow Community Plugins"
 msgstr "允许社区插件"
 
-#: src/ui/sources_ui.rs:40
-#, no-c-format
-msgid "Add a Source"
-msgstr "添加来源"
-
-#: src/ui/sources_ui.rs:46
-#, no-c-format
-msgid "Installed"
-msgstr "已安装"
-
-#: src/ui/sources_ui.rs:47
-#, no-c-format
-msgid "Install from File…"
-msgstr "从文件安装…"
-
-#: src/ui/sources_ui.rs:109
-#, no-c-format
-msgid "No sources installed"
-msgstr "尚未安装来源"
-
-#: src/ui/sources_ui.rs:110
-#, no-c-format
-msgid "Install a source plugin from a .jfpkg file."
-msgstr "从 .jfpkg 文件安装来源插件。"
-
-#: src/ui/sources_ui.rs:143
+#: src/ui/sources_ui.rs:142
 #, no-c-format
 msgid "Community"
 msgstr "社区"
 
-#: src/ui/sources_ui.rs:154
+#: src/ui/sources_ui.rs:153
 #, no-c-format
 msgid "Enabled"
 msgstr "已启用"
 
-#: src/ui/sources_ui.rs:189
+#: src/ui/sources_ui.rs:188
 #, no-c-format
 msgid "Account"
 msgstr "账号"
 
-#: src/ui/sources_ui.rs:191
+#: src/ui/sources_ui.rs:190
 #, no-c-format
 msgid "No sign-in needed"
 msgstr "无需登录"
 
-#: src/ui/sources_ui.rs:197
+#: src/ui/sources_ui.rs:196
 #, no-c-format
 msgid "Sign Out"
 msgstr "退出登录"
 
-#: src/ui/sources_ui.rs:230
-#, no-c-format
-msgid "Settings"
-msgstr "设置"
-
-#: src/ui/sources_ui.rs:232
+#: src/ui/sources_ui.rs:231
 #, no-c-format
 msgid "This plugin's settings could not be read: {error}"
 msgstr "无法读取此插件的设置：{error}"
 
-#: src/ui/sources_ui.rs:240 src/ui/sources_ui.rs:241
+#: src/ui/sources_ui.rs:247 src/ui/sources_ui.rs:248
+#, no-c-format
+msgid "Uninstall…"
+msgstr "卸载…"
+
+#: src/ui/sources_ui.rs:269
+#, no-c-format
+msgid "Uninstall {name}?"
+msgstr "卸载 {name}？"
+
+#: src/ui/sources_ui.rs:270
+#, no-c-format
+msgid "Its settings and sign-in are removed."
+msgstr "其设置和登录信息将被移除。"
+
+#: src/ui/sources_ui.rs:273
 #, no-c-format
 msgid "Uninstall"
 msgstr "卸载"
 
-#: src/ui/sources_ui.rs:256
+#: src/ui/sources_ui.rs:283
 #, no-c-format
 msgid "Sign In with QR Code"
 msgstr "扫码登录"
 
-#: src/ui/sources_ui.rs:257
+#: src/ui/sources_ui.rs:284
 #, no-c-format
 msgid "Sign In in Browser"
 msgstr "在浏览器中登录"
 
-#: src/ui/sources_ui.rs:258
+#: src/ui/sources_ui.rs:285
 #, no-c-format
 msgid "Paste Cookies"
 msgstr "粘贴 Cookie"
 
-#: src/ui/sources_ui.rs:259 src/ui/sources_ui.rs:640
+#: src/ui/sources_ui.rs:286 src/ui/sources_ui.rs:676
 #, no-c-format
 msgid "Sign In"
 msgstr "登录"
 
-#: src/ui/sources_ui.rs:260
+#: src/ui/sources_ui.rs:287
 #, no-c-format
 msgid "Enter API Key"
 msgstr "输入 API 密钥"
 
-#: src/ui/sources_ui.rs:270
+#: src/ui/sources_ui.rs:297
 #, no-c-format
 msgid "Your Jellyfin server"
 msgstr "你的 Jellyfin 服务器"
 
-#: src/ui/sources_ui.rs:271
+#: src/ui/sources_ui.rs:298
 #, no-c-format
 msgid "Your Navidrome server"
 msgstr "你的 Navidrome 服务器"
 
-#: src/ui/sources_ui.rs:272
+#: src/ui/sources_ui.rs:299
 #, no-c-format
 msgid "Airsonic, Gonic and other Subsonic servers"
 msgstr "Airsonic、Gonic 等 Subsonic 服务器"
 
-#: src/ui/sources_ui.rs:300
+#: src/ui/sources_ui.rs:333
 #, no-c-format
 msgid "Connect to {name}"
 msgstr "连接到 {name}"
 
-#: src/ui/sources_ui.rs:313
+#: src/ui/sources_ui.rs:346
 #, no-c-format
-msgid "Server address"
+msgid "Server Address"
 msgstr "服务器地址"
 
-#: src/ui/sources_ui.rs:317
+#: src/ui/sources_ui.rs:350
 #, no-c-format
 msgid "For example {address}"
 msgstr "例如 {address}"
 
-#: src/ui/sources_ui.rs:465
+#: src/ui/sources_ui.rs:501
 #, no-c-format
-msgid "Jellyfesh plugins"
+msgid "Jellyfesh Plugins"
 msgstr "Jellyfesh 插件"
 
-#: src/ui/sources_ui.rs:470
+#: src/ui/sources_ui.rs:506
 #, no-c-format
 msgid "Install Plugin"
 msgstr "安装插件"
 
-#: src/ui/sources_ui.rs:487
+#: src/ui/sources_ui.rs:523
 #, no-c-format
 msgid "Turn On “{name}”?"
 msgstr "启用“{name}”？"
 
-#: src/ui/sources_ui.rs:488
+#: src/ui/sources_ui.rs:524
 #, no-c-format
 msgid "Allow Community Plugins?"
 msgstr "允许社区插件？"
 
-#: src/ui/sources_ui.rs:491
+#: src/ui/sources_ui.rs:527
 #, no-c-format
 msgid "Community plugins are not made or checked by Jellyfesh."
 msgstr "社区插件并非由 Jellyfesh 制作或审核。"
 
-#: src/ui/sources_ui.rs:494
+#: src/ui/sources_ui.rs:530
 #, no-c-format
 msgid "They may break the terms of the service they connect to."
 msgstr "它们可能违反所连接服务的条款。"
 
-#: src/ui/sources_ui.rs:496
+#: src/ui/sources_ui.rs:532
 #, no-c-format
 msgid "They may stop working at any time."
 msgstr "它们可能随时失效。"
 
-#: src/ui/sources_ui.rs:497
+#: src/ui/sources_ui.rs:533
 #, no-c-format
 msgid "Use them for personal use only."
 msgstr "仅限个人使用。"
 
-#: src/ui/sources_ui.rs:502
+#: src/ui/sources_ui.rs:538
 #, no-c-format
 msgid "I Understand, Allow"
 msgstr "我已了解，允许"
 
-#: src/ui/sources_ui.rs:516
+#: src/ui/sources_ui.rs:552
 #, no-c-format
 msgid "Sign In to {name}"
 msgstr "登录 {name}"
 
-#: src/ui/sources_ui.rs:585
+#: src/ui/sources_ui.rs:621
 #, no-c-format
 msgid "Sign-in QR code"
 msgstr "登录二维码"
 
-#: src/ui/sources_ui.rs:588
+#: src/ui/sources_ui.rs:624
 #, no-c-format
 msgid "Scan the code with the {name} app on your phone."
 msgstr "用手机上的 {name} 应用扫描二维码。"
 
-#: src/ui/sources_ui.rs:614
+#: src/ui/sources_ui.rs:650
 #, no-c-format
 msgid "Continue in your browser. Come back here when you are done."
 msgstr "请在浏览器中继续，完成后回到这里。"
 
-#: src/ui/sources_ui.rs:616
+#: src/ui/sources_ui.rs:652
 #, no-c-format
 msgid "Open Browser Again"
 msgstr "再次打开浏览器"
 
-#: src/ui/sources_ui.rs:670
+#: src/ui/sources_ui.rs:706
 #, no-c-format
 msgid "Signed in as {account}."
 msgstr "已登录为 {account}。"
 
-#: src/ui/sources_ui.rs:671
+#: src/ui/sources_ui.rs:707
 #, no-c-format
 msgid "Done"
 msgstr "完成"
@@ -1589,22 +1639,21 @@ msgstr "来源"
 msgid "Library sections"
 msgstr "资料库分区"
 
-#: src/ui/window.rs:293
-#, no-c-format
-msgid "Keyboard Shortcuts"
-msgstr "键盘快捷键"
-
-#: src/ui/window.rs:300 src/ui/window.rs:305
+#: src/ui/window.rs:309 src/ui/window.rs:314
 #, no-c-format
 msgid "Main Menu"
 msgstr "主菜单"
 
-#: src/ui/window.rs:333
+#: src/ui/window.rs:342
 #, no-c-format
 msgid "Add Music Folder"
 msgstr "添加音乐文件夹"
 
-#: src/ui/window.rs:345
+#: src/ui/window.rs:354
 #, no-c-format
 msgid "Adding the folder to your library…"
 msgstr "正在把文件夹加入资料库…"
+
+#, no-c-format
+#~ msgid "Delete"
+#~ msgstr "删除"

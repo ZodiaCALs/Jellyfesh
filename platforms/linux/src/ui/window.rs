@@ -156,6 +156,15 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
         row.update_property(&[gtk::accessible::Property::Label(&section.title())]);
         sidebar.append(&row);
     }
+    // The library's six, a separator, then Search and Sources (docs/ui.md,
+    // "Navigation").
+    sidebar.set_header_func(|row, _| {
+        if row.widget_name() != Section::Search.tag() {
+            row.set_header(None::<&gtk::Widget>);
+        } else if row.header().is_none() {
+            row.set_header(Some(&gtk::Separator::new(gtk::Orientation::Horizontal)));
+        }
+    });
     let sidebar_scroll = gtk::ScrolledWindow::builder()
         .child(&sidebar)
         .hscrollbar_policy(gtk::PolicyType::Never)
@@ -289,7 +298,7 @@ fn primary_menu() -> gtk::MenuButton {
     main.append(Some(&tr("Rescan Library")), Some("win.rescan"));
     menu.append_section(None, &main);
     let app_section = gtk::gio::Menu::new();
-    app_section.append(Some(&tr("Preferences")), Some("app.preferences"));
+    app_section.append(Some(&tr("Settings")), Some("app.settings"));
     app_section.append(Some(&tr("Keyboard Shortcuts")), Some("app.shortcuts"));
     app_section.append(Some(&tr("About Jellyfesh")), Some("app.about"));
     menu.append_section(None, &app_section);
@@ -421,6 +430,26 @@ pub fn show_artist(id: i64, known: Option<ItemData>) {
     push(pages::detail::artist_page(id, known));
 }
 
+/// Opens the library artist with this name, as songs and albums carry it
+/// (the core gives them no artist id): the core's search finds the artist,
+/// the one with exactly that name when there is one.
+pub fn show_artist_named(name: &str) {
+    let name = name.to_owned();
+    crate::ui::state::spawn(async move {
+        let wanted = name.clone();
+        let found = app().query(move |core| core.search(&wanted, 5)).await;
+        if let Some(Ok(results)) = found
+            && let Some(a) = results
+                .artists
+                .iter()
+                .find(|a| a.name == name)
+                .or(results.artists.first())
+        {
+            show_artist(a.id, Some(crate::ui::convert::artist(a)));
+        }
+    });
+}
+
 pub fn show_playlist(id: i64, known: Option<ItemData>) {
     push(pages::playlists::playlist_page(id, known));
 }
@@ -498,7 +527,15 @@ pub fn now_playing_open() -> bool {
     shell().is_some_and(|s| s.now_playing_open.get())
 }
 
-pub fn show_preferences(page: Option<&str>) {
+/// Back from a detail page to the page under it; false on a section's own
+/// page.
+pub fn go_back() -> bool {
+    shell().is_some_and(|s| s.content.pop())
+}
+
+/// Opens Settings, optionally on a page (`appearance`, `playback`,
+/// `library`, `sources`).
+pub fn show_settings(page: Option<&str>) {
     if let Some(s) = shell() {
         prefs::present(&s.window, page);
     }

@@ -41,9 +41,9 @@ pub fn page() -> adw::NavigationPage {
     let empty = status(
         "view-list-symbolic",
         &tr("No Playlists Yet"),
-        &tr("Make one here, or add songs to a new playlist from any song's menu."),
+        &tr("Make a playlist to keep songs together."),
     );
-    let new_button = gtk::Button::with_label(&tr("New Playlist"));
+    let new_button = gtk::Button::with_label(&tr("New Playlist…"));
     new_button.add_css_class("pill");
     new_button.add_css_class("suggested-action");
     new_button.set_halign(gtk::Align::Center);
@@ -56,7 +56,7 @@ pub fn page() -> adw::NavigationPage {
     let (page, header) = frame(&tr("Playlists"), "playlists", &stack);
     let small = small_title(&header, &tr("Playlists"));
     follow_title(&scroll, &title, &small);
-    let add = glyph::button("plus", 18, &tr("New Playlist"));
+    let add = glyph::button("plus", 18, &tr("New Playlist…"));
     add.connect_clicked(|_| new_playlist());
     header.pack_end(&add);
     let import = glyph::button("folder", 18, &tr("Import Playlist…"));
@@ -220,14 +220,14 @@ pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         move |_| actions::play(collection.clone(), 0, true)
     ));
     let name = known.as_ref().map_or_else(|| tr("Playlist"), |k| k.title.clone());
-    let menu = actions::menu_for(&ItemData {
+    let menu = actions::more_menu_for(&ItemData {
         kind: Kind::Playlist,
         id,
         title: name.clone(),
         ..ItemData::default()
     });
     let export = gtk::gio::Menu::new();
-    export.append(Some(&tr("Export…")), Some("playlist.export"));
+    export.append(Some(&tr("Export Playlist…")), Some("playlist.export"));
     menu.append_section(None, &export);
     header.more.set_menu_model(Some(&menu));
     let group = gtk::gio::SimpleActionGroup::new();

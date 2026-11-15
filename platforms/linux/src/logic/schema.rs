@@ -177,13 +177,20 @@ fn label_of(v: &Value) -> String {
 }
 
 /// `server_url` → `Server url`.
+/// A label for a property without a `title`, in Title Case like every row
+/// title (docs/ui.md, "Words"): `api_key` → `Api Key`.
 fn humanize(key: &str) -> String {
-    let spaced = key.replace(['_', '-'], " ");
-    let mut chars = spaced.chars();
-    match chars.next() {
-        Some(first) => first.to_uppercase().chain(chars).collect(),
-        None => String::new(),
-    }
+    key.split(['_', '-', ' '])
+        .filter(|w| !w.is_empty())
+        .map(|word| {
+            let mut chars = word.chars();
+            chars
+                .next()
+                .map(|first| first.to_uppercase().chain(chars).collect::<String>())
+                .unwrap_or_default()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 /// The current value of `field` in a plugin's settings JSON, else its default.
@@ -247,7 +254,7 @@ mod tests {
                 url: true
             }
         );
-        assert_eq!(f[1].title, "Api key");
+        assert_eq!(f[1].title, "Api Key");
         assert_eq!(
             f[1].kind,
             FieldKind::Text {
@@ -277,6 +284,14 @@ mod tests {
             }
         );
         assert!(matches!(f[6].kind, FieldKind::Number { .. }));
+    }
+
+    #[test]
+    fn untitled_properties_get_title_case_labels() {
+        assert_eq!(humanize("server_url"), "Server Url");
+        assert_eq!(humanize("max-bitrate"), "Max Bitrate");
+        assert_eq!(humanize("user__name"), "User Name");
+        assert_eq!(humanize(""), "");
     }
 
     #[test]

@@ -237,7 +237,9 @@ pub fn album_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         id,
         ..known.clone().unwrap_or_default()
     };
-    header.more.set_menu_model(Some(&actions::menu_for(&menu_data)));
+    header
+        .more
+        .set_menu_model(Some(&actions::more_menu_for(&menu_data)));
     if let Some(k) = &known {
         header.title.set_label(&k.title);
         header.subtitle.set_label(&k.subtitle);
@@ -260,22 +262,9 @@ pub fn album_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         artist_link,
         move |_| {
             let name = artist_link.borrow().clone();
-            if name.is_empty() {
-                return;
+            if !name.is_empty() {
+                window::show_artist_named(&name);
             }
-            spawn(async move {
-                let wanted = name.clone();
-                let found = app().query(move |core| core.search(&wanted, 5)).await;
-                if let Some(Ok(results)) = found
-                    && let Some(a) = results
-                        .artists
-                        .iter()
-                        .find(|a| a.name == name)
-                        .or(results.artists.first())
-                {
-                    window::show_artist(a.id, Some(convert::artist(a)));
-                }
-            });
         }
     ));
     let header = Rc::new(header);
@@ -389,7 +378,9 @@ pub fn artist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         id,
         ..known.clone().unwrap_or_default()
     };
-    header.more.set_menu_model(Some(&actions::menu_for(&menu_data)));
+    header
+        .more
+        .set_menu_model(Some(&actions::more_menu_for(&menu_data)));
     header.subtitle.set_visible(false);
     if let Some(k) = &known {
         header.title.set_label(&k.title);

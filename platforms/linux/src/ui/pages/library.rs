@@ -1,14 +1,20 @@
 //! Albums (a grid of covers), Artists and Songs: long lists, virtualised and
 //! loaded page by page from the query thread.
 
+use std::cell::Cell;
+use std::rc::Rc;
+
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{AlbumSort, Command, LibraryStats, TrackQuery, TrackRef, TrackSort};
+use jf_core::{Command, LibraryStats, TrackQuery, TrackRef};
 
+use crate::logic::library;
 use crate::ui::convert;
 use crate::ui::i18n::tr;
 use crate::ui::models::{Item, ItemData, PagedModel};
-use crate::ui::pages::{frame, show_small_title, status, titled_scroller};
+use crate::ui::pages::{
+    frame, play_and_shuffle, show_small_title, status, titled_scroller, titled_scroller_with,
+};
 use crate::ui::rows::{RowStyle, card_factory, row_factory};
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::window;
@@ -88,12 +94,103 @@ fn item_at(view_model: Option<gtk::gio::ListModel>, position: u32) -> Option<Ite
     view_model?.item(position).and_downcast::<Item>()?.data()
 }
 
+/// The order a sort menu chose: its key (`logic::library`) and Descending.
+type SortState = Rc<Cell<(&'static str, bool)>>;
+
+/// The menu item for a sort key of `logic::library`.
+fn sort_label(key: &str) -> String {
+    match key {
+        "title" => tr("Title"),
+        "artist" => tr("Artist"),
+        "album" => tr("Album"),
+        "year" => tr("Year"),
+        _ => tr("Recently Added"),
+    }
+}
+
+/// A sort menu (docs/ui.md, "Albums" and "Songs"): the orders, then
+/// Descending. Choosing an order sets the direction it starts with
+/// (`library::starts_descending`); Descending flips it. `changed` runs after
+/// either.
+fn sort_menu(
+    prefix: &str,
+    tooltip: &str,
+    choices: &[(String, &'static str)],
+    state: SortState,
+    changed: impl Fn() + 'static,
+) -> gtk::MenuButton {
+    let menu = gtk::gio::Menu::new();
+    let orders = gtk::gio::Menu::new();
+    for (label, key) in choices {
+        let item = gtk::gio::MenuItem::new(Some(label), None);
+        item.set_action_and_target_value(Some(&format!("{prefix}.sort")), Some(&key.to_variant()));
+        orders.append_item(&item);
+    }
+    // Descending in the same section, so its check lines up with the orders'.
+    orders.append(Some(&tr("Descending")), Some(&format!("{prefix}.descending")));
+    menu.append_section(None, &orders);
+
+    let (key, descending) = state.get();
+    let sort = gtk::gio::SimpleAction::new_stateful("sort", Some(glib::VariantTy::STRING), &key.to_variant());
+    let flip = gtk::gio::SimpleAction::new_stateful("descending", None, &descending.to_variant());
+    let changed = Rc::new(changed);
+    let keys: Vec<&'static str> = choices.iter().map(|(_, k)| *k).collect();
+    let (s, f, c) = (state.clone(), flip.downgrade(), changed.clone());
+    sort.connect_change_state(move |action, value| {
+        let Some(wanted) = value.and_then(|v| v.get::<String>()) else {
+            return;
+        };
+        let Some(key) = keys.iter().copied().find(|k| *k == wanted) else {
+            return;
+        };
+        let descending = library::starts_descending(key);
+        s.set((key, descending));
+        action.set_state(&key.to_variant());
+        if let Some(f) = f.upgrade() {
+            f.set_state(&descending.to_variant());
+        }
+        c();
+    });
+    flip.connect_change_state(move |action, value| {
+        let Some(on) = value.and_then(|v| v.get::<bool>()) else {
+            return;
+        };
+        let (key, _) = state.get();
+        state.set((key, on));
+        action.set_state(&on.to_variant());
+        changed();
+    });
+    let group = gtk::gio::SimpleActionGroup::new();
+    group.add_action(&sort);
+    group.add_action(&flip);
+    let button = gtk::MenuButton::builder()
+        .icon_name("view-sort-descending-symbolic")
+        .menu_model(&menu)
+        .tooltip_text(tooltip)
+        .build();
+    button.update_property(&[gtk::accessible::Property::Label(tooltip)]);
+    button.insert_action_group(prefix, Some(&group));
+    if let Some(p) = button.popover() {
+        crate::ui::style::animate_popup(&p);
+    }
+    button
+}
+
+/// Reloads a paged model in place (a new order).
+fn reorder(model: &glib::WeakRef<PagedModel>) {
+    if let Some(model) = model.upgrade() {
+        let len = model.len();
+        model.reset(len);
+    }
+}
+
 pub fn albums() -> adw::NavigationPage {
-    let sort = std::rc::Rc::new(std::cell::Cell::new((AlbumSort::Title, false)));
+    let sort: SortState = Rc::new(Cell::new(("title", false)));
     let current = sort.clone();
     let model = PagedModel::new(move |model, offset, limit, generation| {
         let weak = model.downgrade();
-        let (by, descending) = current.get();
+        let (key, descending) = current.get();
+        let by = library::album_sort(key);
         spawn(async move {
             let rows = app()
                 .query(move |core| {
@@ -128,66 +225,26 @@ pub fn albums() -> adw::NavigationPage {
     stack.add_named(
         &empty_library(
             &tr("No Albums Yet"),
-            &tr("Add a folder with music to fill your library."),
+            &tr("Add a music folder to see your albums here."),
         ),
         Some("empty"),
     );
     keep_counted(&model, &stack, |s| s.albums);
     let (page, header) = frame(&tr("Albums"), "albums", &stack);
     show_small_title(&header, &small);
-    header.pack_end(&album_sort_menu(&model, sort));
-    page
-}
-
-/// The album order: title, artist, year or recently added.
-fn album_sort_menu(
-    model: &PagedModel,
-    sort: std::rc::Rc<std::cell::Cell<(AlbumSort, bool)>>,
-) -> gtk::MenuButton {
-    let menu = gtk::gio::Menu::new();
-    for (label, key) in [
-        (tr("Title"), "title"),
-        (tr("Artist"), "artist"),
-        (tr("Year"), "year"),
-        (tr("Recently Added"), "added"),
-    ] {
-        let item = gtk::gio::MenuItem::new(Some(&label), None);
-        item.set_action_and_target_value(Some("albums.sort"), Some(&key.to_variant()));
-        menu.append_item(&item);
-    }
-    let action =
-        gtk::gio::SimpleAction::new_stateful("sort", Some(glib::VariantTy::STRING), &"title".to_variant());
+    let choices: Vec<(String, &'static str)> = library::ALBUM_SORTS
+        .iter()
+        .map(|(key, _)| (sort_label(key), *key))
+        .collect();
     let weak = model.downgrade();
-    action.connect_change_state(move |action, value| {
-        let Some(key) = value.and_then(|v| v.get::<String>()) else {
-            return;
-        };
-        let order = match key.as_str() {
-            "artist" => (AlbumSort::Artist, false),
-            "year" => (AlbumSort::Year, true),
-            "added" => (AlbumSort::Added, true),
-            _ => (AlbumSort::Title, false),
-        };
-        sort.set(order);
-        action.set_state(&key.to_variant());
-        if let Some(model) = weak.upgrade() {
-            let len = model.len();
-            model.reset(len);
-        }
-    });
-    let group = gtk::gio::SimpleActionGroup::new();
-    group.add_action(&action);
-    let button = gtk::MenuButton::builder()
-        .icon_name("view-sort-descending-symbolic")
-        .menu_model(&menu)
-        .tooltip_text(tr("Sort Albums"))
-        .build();
-    button.update_property(&[gtk::accessible::Property::Label(&tr("Sort Albums"))]);
-    button.insert_action_group("albums", Some(&group));
-    if let Some(p) = button.popover() {
-        crate::ui::style::animate_popup(&p);
-    }
-    button
+    header.pack_end(&sort_menu(
+        "albums",
+        &tr("Sort Albums"),
+        &choices,
+        sort,
+        move || reorder(&weak),
+    ));
+    page
 }
 
 pub fn artists() -> adw::NavigationPage {
@@ -214,7 +271,7 @@ pub fn artists() -> adw::NavigationPage {
     stack.add_named(
         &empty_library(
             &tr("No Artists Yet"),
-            &tr("Add a folder with music to fill your library."),
+            &tr("Add a music folder to see your artists here."),
         ),
         Some("empty"),
     );
@@ -224,19 +281,46 @@ pub fn artists() -> adw::NavigationPage {
     page
 }
 
-/// Songs sorted by title.
-const SONG_SORT: TrackSort = TrackSort::Title;
+/// The songs in the order the Songs page shows: `limit` from `offset`.
+fn song_query(sort: (&'static str, bool), offset: usize, limit: usize) -> TrackQuery {
+    let (key, descending) = sort;
+    TrackQuery {
+        offset,
+        limit,
+        sort: library::song_sort(key),
+        descending,
+        ..TrackQuery::default()
+    }
+}
 
+/// Songs (docs/ui.md, "Songs"): Play and Shuffle, then the list, in the
+/// order of its sort menu.
 pub fn songs() -> adw::NavigationPage {
-    let model = paged(|core, offset, limit| {
-        core.tracks(&TrackQuery {
-            offset,
-            limit,
-            sort: SONG_SORT,
-            ..TrackQuery::default()
-        })
-        .map(|v| v.iter().map(|t| convert::track_with_favorite(core, t)).collect())
-        .map_err(|e| e.to_string())
+    let sort: SortState = Rc::new(Cell::new(("title", false)));
+    let current = sort.clone();
+    let model = PagedModel::new(move |model, offset, limit, generation| {
+        let weak = model.downgrade();
+        let query = song_query(current.get(), offset as usize, limit as usize);
+        spawn(async move {
+            let rows = app()
+                .query(move |core| {
+                    core.tracks(&query).map(|v| {
+                        v.iter()
+                            .map(|t| convert::track_with_favorite(core, t))
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .await;
+            let Some(model) = weak.upgrade() else { return };
+            match rows {
+                Some(Ok(rows)) => model.deliver(generation, offset, rows),
+                Some(Err(e)) => {
+                    tracing::warn!("a page failed to load: {e}");
+                    model.failed(generation, offset);
+                }
+                None => model.failed(generation, offset),
+            }
+        });
     });
     let list = gtk::ListView::builder()
         .model(&gtk::NoSelection::new(Some(model.clone())))
@@ -245,67 +329,70 @@ pub fn songs() -> adw::NavigationPage {
         .build();
     list.add_css_class("track-list");
     list.update_property(&[gtk::accessible::Property::Label(&tr("Songs"))]);
-    list.connect_activate(|_, position| play_songs_from(position));
-    let (scroll, small) = titled_scroller(&tr("Songs"), &clamped(&list), Some(LIST_WIDTH));
+    let s = sort.clone();
+    list.connect_activate(move |_, position| play_songs_from(s.get(), position, false));
+    let (actions, play, shuffle) = play_and_shuffle();
+    let s = sort.clone();
+    play.connect_clicked(move |_| play_songs_from(s.get(), 0, false));
+    let s = sort.clone();
+    shuffle.connect_clicked(move |_| play_songs_from(s.get(), 0, true));
+    let (scroll, small) = titled_scroller_with(
+        &tr("Songs"),
+        Some(actions.upcast_ref()),
+        &clamped(&list),
+        Some(LIST_WIDTH),
+    );
     let stack = gtk::Stack::new();
     stack.add_named(&scroll, Some("list"));
     stack.add_named(
         &empty_library(
             &tr("No Songs Yet"),
-            &tr("Add a folder with music to fill your library."),
+            &tr("Add a music folder to see your songs here."),
         ),
         Some("empty"),
     );
     keep_counted(&model, &stack, |s| s.tracks);
     let (page, header) = frame(&tr("Songs"), "songs", &stack);
     show_small_title(&header, &small);
-    let shuffle = crate::ui::widgets::glyph::button("shuffle", 18, &tr("Shuffle All"));
-    shuffle.connect_clicked(|_| {
-        spawn(async {
-            let refs = app()
-                .query(|core| {
-                    core.tracks(&TrackQuery {
-                        limit: 5_000,
-                        sort: SONG_SORT,
-                        ..TrackQuery::default()
-                    })
-                })
-                .await;
-            if let Some(Ok(tracks)) = refs
-                && !tracks.is_empty()
-            {
-                let tracks = tracks.into_iter().map(|t| TrackRef::Library(t.id)).collect();
-                app().send(Command::PlayCollection {
-                    collection: jf_core::Collection::Tracks { tracks },
-                    start: 0,
-                    shuffle: true,
-                });
-            }
-        });
-    });
-    header.pack_end(&shuffle);
+    let choices: Vec<(String, &'static str)> = library::SONG_SORTS
+        .iter()
+        .map(|(key, _)| (sort_label(key), *key))
+        .collect();
+    let weak = model.downgrade();
+    header.pack_end(&sort_menu(
+        "songs",
+        &tr("Sort Songs"),
+        &choices,
+        sort,
+        move || reorder(&weak),
+    ));
     page
 }
 
-/// Plays the song list from `position`: that song and the next 499 in the
-/// same order (a queue of the whole library would be long and slow).
-fn play_songs_from(position: u32) {
+/// Songs played from the list in its order: from `position`, that song and
+/// the next 499 (a queue of the whole library would be long and slow); or,
+/// shuffled, up to 5,000 of them.
+fn play_songs_from(sort: (&'static str, bool), position: u32, shuffle: bool) {
+    let query = if shuffle {
+        song_query(sort, 0, 5_000)
+    } else {
+        song_query(sort, position as usize, 500)
+    };
     spawn(async move {
-        let refs = app()
-            .query(move |core| {
-                core.tracks(&TrackQuery {
-                    offset: position as usize,
-                    limit: 500,
-                    sort: SONG_SORT,
-                    ..TrackQuery::default()
-                })
-            })
-            .await;
+        let refs = app().query(move |core| core.tracks(&query)).await;
         if let Some(Ok(tracks)) = refs
             && !tracks.is_empty()
         {
             let tracks = tracks.into_iter().map(|t| TrackRef::Library(t.id)).collect();
-            app().send(Command::PlayTracks { tracks, start: 0 });
+            app().send(if shuffle {
+                Command::PlayCollection {
+                    collection: jf_core::Collection::Tracks { tracks },
+                    start: 0,
+                    shuffle: true,
+                }
+            } else {
+                Command::PlayTracks { tracks, start: 0 }
+            });
         }
     });
 }

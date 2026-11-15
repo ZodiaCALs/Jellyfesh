@@ -1,5 +1,6 @@
-//! Keyboard: Space plays and pauses, Escape leaves Now Playing, and the
-//! shortcuts window lists every shortcut.
+//! Keyboard (docs/ui.md, "Keyboard"): Space plays and pauses, Escape
+//! closes Now Playing or goes back, and the shortcuts window lists every
+//! shortcut. The other shared keys are application accelerators (`ui::mod`).
 
 use gtk::glib;
 use gtk::prelude::*;
@@ -10,7 +11,8 @@ use crate::ui::state::app;
 use crate::ui::window;
 
 /// Space toggles playback unless the focused widget used it (a text field,
-/// a button); Escape closes Now Playing.
+/// a button); Escape closes Now Playing, or goes back from a detail page
+/// when the focus is outside the pages (which go back on Escape themselves).
 pub fn attach(window: &impl IsA<gtk::Widget>) {
     let keys = gtk::EventControllerKey::new();
     keys.set_propagation_phase(gtk::PropagationPhase::Bubble);
@@ -29,6 +31,7 @@ pub fn attach(window: &impl IsA<gtk::Widget>) {
                 window::close_now_playing();
                 glib::Propagation::Stop
             }
+            gtk::gdk::Key::Escape if plain && window::go_back() => glib::Propagation::Stop,
             _ => glib::Propagation::Proceed,
         }
     });
@@ -45,13 +48,13 @@ pub fn show_shortcuts() {
         (
             tr("Playback"),
             vec![
-                ("space", tr("Play or pause")),
-                ("<Primary>Right", tr("Next song")),
-                ("<Primary>Left", tr("Previous song")),
-                ("<Shift>Right", tr("Skip forward 5 seconds")),
-                ("<Shift>Left", tr("Skip back 5 seconds")),
-                ("<Primary>Up", tr("Volume up")),
-                ("<Primary>Down", tr("Volume down")),
+                ("space", tr("Play or Pause")),
+                ("<Primary>Right", tr("Next Song")),
+                ("<Primary>Left", tr("Previous Song")),
+                ("<Shift>Right", tr("Skip Forward 5 Seconds")),
+                ("<Shift>Left", tr("Skip Back 5 Seconds")),
+                ("<Primary>Up", tr("Volume Up")),
+                ("<Primary>Down", tr("Volume Down")),
                 ("<Primary>m", tr("Mute")),
                 ("<Primary>s", tr("Shuffle")),
                 ("<Primary>r", tr("Repeat")),
@@ -64,22 +67,24 @@ pub fn show_shortcuts() {
                 ("<Primary>l", tr("Lyrics")),
                 ("<Primary>u", tr("Queue")),
                 ("<Primary>f", tr("Search")),
-                ("Escape", tr("Back to the library")),
+                ("Escape", tr("Back")),
             ],
         ),
         (
             tr("General"),
             vec![
-                ("<Primary>comma", tr("Preferences")),
-                ("<Primary>question", tr("Keyboard shortcuts")),
-                ("<Primary>w", tr("Close window")),
+                ("<Primary>comma", tr("Settings")),
+                ("<Primary>question", tr("Keyboard Shortcuts")),
+                ("<Primary>w", tr("Close Window")),
                 ("<Primary>q", tr("Quit")),
             ],
         ),
     ];
-    let mut xml = String::from(
+    let mut xml = format!(
         "<interface><object class=\"GtkShortcutsWindow\" id=\"w\"><property name=\"modal\">1</property>\
+         <property name=\"title\">{}</property>\
          <child><object class=\"GtkShortcutsSection\"><property name=\"section-name\">main</property>",
+        escape(&tr("Keyboard Shortcuts"))
     );
     for (title, items) in &groups {
         xml.push_str(&format!(

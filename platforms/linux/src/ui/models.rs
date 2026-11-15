@@ -53,6 +53,9 @@ pub struct ItemData {
     pub track: Option<TrackRef>,
     pub album_id: Option<i64>,
     pub artist_id: Option<i64>,
+    /// A library song's artist as tagged, for Go to Artist (the core gives
+    /// songs an artist name, not an id).
+    pub artist: Option<String>,
     pub uid: u64,
     pub favorite: bool,
     /// False for missing files and items a source will not play here.

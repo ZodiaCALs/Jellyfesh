@@ -1,4 +1,5 @@
-//! Sources: the installed source plugins, and browsing a source's catalogue.
+//! Sources: adding a source, the installed ones, and browsing a source's
+//! catalogue.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -13,6 +14,7 @@ use crate::ui::models::ItemData;
 use crate::ui::pages::detail::{fill_track_box, track_box};
 use crate::ui::pages::{follow_title, frame, keep_alive, large_title, scroller, small_title, status};
 use crate::ui::rows::RowStyle;
+use crate::ui::sources_ui::preset_row;
 use crate::ui::state::{Change, app};
 use crate::ui::widgets::glyph;
 use crate::ui::{actions, window};
@@ -38,77 +40,83 @@ pub fn account_text(p: &PluginSummary) -> String {
     }
 }
 
+/// Sources (docs/ui.md, "Sources"): what sources are, Add a Source (the
+/// core's presets, with the same connect step as Settings), Your Sources
+/// (each installed source with its status; choosing one browses it), and
+/// Sources Settings….
 pub fn page() -> adw::NavigationPage {
+    let title = large_title(&tr("Sources"));
+    let intro = gtk::Label::builder()
+        .label(tr(
+            "Sources bring music from servers and services into Jellyfesh.",
+        ))
+        .xalign(0.0)
+        .wrap(true)
+        .build();
+    intro.add_css_class("page-subtitle");
+    let add = adw::PreferencesGroup::builder()
+        .title(tr("Add a Source"))
+        .visible(false)
+        .build();
+    let presets = gtk::ListBox::new();
+    presets.add_css_class("boxed-list");
+    presets.set_selection_mode(gtk::SelectionMode::None);
+    presets.update_property(&[gtk::accessible::Property::Label(&tr("Add a Source"))]);
+    add.add(&presets);
+    let yours = adw::PreferencesGroup::builder().title(tr("Your Sources")).build();
     let list = gtk::ListBox::new();
     list.add_css_class("boxed-list");
     list.set_selection_mode(gtk::SelectionMode::None);
-    list.update_property(&[gtk::accessible::Property::Label(&tr("Sources"))]);
-    let title = large_title(&tr("Sources"));
-    let column = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    column.append(&title);
-    column.append(&list);
+    list.update_property(&[gtk::accessible::Property::Label(&tr("Your Sources"))]);
+    yours.add(&list);
+    let settings = gtk::Button::with_label(&tr("Sources Settings…"));
+    settings.add_css_class("pill");
+    settings.set_halign(gtk::Align::Start);
+    settings.connect_clicked(|_| window::show_settings(Some("sources")));
+    let column = gtk::Box::new(gtk::Orientation::Vertical, 24);
+    column.add_css_class("sources-page");
+    let top = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    top.append(&title);
+    top.append(&intro);
+    column.append(&top);
+    column.append(&add);
+    column.append(&yours);
+    column.append(&settings);
     let clamp = adw::Clamp::builder().child(&column).maximum_size(800).build();
     clamp.add_css_class("detail");
     let scroll = scroller(&clamp);
-    let stack = gtk::Stack::new();
-    stack.add_named(&scroll, Some("list"));
-    let empty = status(
-        "network-server-symbolic",
-        &tr("No Sources Yet"),
-        &tr(
-            "Sources bring music from servers and services into Jellyfesh. Install one from a .jfpkg file in Preferences.",
-        ),
-    );
-    let open = gtk::Button::with_label(&tr("Open Sources Settings"));
-    open.add_css_class("pill");
-    open.set_halign(gtk::Align::Center);
-    open.connect_clicked(|_| window::show_preferences(Some("sources")));
-    empty.set_child(Some(&open));
-    stack.add_named(&empty, Some("empty"));
-    let (page, header) = frame(&tr("Sources"), "sources", &stack);
+    let (page, header) = frame(&tr("Sources"), "sources", &scroll);
     let small = small_title(&header, &tr("Sources"));
     follow_title(&scroll, &title, &small);
-    let settings = glyph::button("sources", 18, &tr("Sources Settings"));
-    settings.connect_clicked(|_| window::show_preferences(Some("sources")));
-    header.pack_end(&settings);
 
     let rebuild = {
-        let list = list.downgrade();
-        let stack = stack.downgrade();
+        let (presets, list, add) = (presets.downgrade(), list.downgrade(), add.downgrade());
         move || {
-            let (Some(list), Some(stack)) = (list.upgrade(), stack.upgrade()) else {
+            let (Some(presets), Some(list), Some(add)) = (presets.upgrade(), list.upgrade(), add.upgrade())
+            else {
                 return;
             };
+            let sources = app().sources.borrow().clone();
+            while let Some(c) = presets.first_child() {
+                presets.remove(&c);
+            }
+            for preset in &sources.presets {
+                presets.append(&preset_row(preset, &sources.plugins));
+            }
+            add.set_visible(!sources.presets.is_empty());
             while let Some(c) = list.first_child() {
                 list.remove(&c);
             }
-            let sources = app().sources.borrow().clone();
-            for p in &sources.plugins {
+            if sources.plugins.is_empty() {
                 let row = adw::ActionRow::builder()
-                    .title(gtk::glib::markup_escape_text(&p.name).as_str())
-                    .subtitle(gtk::glib::markup_escape_text(&crate::logic::format::dot_join([
-                        Some(badge_text(p).as_str()),
-                        Some(account_text(p).as_str()),
-                    ])))
-                    .activatable(p.enabled)
+                    .title(tr("No Sources Installed"))
+                    .subtitle(tr("Install a source plugin from a .jfpkg file."))
                     .build();
-                row.add_prefix(&glyph::Glyph::new("sources", 22));
-                if p.enabled {
-                    row.add_suffix(&glyph::Glyph::new("forward", 18));
-                    let (id, name) = (p.id.clone(), p.name.clone());
-                    row.connect_activated(move |_| window::show_source(&id, None, &name));
-                } else {
-                    let off = gtk::Label::new(Some(&tr("Off")));
-                    off.add_css_class("dim-label");
-                    row.add_suffix(&off);
-                }
                 list.append(&row);
             }
-            stack.set_visible_child_name(if sources.plugins.is_empty() {
-                "empty"
-            } else {
-                "list"
-            });
+            for p in &sources.plugins {
+                list.append(&source_row(p));
+            }
         }
     };
     rebuild();
@@ -118,6 +126,36 @@ pub fn page() -> adw::NavigationPage {
         }
     });
     page
+}
+
+/// An installed source with its status; activating it browses the source.
+fn source_row(p: &PluginSummary) -> adw::ActionRow {
+    let row = adw::ActionRow::builder()
+        .title(gtk::glib::markup_escape_text(&p.name).as_str())
+        .subtitle(gtk::glib::markup_escape_text(&crate::logic::format::dot_join([
+            Some(badge_text(p).as_str()),
+            Some(account_text(p).as_str()),
+        ])))
+        .activatable(p.enabled)
+        .build();
+    match &p.icon {
+        Some(path) => {
+            let icon = gtk::Image::from_file(path);
+            icon.set_pixel_size(32);
+            row.add_prefix(&icon);
+        }
+        None => row.add_prefix(&glyph::Glyph::new("sources", 22)),
+    }
+    if p.enabled {
+        row.add_suffix(&glyph::Glyph::new("forward", 18));
+        let (id, name) = (p.id.clone(), p.name.clone());
+        row.connect_activated(move |_| window::show_source(&id, None, &name));
+    } else {
+        let off = gtk::Label::new(Some(&tr("Off")));
+        off.add_css_class("dim-label");
+        row.add_suffix(&off);
+    }
+    row
 }
 
 struct Browse {

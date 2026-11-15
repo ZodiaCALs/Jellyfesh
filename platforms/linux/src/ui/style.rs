@@ -193,7 +193,7 @@ pub fn theme_for(app: &App, dark: bool) -> jf_core::Theme {
 }
 
 /// An appearance's colours with the glass grades set for the Transparency
-/// setting (also for previews of the other appearance in Preferences).
+/// setting (also for previews of the other appearance in Settings).
 pub fn colors_for(app: &App, dark: bool) -> Colors {
     theme_for(app, dark).with_transparency(transparency(app)).colors
 }

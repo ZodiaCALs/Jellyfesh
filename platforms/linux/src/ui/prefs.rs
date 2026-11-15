@@ -1,4 +1,5 @@
-//! Preferences: Appearance, Playback, Library and Sources.
+//! Settings: Appearance, Playback, Library and Sources, with their groups
+//! and rows in the order docs/ui.md ("Settings") gives every app.
 //!
 //! Every control edits a copy of the core's `Settings` slice and sends it
 //! back (`SetSettings`), or sends the matching command; controls update from
@@ -14,7 +15,8 @@ use gtk::glib;
 use jf_core::{Command, EqSettings, ReplayGainMode, ScanStatus, Settings};
 
 use crate::logic::appearance::{self as look, ACCENT_HUES};
-use crate::logic::eq::{self, Preset};
+use crate::logic::{eq, format, playback};
+use crate::ui::actions;
 use crate::ui::i18n::{tr, trc, trf, trn};
 use crate::ui::sources_ui;
 use crate::ui::state::{Change, app, spawn};
@@ -22,11 +24,11 @@ use crate::ui::widgets::glyph;
 use crate::ui::widgets::preview::{ColorDot, HueSlider, Picture, Preview};
 use crate::ui::window;
 
-/// Shows Preferences, optionally on a page (`appearance`, `playback`,
+/// Shows Settings, optionally on a page (`appearance`, `playback`,
 /// `library`, `sources`; `lyrics` opens Appearance, which holds them now).
 pub fn present(parent: &adw::ApplicationWindow, page: Option<&str>) {
     let dialog = adw::PreferencesDialog::new();
-    dialog.set_title(&tr("Preferences"));
+    dialog.set_title(&tr("Settings"));
     dialog.set_search_enabled(true);
     dialog.add(&appearance_page());
     dialog.add(&playback_page());
@@ -35,7 +37,7 @@ pub fn present(parent: &adw::ApplicationWindow, page: Option<&str>) {
     if let Some(name) = page {
         dialog.set_visible_page_name(if name == "lyrics" { "appearance" } else { name });
     }
-    // The device list is current whenever Preferences opens.
+    // The device list is current whenever Settings opens.
     app().send(Command::RefreshDevices);
     dialog.present(Some(parent));
 }
@@ -234,15 +236,14 @@ fn swatch_names() -> [String; 10] {
     ]
 }
 
-/// Appearance (design-controls.md, "Preferences → Appearance"): theme,
-/// accent colour, transparency, reduced motion, the Now Playing background,
-/// lyrics size and alignment, translation and romanization, the app icon.
+/// Appearance (docs/ui.md, "Settings"): Theme, Accent Colour,
+/// Transparency, Now Playing Backdrop, Lyrics, and the note on the app icon.
 fn appearance_page() -> adw::PreferencesPage {
     let p = page("appearance", &tr("Appearance"), "applications-graphics-symbolic");
     let guard = Rc::new(Cell::new(false));
 
     // Theme: System · Light · Dark, with previews.
-    let theme_group = group(&tr("Theme"), None);
+    let theme_group = group(&tr("Theme"), Some(&tr("Light, dark, or the same as the system.")));
     let (theme_row, themes, theme_previews) = picture_choices(
         &[
             (Picture::SystemTheme, tr("System")),
@@ -290,14 +291,14 @@ fn appearance_page() -> adw::PreferencesPage {
     let custom = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     custom.append(&hue_slider);
     custom.append(&hue_dot);
-    let custom_row = block_row(&tr("Custom Hue"), true, &custom);
+    let custom_row = block_row(&tr("Custom"), true, &custom);
     accent_group.add(&follow);
     accent_group.add(&swatch_row);
     accent_group.add(&custom_row);
     p.add(&accent_group);
 
-    // Glass: transparency, and reduced motion and transparency.
-    let glass_group = group(&tr("Glass"), None);
+    // Transparency: Solid … Clear, and reduced motion and transparency.
+    let glass_group = group(&tr("Transparency"), None);
     let transparency = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 100.0, 1.0);
     transparency.set_hexpand(true);
     transparency.set_draw_value(false);
@@ -319,7 +320,7 @@ fn appearance_page() -> adw::PreferencesPage {
     line.set_valign(gtk::Align::Center);
     line.set_hexpand(true);
     glass_box.append(&line);
-    let transparency_row = block_row(&tr("Transparency"), true, &glass_box);
+    let transparency_row = block_row(&tr("Transparency"), false, &glass_box);
     let reduce = adw::SwitchRow::builder()
         .title(tr("Reduce Motion and Transparency"))
         .subtitle(tr(
@@ -330,18 +331,22 @@ fn appearance_page() -> adw::PreferencesPage {
     glass_group.add(&reduce);
     p.add(&glass_group);
 
-    // Now Playing: background, lyrics size and alignment, extra lines.
-    let np_group = group(
-        &tr("Now Playing"),
+    // Now Playing Backdrop: Artwork or Misty, with previews.
+    let backdrop_group = group(&tr("Now Playing Backdrop"), None);
+    let (style_box, styles, style_previews) = picture_choices(
+        &[(Picture::Artwork, tr("Artwork")), (Picture::Misty, tr("Misty"))],
+        &tr("Now Playing Backdrop"),
+    );
+    backdrop_group.add(&block_row(&tr("Now Playing Backdrop"), false, &style_box));
+    p.add(&backdrop_group);
+
+    // Lyrics: size and alignment, extra lines (lyrics settings live only here).
+    let lyrics_group = group(
+        &tr("Lyrics"),
         Some(&tr(
             "Lyrics come from a .ttml, .lrc or .vtt file with the same name as the song, or from its tags. Word-timed lyrics light up word by word.",
         )),
     );
-    let (style_box, styles, style_previews) = picture_choices(
-        &[(Picture::Artwork, tr("Artwork")), (Picture::Misty, tr("Misty"))],
-        &tr("Background"),
-    );
-    np_group.add(&block_row(&tr("Background"), true, &style_box));
     let (size_row, sizes) = segmented_row(&tr("Lyrics Size"), &[tr("Small"), tr("Medium"), tr("Large")]);
     let (align_row, aligns) = segmented_row(
         &tr("Lyrics Alignment"),
@@ -359,11 +364,11 @@ fn appearance_page() -> adw::PreferencesPage {
             "How each line reads in Latin letters, when the lyrics have it.",
         ))
         .build();
-    np_group.add(&size_row);
-    np_group.add(&align_row);
-    np_group.add(&translation);
-    np_group.add(&romanization);
-    p.add(&np_group);
+    lyrics_group.add(&size_row);
+    lyrics_group.add(&align_row);
+    lyrics_group.add(&translation);
+    lyrics_group.add(&romanization);
+    p.add(&lyrics_group);
 
     let icon = group(
         &tr("App Icon"),
@@ -612,36 +617,97 @@ fn appearance_page() -> adw::PreferencesPage {
     p
 }
 
+/// The name of one of the core's equalizer presets (`jf_core::eq_presets()`).
+fn preset_name(id: &str) -> String {
+    match id {
+        "flat" => tr("Flat"),
+        "bass_boost" => tr("Bass Boost"),
+        "vocal" => tr("Vocal"),
+        "treble" => tr("Treble"),
+        other => other.to_owned(),
+    }
+}
+
+/// Shows a spin row's whole seconds with their unit ("5 s"). `with_range`
+/// makes the row numeric, which would refuse the unit, so the row takes any
+/// text; GTK's own input reads the number a value starts with.
+fn show_seconds(row: &adw::SpinRow) {
+    row.set_numeric(false);
+    row.set_width_chars(5);
+    row.connect_output(|row| {
+        let seconds = row.value().round() as i64;
+        row.set_text(&trf("{n} s", &[("n", &seconds.to_string())]));
+        true
+    });
+}
+
+/// Playback (docs/ui.md, "Settings"): Output, Crossfade, Volume Levelling,
+/// Equalizer and Startup.
 fn playback_page() -> adw::PreferencesPage {
     let p = page("playback", &tr("Playback"), "audio-speakers-symbolic");
     let guard = Rc::new(Cell::new(false));
 
-    // Equalizer.
+    // Output: the device, System Default first.
+    let out_group = group(&tr("Output"), None);
+    let device = adw::ComboRow::builder()
+        .title(tr("Output Device"))
+        .subtitle(tr("Where the sound goes."))
+        .build();
+    out_group.add(&device);
+    p.add(&out_group);
+
+    // Crossfade.
+    let xf_group = group(&tr("Crossfade"), None);
+    let xf = adw::ExpanderRow::builder()
+        .title(tr("Crossfade"))
+        .subtitle(tr("Blend the end of a song into the next."))
+        .show_enable_switch(true)
+        .build();
+    let xf_secs = adw::SpinRow::with_range(1.0, 12.0, 1.0);
+    xf_secs.set_title(&tr("Length"));
+    show_seconds(&xf_secs);
+    let xf_album = adw::SwitchRow::builder()
+        .title(tr("Album Continuity"))
+        .subtitle(tr("Songs of the same album join without a fade."))
+        .build();
+    xf.add_row(&xf_secs);
+    xf.add_row(&xf_album);
+    xf_group.add(&xf);
+    p.add(&xf_group);
+
+    // Volume Levelling: ReplayGain and its preamp.
+    let rg_group = group(
+        &tr("Volume Levelling"),
+        Some(&tr("Evens out loudness using the ReplayGain tags in your files.")),
+    );
+    let rg_mode = combo(&tr("ReplayGain"), None, &[tr("Off"), tr("Track"), tr("Album")]);
+    let rg_preamp = adw::SpinRow::with_range(-15.0, 15.0, 0.5);
+    rg_preamp.set_title(&tr("Preamp"));
+    rg_preamp.set_subtitle(&tr("Decibels added to every song"));
+    rg_preamp.set_digits(1);
+    rg_group.add(&rg_mode);
+    rg_group.add(&rg_preamp);
+    p.add(&rg_group);
+
+    // Equalizer: on or off, the core's presets (Custom once a band moves),
+    // the preamp, the bands and Reset to Flat.
     let eq_group = group(&tr("Equalizer"), None);
     let eq_on = adw::SwitchRow::builder().title(tr("Equalizer")).build();
-    let presets = combo(
-        &tr("Preset"),
-        None,
-        &[
-            tr("Flat"),
-            tr("Bass Boost"),
-            tr("Vocal"),
-            tr("Treble"),
-            tr("Custom"),
-        ],
-    );
+    let presets = Rc::new(eq::presets());
+    let preset_names: Vec<String> = presets.iter().map(|p| preset_name(&p.id)).collect();
+    let preset_row = combo(&tr("Preset"), None, &preset_names);
+    let range = f64::from(eq::GAIN_RANGE_DB);
+    let eq_preamp = adw::SpinRow::with_range(-range, range, 0.5);
+    eq_preamp.set_title(&tr("Preamp"));
+    eq_preamp.set_subtitle(&tr("Decibels added before the bands"));
+    eq_preamp.set_digits(1);
     let bands_box = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     bands_box.add_css_class("eq-bands");
     bands_box.set_homogeneous(true);
     let mut sliders = Vec::new();
-    for i in 0..jf_core::EqSettings::flat().bands.len() {
-        let freq = EqSettings::flat().bands[i].freq_hz;
-        let scale = gtk::Scale::with_range(
-            gtk::Orientation::Vertical,
-            f64::from(-eq::GAIN_RANGE_DB),
-            f64::from(eq::GAIN_RANGE_DB),
-            0.5,
-        );
+    for band in &EqSettings::flat().bands {
+        let freq = band.freq_hz;
+        let scale = gtk::Scale::with_range(gtk::Orientation::Vertical, -range, range, 0.5);
         scale.set_inverted(true);
         scale.set_height_request(140);
         scale.add_mark(0.0, gtk::PositionType::Right, None);
@@ -658,56 +724,34 @@ fn playback_page() -> adw::PreferencesPage {
         bands_box.append(&column);
         sliders.push(scale);
     }
+    let reset = gtk::Button::with_label(&tr("Reset to Flat"));
+    reset.set_halign(gtk::Align::End);
+    reset.add_css_class("eq-reset");
+    reset.connect_clicked(|_| {
+        app().update_settings(|s| s.eq = eq::reset_to_flat(&s.eq));
+    });
+    let bands_column = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    bands_column.append(&bands_box);
+    bands_column.append(&reset);
     let bands_row = adw::PreferencesRow::builder()
         .activatable(false)
-        .child(&bands_box)
+        .child(&bands_column)
         .build();
     bands_row.add_css_class("eq-row");
     eq_group.add(&eq_on);
-    eq_group.add(&presets);
+    eq_group.add(&preset_row);
+    eq_group.add(&eq_preamp);
     eq_group.add(&bands_row);
     p.add(&eq_group);
 
-    // ReplayGain.
-    let rg_group = group(
-        &tr("Volume Levelling"),
-        Some(&tr("ReplayGain evens out loudness using the tags in your files.")),
-    );
-    let rg_mode = combo(&tr("ReplayGain"), None, &[tr("Off"), tr("Track"), tr("Album")]);
-    let rg_preamp = adw::SpinRow::with_range(-15.0, 15.0, 0.5);
-    rg_preamp.set_title(&tr("Preamp"));
-    rg_preamp.set_subtitle(&tr("Decibels added to every song"));
-    rg_preamp.set_digits(1);
-    rg_group.add(&rg_mode);
-    rg_group.add(&rg_preamp);
-    p.add(&rg_group);
-
-    // Crossfade.
-    let xf_group = group(&tr("Crossfade"), None);
-    let xf = adw::ExpanderRow::builder()
-        .title(tr("Crossfade"))
-        .subtitle(tr("Blend the end of a song into the next."))
-        .show_enable_switch(true)
+    // Startup.
+    let startup = group(&tr("Startup"), None);
+    let resume = adw::SwitchRow::builder()
+        .title(tr("Resume Playback"))
+        .subtitle(tr("Start playing where you left off when Jellyfesh opens."))
         .build();
-    let xf_secs = adw::SpinRow::with_range(1.0, 12.0, 1.0);
-    xf_secs.set_title(&tr("Length"));
-    xf_secs.set_subtitle(&tr("Seconds"));
-    let xf_album = adw::SwitchRow::builder()
-        .title(tr("Album Continuity"))
-        .subtitle(tr("Songs of the same album join without a fade."))
-        .build();
-    xf.add_row(&xf_secs);
-    xf.add_row(&xf_album);
-    xf_group.add(&xf);
-    p.add(&xf_group);
-
-    // Output.
-    let out_group = group(&tr("Output"), Some(&tr("Where the sound goes.")));
-    let out_list = gtk::ListBox::new();
-    out_list.add_css_class("boxed-list");
-    out_list.set_selection_mode(gtk::SelectionMode::None);
-    out_group.add(&out_list);
-    p.add(&out_group);
+    startup.add(&resume);
+    p.add(&startup);
 
     // Wiring.
     let sliders = Rc::new(sliders);
@@ -719,13 +763,25 @@ fn playback_page() -> adw::PreferencesPage {
         let on = r.is_active();
         app().update_settings(|s| s.eq.enabled = on);
     });
-    let g = guard.clone();
-    presets.connect_selected_notify(move |r| {
+    let (g, chosen) = (guard.clone(), presets.clone());
+    preset_row.connect_selected_notify(move |r| {
         if g.get() {
             return;
         }
-        let preset = Preset::from_index(r.selected());
-        app().update_settings(|s| s.eq = eq::apply_preset(&s.eq, preset));
+        // Custom (after the presets) stands for the bands as they are.
+        let Some(preset) = chosen.get(r.selected() as usize) else {
+            return;
+        };
+        let bands = preset.settings.clone();
+        app().update_settings(|s| s.eq = eq::apply_preset(&s.eq, &bands));
+    });
+    let g = guard.clone();
+    eq_preamp.connect_value_notify(move |r| {
+        if g.get() {
+            return;
+        }
+        let db = r.value() as f32;
+        app().update_settings(|s| s.eq = eq::set_preamp(&s.eq, db));
     });
     for (i, scale) in sliders.iter().enumerate() {
         let g = guard.clone();
@@ -785,25 +841,39 @@ fn playback_page() -> adw::PreferencesPage {
         let on = r.is_active();
         app().update_settings(|s| s.crossfade.album_continuity = on);
     });
+    let g = guard.clone();
+    resume.connect_active_notify(move |r| {
+        if g.get() {
+            return;
+        }
+        let on = r.is_active();
+        app().update_settings(|s| s.resume_on_launch = on);
+    });
     let weak = (
         eq_on.downgrade(),
-        presets.downgrade(),
+        preset_row.downgrade(),
+        eq_preamp.downgrade(),
+        reset.downgrade(),
         rg_mode.downgrade(),
         rg_preamp.downgrade(),
         xf.downgrade(),
         xf_secs.downgrade(),
         xf_album.downgrade(),
+        resume.downgrade(),
     );
     let sl = sliders.clone();
-    follow_settings(&p, guard, move |s| {
+    follow_settings(&p, guard.clone(), move |s| {
         let (
             Some(eq_on),
-            Some(presets),
+            Some(preset_row),
+            Some(eq_preamp),
+            Some(reset),
             Some(rg_mode),
             Some(rg_preamp),
             Some(xf),
             Some(xf_secs),
             Some(xf_album),
+            Some(resume),
         ) = (
             weak.0.upgrade(),
             weak.1.upgrade(),
@@ -812,19 +882,45 @@ fn playback_page() -> adw::PreferencesPage {
             weak.4.upgrade(),
             weak.5.upgrade(),
             weak.6.upgrade(),
+            weak.7.upgrade(),
+            weak.8.upgrade(),
+            weak.9.upgrade(),
         )
         else {
             return;
         };
         eq_on.set_active(s.eq.enabled);
-        presets.set_selected(eq::detect(&s.eq).index());
+        // Custom is listed only while the bands match no preset.
+        let named = u32::try_from(presets.len()).unwrap_or(u32::MAX);
+        let model = preset_row.model().and_downcast::<gtk::StringList>();
+        match eq::detect(&presets, &s.eq) {
+            Some(i) => {
+                if let Some(m) = &model
+                    && m.n_items() > named
+                {
+                    m.remove(named);
+                }
+                preset_row.set_selected(u32::try_from(i).unwrap_or(0));
+            }
+            None => {
+                if let Some(m) = &model
+                    && m.n_items() == named
+                {
+                    m.append(&tr("Custom"));
+                }
+                preset_row.set_selected(named);
+            }
+        }
+        preset_row.set_sensitive(s.eq.enabled);
+        eq_preamp.set_value(f64::from(s.eq.preamp_db));
+        eq_preamp.set_sensitive(s.eq.enabled);
         for (scale, band) in sl.iter().zip(&s.eq.bands) {
             if (scale.value() - f64::from(band.gain_db)).abs() > 0.01 {
                 scale.set_value(f64::from(band.gain_db));
             }
             scale.set_sensitive(s.eq.enabled);
         }
-        presets.set_sensitive(s.eq.enabled);
+        reset.set_sensitive(s.eq.enabled && !eq::is_flat(&s.eq));
         rg_mode.set_selected(match s.replaygain_mode {
             ReplayGainMode::Off => 0,
             ReplayGainMode::Track => 1,
@@ -835,53 +931,47 @@ fn playback_page() -> adw::PreferencesPage {
         xf.set_enable_expansion(s.crossfade.enabled);
         xf_secs.set_value(f64::from(s.crossfade.duration_ms) / 1_000.0);
         xf_album.set_active(s.crossfade.album_continuity);
+        resume.set_active(s.resume_on_launch);
     });
 
+    // The Output Device choices follow the core's device list.
+    let choices: Rc<RefCell<Vec<Option<String>>>> = Rc::new(RefCell::new(Vec::new()));
     let fill = {
-        let list = out_list.downgrade();
+        let device = device.downgrade();
+        let choices = choices.clone();
+        let guard = guard.clone();
         move || {
-            let Some(list) = list.upgrade() else { return };
-            while let Some(c) = list.first_child() {
-                list.remove(&c);
-            }
-            let a = app();
-            let devices = a.devices.borrow().clone();
-            let mut first: Option<gtk::CheckButton> = None;
-            let mut entries: Vec<(Option<String>, String, String)> =
-                vec![(None, tr("System Default"), tr("Follows the system’s choice"))];
-            entries.extend(devices.devices.iter().map(|d| {
-                let rates = d
-                    .sample_rates
+            let Some(device) = device.upgrade() else { return };
+            let devices = app().devices.borrow().clone();
+            let names: Vec<String> = devices.devices.iter().map(|d| d.name.clone()).collect();
+            let (list, at) = playback::output_choices(&names, devices.selected.as_deref());
+            guard.set(true);
+            if *choices.borrow() != list {
+                let labels: Vec<String> = list
                     .iter()
-                    .map(|r| crate::logic::format::sample_rate(*r))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                (Some(d.name.clone()), d.name.clone(), rates)
-            }));
-            for (name, title, subtitle) in entries {
-                let check = gtk::CheckButton::new();
-                if let Some(f) = &first {
-                    check.set_group(Some(f));
-                } else {
-                    first = Some(check.clone());
-                }
-                check.set_active(name == devices.selected);
-                let row = adw::ActionRow::builder()
-                    .title(glib::markup_escape_text(&title).as_str())
-                    .subtitle(glib::markup_escape_text(&subtitle).as_str())
-                    .activatable_widget(&check)
-                    .build();
-                row.add_prefix(&check);
-                check.connect_toggled(move |c| {
-                    if c.is_active() && app().devices.borrow().selected != name {
-                        app().send(Command::SetOutputDevice { name: name.clone() });
-                    }
-                });
-                list.append(&row);
+                    .map(|c| c.clone().unwrap_or_else(|| tr("System Default")))
+                    .collect();
+                let labels: Vec<&str> = labels.iter().map(String::as_str).collect();
+                device.set_model(Some(&gtk::StringList::new(&labels)));
+                *choices.borrow_mut() = list;
             }
+            device.set_selected(at);
+            guard.set(false);
         }
     };
     fill();
+    let g = guard.clone();
+    device.connect_selected_notify(move |row| {
+        if g.get() {
+            return;
+        }
+        let Some(name) = choices.borrow().get(row.selected() as usize).cloned() else {
+            return;
+        };
+        if app().devices.borrow().selected != name {
+            app().send(Command::SetOutputDevice { name });
+        }
+    });
     app().listen_for(&p, move |c| {
         if matches!(c, Change::Devices) {
             fill();
@@ -893,6 +983,9 @@ fn playback_page() -> adw::PreferencesPage {
     p
 }
 
+/// Library (docs/ui.md, "Settings"): Music Folders (each with Show in Files
+/// and Remove Folder…, then Add Folder…), Watch Folders, and Rescan Library
+/// with the scan's progress and Last Scan.
 fn library_page() -> adw::PreferencesPage {
     let p = page("library", &tr("Library"), "folder-music-symbolic");
     let guard = Rc::new(Cell::new(false));
@@ -904,17 +997,17 @@ fn library_page() -> adw::PreferencesPage {
     list.add_css_class("boxed-list");
     list.set_selection_mode(gtk::SelectionMode::None);
     folders.add(&list);
-    let add = gtk::Button::builder()
-        .child(&glyph::Glyph::new("plus", 18))
-        .build();
-    add.add_css_class("flat");
-    add.set_tooltip_text(Some(&tr("Add Folder")));
-    add.update_property(&[gtk::accessible::Property::Label(&tr("Add Folder"))]);
-    add.connect_clicked(|_| window::choose_folder());
-    folders.set_header_suffix(Some(&add));
     p.add(&folders);
 
-    let scan = group(&tr("Scanning"), None);
+    let watch_group = adw::PreferencesGroup::new();
+    let watch = adw::SwitchRow::builder()
+        .title(tr("Watch Folders"))
+        .subtitle(tr("Update the library when files change."))
+        .build();
+    watch_group.add(&watch);
+    p.add(&watch_group);
+
+    let scan = adw::PreferencesGroup::new();
     let rescan_row = adw::ActionRow::builder()
         .title(tr("Rescan Library"))
         .subtitle(tr("Look for new, changed and removed files."))
@@ -925,30 +1018,23 @@ fn library_page() -> adw::PreferencesPage {
         app().send(Command::Rescan);
     });
     rescan_row.add_suffix(&rescan);
+    rescan_row.set_activatable_widget(Some(&rescan));
     let progress = gtk::ProgressBar::new();
     progress.add_css_class("scan-progress");
-    progress.set_visible(false);
+    progress.set_show_text(true);
     let progress_row = adw::PreferencesRow::builder()
         .activatable(false)
         .child(&progress)
         .build();
-    progress_row.set_visible(false);
-    let watch = adw::SwitchRow::builder()
-        .title(tr("Watch Folders"))
-        .subtitle(tr("Update the library when files change."))
+    let last = adw::ActionRow::builder()
+        .title(tr("Last Scan"))
+        .subtitle_selectable(true)
         .build();
+    last.add_css_class("property");
     scan.add(&rescan_row);
     scan.add(&progress_row);
-    scan.add(&watch);
+    scan.add(&last);
     p.add(&scan);
-
-    let startup = group(&tr("Startup"), None);
-    let resume = adw::SwitchRow::builder()
-        .title(tr("Resume Playback"))
-        .subtitle(tr("Start playing where you left off when Jellyfesh opens."))
-        .build();
-    startup.add(&resume);
-    p.add(&startup);
 
     let g = guard.clone();
     watch.connect_active_notify(move |r| {
@@ -958,19 +1044,10 @@ fn library_page() -> adw::PreferencesPage {
         let on = r.is_active();
         app().update_settings(|s| s.watch_folders = on);
     });
-    let g = guard.clone();
-    resume.connect_active_notify(move |r| {
-        if g.get() {
-            return;
-        }
-        let on = r.is_active();
-        app().update_settings(|s| s.resume_on_launch = on);
-    });
-    let (w, r) = (watch.downgrade(), resume.downgrade());
+    let w = watch.downgrade();
     follow_settings(&p, guard, move |s| {
-        if let (Some(w), Some(r)) = (w.upgrade(), r.upgrade()) {
+        if let Some(w) = w.upgrade() {
             w.set_active(s.watch_folders);
-            r.set_active(s.resume_on_launch);
         }
     });
 
@@ -990,71 +1067,121 @@ fn library_page() -> adw::PreferencesPage {
                 };
                 if roots.is_empty() {
                     let row = adw::ActionRow::builder()
-                        .title(tr("No folders yet"))
+                        .title(tr("No Folders Yet"))
                         .subtitle(tr("Add a folder with music."))
                         .build();
                     list.append(&row);
                 }
                 for root in roots {
-                    let name = root
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| root.display().to_string());
-                    let row = adw::ActionRow::builder()
-                        .title(glib::markup_escape_text(&name).as_str())
-                        .subtitle(glib::markup_escape_text(&root.display().to_string()).as_str())
-                        .build();
-                    row.add_prefix(&glyph::Glyph::new("folder", 20));
-                    let remove = glyph::button("trash", 18, &tr("Remove Folder"));
-                    remove.add_css_class("flat");
-                    remove.set_valign(gtk::Align::Center);
-                    remove.connect_clicked(move |_| {
-                        app().send(Command::RemoveRoot { path: root.clone() });
-                    });
-                    row.add_suffix(&remove);
-                    list.append(&row);
+                    list.append(&folder_row(root));
                 }
+                let add = adw::ActionRow::builder()
+                    .title(tr("Add Folder…"))
+                    .activatable(true)
+                    .build();
+                add.add_prefix(&glyph::Glyph::new("plus", 20));
+                add.connect_activated(|_| window::choose_folder());
+                list.append(&add);
             });
         }
     };
     refresh_roots();
-    let (pr, pb, rb) = (progress_row.downgrade(), progress.downgrade(), rescan.downgrade());
-    app().listen_for(&p, move |c| match c {
-        Change::Library => refresh_roots(),
-        Change::Scan(status) => {
-            let (Some(pr), Some(pb), Some(rb)) = (pr.upgrade(), pb.upgrade(), rb.upgrade()) else {
+
+    // The scan: progress while it runs, then how it ended.
+    let show_scan = {
+        let (pr, pb, rb, last) = (
+            progress_row.downgrade(),
+            progress.downgrade(),
+            rescan.downgrade(),
+            last.downgrade(),
+        );
+        move |progress: Option<&jf_core::ScanProgress>| {
+            let (Some(pr), Some(pb), Some(rb), Some(last)) =
+                (pr.upgrade(), pb.upgrade(), rb.upgrade(), last.upgrade())
+            else {
                 return;
             };
-            match status {
-                ScanStatus::Progress(p) => {
-                    pr.set_visible(true);
-                    pb.set_visible(true);
-                    pb.pulse();
-                    pb.set_show_text(true);
-                    pb.set_text(Some(&trn("{n} file checked", "{n} files checked", p.files_seen)));
-                    rb.set_sensitive(false);
+            let a = app();
+            let scanning = a.scanning.get();
+            pr.set_visible(scanning);
+            rb.set_sensitive(!scanning);
+            if scanning {
+                pb.pulse();
+                let checked = progress
+                    .map(|p| trn("{n} file checked", "{n} files checked", p.files_seen))
+                    .unwrap_or_default();
+                pb.set_text(Some(&checked));
+            }
+            let ended = a.last_scan.borrow().clone();
+            last.set_visible(ended.is_some());
+            last.remove_css_class("error");
+            match ended {
+                Some(ScanStatus::Finished(report)) => last.set_subtitle(&trf(
+                    "{added} added, {updated} updated, {removed} removed",
+                    &[
+                        ("added", &format::count(report.added)),
+                        ("updated", &format::count(report.updated)),
+                        ("removed", &format::count(report.removed)),
+                    ],
+                )),
+                Some(ScanStatus::Failed(e)) => {
+                    last.set_subtitle(&glib::markup_escape_text(&e));
+                    last.add_css_class("error");
                 }
-                ScanStatus::Finished(report) => {
-                    pr.set_visible(true);
-                    pb.set_fraction(1.0);
-                    pb.set_text(Some(&trf(
-                        "Done: {added} added, {updated} updated, {removed} removed",
-                        &[
-                            ("added", &report.added.to_string()),
-                            ("updated", &report.updated.to_string()),
-                            ("removed", &report.removed.to_string()),
-                        ],
-                    )));
-                    rb.set_sensitive(true);
-                }
-                ScanStatus::Failed(e) => {
-                    pr.set_visible(true);
-                    pb.set_text(Some(e));
-                    rb.set_sensitive(true);
-                }
+                _ => {}
             }
         }
+    };
+    show_scan(None);
+    app().listen_for(&p, move |c| match c {
+        Change::Library => refresh_roots(),
+        Change::Scan(ScanStatus::Progress(progress)) => show_scan(Some(progress)),
+        Change::Scan(_) => show_scan(None),
         _ => {}
     });
     p
+}
+
+/// A music folder: Show in Files and Remove Folder…, which asks first.
+fn folder_row(root: std::path::PathBuf) -> adw::ActionRow {
+    let name = root
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| root.display().to_string());
+    let row = adw::ActionRow::builder()
+        .title(glib::markup_escape_text(&name).as_str())
+        .subtitle(glib::markup_escape_text(&root.display().to_string()).as_str())
+        .build();
+    row.add_prefix(&glyph::Glyph::new("folder", 20));
+    let show = gtk::Button::from_icon_name("folder-open-symbolic");
+    show.add_css_class("flat");
+    show.set_valign(gtk::Align::Center);
+    show.set_tooltip_text(Some(&tr("Show in Files")));
+    show.update_property(&[gtk::accessible::Property::Label(&tr("Show in Files"))]);
+    let path = root.clone();
+    show.connect_clicked(move |_| actions::show_in_files(&path));
+    row.add_suffix(&show);
+    let remove = glyph::button("trash", 18, &tr("Remove Folder…"));
+    remove.set_valign(gtk::Align::Center);
+    remove.connect_clicked(move |b| {
+        let (b, root, name) = (b.clone(), root.clone(), name.clone());
+        spawn(async move {
+            let dialog = adw::AlertDialog::new(
+                Some(&trf("Remove “{name}” from the library?", &[("name", &name)])),
+                Some(&tr(
+                    "Its songs leave the library and its playlists. The files stay where they are.",
+                )),
+            );
+            dialog.add_response("cancel", &tr("Cancel"));
+            dialog.add_response("remove", &tr("Remove Folder"));
+            dialog.set_response_appearance("remove", adw::ResponseAppearance::Destructive);
+            dialog.set_default_response(Some("cancel"));
+            dialog.set_close_response("cancel");
+            if dialog.choose_future(Some(&b)).await == "remove" {
+                app().send(Command::RemoveRoot { path: root });
+            }
+        });
+    });
+    row.add_suffix(&remove);
+    row
 }

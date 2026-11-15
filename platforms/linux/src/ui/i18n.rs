@@ -46,10 +46,11 @@ pub fn trc(context: &str, msgid: &str) -> String {
     gettextrs::pgettext(context, msgid)
 }
 
-/// A translated message for a count; `{n}` in it becomes the count.
+/// A translated message for a count; `{n}` in it becomes the count, with
+/// its thousands grouped ("1,204 songs").
 pub fn trn(singular: &str, plural: &str, n: u64) -> String {
     let n32 = u32::try_from(n).unwrap_or(u32::MAX);
-    gettextrs::ngettext(singular, plural, n32).replace("{n}", &n.to_string())
+    gettextrs::ngettext(singular, plural, n32).replace("{n}", &crate::logic::format::count(n))
 }
 
 /// `tr` with `{name}` placeholders filled in.

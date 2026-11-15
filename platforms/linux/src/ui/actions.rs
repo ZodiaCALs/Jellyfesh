@@ -1,13 +1,16 @@
 //! What rows, cards and menus do: play, queue, add to a playlist,
-//! favourite, and go to an album or artist. Each is a command to the core;
-//! nothing here changes state on its own.
+//! favourite, go to an album or artist, and show a file in Files. Each is a
+//! command to the core (or the file manager); nothing here changes state on
+//! its own.
+
+use std::path::Path;
 
 use adw::prelude::*;
 use gtk::{gio, glib};
 use jf_core::{Collection, Command, TrackQuery, TrackRef, TrackSort};
 use serde::{Deserialize, Serialize};
 
-use crate::ui::i18n::tr;
+use crate::ui::i18n::{tr, trf};
 use crate::ui::models::{ItemData, Kind};
 use crate::ui::state::{app, spawn};
 use crate::ui::window;
@@ -86,12 +89,27 @@ fn entry(menu: &gio::Menu, label: &str, action: &str, target: glib::Variant) {
     menu.append_item(&item);
 }
 
-/// The menu for an item.
+/// The menu for an item (right click, long press, or a row's More): for a
+/// song, Play Next, Play Last, Add to Playlist…, the favourite, Go to Album,
+/// Go to Artist and Show in Files (docs/ui.md, "Song menu"); albums, artists
+/// and playlists also offer Play and Shuffle.
 pub fn menu_for(data: &ItemData) -> gio::Menu {
+    build_menu(data, false)
+}
+
+/// The More menu of an album, artist or playlist page, whose Play and
+/// Shuffle are buttons beside it: Play Next, Play Last, Add to Playlist…
+/// (and Rename… and Delete Playlist… on a playlist).
+pub fn more_menu_for(data: &ItemData) -> gio::Menu {
+    build_menu(data, true)
+}
+
+/// The menu for `data`; `own_page` for the More menu on the item's own page.
+fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let playing = gio::Menu::new();
     if let Some(c) = collection_of(data) {
-        if matches!(data.kind, Kind::Album | Kind::Artist | Kind::Playlist) {
+        if !own_page && matches!(data.kind, Kind::Album | Kind::Artist | Kind::Playlist) {
             let args = PlayArgs {
                 collection: c.clone(),
                 start: 0,
@@ -135,20 +153,46 @@ pub fn menu_for(data: &ItemData) -> gio::Menu {
     }
     if let Some(album) = data.album_id
         && data.kind != Kind::Album
+        && !own_page
     {
         entry(&more, &tr("Go to Album"), "win.show-album", album.to_variant());
     }
-    if let Some(artist) = data.artist_id
-        && data.kind != Kind::Artist
-    {
-        entry(&more, &tr("Go to Artist"), "win.show-artist", artist.to_variant());
+    if data.kind != Kind::Artist && !own_page {
+        if let Some(artist) = data.artist_id {
+            entry(&more, &tr("Go to Artist"), "win.show-artist", artist.to_variant());
+        } else if let Some(name) = data.artist.as_deref().filter(|n| !n.trim().is_empty()) {
+            entry(
+                &more,
+                &tr("Go to Artist"),
+                "win.show-artist-named",
+                name.to_variant(),
+            );
+        }
     }
     if data.kind == Kind::Playlist {
         entry(&more, &tr("Rename…"), "win.rename-playlist", data.id.to_variant());
-        entry(&more, &tr("Delete"), "win.delete-playlist", data.id.to_variant());
+        entry(
+            &more,
+            &tr("Delete Playlist…"),
+            "win.delete-playlist",
+            data.id.to_variant(),
+        );
     }
     if more.n_items() > 0 {
         menu.append_section(None, &more);
+    }
+    // Songs that are files on this computer.
+    if let Some(track @ (TrackRef::Library(_) | TrackRef::File(_))) = &data.track
+        && matches!(data.kind, Kind::Track | Kind::QueueEntry | Kind::PlaylistEntry)
+    {
+        let files = gio::Menu::new();
+        entry(
+            &files,
+            &tr("Show in Files"),
+            "win.show-in-files",
+            json_target(track),
+        );
+        menu.append_section(None, &files);
     }
     menu
 }
@@ -231,11 +275,49 @@ pub fn install(window: &adw::ApplicationWindow) {
             });
         }
     }));
+    window.add_action(&string_action("show-in-files", |json| {
+        if let Ok(track) = serde_json::from_str::<TrackRef>(json) {
+            show_track_in_files(track);
+        }
+    }));
     window.add_action(&id_action("show-album", |id| window::show_album(id, None)));
     window.add_action(&id_action("show-artist", |id| window::show_artist(id, None)));
+    window.add_action(&string_action("show-artist-named", window::show_artist_named));
     window.add_action(&id_action("show-playlist", |id| window::show_playlist(id, None)));
     window.add_action(&id_action("rename-playlist", rename_playlist));
     window.add_action(&id_action("delete-playlist", delete_playlist));
+}
+
+/// Opens Files (the file manager) on the folder that holds `path`, with it
+/// selected.
+pub fn show_in_files(path: &Path) {
+    let launcher = gtk::FileLauncher::new(Some(&gio::File::for_path(path)));
+    let parent = app().window.borrow().upgrade();
+    launcher.open_containing_folder(parent.as_ref(), gio::Cancellable::NONE, |result| {
+        if let Err(e) = result
+            && !e.matches(gtk::DialogError::Dismissed)
+        {
+            app().toast(e.message());
+        }
+    });
+}
+
+/// Show in Files for a library track (its path comes from the core) or a
+/// file.
+fn show_track_in_files(track: TrackRef) {
+    spawn(async move {
+        let path = match track {
+            TrackRef::File(path) => Some(path),
+            TrackRef::Library(id) => app()
+                .query(move |core| core.track(id).ok().flatten().map(|t| t.path))
+                .await
+                .flatten(),
+            _ => None,
+        };
+        if let Some(path) = path {
+            show_in_files(&path);
+        }
+    });
 }
 
 /// The track references of a collection (resolved on the query thread).
@@ -374,12 +456,19 @@ fn rename_playlist(id: i64) {
 fn delete_playlist(id: i64) {
     spawn(async move {
         let a = app();
+        let name = a
+            .query(move |core| core.playlist(id).map_err(|e| e.to_string()))
+            .await
+            .and_then(Result::ok)
+            .flatten()
+            .map(|p| p.name)
+            .unwrap_or_default();
         let dialog = adw::AlertDialog::new(
-            Some(&tr("Delete Playlist?")),
+            Some(&trf("Delete “{name}”?", &[("name", &name)])),
             Some(&tr("The songs stay in your library.")),
         );
         dialog.add_response("cancel", &tr("Cancel"));
-        dialog.add_response("delete", &tr("Delete"));
+        dialog.add_response("delete", &tr("Delete Playlist"));
         dialog.set_response_appearance("delete", adw::ResponseAppearance::Destructive);
         dialog.set_close_response("cancel");
         let parent = a.window.borrow().upgrade();

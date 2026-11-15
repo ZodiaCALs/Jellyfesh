@@ -1,14 +1,21 @@
-//! The Info panel: what is playing and how (format, lyrics source, file).
+//! The Info panel, "About This Song" (docs/ui.md, "Now Playing"): Title,
+//! Artist, Album, Year, Length, Format, Lyrics and File.
+
+use std::cell::Cell;
+use std::rc::Rc;
 
 use adw::prelude::*;
-use jf_core::{LyricsSnapshot, LyricsSource, NowPlaying};
+use jf_core::{LyricsSnapshot, LyricsSource, NowPlaying, TrackRef};
 
 use crate::logic::format;
 use crate::ui::i18n::{tr, trn};
+use crate::ui::state::{app, spawn};
 
 pub struct Info {
     pub root: gtk::ScrolledWindow,
     rows: Vec<(String, adw::ActionRow)>,
+    /// The queue entry whose year the Year row shows (or is looking up).
+    year_of: Rc<Cell<Option<u64>>>,
 }
 
 impl std::fmt::Debug for Info {
@@ -17,7 +24,9 @@ impl std::fmt::Debug for Info {
     }
 }
 
-const KEYS: [&str; 7] = ["title", "artist", "album", "duration", "format", "lyrics", "file"];
+const KEYS: [&str; 8] = [
+    "title", "artist", "album", "year", "duration", "format", "lyrics", "file",
+];
 
 impl Info {
     pub fn new() -> Info {
@@ -31,6 +40,7 @@ impl Info {
                 "title" => tr("Title"),
                 "artist" => tr("Artist"),
                 "album" => tr("Album"),
+                "year" => tr("Year"),
                 "duration" => tr("Length"),
                 "format" => tr("Format"),
                 "lyrics" => tr("Lyrics"),
@@ -59,7 +69,11 @@ impl Info {
             .vexpand(true)
             .build();
         root.add_css_class("info-panel");
-        Info { root, rows }
+        Info {
+            root,
+            rows,
+            year_of: Rc::new(Cell::new(None)),
+        }
     }
 
     fn set(&self, key: &str, value: &str) {
@@ -74,9 +88,11 @@ impl Info {
             for key in KEYS {
                 self.set(key, "");
             }
+            self.year_of.set(None);
             return;
         };
         self.set("title", &np.title);
+        self.show_year(np);
         self.set("artist", np.artist.as_deref().unwrap_or_default());
         self.set("album", np.album.as_deref().unwrap_or_default());
         self.set("duration", &np.duration_ms.map(format::clock).unwrap_or_default());
@@ -114,6 +130,42 @@ impl Info {
                 .map(|p| p.display().to_string())
                 .unwrap_or_default(),
         );
+    }
+}
+
+impl Info {
+    /// The year of a library song, from the core (the playing entry does not
+    /// carry it); looked up once per entry.
+    fn show_year(&self, np: &NowPlaying) {
+        if self.year_of.get() == Some(np.uid) {
+            return;
+        }
+        self.year_of.set(Some(np.uid));
+        self.set("year", "");
+        let TrackRef::Library(id) = np.track else {
+            return;
+        };
+        let Some(row) = self
+            .rows
+            .iter()
+            .find(|(k, _)| k == "year")
+            .map(|(_, r)| r.downgrade())
+        else {
+            return;
+        };
+        let (year_of, uid) = (self.year_of.clone(), np.uid);
+        spawn(async move {
+            let year = app()
+                .query(move |core| core.track(id).ok().flatten().and_then(|t| t.year))
+                .await
+                .flatten();
+            if let (Some(row), Some(year)) = (row.upgrade(), year)
+                && year_of.get() == Some(uid)
+            {
+                row.set_subtitle(&year.to_string());
+                row.set_visible(true);
+            }
+        });
     }
 }
 

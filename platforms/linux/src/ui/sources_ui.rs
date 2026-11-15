@@ -1,7 +1,8 @@
-//! Preferences → Sources: installed plugins with their badges, enabling,
-//! sign-in flows (QR code, browser, fields), settings forms from each
-//! plugin's JSON Schema, installing from a `.jfpkg` file, and the
-//! community-plugin disclosure (ADR-0012).
+//! Settings › Sources (docs/ui.md, "Settings"): Add a Source (the core's
+//! presets, also on the Sources page), the installed plugins with their
+//! badges, enabling, sign-in flows (QR code, browser, fields), settings forms
+//! from each plugin's JSON Schema, installing from a `.jfpkg` file and
+//! uninstalling, and Community Plugins with the disclosure (ADR-0012).
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -23,18 +24,6 @@ pub fn page() -> adw::PreferencesPage {
         .title(tr("Sources"))
         .icon_name("network-server-symbolic")
         .build();
-    let community = adw::PreferencesGroup::builder()
-        .title(tr("Community Plugins"))
-        .description(tr(
-            "Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.",
-        ))
-        .build();
-    let allow = adw::SwitchRow::builder()
-        .title(tr("Allow Community Plugins"))
-        .build();
-    community.add(&allow);
-    p.add(&community);
-
     // The services Jellyfesh offers, each while its official plugin is installed.
     let add = adw::PreferencesGroup::builder()
         .title(tr("Add a Source"))
@@ -50,6 +39,18 @@ pub fn page() -> adw::PreferencesPage {
     installed.set_header_suffix(Some(&install));
     p.add(&installed);
     let rows: Rc<RefCell<Vec<gtk::Widget>>> = Rc::new(RefCell::new(Vec::new()));
+
+    let community = adw::PreferencesGroup::builder()
+        .title(tr("Community Plugins"))
+        .description(tr(
+            "Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.",
+        ))
+        .build();
+    let allow = adw::SwitchRow::builder()
+        .title(tr("Allow Community Plugins"))
+        .build();
+    community.add(&allow);
+    p.add(&community);
 
     let guard = Rc::new(Cell::new(false));
     let g = guard.clone();
@@ -96,18 +97,13 @@ pub fn page() -> adw::PreferencesPage {
             }
             add.set_visible(!sources.presets.is_empty());
             for preset in &sources.presets {
-                let icon = sources
-                    .plugins
-                    .iter()
-                    .find(|p| p.id == preset.plugin)
-                    .and_then(|p| p.icon.clone());
-                let row = preset_row(preset, icon.as_deref());
+                let row = preset_row(preset, &sources.plugins);
                 add.add(&row);
                 preset_rows.borrow_mut().push(row.upcast());
             }
             if sources.plugins.is_empty() {
                 let row = adw::ActionRow::builder()
-                    .title(tr("No sources installed"))
+                    .title(tr("No Sources Installed"))
                     .subtitle(tr("Install a source plugin from a .jfpkg file."))
                     .build();
                 installed.add(&row);
@@ -129,11 +125,13 @@ pub fn page() -> adw::PreferencesPage {
     p
 }
 
+/// An installed source: its name, badge and sign-in; open, Enabled, the
+/// sign-in buttons (or Sign Out), its settings, its version and author, and
+/// Uninstall….
 fn plugin_row(plugin: &PluginSummary, allow_community: bool) -> adw::ExpanderRow {
     let subtitle = crate::logic::format::dot_join([
         Some(badge_text(plugin).as_str()),
         Some(account_text(plugin).as_str()),
-        Some(plugin.version.as_str()),
     ]);
     let row = adw::ExpanderRow::builder()
         .title(glib::markup_escape_text(&plugin.name).as_str())
@@ -238,17 +236,45 @@ fn plugin_row(plugin: &PluginSummary, allow_community: bool) -> adw::ExpanderRow
         }
     }
 
-    let remove = adw::ActionRow::builder().title(tr("Uninstall")).build();
-    let b = gtk::Button::with_label(&tr("Uninstall"));
+    // "Version 1.2.0 · Author", then Uninstall…, which asks first.
+    let version = trf("Version {version}", &[("version", &plugin.version)]);
+    let about = crate::logic::format::dot_join([Some(version.as_str()), Some(plugin.author.as_str())]);
+    let about_row = adw::ActionRow::builder()
+        .title(glib::markup_escape_text(&about).as_str())
+        .build();
+    about_row.add_css_class("dim-label");
+    row.add_row(&about_row);
+    let remove = adw::ActionRow::builder().title(tr("Uninstall…")).build();
+    let b = gtk::Button::with_label(&tr("Uninstall…"));
     b.add_css_class("destructive-action");
     b.set_valign(gtk::Align::Center);
-    let id = plugin.id.clone();
-    b.connect_clicked(move |_| {
-        app().send(Command::UninstallPlugin { id: id.clone() });
+    let (id, name) = (plugin.id.clone(), plugin.name.clone());
+    b.connect_clicked(move |b| {
+        let (b, id, name) = (b.clone(), id.clone(), name.clone());
+        spawn(async move {
+            if confirm_uninstall(&b, &name).await {
+                app().send(Command::UninstallPlugin { id });
+            }
+        });
     });
     remove.add_suffix(&b);
+    remove.set_activatable_widget(Some(&b));
     row.add_row(&remove);
     row
+}
+
+/// "Uninstall Name?"; true when the person chose Uninstall.
+async fn confirm_uninstall(from: &gtk::Button, name: &str) -> bool {
+    let dialog = adw::AlertDialog::new(
+        Some(&trf("Uninstall {name}?", &[("name", name)])),
+        Some(&tr("Its settings and sign-in are removed.")),
+    );
+    dialog.add_response("cancel", &tr("Cancel"));
+    dialog.add_response("uninstall", &tr("Uninstall"));
+    dialog.set_response_appearance("uninstall", adw::ResponseAppearance::Destructive);
+    dialog.set_default_response(Some("cancel"));
+    dialog.set_close_response("cancel");
+    dialog.choose_future(Some(from)).await == "uninstall"
 }
 
 /// The label of the button that signs in with `method`.
@@ -275,8 +301,14 @@ fn preset_description(preset: &SourcePreset) -> String {
     }
 }
 
-/// A service in Add a Source; activating it asks for the address and how to sign in.
-fn preset_row(preset: &SourcePreset, icon: Option<&std::path::Path>) -> adw::ActionRow {
+/// A service in Add a Source (Settings › Sources and the Sources page);
+/// activating it asks for the server's address and how to sign in. Its
+/// picture is the icon of the plugin that connects to it, from `plugins`.
+pub fn preset_row(preset: &SourcePreset, plugins: &[PluginSummary]) -> adw::ActionRow {
+    let icon = plugins
+        .iter()
+        .find(|p| p.id == preset.plugin)
+        .and_then(|p| p.icon.as_deref());
     let row = adw::ActionRow::builder()
         .title(glib::markup_escape_text(&preset.name).as_str())
         .subtitle(glib::markup_escape_text(&preset_description(preset)).as_str())
@@ -311,7 +343,7 @@ fn connect_dialog(from: &adw::ActionRow, preset: &SourcePreset) {
     view.set_content(Some(&body));
     dialog.set_child(Some(&view));
 
-    let address = adw::EntryRow::builder().title(tr("Server address")).build();
+    let address = adw::EntryRow::builder().title(tr("Server Address")).build();
     if preset.needs_address {
         let group = adw::PreferencesGroup::new();
         if let Some(example) = &preset.address_example {
@@ -466,7 +498,7 @@ fn field_row(plugin: &PluginSummary, field: &schema::Field) -> gtk::Widget {
 
 fn install_from_file() {
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&tr("Jellyfesh plugins")));
+    filter.set_name(Some(&tr("Jellyfesh Plugins")));
     filter.add_suffix("jfpkg");
     let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&filter);
@@ -511,9 +543,9 @@ async fn disclosure(plugin: Option<&str>) -> bool {
     dialog.choose_future(parent.as_ref()).await == "allow"
 }
 
-/// A sign-in flow: the core drives the steps, the dialog renders each.
-/// The sign-in dialog for `plugin`: sends `start` (`BeginLogin` or `ConnectSource`) and shows
-/// the steps that follow.
+/// A sign-in flow: the core drives the steps, the dialog renders each. Sends
+/// `start` (`BeginLogin` or `ConnectSource`) for `plugin` and shows the steps
+/// that follow.
 fn sign_in(from: &impl IsA<gtk::Widget>, plugin: &str, name: &str, start: Command) {
     let a = app();
     let dialog = adw::Dialog::builder()

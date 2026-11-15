@@ -74,6 +74,20 @@ pub fn codec(name: &str) -> String {
     }
 }
 
+/// A count with its thousands grouped, as every launch language writes
+/// them: `1,204`.
+pub fn count(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::with_capacity(digits.len() + digits.len() / 3);
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// Joins the parts that are present with a middle dot: `Artist · Album`.
 pub fn dot_join<'a>(parts: impl IntoIterator<Item = Option<&'a str>>) -> String {
     parts
@@ -147,6 +161,15 @@ mod tests {
         assert_eq!(codec("flac"), "FLAC");
         assert_eq!(codec("pcm_s16le"), "PCM");
         assert_eq!(codec("vorbis"), "Vorbis");
+    }
+
+    #[test]
+    fn counts_group_thousands() {
+        assert_eq!(count(0), "0");
+        assert_eq!(count(999), "999");
+        assert_eq!(count(1_204), "1,204");
+        assert_eq!(count(96_000), "96,000");
+        assert_eq!(count(1_234_567), "1,234,567");
     }
 
     #[test]

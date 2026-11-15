@@ -1,4 +1,6 @@
-//! Home: what was added and played recently.
+//! Home (docs/ui.md, "Home"): the library's size, then Recently Added
+//! (albums), Recently Played and Most Played (songs); a welcome instead
+//! while the library is empty and no source is signed in.
 
 use std::collections::HashSet;
 
@@ -13,11 +15,63 @@ use crate::ui::pages::{follow_title, frame, heading, keep_alive, large_title, sc
 use crate::ui::rows::{Card, ListRow, RowStyle};
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::thumbs::ArtKey;
-use crate::ui::window;
+use crate::ui::window::{self, Section};
 
 const RECENT_TRACKS: usize = 200;
 const RECENT_ALBUMS: usize = 12;
 const RECENT_PLAYED: usize = 10;
+const MOST_PLAYED: usize = 10;
+
+/// A list of songs under a heading (Recently Played, Most Played); a row
+/// plays the list from that song.
+struct Shelf {
+    heading: gtk::Label,
+    list: gtk::ListBox,
+    refs: std::cell::RefCell<Vec<TrackRef>>,
+}
+
+impl Shelf {
+    fn new(title: &str, body: &gtk::Box) -> std::rc::Rc<Shelf> {
+        let heading = heading(title);
+        let list = gtk::ListBox::new();
+        list.add_css_class("track-box");
+        list.set_selection_mode(gtk::SelectionMode::None);
+        list.update_property(&[gtk::accessible::Property::Label(title)]);
+        body.append(&heading);
+        body.append(&list);
+        let shelf = std::rc::Rc::new(Shelf {
+            heading,
+            list,
+            refs: std::cell::RefCell::new(Vec::new()),
+        });
+        shelf.list.connect_row_activated(glib::clone!(
+            #[weak]
+            shelf,
+            move |_, row| {
+                let refs = shelf.refs.borrow().clone();
+                if let Ok(index) = usize::try_from(row.index()) {
+                    crate::ui::actions::play(Collection::Tracks { tracks: refs }, index, false);
+                }
+            }
+        ));
+        shelf
+    }
+
+    fn fill(&self, rows: &[ItemData]) {
+        while let Some(child) = self.list.first_child() {
+            self.list.remove(&child);
+        }
+        *self.refs.borrow_mut() = rows.iter().filter_map(|d| d.track.clone()).collect();
+        for data in rows {
+            let row = ListRow::new(RowStyle::TRACK);
+            row.bind(&Item::new(Some(data.clone())));
+            let lbr = gtk::ListBoxRow::builder().child(&row).activatable(true).build();
+            self.list.append(&lbr);
+        }
+        self.heading.set_visible(!rows.is_empty());
+        self.list.set_visible(!rows.is_empty());
+    }
+}
 
 struct Home {
     stats: gtk::Label,
@@ -25,9 +79,8 @@ struct Home {
     added_heading: gtk::Label,
     added: gtk::Box,
     added_scroll: gtk::ScrolledWindow,
-    played_heading: gtk::Label,
-    played: gtk::ListBox,
-    played_refs: std::cell::RefCell<Vec<TrackRef>>,
+    played: std::rc::Rc<Shelf>,
+    most: std::rc::Rc<Shelf>,
 }
 
 pub fn page() -> adw::NavigationPage {
@@ -55,13 +108,8 @@ pub fn page() -> adw::NavigationPage {
     body.append(&added_heading);
     body.append(&added_scroll);
 
-    let played_heading = heading(&tr("Recently Played"));
-    let played = gtk::ListBox::new();
-    played.add_css_class("track-box");
-    played.set_selection_mode(gtk::SelectionMode::None);
-    played.update_property(&[gtk::accessible::Property::Label(&tr("Recently Played"))]);
-    body.append(&played_heading);
-    body.append(&played);
+    let played = Shelf::new(&tr("Recently Played"), &body);
+    let most = Shelf::new(&tr("Most Played"), &body);
 
     let clamp = adw::Clamp::builder().child(&body).maximum_size(1100).build();
     let scroll = scroller(&clamp);
@@ -75,29 +123,18 @@ pub fn page() -> adw::NavigationPage {
         added_heading,
         added,
         added_scroll,
-        played_heading,
         played,
-        played_refs: std::cell::RefCell::new(Vec::new()),
+        most,
     });
     refresh(&home);
     let weak = std::rc::Rc::downgrade(&home);
     app().listen_for(&page, move |change| {
         if let Some(home) = weak.upgrade()
-            && matches!(change, Change::Library | Change::NowPlaying)
+            && matches!(change, Change::Library | Change::NowPlaying | Change::Sources)
         {
             refresh(&home);
         }
     });
-    home.played.connect_row_activated(glib::clone!(
-        #[weak]
-        home,
-        move |_, row| {
-            let refs = home.played_refs.borrow().clone();
-            if let Ok(index) = usize::try_from(row.index()) {
-                crate::ui::actions::play(Collection::Tracks { tracks: refs }, index, false);
-            }
-        }
-    ));
     // The page keeps the parts alive.
     keep_alive(&page, home);
     page
@@ -110,7 +147,7 @@ fn welcome() -> gtk::Box {
     t.add_css_class("welcome-title");
     t.set_xalign(0.0);
     let d = gtk::Label::new(Some(&tr(
-        "Add the folders that hold your music. Jellyfesh reads their tags, artwork and lyrics and keeps watching them.",
+        "Add your music folders, or connect a server in Sources.",
     )));
     d.set_wrap(true);
     d.set_xalign(0.0);
@@ -118,11 +155,17 @@ fn welcome() -> gtk::Box {
     let add = gtk::Button::with_label(&tr("Add Music Folder…"));
     add.add_css_class("pill");
     add.add_css_class("suggested-action");
-    add.set_halign(gtk::Align::Start);
     add.connect_clicked(|_| window::choose_folder());
+    let source = gtk::Button::with_label(&tr("Add a Source"));
+    source.add_css_class("pill");
+    source.connect_clicked(|_| window::show_section(Section::Sources));
+    let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    buttons.set_halign(gtk::Align::Start);
+    buttons.append(&add);
+    buttons.append(&source);
     b.append(&t);
     b.append(&d);
-    b.append(&add);
+    b.append(&buttons);
     b.set_visible(false);
     b
 }
@@ -165,6 +208,10 @@ fn refresh(home: &std::rc::Rc<Home>) {
             .query(|core| {
                 let stats = core.stats().ok();
                 let added = core.recently_added(RECENT_TRACKS).unwrap_or_default();
+                let most: Vec<ItemData> = core
+                    .most_played(MOST_PLAYED)
+                    .map(|rows| rows.iter().map(convert::track_row).collect())
+                    .unwrap_or_default();
                 let played: Vec<ItemData> = match core.recently_played(RECENT_PLAYED) {
                     Ok(rows) => rows.iter().map(convert::track_row).collect(),
                     // Until play statistics land: the queue's play history.
@@ -184,10 +231,10 @@ fn refresh(home: &std::rc::Rc<Home>) {
                             .collect()
                     }
                 };
-                (stats, recent_albums(&added), played)
+                (stats, recent_albums(&added), played, most)
             })
             .await;
-        let (Some(home), Some((stats, albums, played))) = (weak.upgrade(), result) else {
+        let (Some(home), Some((stats, albums, played, most))) = (weak.upgrade(), result) else {
             return;
         };
         let tracks = stats.map_or(0, |s| s.tracks);
@@ -200,7 +247,10 @@ fn refresh(home: &std::rc::Rc<Home>) {
             ),
             _ => String::new(),
         });
-        home.welcome.set_visible(tracks == 0);
+        // The welcome, while there is nothing to play: no library and no
+        // source signed in.
+        let signed_in = app().sources.borrow().plugins.iter().any(|p| p.account.is_some());
+        home.welcome.set_visible(tracks == 0 && !signed_in);
 
         while let Some(child) = home.added.first_child() {
             home.added.remove(&child);
@@ -215,17 +265,7 @@ fn refresh(home: &std::rc::Rc<Home>) {
         home.added_heading.set_visible(!albums.is_empty());
         home.added_scroll.set_visible(!albums.is_empty());
 
-        while let Some(child) = home.played.first_child() {
-            home.played.remove(&child);
-        }
-        *home.played_refs.borrow_mut() = played.iter().filter_map(|d| d.track.clone()).collect();
-        for data in &played {
-            let row = ListRow::new(RowStyle::TRACK);
-            row.bind(&Item::new(Some(data.clone())));
-            let lbr = gtk::ListBoxRow::builder().child(&row).activatable(true).build();
-            home.played.append(&lbr);
-        }
-        home.played_heading.set_visible(!played.is_empty());
-        home.played.set_visible(!played.is_empty());
+        home.played.fill(&played);
+        home.most.fill(&most);
     });
 }

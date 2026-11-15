@@ -66,7 +66,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     for (title, subtitle) in [
         (tr("Design"), tr("Designed with the Misty design language.")),
         (
-            tr("Design tokens"),
+            tr("Design Tokens"),
             tr("Derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0."),
         ),
         (

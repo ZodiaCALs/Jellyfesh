@@ -83,8 +83,14 @@ window.jf-window.wide .large-title {
   padding: 0 {{space.s5}};
 }
 
-.title-clamp > .large-title {
+.title-clamp > .large-title,
+.title-clamp > .title-block > .large-title {
   margin: {{space.s2}} {{space.s3}} {{space.s3}};
+}
+
+/* Play and Shuffle under a list's title (Songs). */
+.title-block > .page-actions {
+  margin: 0 {{space.s3}} {{space.s4}};
 }
 
 .home > .large-title,
@@ -119,6 +125,15 @@ window.jf-window.wide .large-title {
 .source-heading {
   margin-top: {{space.s6}};
   color: {{accent.accent-text}};
+}
+
+/* Search: From Your Sources, then each source's name under it. */
+.from-sources {
+  margin-top: {{space.s6}};
+}
+
+.from-sources + .source-heading {
+  margin-top: {{space.s2}};
 }
 
 .error-text {
@@ -796,6 +811,10 @@ button.swatch:checked {
 
 .eq-bands {
   padding: {{space.s4}} {{space.s3}} {{space.s3}};
+}
+
+.eq-reset {
+  margin: 0 {{space.s3}} {{space.s3}};
 }
 
 .eq-label {

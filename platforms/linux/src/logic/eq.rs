@@ -1,94 +1,82 @@
-//! The equalizer page: presets, band labels and edits.
+//! The equalizer group: which preset the bands match, and edits.
 //!
-//! The presets are the core's own (`EqSettings::flat()`, …); the page only
-//! recognises which one the current bands match and edits gains.
+//! The presets and their order are the core's (`jf_core::eq_presets()`);
+//! the group only recognises which one the current bands match, edits
+//! gains and the preamp, and resets to flat.
 
-use jf_core::EqSettings;
+use jf_core::{EqPreset, EqSettings};
 
-/// Band gains the sliders allow, in dB.
+/// Band gains and the preamp the sliders allow, in dB.
 pub const GAIN_RANGE_DB: f32 = 12.0;
 
-/// The core's presets, in the order the page lists them.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Preset {
-    Flat,
-    BassBoost,
-    Vocal,
-    Treble,
-    /// Anything else.
-    Custom,
+/// The presets every app offers, in the core's order.
+pub fn presets() -> Vec<EqPreset> {
+    jf_core::eq_presets()
 }
 
-impl Preset {
-    pub const NAMED: [Preset; 4] = [Preset::Flat, Preset::BassBoost, Preset::Vocal, Preset::Treble];
-
-    /// The preset's settings (`Custom` has none).
-    pub fn settings(self) -> Option<EqSettings> {
-        match self {
-            Preset::Flat => Some(EqSettings::flat()),
-            Preset::BassBoost => Some(EqSettings::bass_boost()),
-            Preset::Vocal => Some(EqSettings::vocal()),
-            Preset::Treble => Some(EqSettings::treble()),
-            Preset::Custom => None,
-        }
-    }
-
-    /// Position in the preset list (Custom last).
-    pub fn index(self) -> u32 {
-        match self {
-            Preset::Flat => 0,
-            Preset::BassBoost => 1,
-            Preset::Vocal => 2,
-            Preset::Treble => 3,
-            Preset::Custom => 4,
-        }
-    }
-
-    pub fn from_index(index: u32) -> Preset {
-        Preset::NAMED
-            .get(index as usize)
-            .copied()
-            .unwrap_or(Preset::Custom)
-    }
-}
-
-/// The preset whose bands `eq` matches (gains within 0.05 dB, same
-/// frequencies), or `Custom`.
-pub fn detect(eq: &EqSettings) -> Preset {
-    for preset in Preset::NAMED {
-        let Some(p) = preset.settings() else { continue };
-        let same = p.bands.len() == eq.bands.len()
+/// The position in `presets` of the one whose bands `eq` matches (same
+/// frequencies and shapes, gains within 0.05 dB), or `None` once a band has
+/// moved off every preset (Custom). The preamp is a control of its own and
+/// does not count.
+pub fn detect(presets: &[EqPreset], eq: &EqSettings) -> Option<usize> {
+    presets.iter().position(|preset| {
+        let p = &preset.settings;
+        p.bands.len() == eq.bands.len()
             && p.bands.iter().zip(&eq.bands).all(|(a, b)| {
                 (a.freq_hz - b.freq_hz).abs() < 0.5
                     && (a.gain_db - b.gain_db).abs() < 0.05
                     && a.kind == b.kind
             })
-            && (p.preamp_db - eq.preamp_db).abs() < 0.05;
-        if same {
-            return preset;
-        }
-    }
-    Preset::Custom
+    })
 }
 
-/// Applies a preset, keeping whether the equalizer is on.
-pub fn apply_preset(current: &EqSettings, preset: Preset) -> EqSettings {
-    match preset.settings() {
-        Some(mut eq) => {
-            eq.enabled = current.enabled;
-            eq
-        }
-        None => current.clone(),
+/// `current` with the bands of `preset`, keeping whether the equalizer is on
+/// and the person's preamp.
+pub fn apply_preset(current: &EqSettings, preset: &EqSettings) -> EqSettings {
+    EqSettings {
+        enabled: current.enabled,
+        preamp_db: current.preamp_db,
+        bands: preset.bands.clone(),
     }
+}
+
+/// Reset to Flat: every band and the preamp at 0 dB, keeping the bands'
+/// frequencies and whether the equalizer is on.
+pub fn reset_to_flat(current: &EqSettings) -> EqSettings {
+    let mut eq = current.clone();
+    eq.preamp_db = 0.0;
+    for band in &mut eq.bands {
+        band.gain_db = 0.0;
+    }
+    eq
+}
+
+/// Whether every band and the preamp are at 0 dB (Reset to Flat would change
+/// nothing).
+pub fn is_flat(eq: &EqSettings) -> bool {
+    eq.preamp_db.abs() < 0.05 && eq.bands.iter().all(|b| b.gain_db.abs() < 0.05)
+}
+
+/// A gain as the sliders keep it: within the range, to 0.1 dB.
+fn slider_gain(gain_db: f32) -> f32 {
+    (gain_db.clamp(-GAIN_RANGE_DB, GAIN_RANGE_DB) * 10.0).round() / 10.0
 }
 
 /// Sets band `index` to `gain_db` (clamped to the slider range).
 pub fn set_gain(current: &EqSettings, index: usize, gain_db: f32) -> EqSettings {
     let mut eq = current.clone();
     if let Some(band) = eq.bands.get_mut(index) {
-        band.gain_db = (gain_db.clamp(-GAIN_RANGE_DB, GAIN_RANGE_DB) * 10.0).round() / 10.0;
+        band.gain_db = slider_gain(gain_db);
     }
     eq
+}
+
+/// Sets the preamp to `gain_db` (clamped to the slider range).
+pub fn set_preamp(current: &EqSettings, gain_db: f32) -> EqSettings {
+    EqSettings {
+        preamp_db: slider_gain(gain_db),
+        ..current.clone()
+    }
 }
 
 /// A short frequency label: `31`, `250`, `1k`, `16k`.
@@ -126,28 +114,60 @@ pub fn gain_label(db: f32) -> String {
 mod tests {
     use super::*;
 
-    #[test]
-    fn detects_presets() {
-        assert_eq!(detect(&EqSettings::flat()), Preset::Flat);
-        assert_eq!(detect(&EqSettings::bass_boost()), Preset::BassBoost);
-        assert_eq!(detect(&EqSettings::vocal()), Preset::Vocal);
-        assert_eq!(detect(&EqSettings::treble()), Preset::Treble);
-        let custom = set_gain(&EqSettings::flat(), 3, 2.0);
-        assert_eq!(detect(&custom), Preset::Custom);
+    fn position(id: &str) -> Option<usize> {
+        presets().iter().position(|p| p.id == id)
     }
 
     #[test]
-    fn presets_keep_the_switch() {
-        let mut off = EqSettings::flat();
+    fn the_presets_are_the_cores() {
+        let ids: Vec<String> = presets().into_iter().map(|p| p.id).collect();
+        assert_eq!(ids, ["flat", "bass_boost", "vocal", "treble"]);
+    }
+
+    #[test]
+    fn detects_presets() {
+        let all = presets();
+        assert_eq!(detect(&all, &EqSettings::flat()), position("flat"));
+        assert_eq!(detect(&all, &EqSettings::bass_boost()), position("bass_boost"));
+        assert_eq!(detect(&all, &EqSettings::vocal()), position("vocal"));
+        assert_eq!(detect(&all, &EqSettings::treble()), position("treble"));
+        // Custom once a band moves.
+        let custom = set_gain(&EqSettings::flat(), 3, 2.0);
+        assert_eq!(detect(&all, &custom), None);
+        assert_eq!(detect(&[], &EqSettings::flat()), None);
+    }
+
+    #[test]
+    fn the_preamp_does_not_make_it_custom() {
+        let all = presets();
+        let louder = set_preamp(&EqSettings::bass_boost(), 3.0);
+        assert_eq!(detect(&all, &louder), position("bass_boost"));
+    }
+
+    #[test]
+    fn presets_keep_the_switch_and_the_preamp() {
+        let all = presets();
+        let mut off = set_preamp(&EqSettings::flat(), -4.0);
         off.enabled = false;
-        let bass = apply_preset(&off, Preset::BassBoost);
-        assert!(!bass.enabled);
-        assert_eq!(detect(&bass), Preset::BassBoost);
-        assert_eq!(apply_preset(&off, Preset::Custom), off);
-        for p in Preset::NAMED {
-            assert_eq!(Preset::from_index(p.index()), p);
-        }
-        assert_eq!(Preset::from_index(99), Preset::Custom);
+        let bass = all.iter().find(|p| p.id == "bass_boost").expect("bass boost");
+        let applied = apply_preset(&off, &bass.settings);
+        assert!(!applied.enabled);
+        assert_eq!(applied.preamp_db, -4.0);
+        assert_eq!(applied.bands, bass.settings.bands);
+        assert_eq!(detect(&all, &applied), position("bass_boost"));
+    }
+
+    #[test]
+    fn reset_to_flat_zeroes_bands_and_preamp() {
+        let mut eq = set_preamp(&EqSettings::vocal(), 2.5);
+        eq.enabled = false;
+        assert!(!is_flat(&eq));
+        let flat = reset_to_flat(&eq);
+        assert!(is_flat(&flat));
+        assert!(!flat.enabled);
+        assert_eq!(detect(&presets(), &flat), position("flat"));
+        assert!(is_flat(&EqSettings::flat()));
+        assert!(!is_flat(&set_preamp(&EqSettings::flat(), 1.0)));
     }
 
     #[test]
@@ -157,6 +177,8 @@ mod tests {
         let eq = set_gain(&eq, 1, -2.345);
         assert_eq!(eq.bands[1].gain_db, -2.3);
         assert_eq!(set_gain(&eq, 99, 1.0), eq);
+        assert_eq!(set_preamp(&eq, -40.0).preamp_db, -GAIN_RANGE_DB);
+        assert_eq!(set_preamp(&eq, 1.26).preamp_db, 1.3);
     }
 
     #[test]

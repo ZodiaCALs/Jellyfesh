@@ -137,11 +137,32 @@ pub fn titled_scroller(
     list: &(impl IsA<gtk::Scrollable> + IsA<gtk::Widget>),
     max_width: Option<i32>,
 ) -> (gtk::ScrolledWindow, adw::WindowTitle) {
+    titled_scroller_with(title, None, list, max_width)
+}
+
+/// [`titled_scroller`] with `below` (a page's Play and Shuffle) under the
+/// large title, scrolling away with it.
+pub fn titled_scroller_with(
+    title: &str,
+    below: Option<&gtk::Widget>,
+    list: &(impl IsA<gtk::Scrollable> + IsA<gtk::Widget>),
+    max_width: Option<i32>,
+) -> (gtk::ScrolledWindow, adw::WindowTitle) {
     let label = large_title(title);
+    let block: gtk::Widget = match below {
+        Some(below) => {
+            let b = gtk::Box::new(gtk::Orientation::Vertical, 0);
+            b.add_css_class("title-block");
+            b.append(&label);
+            b.append(below);
+            b.upcast()
+        }
+        None => label.clone().upcast(),
+    };
     let holder: gtk::Widget = match max_width {
         Some(w) => {
             let clamp = adw::Clamp::builder()
-                .child(&label)
+                .child(&block)
                 .maximum_size(w)
                 .tightening_threshold(700)
                 .build();
@@ -149,8 +170,8 @@ pub fn titled_scroller(
             clamp.upcast()
         }
         None => {
-            label.add_css_class("title-wide");
-            label.clone().upcast()
+            block.add_css_class("title-wide");
+            block
         }
     };
     let titled = TitledScroll::new(&holder, list);
@@ -207,6 +228,18 @@ pub fn heading(text: &str) -> gtk::Label {
         .build();
     l.add_css_class("section-heading");
     l
+}
+
+/// Play (accent) and Shuffle (glass) side by side, as on album pages.
+pub fn play_and_shuffle() -> (gtk::Box, gtk::Button, gtk::Button) {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    row.add_css_class("page-actions");
+    let play = pill(&crate::ui::i18n::tr("Play"), "play", true);
+    let shuffle = pill(&crate::ui::i18n::tr("Shuffle"), "shuffle", false);
+    shuffle.add_css_class("glass-pill");
+    row.append(&play);
+    row.append(&shuffle);
+    (row, play, shuffle)
 }
 
 /// A pill button (Play, Shuffle).

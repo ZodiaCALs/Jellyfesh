@@ -1,5 +1,6 @@
-//! Unified search: the library and every enabled source, each source's
-//! results appearing as they arrive.
+//! Unified search (docs/ui.md, "Search"): the library's results first
+//! (Songs, Albums, Artists), then From Your Sources, one group per source,
+//! each appearing as it arrives.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -56,7 +57,7 @@ struct Search {
 
 pub fn page() -> adw::NavigationPage {
     let entry = gtk::SearchEntry::builder()
-        .placeholder_text(tr("Songs, albums, artists"))
+        .placeholder_text(tr("Songs, albums and artists"))
         .hexpand(true)
         .search_delay(180)
         .build();
@@ -179,9 +180,6 @@ fn enrich(search: &Rc<Search>, request: jf_core::CommandId) {
 }
 
 fn source_name(id: &str) -> String {
-    if id == LIBRARY {
-        return tr("Library");
-    }
     app()
         .sources
         .borrow()
@@ -222,12 +220,18 @@ fn render(search: &Search) {
         return;
     }
     search.stack.set_visible_child_name("results");
-    let several = state.sections().len() > 1;
+    let mut from_sources = false;
     for section in state.sections() {
         if section.items.is_empty() && section.error.is_none() {
             continue;
         }
-        if several || section.source != LIBRARY {
+        if section.source != LIBRARY {
+            if !from_sources {
+                let h = heading(&tr("From Your Sources"));
+                h.add_css_class("from-sources");
+                search.results.append(&h);
+                from_sources = true;
+            }
             let h = heading(&source_name(&section.source));
             h.add_css_class("source-heading");
             search.results.append(&h);
