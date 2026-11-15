@@ -41,8 +41,9 @@ import {
   qualityToJco,
   streamFromJco,
 } from './convert';
+import { preparePackage } from './install';
 import type { CallFailure, FromWorker, ToWorker } from './protocol';
-import { defaultState, type PluginState, type Store } from './storage';
+import { defaultState, type InstalledPlugin, type PluginState, type Store } from './storage';
 
 /** Wall-clock budgets (ADR-0004). */
 export const CALL_MS = 10_000;
@@ -67,6 +68,32 @@ export interface BundledPlugin {
   package: string;
   module: string;
   wasm_sha256: string;
+}
+
+/** A plugin's files: bundled with the app (URLs under plugins/), or installed from a file. */
+export interface PluginEntry extends BundledPlugin {
+  installed: InstalledPlugin | null;
+}
+
+function bundledEntry(bundled: BundledPlugin): PluginEntry {
+  return { ...bundled, installed: null };
+}
+
+function installedEntry(installed: InstalledPlugin): PluginEntry {
+  const info = installed.info;
+  return {
+    id: info.id,
+    name: info.name,
+    version: info.version,
+    official: info.official,
+    description: info.description,
+    capabilities: info.capabilities,
+    auth_kinds: info.auth_kinds,
+    package: `${info.id}.jfpkg`,
+    module: 'plugin.js',
+    wasm_sha256: info.wasm_sha256,
+    installed,
+  };
 }
 
 export type CallErrorKind =
@@ -129,9 +156,13 @@ export class Plugin {
   private kv: [string, Uint8Array][] = [];
   private secrets: [string, string][] = [];
   private source: InstanceType<Jf['Source']> | null = null;
+  /** Capabilities the plugin reported but its manifest does not declare (an install refuses it). */
+  undeclared: string[] = [];
+  /** Object URLs of an installed plugin's files, made on its first start. */
+  private blobs: { packageUrl: string; moduleUrl: string; coreUrls: Record<string, string> } | null = null;
 
   constructor(
-    readonly entry: BundledPlugin,
+    readonly entry: PluginEntry,
     private readonly host: PluginHost,
     loaded: { state: PluginState | null; kv: [string, Uint8Array][]; secrets: [string, string][] },
   ) {
@@ -229,12 +260,13 @@ export class Plugin {
         this.stop();
         reject(new CallError('load', this.loadError));
       };
-      const base = new URL('plugins/', document.baseURI);
+      const urls = this.urls();
       const init: ToWorker = {
         type: 'init',
         plugin: this.id,
-        packageUrl: new URL(this.entry.package, base).href,
-        moduleUrl: new URL(this.entry.module, base).href,
+        packageUrl: urls.packageUrl,
+        moduleUrl: urls.moduleUrl,
+        coreUrls: urls.coreUrls,
         wasmSha256: this.entry.wasm_sha256,
         settings: JSON.stringify(this.state.settings ?? {}),
         kv: this.kv,
@@ -254,7 +286,9 @@ export class Plugin {
     this.loadError = null;
     if (instantiated) {
       const declared = new Set<string>(info.capabilities);
-      this.capabilities = reported.map(capabilityFromJco).filter((c) => declared.has(c));
+      const all = reported.map(capabilityFromJco);
+      this.capabilities = all.filter((c) => declared.has(c));
+      this.undeclared = all.filter((c) => !declared.has(c));
     }
     // Never changed by the person: official packages are on, others off (ADR-0012).
     if (!this.host.known(this.id)) this.state.enabled = info.official;
@@ -329,6 +363,46 @@ export class Plugin {
       pending.reject(new CallError('crashed', 'The plugin was restarted.'));
     }
     this.pending.clear();
+  }
+
+  /** Where the worker reads the package and the transpiled component from. */
+  private urls(): { packageUrl: string; moduleUrl: string; coreUrls: Record<string, string> | null } {
+    const installed = this.entry.installed;
+    if (!installed) {
+      const base = new URL('plugins/', document.baseURI);
+      return {
+        packageUrl: new URL(this.entry.package, base).href,
+        moduleUrl: new URL(this.entry.module, base).href,
+        coreUrls: null,
+      };
+    }
+    if (!this.blobs) {
+      const url = (bytes: Uint8Array, type: string) => URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
+      this.blobs = {
+        packageUrl: url(installed.package, 'application/octet-stream'),
+        moduleUrl: url(installed.module, 'text/javascript'),
+        coreUrls: Object.fromEntries(installed.cores.map(([name, bytes]) => [name, url(bytes, 'application/wasm')])),
+      };
+    }
+    return this.blobs;
+  }
+
+  /** What an update keeps: the stored state, kv values and secrets. */
+  get kept(): { state: PluginState; kv: [string, Uint8Array][]; secrets: [string, string][] } {
+    return { state: this.state, kv: this.kv, secrets: this.secrets };
+  }
+
+  /** Stops the plugin for good (uninstalled or replaced) and frees its files' URLs. */
+  dispose() {
+    this.stop();
+    this.source?.free();
+    this.source = null;
+    if (this.blobs) {
+      URL.revokeObjectURL(this.blobs.packageUrl);
+      URL.revokeObjectURL(this.blobs.moduleUrl);
+      for (const url of Object.values(this.blobs.coreUrls)) URL.revokeObjectURL(url);
+      this.blobs = null;
+    }
   }
 
   /** Calls `method` (jco's `interface.function`) with jco-shaped arguments. */
@@ -523,21 +597,30 @@ function capabilityOf(method: string): string | null {
   }
 }
 
-/** The bundled plugins and their shared policy. */
+/** The plugins (bundled with the app or installed from files) and their shared policy. */
 export class PluginHost {
   plugins: Plugin[] = [];
   allowCommunity = false;
   private remembered = new Set<string>();
   private listeners = new Set<() => void>();
+  /** The ids the app bundles. */
+  private bundled = new Set<string>();
+  /** Bundled plugins the person uninstalled: not loaded again (as in the native apps). */
+  private declined = new Set<string>();
 
   constructor(
     readonly jf: Jf,
     readonly store: Store,
   ) {}
 
-  /** Loads plugins/index.json and each plugin's stored state; workers start on demand. */
+  /**
+   * Loads plugins/index.json, the plugins installed from files and each plugin's stored state;
+   * workers start on demand. A package installed from a file stays until the app bundles a newer
+   * version of it (signed the same way), as native apps update their bundled plugins.
+   */
   async load(): Promise<void> {
     this.allowCommunity = (await this.store.getGlobal<boolean>('allowCommunity')) ?? false;
+    this.declined = new Set((await this.store.getGlobal<string[]>('declined')) ?? []);
     let list: BundledPlugin[] = [];
     try {
       const response = await fetch(new URL('plugins/index.json', document.baseURI), { cache: 'no-cache' });
@@ -545,8 +628,27 @@ export class PluginHost {
     } catch {
       // No plugins bundled (a build without them): files still play.
     }
+    this.bundled = new Set(list.map((p) => p.id));
+    const installed = await this.store.installed().catch(() => [] as InstalledPlugin[]);
+    const entries: PluginEntry[] = [];
+    for (const bundled of list) {
+      const own = installed.find((p) => p.id === bundled.id);
+      if (own) {
+        if (own.info.official === bundled.official && this.jf.bundled_updates(own.info.version, bundled.version)) {
+          await this.store.removeInstalled(own.id).catch(() => undefined);
+          entries.push(bundledEntry(bundled));
+        } else {
+          entries.push(installedEntry(own));
+        }
+      } else if (!this.declined.has(bundled.id)) {
+        entries.push(bundledEntry(bundled));
+      }
+    }
+    for (const own of installed) {
+      if (!this.bundled.has(own.id)) entries.push(installedEntry(own));
+    }
     this.plugins = await Promise.all(
-      list.map(async (entry) => {
+      entries.map(async (entry) => {
         const loaded = await this.store.load(entry.id);
         if (loaded.state) this.remembered.add(entry.id);
         // Sign-ins were not kept (no WebCrypto on this page): nobody is signed in any more.
@@ -554,6 +656,76 @@ export class PluginHost {
         return new Plugin(entry, this, loaded);
       }),
     );
+    this.changed();
+  }
+
+  /**
+   * Installs (or updates) a plugin from a `.jfpkg` file, as the native host does: checks the
+   * package and its signature, refuses community packages while they are off and updates signed
+   * by another key, transpiles the component for this browser, starts it once and checks the
+   * capabilities it reports. Official packages start on; community ones wait for the disclosure.
+   * An update keeps the settings, account and secrets. Throws why it was refused.
+   */
+  async install(file: File): Promise<Plugin> {
+    const limit = this.jf.max_package_bytes();
+    if (file.size > limit) throw new Error(`the package is larger than ${Math.round(limit / 1024 / 1024)} MiB`);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const prepared = await preparePackage(bytes);
+    const info = prepared.info;
+    const existing = this.get(info.id);
+    if (existing) await existing.verify().catch(() => undefined);
+    const refusal = this.jf.install_refusal(
+      JSON.stringify({ id: info.id, name: info.name, signature: info.signature }),
+      existing?.info ? JSON.stringify(existing.info.signature) : undefined,
+      this.allowCommunity,
+    );
+    if (refusal) throw new Error(refusal);
+    const record: InstalledPlugin = {
+      id: info.id,
+      info,
+      package: bytes,
+      module: prepared.module,
+      cores: prepared.cores,
+      installedAt: Date.now(),
+    };
+    const kept = existing?.kept ?? { state: null, kv: [], secrets: [] };
+    const plugin = new Plugin(installedEntry(record), this, kept);
+    try {
+      await plugin.start(true);
+    } catch (error) {
+      plugin.dispose();
+      throw new Error(`the plugin failed to start: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (plugin.undeclared.length > 0) {
+      plugin.dispose();
+      throw new Error(
+        `invalid manifest: the plugin reports capability ${plugin.undeclared[0]}, which the manifest does not declare`,
+      );
+    }
+    plugin.stop();
+    await this.store.saveInstalled(record);
+    existing?.dispose();
+    this.plugins = existing ? this.plugins.map((p) => (p === existing ? plugin : p)) : [...this.plugins, plugin];
+    if (this.declined.delete(info.id)) await this.store.setGlobal('declined', [...this.declined]);
+    await plugin.save();
+    this.changed();
+    return plugin;
+  }
+
+  /**
+   * Removes a plugin with its settings, kv values and secrets. A bundled plugin stays removed
+   * (it is not loaded again) until a package for it is installed from a file.
+   */
+  async uninstall(plugin: Plugin) {
+    plugin.dispose();
+    await this.store.forget(plugin.id);
+    if (plugin.entry.installed) await this.store.removeInstalled(plugin.id);
+    if (this.bundled.has(plugin.id)) {
+      this.declined.add(plugin.id);
+      await this.store.setGlobal('declined', [...this.declined]);
+    }
+    this.remembered.delete(plugin.id);
+    this.plugins = this.plugins.filter((p) => p !== plugin);
     this.changed();
   }
 

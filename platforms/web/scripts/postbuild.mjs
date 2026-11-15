@@ -22,10 +22,11 @@ function files(dir) {
   });
 }
 
-// THIRD_PARTY_NOTICES.txt (Preferences → About links it): the Rust crates in the three WebAssembly
+// THIRD_PARTY_NOTICES.txt (Settings › About links it): the Rust crates in the three WebAssembly
 // modules and the plugins, and the npm packages whose code the bundle contains (Svelte's runtime,
-// Vite's module loader, jco's generated glue), by tools/licenses/generate.py. Plain text, so every
-// server shows it rather than offering a download. In CI a failure stops the build.
+// Vite's module loader, jco's generated glue, and jco's transpiler with its WASI shims, which
+// install plugins from files), by tools/licenses/generate.py. Plain text, so every server shows it
+// rather than offering a download. In CI a failure stops the build.
 const repo = join(web, '..', '..');
 const python = process.platform === 'win32' ? 'python' : 'python3';
 const notices = spawnSync(
@@ -35,7 +36,7 @@ const notices = spawnSync(
     '--out',
     join(dist, 'THIRD_PARTY_NOTICES.txt'),
     '--npm',
-    'platforms/web:svelte,vite,@bytecodealliance/jco',
+    'platforms/web:svelte,vite,@bytecodealliance/jco,@bytecodealliance/jco-transpile,@bytecodealliance/preview2-shim',
     'jf-web',
     'jf-web-media',
     'jf-web-sandbox',

@@ -116,7 +116,7 @@ async function init(message: Extract<ToWorker, { type: 'init' }>) {
   });
   const module = await import(/* @vite-ignore */ message.moduleUrl);
   const getCoreModule = async (path: string) => {
-    const url = new URL(path, message.moduleUrl);
+    const url = message.coreUrls?.[path] ?? new URL(path, message.moduleUrl);
     const bytes = await (await fetch(url)).arrayBuffer();
     return WebAssembly.compile(bytes);
   };

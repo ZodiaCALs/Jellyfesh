@@ -10,6 +10,8 @@ export type ToWorker =
       /** Absolute URLs of the package and of the transpiled component's JavaScript. */
       packageUrl: string;
       moduleUrl: string;
+      /** The component's core WebAssembly files by name, when they are not beside the module. */
+      coreUrls: Record<string, string> | null;
       /** The SHA-256 of the component the JavaScript was transpiled from (plugins/index.json). */
       wasmSha256: string;
       /** The settings as JSON. */

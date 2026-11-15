@@ -2,7 +2,8 @@
 // OS keystore, ADR-0015):
 //
 // * IndexedDB `jellyfesh`: per plugin its state (on or off, strikes, account, settings, consent),
-//   its plain kv values, and its secrets;
+//   its plain kv values, and its secrets; and the plugins installed from files (the package and
+//   its component transpiled for this browser);
 // * secrets are encrypted with AES-GCM under a key WebCrypto generated as non-extractable: the key
 //   is stored as a CryptoKey object, so no script (not even this one) can read its bytes, and a
 //   copy of the database without the browser profile does not reveal the secrets. Each value is
@@ -13,6 +14,8 @@
 // page served over plain http from anywhere but localhost) the rest is kept but secrets are not:
 // there is no key to protect them with.
 
+import type { PackageInfo } from '../core/types';
+
 export interface PluginState {
   enabled: boolean;
   strikes: number;
@@ -22,6 +25,19 @@ export interface PluginState {
   settings: Record<string, unknown> | null;
   /** The community disclosure was accepted for this plugin. */
   acknowledged: boolean;
+}
+
+/** A plugin installed from a file (Sources → Install from File…). */
+export interface InstalledPlugin {
+  id: string;
+  /** The package as the install read and checked it. */
+  info: PackageInfo;
+  /** The `.jfpkg` itself: each start verifies it again, as for bundled plugins. */
+  package: Uint8Array;
+  /** Its component transpiled by jco: the module and its core WebAssembly files by name. */
+  module: Uint8Array;
+  cores: [string, Uint8Array][];
+  installedAt: number;
 }
 
 export interface Loaded {
@@ -43,11 +59,17 @@ export interface Store {
   forgetSecrets(plugin: string): Promise<void>;
   getGlobal<T>(name: string): Promise<T | null>;
   setGlobal<T>(name: string, value: T): Promise<void>;
+  /** The plugins installed from files. */
+  installed(): Promise<InstalledPlugin[]>;
+  saveInstalled(plugin: InstalledPlugin): Promise<void>;
+  removeInstalled(plugin: string): Promise<void>;
+  /** Deletes everything kept for `plugin`: its state, kv values and secrets (an uninstall). */
+  forget(plugin: string): Promise<void>;
 }
 
 const DB = 'jellyfesh';
-const VERSION = 1;
-const STORES = ['state', 'kv', 'secrets', 'keys', 'global'] as const;
+const VERSION = 2;
+const STORES = ['state', 'kv', 'secrets', 'keys', 'global', 'installed'] as const;
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -183,6 +205,33 @@ class IndexedStore implements Store {
     tx.objectStore('global').put(value, name);
     await done(tx);
   }
+
+  async installed(): Promise<InstalledPlugin[]> {
+    const tx = this.db.transaction('installed', 'readonly');
+    return (await request(tx.objectStore('installed').getAll())) as InstalledPlugin[];
+  }
+
+  async saveInstalled(plugin: InstalledPlugin): Promise<void> {
+    const tx = this.db.transaction('installed', 'readwrite');
+    tx.objectStore('installed').put(plugin, plugin.id);
+    await done(tx);
+  }
+
+  async removeInstalled(plugin: string): Promise<void> {
+    const tx = this.db.transaction('installed', 'readwrite');
+    tx.objectStore('installed').delete(plugin);
+    await done(tx);
+  }
+
+  async forget(plugin: string): Promise<void> {
+    this.memory.delete(plugin);
+    const range = IDBKeyRange.bound([plugin, ''], [plugin, '￿']);
+    const tx = this.db.transaction(['state', 'kv', 'secrets'], 'readwrite');
+    tx.objectStore('state').delete(plugin);
+    tx.objectStore('kv').delete(range);
+    tx.objectStore('secrets').delete(range);
+    await done(tx);
+  }
 }
 
 /** Keeps everything in memory (no IndexedDB). */
@@ -232,6 +281,26 @@ class MemoryStore implements Store {
 
   async setGlobal<T>(name: string, value: T): Promise<void> {
     this.globals.set(name, value);
+  }
+
+  private plugins = new Map<string, InstalledPlugin>();
+
+  async installed(): Promise<InstalledPlugin[]> {
+    return [...this.plugins.values()];
+  }
+
+  async saveInstalled(plugin: InstalledPlugin): Promise<void> {
+    this.plugins.set(plugin.id, plugin);
+  }
+
+  async removeInstalled(plugin: string): Promise<void> {
+    this.plugins.delete(plugin);
+  }
+
+  async forget(plugin: string): Promise<void> {
+    this.states.delete(plugin);
+    this.kv.delete(plugin);
+    this.secrets.delete(plugin);
   }
 }
 

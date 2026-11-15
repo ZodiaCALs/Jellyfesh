@@ -1,4 +1,4 @@
-// The sources (bundled plugins) as the views see them, sign-in flows, and errors in words a person
+// The sources (bundled plugins and those installed from files) as the views see them, sign-in flows, and errors in words a person
 // can act on, including the browser-only ones: CORS and mixed content (docs/web.md).
 
 import type { Jf } from '../core/wasm';
@@ -24,6 +24,10 @@ export interface SourceView {
   capabilities: Capability[];
   server: string | null;
   ready: boolean;
+  /** The author, once the package has been read. */
+  author: string | null;
+  /** Installed from a file rather than bundled with the app. */
+  fromFile: boolean;
 }
 
 /** The server address in a plugin's settings, if it has one. */
@@ -147,6 +151,8 @@ export class Sources {
         capabilities: p.info?.capabilities ?? p.entry.capabilities ?? [],
         server: serverOf(p),
         ready: p.info !== null,
+        author: p.info?.author ?? p.entry.installed?.info.author ?? null,
+        fromFile: p.entry.installed !== null,
       };
     });
     this.presetDefs ??= JSON.parse(this.jf.source_presets()) as PresetDef[];
@@ -176,6 +182,20 @@ export class Sources {
   async signOut(plugin: Plugin) {
     await plugin.logout();
     this.refresh();
+  }
+
+  /** Installs or updates a plugin from a `.jfpkg` file; throws why it was refused. */
+  async install(file: File): Promise<Plugin> {
+    return this.host.install(file);
+  }
+
+  async uninstall(plugin: Plugin) {
+    await this.host.uninstall(plugin);
+  }
+
+  /** Reads every package not read yet (for versions and authors), without running the plugins. */
+  async verifyAll() {
+    await Promise.all(this.host.plugins.map((p) => p.verify().catch(() => undefined)));
   }
 }
 
