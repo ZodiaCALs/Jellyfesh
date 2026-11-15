@@ -43,7 +43,7 @@ pub fn begin(flow: Flow) -> Result<FlowStep> {
     api::device_id()?;
     match flow.kind {
         AuthKind::PasswordExchange => {
-            let mut user = FieldSpec::text("username", "User name");
+            let mut user = FieldSpec::text("username", "User Name");
             user.placeholder = Some("Your user name on the server".into());
             let mut password = FieldSpec::secret("password", "Password");
             password.required = false;

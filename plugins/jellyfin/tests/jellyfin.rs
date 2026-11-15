@@ -239,7 +239,7 @@ fn wrong_password() {
     let _form = next_step(&flow);
     // A blank user name is refused (by the host already: the field is required).
     flow.submit(fields(&[("username", " "), ("password", "x")]));
-    assert!(failure(&flow).contains("User name"));
+    assert!(failure(&flow).contains("User Name"));
     assert!(env.secrets.keys().is_empty());
 }
 

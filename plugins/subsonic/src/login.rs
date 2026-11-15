@@ -38,7 +38,7 @@ pub fn begin(flow: Flow) -> Result<FlowStep> {
             if info.has(API_KEYS) {
                 FlowStep::failed(format!(
                     "{} supports API keys, which are safer than signing in with your password. \
-                     Create an API key in the server's settings, then sign in with \u{201c}API key\u{201d}.",
+                     Create an API key in the server's settings, then sign in with \u{201c}Enter API Key\u{201d}.",
                     info.describe()
                 ))
             } else if info.api_at_least(1, 13) == Some(false) {
@@ -49,7 +49,7 @@ pub fn begin(flow: Flow) -> Result<FlowStep> {
                     info.api_version.as_deref().unwrap_or("?")
                 ))
             } else {
-                let mut user = FieldSpec::text("username", "User name");
+                let mut user = FieldSpec::text("username", "User Name");
                 user.placeholder = Some("Your user name on the server".into());
                 let mut password = FieldSpec::secret("password", "Password");
                 password.help = Some(format!(
@@ -62,7 +62,7 @@ pub fn begin(flow: Flow) -> Result<FlowStep> {
         }
         AuthKind::ApiKey => {
             if info.has(API_KEYS) {
-                let mut key = FieldSpec::secret("api-key", "API key");
+                let mut key = FieldSpec::secret("api-key", "API Key");
                 key.help = Some(format!(
                     "Create one in your server's settings. Jellyfesh keeps it in your system's keystore.{}",
                     http_warning(&base)
@@ -188,7 +188,7 @@ fn api_key(base: &str, key: &str) -> Result<FlowStep> {
         .and_then(|envelope| serde_json::from_value::<TokenInfo>(envelope.get("tokenInfo")?.clone()).ok())
         .map(|info| info.username)
         .filter(|name| !name.is_empty())
-        .unwrap_or_else(|| "API key".to_string());
+        .unwrap_or_else(|| "API Key".to_string());
     match api::save_creds(&creds) {
         Ok(()) => Ok(FlowStep::done(account)),
         Err(error) => Ok(FlowStep::failed(format!(
@@ -210,7 +210,7 @@ fn refused(base: &str, failure: Failure, with_key: bool) -> String {
                 44 => format!("The server did not accept this API key.{help}"),
                 41 => format!(
                     "This server does not accept token sign-in (for example for LDAP accounts). \
-                     Create an API key on the server and sign in with \u{201c}API key\u{201d}.{help}"
+                     Create an API key on the server and sign in with \u{201c}Enter API Key\u{201d}.{help}"
                 ),
                 42 => format!("This server does not accept this way of signing in.{help}"),
                 30 => format!(

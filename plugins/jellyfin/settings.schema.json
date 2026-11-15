@@ -1,32 +1,32 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Jellyfin server",
+  "title": "Jellyfin Server",
   "type": "object",
   "properties": {
     "server_url": {
       "type": "string",
       "format": "uri",
-      "title": "Server address",
+      "title": "Server Address",
       "description": "The address you open Jellyfin at, for example http://192.168.1.20:8096 or https://jellyfin.example.com.",
       "maxLength": 512
     },
     "quality": {
       "type": "string",
-      "title": "Streaming quality",
+      "title": "Streaming Quality",
       "description": "\"app\" follows the quality you chose in Jellyfesh for each network; the other values always use that quality on this server.",
       "enum": ["app", "lossless", "high", "normal", "low"],
       "default": "app"
     },
     "transcode_codec": {
       "type": "string",
-      "title": "Format when the server converts",
+      "title": "Format When the Server Converts",
       "description": "What Jellyfin converts to when a file is above the chosen quality or in a format Jellyfesh cannot play.",
       "enum": ["aac", "mp3", "opus"],
       "default": "aac"
     },
     "device_name": {
       "type": "string",
-      "title": "Device name",
+      "title": "Device Name",
       "description": "How this device appears in Jellyfin's list of devices and sessions.",
       "minLength": 1,
       "maxLength": 64,
