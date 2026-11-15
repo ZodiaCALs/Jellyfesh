@@ -275,6 +275,10 @@ export interface FileTags {
   artist: string | null;
   album: string | null;
   album_artist: string | null;
+  /** Each ARTIST value and the ARTISTS list as tagged (the library splits them into artists). */
+  artist_values: string[];
+  explicit_artists: string[];
+  year: number | null;
   track_no: number | null;
   disc_no: number | null;
   duration_ms: number | null;
@@ -390,3 +394,79 @@ export interface Themes {
   light: Theme;
   dark: Theme;
 }
+
+// ---- the music library (jf_web::library) ----------------------------------------------------------
+
+/** A song in the library as the page keeps it (IndexedDB) and hands it to the catalogue. */
+export interface LibTrack {
+  /** `<folder>/<path>`. */
+  key: string;
+  folder: number;
+  /** Where the file is inside the folder, `/`-separated. */
+  path: string;
+  title: string | null;
+  artist: string | null;
+  artist_values: string[];
+  explicit_artists: string[];
+  album: string | null;
+  album_artist: string | null;
+  year: number | null;
+  track_no: number | null;
+  disc_no: number | null;
+  duration_ms: number | null;
+  replaygain: ReplayGainInfo | null;
+  /** The cover's id in the artwork store. */
+  artwork: string | null;
+  /** The lyrics file beside it, by its path in the folder. */
+  lyrics_path: string | null;
+  size: number;
+  modified_ms: number;
+  added_ms: number;
+  /** For Now Playing › Info (the catalogue ignores them). */
+  codec: string | null;
+  sample_rate: number | null;
+  bitrate_kbps: number | null;
+}
+
+export interface LibTrackView {
+  key: string;
+  title: string;
+  artist: string | null;
+  artist_id: string | null;
+  album: string | null;
+  album_id: string | null;
+  year: number | null;
+  track_no: number | null;
+  disc_no: number | null;
+  duration_ms: number | null;
+  artwork: string | null;
+}
+
+export interface LibAlbumView {
+  id: string;
+  title: string;
+  artist: string | null;
+  artist_id: string | null;
+  year: number | null;
+  track_count: number;
+  duration_ms: number;
+  artwork: string | null;
+}
+
+export interface LibArtistView {
+  id: string;
+  name: string;
+  album_count: number;
+  track_count: number;
+  artwork: string | null;
+}
+
+export interface LibStats {
+  tracks: number;
+  albums: number;
+  artists: number;
+  duration_ms: number;
+}
+
+export type AlbumSort = 'title' | 'artist' | 'year' | 'added';
+export type TrackSort = 'title' | 'artist' | 'album' | 'year' | 'duration' | 'path' | 'added';

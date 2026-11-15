@@ -18,6 +18,7 @@
     loadingMore = false,
     onmore,
     alsoIn,
+    onplay,
   }: {
     plugin: string;
     items: Item[];
@@ -26,6 +27,8 @@
     loadingMore?: boolean;
     onmore?: () => void;
     alsoIn?: (item: Item) => string[];
+    /** Plays from a track instead of the tracks listed (a list longer than what is loaded). */
+    onplay?: (item: Item) => void;
   } = $props();
 
   const app = useApp();
@@ -45,7 +48,9 @@
   });
 
   function activate(item: Item) {
-    if (item.kind === 'Track') {
+    if (item.kind === 'Track' && onplay) {
+      onplay(item);
+    } else if (item.kind === 'Track') {
       const { entries, start } = tracksFrom(plugin, tracks, item);
       app.player.playEntries(entries, start);
     } else {

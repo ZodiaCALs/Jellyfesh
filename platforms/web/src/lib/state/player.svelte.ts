@@ -190,8 +190,11 @@ export class Player {
 
   // ---- startup and settings --------------------------------------------------------------------
 
-  /** Restores the saved queue, ready to play (browsers do not start audio before a click). */
-  restore() {
+  /**
+   * Restores the saved queue, ready to play (browsers do not start audio before a click).
+   * `restored` runs right after the core restored it, to hand back the tags of library songs.
+   */
+  restore(restored?: () => void) {
     const saved = (() => {
       try {
         return localStorage.getItem(QUEUE_KEY);
@@ -200,6 +203,7 @@ export class Player {
       }
     })();
     if (!saved || !this.core.restore(saved)) return;
+    restored?.();
     this.queue = this.snapshot();
     const row = this.queue.current;
     if (!row) return;
@@ -557,8 +561,19 @@ export class Player {
   private async resolveNow(row: Row, start: Quality): Promise<Resolved> {
     if (row.kind === 'file') {
       const meta = this.parse<FileMeta | null>(this.core.file_of(row.uid));
-      const dropped = meta ? this.files.get(meta.id) : undefined;
-      if (!meta || !dropped) throw new Error(t('This file is no longer open. Drop it here again to play it.'));
+      const dropped = meta ? await this.files.open(meta.id) : undefined;
+      if (!meta || !dropped) {
+        switch (this.files.whyClosed(meta?.id ?? row.id)) {
+          case 'ask':
+            throw new Error(t('Allow Jellyfesh to read your music folder again in Settings › Library to play this song.'));
+          case 'pick':
+            throw new Error(t('Pick the folder of this song again in Settings › Library to play it.'));
+          case 'gone':
+            throw new Error(t('This song is no longer in its folder.'));
+          default:
+            throw new Error(t('This file is no longer open. Drop it here again to play it.'));
+        }
+      }
       const tags = dropped.tags;
       const format = [
         tags?.codec?.toUpperCase(),
@@ -798,7 +813,7 @@ export class Player {
     let source: ArtworkSource | null = null;
     if (row.kind === 'file') {
       const meta = this.parse<FileMeta | null>(this.core.file_of(row.uid));
-      const dropped = meta ? this.files.get(meta.id) : undefined;
+      const dropped = meta ? await this.files.open(meta.id).catch(() => undefined) : undefined;
       if (dropped?.cover) source = { kind: 'bytes', key: `file:${dropped.id}`, bytes: dropped.cover.bytes, mime: dropped.cover.mime };
     } else {
       const found = this.sourceItem(row);

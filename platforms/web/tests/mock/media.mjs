@@ -31,6 +31,37 @@ export function wav(seconds, frequency, { sampleRate = 44100, amplitude = 0.5 } 
   return Buffer.concat([header, data]);
 }
 
+/**
+ * `wav` with RIFF INFO tags (title INAM, artist IART, album IPRD, track number IPRT, date ICRD),
+ * as tagging software writes them into WAV files.
+ */
+export function taggedWav(seconds, frequency, { title, artist, album, track, year } = {}) {
+  const plain = wav(seconds, frequency);
+  const fields = [
+    ['INAM', title],
+    ['IART', artist],
+    ['IPRD', album],
+    ['IPRT', track === undefined ? undefined : String(track)],
+    ['ICRD', year === undefined ? undefined : String(year)],
+  ].filter(([, value]) => value !== undefined);
+  const parts = fields.map(([id, value]) => {
+    const text = Buffer.from(`${value}\0`, 'utf8');
+    const padded = Buffer.alloc(text.length + (text.length % 2));
+    text.copy(padded);
+    const head = Buffer.alloc(8);
+    head.write(id, 0, 'ascii');
+    head.writeUInt32LE(text.length, 4);
+    return Buffer.concat([head, padded]);
+  });
+  const info = Buffer.concat([Buffer.from('INFO', 'ascii'), ...parts]);
+  const list = Buffer.alloc(8);
+  list.write('LIST', 0, 'ascii');
+  list.writeUInt32LE(info.length, 4);
+  const out = Buffer.concat([plain, list, info]);
+  out.writeUInt32LE(out.length - 8, 4);
+  return out;
+}
+
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n;
   for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;

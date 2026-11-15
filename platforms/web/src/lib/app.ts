@@ -3,10 +3,13 @@
 import { getContext, setContext } from 'svelte';
 import { loadCore, type Jf } from './core/wasm';
 import { setLanguage } from './i18n/index.svelte';
+import { filesOfInput, type PickedFolder } from './library/folders';
+import { openLibraryStore } from './library/store';
 import { PluginHost } from './plugins/host';
 import { openStore, type Store } from './plugins/storage';
 import { Artworks } from './state/artwork';
 import { Files } from './state/files';
+import { Library } from './state/library.svelte';
 import { Nav } from './state/nav.svelte';
 import { Player } from './state/player.svelte';
 import { Search } from './state/search.svelte';
@@ -23,6 +26,7 @@ export interface App {
   nav: Nav;
   sources: Sources;
   files: Files;
+  library: Library;
   artworks: Artworks;
   player: Player;
   search: Search;
@@ -30,17 +34,39 @@ export interface App {
 
 const KEY = Symbol('jellyfesh');
 
+/** A folder picked with `<input webkitdirectory>`, where the browser keeps no folders. */
+function pickWithInput(): Promise<PickedFolder | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.webkitdirectory = true;
+    input.multiple = true;
+    input.hidden = true;
+    input.dataset.role = 'folder-picker';
+    document.body.append(input);
+    const finish = (picked: PickedFolder | null) => {
+      input.remove();
+      resolve(picked);
+    };
+    input.addEventListener('change', () => finish(filesOfInput(input.files ?? [])), { once: true });
+    input.addEventListener('cancel', () => finish(null), { once: true });
+    input.click();
+  });
+}
+
 export async function createApp(): Promise<App> {
   const jf = await loadCore();
   jf.start();
   const seed = crypto.getRandomValues(new Uint32Array(2));
   const core = new jf.Core(seed[0], seed[1]);
   const settings = new Settings(core);
-  const [store] = await Promise.all([openStore(), setLanguage(settings.value.language)]);
+  const [store, libraryStore] = await Promise.all([openStore(), openLibraryStore(), setLanguage(settings.value.language)]);
   const theme = new Theme(jf, settings.value);
   const host = new PluginHost(jf, store);
   const sources = new Sources(jf, host);
   const files = new Files(jf, core);
+  const library = new Library(jf, core, libraryStore, pickWithInput);
+  files.attach(library);
   const artworks = new Artworks();
   const player = new Player(jf, core, sources, files, theme, artworks, settings.value);
   const search = new Search(jf, sources);
@@ -50,9 +76,9 @@ export async function createApp(): Promise<App> {
     player.applySettings(value);
     void setLanguage(value.language);
   });
-  await sources.init();
-  player.restore();
-  const app: App = { jf, core, store, settings, theme, nav, sources, files, artworks, player, search };
+  await Promise.all([sources.init(), library.init()]);
+  player.restore(() => library.restoreQueue());
+  const app: App = { jf, core, store, settings, theme, nav, sources, files, library, artworks, player, search };
   if (new URLSearchParams(location.search).has('e2e')) {
     // A handle for the end-to-end tests (gap measurement, state checks); only with ?e2e.
     (globalThis as unknown as { jellyfesh: App }).jellyfesh = app;

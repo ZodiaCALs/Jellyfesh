@@ -7,10 +7,13 @@
   import Art from '../components/Art.svelte';
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
+  import Menu from '../components/Menu.svelte';
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t, tn } from '../lib/i18n/index.svelte';
-  import { artistOf, secondary, summary, tracksFrom } from '../lib/items';
+  import { artistOf, itemMenu, secondary, summary, tracksFrom } from '../lib/items';
+  import { toast } from '../lib/state/toast.svelte';
+  import { LIBRARY } from '../lib/state/library.svelte';
   import { explain } from '../lib/state/sources.svelte';
 
   let { plugin, item }: { plugin: string; item: Item } = $props();
@@ -23,6 +26,13 @@
   let generation = 0;
 
   async function load(cursor: string | null) {
+    if (plugin === LIBRARY) {
+      items = app.library.browse(item).items;
+      next = null;
+      error = null;
+      loading = false;
+      return;
+    }
     const source = app.sources.get(plugin);
     if (!source) {
       error = t('The source of this page is not available.');
@@ -47,6 +57,7 @@
   $effect(() => {
     void item;
     void app.sources.revision;
+    void app.library.revision;
     generation += 1;
     items = [];
     next = null;
@@ -92,6 +103,7 @@
         <div class="actions">
           <button class="primary" onclick={() => play(false)}><Icon name="play" size={18} />{t('Play')}</button>
           <button class="secondary" onclick={() => play(true)}><Icon name="shuffle" size={18} />{t('Shuffle')}</button>
+          <Menu items={itemMenu(app, plugin, item, toast)} label={t('More for {title}', { title: item.title })} />
         </div>
       {/if}
     </div>

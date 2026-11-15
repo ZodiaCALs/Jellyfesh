@@ -26,6 +26,7 @@
 <script lang="ts">
   import { useApp } from '../lib/app';
   import type { Item, ItemKind } from '../lib/core/types';
+  import { LIBRARY } from '../lib/state/library.svelte';
   import Icon from './Icon.svelte';
 
   let {
@@ -46,7 +47,7 @@
     alt?: string;
   } = $props();
 
-  const { sources, artworks } = useApp();
+  const { sources, artworks, library } = useApp();
   let element: HTMLElement | undefined = $state();
   let resolved = $state<string | null>(null);
   let failed = $state(false);
@@ -61,6 +62,15 @@
     if (!target || !current || src) return;
     let live = true;
     const stop = observe(target, () => {
+      if (from === LIBRARY) {
+        // The library's covers come from its own store.
+        const url = current.artwork?.url;
+        if (!url) return;
+        void library.coverUrl(url).then((found) => {
+          if (live) resolved = found;
+        });
+        return;
+      }
       const owner = from ? sources.get(from) : undefined;
       void artworks
         .ref(owner, current, Math.min(1024, Math.round(size * devicePixelRatio)))

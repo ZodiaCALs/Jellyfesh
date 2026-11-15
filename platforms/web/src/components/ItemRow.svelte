@@ -7,6 +7,7 @@
   import type { Item } from '../lib/core/types';
   import { formatTime, t } from '../lib/i18n/index.svelte';
   import { itemMenu, secondary } from '../lib/items';
+  import { LIBRARY, LIBRARY_ID } from '../lib/state/library.svelte';
   import { toast } from '../lib/state/toast.svelte';
   import Art from './Art.svelte';
   import Icon from './Icon.svelte';
@@ -32,9 +33,9 @@
   const app = useApp();
   const playing = $derived(
     item.kind === 'Track' &&
-      app.player.current?.kind === 'source' &&
-      app.player.current.plugin === plugin &&
-      app.player.current.id === item.id,
+      (plugin === LIBRARY
+        ? app.player.current?.kind === 'file' && app.player.current.id === `${LIBRARY_ID}${item.id}`
+        : app.player.current?.kind === 'source' && app.player.current.plugin === plugin && app.player.current.id === item.id),
   );
   const unplayable = $derived(item.kind === 'Track' && !item.playable);
   const second = $derived(secondary(item));

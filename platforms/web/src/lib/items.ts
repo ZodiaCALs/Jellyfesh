@@ -1,10 +1,13 @@
-// What the views do with items: queue entries, the rows' second line, and the "More" menu.
+// What the views do with items: queue entries, the rows' second line, and the "More" menu. The
+// library's items (`LIBRARY`) play as files; everything else as a source's tracks.
 
 import type { App } from './app';
 import type { Item, NewEntry } from './core/types';
 import { t, tn } from './i18n/index.svelte';
+import { LIBRARY, LIBRARY_ID } from './state/library.svelte';
 
 export function entryOf(plugin: string, item: Item): NewEntry {
+  if (plugin === LIBRARY) return { kind: 'file', id: `${LIBRARY_ID}${item.id}` };
   return { kind: 'source', plugin, item };
 }
 
@@ -116,6 +119,12 @@ export function itemMenu(app: App, plugin: string, item: Item, toast: (text: str
 
 /** Every track in a container (first pages), for Play, Shuffle and the queue commands. */
 export async function tracksOf(app: App, plugin: string, container: Item, limit = 500): Promise<NewEntry[]> {
+  if (plugin === LIBRARY) {
+    return app.library
+      .browse(container)
+      .items.filter((i) => i.kind === 'Track')
+      .map((i) => entryOf(plugin, i));
+  }
   const source = app.sources.get(plugin);
   if (!source) return [];
   const entries: NewEntry[] = [];
