@@ -1,12 +1,15 @@
 <script lang="ts">
-  // Home: each signed-in source's own start page (what its `browse` lists at the top), or a
-  // welcome that points to Sources and to dropping files.
+  // Home (docs/ui.md): the library's size and Recently Added, then each signed-in source's own start
+  // page (what its `browse` lists at the top); with neither, the welcome: add music folders or
+  // connect a server (or drop files, which play without being kept).
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
-  import { t } from '../lib/i18n/index.svelte';
+  import { t, tn } from '../lib/i18n/index.svelte';
+  import { LIBRARY } from '../lib/state/library.svelte';
   import { explain } from '../lib/state/sources.svelte';
+  import { toast } from '../lib/state/toast.svelte';
 
   let { onopenfiles }: { onopenfiles: () => void } = $props();
   const app = useApp();
@@ -20,6 +23,25 @@
   }
 
   let shelves = $state.raw<Shelf[]>([]);
+  const library = app.library;
+  const recent = $derived((void library.revision, library.recentlyAdded(24)));
+  const size = $derived(
+    library.stats.tracks > 0
+      ? [
+          tn('{n} song', '{n} songs', library.stats.tracks),
+          tn('{n} album', '{n} albums', library.stats.albums),
+          tn('{n} artist', '{n} artists', library.stats.artists),
+        ].join(' · ')
+      : '',
+  );
+
+  async function addFolder() {
+    try {
+      await library.addFolder();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error));
+    }
+  }
 
   $effect(() => {
     void app.sources.revision;
@@ -44,17 +66,24 @@
 
 <section class="page" aria-labelledby="home-title">
   <h1 id="home-title" class="page-title">{t('Home')}</h1>
-  {#if shelves.length === 0}
+  {#if size}<p class="size">{size}</p>{/if}
+  {#if shelves.length === 0 && library.isEmpty && library.folders.length === 0}
     <div class="welcome">
       <h2>{t('Welcome to Jellyfesh')}</h2>
-      <p>
-        {t('Sign in to your Subsonic, Navidrome or Jellyfin server to browse and play your music here. Audio files you drop on this page play too; they are not saved.')}
-      </p>
+      <p>{t('Add your music folders, or connect a server in Sources.')}</p>
       <div class="actions">
-        <button class="primary" onclick={() => app.nav.switchTab('sources')}><Icon name="sources" size={18} />{t('Sign In to a Server')}</button>
+        <button class="primary" onclick={addFolder}><Icon name="folder-plus" size={18} />{t('Add Music Folder…')}</button>
+        <button class="secondary" onclick={() => app.nav.switchTab('sources')}><Icon name="sources" size={18} />{t('Add a Source')}</button>
         <button class="secondary" onclick={onopenfiles}><Icon name="file" size={18} />{t('Open Files…')}</button>
       </div>
+      <p class="hint">{t('Files you open or drop on this page play without being added.')}</p>
     </div>
+  {/if}
+  {#if recent.length > 0}
+    <section class="shelf" aria-labelledby="recent-title">
+      <h2 id="recent-title" class="section">{t('Recently Added')}</h2>
+      <ItemList plugin={LIBRARY} items={recent} />
+    </section>
   {/if}
   {#each shelves as shelf (shelf.plugin)}
     <section class="shelf" aria-label={shelf.name}>
@@ -71,6 +100,15 @@
 </section>
 
 <style>
+  .size {
+    margin: calc(-1 * var(--jf-space-s3)) 0 var(--jf-space-s6);
+    color: var(--jf-ink-50);
+  }
+  .hint {
+    margin: var(--jf-space-s4) 0 0;
+    font-size: 13px;
+    color: var(--jf-ink-50);
+  }
   .welcome {
     max-width: var(--jf-layout-reading);
     padding: var(--jf-space-s7);

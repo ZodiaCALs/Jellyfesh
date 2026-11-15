@@ -128,3 +128,16 @@ select {
     margin-bottom: var(--jf-space-s4);
   }
 }
+
+/* Read by screen readers, not shown (a label the heading above already shows). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

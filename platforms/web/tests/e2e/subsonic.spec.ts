@@ -2,16 +2,7 @@
 // previous, crossfade on and off, and the gap between gapless tracks.
 
 import { expect, type Page, test } from '@playwright/test';
-import {
-  nav,
-  openAlbum,
-  openApp,
-  setCrossfade,
-  signInSubsonic,
-  snapshot,
-  transitions,
-  waitPlaying,
-} from './helpers';
+import { nav, openAlbum, openApp, openSourcesSettings, setCrossfade, signInSubsonic, snapshot, sourceCard, transitions, waitPlaying } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -32,8 +23,8 @@ test('signs in and shows the server on Home', async () => {
   const shelf = page.getByRole('region', { name: 'Subsonic' });
   await expect(shelf.getByRole('button', { name: 'Open Albums' })).toBeVisible();
   await expect(shelf.getByRole('button', { name: 'Open Artists' })).toBeVisible();
-  await nav(page, 'Sources').click();
-  await expect(page.locator('li.source', { hasText: 'Subsonic' })).toContainText('Signed in as demo');
+  await openSourcesSettings(page);
+  await expect(sourceCard(page, 'Subsonic')).toContainText('Signed in as demo');
 });
 
 test('browses to an album and plays it, with word-timed lyrics advancing', async () => {

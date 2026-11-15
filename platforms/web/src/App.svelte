@@ -12,10 +12,14 @@
   import type { Tab } from './lib/state/nav.svelte';
   import { toast, toasts } from './lib/state/toast.svelte';
   import NowPlaying from './nowplaying/NowPlaying.svelte';
+  import Albums from './views/Albums.svelte';
+  import Artists from './views/Artists.svelte';
   import Browse from './views/Browse.svelte';
   import Home from './views/Home.svelte';
-  import Preferences from './views/Preferences.svelte';
   import SearchView from './views/SearchView.svelte';
+  import Settings from './views/Settings.svelte';
+  import Songs from './views/Songs.svelte';
+  import SourcePage from './views/SourcePage.svelte';
   import SourcesView from './views/SourcesView.svelte';
 
   let { app }: { app: AppState } = $props();
@@ -31,12 +35,28 @@
   let dragDepth = 0;
   let installEvent = $state<(Event & { prompt(): Promise<void> }) | null>(null);
 
-  const TABS: [Tab, string, string][] = [
+  // The places in the order every app lists them (docs/ui.md); a null starts a new group.
+  const PLACES: ([Tab, string, string] | null)[] = [
     ['home', 'Home', 'home'],
+    ['albums', 'Albums', 'album'],
+    ['artists', 'Artists', 'artist'],
+    ['songs', 'Songs', 'note'],
+    null,
     ['search', 'Search', 'search'],
     ['sources', 'Sources', 'sources'],
-    ['settings', 'Preferences', 'settings'],
   ];
+  const LIBRARY_TABS: Tab[] = ['albums', 'artists', 'songs'];
+  // Phones: the library is one tab, as on Android.
+  const PHONE_TABS: [Tab, string, string][] = [
+    ['home', 'Home', 'home'],
+    ['albums', 'Library', 'library'],
+    ['search', 'Search', 'search'],
+    ['sources', 'Sources', 'sources'],
+    ['settings', 'Settings', 'settings'],
+  ];
+  function onTab(id: Tab): boolean {
+    return id === 'albums' ? LIBRARY_TABS.includes(nav.tab) : nav.tab === id;
+  }
 
   async function play(list: File[]) {
     if (list.length === 0) return;
@@ -145,12 +165,25 @@
       <img src="./icons/icon.svg" alt="" width="32" height="32" />
       <span>Jellyfesh</span>
     </div>
-    {#each TABS as [id, label, icon] (id)}
-      <button class="nav-item" class:on={nav.tab === id} aria-current={nav.tab === id ? 'page' : undefined} onclick={() => nav.switchTab(id)}>
-        <Icon name={icon} />{t(label)}
-      </button>
+    {#each PLACES as place, index (place?.[0] ?? `gap-${index}`)}
+      {#if place}
+        {@const [id, label, icon] = place}
+        <button class="nav-item" class:on={nav.tab === id} aria-current={nav.tab === id ? 'page' : undefined} onclick={() => nav.switchTab(id)}>
+          <Icon name={icon} />{t(label)}
+        </button>
+      {:else}
+        <hr class="nav-gap" />
+      {/if}
     {/each}
-    <button class="nav-item files" onclick={() => fileInput?.click()}><Icon name="file" />{t('Open Files…')}</button>
+    <div class="nav-end">
+      <button class="nav-item" onclick={() => fileInput?.click()}><Icon name="file" />{t('Open Files…')}</button>
+      <button
+        class="nav-item"
+        class:on={nav.tab === 'settings'}
+        aria-current={nav.tab === 'settings' ? 'page' : undefined}
+        onclick={() => nav.switchTab('settings')}><Icon name="settings" />{t('Settings')}</button
+      >
+    </div>
   </nav>
 
   <main class="content" id="main" tabindex="-1">
@@ -162,12 +195,21 @@
       <div class="route" class:fade={nav.motion === 'back'}>
         {#if route.view === 'browse'}
           <Browse plugin={route.plugin} item={route.item} />
+        {:else if route.view === 'source'}
+          <SourcePage plugin={route.plugin} />
+        {:else if route.view === 'albums' || route.view === 'artists' || route.view === 'songs'}
+          <nav class="library-tabs" aria-label={t('Library')}>
+            {#each [['albums', t('Albums')], ['artists', t('Artists')], ['songs', t('Songs')]] as [id, label] (id)}
+              <button class:on={route.view === id} aria-current={route.view === id ? 'page' : undefined} onclick={() => nav.switchTab(id as Tab)}>{label}</button>
+            {/each}
+          </nav>
+          {#if route.view === 'albums'}<Albums />{:else if route.view === 'artists'}<Artists />{:else}<Songs />{/if}
         {:else if route.view === 'search'}
           <SearchView />
         {:else if route.view === 'sources'}
           <SourcesView />
         {:else if route.view === 'settings'}
-          <Preferences
+          <Settings
             installPrompt={installEvent !== null}
             oninstall={async () => {
               await installEvent?.prompt();
@@ -195,8 +237,8 @@
   </div>
 
   <nav class="tabs" aria-label={t('Library sections')}>
-    {#each TABS as [id, label, icon] (id)}
-      <button class:on={nav.tab === id} aria-current={nav.tab === id ? 'page' : undefined} onclick={() => nav.switchTab(id)}>
+    {#each PHONE_TABS as [id, label, icon] (id)}
+      <button class:on={onTab(id)} aria-current={onTab(id) ? 'page' : undefined} onclick={() => nav.switchTab(id)}>
         <Icon name={icon} /><span>{t(label)}</span>
       </button>
     {/each}
@@ -298,8 +340,20 @@
     background: var(--jf-accent-soft);
     color: var(--jf-accent-text);
   }
-  .nav-item.files {
+  .nav-gap {
+    margin: var(--jf-space-s2) var(--jf-space-s3);
+    border: 0;
+    border-top: 1px solid var(--jf-line-soft);
+  }
+  .nav-end {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     margin-top: auto;
+  }
+  /* Albums, Artists and Songs as one Library tab on phones. */
+  .library-tabs {
+    display: none;
   }
   button:focus-visible,
   a:focus-visible {
@@ -489,6 +543,30 @@
     }
     .tabs button.on {
       color: var(--jf-accent-text);
+    }
+    .library-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: var(--jf-space-s4);
+      padding: 4px;
+      border-radius: var(--jf-radius-r-full);
+      background: var(--jf-fill);
+    }
+    .library-tabs button {
+      flex: 1;
+      min-height: 36px;
+      border: 0;
+      border-radius: var(--jf-radius-r-full);
+      background: transparent;
+      color: var(--jf-ink-70);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .library-tabs button.on {
+      background: var(--jf-cloud);
+      color: var(--jf-ink-90);
+      box-shadow: var(--jf-elevation-shadow-1);
     }
   }
 </style>

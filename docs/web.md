@@ -1,16 +1,17 @@
 # Jellyfesh Web
 
-Jellyfesh Web is Jellyfesh in the browser, "server player first": it streams
-and browses your **Subsonic, Navidrome or Jellyfin server** with the same
-Now Playing as the apps (artwork, both backdrop styles, lyrics that follow
-every word, with translation and romanization), the queue, search, browse,
-sign-in and settings, in the Misty design. It installs as a web app, lives
-on the website at `/app/`, and plays audio files you drag onto it, without
-keeping them.
+Jellyfesh Web is Jellyfesh in the browser. It streams and browses your
+**Subsonic, Navidrome or Jellyfin server**, keeps a **library of your own
+music folders**, and installs **source plugins from `.jfpkg` files**, with
+the same Now Playing as the apps (artwork, both backdrop styles, lyrics that
+follow every word, with translation and romanization), the queue, search,
+sign-in and settings, in the Misty design. It is laid out like the apps
+(Home, Albums, Artists, Songs, Search, Sources, Settings; [ui.md](ui.md)),
+installs as a web app, lives on the website at `/app/`, and plays audio
+files you drag onto it without keeping them.
 
-It has no library of its own: no folders, no saved playlists or favourites.
-Everything comes from your server through the same official plugins the
-apps use, or from the files you drop.
+It keeps no playlists, favourites or play history of its own: the server's
+playlists can be browsed and played.
 
 ![Now Playing in the Artwork style, dark, against the mock server](screenshots/web/now-playing-artwork-dark-desktop-mock-server.png)
 
@@ -26,16 +27,35 @@ secret).
 
 * **Open it** at the website's `/app/` (the "Open Jellyfesh Web" link on the
   home and download pages), or host it yourself (below).
-* **Install it**, if you like: Preferences → Install Jellyfesh Web where the
+* **Install it**, if you like: Settings › About › Install Jellyfesh Web where the
   browser offers it (Chrome, Edge), or the browser's own "Add to Home
   Screen" / "Add to Dock" (Safari). It then opens in its own window and
   starts without a connection; your server still has to be reachable.
-* **Add a source**: Sources → Add a Source lists the services this copy's
-  official plugins connect to (Jellyfin, Navidrome, other Subsonic servers);
-  choosing one opens the sign-in below with the service's name and an
-  example address. Plugins that are not signed with the release key are not
-  listed there (sign in from their own card instead).
-* **Sign in**: Sources → Sign In on Subsonic or Jellyfin. Enter the address
+* **Add music folders**: Home → Add Music Folder…, or Settings › Library →
+  Add Folder…. Jellyfesh Web reads the folder through the browser (nothing
+  is uploaded), keeps what the songs' tags say in IndexedDB, and lists it
+  under Albums, Artists and Songs, with Search and Home's Recently Added.
+  Lyrics files beside a song (`.lrc`, `.ttml`, `.vtt`) and embedded lyrics
+  are used. Chrome and Edge keep access to the folder: on a later visit they
+  ask once ("Allow Access"). Firefox and Safari give pages a folder's files
+  only for the visit: the library is kept, and you pick the folder again
+  ("Pick Folder…") to play from it. Rescan Library reads new, changed and
+  removed files; browsers do not tell pages when files change, so there is
+  no Watch Folders.
+* **Add a source**: Sources → Add a Source (also in Settings › Sources) lists
+  the services this copy's official plugins connect to (Jellyfin, Navidrome,
+  other Subsonic servers); choosing one opens the sign-in below with the
+  service's name and an example address. Plugins that are not signed with
+  the release key are not listed there (sign in from their card in Settings
+  › Sources instead).
+* **Install a plugin**: Settings › Sources › Install from File… reads a
+  `.jfpkg` with the native host's checks (below), refuses community packages
+  while community plugins are off and updates signed by another key, starts
+  it once, and keeps it. Uninstall… removes a plugin with its settings and
+  sign-in; a bundled plugin you uninstall stays uninstalled until you install
+  it from a file again.
+* **Sign in**: Settings › Sources → Sign In on Subsonic or Jellyfin, or
+  choose the source under Sources › Your Sources. Enter the address
   you open your server at; Jellyfesh Web checks that this page can reach it
   (see the next section) and then offers the plugin's ways to sign in:
   user name and password (exchanged once for a token; the password is never
@@ -46,12 +66,12 @@ secret).
   A lyrics file with the same name (`.ttml`, `.lrc`, `.vtt`) dropped with
   them is used, else lyrics in the tags. They play for this visit only and
   are not uploaded or stored.
-* The keyboard shortcuts are the Linux app's (Preferences lists them):
+* The keyboard shortcuts are the apps' ([ui.md](ui.md); Settings › About lists them):
   Space, Ctrl+→/←, Shift+→/←, Ctrl+↑/↓, Ctrl+M, Ctrl+S, Ctrl+R, Ctrl+P,
   Ctrl+L, Ctrl+U, Ctrl+F, Esc. Media keys, lock screens and system media
   controls work through the Media Session API.
 * Languages: English, Simplified Chinese, Traditional Chinese and Japanese,
-  from the browser's languages or Preferences → Language.
+  from the browser's languages or Settings › Appearance › Language.
 
 ## How it looks
 
@@ -78,7 +98,7 @@ after Apple Music and Windows Media Player.
   thumb, 12 px while dragging). It seeks when released. Keys: Left and
   Right move 5 s, Page Up and Page Down 30 s, Home and End go to the ends;
   screen readers hear "1:23 of 3:45". The volume and the sliders in
-  Preferences are the same line.
+  Settings are the same line.
 * **Now Playing**: the artwork settles at 88 % while paused and springs
   back when playing; play and pause morph into each other; the backdrop
   crossfades between songs; lyrics move up in a cascade, each line 30 ms
@@ -98,8 +118,10 @@ after Apple Music and Windows Media Player.
   nothing moves: what changes fades briefly, the artwork keeps its size,
   lyrics jump and the level glyph stands still.
 
-**Preferences → Appearance**, where every change applies at once (the hue
-and transparency sliders while they move):
+**Settings** has the apps' sections, one at a time: Appearance, Playback,
+Library, Sources and About ([ui.md](ui.md)). **Settings › Appearance**, where
+every change applies at once (the hue and transparency sliders while they
+move):
 
 | Setting | Choices |
 | --- | --- |
@@ -107,15 +129,16 @@ and transparency sliders while they move):
 | Accent Colour | Follow the Artwork; or one of ten swatches (hues 250, 210, 180, 150, 120, 60, 30, 0, 330, 290) or any hue on the Custom slider |
 | Transparency | Solid … Clear, 50 % by default (the glass tints' alpha, from the core's `glass_alpha`), with a live preview |
 | Reduce Motion and Transparency | Solid glass and no movement |
-| Now Playing Background | Artwork or Misty, with previews |
+| Now Playing Backdrop | Artwork or Misty, with previews |
 | Lyrics Size | Small, Medium, Large (0.8×, 1×, 1.2×) |
 | Lyrics Alignment | Start, Centre |
 | Show Translations, Show Romanization | Switches |
+| Language | System, English, 简体中文, 繁體中文, 日本語 |
 
 The apps' app icon picker has no counterpart here: an installed web app
 takes its icon from the manifest.
 
-![Preferences, Appearance, dark, against the mock server](screenshots/web/preferences-appearance-dark-desktop-mock-server.png)
+![Settings, Appearance, dark, against the mock server](screenshots/web/preferences-appearance-dark-desktop-mock-server.png)
 
 ## Browsers
 
@@ -200,7 +223,7 @@ message says so. The two ways out:
 
 ### Formats
 
-Jellyfesh Web asks the server for the quality in Preferences → Streaming
+Jellyfesh Web asks the server for the quality in Settings › Playback › Streaming
 Quality. When the browser cannot play what the server would send (the
 plugins say which codec will arrive, and the page asks the browser with
 `canPlayType`), it asks for the next quality down, which servers send
@@ -216,7 +239,7 @@ cannot be played, the player says so and goes on to the next.
 
 Each release from the next one on has `jellyfesh-web-v<version>.zip`: the
 static folder, with the official plugins and `THIRD_PARTY_NOTICES.txt` (the
-licences of what it contains, linked from Preferences → About) inside. Unpack it anywhere a web server serves static files
+licences of what it contains, linked from Settings › About) inside. Unpack it anywhere a web server serves static files
 (nginx, Caddy, Apache, the server's own reverse proxy), at any path: every
 URL in it is relative. Notes:
 
@@ -248,13 +271,13 @@ URL in it is relative. Notes:
 
 | | Apps | Jellyfesh Web |
 | --- | --- | --- |
-| Library | Folders scanned into a local library | None: your server's catalogue, and dropped files for one visit |
-| Playlists, favourites | Kept locally | Not in this version; the server's playlists can be browsed and played |
+| Library | Folders scanned into a local library (SQLite) | Folders read through the browser, catalogued in IndexedDB by the same grouping, sorting and search rules (`jf_web::library`); re-picked each visit where the browser keeps no folder access; no Watch Folders |
+| Playlists, favourites, history | Kept locally | Not in this version; the server's playlists can be browsed and played |
 | Audio | `jf-engine` on a thread of its own, cpal output | The browser's decoders and Web Audio (below) |
 | Gapless | Sample-accurate | Near-gapless: the next song starts by the element clock (below) |
 | Output device | Choosable | The browser's |
-| ReplayGain | From tags, any source | From the tags of dropped files; server streams carry no gain values through the plugins, so they play at their own level |
-| Plugins | Installable `.jfpkg` files, wasmtime sandbox | The bundled official plugins only, in Web Workers (below) |
+| ReplayGain | From tags, any source | From the tags of library songs and dropped files; server streams carry no gain values through the plugins, so they play at their own level |
+| Plugins | Installable `.jfpkg` files, wasmtime sandbox | The bundled plugins and `.jfpkg` files installed in the browser, in Web Workers (below) |
 | Sign-in | Every kind the plugin offers | Not "Sign In in Browser" (OAuth needs a loopback redirect a page cannot catch) or "Paste Cookies" |
 | Secrets | System keystore | IndexedDB, encrypted with a non-extractable WebCrypto key |
 | Resume Playback | Starts playing | Brings back the queue and position, ready to play: browsers do not start sound before a click |
@@ -306,15 +329,18 @@ http page) the page downloads the song whole and plays it from memory.
 
 ### How plugins run
 
-Each official plugin runs in its own Web Worker. The build transpiles the
-plugin's component from its `.jfpkg` with `@bytecodealliance/jco` (1.41.0),
-and the worker reads and verifies the package with the same Rust code as the
-native host (`jf-web-sandbox`: package format, manifest, signature against
-the built-in trust list) and checks that the transpiled code came from that
-package's component (its SHA-256, recorded at build time). The page's origin
-is the trust anchor: the package, the transpiled code and the app come from
-it together. Unsigned packages are Community plugins, off until you allow
-them, as in the apps (ADR-0012).
+Each plugin runs in its own Web Worker. The build transpiles the bundled
+plugins' components from their `.jfpkg` with `@bytecodealliance/jco`
+(1.41.0); a package installed from a file is transpiled in the browser, in a
+worker of its own, by jco's browser transpiler (`@bytecodealliance/jco/component`,
+loaded only for an install), and kept in IndexedDB with the package. Each
+worker reads and verifies the package with the same Rust code as the native
+host (`jf-web-sandbox`: package format, manifest, signature against the
+built-in trust list) and checks that the transpiled code came from that
+package's component (its SHA-256). Which packages may be installed, and the
+words for refusals, are `jf_plugin_model::install`, shared with the native
+host. Unsigned packages are Community plugins, off until you allow them, as
+in the apps (ADR-0012).
 
 The WIT host imports are TypeScript, with the native rules where a browser
 allows them:
@@ -351,10 +377,13 @@ allows them:
 
 Jellyfesh Web talks only to the servers you sign in to; the site it is
 served from gets the static files and nothing else (no analytics, no
-cookies). In the browser it keeps your preferences, volume and queue
-(`localStorage`; dropped files are never stored) and, per plugin, its state,
-settings, plain values and encrypted secrets (IndexedDB). Clearing the
-site's data in the browser removes all of it.
+cookies). In the browser it keeps your settings, volume and queue
+(`localStorage`; dropped files are never stored); per plugin, its state,
+settings, plain values and encrypted secrets, and the packages you installed
+(IndexedDB `jellyfesh`); and your library: the folders (with the browser's
+folder handles where it keeps them), what the songs' tags say and their
+covers (IndexedDB `jellyfesh-library`). The music files themselves are never
+copied. Clearing the site's data in the browser removes all of it.
 
 ## Performance
 

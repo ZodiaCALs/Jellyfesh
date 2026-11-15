@@ -57,8 +57,9 @@ function viewTransitions(target: Page): Promise<number> {
 }
 
 async function openPreferences() {
-  await nav(page, 'Preferences').click();
-  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+  await nav(page, 'Settings').click();
+  await page.getByRole('tab', { name: 'Appearance' }).click();
+  await expect(page.getByRole('heading', { name: 'Theme' })).toBeVisible();
 }
 
 test.beforeAll(async ({ browser }) => {
@@ -192,7 +193,7 @@ test('steps the seek bar with the keyboard and reads its value', async () => {
 
 test('sets the glass tints from the transparency setting', async () => {
   await openPreferences();
-  const slider = page.getByLabel('Transparency', { exact: true });
+  const slider = page.getByRole('slider', { name: 'Transparency', exact: true });
   const veil = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--jf-tint-veil'));
   const expected = (t: number) =>
     page.evaluate((transparency) => {

@@ -11,7 +11,7 @@ test.describe.configure({ mode: 'serial' });
 
 const OUT = fileURLToPath(new URL('../../../../docs/screenshots/web/', import.meta.url));
 const DESKTOP = { width: 1280, height: 800 };
-/** Tall enough for the whole Appearance section of Preferences. */
+/** Tall enough for the whole Appearance section of Settings. */
 const DESKTOP_TALL = { width: 1280, height: 1380 };
 const PHONE = { width: 390, height: 844 };
 
@@ -97,9 +97,10 @@ test('the player bar', async () => {
   await setLook('light', 'artwork');
 });
 
-test('Preferences: Appearance', async () => {
-  await nav(page, 'Preferences').click();
-  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+test('Settings: Appearance', async () => {
+  await nav(page, 'Settings').click();
+  await page.getByRole('tab', { name: 'Appearance' }).click();
+  await expect(page.getByRole('heading', { name: 'Theme' })).toBeVisible();
   // Show the swatches: a fixed accent, the default hue's swatch.
   await page.evaluate(() =>
     (globalThis as any).jellyfesh.settings.update((d: any) => (d.hue_source = { kind: 'fixed', hue: 250 })),

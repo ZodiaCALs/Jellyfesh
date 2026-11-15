@@ -2,7 +2,7 @@
 // elsewhere), browsing, streams that need an Authorization header, lyrics, search and sign-out.
 
 import { expect, type Page, test } from '@playwright/test';
-import { nav, openAlbum, openApp, signInJellyfinQuickConnect, snapshot, waitPlaying } from './helpers';
+import { nav, openAlbum, openApp, openSourcesSettings, signInJellyfinQuickConnect, snapshot, sourceCard, waitPlaying } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -19,8 +19,8 @@ test.afterAll(async () => {
 
 test('signs in with Quick Connect', async () => {
   await signInJellyfinQuickConnect(page);
-  await nav(page, 'Sources').click();
-  await expect(page.locator('li.source', { hasText: 'Jellyfin' })).toContainText('Signed in as demo');
+  await openSourcesSettings(page);
+  await expect(sourceCard(page, 'Jellyfin')).toContainText('Signed in as demo');
 });
 
 test('plays an album whose streams need the Authorization header', async () => {
@@ -51,8 +51,8 @@ test('searches, and signs out', async () => {
   await nav(page, 'Search').click();
   await page.getByRole('searchbox', { name: 'Search' }).fill('still');
   await expect(page.getByRole('region', { name: 'Jellyfin' }).getByRole('button', { name: 'Play Still Water' })).toBeVisible();
-  await nav(page, 'Sources').click();
-  const card = page.locator('li.source', { hasText: 'Jellyfin' });
+  await openSourcesSettings(page);
+  const card = sourceCard(page, 'Jellyfin');
   await card.getByRole('button', { name: 'Sign Out' }).click();
   await expect(card).toContainText('Not signed in');
 });

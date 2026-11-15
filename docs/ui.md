@@ -187,8 +187,9 @@ conventions and must not reuse these keys.
 ## Allowed differences
 
 * **Web:** no Playlists, Favourites or history (so Home has no Recently
-  Played or Most Played), and no Output Device (a browser decides where
-  sound goes). Its Settings also list the keyboard shortcuts. Its library is folders the browser may
+  Played or Most Played; it shows each signed-in source's start page
+  instead), and no Output Device (a browser decides where sound goes). Its
+  Settings also list the keyboard shortcuts. Its library is folders the browser may
   read (re-picked each visit where the browser cannot keep access), with no
   Watch Folders. **Open Files…** plays files for one visit without adding
   them. Streaming Quality and Language are its own settings.

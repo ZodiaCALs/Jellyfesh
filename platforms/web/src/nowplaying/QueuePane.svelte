@@ -80,7 +80,7 @@
         onclick={() => {
           confirming = false;
           player.clear();
-        }}>{t('Clear')}</button
+        }}>{t('Clear Queue')}</button
       >
     </div>
   </Sheet>

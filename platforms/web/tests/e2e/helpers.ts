@@ -60,10 +60,22 @@ export function nav(page: Page, name: string) {
   return page.getByRole('navigation', { name: 'Library sections' }).first().getByRole('button', { name, exact: true });
 }
 
+/** Settings › Sources, where the installed sources are managed. */
+export async function openSourcesSettings(page: Page) {
+  await nav(page, 'Settings').click();
+  await page.getByRole('tab', { name: 'Sources' }).click();
+  await expect(page.getByRole('heading', { name: 'Installed' })).toBeVisible();
+}
+
+/** A source's card in Settings › Sources. */
+export function sourceCard(page: Page, name: string) {
+  return page.locator('li.source', { has: page.getByRole('heading', { name, exact: true }) });
+}
+
 /** Opens the sign-in sheet of a source, accepting the community disclosure when the build's packages are unsigned. */
-async function openSignIn(page: Page, source: string) {
-  await nav(page, 'Sources').click();
-  const card = page.locator('li.source', { has: page.getByRole('heading', { name: source }) });
+export async function openSignIn(page: Page, source: string) {
+  await openSourcesSettings(page);
+  const card = sourceCard(page, source);
   await card.getByRole('button', { name: 'Sign In', exact: true }).click();
   const allow = page.getByRole('button', { name: 'I Understand, Allow' });
   const sheet = page.getByRole('dialog', { name: `Sign In to ${source}` });
@@ -78,10 +90,10 @@ async function openSignIn(page: Page, source: string) {
 
 export async function signInSubsonic(page: Page, server = SUBSONIC) {
   const sheet = await openSignIn(page, 'Subsonic');
-  await sheet.getByLabel('Server address').fill(server);
+  await sheet.getByLabel('Server Address').fill(server);
   await sheet.getByRole('button', { name: 'Continue' }).click();
   await sheet.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await sheet.getByLabel('User name').fill(USER);
+  await sheet.getByLabel('User Name').fill(USER);
   await sheet.getByLabel('Password').fill(PASSWORD);
   await sheet.getByRole('button', { name: 'Sign In', exact: true }).click();
   await expect(sheet.getByText(`Signed in as ${USER}.`)).toBeVisible();
@@ -91,7 +103,7 @@ export async function signInSubsonic(page: Page, server = SUBSONIC) {
 /** Quick Connect: the app shows a code, the "person" approves it on the mock server. */
 export async function signInJellyfinQuickConnect(page: Page) {
   const sheet = await openSignIn(page, 'Jellyfin');
-  await sheet.getByLabel('Server address').fill(JELLYFIN);
+  await sheet.getByLabel('Server Address').fill(JELLYFIN);
   await sheet.getByRole('button', { name: 'Continue' }).click();
   await sheet.getByRole('button', { name: 'Sign In with QR Code' }).click();
   const code = sheet.locator('.code');
@@ -118,7 +130,7 @@ export async function openAlbum(page: Page, source: string, album: string) {
   await expect(page.getByRole('heading', { name: album, level: 1 })).toBeVisible();
 }
 
-/** Sets a preference through the core (as the Preferences page does). */
+/** Sets a setting through the core (as the Settings page does). */
 export async function setCrossfade(page: Page, enabled: boolean, seconds = 2, albumContinuity = false) {
   await page.evaluate(
     ({ enabled, seconds, albumContinuity }) => {

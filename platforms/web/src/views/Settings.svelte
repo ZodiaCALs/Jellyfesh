@@ -1,19 +1,31 @@
 <script lang="ts">
-  // Preferences in grouped cards (after Windows Settings and macOS System Settings): appearance
-  // (theme, accent colour, transparency, motion, the Now Playing background and lyrics), playback
-  // (crossfade, volume levelling, equalizer, quality), startup and language. Every change applies at
-  // once and goes through the core, which keeps the values in range; the sliders apply live.
+  // Settings in the sections every app has (docs/ui.md), one at a time: Appearance (theme, accent
+  // colour, transparency, the Now Playing backdrop, lyrics, language), Playback (crossfade, volume
+  // levelling, equalizer, streaming quality, startup), Library (music folders), Sources (adding,
+  // installing and managing sources) and About (keyboard shortcuts, version, notices). Every change
+  // applies at once and goes through the core, which keeps the values in range.
   import Icon from '../components/Icon.svelte';
   import LineSlider from '../components/LineSlider.svelte';
+  import LibrarySettings from './LibrarySettings.svelte';
+  import SourcesSettings from './SourcesSettings.svelte';
   import { useApp } from '../lib/app';
   import type { EqSettings, Quality, Themes, WebSettings } from '../lib/core/types';
   import { LANGUAGES, pt, t } from '../lib/i18n/index.svelte';
   import { cssColour, type Rgba } from '../lib/state/glass';
+  import type { SettingsSection } from '../lib/state/nav.svelte';
 
   let { installPrompt, oninstall }: { installPrompt: boolean; oninstall: () => void } = $props();
 
   const app = useApp();
   const settings = app.settings;
+  const section = $derived(app.nav.settingsSection);
+  const SECTION_LABELS: [SettingsSection, string][] = [
+    ['appearance', 'Appearance'],
+    ['playback', 'Playback'],
+    ['library', 'Library'],
+    ['sources', 'Sources'],
+    ['about', 'About'],
+  ];
   const s = $derived(settings.value);
   const presets = JSON.parse(app.jf.eq_presets()) as [string, EqSettings][];
   const PRESET_LABELS: Record<string, string> = { flat: 'Flat', bass_boost: 'Bass Boost', vocal: 'Vocal', treble: 'Treble' };
@@ -39,7 +51,7 @@
     return cssColour(themesFor(hue)[appearance].colors['accent.accent'] as Rgba);
   }
   const swatches = $derived(
-    [t('Blue'), t('Cyan'), t('Teal'), t('Green'), t('Olive'), t('Orange'), t('Red'), t('Rose'), t('Magenta'), t('Purple')].map(
+    [t('Blue'), t('Cyan'), t('Teal'), t('Green'), t('Olive'), t('Orange'), t('Red'), t('Rose'), t('Magenta'), t('Violet')].map(
       (name, index) => ({ hue: SWATCH_HUES[index], name, colour: accentOf(SWATCH_HUES[index]) }),
     ),
   );
@@ -81,17 +93,17 @@
   }
 
   const SHORTCUTS: [string, string][] = [
-    ['Space', 'Play or pause'],
-    ['Ctrl + →', 'Next song'],
-    ['Ctrl + ←', 'Previous song'],
-    ['Shift + →', 'Skip forward 5 seconds'],
-    ['Shift + ←', 'Skip back 5 seconds'],
-    ['Ctrl + ↑', 'Volume up'],
-    ['Ctrl + ↓', 'Volume down'],
+    ['Space', 'Play or Pause'],
+    ['Ctrl + →', 'Next Song'],
+    ['Ctrl + ←', 'Previous Song'],
+    ['Shift + →', 'Skip Forward 5 Seconds'],
+    ['Shift + ←', 'Skip Back 5 Seconds'],
+    ['Ctrl + ↑', 'Volume Up'],
+    ['Ctrl + ↓', 'Volume Down'],
     ['Ctrl + M', 'Mute'],
     ['Ctrl + S', 'Shuffle'],
     ['Ctrl + R', 'Repeat'],
-    ['Ctrl + P', 'Open Now Playing'],
+    ['Ctrl + P', 'Now Playing'],
     ['Ctrl + L', 'Lyrics'],
     ['Ctrl + U', 'Queue'],
     ['Ctrl + F', 'Search'],
@@ -127,15 +139,29 @@
 {/snippet}
 
 <section class="page prefs" aria-labelledby="prefs-title">
-  <h1 id="prefs-title" class="page-title">{t('Preferences')}</h1>
+  <h1 id="prefs-title" class="page-title">{t('Settings')}</h1>
 
-  <section class="group" aria-labelledby="g-appearance">
-    <h2 id="g-appearance" class="section">{t('Appearance')}</h2>
+  <div class="sections" role="tablist" aria-label={t('Settings')}>
+    {#each SECTION_LABELS as [id, label] (id)}
+      <button
+        role="tab"
+        id="tab-{id}"
+        aria-selected={section === id}
+        aria-controls="panel-{id}"
+        class:on={section === id}
+        onclick={() => app.nav.showSection(id)}>{t(label)}</button
+      >
+    {/each}
+  </div>
 
+  <div class="panel" role="tabpanel" id="panel-{section}" aria-labelledby="tab-{section}">
+  {#if section === 'appearance'}
+  <section class="group" aria-labelledby="g-theme">
+    <h2 id="g-theme" class="section">{t('Theme')}</h2>
     <div class="card">
       <div class="row stacked">
-        <span class="text"><span class="label" id="theme-label">{t('Theme')}</span></span>
-        <div class="tiles" role="radiogroup" aria-labelledby="theme-label">
+        <span class="text"><span class="help">{t('Light, dark, or the same as your system.')}</span></span>
+        <div class="tiles" role="radiogroup" aria-labelledby="g-theme">
           {#each [['system', t('System')], ['light', t('Light')], ['dark', t('Dark')]] as [id, name] (id)}
             <label class="tile" class:on={s.appearance === id}>
               <input
@@ -163,13 +189,16 @@
       </div>
     </div>
 
+  </section>
+  <section class="group" aria-labelledby="g-accent">
+    <h2 id="g-accent" class="section">{t('Accent Colour')}</h2>
     <div class="card">
       {@render toggle(t('Follow the Artwork'), t('The accent and the field take the hue of what plays.'), s.hue_source.kind === 'artwork', (on) =>
         set((d) => (d.hue_source = on ? { kind: 'artwork' } : { kind: 'fixed', hue: Math.round(app.theme.themes.hue) })),
       )}
       {#if fixedHue !== null}
         <div class="row stacked">
-          <span class="text"><span class="label" id="accent-label">{t('Accent Colour')}</span></span>
+          <span class="text"><span class="label" id="accent-label">{t('Colour')}</span></span>
           <div class="swatches" role="radiogroup" aria-labelledby="accent-label">
             {#each swatches as swatch (swatch.hue)}
               <label class="swatch" style:--swatch={swatch.colour} title={swatch.name}>
@@ -210,10 +239,13 @@
       {/if}
     </div>
 
+  </section>
+  <section class="group" aria-labelledby="g-transparency">
+    <h2 id="g-transparency" class="section">{t('Transparency')}</h2>
     <div class="card">
       <div class="row stacked">
         <span class="text">
-          <label class="label" for="transparency">{t('Transparency')}</label>
+          <label class="sr-only" for="transparency">{t('Transparency')}</label>
           <span class="help">
             {s.reduce_effects
               ? t('Glass is solid while Reduce Motion and Transparency is on.')
@@ -249,10 +281,13 @@
       )}
     </div>
 
+  </section>
+  <section class="group" aria-labelledby="g-backdrop">
+    <h2 id="g-backdrop" class="section">{t('Now Playing Backdrop')}</h2>
     <div class="card">
       <div class="row stacked">
         <span class="text">
-          <span class="label" id="background-label">{t('Now Playing Background')}</span>
+          <span class="sr-only" id="background-label">{t('Now Playing Backdrop')}</span>
           <span class="help">{t('Artwork blurs the album cover behind Now Playing; Misty uses the Misty field in its colour.')}</span>
         </span>
         <div class="tiles" role="radiogroup" aria-labelledby="background-label">
@@ -276,6 +311,9 @@
       </div>
     </div>
 
+  </section>
+  <section class="group" aria-labelledby="g-lyrics">
+    <h2 id="g-lyrics" class="section">{t('Lyrics')}</h2>
     <div class="card">
       {@render segmented(
         'lyrics-size',
@@ -312,16 +350,30 @@
       )}
     </div>
   </section>
-
-  <section class="group" aria-labelledby="g-playback">
-    <h2 id="g-playback" class="section">{t('Playback')}</h2>
+  <section class="group" aria-labelledby="g-language">
+    <h2 id="g-language" class="section">{t('Language')}</h2>
+    <div class="card">
+      <div class="row">
+        <label class="text" for="language"><span class="help">{t('The language Jellyfesh Web is shown in.')}</span></label>
+        <select id="language" value={s.language ?? ''} onchange={(event) => set((d) => (d.language = value(event) || null))}>
+          <option value="">{t('System')}</option>
+          {#each LANGUAGES as language (language.id)}
+            <option value={language.id} lang={language.id}>{language.name}</option>
+          {/each}
+        </select>
+      </div>
+    </div>
+  </section>
+  {:else if section === 'playback'}
+  <section class="group" aria-labelledby="g-crossfade">
+    <h2 id="g-crossfade" class="section">{t('Crossfade')}</h2>
     <div class="card">
       {@render toggle(t('Crossfade'), t('Blend the end of a song into the next.'), s.crossfade.enabled, (on) =>
         set((d) => (d.crossfade.enabled = on)),
       )}
       {#if s.crossfade.enabled}
         <div class="row">
-          <label class="text" for="xfade"><span class="label">{t('Seconds')}</span></label>
+          <label class="text" for="xfade"><span class="label">{t('Length')}</span></label>
           <span class="slider">
             <LineSlider
               id="xfade"
@@ -339,24 +391,11 @@
           set((d) => (d.crossfade.album_continuity = on)),
         )}
       {/if}
-      <div class="row">
-        <label class="text" for="quality">
-          <span class="label">{t('Streaming Quality')}</span>
-          <span class="help">{t('What to ask servers for. Jellyfesh steps down when this browser cannot play a format.')}</span>
-        </label>
-        <select id="quality" value={s.quality} onchange={(event) => set((d) => (d.quality = value(event) as Quality))}>
-          <option value="Lossless">{t('Lossless')}</option>
-          <option value="High">{t('High')}</option>
-          <option value="Normal">{t('Normal')}</option>
-          <option value="Low">{t('Low')}</option>
-        </select>
-      </div>
     </div>
   </section>
-
   <section class="group" aria-labelledby="g-levelling">
     <h2 id="g-levelling" class="section">{t('Volume Levelling')}</h2>
-    <p class="note">{t('ReplayGain evens out loudness using the tags in your files.')}</p>
+    <p class="note">{t('Evens out loudness using the ReplayGain tags in your files.')}</p>
     <div class="card">
       {@render segmented(
         'replaygain',
@@ -390,7 +429,6 @@
       </div>
     </div>
   </section>
-
   <section class="group" aria-labelledby="g-eq">
     <h2 id="g-eq" class="section">{t('Equalizer')}</h2>
     <div class="card">
@@ -411,6 +449,23 @@
           {#if preset === 'custom'}<option value="custom">{t('Custom')}</option>{/if}
         </select>
       </div>
+      <div class="row">
+        <label class="text" for="eq-preamp"><span class="label">{t('Preamp')}</span></label>
+        <span class="slider">
+          <LineSlider
+            id="eq-preamp"
+            value={s.eq.preamp_db}
+            min={-12}
+            max={12}
+            step={0.5}
+            plain
+            disabled={!s.eq.enabled}
+            valuetext="{s.eq.preamp_db.toFixed(1)} dB"
+            onchange={(db) => set((d) => (d.eq.preamp_db = db))}
+          />
+          <output for="eq-preamp">{s.eq.preamp_db > 0 ? '+' : ''}{s.eq.preamp_db.toFixed(1)} dB</output>
+        </span>
+      </div>
       <div class="bands" class:off={!s.eq.enabled}>
         {#each s.eq.bands as band, index (index)}
           <label class="band">
@@ -429,39 +484,51 @@
           </label>
         {/each}
       </div>
+      <div class="row end">
+        <button
+          class="button"
+          disabled={!s.eq.enabled}
+          onclick={() => {
+            const flat = presets.find(([name]) => name === 'flat');
+            if (flat) set((d) => (d.eq = { ...flat[1], enabled: d.eq.enabled }));
+          }}>{t('Reset to Flat')}</button
+        >
+      </div>
     </div>
   </section>
-
-  <section class="group" aria-labelledby="g-general">
-    <h2 id="g-general" class="section">{t('General')}</h2>
+  <section class="group" aria-labelledby="g-streaming">
+    <h2 id="g-streaming" class="section">{t('Streaming')}</h2>
+    <div class="card">
+      <div class="row">
+        <label class="text" for="quality">
+          <span class="label">{t('Streaming Quality')}</span>
+          <span class="help">{t('What to ask servers for. Jellyfesh steps down when this browser cannot play a format.')}</span>
+        </label>
+        <select id="quality" value={s.quality} onchange={(event) => set((d) => (d.quality = value(event) as Quality))}>
+          <option value="Lossless">{t('Lossless')}</option>
+          <option value="High">{t('High')}</option>
+          <option value="Normal">{t('Normal')}</option>
+          <option value="Low">{t('Low')}</option>
+        </select>
+      </div>
+    </div>
+  </section>
+  <section class="group" aria-labelledby="g-startup">
+    <h2 id="g-startup" class="section">{t('Startup')}</h2>
     <div class="card">
       {@render toggle(
         t('Resume Playback'),
-        t('Start where you left off: the queue and position come back, ready to play.'),
+        t('Start playing where you left off when Jellyfesh opens.'),
         s.resume_on_launch,
         (on) => set((d) => (d.resume_on_launch = on)),
       )}
-      <div class="row">
-        <label class="text" for="language"><span class="label">{t('Language')}</span></label>
-        <select id="language" value={s.language ?? ''} onchange={(event) => set((d) => (d.language = value(event) || null))}>
-          <option value="">{t('Follow System')}</option>
-          {#each LANGUAGES as language (language.id)}
-            <option value={language.id} lang={language.id}>{language.name}</option>
-          {/each}
-        </select>
-      </div>
-      {#if installPrompt}
-        <div class="row">
-          <span class="text">
-            <span class="label">{t('Install Jellyfesh Web')}</span>
-            <span class="help">{t('Open it from your apps, in its own window.')}</span>
-          </span>
-          <button class="button" onclick={oninstall}><Icon name="install" size={18} />{t('Install')}</button>
-        </div>
-      {/if}
     </div>
   </section>
-
+  {:else if section === 'library'}
+  <LibrarySettings />
+  {:else if section === 'sources'}
+  <SourcesSettings />
+  {:else}
   <section class="group" aria-labelledby="g-keys">
     <h2 id="g-keys" class="section">{t('Keyboard Shortcuts')}</h2>
     <div class="card padded">
@@ -473,20 +540,63 @@
       </dl>
     </div>
   </section>
-
   <section class="group about" aria-labelledby="g-about">
     <h2 id="g-about" class="section">{t('About Jellyfesh')}</h2>
     <div class="card padded">
       <p>{t('Version {version}', { version })} · {t('An elegant, lightweight music player.')}</p>
       <p>{t('Designed with the Misty design language.')}</p>
       <p><a href="THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener">{t('Third-party notices')}</a></p>
+      {#if installPrompt}
+        <div class="row">
+          <span class="text">
+            <span class="label">{t('Install Jellyfesh Web')}</span>
+            <span class="help">{t('Open it from your apps, in its own window.')}</span>
+          </span>
+          <button class="button" onclick={oninstall}><Icon name="install" size={18} />{t('Install')}</button>
+        </div>
+      {/if}
     </div>
   </section>
+  {/if}
+  </div>
 </section>
 
 <style>
   .prefs {
     max-width: var(--jf-layout-reading);
+  }
+  .sections {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: var(--jf-space-s6);
+    padding: 4px;
+    border-radius: var(--jf-radius-r-full);
+    background: var(--jf-fill);
+  }
+  .sections button {
+    flex: 1 1 auto;
+    min-height: 36px;
+    padding: 0 var(--jf-space-s3);
+    border: 0;
+    border-radius: var(--jf-radius-r-full);
+    background: transparent;
+    color: var(--jf-ink-70);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .sections button.on {
+    background: var(--jf-cloud);
+    color: var(--jf-ink-90);
+    box-shadow: var(--jf-elevation-shadow-1);
+  }
+  .sections button:focus-visible {
+    outline: none;
+    box-shadow: var(--jf-elevation-focus);
+  }
+  .row.end {
+    justify-content: flex-end;
   }
   .group {
     margin-bottom: var(--jf-space-s8);
