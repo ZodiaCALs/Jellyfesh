@@ -2,7 +2,7 @@
 
 use crate::{
     Capability, FieldValue, Flow, FlowStep, ImageRef, Item, ItemPage, LyricPayload, PageRequest, PluginError,
-    Quality, Result, SearchFilters, StreamInfo,
+    Quality, RemoteDevice, RemoteRepeat, RemoteState, Result, SearchFilters, StreamInfo,
 };
 
 /// A plugin: implement what the manifest declares, leave the rest.
@@ -91,6 +91,79 @@ pub trait Plugin {
     /// Personal suggestions.
     fn recommendations_for_user(page: PageRequest) -> Result<ItemPage> {
         let _ = page;
+        Err(PluginError::Unsupported)
+    }
+
+    /// Remote control (API 1.1): the devices the service can play on.
+    fn remote_devices() -> Result<Vec<RemoteDevice>> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// What the service's player is doing; `None` when nothing plays.
+    fn remote_state() -> Result<Option<RemoteState>> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// Plays `tracks` from index `start`, or the album or playlist `context`
+    /// from its track `start` (then `tracks` is empty), on `device` (the
+    /// active one when `None`).
+    fn remote_play(
+        device: Option<String>,
+        context: Option<Item>,
+        tracks: Vec<Item>,
+        start: u32,
+    ) -> Result<()> {
+        let _ = (device, context, tracks, start);
+        Err(PluginError::Unsupported)
+    }
+
+    /// Resumes playback.
+    fn remote_resume() -> Result<()> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// Pauses playback.
+    fn remote_pause() -> Result<()> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// Skips to the next track.
+    fn remote_next() -> Result<()> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// Goes back to the previous track.
+    fn remote_previous() -> Result<()> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// Seeks within the current track.
+    fn remote_seek(position_ms: u32) -> Result<()> {
+        let _ = position_ms;
+        Err(PluginError::Unsupported)
+    }
+
+    /// Sets the active device's volume (0–100).
+    fn remote_set_volume(percent: u32) -> Result<()> {
+        let _ = percent;
+        Err(PluginError::Unsupported)
+    }
+
+    /// Turns shuffle on or off.
+    fn remote_set_shuffle(on: bool) -> Result<()> {
+        let _ = on;
+        Err(PluginError::Unsupported)
+    }
+
+    /// Sets the repeat mode.
+    fn remote_set_repeat(mode: RemoteRepeat) -> Result<()> {
+        let _ = mode;
+        Err(PluginError::Unsupported)
+    }
+
+    /// Moves playback to `device`, playing there if `play`.
+    fn remote_transfer(device: String, play: bool) -> Result<()> {
+        let _ = (device, play);
         Err(PluginError::Unsupported)
     }
 }

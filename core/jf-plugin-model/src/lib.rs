@@ -18,6 +18,7 @@
 //! * [`merge`]: unified search merging.
 //! * [`auth`]: login flows as a state machine without I/O.
 //! * [`install`]: which packages may be installed, and the words for refusals.
+//! * [`links`]: links that open an item in its service (API 1.1).
 //! * [`crypto`] (feature `crypto`): the `crypto` import's primitives.
 //! * [`HostError`], [`CallError`]: the host API's errors.
 
@@ -28,6 +29,7 @@ pub mod crypto;
 mod error;
 pub mod http;
 pub mod install;
+pub mod links;
 pub mod manifest;
 pub mod merge;
 pub mod package;
@@ -42,5 +44,6 @@ pub use types::*;
 
 /// The WIT package major version hosts implement (`jellyfesh:plugin@1`).
 pub const API_MAJOR: u64 = 1;
-/// The WIT package minor version hosts implement.
-pub const API_MINOR: u64 = 0;
+/// The WIT package minor version hosts implement: 1.1 added the `remote`
+/// interface and manifest links (ADR-0018).
+pub const API_MINOR: u64 = 1;

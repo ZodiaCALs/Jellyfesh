@@ -1,0 +1,31 @@
+package jellyfesh:plugin@1.0.0;
+
+/// A source plugin: one online service, server or lyrics provider.
+///
+/// A plugin is a WebAssembly component built for this world (the SDK,
+/// `plugins/sdk`, does it from Rust) and packed with its manifest into a
+/// `.jfpkg` (ADR-0004). It has no WASI imports at all: no files, sockets,
+/// environment or arguments; everything goes through the imports below.
+///
+/// Every export must be present. Capabilities a plugin does not implement
+/// return `plugin-error.unsupported` (the SDK does this for you), and the host
+/// never calls a capability the manifest does not declare.
+///
+/// Versioning: the manifest's `api_version` names the package `major.minor`
+/// the plugin targets. The major version must match the host's; a plugin
+/// built for an older minor runs on a newer host.
+world source {
+    import http;
+    import kv;
+    import crypto;
+    import clock;
+    import log;
+
+    export meta;
+    export auth;
+    export catalog;
+    export playback;
+    export lyrics;
+    export artwork;
+    export recommendations;
+}

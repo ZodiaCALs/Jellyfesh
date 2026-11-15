@@ -12,7 +12,8 @@ use url::Url;
 
 use crate::error::CallError;
 use crate::types::{
-    Header, ImageRef, Item, ItemPage, LyricPayload, StreamInfo, Unplayable, UnplayableReason,
+    Header, ImageRef, Item, ItemPage, LyricPayload, RemoteDevice, RemoteState, StreamInfo, Unplayable,
+    UnplayableReason,
 };
 
 const MAX_ID: usize = 1024;
@@ -24,6 +25,10 @@ const MAX_HEADER_VALUE: usize = 8192;
 const MAX_LYRICS: usize = 1024 * 1024;
 /// Most items a page may carry.
 pub const MAX_PAGE: u32 = 200;
+/// Most devices a remote source may list.
+pub const MAX_DEVICES: usize = 64;
+/// Most tracks the host hands `remote.play` at once.
+pub const MAX_REMOTE_TRACKS: usize = 200;
 
 /// What the checks need to know about the plugin that answered.
 pub struct Checker<'a> {
@@ -246,9 +251,156 @@ pub fn artwork(image_ref: ImageRef, checker: &Checker<'_>) -> Result<ImageRef, C
     })
 }
 
+/// A remote device, or `None` if it has no id or name. The volume is cut to
+/// 0–100 and dropped where the device has none.
+pub fn remote_device(device: RemoteDevice) -> Option<RemoteDevice> {
+    if device.id.is_empty() || device.id.len() > MAX_ID {
+        return None;
+    }
+    let name = text(&device.name, MAX_TEXT);
+    if name.is_empty() {
+        return None;
+    }
+    Some(RemoteDevice {
+        id: device.id,
+        name,
+        kind: device.kind,
+        active: device.active,
+        supports_volume: device.supports_volume,
+        volume_percent: device
+            .volume_percent
+            .filter(|_| device.supports_volume)
+            .map(|v| v.min(100)),
+    })
+}
+
+/// The devices a remote source lists: unusable ones dropped, at most
+/// [`MAX_DEVICES`], one entry per id, and at most one marked active.
+pub fn remote_devices(devices: Vec<RemoteDevice>) -> Vec<RemoteDevice> {
+    let mut out: Vec<RemoteDevice> = Vec::new();
+    for device in devices.into_iter().filter_map(remote_device) {
+        if out.len() == MAX_DEVICES {
+            break;
+        }
+        if out.iter().any(|d| d.id == device.id) {
+            continue;
+        }
+        let active = device.active && !out.iter().any(|d| d.active);
+        out.push(RemoteDevice { active, ..device });
+    }
+    out
+}
+
+/// What a remote player says it is doing, checked like any other answer:
+/// an unusable device, item or context becomes `None`, and the position
+/// stays within the item's length when it has one.
+pub fn remote_state(state: RemoteState, checker: &Checker<'_>) -> RemoteState {
+    let item = state.item.and_then(|i| item(i, checker));
+    let position_ms = match item.as_ref().and_then(|i| i.duration_ms) {
+        Some(length) if length > 0 => state.position_ms.min(length),
+        _ => state.position_ms,
+    };
+    RemoteState {
+        device: state.device.and_then(remote_device),
+        item,
+        context: state.context.and_then(|c| self::item(c, checker)),
+        playing: state.playing,
+        position_ms,
+        shuffle: state.shuffle,
+        repeat: state.repeat,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{ItemKind, RemoteDeviceKind, RemoteRepeat};
+
+    fn device(id: &str, name: &str, active: bool) -> RemoteDevice {
+        RemoteDevice {
+            id: id.into(),
+            name: name.into(),
+            kind: RemoteDeviceKind::Speaker,
+            active,
+            supports_volume: true,
+            volume_percent: Some(140),
+        }
+    }
+
+    #[test]
+    fn checks_remote_devices() {
+        let devices = remote_devices(vec![
+            device("a", " Kitchen\u{7} ", true),
+            device("", "No id", false),
+            device("b", "  ", false),
+            device("a", "Kitchen again", false),
+            device("c", "Desk", true),
+        ]);
+        assert_eq!(devices.len(), 2);
+        assert_eq!(devices[0].name, "Kitchen");
+        assert_eq!(devices[0].volume_percent, Some(100));
+        assert!(devices[0].active);
+        assert!(!devices[1].active, "only one device is active");
+
+        let silent = remote_device(RemoteDevice {
+            supports_volume: false,
+            ..device("d", "Car", false)
+        })
+        .unwrap();
+        assert_eq!(silent.volume_percent, None);
+
+        let many = remote_devices(
+            (0..100)
+                .map(|i| device(&i.to_string(), "Speaker", false))
+                .collect(),
+        );
+        assert_eq!(many.len(), MAX_DEVICES);
+    }
+
+    #[test]
+    fn checks_remote_state() {
+        let allow_none = |_: &Url| false;
+        let checker = Checker::new("test", &allow_none);
+        let track = Item {
+            id: "t1".into(),
+            kind: ItemKind::Track,
+            title: "A Song".into(),
+            artist: None,
+            album: None,
+            album_id: None,
+            artist_id: None,
+            duration_ms: Some(1000),
+            track_number: None,
+            disc_number: None,
+            year: None,
+            child_count: None,
+            isrc: None,
+            artwork: None,
+            explicit: false,
+            playable: true,
+            unplayable: None,
+        };
+        let state = remote_state(
+            RemoteState {
+                device: Some(device("", "Nameless", true)),
+                item: Some(track.clone()),
+                context: Some(Item {
+                    title: String::new(),
+                    ..track.clone()
+                }),
+                playing: true,
+                position_ms: 5000,
+                shuffle: false,
+                repeat: RemoteRepeat::All,
+            },
+            &checker,
+        );
+        assert_eq!(state.device, None);
+        assert_eq!(state.item.as_ref().map(|i| i.id.as_str()), Some("t1"));
+        assert_eq!(state.context, None);
+        assert_eq!(state.position_ms, 1000, "the position stays within the song");
+        assert_eq!(state.repeat, RemoteRepeat::All);
+    }
 
     #[test]
     fn normalises_isrcs() {

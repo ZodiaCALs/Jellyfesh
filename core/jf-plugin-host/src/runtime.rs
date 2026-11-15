@@ -8,8 +8,8 @@
 //!   workspace denies `unsafe_code`, so v0.0.3 does not cache compiled code
 //!   on disk (ADR-0003 step 3 waits for that).
 //! * One long-lived instance per plugin, created on first use from a
-//!   pre-linked [`SourcePre`]. A trap or limit violation drops it; the next
-//!   call instantiates a fresh one ("restarted lazily").
+//!   pre-linked [`Prepared`] component. A trap or limit violation drops it;
+//!   the next call instantiates a fresh one ("restarted lazily").
 //! * CPU: an epoch ticker advances the engine every [`EPOCH_TICK`] while guest
 //!   code runs (it parks otherwise, so an idle host wakes nobody); the store's
 //!   deadline callback runs on every tick while guest code executes and
@@ -24,11 +24,12 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use wasmtime::component::{Component, HasSelf, Linker};
+use wasmtime::component::{Component, HasSelf, InstancePre, Linker};
 use wasmtime::{Config, Engine, ResourceLimiter, Store, StoreLimits, StoreLimitsBuilder, UpdateDeadline};
 use zeroize::Zeroizing;
 
-use crate::bindings::{Source, SourcePre};
+use crate::bindings::remote::{RemoteControl, RemoteControlIndices};
+use crate::bindings::{Source, SourceIndices};
 use crate::error::{CallError, HostError};
 use crate::http::NetBudget;
 use crate::services::Services;
@@ -273,20 +274,30 @@ impl Runtime {
     /// Compiles a component and links it against the host's imports. Fails
     /// for invalid components and for components that import anything the
     /// host does not provide (WASI, another WIT version) or lack an export.
-    pub(crate) fn prepare(&self, wasm: &[u8]) -> Result<SourcePre<HostState>, HostError> {
+    /// `remote` asks for the `remote` export too (manifests that declare the
+    /// `remote` capability, API 1.1); others never have it looked up.
+    pub(crate) fn prepare(&self, wasm: &[u8], remote: bool) -> Result<Prepared, HostError> {
         let component =
             Component::new(&self.engine, wasm).map_err(|e| HostError::InvalidComponent(format!("{e:#}")))?;
         let pre = self
             .linker
             .instantiate_pre(&component)
             .map_err(|e| HostError::Incompatible(format!("{e:#}")))?;
-        SourcePre::new(pre).map_err(|e| HostError::Incompatible(format!("{e:#}")))
+        let source = SourceIndices::new(&pre).map_err(|e| HostError::Incompatible(format!("{e:#}")))?;
+        let remote = if remote {
+            Some(RemoteControlIndices::new(&pre).map_err(|e| {
+                HostError::Incompatible(format!("the manifest declares remote, but the component: {e:#}"))
+            })?)
+        } else {
+            None
+        };
+        Ok(Prepared { pre, source, remote })
     }
 
     /// Instantiates a plugin and delivers its settings.
     pub(crate) fn instantiate(
         &self,
-        pre: &SourcePre<HostState>,
+        prepared: &Prepared,
         services: &Arc<Services>,
     ) -> Result<Instance, CallError> {
         let mut store = Store::new(
@@ -319,17 +330,18 @@ impl Runtime {
         });
         let mut instance = Instance {
             store,
-            source: None,
+            exports: None,
             ticker: self.ticker.shared.clone(),
         };
         // Start functions and `settings-changed` are guest code too.
         let _ticking = instance.ticker.ticking();
         instance.begin(Budget::start(&self.limits), Protected::default());
-        let source = pre
+        let exports = prepared
             .instantiate(&mut instance.store)
             .map_err(|e| instance.classify(e))?;
         let settings = services.settings_json();
-        match source
+        match exports
+            .source
             .jellyfesh_plugin_meta()
             .call_settings_changed(&mut instance.store, &settings)
         {
@@ -341,15 +353,43 @@ impl Runtime {
             ),
             Err(trap) => return Err(instance.classify(trap)),
         }
-        instance.source = Some(source);
+        instance.exports = Some(exports);
         Ok(instance)
     }
+}
+
+/// A compiled component linked against the host's imports, with the
+/// positions of the exports the host calls.
+#[derive(Clone)]
+pub(crate) struct Prepared {
+    pre: InstancePre<HostState>,
+    source: SourceIndices,
+    remote: Option<RemoteControlIndices>,
+}
+
+impl Prepared {
+    fn instantiate(&self, store: &mut Store<HostState>) -> wasmtime::Result<Exports> {
+        let instance = self.pre.instantiate(&mut *store)?;
+        let source = self.source.load(&mut *store, &instance)?;
+        let remote = match &self.remote {
+            Some(remote) => Some(remote.load(&mut *store, &instance)?),
+            None => None,
+        };
+        Ok(Exports { source, remote })
+    }
+}
+
+/// What a live instance exports.
+pub(crate) struct Exports {
+    pub source: Source,
+    /// The `remote` interface, for plugins that declare `remote`.
+    pub remote: Option<RemoteControl>,
 }
 
 /// A live plugin instance.
 pub(crate) struct Instance {
     pub store: Store<HostState>,
-    source: Option<Source>,
+    exports: Option<Exports>,
     ticker: Arc<TickerShared>,
 }
 
@@ -368,18 +408,25 @@ impl Instance {
         self.store.set_epoch_deadline(1);
     }
 
+    /// Whether the instance has the `remote` export.
+    pub(crate) fn has_remote(&self) -> bool {
+        self.exports
+            .as_ref()
+            .is_some_and(|exports| exports.remote.is_some())
+    }
+
     /// Runs one export under `budget`. On a trap the caller must drop the
     /// instance.
     pub(crate) fn call<R>(
         &mut self,
         budget: Budget,
         protected: Protected,
-        f: impl FnOnce(&Source, &mut Store<HostState>) -> wasmtime::Result<R>,
+        f: impl FnOnce(&Exports, &mut Store<HostState>) -> wasmtime::Result<R>,
     ) -> Result<R, CallError> {
         self.begin(budget, protected);
         let _ticking = self.ticker.ticking();
-        let Instance { store, source, .. } = self;
-        let result = f(source.as_ref().expect("instantiated"), store);
+        let Instance { store, exports, .. } = self;
+        let result = f(exports.as_ref().expect("instantiated"), store);
         // Wipe protected values now, not when the next call begins.
         self.store.data_mut().call.protected = Protected::default();
         result.map_err(|e| self.classify(e))

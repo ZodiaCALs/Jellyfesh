@@ -1,4 +1,4 @@
-package jellyfesh:plugin@1.0.0;
+package jellyfesh:plugin@1.1.0;
 
 /// A source plugin: one online service, server or lyrics provider.
 ///
@@ -13,7 +13,9 @@ package jellyfesh:plugin@1.0.0;
 ///
 /// Versioning: the manifest's `api_version` names the package `major.minor`
 /// the plugin targets. The major version must match the host's; a plugin
-/// built for an older minor runs on a newer host.
+/// built for an older minor runs on a newer host. 1.1 added the `remote`
+/// interface (world `remote-source`) and manifest links; every 1.0 interface
+/// is unchanged, so 1.0 plugins load in 1.1 hosts (ADR-0018).
 world source {
     import http;
     import kv;
@@ -28,4 +30,18 @@ world source {
     export lyrics;
     export artwork;
     export recommendations;
+}
+
+/// A source plugin built with API 1.1: everything in `source`, plus remote
+/// control. The SDK builds this world; `remote` answers `unsupported` unless
+/// the plugin implements it and its manifest declares the `remote` capability.
+world remote-source {
+    include source;
+    export remote;
+}
+
+/// The remote-control part of a 1.1 plugin, which hosts look up on its own
+/// for plugins that declare `remote` (1.0 plugins do not export it).
+world remote-control {
+    export remote;
 }

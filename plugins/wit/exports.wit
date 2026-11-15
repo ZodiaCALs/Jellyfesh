@@ -1,4 +1,4 @@
-package jellyfesh:plugin@1.0.0;
+package jellyfesh:plugin@1.1.0;
 
 /// Plugin metadata and settings.
 ///
@@ -340,4 +340,89 @@ interface recommendations {
     for-item: func(item: item, page: page-request) -> result<item-page, plugin-error>;
     /// Personal suggestions for the logged-in account.
     for-user: func(page: page-request) -> result<item-page, plugin-error>;
+}
+
+/// Remote control of the service's own player (API 1.1): the person's
+/// devices, what plays on them, and the transport. For plugins whose manifest
+/// declares the `remote` capability with `playback_mode = "remote"`; their
+/// items play on the service's devices, never through Jellyfesh's engine, and
+/// never join its queue (ADR-0011, ADR-0018).
+///
+/// The host polls `state` (about every second while something plays, less
+/// often while paused) and calls the commands when the person uses the
+/// transport. Commands may take effect a moment later; the next `state` shows
+/// the result.
+interface remote {
+    use types.{item, plugin-error};
+
+    /// What kind of device something plays on.
+    enum device-kind {
+        computer,
+        smartphone,
+        speaker,
+        tv,
+        car,
+        other,
+    }
+
+    /// A device the service can play on.
+    record device {
+        /// The service's identifier, passed back in `play` and `transfer`.
+        id: string,
+        /// The name the person gave the device.
+        name: string,
+        kind: device-kind,
+        /// The device the service plays on now (at most one).
+        active: bool,
+        /// Whether `set-volume` works on this device.
+        supports-volume: bool,
+        /// Volume in percent (0–100), if known.
+        volume-percent: option<u32>,
+    }
+
+    /// The repeat mode of the service's player.
+    enum repeat {
+        off,
+        /// The whole context (album, playlist).
+        all,
+        /// The current track.
+        one,
+    }
+
+    /// What the service's player is doing.
+    record playback-state {
+        /// The device it plays on.
+        device: option<device>,
+        /// The current track, in the plugin's item shape (so it can be played,
+        /// browsed or shown like any item).
+        item: option<item>,
+        /// The album, playlist or artist it plays from, if any.
+        context: option<item>,
+        playing: bool,
+        /// Position in the track when the state was read, in milliseconds.
+        position-ms: u32,
+        shuffle: bool,
+        repeat: repeat,
+    }
+
+    /// The person's devices, the active one first.
+    devices: func() -> result<list<device>, plugin-error>;
+    /// What plays now; none when nothing plays on any device.
+    state: func() -> result<option<playback-state>, plugin-error>;
+    /// Plays on `device` (none: the active device, or the service's choice):
+    /// `context` (an album, playlist or artist) from track `start`, or the
+    /// `tracks` given, from `start`. One of them is set.
+    play: func(device: option<string>, context: option<item>, tracks: list<item>, start: u32) -> result<_, plugin-error>;
+    /// Resumes on the active device.
+    resume: func() -> result<_, plugin-error>;
+    pause: func() -> result<_, plugin-error>;
+    next: func() -> result<_, plugin-error>;
+    previous: func() -> result<_, plugin-error>;
+    seek: func(position-ms: u32) -> result<_, plugin-error>;
+    /// 0–100, on the active device.
+    set-volume: func(percent: u32) -> result<_, plugin-error>;
+    set-shuffle: func(on: bool) -> result<_, plugin-error>;
+    set-repeat: func(mode: repeat) -> result<_, plugin-error>;
+    /// Moves playback to `device`, playing if `play` (else as it was).
+    transfer: func(device: string, play: bool) -> result<_, plugin-error>;
 }

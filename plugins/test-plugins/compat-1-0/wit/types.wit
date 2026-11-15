@@ -1,0 +1,168 @@
+package jellyfesh:plugin@1.0.0;
+
+/// Types shared by the host imports and the plugin exports.
+///
+/// Conventions used across the package:
+///
+/// * Times are milliseconds: durations as `u32`/`u64` counts, instants as
+///   milliseconds since the Unix epoch (UTC) in fields named `*-at-ms`.
+/// * Text is UTF-8 and meant for people unless a field says it is opaque.
+/// * Identifiers (`id`, cursors, `state`) are opaque to the host: it stores
+///   them and passes them back unchanged, never parses them.
+/// * The host bounds what it accepts from a plugin (string lengths, list
+///   sizes); values over the bounds are truncated or rejected, never trusted.
+interface types {
+    /// An HTTP header, or any other name/value pair the host passes through.
+    /// Header names compare case-insensitively.
+    record header {
+        name: string,
+        value: string,
+    }
+
+    /// What an item is.
+    enum item-kind {
+        /// A single playable recording.
+        track,
+        /// A release: an ordered list of tracks.
+        album,
+        /// A performer. Browsing an artist lists its albums (or tracks).
+        artist,
+        /// A playlist, owned by the person or by the service.
+        playlist,
+        /// Any other container in the service's own hierarchy: a library
+        /// section, a genre, a folder on a server.
+        folder,
+    }
+
+    /// Why the service will not play an item for this account. The host shows
+    /// the reason and never tries to work around it: no paywall or region
+    /// bypass, no substitute stream.
+    enum unplayable-reason {
+        /// Needs a subscription, a higher tier or a purchase.
+        paywall,
+        /// Not available in the account's country or region.
+        region,
+        /// Removed, hidden, still processing or otherwise unavailable.
+        unavailable,
+        /// Anything else; `unplayable.message` says what.
+        other,
+    }
+
+    /// The reason attached to an item that is not playable.
+    record unplayable {
+        reason: unplayable-reason,
+        /// Text for the person, in the service's words where possible
+        /// ("Requires Premium"). None lets the host word it from `reason`.
+        message: option<string>,
+    }
+
+    /// A picture the host may download: cover art, an artist photo.
+    record image-ref {
+        /// Absolute `http` or `https` URL. It must be covered by the plugin's
+        /// network allowlist; the host drops image references that are not.
+        url: string,
+        /// Extra request headers the host sends when it fetches the image
+        /// (for example authorisation). Cookies from the plugin's jar are not
+        /// sent with image requests.
+        headers: list<header>,
+        /// Width in pixels, if known.
+        width: option<u32>,
+        /// Height in pixels, if known.
+        height: option<u32>,
+    }
+
+    /// One entry in search results, browse listings and recommendations. The
+    /// same record is passed back to the plugin to play, browse or fetch
+    /// lyrics and artwork for it.
+    ///
+    /// Lyrics and artwork plugins also receive items that came from other
+    /// sources (or from local files); they should match on `title`, `artist`,
+    /// `album`, `duration-ms` and `isrc` and treat `id` as foreign.
+    record item {
+        /// The source's identifier: opaque to the host, stable across sessions,
+        /// unique within the plugin for its `kind`. At most 1 KiB.
+        id: string,
+        /// What the item is.
+        kind: item-kind,
+        /// Track, album, artist, playlist or folder name.
+        title: string,
+        /// Display artist as the service writes it ("A, B feat. C"). None for
+        /// artist items. The host takes the first name as the primary artist
+        /// when it merges results from several sources.
+        artist: option<string>,
+        /// Album title, for tracks.
+        album: option<string>,
+        /// The source's id of the album, for tracks: lets the person go to the
+        /// album (`catalog.browse` on an album item with this id).
+        album-id: option<string>,
+        /// The source's id of the primary artist, for tracks and albums.
+        artist-id: option<string>,
+        /// Duration in milliseconds: tracks, and albums or playlists if known.
+        duration-ms: option<u32>,
+        /// Position on its disc, for album tracks (1-based).
+        track-number: option<u32>,
+        /// Disc number, for album tracks (1-based).
+        disc-number: option<u32>,
+        /// Release year, for tracks and albums.
+        year: option<u32>,
+        /// Number of children (tracks of an album or playlist, entries of a
+        /// folder), if known.
+        child-count: option<u32>,
+        /// International Standard Recording Code, for tracks: 12 characters,
+        /// uppercase, no hyphens ("USRC17607839"). The strongest key when the
+        /// host merges results from several sources.
+        isrc: option<string>,
+        /// Cover art or photo at a default size; `artwork.artwork` returns
+        /// other sizes.
+        artwork: option<image-ref>,
+        /// Explicit content.
+        explicit: bool,
+        /// False when the service will not play this item for this account.
+        playable: bool,
+        /// Why `playable` is false. Ignored when `playable` is true; when it is
+        /// false and this is none, the host uses `other`.
+        unplayable: option<unplayable>,
+    }
+
+    /// Which slice of a list the host wants.
+    record page-request {
+        /// The `next` cursor of the previous page; none for the first page.
+        cursor: option<string>,
+        /// The most items the host wants (1–200). A plugin may return fewer;
+        /// the host drops any beyond this.
+        limit: u32,
+    }
+
+    /// One page of items.
+    record item-page {
+        /// The items, in the source's order (relevance for search).
+        items: list<item>,
+        /// Cursor for the following page; none when this page is the last.
+        next: option<string>,
+        /// Total number of items in the whole list, if the service says.
+        total: option<u32>,
+    }
+
+    /// Why a plugin export failed.
+    variant plugin-error {
+        /// This capability, or this particular request, is not implemented.
+        /// The SDK returns it for every capability a plugin leaves out.
+        unsupported,
+        /// No account is logged in, or the session expired: the host offers
+        /// to log in again.
+        auth-required,
+        /// The item, node or account does not exist (any more).
+        not-found,
+        /// An argument the plugin cannot use; the text says which and why.
+        invalid-input(string),
+        /// The service asked the plugin to slow down.
+        rate-limited,
+        /// A request to the service failed: DNS, connection, TLS, timeout, or
+        /// refused by the sandbox (see `http.http-error`).
+        network(string),
+        /// The service answered with an error; the text is shown to the person.
+        service(string),
+        /// A bug or an unexpected state in the plugin.
+        internal(string),
+    }
+}

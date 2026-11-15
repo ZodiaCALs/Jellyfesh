@@ -11,6 +11,7 @@ use jf_plugin_model::types as model;
 
 use crate::bindings::exports::jellyfesh::plugin::{auth, catalog, lyrics, meta, playback};
 use crate::bindings::jellyfesh::plugin::{crypto, types};
+use crate::bindings::remote::exports::jellyfesh::plugin::remote;
 
 /// `From` both ways between two enums whose variants carry no data.
 macro_rules! same_enum {
@@ -44,19 +45,22 @@ same_enum!(
     model::UnplayableReason,
     [Paywall, Region, Unavailable, Other]
 );
-same_enum!(
-    meta::Capability,
-    model::Capability,
-    [
-        Auth,
-        Search,
-        Browse,
-        ResolveStream,
-        Lyrics,
-        Artwork,
-        Recommendations
-    ]
-);
+/// What a plugin reports it can do. The WIT enum is 1.0's (`remote` is a
+/// manifest capability only, ADR-0018), so this goes one way.
+impl From<meta::Capability> for model::Capability {
+    fn from(value: meta::Capability) -> Self {
+        use meta::Capability as W;
+        match value {
+            W::Auth => Self::Auth,
+            W::Search => Self::Search,
+            W::Browse => Self::Browse,
+            W::ResolveStream => Self::ResolveStream,
+            W::Lyrics => Self::Lyrics,
+            W::Artwork => Self::Artwork,
+            W::Recommendations => Self::Recommendations,
+        }
+    }
+}
 same_enum!(
     auth::AuthKind,
     model::AuthKind,
@@ -386,6 +390,40 @@ impl From<model::CryptoError> for crypto::CryptoError {
     }
 }
 
+same_enum!(
+    remote::DeviceKind,
+    model::RemoteDeviceKind,
+    [Computer, Smartphone, Speaker, Tv, Car, Other]
+);
+same_enum!(remote::Repeat, model::RemoteRepeat, [Off, All, One]);
+
+impl From<remote::Device> for model::RemoteDevice {
+    fn from(d: remote::Device) -> Self {
+        model::RemoteDevice {
+            id: d.id,
+            name: d.name,
+            kind: d.kind.into(),
+            active: d.active,
+            supports_volume: d.supports_volume,
+            volume_percent: d.volume_percent,
+        }
+    }
+}
+
+impl From<remote::PlaybackState> for model::RemoteState {
+    fn from(s: remote::PlaybackState) -> Self {
+        model::RemoteState {
+            device: s.device.map(Into::into),
+            item: s.item.map(Into::into),
+            context: s.context.map(Into::into),
+            playing: s.playing,
+            position_ms: s.position_ms,
+            shuffle: s.shuffle,
+            repeat: s.repeat.into(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -425,8 +463,12 @@ mod tests {
         let wit: types::Item = item.clone().into();
         assert_eq!(model::Item::from(wit), item);
         assert_eq!(
-            model::Capability::from(meta::Capability::from(model::Capability::ResolveStream)),
+            model::Capability::from(meta::Capability::ResolveStream),
             model::Capability::ResolveStream
+        );
+        assert_eq!(
+            model::RemoteRepeat::from(remote::Repeat::from(model::RemoteRepeat::One)),
+            model::RemoteRepeat::One
         );
     }
 }

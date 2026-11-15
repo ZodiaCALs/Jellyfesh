@@ -432,12 +432,13 @@ export function createImports(deps: HostDeps): Record<string, Record<string, unk
   };
 
   // jco's instantiation mode looks interfaces up without their version (`jellyfesh:plugin/http`);
-  // the versioned names are there too, for tools that use them.
+  // the versioned names of API 1.0 and 1.1 are there too, for tools that use them.
   const interfaces: Record<string, Record<string, unknown>> = { http, kv, crypto, clock, log, types: {} };
   const imports: Record<string, Record<string, unknown>> = {};
   for (const [name, value] of Object.entries(interfaces)) {
     imports[`jellyfesh:plugin/${name}`] = value;
     imports[`jellyfesh:plugin/${name}@1.0.0`] = value;
+    imports[`jellyfesh:plugin/${name}@1.1.0`] = value;
   }
   return imports;
 }

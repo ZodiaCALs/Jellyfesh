@@ -30,7 +30,13 @@
 //! [cookie_import]                    # required with auth = ["cookie-import"]
 //! url = "https://music.example.com/" # or "${settings.<key>}"; must be allowlisted
 //! names = ["session", "csrf"]        # cookies the host accepts from the pasted header
+//!
+//! [links]                            # API 1.1: open an item in its service
+//! track = "https://music.example.com/song/{id}"    # also album, artist, playlist
 //! ```
+//!
+//! API 1.1 also adds the `remote` capability, which goes with
+//! `playback_mode = "remote"` (ADR-0018).
 //!
 //! Unknown keys anywhere are an error, so a typo never silently weakens a
 //! policy. `network.allow` entries are a settings reference (the origin the
@@ -41,6 +47,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::error::HostError;
+use crate::links::Links;
 use crate::types::{AuthKind, Capability, ContentPolicy, LibraryStorage, PlaybackMode};
 use crate::{API_MAJOR, API_MINOR};
 
@@ -84,6 +91,8 @@ pub struct Manifest {
     pub content_policy: ContentPolicy,
     /// Cookie import rules, present when `auth` lists `cookie-import`.
     pub cookie_import: Option<CookieImport>,
+    /// Link templates (API 1.1).
+    pub links: Links,
 }
 
 /// `api_version`: the WIT package `major.minor`.
@@ -160,6 +169,8 @@ struct RawManifest {
     content_policy: Option<RawContentPolicy>,
     #[serde(default)]
     cookie_import: Option<RawCookieImport>,
+    #[serde(default)]
+    links: Option<RawLinks>,
 }
 
 #[derive(Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -172,6 +183,20 @@ enum RawCapability {
     Lyrics,
     Artwork,
     Recommendations,
+    Remote,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawLinks {
+    #[serde(default)]
+    track: Option<String>,
+    #[serde(default)]
+    album: Option<String>,
+    #[serde(default)]
+    artist: Option<String>,
+    #[serde(default)]
+    playlist: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -274,6 +299,7 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
             RawCapability::Lyrics => Capability::Lyrics,
             RawCapability::Artwork => Capability::Artwork,
             RawCapability::Recommendations => Capability::Recommendations,
+            RawCapability::Remote => Capability::Remote,
         };
         if capabilities.contains(&cap) {
             return Err(bad(format!("capability {cap} is listed twice")));
@@ -289,6 +315,24 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         RawPlaybackMode::Vendor => PlaybackMode::Vendor,
         RawPlaybackMode::Remote => PlaybackMode::Remote,
     };
+    let needs_1_1 = |what: &str| -> Result<(), HostError> {
+        if api_version.major == 1 && api_version.minor < 1 {
+            return Err(bad(format!("{what} needs api_version 1.1")));
+        }
+        Ok(())
+    };
+    let remote = capabilities.contains(&Capability::Remote);
+    if remote {
+        needs_1_1("capability remote")?;
+        if playback_mode != PlaybackMode::Remote {
+            return Err(bad("capability remote needs playback_mode = \"remote\""));
+        }
+        if capabilities.contains(&Capability::ResolveStream) {
+            return Err(bad("capability remote does not go with resolve_stream"));
+        }
+    } else if playback_mode == PlaybackMode::Remote {
+        return Err(bad("playback_mode = \"remote\" needs capability remote"));
+    }
 
     let mut auth = Vec::new();
     for raw_kind in &raw.auth {
@@ -424,6 +468,26 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         }
     };
 
+    let links = match raw.links {
+        Some(raw_links) => {
+            needs_1_1("[links]")?;
+            let check = |key: &str, value: Option<String>| -> Result<Option<String>, HostError> {
+                value.map(|t| crate::links::check_template(key, &t)).transpose()
+            };
+            let links = Links {
+                track: check("track", raw_links.track)?,
+                album: check("album", raw_links.album)?,
+                artist: check("artist", raw_links.artist)?,
+                playlist: check("playlist", raw_links.playlist)?,
+            };
+            if links.is_empty() {
+                return Err(bad("[links] must hold at least one template"));
+            }
+            links
+        }
+        None => Links::default(),
+    };
+
     Ok(Manifest {
         id: raw.id,
         name,
@@ -440,15 +504,12 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         settings_schema,
         content_policy,
         cookie_import,
+        links,
     })
 }
 
 impl Manifest {
     /// Checks `api_version` against the host: same major, minor not newer.
-    #[allow(
-        clippy::absurd_extreme_comparisons,
-        reason = "API_MINOR is 0 today; the check is for later minor versions"
-    )]
     pub fn check_api_version(&self) -> Result<(), HostError> {
         let v = self.api_version;
         if v.major == API_MAJOR && v.minor <= API_MINOR {
@@ -844,7 +905,13 @@ attribution = "spotify"
 
     #[test]
     fn api_version_must_match_the_host() {
-        for (version, ok) in [("1.0", true), ("1.1", false), ("2.0", false), ("0.9", false)] {
+        for (version, ok) in [
+            ("1.0", true),
+            ("1.1", true),
+            ("1.2", false),
+            ("2.0", false),
+            ("0.9", false),
+        ] {
             let m = parse(&MINIMAL.replace("\"1.0\"", &format!("{version:?}"))).unwrap();
             assert_eq!(m.check_api_version().is_ok(), ok, "{version}");
         }
@@ -862,5 +929,45 @@ attribution = "spotify"
         assert!(!rule.matches_fixed("example.com", 443));
         assert!(!rule.matches_fixed("badexample.com", 443));
         assert!(!rule.matches_fixed("a.example.com", 8443));
+    }
+
+    #[test]
+    fn links_need_api_1_1_and_safe_templates() {
+        let links = "[links]\ntrack = \"https://music.example.com/song/{id}\"\n";
+        let err = parse(&format!("{MINIMAL}{links}")).unwrap_err().to_string();
+        assert!(err.contains("needs api_version 1.1"), "{err}");
+        let v11 = MINIMAL.replace("api_version = \"1.0\"", "api_version = \"1.1\"");
+        let m = parse(&format!("{v11}{links}")).unwrap();
+        assert_eq!(
+            m.links.url_for(crate::ItemKind::Track, "x 1").as_deref(),
+            Some("https://music.example.com/song/x%201")
+        );
+        assert!(parse(&format!("{v11}[links]\n")).is_err(), "an empty [links]");
+        assert!(parse(&format!("{v11}[links]\ntrack = \"http://e.com/{{id}}\"\n")).is_err());
+        assert!(parse(&format!("{v11}[links]\nsong = \"https://e.com/{{id}}\"\n")).is_err());
+        assert!(parse(&v11).unwrap().links.is_empty());
+    }
+
+    #[test]
+    fn remote_goes_with_remote_playback_and_api_1_1() {
+        let v11 = MINIMAL.replace("api_version = \"1.0\"", "api_version = \"1.1\"");
+        let remote = v11
+            .replace("[\"search\"]", "[\"search\", \"remote\"]")
+            .replace("playback_mode = \"stream\"", "playback_mode = \"remote\"");
+        let m = parse(&remote).unwrap();
+        assert!(m.capabilities.contains(&Capability::Remote));
+        assert_eq!(m.playback_mode, PlaybackMode::Remote);
+        // Not in a 1.0 manifest, not with stream playback, not with resolve_stream.
+        let on_1_0 = remote.replace("api_version = \"1.1\"", "api_version = \"1.0\"");
+        assert!(
+            parse(&on_1_0)
+                .unwrap_err()
+                .to_string()
+                .contains("needs api_version 1.1")
+        );
+        assert!(parse(&remote.replace("playback_mode = \"remote\"", "playback_mode = \"stream\"")).is_err());
+        assert!(parse(&remote.replace("\"remote\"]", "\"remote\", \"resolve_stream\"]")).is_err());
+        // Remote playback without the capability is an error too.
+        assert!(parse(&v11.replace("playback_mode = \"stream\"", "playback_mode = \"remote\"")).is_err());
     }
 }

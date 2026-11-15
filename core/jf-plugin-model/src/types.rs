@@ -119,6 +119,9 @@ pub enum Capability {
     Lyrics,
     Artwork,
     Recommendations,
+    /// Remote control of the service's own player (API 1.1, `remote`). A
+    /// manifest capability only: the WIT `capability` enum of 1.0 is unchanged.
+    Remote,
 }
 
 // ---- auth ------------------------------------------------------------------------------------
@@ -341,6 +344,50 @@ pub enum CryptoError {
 
 // ---- the host's side -------------------------------------------------------------------------
 
+// ---- remote control (API 1.1) -------------------------------------------------------------------
+
+/// What kind of device a remote source plays on (`remote.device-kind`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RemoteDeviceKind {
+    Computer,
+    Smartphone,
+    Speaker,
+    Tv,
+    Car,
+    Other,
+}
+
+/// A device a remote source can play on (`remote.device`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RemoteDevice {
+    pub id: String,
+    pub name: String,
+    pub kind: RemoteDeviceKind,
+    pub active: bool,
+    pub supports_volume: bool,
+    pub volume_percent: Option<u32>,
+}
+
+/// The repeat mode of a remote player (`remote.repeat`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RemoteRepeat {
+    Off,
+    All,
+    One,
+}
+
+/// What a remote player is doing (`remote.state`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RemoteState {
+    pub device: Option<RemoteDevice>,
+    pub item: Option<Item>,
+    pub context: Option<Item>,
+    pub playing: bool,
+    pub position_ms: u32,
+    pub shuffle: bool,
+    pub repeat: RemoteRepeat,
+}
+
 /// How a source's audio reaches the speakers (ADR-0004).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PlaybackMode {
@@ -460,6 +507,10 @@ pub struct PluginInfo {
     pub settings: serde_json::Value,
     /// `[content_policy]` from the manifest.
     pub content_policy: ContentPolicy,
+    /// `[links]` from the manifest (API 1.1): templates that open an item in
+    /// the service.
+    #[serde(default)]
+    pub links: crate::links::Links,
     /// Whether the package has an icon.
     pub has_icon: bool,
 }
@@ -530,6 +581,7 @@ pub fn capability_name(capability: Capability) -> &'static str {
         Capability::Lyrics => "lyrics",
         Capability::Artwork => "artwork",
         Capability::Recommendations => "recommendations",
+        Capability::Remote => "remote",
     }
 }
 

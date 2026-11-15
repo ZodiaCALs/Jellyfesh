@@ -209,6 +209,17 @@ pub fn import_allowed(name: &str) -> bool {
         .is_some_and(|(_, version)| version.starts_with("1."))
 }
 
+/// Whether the component exports the `remote` interface of API 1.1 or
+/// later, which a manifest that declares `remote` needs (ADR-0018).
+pub fn exports_remote(found: &Interfaces) -> bool {
+    found.exports.iter().any(|name| {
+        name.strip_prefix("jellyfesh:plugin/remote@1.")
+            .and_then(|rest| rest.split('.').next())
+            .and_then(|minor| minor.parse::<u32>().ok())
+            .is_some_and(|minor| minor >= 1)
+    })
+}
+
 /// Lists a component's imports and fails unless they are all
 /// `jellyfesh:plugin/<interface>@1.x`.
 pub fn check_imports(component: &[u8]) -> Result<Vec<String>> {
@@ -316,6 +327,15 @@ mod tests {
     #[test]
     fn allows_only_the_plugin_world_imports() {
         assert!(import_allowed("jellyfesh:plugin/http@1.0.0"));
+        assert!(import_allowed("jellyfesh:plugin/http@1.1.0"));
+        let with = |exports: &[&str]| Interfaces {
+            imports: Vec::new(),
+            exports: exports.iter().map(|e| (*e).to_string()).collect(),
+        };
+        assert!(exports_remote(&with(&["jellyfesh:plugin/remote@1.1.0"])));
+        assert!(exports_remote(&with(&["jellyfesh:plugin/remote@1.2.3"])));
+        assert!(!exports_remote(&with(&["jellyfesh:plugin/remote@1.0.0"])));
+        assert!(!exports_remote(&with(&["jellyfesh:plugin/meta@1.1.0"])));
         assert!(import_allowed("jellyfesh:plugin/kv@1.2.0"));
         assert!(!import_allowed("jellyfesh:plugin/http@2.0.0"));
         assert!(!import_allowed("wasi:filesystem/types@0.2.0"));

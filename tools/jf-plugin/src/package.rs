@@ -13,7 +13,7 @@ use jf_plugin_host::manifest::{self, AllowRule, Manifest};
 use jf_plugin_host::package::{self, ICON, MANIFEST, Package, PackageBuilder, SIGNATURE, WASM};
 use jf_plugin_host::schema::{Format, PropertyKind, SettingsSchema};
 use jf_plugin_host::trust::TrustList;
-use jf_plugin_host::{HostError, LibraryStorage, SignatureStatus};
+use jf_plugin_host::{Capability, HostError, LibraryStorage, SignatureStatus};
 use serde_json::{Value, json};
 
 use crate::key::SigningKey;
@@ -75,7 +75,8 @@ impl PluginFiles {
 /// given. The component must import nothing but `jellyfesh:plugin/*@1`, and
 /// the result must pass the host's checks.
 pub fn pack(files: &PluginFiles, wasm: Vec<u8>, key: Option<&SigningKey>) -> Result<Vec<u8>> {
-    jf_plugin_build::check_component(&wasm).context("checking the component")?;
+    let found = jf_plugin_build::check_component(&wasm).context("checking the component")?;
+    check_remote(&files.manifest()?, &found)?;
     let mut builder = PackageBuilder::new().manifest(&files.manifest).wasm(wasm);
     if let Some((name, text)) = &files.schema {
         builder = builder.file(name, text.clone());
@@ -163,10 +164,24 @@ pub struct Verified {
 /// which valid signatures count as official.
 pub fn verify(bytes: &[u8], trust: &TrustList) -> Result<Verified> {
     let package = package::read(bytes, trust).map_err(explain)?;
-    let imports = jf_plugin_build::check_component(&package.wasm)
-        .context("checking plugin.wasm")?
-        .imports;
-    Ok(Verified { package, imports })
+    let found = jf_plugin_build::check_component(&package.wasm).context("checking plugin.wasm")?;
+    check_remote(&package.manifest, &found)?;
+    Ok(Verified {
+        package,
+        imports: found.imports,
+    })
+}
+
+/// A manifest that declares `remote` needs a component that exports it.
+fn check_remote(manifest: &Manifest, found: &jf_plugin_build::Interfaces) -> Result<()> {
+    if manifest.capabilities.contains(&Capability::Remote) {
+        ensure!(
+            jf_plugin_build::exports_remote(found),
+            "the manifest declares remote, but plugin.wasm does not export jellyfesh:plugin/remote@1.1 \
+             (build it with SDK 1.1 or later)"
+        );
+    }
+    Ok(())
 }
 
 /// The app's trust list, plus the published test key when `test_key`, plus

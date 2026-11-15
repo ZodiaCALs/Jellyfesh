@@ -460,13 +460,13 @@ fn malformed_components_are_refused() {
     assert_eq!(installed, 0);
 }
 
-/// `api_version` must name this host's major version and no newer minor;
-/// a component built for another major version is refused even when the
-/// manifest claims 1.0.
+/// `api_version` must name this host's major version and no newer minor
+/// (the host implements 1.1); a component built for another major version
+/// is refused even when the manifest claims 1.0.
 #[test]
 fn api_version_mismatches_are_refused() {
     let env = Env::new();
-    for version in ["2.0", "1.1", "0.9"] {
+    for version in ["2.0", "1.2", "0.9"] {
         let text = echo_manifest().replace("api_version = \"1.0\"", &format!("api_version = {version:?}"));
         let path = package(
             &env.incoming(),

@@ -7,13 +7,14 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use wasmtime::Store;
 
-use crate::bindings::{Source, SourcePre};
+use crate::bindings::Source;
+use crate::bindings::remote::RemoteControl;
 use crate::error::{CallError, HostError};
 use crate::manifest::Manifest;
-use crate::runtime::{Budget, HostState, Instance, Protected, Runtime};
+use crate::runtime::{Budget, Exports, HostState, Instance, Prepared, Protected, Runtime};
 use crate::schema::SettingsSchema;
 use crate::services::Services;
-use crate::types::SignatureStatus;
+use crate::types::{Capability, SignatureStatus};
 
 /// Work for a plugin, run on a pool worker with exclusive access to the
 /// plugin's instance.
@@ -51,7 +52,7 @@ pub(crate) struct Plugin {
     pub services: Arc<Services>,
     pub slot: Mutex<Slot>,
     wasm: Vec<u8>,
-    prepared: Mutex<Option<SourcePre<HostState>>>,
+    prepared: Mutex<Option<Prepared>>,
 }
 
 impl std::fmt::Debug for Plugin {
@@ -72,7 +73,7 @@ impl Plugin {
         signature: SignatureStatus,
         icon: Option<Vec<u8>>,
         wasm: Vec<u8>,
-        prepared: Option<SourcePre<HostState>>,
+        prepared: Option<Prepared>,
         services: Arc<Services>,
     ) -> Plugin {
         Plugin {
@@ -92,13 +93,16 @@ impl Plugin {
     }
 
     /// The compiled, linked component (compiled on first use).
-    fn prepared(&self, runtime: &Runtime) -> Result<SourcePre<HostState>, HostError> {
+    fn prepared(&self, runtime: &Runtime) -> Result<Prepared, HostError> {
         let mut prepared = self.prepared.lock();
         if let Some(pre) = prepared.as_ref() {
             return Ok(pre.clone());
         }
         let started = std::time::Instant::now();
-        let pre = runtime.prepare(&self.wasm)?;
+        let pre = runtime.prepare(
+            &self.wasm,
+            self.manifest.capabilities.contains(&Capability::Remote),
+        )?;
         tracing::debug!(plugin = %self.id(), elapsed = ?started.elapsed(), "compiled plugin");
         *prepared = Some(pre.clone());
         Ok(pre)
@@ -147,19 +151,52 @@ impl JobContext<'_> {
         protected: Protected,
         f: impl FnOnce(&Source, &mut Store<HostState>) -> wasmtime::Result<R>,
     ) -> Result<R, CallError> {
-        if self.instance.is_none() {
-            let pre = self
-                .plugin
-                .prepared(self.runtime)
-                .map_err(|e| CallError::Load(e.to_string()))?;
-            match self.runtime.instantiate(&pre, &self.plugin.services) {
-                Ok(instance) => *self.instance = Some(instance),
-                Err(error) => {
-                    self.plugin.record_violation(&error, self.runtime);
-                    return Err(error);
-                }
+        self.run(budget, protected, |exports, store| f(&exports.source, store))
+    }
+
+    /// Calls the plugin's `remote` export like [`JobContext::call`]. Plugins
+    /// whose manifest does not declare `remote` have none.
+    pub(crate) fn call_remote<R>(
+        &mut self,
+        budget: Budget,
+        f: impl FnOnce(&RemoteControl, &mut Store<HostState>) -> wasmtime::Result<R>,
+    ) -> Result<R, CallError> {
+        self.ensure_instance()?;
+        if !self.instance.as_ref().is_some_and(Instance::has_remote) {
+            return Err(CallError::NotDeclared("remote".into()));
+        }
+        self.run(budget, Protected::default(), |exports, store| {
+            f(exports.remote.as_ref().expect("checked above"), store)
+        })
+    }
+
+    fn ensure_instance(&mut self) -> Result<(), CallError> {
+        if self.instance.is_some() {
+            return Ok(());
+        }
+        let pre = self
+            .plugin
+            .prepared(self.runtime)
+            .map_err(|e| CallError::Load(e.to_string()))?;
+        match self.runtime.instantiate(&pre, &self.plugin.services) {
+            Ok(instance) => {
+                *self.instance = Some(instance);
+                Ok(())
+            }
+            Err(error) => {
+                self.plugin.record_violation(&error, self.runtime);
+                Err(error)
             }
         }
+    }
+
+    fn run<R>(
+        &mut self,
+        budget: Budget,
+        protected: Protected,
+        f: impl FnOnce(&Exports, &mut Store<HostState>) -> wasmtime::Result<R>,
+    ) -> Result<R, CallError> {
+        self.ensure_instance()?;
         let instance = self.instance.as_mut().expect("instantiated above");
         let result = instance.call(budget, protected, f);
         match &result {

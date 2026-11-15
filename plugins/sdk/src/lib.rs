@@ -1,10 +1,16 @@
 //! Write Jellyfesh plugins in Rust.
 //!
-//! A plugin is a WebAssembly component for the `jellyfesh:plugin/source@1`
-//! world (`plugins/wit`). This crate generates the bindings, turns a
-//! [`Plugin`] implementation into the world's exports, and wraps the host
-//! imports in small helpers. Plugins build for `wasm32-unknown-unknown` and
-//! end up with **no WASI imports at all**.
+//! A plugin is a WebAssembly component for the `jellyfesh:plugin@1.1`
+//! world `remote-source` (`plugins/wit`): the `source` world plus the
+//! `remote` interface. This crate generates the bindings, turns a [`Plugin`]
+//! implementation into the world's exports, and wraps the host imports in
+//! small helpers. Plugins build for `wasm32-unknown-unknown` and end up with
+//! **no WASI imports at all**.
+//!
+//! Hosts that implement API 1.0 load SDK 1.1 plugins as long as their
+//! manifest says `api_version = "1.0"`: the extra `remote` export is never
+//! looked up there. Declare `api_version = "1.1"` only for what needs it,
+//! the `remote` capability and `[links]` (ADR-0018).
 //!
 //! # A plugin
 //!
@@ -37,7 +43,8 @@
 //!
 //! Everything a plugin does not implement answers
 //! [`PluginError::Unsupported`]; the host only calls what the manifest
-//! declares anyway. Keep state between calls in `thread_local!` cells (a
+//! declares anyway. A remote-control plugin (`playback_mode = "remote"`)
+//! implements the `remote_*` methods instead of [`Plugin::resolve_stream`]. Keep state between calls in `thread_local!` cells (a
 //! plugin is single-threaded); the host may restart an instance at any time
 //! (after a trap, a limit violation or a password login), so anything that
 //! must survive goes to [`kv`] or, for credentials, [`kv::secret`].
@@ -96,7 +103,7 @@ pub use plugin::Plugin;
 #[allow(missing_debug_implementations, reason = "generated code")]
 pub mod bindings {
     wit_bindgen::generate!({
-        world: "source",
+        world: "remote-source",
         path: "../wit",
         pub_export_macro: true,
         export_macro_name: "__export_source_world",
@@ -114,6 +121,10 @@ pub use bindings::exports::jellyfesh::plugin::catalog::SearchFilters;
 pub use bindings::exports::jellyfesh::plugin::lyrics::{LyricFormat, LyricPayload};
 pub use bindings::exports::jellyfesh::plugin::meta::Capability;
 pub use bindings::exports::jellyfesh::plugin::playback::{Quality, StreamInfo};
+pub use bindings::exports::jellyfesh::plugin::remote::{
+    Device as RemoteDevice, DeviceKind as RemoteDeviceKind, PlaybackState as RemoteState,
+    Repeat as RemoteRepeat,
+};
 pub use bindings::jellyfesh::plugin::types::{
     Header, ImageRef, Item, ItemKind, ItemPage, PageRequest, PluginError, Unplayable, UnplayableReason,
 };
@@ -126,8 +137,9 @@ pub mod prelude {
     pub use crate::{
         AuthKind, Capability, CodeDisplay, FieldKind, FieldSpec, FieldValue, Flow, FlowStep, Header,
         ImageRef, Item, ItemKind, ItemPage, LyricFormat, LyricPayload, OauthRequest, OpenUrl, PageRequest,
-        Plugin, PluginError, QrCode, Quality, RedirectCapture, Result, SearchFilters, Step, StreamInfo,
-        Unplayable, UnplayableReason, clock, crypto, http, kv,
+        Plugin, PluginError, QrCode, Quality, RedirectCapture, RemoteDevice, RemoteDeviceKind, RemoteRepeat,
+        RemoteState, Result, SearchFilters, Step, StreamInfo, Unplayable, UnplayableReason, clock, crypto,
+        http, kv,
     };
 }
 
@@ -240,6 +252,62 @@ macro_rules! export_plugin {
                 fn for_user(page: $crate::PageRequest) -> Result<$crate::ItemPage, PluginError> {
                     $crate::__private::enter();
                     <$plugin as $crate::Plugin>::recommendations_for_user(page)
+                }
+            }
+
+            impl jf::remote::Guest for $plugin {
+                fn devices() -> Result<Vec<$crate::RemoteDevice>, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_devices()
+                }
+                fn state() -> Result<Option<$crate::RemoteState>, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_state()
+                }
+                fn play(
+                    device: Option<String>,
+                    context: Option<$crate::Item>,
+                    tracks: Vec<$crate::Item>,
+                    start: u32,
+                ) -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_play(device, context, tracks, start)
+                }
+                fn resume() -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_resume()
+                }
+                fn pause() -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_pause()
+                }
+                fn next() -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_next()
+                }
+                fn previous() -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_previous()
+                }
+                fn seek(position_ms: u32) -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_seek(position_ms)
+                }
+                fn set_volume(percent: u32) -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_set_volume(percent)
+                }
+                fn set_shuffle(on: bool) -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_set_shuffle(on)
+                }
+                fn set_repeat(mode: $crate::RemoteRepeat) -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_set_repeat(mode)
+                }
+                fn transfer(device: String, play: bool) -> Result<(), PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::remote_transfer(device, play)
                 }
             }
         };

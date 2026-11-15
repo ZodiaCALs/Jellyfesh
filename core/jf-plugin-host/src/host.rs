@@ -22,8 +22,8 @@ use crate::services::{Services, effective_settings};
 use crate::storage::{PluginPaths, PluginState, read_json, write_atomic, write_json};
 use crate::trust::TrustList;
 use crate::types::{
-    Capability, ImageRef, Item, ItemPage, LyricPayload, PageRequest, PluginInfo, Quality, Reply,
-    SearchFilters, SignatureStatus, StreamInfo,
+    Capability, ImageRef, Item, ItemPage, LyricPayload, PageRequest, PluginInfo, Quality, RemoteDevice,
+    RemoteRepeat, RemoteState, Reply, SearchFilters, SignatureStatus, StreamInfo,
 };
 
 /// Where the host keeps its files and secrets.
@@ -165,7 +165,7 @@ impl PluginHost {
         &self,
         package: Package,
         state: PluginState,
-        prepared: Option<crate::bindings::SourcePre<crate::runtime::HostState>>,
+        prepared: Option<crate::runtime::Prepared>,
     ) -> Plugin {
         let id = package.manifest.id.clone();
         let paths = PluginPaths::new(&self.inner.config.dir, &id);
@@ -224,7 +224,8 @@ impl PluginHost {
             ..PluginState::default()
         });
 
-        let prepared = self.inner.runtime.prepare(&package.wasm)?;
+        let remote = package.manifest.capabilities.contains(&Capability::Remote);
+        let prepared = self.inner.runtime.prepare(&package.wasm, remote)?;
         let plugin = Arc::new(self.make_plugin(package, state, Some(prepared.clone())));
 
         // Start it once: instantiation, settings, and its capabilities.
@@ -237,7 +238,7 @@ impl PluginHost {
             .call(
                 Budget::start(&self.inner.runtime.limits),
                 Protected::default(),
-                |source, store| source.jellyfesh_plugin_meta().call_capabilities(store),
+                |exports, store| exports.source.jellyfesh_plugin_meta().call_capabilities(store),
             )
             .map_err(|e| HostError::Start(e.to_string()))?;
         let reported: Vec<Capability> = reported.into_iter().map(Into::into).collect();
@@ -318,6 +319,7 @@ impl PluginHost {
             settings_schema_text: plugin.schema.text().to_owned(),
             settings: plugin.services.settings(),
             content_policy: manifest.content_policy.clone(),
+            links: manifest.links.clone(),
             has_icon: plugin.icon.is_some(),
         }
     }
@@ -446,7 +448,8 @@ impl PluginHost {
     }
 
     /// What the plugin says it can do right now (`meta.capabilities`),
-    /// limited to what its manifest declares.
+    /// limited to what its manifest declares. `remote` is a manifest-only
+    /// capability (ADR-0018): it is listed whenever the manifest declares it.
     pub fn capabilities(&self, id: &str) -> Reply<Vec<Capability>> {
         self.call(id, None, |ctx| {
             let budget = Budget::call(&ctx.runtime.limits);
@@ -461,7 +464,7 @@ impl PluginHost {
             Ok(declared
                 .iter()
                 .copied()
-                .filter(|c| reported.contains(c))
+                .filter(|c| *c == Capability::Remote || reported.contains(c))
                 .collect())
         })
     }
@@ -589,6 +592,144 @@ impl PluginHost {
             })?;
             let answer = result.map_err(|e| CallError::Plugin(e.into()))?;
             Ok(checked_page(answer, page.limit, &ctx.plugin.services))
+        })
+    }
+
+    /// `remote.devices`: where the remote source can play (API 1.1).
+    pub fn remote_devices(&self, id: &str) -> Reply<Vec<RemoteDevice>> {
+        self.call(id, Some(Capability::Remote), |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let result = ctx.call_remote(budget, |remote, store| {
+                remote.jellyfesh_plugin_remote().call_devices(store)
+            })?;
+            let devices = result.map_err(|e| CallError::Plugin(e.into()))?;
+            Ok(sanitize::remote_devices(
+                devices.into_iter().map(Into::into).collect(),
+            ))
+        })
+    }
+
+    /// `remote.state`: what the remote player is doing, `None` when nothing
+    /// plays anywhere.
+    pub fn remote_state(&self, id: &str) -> Reply<Option<RemoteState>> {
+        self.call(id, Some(Capability::Remote), |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let result = ctx.call_remote(budget, |remote, store| {
+                remote.jellyfesh_plugin_remote().call_state(store)
+            })?;
+            let state = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = ctx.plugin.services.clone();
+            let allows = |url: &url::Url| services.allows(url);
+            let checker = Checker::new(&services.id, &allows);
+            Ok(state.map(|s| sanitize::remote_state(s.into(), &checker)))
+        })
+    }
+
+    /// `remote.play`: plays `tracks` from `start`, or `context` (an album or
+    /// playlist) from its track `start`, on `device` (the active device when
+    /// `None`). At most [`sanitize::MAX_REMOTE_TRACKS`] tracks are handed on.
+    pub fn remote_play(
+        &self,
+        id: &str,
+        device: Option<String>,
+        context: Option<Item>,
+        tracks: Vec<Item>,
+        start: u32,
+    ) -> Reply<()> {
+        let device = device.filter(|d| !d.is_empty() && d.len() <= 1024);
+        self.call(id, Some(Capability::Remote), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let context = context.map(wit::Item::from);
+            let tracks: Vec<wit::Item> = tracks
+                .into_iter()
+                .take(sanitize::MAX_REMOTE_TRACKS)
+                .map(wit::Item::from)
+                .collect();
+            let start = start.min(u32::try_from(tracks.len().saturating_sub(1)).unwrap_or(u32::MAX));
+            let result = ctx.call_remote(budget, |remote, store| {
+                remote.jellyfesh_plugin_remote().call_play(
+                    store,
+                    device.as_deref(),
+                    context.as_ref(),
+                    &tracks,
+                    start,
+                )
+            })?;
+            result.map_err(|e| CallError::Plugin(e.into()))
+        })
+    }
+
+    /// `remote.resume`.
+    pub fn remote_resume(&self, id: &str) -> Reply<()> {
+        self.remote_command(id, |remote, store| remote.call_resume(store))
+    }
+
+    /// `remote.pause`.
+    pub fn remote_pause(&self, id: &str) -> Reply<()> {
+        self.remote_command(id, |remote, store| remote.call_pause(store))
+    }
+
+    /// `remote.next`.
+    pub fn remote_next(&self, id: &str) -> Reply<()> {
+        self.remote_command(id, |remote, store| remote.call_next(store))
+    }
+
+    /// `remote.previous`.
+    pub fn remote_previous(&self, id: &str) -> Reply<()> {
+        self.remote_command(id, |remote, store| remote.call_previous(store))
+    }
+
+    /// `remote.seek` to `position_ms`.
+    pub fn remote_seek(&self, id: &str, position_ms: u32) -> Reply<()> {
+        self.remote_command(id, move |remote, store| remote.call_seek(store, position_ms))
+    }
+
+    /// `remote.set-volume`, cut to 0–100.
+    pub fn remote_set_volume(&self, id: &str, percent: u32) -> Reply<()> {
+        let percent = percent.min(100);
+        self.remote_command(id, move |remote, store| remote.call_set_volume(store, percent))
+    }
+
+    /// `remote.set-shuffle`.
+    pub fn remote_set_shuffle(&self, id: &str, on: bool) -> Reply<()> {
+        self.remote_command(id, move |remote, store| remote.call_set_shuffle(store, on))
+    }
+
+    /// `remote.set-repeat`.
+    pub fn remote_set_repeat(&self, id: &str, mode: RemoteRepeat) -> Reply<()> {
+        self.remote_command(id, move |remote, store| {
+            remote.call_set_repeat(store, mode.into())
+        })
+    }
+
+    /// `remote.transfer`: moves playback to `device`, playing if `play`.
+    pub fn remote_transfer(&self, id: &str, device: String, play: bool) -> Reply<()> {
+        if device.is_empty() || device.len() > 1024 {
+            let (tx, rx) = crossbeam_channel::bounded(1);
+            let _ = tx.send(Err(CallError::InvalidResponse("no such device".into())));
+            return rx;
+        }
+        self.remote_command(id, move |remote, store| {
+            remote.call_transfer(store, &device, play)
+        })
+    }
+
+    /// A `remote` call that answers nothing but success or an error.
+    fn remote_command(
+        &self,
+        id: &str,
+        f: impl FnOnce(
+            &crate::bindings::remote::exports::jellyfesh::plugin::remote::Guest,
+            &mut wasmtime::Store<crate::runtime::HostState>,
+        ) -> wasmtime::Result<Result<(), wit::PluginError>>
+        + Send
+        + 'static,
+    ) -> Reply<()> {
+        self.call(id, Some(Capability::Remote), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let result =
+                ctx.call_remote(budget, |remote, store| f(remote.jellyfesh_plugin_remote(), store))?;
+            result.map_err(|e| CallError::Plugin(e.into()))
         })
     }
 

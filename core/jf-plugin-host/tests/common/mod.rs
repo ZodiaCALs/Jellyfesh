@@ -30,6 +30,8 @@ pub const PLUGINS: &[&str] = &[
     "secret-thief",
     "panicker",
     "api-mismatch",
+    "remote",
+    "compat-1-0",
 ];
 
 /// The cargo target directory this test binary was built in.

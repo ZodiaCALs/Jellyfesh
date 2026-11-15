@@ -2571,6 +2571,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "jf-test-compat-1-0"
+version = "0.0.5"
+dependencies = [
+ "wit-bindgen",
+]
+
+[[package]]
 name = "jf-test-echo"
 version = "0.0.5"
 dependencies = [
@@ -2600,6 +2607,16 @@ name = "jf-test-panicker"
 version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
+]
+
+[[package]]
+name = "jf-test-remote"
+version = "0.0.5"
+dependencies = [
+ "getrandom 0.4.3",
+ "jf-plugin-sdk",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

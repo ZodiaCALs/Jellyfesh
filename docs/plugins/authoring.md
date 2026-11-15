@@ -1,7 +1,8 @@
 # Writing a Jellyfesh plugin
 
 A Jellyfesh source plugin is a WebAssembly component for the
-`jellyfesh:plugin/source@1` world (`plugins/wit`). It has no WASI at all: no
+`jellyfesh:plugin@1.1` world `remote-source` (`plugins/wit`): the `source`
+world of API 1.0 plus the `remote` interface. It has no WASI at all: no
 files, sockets, environment or clock of its own. Everything goes through the
 host's imports (HTTP limited to the manifest's allowlist, small private
 storage, the system keystore, crypto, time, logging), and the host calls its
@@ -109,6 +110,42 @@ what the manifest declares. Things to know:
   wall time (30 s for sign-in steps), 64 MiB of memory, 16 MiB per HTTP
   response. Waiting for HTTP does not count as CPU.
 
+### API 1.1: links and remote control
+
+Two things need `api_version = "1.1"` in the manifest (ADR-0018); without
+them, keep `"1.0"` so the plugin also loads in apps that implement 1.0.
+
+* **Links** open an item in its service. Add a `[links]` table with an
+  `https` URL template per item kind, holding `{id}` once after the host;
+  the host fills in the item's id (percent-encoded) and the apps offer
+  **Open in {Service}**, the main action for items that cannot play here.
+  The person's browser opens them, never the plugin, so their host need not
+  be in `[network] allow`.
+
+  ```toml
+  [links]
+  track = "https://music.example.com/song/{id}"
+  playlist = "https://music.example.com/playlist?id={id}"
+  ```
+
+* **Remote control** is for services that only let an app control the
+  person's own players. Declare the `remote` capability with
+  `playback_mode = "remote"` (and no `resolve_stream`), then implement the
+  `remote_*` methods: `remote_devices`, `remote_state` (`None` when nothing
+  plays), `remote_play` (tracks from an index, or an album or playlist as
+  `context`), `remote_resume`, `remote_pause`, `remote_next`,
+  `remote_previous`, `remote_seek`, `remote_set_volume`, `remote_set_shuffle`,
+  `remote_set_repeat` and `remote_transfer`. The host checks every answer:
+  devices without an id or name are dropped, volumes cut to 0–100, one
+  device at most is active, positions stay within the song. `meta`'s
+  `capabilities` cannot report `remote` (its enum is 1.0's); the host lists
+  it whenever the manifest declares it. Jellyfesh Web does not run remote
+  sources yet.
+
+Plugins built with this SDK always export `remote` (answering `unsupported`
+unless implemented); a 1.1 host looks it up only when the manifest declares
+`remote`. Packages built for 1.0 keep working in 1.1 hosts unchanged.
+
 ## 3. Build
 
 ```sh
@@ -121,7 +158,8 @@ jf-plugin build --path plugins/subsonic --out /tmp/subsonic.wasm
 `--cfg getrandom_backend="custom"` (the SDK provides randomness from the
 host), wraps the module into a component with `wit-component`, and refuses it
 unless it imports only `jellyfesh:plugin/*@1` and exports the whole `source`
-world. `cargo xtask plugin build <package>` and the plugin tests use the same
+world (and `remote` when the manifest declares it, checked by `pack` and
+`verify`). `cargo xtask plugin build <package>` and the plugin tests use the same
 code (`tools/jf-plugin/plugin-build`). `opt-level = "s"` in the release
 profile gives noticeably smaller components (the official plugins: about
 440 KiB).
