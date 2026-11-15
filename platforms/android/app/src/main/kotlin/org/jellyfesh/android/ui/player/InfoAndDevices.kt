@@ -24,6 +24,8 @@ import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.components.Overlays
 import org.jellyfesh.android.ui.data.LocalGraph
+import org.jellyfesh.android.ui.data.ok
+import org.jellyfesh.android.ui.data.rememberQuery
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.logic.core.Command
@@ -31,19 +33,26 @@ import org.jellyfesh.logic.core.LyricsSnapshot
 import org.jellyfesh.logic.core.LyricsSource
 import org.jellyfesh.logic.core.NowPlaying
 import org.jellyfesh.logic.core.Timing
+import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.format.TimeFormat
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.state.CoreState
 
-/** About this song: tags, length, stream format and where its lyrics came from. */
+/**
+ * About This Song (docs/ui.md, Now Playing › Info): Title, Artist, Album, Year, Length, Format,
+ * Lyrics and File. The year is the library's (Now Playing does not carry it).
+ */
 @Composable
 fun InfoView(now: NowPlaying, lyrics: LyricsSnapshot?, durationUs: Long?, modifier: Modifier = Modifier) {
+    val library = now.track as? TrackRef.Library
+    val year = library?.let { ref -> rememberQuery(ref.id) { it.track(ref.id) }.ok?.year }
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         JfText(stringResource(R.string.info_heading), style = JfType.section, modifier = Modifier.semantics { heading() })
         InfoLine(stringResource(R.string.info_title), now.title)
         now.artist?.let { InfoLine(stringResource(R.string.info_artist), it) }
         now.album?.let { InfoLine(stringResource(R.string.info_album), it) }
+        year?.let { InfoLine(stringResource(R.string.info_year), it.toString()) }
         durationUs?.let { InfoLine(stringResource(R.string.info_length), TimeFormat.clockUs(it)) }
         now.format?.let { f ->
             val text = Labels.format(f) + if (f.gapless) " · " + stringResource(R.string.info_gapless) else ""

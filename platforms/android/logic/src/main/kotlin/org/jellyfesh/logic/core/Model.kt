@@ -99,6 +99,17 @@ data class EqSettings(val enabled: Boolean, val preampDb: Float, val bands: List
     }
 }
 
+/**
+ * An equalizer preset from the core's `eq_presets()`: every app offers the same ones, in the
+ * core's order. Applying one sets [Settings.eq] to its bands.
+ */
+data class EqPreset(
+    /** Stable name (`flat`, `bass_boost`, `vocal`, `treble`); the app shows it translated. */
+    val id: String,
+    /** Its bands, switched on, with a 0 dB preamp. */
+    val settings: EqSettings,
+)
+
 data class CrossfadeSettings(val enabled: Boolean, val durationMs: Int, val albumContinuity: Boolean) {
     companion object {
         const val MIN_MS = 1_000

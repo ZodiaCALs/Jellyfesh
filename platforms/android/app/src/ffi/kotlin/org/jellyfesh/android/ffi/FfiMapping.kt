@@ -27,6 +27,7 @@ import org.jellyfesh.ffi.DeviceInfo as FDeviceInfo
 import org.jellyfesh.ffi.DevicesSnapshot as FDevicesSnapshot
 import org.jellyfesh.ffi.Direction as FDirection
 import org.jellyfesh.ffi.EqBand as FEqBand
+import org.jellyfesh.ffi.EqPreset as FEqPreset
 import org.jellyfesh.ffi.EqSettings as FEqSettings
 import org.jellyfesh.ffi.Event as FEvent
 import org.jellyfesh.ffi.Format as FFormat
@@ -97,6 +98,7 @@ import org.jellyfesh.logic.core.CrossfadeSettings
 import org.jellyfesh.logic.core.DeviceInfo
 import org.jellyfesh.logic.core.DevicesSnapshot
 import org.jellyfesh.logic.core.EqBand
+import org.jellyfesh.logic.core.EqPreset
 import org.jellyfesh.logic.core.EqSettings
 import org.jellyfesh.logic.core.HistoryEntry
 import org.jellyfesh.logic.core.HueSource
@@ -614,6 +616,8 @@ object FfiMapping {
     )
 
     fun FDeviceInfo.toLogic(): DeviceInfo = DeviceInfo(id, name, isDefault, sampleRates.map { it.toInt() })
+
+    fun FEqPreset.toLogic(): EqPreset = EqPreset(id = id, settings = settings.toLogic())
 
     fun FDevicesSnapshot.toLogic(): DevicesSnapshot =
         DevicesSnapshot(version.toLong(), devices.map { it.toLogic() }, selected)

@@ -61,6 +61,7 @@ import org.jellyfesh.android.ui.theme.Badge
 import org.jellyfesh.android.ui.theme.ButtonStyle
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfButton
+import org.jellyfesh.android.ui.theme.JfIconButton
 import org.jellyfesh.android.ui.theme.JfSwitch
 import org.jellyfesh.android.ui.theme.JfTextField
 import org.jellyfesh.android.ui.theme.JfType
@@ -81,8 +82,10 @@ import org.jellyfesh.logic.sources.Disclosure
 import org.jellyfesh.logic.state.CoreState
 
 /**
- * The services to add (Add a Source), the installed sources (Official and Community plugins) and
- * their state, and installing a new one.
+ * The Sources tab (docs/ui.md, "Sources"): what sources are, Add a Source (the core's services),
+ * Your Sources (each installed source with its status; choosing one opens it), then Sources
+ * Settings…, which opens Settings › Sources. Install from File… stays beside it, as on Android it
+ * is the quickest way to a plugin someone sent.
  */
 @Composable
 fun SourcesScreen(state: CoreState) {
@@ -97,28 +100,18 @@ fun SourcesScreen(state: CoreState) {
                 stringResource(R.string.tab_sources),
                 Modifier.windowInsetsPadding(WindowInsets.statusBars),
                 subtitle = stringResource(R.string.sources_subtitle),
-            )
-        }
-        item(key = "actions") {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                JfButton(stringResource(R.string.action_install_plugin), install, icon = R.drawable.ic_add)
-                JfButton(stringResource(R.string.settings_title), { nav.openSettings(SettingsSection.Sources) }, style = ButtonStyle.Quiet, icon = R.drawable.ic_settings)
+            ) {
+                JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
             }
         }
-        // The services Jellyfesh offers, each while its official plugin is installed. With them
-        // above, the plugins get their own heading, so a service and its plugin do not read as one list.
+        // The services Jellyfesh offers, each while its official plugin is installed.
         if (presets.isNotEmpty()) {
             item(key = "add-h") { SectionHeader(stringResource(R.string.sources_add)) }
             items(presets, key = { "preset:${it.id}" }) { preset ->
-                NavRow(
-                    title = preset.name,
-                    subtitle = presetDescription(preset),
-                    onClick = { connect.open(preset) },
-                    leading = { PresetIcon(preset.name, plugins.firstOrNull { it.id == preset.plugin }?.icon) },
-                )
+                PresetRow(preset, plugins) { connect.open(preset) }
             }
-            item(key = "installed-h") { SectionHeader(stringResource(R.string.sources_installed)) }
         }
+        item(key = "yours-h") { SectionHeader(stringResource(R.string.sources_your)) }
         if (plugins.isEmpty()) {
             item(key = "empty") { EmptyState(R.drawable.ic_sources, stringResource(R.string.sources_empty_title), stringResource(R.string.sources_empty_body)) }
         }
@@ -130,11 +123,18 @@ fun SourcesScreen(state: CoreState) {
                 leading = { InitialTile(plugin.name, icon = R.drawable.ic_sources) },
             )
         }
+        item(key = "actions") {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                JfButton(stringResource(R.string.sources_settings), { nav.openSettings(SettingsSection.Sources) }, icon = R.drawable.ic_settings)
+                JfButton(stringResource(R.string.action_install_plugin), install, style = ButtonStyle.Quiet, icon = R.drawable.ic_add)
+            }
+        }
     }
 }
 
+/** A source's line in a list: its badge and whether it is on and signed in. */
 @Composable
-private fun pluginStatus(plugin: PluginSummary): String {
+fun pluginStatus(plugin: PluginSummary): String {
     val badge = stringResource(if (plugin.badge == PluginBadge.Official) R.string.badge_official else R.string.badge_community)
     val account = plugin.account
     val state = when {
@@ -144,6 +144,17 @@ private fun pluginStatus(plugin: PluginSummary): String {
         else -> stringResource(R.string.source_enabled)
     }
     return "$badge · $state"
+}
+
+/** A service of Add a Source (the Sources tab and Settings › Sources): its picture, name and line. */
+@Composable
+fun PresetRow(preset: SourcePreset, plugins: List<PluginSummary>, onClick: () -> Unit) {
+    NavRow(
+        title = preset.name,
+        subtitle = presetDescription(preset),
+        onClick = onClick,
+        leading = { PresetIcon(preset.name, plugins.firstOrNull { it.id == preset.plugin }?.icon) },
+    )
 }
 
 /** The line under a service in Add a Source: the account once signed in, else what the service is. */
@@ -297,7 +308,11 @@ private fun ConnectContent(preset: SourcePreset, dismiss: () -> Unit, connect: (
     }
 }
 
-/** One plugin: its badge, switch, account and sign-in, settings, browsing and removal. */
+/**
+ * One source (docs/ui.md, Settings › Sources › Installed): its name, badge and whether it is
+ * signed in; then Enabled, the sign-in buttons (or Sign Out), its own settings, browsing it,
+ * "Version 1.2.0 · Author" and Uninstall…, which asks first.
+ */
 @Composable
 fun SourceScreen(pluginId: String, state: CoreState) {
     val graph = LocalGraph.current
@@ -307,6 +322,7 @@ fun SourceScreen(pluginId: String, state: CoreState) {
     val plugin = state.sources.plugins.firstOrNull { it.id == pluginId }
     val uninstallTitle = plugin?.let { stringResource(R.string.source_uninstall_title, it.name) }
     val uninstallBody = stringResource(R.string.source_uninstall_body)
+    val uninstallAsk = stringResource(R.string.action_uninstall_ask)
     val uninstallLabel = stringResource(R.string.action_uninstall)
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
@@ -323,7 +339,13 @@ fun SourceScreen(pluginId: String, state: CoreState) {
                             stringResource(if (plugin.badge == PluginBadge.Official) R.string.badge_official else R.string.badge_community),
                             warning = plugin.badge == PluginBadge.Community,
                         )
-                        JfText(stringResource(R.string.source_version, plugin.version, plugin.author), style = JfType.caption, color = Jf.colors.ink50, maxLines = 1)
+                        val account = plugin.account
+                        val signedIn = when {
+                            account != null -> stringResource(R.string.source_signed_in, account)
+                            plugin.authMethods.isNotEmpty() -> stringResource(R.string.source_not_signed_in)
+                            else -> null
+                        }
+                        if (signedIn != null) JfText(signedIn, style = JfType.caption, color = Jf.colors.ink70, maxLines = 1)
                     }
                 }
             }
@@ -351,9 +373,17 @@ fun SourceScreen(pluginId: String, state: CoreState) {
                     }
                 }
             }
+            item(key = "version") {
+                JfText(
+                    stringResource(R.string.source_version, plugin.version, plugin.author),
+                    style = JfType.caption,
+                    color = Jf.colors.ink50,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp),
+                )
+            }
             item(key = "uninstall") {
                 Row(Modifier.padding(16.dp)) {
-                    JfButton(uninstallLabel, {
+                    JfButton(uninstallAsk, {
                         overlays.confirm(uninstallTitle ?: uninstallLabel, uninstallBody, uninstallLabel, destructive = true) {
                             graph.send(Command.UninstallPlugin(plugin.id))
                             nav.back()

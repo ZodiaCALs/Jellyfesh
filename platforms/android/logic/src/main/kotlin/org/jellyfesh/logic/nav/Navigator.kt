@@ -6,7 +6,11 @@ enum class Tab { Home, Library, Search, Sources }
 /** The library's sections (Misty's segmented control on the Library tab). */
 enum class LibrarySection { Albums, Artists, Songs, Playlists, Favorites }
 
-enum class SettingsSection { Appearance, Playback, Library, Lyrics, Sources }
+/**
+ * Settings' sections, in the order every app lists them (docs/ui.md, "Settings"). Android keeps
+ * About in Settings; the lyrics settings live in Appearance, with no section of their own.
+ */
+enum class SettingsSection { Appearance, Playback, Library, Sources, About }
 
 /** A screen in a tab's back stack. */
 sealed interface Screen {

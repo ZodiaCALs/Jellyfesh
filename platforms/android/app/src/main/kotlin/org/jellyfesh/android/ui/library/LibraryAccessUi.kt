@@ -80,15 +80,19 @@ fun rememberLibraryAccess(): LibraryAccessUi {
     }
 }
 
-/** The two ways in: access to music (when not granted yet) and a folder of the person's choice. */
+/**
+ * The ways in on Home and the empty library pages: access to music (while not granted; Android's
+ * own first step), Add Music Folder…, and on Home Add a Source ([onAddSource]).
+ */
 @Composable
-fun LibraryAccessButtons(modifier: Modifier = Modifier) {
+fun LibraryAccessButtons(modifier: Modifier = Modifier, onAddSource: (() -> Unit)? = null) {
     val access = rememberLibraryAccess()
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!access.hasMusicPermission) {
             JfButton(stringResource(R.string.action_allow_music), access.requestMusic, style = ButtonStyle.Accent, icon = R.drawable.ic_library)
         }
-        JfButton(stringResource(R.string.action_add_folder), access.addFolder, icon = R.drawable.ic_folder)
+        JfButton(stringResource(R.string.action_add_music_folder), access.addFolder, icon = R.drawable.ic_folder)
+        if (onAddSource != null) JfButton(stringResource(R.string.sources_add), onAddSource, icon = R.drawable.ic_sources)
     }
 }
 
@@ -100,6 +104,6 @@ fun LibraryAccessRow(modifier: Modifier = Modifier) {
         if (!access.hasMusicPermission) {
             JfButton(stringResource(R.string.action_allow_music), access.requestMusic, style = ButtonStyle.Accent, modifier = Modifier.weight(1f))
         }
-        JfButton(stringResource(R.string.action_add_folder), access.addFolder, modifier = Modifier.weight(1f))
+        JfButton(stringResource(R.string.action_add_music_folder), access.addFolder, modifier = Modifier.weight(1f))
     }
 }

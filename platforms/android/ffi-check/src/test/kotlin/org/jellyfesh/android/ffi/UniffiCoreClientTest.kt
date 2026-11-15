@@ -95,6 +95,24 @@ class UniffiCoreClientTest {
             assertEquals(2, client.playlist(created.id)?.entryCount)
             assertEquals(listOf("01 Harbor", "02 Lantern"), client.playlistEntries(created.id, 0, 50).map { it.row.title })
 
+            // Export Playlist… and Import Playlist… go through these after the document picker:
+            // the core writes M3U8 to a path and reads one back as a new playlist named after it.
+            val exported = dir.resolve("Evening.m3u8")
+            client.exportPlaylist(created.id, exported.path)
+            val m3u = exported.readText()
+            assertTrue(m3u.startsWith("#EXTM3U"), m3u)
+            assertTrue("01 Harbor.wav" in m3u && "02 Lantern.wav" in m3u, m3u)
+            val importRequest = client.send(Command.ImportPlaylist(exported.path))
+            val imported = waitFor(events) { it is CoreEvent.PlaylistCreated && it.request == importRequest } as CoreEvent.PlaylistCreated
+            assertEquals("Evening", client.playlist(imported.id)?.name)
+            assertEquals(listOf("01 Harbor", "02 Lantern"), client.playlistEntries(imported.id, 0, 50).map { it.row.title })
+
+            // Dragging a row by its handle sends MovePlaylistEntry with the row it lands on.
+            val second = client.playlistEntries(imported.id, 0, 50)[1]
+            client.send(Command.MovePlaylistEntry(imported.id, second.entryId, 0))
+            waitFor(events) { it is CoreEvent.LibraryChanged }
+            assertEquals(listOf("02 Lantern", "01 Harbor"), client.playlistEntries(imported.id, 0, 50).map { it.row.title })
+
             // Play it; the store mirrors the slices.
             client.send(Command.PlayCollection(CollectionRef.Playlist(created.id), start = 0, shuffle = false))
             waitFor(events) { it is CoreEvent.Playback && it.snapshot.status == Status.Ended }
@@ -156,6 +174,25 @@ class UniffiCoreClientTest {
         // Out-of-range values are clamped rather than wrapped.
         assertEquals(org.jellyfesh.ffi.Command.Seek(positionMs = 0uL), mapped[6])
         assertEquals(org.jellyfesh.ffi.Command.SetVolume(volume = 1f), mapped[7])
+    }
+
+    @Test
+    fun theFreeFunctionsReachTheShell() {
+        library()
+        val dir = Files.createTempDirectory("jf-android-ffi").toFile()
+        try {
+            val client = start(dir)
+            // The equalizer's Preset picker lists the core's presets, in its order.
+            val presets = client.eqPresets()
+            assertEquals(listOf("flat", "bass_boost", "vocal", "treble"), presets.map { it.id })
+            assertTrue(presets.all { it.settings.bands.size == 10 && it.settings.preampDb == 0f })
+            assertTrue(presets.first().settings.bands.all { it.gainDb == 0f })
+            // Settings › About shows the version from the build, never a typed-in one.
+            assertTrue(client.libraryVersion().matches(Regex("\\d+\\.\\d+\\.\\d+.*")), client.libraryVersion())
+            client.shutdown()
+        } finally {
+            dir.deleteRecursively()
+        }
     }
 
     @Test

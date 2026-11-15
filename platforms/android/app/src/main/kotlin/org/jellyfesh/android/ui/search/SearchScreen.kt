@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -157,7 +158,7 @@ fun SearchScreen(state: CoreState) {
                     durationMs = track.durationMs,
                     playing = ref == playing,
                     onClick = { graph.send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
-                    onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album)) },
+                    onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album, artist = track.artist)) },
                 )
             }
         }
@@ -189,13 +190,20 @@ fun SearchScreen(state: CoreState) {
                 )
             }
         }
-        if (search.sourcesUnavailable && state.sources.plugins.any { it.enabled }) {
+        // Then From Your Sources, one group per source, as each answers (docs/ui.md, "Search").
+        val sourcesUnavailable = search.sourcesUnavailable && state.sources.plugins.any { it.enabled }
+        if (sourcesUnavailable || search.sources.isNotEmpty()) {
+            item(key = "src-h") { SectionHeader(stringResource(R.string.search_from_sources)) }
+        }
+        if (sourcesUnavailable) {
             item(key = "src-unavailable") { Notice(stringResource(R.string.search_sources_unavailable)) }
         }
         search.sources.forEach { section ->
             val plugin = state.sources.plugins.firstOrNull { it.id == section.source }
             val name = plugin?.name ?: section.source
-            item(key = "src-${section.source}-h") { SectionHeader(name) }
+            item(key = "src-${section.source}-h") {
+                JfText(name, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize), modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp).semantics { heading() })
+            }
             section.error?.let { error ->
                 item(key = "src-${section.source}-e") { Notice(stringResource(R.string.search_source_failed, name, error), warning = true) }
             }

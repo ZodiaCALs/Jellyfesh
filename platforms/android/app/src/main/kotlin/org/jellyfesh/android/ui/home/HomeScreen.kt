@@ -45,12 +45,19 @@ import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.core.TrackRow as CoreTrackRow
 import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.images.ArtworkSizes
+import org.jellyfesh.logic.library.HomeModel
+import org.jellyfesh.logic.nav.Tab
 import org.jellyfesh.logic.state.CoreState
 
 private const val SHELF_ALBUMS = 12
 private const val RECENT_ROWS = 10
 
-/** Home: what was added and played recently, and a welcome while the library is empty. */
+/**
+ * Home (docs/ui.md): the library's size ("1,204 songs · 96 albums · 41 artists"), then Recently
+ * Added (albums), Recently Played and Most Played; with nothing in the library and no source
+ * signed in, a welcome with Add Music Folder… and Add a Source instead (and Allow Access to Music
+ * while Jellyfesh may not read the music on this phone).
+ */
 @Composable
 fun HomeScreen(state: CoreState) {
     val graph = LocalGraph.current
@@ -75,8 +82,11 @@ fun HomeScreen(state: CoreState) {
         item(key = "title") {
             val s = (stats as? QueryResult.Ok)?.value
             val subtitle = s?.takeIf { it.tracks > 0 }?.let {
-                pluralStringResource(R.plurals.count_songs, it.tracks.toInt(), it.tracks.toInt()) + " · " +
-                    pluralStringResource(R.plurals.count_albums, it.albums.toInt(), it.albums.toInt())
+                listOf(
+                    pluralStringResource(R.plurals.count_songs, it.tracks.toInt(), it.tracks.toInt()),
+                    pluralStringResource(R.plurals.count_albums, it.albums.toInt(), it.albums.toInt()),
+                    pluralStringResource(R.plurals.count_artists, it.artists.toInt(), it.artists.toInt()),
+                ).joinToString(" · ")
             }
             ScreenTitle(
                 stringResource(R.string.tab_home),
@@ -86,14 +96,13 @@ fun HomeScreen(state: CoreState) {
                 JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
             }
         }
-        val s = (stats as? QueryResult.Ok)?.value
-        if (s != null && s.tracks == 0L && !state.scanning) {
+        if (HomeModel.showsWelcome((stats as? QueryResult.Ok)?.value, state.scanning, state.sources)) {
             item(key = "welcome") {
                 EmptyState(
                     icon = R.drawable.ic_library,
                     title = stringResource(R.string.home_welcome_title),
                     body = stringResource(R.string.home_welcome_body),
-                ) { LibraryAccessButtons() }
+                ) { LibraryAccessButtons(onAddSource = { nav.select(Tab.Sources) }) }
             }
         }
         if (stats is QueryResult.Failed) {
@@ -145,7 +154,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trackSection(
             missing = row.missing,
             favorite = row.favorite,
             onClick = { send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
-            onMore = { more(TrackTarget(row.track, row.title, Labels.artistAlbum(row.artist, row.album), favorite = row.favorite)) },
+            onMore = { more(TrackTarget(row.track, row.title, Labels.artistAlbum(row.artist, row.album), favorite = row.favorite, artist = row.artist)) },
         )
     }
 }

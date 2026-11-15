@@ -59,6 +59,12 @@ object AccentChoices {
     /** The swatches' hues in the order shown: Misty blue first, then round the wheel. */
     val SWATCH_HUES: List<Float> = listOf(250f, 210f, 180f, 150f, 120f, 60f, 30f, 0f, 330f, 290f)
 
+    /**
+     * The swatches' names in [SWATCH_HUES] order, as stable ids the app translates (the Linux
+     * app's names; docs/ui.md: the last is Violet, not Purple).
+     */
+    val SWATCH_NAMES: List<String> = listOf("blue", "cyan", "teal", "green", "olive", "orange", "red", "rose", "magenta", "violet")
+
     /** A hue in degrees, normalised to 0 until 360 (NaN counts as Misty's 250). */
     fun normalize(hue: Float): Float {
         if (!hue.isFinite()) return 250f

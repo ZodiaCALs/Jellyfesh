@@ -1,0 +1,123 @@
+package org.jellyfesh.logic.library
+
+import org.jellyfesh.logic.core.AlbumSort
+import org.jellyfesh.logic.core.Artist
+import org.jellyfesh.logic.core.CollectionRef
+import org.jellyfesh.logic.core.CoreClient
+import org.jellyfesh.logic.core.LibraryStats
+import org.jellyfesh.logic.core.SourcesSnapshot
+import org.jellyfesh.logic.core.TrackQuery
+import org.jellyfesh.logic.core.TrackRef
+import org.jellyfesh.logic.core.TrackSort
+
+/** A list's order: what it is sorted by, and whether the order runs backwards (the menu's Descending). */
+data class SortOrder<F>(val field: F, val descending: Boolean)
+
+/**
+ * The sort menus of Albums and Songs (docs/ui.md, "Pages"): the fields in the menu's order, then
+ * Descending. The core sorts; the menu only says how. Choosing a field starts it the way people
+ * read it (newest first for Year and Recently Added, A to Z otherwise), and Descending turns the
+ * order round from there.
+ */
+object SortMenus {
+    /** Albums: Title, Artist, Year, Recently Added. */
+    val ALBUM_FIELDS: List<AlbumSort> = listOf(AlbumSort.Title, AlbumSort.Artist, AlbumSort.Year, AlbumSort.Added)
+
+    /** Songs: Title, Artist, Album, Year, Recently Added. */
+    val SONG_FIELDS: List<TrackSort> = listOf(TrackSort.Title, TrackSort.Artist, TrackSort.Album, TrackSort.Year, TrackSort.Added)
+
+    val DEFAULT_ALBUMS: SortOrder<AlbumSort> = album(AlbumSort.Title)
+    val DEFAULT_SONGS: SortOrder<TrackSort> = song(TrackSort.Artist)
+
+    /** The order an Albums field starts in. */
+    fun album(field: AlbumSort): SortOrder<AlbumSort> = SortOrder(field, field == AlbumSort.Year || field == AlbumSort.Added)
+
+    /** The order a Songs field starts in. */
+    fun song(field: TrackSort): SortOrder<TrackSort> = SortOrder(field, field == TrackSort.Year || field == TrackSort.Added)
+
+    /** Descending switched on or off. */
+    fun <F> descending(order: SortOrder<F>, on: Boolean): SortOrder<F> = order.copy(descending = on)
+
+    /** The query for a page of Songs in [order]. */
+    fun songsQuery(order: SortOrder<TrackSort>, offset: Int, limit: Int): TrackQuery =
+        TrackQuery(offset = offset, limit = limit, sort = order.field, descending = order.descending)
+}
+
+/** The songs a collection holds, as Add to Playlist… adds them (the core's queries, page by page). */
+object CollectionTracks {
+    /** Rows read per query while gathering a long collection. */
+    const val PAGE = 500
+
+    /** At most this many rows are gathered, whatever the collection holds. */
+    const val MAX = 50_000
+
+    /** Whether Add to Playlist… can gather [collection]'s songs here (a source's containers cannot). */
+    fun canAdd(collection: CollectionRef): Boolean = collection !is CollectionRef.Source
+
+    /**
+     * Every song of [collection] that a playlist can hold (library songs and files), in the
+     * collection's order. Runs queries: call it off the main thread.
+     */
+    fun of(core: CoreClient, collection: CollectionRef): List<TrackRef> = when (collection) {
+        is CollectionRef.Album -> core.albumTracks(collection.id).map { TrackRef.Library(it.id) }
+        is CollectionRef.Artist -> pages { offset ->
+            core.tracks(TrackQuery(offset = offset, limit = PAGE, sort = TrackSort.Album, artistId = collection.id)).map { TrackRef.Library(it.id) }
+        }
+        is CollectionRef.Playlist -> pages { offset -> core.playlistEntries(collection.id, offset, PAGE).map { it.row.track } }
+        CollectionRef.Favorites -> pages { offset -> core.favorites(offset, PAGE).map { it.track } }
+        is CollectionRef.Tracks -> collection.tracks
+        is CollectionRef.Source -> emptyList()
+    }.filter(::playlistCanHold)
+
+    /** Playlists hold library songs and files; a source's songs are left out, as the song menu does. */
+    fun playlistCanHold(track: TrackRef): Boolean = track is TrackRef.Library || track is TrackRef.File
+
+    private inline fun pages(read: (offset: Int) -> List<TrackRef>): List<TrackRef> {
+        val out = ArrayList<TrackRef>()
+        while (true) {
+            val page = read(out.size)
+            out += page
+            if (page.size < PAGE || out.size >= MAX) return out
+        }
+    }
+}
+
+/** Finds the library's artist for a name the core gave with a song or an album. */
+object ArtistMatch {
+    /** The artist named exactly [name], else the first whose name matches ignoring case, else null. */
+    fun find(name: String, artists: List<Artist>): Artist? =
+        artists.firstOrNull { it.name == name } ?: artists.firstOrNull { it.name.equals(name, ignoreCase = true) }
+}
+
+/** Home (docs/ui.md, "Pages"). */
+object HomeModel {
+    /**
+     * Whether Home shows the welcome instead of its shelves: nothing in the library (and no scan
+     * filling it right now) and no source signed in.
+     */
+    fun showsWelcome(stats: LibraryStats?, scanning: Boolean, sources: SourcesSnapshot): Boolean =
+        stats != null && stats.tracks == 0L && !scanning && sources.plugins.none { it.account != null }
+}
+
+/** The items of a song's menu (long press or More), in the order every app lists them. */
+enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist }
+
+object TrackMenu {
+    /**
+     * The song menu (docs/ui.md, "Song menu"): Play Next, Play Last, Add to Playlist… (songs a
+     * playlist can hold), Add to or Remove from Favourites (when the favourite state is known),
+     * Go to Album and Go to Artist (when the library has them).
+     */
+    fun items(track: TrackRef, favourite: Boolean?, hasAlbum: Boolean, hasArtist: Boolean): List<TrackMenuItem> = buildList {
+        add(TrackMenuItem.PlayNext)
+        add(TrackMenuItem.PlayLast)
+        if (CollectionTracks.playlistCanHold(track)) add(TrackMenuItem.AddToPlaylist)
+        when (favourite) {
+            true -> add(TrackMenuItem.RemoveFromFavourites)
+            false -> add(TrackMenuItem.AddToFavourites)
+            null -> Unit
+        }
+        if (hasAlbum) add(TrackMenuItem.GoToAlbum)
+        if (hasArtist) add(TrackMenuItem.GoToArtist)
+    }
+}

@@ -8,14 +8,19 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.provider.MediaStore
+import android.provider.OpenableColumns
 import androidx.core.content.ContextCompat
 import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jellyfesh.android.AppGraph
+import org.jellyfesh.android.QueryResult
+import org.jellyfesh.android.R
 import org.jellyfesh.android.valueOrNull
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.library.LibraryRoots
+import org.jellyfesh.logic.playlist.PlaylistFiles
 
 /**
  * Android library access, option C (docs/step-0 "Android library access", implemented here for
@@ -91,6 +96,64 @@ class LibraryAccess(private val context: Context, private val graph: AppGraph) {
         }.getOrDefault(false)
         if (copied) graph.send(Command.InstallPlugin(target.path))
         copied
+    }
+
+    /**
+     * Import Playlist…: an M3U or M3U8 file the person picked, handed to the core's
+     * `ImportPlaylist`. Read where it is when the core can (its relative lines then resolve
+     * against its own folder), else copied to the cache under its own name, so the playlist is
+     * still named after the file. Returns false when it could not be read; the core then reports
+     * the new playlist (PlaylistCreated) or why it failed.
+     */
+    suspend fun importPlaylist(document: Uri): Boolean = withContext(Dispatchers.IO) {
+        val inPlace = runCatching { DocumentsContract.getDocumentId(document) }.getOrNull()
+            ?.let { PlaylistFiles.pathOfDocument(it, primaryVolume()) }
+            ?.takeIf { File(it).canRead() }
+        val path = inPlace ?: copyForImport(document) ?: return@withContext false
+        graph.send(Command.ImportPlaylist(path)) != 0L
+    }
+
+    private fun copyForImport(document: Uri): String? {
+        val folder = File(context.cacheDir, "playlists/import-${System.currentTimeMillis()}").apply { mkdirs() }
+        val target = File(folder, PlaylistFiles.importName(displayName(document)))
+        val copied = runCatching {
+            context.contentResolver.openInputStream(document)?.use { input -> target.outputStream().use { input.copyTo(it) } } != null
+        }.getOrDefault(false)
+        return target.path.takeIf { copied }
+    }
+
+    private fun displayName(document: Uri): String? = runCatching {
+        context.contentResolver.query(document, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+    }.getOrNull()
+
+    /**
+     * Export Playlist…: the core writes playlist [id] as M3U8 (`export_playlist`) to the cache,
+     * and the file is copied into the document the person created. Null when it is done, else why
+     * it failed. Songs are written with their full paths (they are not below the cache).
+     */
+    suspend fun exportPlaylist(id: Long, document: Uri): String? = withContext(Dispatchers.IO) {
+        val folder = File(context.cacheDir, "playlists").apply { mkdirs() }
+        val temp = File(folder, "export-${System.currentTimeMillis()}.${PlaylistFiles.EXTENSION}")
+        try {
+            when (val written = graph.query { it.exportPlaylist(id, temp.path) }) {
+                is QueryResult.Ok -> Unit
+                is QueryResult.Failed -> return@withContext written.message
+                is QueryResult.NotAvailable, QueryResult.Loading -> return@withContext context.getString(R.string.not_available_yet)
+            }
+            val resolver = context.contentResolver
+            // "wt" truncates a file being replaced; not every provider takes it.
+            val out = runCatching { resolver.openOutputStream(document, "wt") }.getOrNull() ?: resolver.openOutputStream(document)
+            out?.use { stream -> temp.inputStream().use { it.copyTo(stream) } } ?: return@withContext context.getString(R.string.toast_playlist_unwritable)
+            null
+        } catch (e: IOException) {
+            e.message ?: e.toString()
+        } catch (e: SecurityException) {
+            e.message ?: e.toString()
+        } finally {
+            temp.delete()
+        }
     }
 
     /** Storage volume roots (`/storage/emulated/0`, SD cards), from the app's own folders on them. */

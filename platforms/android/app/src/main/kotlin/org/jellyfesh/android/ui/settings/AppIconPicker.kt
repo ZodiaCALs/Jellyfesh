@@ -92,8 +92,8 @@ fun AppIconPicker(settings: Settings) {
     val options: List<String> = listOf(AppIcons.AUTOMATIC) + AppIcon.entries.map { it.id }
     val selected = settings.appIcon.takeIf { s -> options.contains(s) } ?: AppIcons.AUTOMATIC
     Panel {
+        // The group's heading (App Icon) is above the panel.
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            JfText(stringResource(R.string.app_icon), style = JfType.listTitle.copy(fontSize = JfType.body.fontSize))
             JfText(stringResource(R.string.app_icon_desc), style = JfType.small, color = Jf.colors.ink70)
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val perRow = (maxWidth / 88.dp).toInt().coerceIn(3, 6)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,14 +38,17 @@ import org.jellyfesh.android.ui.actions.TrackTarget
 import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.components.AlbumCard
 import org.jellyfesh.android.ui.components.ArtworkImage
+import org.jellyfesh.android.ui.components.ChoiceRow
+import org.jellyfesh.android.ui.components.Divider
 import org.jellyfesh.android.ui.components.EmptyState
 import org.jellyfesh.android.ui.components.InitialTile
 import org.jellyfesh.android.ui.components.LoadingRow
 import org.jellyfesh.android.ui.components.LocalOverlays
 import org.jellyfesh.android.ui.components.NavRow
 import org.jellyfesh.android.ui.components.Notice
+import org.jellyfesh.android.ui.components.Overlays
 import org.jellyfesh.android.ui.components.ScreenTitle
-import org.jellyfesh.android.ui.components.SheetAction
+import org.jellyfesh.android.ui.components.SettingRow
 import org.jellyfesh.android.ui.components.TrackRow
 import org.jellyfesh.android.ui.components.bleed
 import org.jellyfesh.android.ui.data.LocalGraph
@@ -54,19 +58,22 @@ import org.jellyfesh.android.ui.data.rememberPagedSource
 import org.jellyfesh.android.ui.data.rememberQuery
 import org.jellyfesh.android.ui.nav.LocalNav
 import org.jellyfesh.android.ui.theme.ButtonStyle
+import org.jellyfesh.android.ui.theme.ChipButton
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfButton
 import org.jellyfesh.android.ui.theme.JfIconButton
+import org.jellyfesh.android.ui.theme.JfSwitch
 import org.jellyfesh.android.ui.theme.SegmentedControl
 import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.logic.core.AlbumSort
 import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
-import org.jellyfesh.logic.core.TrackQuery
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.core.TrackSort
 import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.images.ArtworkSizes
+import org.jellyfesh.logic.library.SortMenus
+import org.jellyfesh.logic.library.SortOrder
 import org.jellyfesh.logic.nav.LibrarySection
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.state.CoreState
@@ -116,11 +123,15 @@ fun listPadding(): PaddingValues = PaddingValues(bottom = LocalChromePadding.cur
 private fun AlbumsGrid(state: CoreState, header: @Composable () -> Unit) {
     val nav = LocalNav.current
     val graph = LocalGraph.current
-    var sort by rememberSaveable { mutableStateOf(AlbumSort.Title) }
+    val overlays = LocalOverlays.current
+    var sortField by rememberSaveable { mutableStateOf(SortMenus.DEFAULT_ALBUMS.field) }
+    var descending by rememberSaveable { mutableStateOf(SortMenus.DEFAULT_ALBUMS.descending) }
+    val order = SortOrder(sortField, descending)
     val gridState = rememberLazyGridState()
-    val albums = rememberPagedGridSource(gridState, state.libraryRevision, sort, rowOffset = 1) { core, offset, limit ->
-        core.albumsSorted(sort, sort == AlbumSort.Added || sort == AlbumSort.Year, offset, limit)
+    val albums = rememberPagedGridSource(gridState, state.libraryRevision, order, rowOffset = 1) { core, offset, limit ->
+        core.albumsSorted(order.field, order.descending, offset, limit)
     }
+    val sortTitle = stringResource(R.string.sort_albums)
     val cellPx = with(LocalDensity.current) { 180.dp.roundToPx() }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(150.dp),
@@ -133,14 +144,19 @@ private fun AlbumsGrid(state: CoreState, header: @Composable () -> Unit) {
         item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
             Column(Modifier.bleed(12.dp)) {
                 header()
-                SegmentedControl(
-                    options = AlbumSort.entries,
-                    selected = sort,
-                    label = { stringResource(albumSortLabel(it)) },
-                    onSelect = { sort = it },
-                    description = stringResource(R.string.sort_albums),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+                SortChip(sortTitle, stringResource(albumSortLabel(order.field)), order.descending) {
+                    showSortMenu(
+                        overlays,
+                        sortTitle,
+                        SortMenus.ALBUM_FIELDS,
+                        { stringResource(albumSortLabel(it)) },
+                        { SortOrder(sortField, descending) },
+                        SortMenus::album,
+                    ) { chosen ->
+                        sortField = chosen.field
+                        descending = chosen.descending
+                    }
+                }
             }
         }
         pagedStates(albums, emptyTitle = R.string.albums_empty_title, emptyBody = R.string.albums_empty_body)
@@ -165,6 +181,56 @@ fun albumSortLabel(sort: AlbumSort): Int = when (sort) {
     AlbumSort.Artist -> R.string.sort_artist
     AlbumSort.Year -> R.string.sort_year
     AlbumSort.Added -> R.string.sort_added
+}
+
+fun songSortLabel(sort: TrackSort): Int = when (sort) {
+    TrackSort.Title -> R.string.sort_title
+    TrackSort.Artist -> R.string.sort_artist
+    TrackSort.Album -> R.string.sort_album
+    TrackSort.Year -> R.string.sort_year
+    TrackSort.Added -> R.string.sort_added
+    // Not in the Songs menu (SortMenus.SONG_FIELDS).
+    TrackSort.Duration -> R.string.info_length
+    TrackSort.Path -> R.string.info_file
+}
+
+/** The sort menu's button: the order in use; it opens the menu. */
+@Composable
+private fun SortChip(title: String, field: String, descending: Boolean, onClick: () -> Unit) {
+    val spoken = listOfNotNull(title, field, stringResource(R.string.sort_descending).takeIf { descending }).joinToString(", ")
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+        ChipButton(R.drawable.ic_sort, field, onClick, description = spoken)
+    }
+}
+
+/**
+ * A sort menu as a sheet (docs/ui.md): the fields, each starting in its own direction
+ * ([SortMenus]), then Descending. [current] is read while the sheet shows, so the switch follows.
+ */
+private fun <F> showSortMenu(
+    overlays: Overlays,
+    title: String,
+    fields: List<F>,
+    label: @Composable (F) -> String,
+    current: () -> SortOrder<F>,
+    start: (F) -> SortOrder<F>,
+    onChange: (SortOrder<F>) -> Unit,
+) {
+    overlays.showSheet(title) { dismiss ->
+        val order = current()
+        Column(Modifier.selectableGroup().padding(top = 4.dp)) {
+            fields.forEach { field ->
+                ChoiceRow(label(field), field == order.field, {
+                    onChange(start(field))
+                    dismiss()
+                })
+            }
+        }
+        Divider()
+        SettingRow(stringResource(R.string.sort_descending), Modifier.padding(horizontal = 4.dp)) {
+            JfSwitch(order.descending, { onChange(SortMenus.descending(order, it)) })
+        }
+    }
 }
 
 /** Empty, loading and failure rows of a paged grid. */
@@ -201,7 +267,7 @@ private fun ArtistsList(state: CoreState, header: @Composable () -> Unit) {
     val artists = rememberPagedSource(listState, state.libraryRevision, rowOffset = 1) { core, offset, limit -> core.artists(offset, limit) }
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "header") { header() }
-        pagedStates(artists, R.drawable.ic_artist, R.string.artists_empty_title, R.string.albums_empty_body)
+        pagedStates(artists, R.drawable.ic_artist, R.string.artists_empty_title, R.string.albums_empty_body) { LibraryAccessButtons() }
         items(artists.count, key = { i -> artists[i]?.id ?: "pending-$i" }) { i ->
             val artist = artists[i]
             if (artist != null) {
@@ -220,22 +286,42 @@ private fun ArtistsList(state: CoreState, header: @Composable () -> Unit) {
 @Composable
 private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
     val graph = LocalGraph.current
+    val overlays = LocalOverlays.current
     val actions = rememberTrackActions()
     val listState = rememberLazyListState()
-    val songs = rememberPagedSource(listState, state.libraryRevision, rowOffset = 2) { core, offset, limit ->
-        core.tracks(TrackQuery(offset = offset, limit = limit, sort = TrackSort.Artist))
+    var sortField by rememberSaveable { mutableStateOf(SortMenus.DEFAULT_SONGS.field) }
+    var descending by rememberSaveable { mutableStateOf(SortMenus.DEFAULT_SONGS.descending) }
+    val order = SortOrder(sortField, descending)
+    val songs = rememberPagedSource(listState, state.libraryRevision, order, rowOffset = 2) { core, offset, limit ->
+        core.tracks(SortMenus.songsQuery(order, offset, limit))
     }
+    val sortTitle = stringResource(R.string.sort_songs)
     val playing = state.nowPlaying?.track
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "header") { header() }
         item(key = "play") {
-            // Shuffles the songs loaded so far: the core has no "whole library" collection yet.
-            PlayButtons(
-                onPlay = { refs(songs).takeIf { it.isNotEmpty() }?.let { graph.send(Command.PlayCollection(CollectionRef.Tracks(it), 0, false)) } },
-                onShuffle = { refs(songs).takeIf { it.isNotEmpty() }?.let { graph.send(Command.PlayCollection(CollectionRef.Tracks(it), 0, true)) } },
-            )
+            Column {
+                // Shuffles the songs loaded so far: the core has no "whole library" collection yet.
+                PlayButtons(
+                    onPlay = { refs(songs).takeIf { it.isNotEmpty() }?.let { graph.send(Command.PlayCollection(CollectionRef.Tracks(it), 0, false)) } },
+                    onShuffle = { refs(songs).takeIf { it.isNotEmpty() }?.let { graph.send(Command.PlayCollection(CollectionRef.Tracks(it), 0, true)) } },
+                )
+                SortChip(sortTitle, stringResource(songSortLabel(order.field)), order.descending) {
+                    showSortMenu(
+                        overlays,
+                        sortTitle,
+                        SortMenus.SONG_FIELDS,
+                        { stringResource(songSortLabel(it)) },
+                        { SortOrder(sortField, descending) },
+                        SortMenus::song,
+                    ) { chosen ->
+                        sortField = chosen.field
+                        descending = chosen.descending
+                    }
+                }
+            }
         }
-        pagedStates(songs, R.drawable.ic_song, R.string.songs_empty_title, R.string.albums_empty_body)
+        pagedStates(songs, R.drawable.ic_song, R.string.songs_empty_title, R.string.albums_empty_body) { LibraryAccessButtons() }
         items(songs.count, key = { i -> songs[i]?.id ?: "pending-$i" }) { i ->
             val track = songs[i]
             if (track != null) {
@@ -248,7 +334,7 @@ private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
                     durationMs = track.durationMs,
                     playing = ref == playing,
                     onClick = { graph.send(Command.PlayCollection(CollectionRef.Tracks(refs(songs)), i, false)) },
-                    onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album)) },
+                    onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album, artist = track.artist)) },
                 )
             }
         }
@@ -271,26 +357,24 @@ fun PlayButtons(onPlay: () -> Unit, onShuffle: () -> Unit, modifier: Modifier = 
     }
 }
 
+/**
+ * Playlists (docs/ui.md): New Playlist… (asks for the name first) and Import Playlist…, then the
+ * playlists; each one's More menu adds Rename…, Export Playlist… and Delete Playlist….
+ */
 @Composable
 private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
-    val graph = LocalGraph.current
     val nav = LocalNav.current
-    val overlays = LocalOverlays.current
     val actions = rememberTrackActions()
+    val transfer = rememberPlaylistTransfer()
+    val playlistActions = rememberPlaylistActions(transfer)
     val playlists by rememberQuery(state.libraryRevision) { it.playlists() }
-    val newTitle = stringResource(R.string.playlist_new_title)
-    val nameLabel = stringResource(R.string.playlist_name)
-    val create = stringResource(R.string.action_create)
-    val renameTitle = stringResource(R.string.playlist_rename_title)
-    val renameLabel = stringResource(R.string.action_rename)
-    val deleteTitle = stringResource(R.string.playlist_delete_title)
-    val deleteBody = stringResource(R.string.playlist_delete_body)
-    val deleteLabel = stringResource(R.string.action_delete)
+    val newLabel = stringResource(R.string.action_new_playlist)
     LazyColumn(modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "header") { header() }
         item(key = "new") {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                JfButton(newTitle, { overlays.prompt(newTitle, nameLabel, "", create) { graph.send(Command.CreatePlaylist(it, emptyList())) } }, icon = R.drawable.ic_add)
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                JfButton(newLabel, playlistActions::create, icon = R.drawable.ic_add)
+                JfButton(stringResource(R.string.action_import_playlist), transfer.import, style = ButtonStyle.Quiet, icon = R.drawable.ic_import)
             }
         }
         when (val p = playlists) {
@@ -299,7 +383,11 @@ private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
             is QueryResult.Failed -> item(key = "state") { Notice(stringResource(R.string.query_failed, p.message), warning = true) }
             is QueryResult.Ok -> {
                 if (p.value.isEmpty()) {
-                    item(key = "state") { EmptyState(R.drawable.ic_playlist, stringResource(R.string.playlists_empty_title), stringResource(R.string.playlists_empty_body)) }
+                    item(key = "state") {
+                        EmptyState(R.drawable.ic_playlist, stringResource(R.string.playlists_empty_title), stringResource(R.string.playlists_empty_body)) {
+                            JfButton(newLabel, playlistActions::create, style = ButtonStyle.Accent, icon = R.drawable.ic_add)
+                        }
+                    }
                 }
                 items(p.value.size, key = { p.value[it].id }) { i ->
                     val playlist = p.value[i]
@@ -320,14 +408,7 @@ private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
                                 playlist.name,
                                 subtitle,
                                 CollectionRef.Playlist(playlist.id),
-                                extra = listOf(
-                                    SheetAction(renameLabel, R.drawable.ic_edit) {
-                                        overlays.prompt(renameTitle, nameLabel, playlist.name, renameLabel) { graph.send(Command.RenamePlaylist(playlist.id, it)) }
-                                    },
-                                    SheetAction(deleteLabel, R.drawable.ic_trash, destructive = true) {
-                                        overlays.confirm(deleteTitle, deleteBody, deleteLabel, destructive = true) { graph.send(Command.DeletePlaylist(playlist.id)) }
-                                    },
-                                ),
+                                extra = playlistActions.items(playlist.id, playlist.name),
                             )
                         },
                     )
@@ -365,7 +446,7 @@ private fun FavouritesList(state: CoreState, header: @Composable () -> Unit) {
                     playing = row.track == playing,
                     missing = row.missing,
                     onClick = { graph.send(Command.PlayCollection(CollectionRef.Favorites, i, false)) },
-                    onMore = { actions.showFor(TrackTarget(row.track, row.title, subtitle, favorite = true)) },
+                    onMore = { actions.showFor(TrackTarget(row.track, row.title, subtitle, favorite = true, artist = row.artist)) },
                 )
             }
         }

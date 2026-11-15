@@ -49,6 +49,15 @@ interface CoreClient {
     /** Audio output devices (a free function of the core). */
     fun outputDevices(): List<DeviceInfo>
 
+    /**
+     * The equalizer presets, in the order every app lists them (the core's free function
+     * `eq_presets()`): Settings › Playback › Equalizer offers these, never a copy of its own.
+     */
+    fun eqPresets(): List<EqPreset>
+
+    /** The version of the core library the app runs (the free function `library_version()`). */
+    fun libraryVersion(): String
+
     /** The clock anchors are stamped with, in nanoseconds. Not for per-frame use. */
     fun monotonicNowNs(): Long
 

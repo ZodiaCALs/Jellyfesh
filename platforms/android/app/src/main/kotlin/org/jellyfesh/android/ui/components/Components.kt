@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -412,6 +413,34 @@ fun SettingRow(
             if (description != null) JfText(description, style = JfType.small, color = colors.ink70)
         }
         control?.invoke()
+    }
+}
+
+/**
+ * One choice of a list that picks one (a sort menu, the equalizer's presets, the output device):
+ * its label, and a check mark when chosen. TalkBack reads it as a radio button. [inset] is 20 dp
+ * in sheets and 16 dp in a [Panel].
+ */
+@Composable
+fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, inset: Dp = 20.dp) {
+    val colors = Jf.colors
+    Row(
+        modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .selectable(selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = inset),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        JfText(
+            label,
+            style = JfType.listTitle.copy(fontSize = JfType.body.fontSize),
+            color = if (selected) colors.accentText else colors.ink90,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
+        )
+        if (selected) JfIcon(R.drawable.ic_check, colors.accentText, size = 20.dp)
     }
 }
 

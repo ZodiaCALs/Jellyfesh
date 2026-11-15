@@ -16,6 +16,7 @@ import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreException
 import org.jellyfesh.logic.core.CoreSnapshot
 import org.jellyfesh.logic.core.DeviceInfo
+import org.jellyfesh.logic.core.EqPreset
 import org.jellyfesh.logic.core.HistoryEntry
 import org.jellyfesh.logic.core.LibraryStats
 import org.jellyfesh.logic.core.PlaylistEntry
@@ -99,6 +100,10 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
 
     // Qualified: the members of the same name would shadow the bindings' top-level functions.
     override fun outputDevices(): List<DeviceInfo> = query { org.jellyfesh.ffi.outputDevices().map { it.toLogic() } }
+
+    override fun eqPresets(): List<EqPreset> = query { org.jellyfesh.ffi.eqPresets().map { it.toLogic() } }
+
+    override fun libraryVersion(): String = query { org.jellyfesh.ffi.libraryVersion() }
 
     override fun monotonicNowNs(): Long = org.jellyfesh.ffi.monotonicNowNs().toLong()
 

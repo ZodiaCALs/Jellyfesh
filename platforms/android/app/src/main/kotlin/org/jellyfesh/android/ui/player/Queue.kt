@@ -78,7 +78,8 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
     val rowPx = with(LocalDensity.current) { ROW_HEIGHT.toPx() }
     val clearTitle = stringResource(R.string.queue_clear_title)
     val clearBody = stringResource(R.string.queue_clear_body)
-    val clearLabel = stringResource(R.string.action_clear)
+    // Clear Queue asks first; its confirming button says the same (docs/ui.md).
+    val clearLabel = stringResource(R.string.queue_clear)
     val removeLabel = stringResource(R.string.action_remove)
     val moveUp = stringResource(R.string.a11y_move_up)
     val moveDown = stringResource(R.string.a11y_move_down)
@@ -88,7 +89,7 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
         item(key = "header") {
             SectionHeader(stringResource(R.string.queue_up_next)) {
                 if (queue.len > 0) {
-                    JfButton(stringResource(R.string.queue_clear), {
+                    JfButton(clearLabel, {
                         overlays.confirm(clearTitle, clearBody, clearLabel, destructive = true) { graph.send(Command.ClearQueue) }
                     }, style = ButtonStyle.Quiet)
                 }

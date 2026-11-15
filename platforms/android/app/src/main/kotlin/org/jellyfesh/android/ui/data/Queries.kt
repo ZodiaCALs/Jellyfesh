@@ -66,6 +66,12 @@ class PagedSource<T>(
     /** True until the first page answers. */
     val isLoading: Boolean get() = version == 0 && failure == null
 
+    /** The library revision the rows on screen were read at (-1 before the first page). */
+    val rowsRevision: Long get() {
+        version
+        return list.revision
+    }
+
     val count: Int get() {
         version
         return list.knownCount

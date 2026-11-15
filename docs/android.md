@@ -53,12 +53,13 @@ Misty's tokens). The numbers are in `:logic` and tested (`seek/SeekGeometry.kt`,
   transparency) nothing moves and transitions are a short fade (dur-1); the
   artwork keeps its size, the level glyph stands still and lyrics jump. Bottom sheets keep their slide
   (now with a fade) rather than scaling from 96 %.
-* **Settings → Appearance:** Theme (System, Light and Dark with previews), the
-  accent colour (Follow the artwork, ten swatches and a Custom hue on a
+* **Settings → Appearance:** Theme (System, Light and Dark with previews), Accent
+  Colour (Follow the Artwork, ten named swatches and a Custom hue on a
   hue-gradient track with a preview), Transparency from Solid to Clear in
-  whole percent with a live preview, Reduce motion and transparency, the Now
-  Playing background with previews, Lyrics size and alignment, translation
-  and romanization, and the app icon. Each change is one `SetSettings`.
+  whole percent with a live preview and Reduce Motion and Transparency, the Now
+  Playing Backdrop with previews, Lyrics (size, alignment, translations and
+  romanization) and the App Icon, each group under its heading (see "Aligned
+  with docs/ui.md"). Each change is one `SetSettings`.
 * **Transparency on Cloudy:** `GlassSurface` keeps Cloudy's blur and sets the
   Misty tint's alpha from the shared glass-alpha port
   (`platforms/shared/kotlin`, `glassAlpha`): the tokens' alphas at 50 %,
@@ -69,6 +70,69 @@ Misty's tokens). The numbers are in `:logic` and tested (`seek/SeekGeometry.kt`,
 screens) against Compose Multiplatform 1.8.2 and the stand-ins with no errors
 or warnings. Nothing ran on a device; the APIs Compose 1.12 has beyond 1.8 are
 not used.
+
+## Aligned with docs/ui.md
+
+The app follows the shared UI spec ([`ui.md`](ui.md)) with Android's own mechanics: bottom tabs,
+sheets for menus and pickers, dialogs for questions, the system's document picker. Order and
+structure live in `:logic` and are tested; the Compose code draws them.
+
+* **Settings** (`settings/SettingsModel.kt`, `SettingsLayout`): the sections Appearance, Playback,
+  Library, Sources and About, each with its groups in the spec's order under headings. There is
+  no Lyrics section any more: Lyrics Size, Lyrics Alignment, Show Translations and Show
+  Romanization are Appearance › Lyrics. Playback: Output (Output Device), Crossfade, Volume
+  Levelling (ReplayGain and its preamp), Equalizer, Startup (Resume Playback). Library: Music on
+  This Phone (access to music and Find Music on This Phone, Android's allowed difference), Music
+  Folders (Remove Folder… asks "Remove “Name” from the library?"; Add Folder… after the folders),
+  Watch Folders, Rescan Library (its progress, then Last Scan). Sources: Add a Source (the connect
+  sheet of the Sources tab), Installed (Install from File… in its heading; each source opens its
+  page: badge and sign-in state, Enabled, the sign-in buttons or Sign Out, its settings with Save,
+  Browse, "Version · Author", Uninstall…, which asks first), Community Plugins.
+* **Equalizer:** Preset lists the core's `eq_presets()` (`CoreClient.eqPresets()`) translated by id
+  and shows Custom once a band moves (`EqPresets`: a preset is its bands, so the switch and the
+  equalizer's own preamp stay the person's when one is chosen). Preamp ±12 dB, the ten bands, and
+  Reset to Flat, which applies the core's flat preset with a 0 dB preamp.
+* **About:** the version is `BuildConfig.VERSION_NAME`, with the core's `library_version()` after
+  it only when the two differ; nothing is typed in. The website and its third-party notices
+  (`THIRD_PARTY_NOTICES.html`, which the website build publishes) show when the build knows the
+  website: the Gradle property `jellyfesh.website`, else in GitHub Actions
+  `https://OWNER.github.io/NAME/` from `GITHUB_REPOSITORY` (docs/github.md). Other builds show the
+  version only; the APK carries no licence texts of its own.
+* **Sources tab:** the intro line, Add a Source, Your Sources (each with its status; choosing one
+  opens it), then Sources Settings… and Install from File….
+* **Home:** "1,204 songs · 96 albums · 41 artists" (counts with the language's thousands
+  separator), Recently Added (albums), Recently Played and Most Played. With nothing in the
+  library and no source signed in (`HomeModel`), the welcome instead: "Add your music folders, or
+  connect a server in Sources.", Add Music Folder… and Add a Source, after Allow Access to Music
+  while that access is missing.
+* **Library:** Albums and Songs sort from a menu (a sheet): Title, Artist, Album (songs), Year,
+  Recently Added, then Descending (`SortMenus`; Year and Recently Added start newest first). The
+  empty pages say "Add a music folder to see your albums here." with Add Music Folder….
+* **Playlists:** New Playlist… asks for the name first. Import Playlist… and Export Playlist…
+  (M3U8) use the document picker. Import hands the core the picked file where it is when its
+  provider names a path the core can read, so the playlist's relative lines resolve against its
+  folder; otherwise a copy in the cache under the file's own name (the core names the playlist
+  after the file; relative lines in such a copy do not resolve). Export lets the core write the
+  M3U8 to the cache (`export_playlist`; songs get full paths) and copies it into the document
+  created as `audio/x-mpegurl`, the type Android maps to `.m3u8`. Songs reorder by dragging the
+  handle (`PlaylistReorder`; TalkBack offers Move up and Move down), and the drop shows until the
+  list read after the core's change arrives.
+* **Menus:** a song's menu is Play Next, Play Last, Add to Playlist…, Add to or Remove from
+  Favourites, Go to Album and Go to Artist (`TrackMenu`; a favourite state, album or artist a row
+  does not carry is read from the library first). The More menu of an album, artist or playlist
+  page: Play Next, Play Last, Add to Playlist… (the collection's songs, `CollectionTracks`), and on a
+  playlist Rename…, Export Playlist… and Delete Playlist…, which asks first. Clear Queue asks
+  first; Now Playing › Info adds the Year.
+* **Words:** the spec's words in all four languages (System, Reset to Flat, Server Address,
+  Sources Settings…, Uninstall…, Remove Folder…, From Your Sources, swatch names ending with
+  Violet, and so on). `StringsTest` checks that every translation has every string with the same
+  placeholders, and that the English avoids the words the spec rules out.
+* **Not here:** Show in Files for a music folder (Android cannot reliably open a folder by path in
+  a file manager), and the spec's keyboard keys, which are for the desktop apps and the web.
+
+Checked for this pass: `:logic` 149 tests pass, `:ffi-check` 4 tests pass against the core (with
+bindings generated from the host build of `jf-ffi`), and `:ui-check` compiles with no errors or
+warnings. The Android SDK is not available here, so `:app` itself was not built.
 
 ## Modules
 
@@ -194,7 +258,8 @@ Steel, vectors for the other eight. The results are committed.
   Ice. The picker confirms before switching and states the launchers' limits.
 * **Navigation.** Four tabs (Home, Library, Search, Sources), each with its own back stack kept
   in `AppGraph` (so it survives the activity being recreated), Now Playing over everything, and
-  Settings from Home and Library. Back closes sheets, then Now Playing, then pops the stack.
+  Settings from the gear on Home, Library and Sources (Sources also has Sources Settings…, which
+  opens Settings › Sources). Back closes sheets, then Now Playing, then pops the stack.
 * **Accessibility.** Every control has a TalkBack label and state; lyrics are a list with the
   current line selected; the queue offers Move up and Move down; text is in sp; the seek bar and
   volume take keyboard focus and steps; reduced motion (the system's "remove animations", or
@@ -211,8 +276,10 @@ compiles and runs them), except where marked:
 
 * package `org.jellyfesh.ffi`; `JellyfeshCore(config: CoreConfig)` with `send`, `snapshot`,
   `setListener(CoreListener?)`, the queries of docs/ffi.md and `shutdown`; top-level
-  `outputDevices()` and `monotonicNowNs()`; `CoreFfiException.Core/NotAvailable/ShutDown/
-  InvalidArgument`; `AndroidContext.initialize(Any)`;
+  `outputDevices()`, `eqPresets()` (`EqPreset(id, settings)`), `libraryVersion()` and
+  `monotonicNowNs()`, which reach the views through `CoreClient` like the queries, so `:logic`
+  tests use a fake; `CoreFfiException.Core/NotAvailable/ShutDown/InvalidArgument`;
+  `AndroidContext.initialize(Any)`;
 * `CoreConfig(dataDir, cacheDir, output = OutputKind.Device(name), watchFolders, ...)`;
 * **not yet in the bindings:** `CoreConfig.bundledPlugins: List<String>` (paths), named only in
   `app/src/ffi-config/.../CoreConfigs.kt` (while the bindings lack it, the builds compile

@@ -1,6 +1,7 @@
 package org.jellyfesh.android.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -23,18 +25,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import org.jellyfesh.android.QueryResult
 import org.jellyfesh.android.R
@@ -46,9 +57,9 @@ import org.jellyfesh.android.ui.components.ArtworkFill
 import org.jellyfesh.android.ui.components.ArtworkImage
 import org.jellyfesh.android.ui.components.BackBar
 import org.jellyfesh.android.ui.components.EmptyState
+import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.components.LoadingRow
-import org.jellyfesh.android.ui.components.LocalOverlays
 import org.jellyfesh.android.ui.components.Notice
 import org.jellyfesh.android.ui.components.SectionHeader
 import org.jellyfesh.android.ui.components.SheetAction
@@ -67,6 +78,10 @@ import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.format.TimeFormat
 import org.jellyfesh.logic.images.ArtworkSizes
+import org.jellyfesh.logic.library.ArtistMatch
+import org.jellyfesh.logic.playlist.PendingMove
+import org.jellyfesh.logic.playlist.PlaylistDrag
+import org.jellyfesh.logic.playlist.PlaylistReorder
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.tokens.Tokens
 
@@ -164,9 +179,8 @@ fun AlbumScreen(id: Long, title: String, state: CoreState) {
                         val openArtist = artist?.let { name ->
                             {
                                 scope.launch {
-                                    val found = (graph.query { it.searchLibrary(name, 20) } as? QueryResult.Ok)?.value?.artists
-                                    val match = found?.firstOrNull { it.name == name } ?: found?.firstOrNull { it.name.equals(name, ignoreCase = true) }
-                                    if (match != null) nav.openArtist(match.id, match.name)
+                                    val found = (graph.query { it.searchLibrary(name, 20) } as? QueryResult.Ok)?.value?.artists.orEmpty()
+                                    ArtistMatch.find(name, found)?.let { nav.openArtist(it.id, it.name) }
                                 }
                                 Unit
                             }
@@ -179,7 +193,7 @@ fun AlbumScreen(id: Long, title: String, state: CoreState) {
                             onShuffle = { graph.send(Command.PlayCollection(CollectionRef.Album(id), 0, true)) },
                         ) {
                             JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
-                                actions.showForCollection(title, artist, CollectionRef.Album(id))
+                                actions.showForCollection(title, artist, CollectionRef.Album(id), withPlay = false)
                             })
                         }
                     }
@@ -203,7 +217,7 @@ fun AlbumScreen(id: Long, title: String, state: CoreState) {
                                 durationMs = track.durationMs,
                                 playing = ref == playing,
                                 onClick = { graph.send(Command.PlayCollection(CollectionRef.Album(id), index, false)) },
-                                onMore = { actions.showFor(TrackTarget(ref, track.title, Labels.artistAlbum(track.artist, track.album))) },
+                                onMore = { actions.showFor(TrackTarget(ref, track.title, Labels.artistAlbum(track.artist, track.album), id, title, artist = track.artist)) },
                             )
                         }
                     }
@@ -253,7 +267,7 @@ fun ArtistScreen(id: Long, name: String, state: CoreState) {
                         onShuffle = { graph.send(Command.PlayCollection(CollectionRef.Artist(id), 0, true)) },
                         modifier = Modifier.widthIn(max = 520.dp),
                     ) {
-                        JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), { actions.showForCollection(name, null, CollectionRef.Artist(id)) })
+                        JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), { actions.showForCollection(name, null, CollectionRef.Artist(id), withPlay = false) })
                     }
                     SectionHeader(stringResource(R.string.section_albums), Modifier.padding(horizontal = 0.dp))
                 }
@@ -278,13 +292,18 @@ fun ArtistScreen(id: Long, name: String, state: CoreState) {
     }
 }
 
-/** A playlist: its entries in order, with the playlist's own actions. */
+/**
+ * A playlist: its entries in order, with the playlist's own actions. Rows reorder by dragging
+ * their handle (docs/ui.md); the drop shows at once and becomes `MovePlaylistEntry`, and the list
+ * read after the core's change confirms it ([PlaylistReorder]). TalkBack gets Move up and Move
+ * down on each row instead.
+ */
 @Composable
 fun PlaylistScreen(id: Long, name: String, state: CoreState) {
     val graph = LocalGraph.current
     val nav = LocalNav.current
-    val overlays = LocalOverlays.current
     val actions = rememberTrackActions()
+    val playlistActions = rememberPlaylistActions()
     val summary by rememberQuery(id, state.libraryRevision) { it.playlist(id) }
     val listState = rememberLazyListState()
     val entries = rememberPagedSource(listState, state.libraryRevision, id, rowOffset = 3) { core, offset, limit -> core.playlistEntries(id, offset, limit) }
@@ -292,13 +311,15 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
     val playing = state.nowPlaying?.track
     val current = (summary as? QueryResult.Ok)?.value
     val title = current?.name ?: name
-    val renameTitle = stringResource(R.string.playlist_rename_title)
-    val nameLabel = stringResource(R.string.playlist_name)
-    val renameLabel = stringResource(R.string.action_rename)
-    val deleteTitle = stringResource(R.string.playlist_delete_title)
-    val deleteBody = stringResource(R.string.playlist_delete_body)
-    val deleteLabel = stringResource(R.string.action_delete)
     val removeLabel = stringResource(R.string.action_remove_from_playlist)
+    val moreLabel = stringResource(R.string.action_more)
+    val moveUp = stringResource(R.string.a11y_move_up)
+    val moveDown = stringResource(R.string.a11y_move_down)
+    val rowPx = with(LocalDensity.current) { PLAYLIST_ROW.toPx() }
+    var drag by remember(id) { mutableStateOf<PlaylistDrag?>(null) }
+    var pending by remember(id) { mutableStateOf<PendingMove?>(null) }
+    // The local order holds until rows read after the core's change arrive.
+    val shownPending = PlaylistReorder.stillPending(pending, entries.rowsRevision)
     Box(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
             item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
@@ -321,27 +342,20 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                             title,
                             null,
                             CollectionRef.Playlist(id),
-                            extra = listOf(
-                                SheetAction(renameLabel, R.drawable.ic_edit) {
-                                    overlays.prompt(renameTitle, nameLabel, title, renameLabel) { graph.send(Command.RenamePlaylist(id, it)) }
-                                },
-                                SheetAction(deleteLabel, R.drawable.ic_trash, destructive = true) {
-                                    overlays.confirm(deleteTitle, deleteBody, deleteLabel, destructive = true) {
-                                        graph.send(Command.DeletePlaylist(id))
-                                        nav.back()
-                                    }
-                                },
-                            ),
+                            withPlay = false,
+                            extra = playlistActions.items(id, title) { nav.back() },
                         )
                     })
                 }
             }
             pagedStates(entries, R.drawable.ic_playlist, R.string.playlist_empty, null)
-            items(entries.count, key = { i -> entries[i]?.entryId ?: "pending-$i" }) { i ->
-                val entry = entries[i]
+            val count = entries.count
+            items(count, key = { i -> entries[PlaylistReorder.rowAt(i, shownPending)]?.entryId ?: "pending-$i" }) { i ->
+                val entry = entries[PlaylistReorder.rowAt(i, shownPending)]
                 if (entry != null) {
                     val row = entry.row
                     val subtitle = Labels.artistAlbum(row.artist, row.album)
+                    val dragging = drag?.entryId == entry.entryId
                     TrackRow(
                         title = row.title,
                         subtitle = subtitle,
@@ -350,15 +364,49 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                         playing = row.track == playing,
                         missing = row.missing,
                         favorite = row.favorite,
-                        onClick = { graph.send(Command.PlayCollection(CollectionRef.Playlist(id), entry.position, false)) },
-                        onMore = {
-                            actions.showFor(
-                                TrackTarget(row.track, row.title, subtitle, favorite = row.favorite),
-                                extra = listOf(
-                                    SheetAction(removeLabel, R.drawable.ic_close, destructive = true) {
-                                        graph.send(Command.RemoveFromPlaylist(id, listOf(entry.entryId)))
+                        modifier = Modifier
+                            .zIndex(if (dragging) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = PlaylistReorder.shift(i, drag, rowPx, count)
+                                if (dragging) shadowElevation = 12f
+                            }
+                            .semantics {
+                                customActions = listOfNotNull(
+                                    PlaylistReorder.step(id, entry.entryId, i, -1, count)?.let { command ->
+                                        CustomAccessibilityAction(moveUp) { graph.send(command) != 0L }
                                     },
-                                ),
+                                    PlaylistReorder.step(id, entry.entryId, i, 1, count)?.let { command ->
+                                        CustomAccessibilityAction(moveDown) { graph.send(command) != 0L }
+                                    },
+                                )
+                            },
+                        onClick = { graph.send(Command.PlayCollection(CollectionRef.Playlist(id), i, false)) },
+                        // More, then the handle at the row's end, as in the queue.
+                        trailing = {
+                            JfIconButton(R.drawable.ic_more, moreLabel, {
+                                actions.showFor(
+                                    TrackTarget(row.track, row.title, subtitle, favorite = row.favorite, artist = row.artist),
+                                    extra = listOf(
+                                        SheetAction(removeLabel, R.drawable.ic_close, destructive = true) {
+                                            graph.send(Command.RemoveFromPlaylist(id, listOf(entry.entryId)))
+                                        },
+                                    ),
+                                )
+                            }, size = 40.dp, iconSize = 20.dp)
+                            DragHandle(
+                                key = entry.entryId,
+                                onStart = { drag = PlaylistDrag(entry.entryId, i, 0f) },
+                                onDrag = { dy -> drag = drag?.let { it.copy(offsetPx = it.offsetPx + dy) } },
+                                onEnd = {
+                                    val held = drag
+                                    drag = null
+                                    if (held != null) {
+                                        PlaylistReorder.drop(id, held, rowPx, count, state.libraryRevision)?.let { (move, command) ->
+                                            pending = move
+                                            graph.send(command)
+                                        }
+                                    }
+                                },
                             )
                         },
                     )
@@ -366,5 +414,40 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
             }
         }
         BackBar(onBack = nav::back, title = title.takeIf { headerGone }, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars))
+    }
+}
+
+/** A playlist row's height (a [TrackRow]: the 52 dp row with its 8 dp of padding). */
+private val PLAYLIST_ROW = (Tokens.Player.rowHeight + 8).dp
+
+/**
+ * The handle a row is dragged by: 48 dp, labelled for TalkBack (which uses Move up and Move down).
+ * The gesture outlives recompositions, so it calls the latest callbacks (a row's index changes
+ * after a move while its key stays).
+ */
+@Composable
+private fun DragHandle(key: Long, onStart: () -> Unit, onDrag: (Float) -> Unit, onEnd: () -> Unit) {
+    val label = stringResource(R.string.a11y_drag)
+    val start by rememberUpdatedState(onStart)
+    val move by rememberUpdatedState(onDrag)
+    val end by rememberUpdatedState(onEnd)
+    Box(
+        Modifier
+            .size(48.dp)
+            .semantics { contentDescription = label }
+            .pointerInput(key) {
+                detectVerticalDragGestures(
+                    onDragStart = { start() },
+                    onDragEnd = { end() },
+                    onDragCancel = { end() },
+                    onVerticalDrag = { change, dy ->
+                        change.consume()
+                        move(dy)
+                    },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        JfIcon(R.drawable.ic_drag, Jf.colors.ink50, size = 20.dp)
     }
 }

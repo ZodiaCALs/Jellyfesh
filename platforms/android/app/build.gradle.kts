@@ -8,6 +8,19 @@ plugins {
 
 val repoRoot: File = rootDir.resolve("../..").canonicalFile
 
+/**
+ * The website Settings › About links to, with the third-party notices it publishes
+ * (THIRD_PARTY_NOTICES.html, tools/release/build_site.py): the `jellyfesh.website` Gradle property,
+ * else, in GitHub Actions, the repository's GitHub Pages address, where web.yml deploys the website
+ * (docs/github.md). Without either, About shows the version only.
+ */
+val website: String = providers.gradleProperty("jellyfesh.website").orNull?.trim()?.takeIf { it.isNotEmpty() }
+    ?: providers.environmentVariable("GITHUB_REPOSITORY").orNull?.takeIf { it.count { c -> c == '/' } == 1 }?.let { repository ->
+        val (owner, name) = repository.split('/')
+        "https://${owner.lowercase()}.github.io/$name/"
+    }
+    ?: ""
+
 // CoreConfigs.kt with or without CoreConfig.bundledPlugins, as the generated bindings allow.
 val ffiConfigDir = gradle.extra["jellyfesh.ffiConfigDir"] as String
 if (ffiConfigDir.endsWith("-compat/kotlin")) {
@@ -24,6 +37,8 @@ android {
         targetSdk = 37
         versionCode = 4
         versionName = "0.0.4"
+        // Settings › About shows versionName (BuildConfig.VERSION_NAME) and links to the website.
+        buildConfigField("String", "WEBSITE", "\"${website.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
@@ -46,6 +61,8 @@ android {
 
     buildFeatures {
         compose = true
+        // VERSION_NAME and WEBSITE for Settings › About (AGP turns BuildConfig off by default).
+        buildConfig = true
     }
 
     lint {

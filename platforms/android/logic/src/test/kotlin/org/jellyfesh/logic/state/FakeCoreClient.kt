@@ -10,6 +10,7 @@ import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreException
 import org.jellyfesh.logic.core.CoreSnapshot
 import org.jellyfesh.logic.core.DeviceInfo
+import org.jellyfesh.logic.core.EqPreset
 import org.jellyfesh.logic.core.HistoryEntry
 import org.jellyfesh.logic.core.LibraryStats
 import org.jellyfesh.logic.core.PlaylistEntry
@@ -27,6 +28,8 @@ class FakeCoreClient(private var snapshot: CoreSnapshot) : CoreClient {
     val sent = mutableListOf<Command>()
     private var listener: ((CoreEvent) -> Unit)? = null
     var albums: List<Album> = emptyList()
+    var presets: List<EqPreset> = emptyList()
+    var version: String = "0.0.0-test"
 
     fun emit(event: CoreEvent) {
         listener?.invoke(event)
@@ -66,6 +69,8 @@ class FakeCoreClient(private var snapshot: CoreSnapshot) : CoreClient {
     override fun roots(): List<String> = emptyList()
     override fun stats(): LibraryStats = LibraryStats(0, 0, 0, 0, 0, 0, 0)
     override fun outputDevices(): List<DeviceInfo> = emptyList()
+    override fun eqPresets(): List<EqPreset> = presets
+    override fun libraryVersion(): String = version
     override fun monotonicNowNs(): Long = 0
     override fun newDrawClock(): DrawClock = LinearClock()
     override fun shutdown() = Unit
