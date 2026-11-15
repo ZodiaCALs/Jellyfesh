@@ -35,8 +35,8 @@ android {
         applicationId = "org.jellyfesh.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.0.4"
+        versionCode = 5
+        versionName = "0.0.5"
         // Settings › About shows versionName (BuildConfig.VERSION_NAME) and links to the website.
         buildConfigField("String", "WEBSITE", "\"${website.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         ndk {

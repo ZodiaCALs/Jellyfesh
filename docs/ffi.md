@@ -1,4 +1,4 @@
-# The FFI layer (v0.0.4)
+# The FFI layer (v0.0.5)
 
 How the macOS (Swift), Android (Kotlin) and Windows (C#) shells reach
 `jf-core`: one crate, `core/jf-ffi`, exposes the core API of

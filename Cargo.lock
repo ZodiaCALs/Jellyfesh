@@ -2259,7 +2259,7 @@ checksum = "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
 
 [[package]]
 name = "jellyfesh-gtk"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "async-channel",
  "crossbeam-channel",
@@ -2279,7 +2279,7 @@ dependencies = [
 
 [[package]]
 name = "jf-cli"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -2294,7 +2294,7 @@ dependencies = [
 
 [[package]]
 name = "jf-core"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "blake3",
  "crossbeam-channel",
@@ -2324,7 +2324,7 @@ dependencies = [
 
 [[package]]
 name = "jf-core-test-catalog"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
  "serde",
@@ -2333,7 +2333,7 @@ dependencies = [
 
 [[package]]
 name = "jf-engine"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "cpal",
  "crossbeam-channel",
@@ -2356,7 +2356,7 @@ dependencies = [
 
 [[package]]
 name = "jf-ffi"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "hound",
  "jf-core",
@@ -2375,7 +2375,7 @@ dependencies = [
 
 [[package]]
 name = "jf-ffi-bindgen"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "uniffi",
 ]
@@ -2393,7 +2393,7 @@ dependencies = [
 
 [[package]]
 name = "jf-library"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "blake3",
  "fast_image_resize",
@@ -2413,7 +2413,7 @@ dependencies = [
 
 [[package]]
 name = "jf-lyrics"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "proptest",
  "quick-xml",
@@ -2425,7 +2425,7 @@ dependencies = [
 
 [[package]]
 name = "jf-palette"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "fast_image_resize",
  "image",
@@ -2439,7 +2439,7 @@ dependencies = [
 
 [[package]]
 name = "jf-plugin"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "clap",
@@ -2454,7 +2454,7 @@ dependencies = [
 
 [[package]]
 name = "jf-plugin-build"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "serde_json",
@@ -2463,7 +2463,7 @@ dependencies = [
 
 [[package]]
 name = "jf-plugin-host"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "aes-gcm",
  "base64",
@@ -2490,7 +2490,7 @@ dependencies = [
 
 [[package]]
 name = "jf-plugin-model"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -2519,7 +2519,7 @@ dependencies = [
 
 [[package]]
 name = "jf-plugin-sdk"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "getrandom 0.4.3",
  "serde",
@@ -2529,7 +2529,7 @@ dependencies = [
 
 [[package]]
 name = "jf-plugin-testkit"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-build",
  "jf-plugin-host",
@@ -2540,7 +2540,7 @@ dependencies = [
 
 [[package]]
 name = "jf-session"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "proptest",
  "rand 0.10.3",
@@ -2565,14 +2565,14 @@ dependencies = [
 
 [[package]]
 name = "jf-test-api-mismatch"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "wit-bindgen",
 ]
 
 [[package]]
 name = "jf-test-echo"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "getrandom 0.4.3",
  "jf-plugin-sdk",
@@ -2582,14 +2582,14 @@ dependencies = [
 
 [[package]]
 name = "jf-test-memory-bomb"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
 ]
 
 [[package]]
 name = "jf-test-net-attacker"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
  "serde_json",
@@ -2597,14 +2597,14 @@ dependencies = [
 
 [[package]]
 name = "jf-test-panicker"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
 ]
 
 [[package]]
 name = "jf-test-secret-thief"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
  "serde_json",
@@ -2612,7 +2612,7 @@ dependencies = [
 
 [[package]]
 name = "jf-test-spin"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "jf-plugin-sdk",
  "serde_json",
@@ -2620,11 +2620,11 @@ dependencies = [
 
 [[package]]
 name = "jf-tokens"
-version = "0.0.4"
+version = "0.0.5"
 
 [[package]]
 name = "jf-web"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "getrandom 0.4.3",
  "jf-core",
@@ -2647,7 +2647,7 @@ dependencies = [
 
 [[package]]
 name = "jf-web-media"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "image",
  "jf-library",
@@ -2661,7 +2661,7 @@ dependencies = [
 
 [[package]]
 name = "jf-web-sandbox"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "getrandom 0.2.17",
  "getrandom 0.4.3",
@@ -6120,7 +6120,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "xtask"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "anyhow",
  "jf-plugin-build",

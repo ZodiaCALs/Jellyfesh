@@ -1,4 +1,4 @@
-# The macOS app (v0.0.4)
+# The macOS app (v0.0.5)
 
 SwiftUI on macOS 14.2 and later, over the Rust core through the UniFFI bindings
 ([`ffi.md`](ffi.md)). The app holds no business logic (ADR-0001): it shows the

@@ -1,4 +1,4 @@
-# The core API (v0.0.4)
+# The core API (v0.0.5)
 
 Every UI (the Linux app in Rust, the macOS, Windows and Android apps through
 the FFI bindings, and the `jf` CLI) talks to `jf-core` the same way, and

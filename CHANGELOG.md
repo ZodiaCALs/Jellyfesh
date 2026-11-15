@@ -4,18 +4,35 @@ Every version is an annotated git tag, delivered as a `.zip` snapshot and a
 `.bundle` with the full history (`git clone jellyfesh-<tag>.bundle
 jellyfesh`). See ADR-0016.
 
-## Unreleased
+## v0.0.5 — 2026-11-15
 
-* **Add a Source** in Sources on every app and in Jellyfesh Web: pick
-  Jellyfin, Navidrome or another Subsonic server, enter its address and sign
-  in. A service is listed only while a plugin signed by Jellyfesh for it is
-  installed; more services join the list as their plugins are ready
-  (`jf_plugin_model::presets`, `Command::ConnectSource`).
-* Settings forms list a plugin's settings in the plugin's own order (the
-  server address first), on every app.
-* macOS: a plugin's text settings show a bordered field with the plugin's
-  description, and what is typed is saved without pressing Return, also
-  just before signing in.
+One app on five platforms, a music library and plugin installs in
+Jellyfesh Web, Add a Source everywhere, and the fixes from the first CI
+builds of the macOS, Windows and Android apps. Full notes:
+`docs/releases/v0.0.5.md`.
+
+* **One UI** (`docs/ui.md`): the same places, Settings sections and groups,
+  words (Title Case everywhere, Windows included), confirmations and keys
+  in the macOS, Windows, Linux and Android apps and Jellyfesh Web, each in
+  its platform's look. Gaps filled across apps: Play, Shuffle and sort
+  menus with Descending, Most Played, More menus on album, artist and
+  playlist pages, Go to Artist, playlist import and export on Android,
+  equalizer presets from the core (`eq_presets()`) with Preamp and Reset to
+  Flat, one sign-in button per method on Windows, Ctrl+F for Search.
+* **Add a Source** in every app: pick Jellyfin, Navidrome or another
+  Subsonic server, enter its address and sign in (`jf_plugin_model::presets`,
+  `Command::ConnectSource`); the Sources page lists Your Sources and opens
+  Sources Settings….
+* **Jellyfesh Web:** a library of the person's folders (`jf_web::library`,
+  by `jf-library`'s rules), installing and uninstalling plugins from
+  `.jfpkg` files (transpiled in the browser), and the apps' layout.
+* **Core:** `jf_plugin_model::install` (install rules shared with the web),
+  `eq_presets()` through the FFI; official plugins 0.0.5 with Title Case
+  labels.
+* **Fixed:** a server address typed on macOS was saved only after Return;
+  settings forms listed a plugin's settings alphabetically; Windows reported
+  a missing music folder as a generic error; the first CI builds of the
+  macOS and Android apps; tests that failed now and then.
 
 ## v0.0.4 — 2026-11-13
 

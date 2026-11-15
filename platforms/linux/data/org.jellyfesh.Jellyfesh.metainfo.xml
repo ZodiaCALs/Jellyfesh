@@ -53,6 +53,14 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.0.5" date="2026-11-15">
+      <description>
+        <p>The same places, words and steps as every Jellyfesh app: Settings
+        in shared sections, Add a Source on the Sources page, sort menus with
+        Descending, Most Played on Home, and confirmations before removing a
+        folder or uninstalling a source.</p>
+      </description>
+    </release>
     <release version="0.0.4" date="2026-11-13">
       <description>
         <p>A straight progress line, a player bar for wide windows, smoother

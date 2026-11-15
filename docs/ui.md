@@ -167,8 +167,8 @@ Web). Groups and rows in this order:
    Community plugins are made by others and are off unless you allow them."
    and **Allow Community Plugins**, which shows the disclosure first.
 
-**About**: the version (from the build, never typed in), the website, and
-the third-party licences.
+**About**: the version (from the build, never typed in), and the website and
+the third-party licences where the build knows where they are published.
 
 ## Steps that ask first
 

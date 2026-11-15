@@ -8,7 +8,7 @@
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap rescap mp">
 
-  <Identity Name="Jellyfesh" Publisher="CN=Jellyfesh" Version="0.0.4.0" />
+  <Identity Name="Jellyfesh" Publisher="CN=Jellyfesh" Version="0.0.5.0" />
 
   <mp:PhoneIdentity PhoneProductId="7f2a6b2e-4c3e-4d77-9b40-9f3c4f8a1d10" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
 

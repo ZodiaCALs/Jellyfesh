@@ -23,7 +23,7 @@ members = [
 default-members = ["core/*", "apps/cli", "xtask", "tools/jf-plugin", "tools/jf-plugin/plugin-build"]
 
 [workspace.package]
-version = "0.0.4"
+version = "0.0.5"
 edition = "2024"
 rust-version = "1.92"
 authors = ["the Jellyfesh authors"]

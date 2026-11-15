@@ -1,4 +1,4 @@
-# The Windows app (v0.0.4)
+# The Windows app (v0.0.5)
 
 WinUI 3 (Windows App SDK 2.6.5) in C# on .NET 10 (LTS), over the Rust core through
 the hand-written `Jellyfesh.Ffi` binding ([`ffi.md`](ffi.md)). Windows 10 1809

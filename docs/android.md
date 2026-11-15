@@ -1,4 +1,4 @@
-# The Android app (v0.0.4)
+# The Android app (v0.0.5)
 
 Kotlin and Jetpack Compose over the Rust core through the UniFFI Kotlin bindings
 (docs/ffi.md). minSdk 26 (cpal's AAudio output, ADR-0009), compileSdk and targetSdk 37.

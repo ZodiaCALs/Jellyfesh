@@ -7,7 +7,10 @@ and the macOS, Windows and Android apps written but not yet compiled (their
 gates need the CI builds and real devices). v0.0.4 (2026-11-13) added
 Jellyfesh Web, the player in the browser for Subsonic, Navidrome and Jellyfin
 servers (`docs/web.md`), outside this plan, and a design pass on every app
-(`docs/design-controls.md`, "v0.0.4"). Each milestone ends at a gate: its
+(`docs/design-controls.md`, "v0.0.4"). v0.0.5 (2026-11-15) made the five
+apps one (`docs/ui.md`), gave Jellyfesh Web a library and plugin installs,
+and was the first release with every app built and tested by CI. Each
+milestone ends at a gate: its
 acceptance checks pass, the budgets in scope are **measured and reported**,
 and you approve before the next one starts. Every milestone is delivered as
 small commits with tests.
