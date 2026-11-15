@@ -29,8 +29,10 @@ struct AlbumsView: View {
         }
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
-                EmptyState(title: "No Albums", symbol: "square.stack",
-                           message: "Albums appear here once your music folders are scanned.", error: list.error)
+                EmptyState(title: "No Albums Yet", symbol: "square.stack",
+                           message: "Add a music folder to see your albums here.", error: list.error) {
+                    AddMusicFolderButton()
+                }
             }
         }
         .navigationTitle(Text("Albums"))
@@ -44,7 +46,7 @@ struct AlbumsView: View {
                         Text("Title").tag(AlbumOrder.title)
                         Text("Artist").tag(AlbumOrder.artist)
                         Text("Year").tag(AlbumOrder.year)
-                        Text("Date Added").tag(AlbumOrder.added)
+                        Text("Recently Added").tag(AlbumOrder.added)
                     }
                     .pickerStyle(.inline)
                     Toggle("Descending", isOn: Binding(

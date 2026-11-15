@@ -129,6 +129,17 @@ final class SearchStore {
         done && sections.allSatisfy { $0.items.isEmpty && $0.error == nil }
     }
 
+    /// The library's results, shown first.
+    var librarySection: SearchSection? {
+        sections.first { $0.source == Self.library && (!$0.items.isEmpty || $0.error != nil) }
+    }
+
+    /// The sources' results (From Your Sources), one group per source that found something or
+    /// failed, in the order they answered.
+    var sourceSections: [SearchSection] {
+        sections.filter { $0.source != Self.library && (!$0.items.isEmpty || $0.error != nil) }
+    }
+
     /// The artwork of a library result.
     func artwork(for item: SourceResult) -> ArtworkSource? {
         if item.source == Self.library, let hash = libraryArtwork[Self.key(item.kind, item.itemID)] {

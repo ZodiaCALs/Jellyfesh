@@ -1,6 +1,7 @@
-// Playback: where the sound goes, crossfade, ReplayGain and the equalizer. The core applies them
-// (docs/core-api.md, "Playback output"); sliders send while they move, at most every 100 ms, and
-// once more when let go.
+// Playback, in the order of docs/ui.md: where the sound goes, crossfade, volume levelling
+// (ReplayGain), the equalizer with the core's presets, and resuming at startup. The core applies
+// them (docs/core-api.md, "Playback output"); sliders send while they move, at most every 100 ms,
+// and once more when let go.
 
 import SwiftUI
 
@@ -22,10 +23,6 @@ struct PlaybackSettings: View {
                 } label: {
                     Text("Output Device")
                     Text("Where the sound goes.")
-                }
-                Toggle(isOn: Binding(get: { current.resumeOnLaunch }, set: { settings.setResumeOnLaunch($0) })) {
-                    Text("Resume Playback")
-                    Text("Start playing where you left off when Jellyfesh opens.")
                 }
             }
 
@@ -68,7 +65,7 @@ struct PlaybackSettings: View {
             }
 
             Section {
-                Picker("Volume Levelling", selection: Binding(get: { current.replayGain }, set: { settings.setReplayGain($0) })) {
+                Picker("ReplayGain", selection: Binding(get: { current.replayGain }, set: { settings.setReplayGain($0) })) {
                     Text("Off").tag(ReplayGainOption.off)
                     Text("Track").tag(ReplayGainOption.track)
                     Text("Album").tag(ReplayGainOption.album)
@@ -92,20 +89,30 @@ struct PlaybackSettings: View {
                     }
                 }
             } header: {
-                Text("ReplayGain")
+                Text("Volume Levelling")
             } footer: {
-                Text("ReplayGain evens out loudness using the tags in your files.")
+                Text("Evens out loudness using the ReplayGain tags in your files.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
             EqualizerSection()
+
+            Section {
+                Toggle(isOn: Binding(get: { current.resumeOnLaunch }, set: { settings.setResumeOnLaunch($0) })) {
+                    Text("Resume Playback")
+                    Text("Start playing where you left off when Jellyfesh opens.")
+                }
+            } header: {
+                Text("Startup")
+            }
         }
         .formStyle(.grouped)
     }
 }
 
-/// The equalizer: on or off, a preamp and the core's bands (ten one-octave bands by default).
+/// The equalizer: on or off, the core's presets, a preamp and the core's bands (ten one-octave
+/// bands by default), and Reset to Flat.
 private struct EqualizerSection: View {
     @Environment(SettingsStore.self) private var settings
     @State private var draft: EqualizerConfig?
@@ -113,6 +120,8 @@ private struct EqualizerSection: View {
 
     /// The gain the sliders allow, in dB (as the Linux app).
     private static let range: ClosedRange<Double> = -12...12
+    /// The Preset picker's choice while the bands match no preset.
+    private static let custom = "custom"
 
     var body: some View {
         let eq = draft ?? settings.current.eq
@@ -122,6 +131,9 @@ private struct EqualizerSection: View {
                 next.enabled = value
                 settings.setEqualizer(next)
             }))
+            if !settings.equalizerPresets.isEmpty {
+                presetPicker(matched: settings.equalizerPreset(matching: eq))
+            }
             if !eq.bands.isEmpty {
                 bandRow(label: String(localized: "Preamp"), value: Double(eq.preampDb)) { value in
                     edit { $0.preampDb = Float(value) }
@@ -145,6 +157,32 @@ private struct EqualizerSection: View {
         } header: {
             Text("Equalizer")
         }
+    }
+
+    /// Flat, Bass Boost, Vocal and Treble from the core, and Custom once a band has moved.
+    private func presetPicker(matched: EqualizerPreset?) -> some View {
+        Picker("Preset", selection: Binding<String>(
+            get: { matched?.id ?? Self.custom },
+            set: { id in
+                guard let preset = settings.equalizerPresets.first(where: { $0.id == id }) else { return }
+                apply(preset)
+            }
+        )) {
+            ForEach(settings.equalizerPresets) { preset in
+                Text(EqualizerPresetText.name(preset.id)).tag(preset.id)
+            }
+            if matched == nil {
+                Text("Custom").tag(Self.custom)
+            }
+        }
+    }
+
+    /// A preset replaces whatever a slider was still sending.
+    private func apply(_ preset: EqualizerPreset) {
+        sendTask?.cancel()
+        sendTask = nil
+        draft = nil
+        settings.applyEqualizerPreset(preset)
     }
 
     private func bandRow(label: String, value: Double, change: @escaping (Double) -> Void,
@@ -195,6 +233,20 @@ private struct EqualizerSection: View {
             return String(format: "%.1fk", Double(kilo))
         }
         return "\(Int(hertz.rounded()))"
+    }
+}
+
+/// An equalizer preset's name, by the core's id ("Flat", "Bass Boost", "Vocal", "Treble"); an id
+/// this build does not know reads as words.
+enum EqualizerPresetText {
+    static func name(_ id: String) -> String {
+        switch id {
+        case "flat": return String(localized: "Flat")
+        case "bass_boost": return String(localized: "Bass Boost")
+        case "vocal": return String(localized: "Vocal")
+        case "treble": return String(localized: "Treble")
+        default: return SchemaForm.humanize(id)
+        }
     }
 }
 

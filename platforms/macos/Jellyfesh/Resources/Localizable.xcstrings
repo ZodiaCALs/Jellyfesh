@@ -627,6 +627,28 @@
         }
       }
     },
+    "About This Song": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この曲について"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于这首歌"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於這首歌"
+          }
+        }
+      }
+    },
     "Abyss": {
       "localizations": {
         "ja": {
@@ -803,6 +825,28 @@
         }
       }
     },
+    "Add a music folder to see your albums here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダを追加すると、ここにアルバムが表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加音乐文件夹后，你的专辑会显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入音樂資料夾後，你的專輯會顯示在這裡。"
+          }
+        }
+      }
+    },
     "Add songs from their menu with Add to Playlist.": {
       "localizations": {
         "ja": {
@@ -821,28 +865,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在歌曲的選單中選擇「加入播放清單」即可加入。"
-          }
-        }
-      }
-    },
-    "Add the folders that hold your music. Jellyfesh reads their tags, artwork and lyrics and keeps watching them.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音楽のあるフォルダを追加してください。Jellyfesh がタグ・アートワーク・歌詞を読み込み、変更も見守ります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加存放音乐的文件夹。Jellyfesh 会读取其中的标签、封面和歌词，并持续关注变化。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入存放音樂的資料夾。Jellyfesh 會讀取其中的標籤、封面與歌詞，並持續留意變更。"
           }
         }
       }
@@ -869,24 +891,46 @@
         }
       }
     },
-    "Add to Playlist": {
+    "Add to Playlist…": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プレイリストに追加"
+            "value": "プレイリストに追加…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加到歌单"
+            "value": "添加到歌单…"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "加入播放清單"
+            "value": "加入播放清單…"
+          }
+        }
+      }
+    },
+    "Add your music folders, or connect a server in Sources.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽フォルダを追加するか、「ソース」でサーバーに接続してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加你的音乐文件夹，或在“来源”中连接服务器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入你的音樂資料夾，或在「來源」中連線至伺服器。"
           }
         }
       }
@@ -997,28 +1041,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "專輯"
-          }
-        }
-      }
-    },
-    "Albums appear here once your music folders are scanned.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音楽フォルダのスキャンが終わると、ここにアルバムが表示されます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音乐文件夹扫描完成后，专辑会显示在这里。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音樂資料夾掃描完成後，專輯會顯示在這裡。"
           }
         }
       }
@@ -1249,28 +1271,6 @@
         }
       }
     },
-    "Artists appear here once your music folders are scanned.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音楽フォルダのスキャンが終わると、ここにアーティストが表示されます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音乐文件夹扫描完成后，艺人会显示在这里。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音樂資料夾掃描完成後，藝人會顯示在這裡。"
-          }
-        }
-      }
-    },
     "Artwork": {
       "localizations": {
         "ja": {
@@ -1289,28 +1289,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "封面"
-          }
-        }
-      }
-    },
-    "Author": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作者"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作者"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作者"
           }
         }
       }
@@ -1381,24 +1359,24 @@
         }
       }
     },
-    "Bit Rate": {
+    "Bass Boost": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビットレート"
+            "value": "低音強調"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "比特率"
+            "value": "低音增强"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "位元率"
+            "value": "低音增強"
           }
         }
       }
@@ -1513,28 +1491,6 @@
         }
       }
     },
-    "Channels": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チャンネル"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "声道"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "聲道"
-          }
-        }
-      }
-    },
     "Choose…": {
       "localizations": {
         "ja": {
@@ -1557,24 +1513,24 @@
         }
       }
     },
-    "Clear": {
+    "Clear Queue": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "消去"
+            "value": "キューを消去"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清空"
+            "value": "清空播放队列"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除"
+            "value": "清除播放佇列"
           }
         }
       }
@@ -1601,46 +1557,24 @@
         }
       }
     },
-    "Clear the queue": {
+    "Clear the Queue?": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キューを消去"
+            "value": "キューを消去しますか？"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清空播放队列"
+            "value": "清空播放队列？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除播放佇列"
-          }
-        }
-      }
-    },
-    "Codec": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コーデック"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "编码"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "編碼"
+            "value": "清除播放佇列？"
           }
         }
       }
@@ -1821,6 +1755,28 @@
         }
       }
     },
+    "Create": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建立"
+          }
+        }
+      }
+    },
     "Crossfade": {
       "localizations": {
         "ja": {
@@ -1887,28 +1843,6 @@
         }
       }
     },
-    "Date Added": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "追加日"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加日期"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加入日期"
-          }
-        }
-      }
-    },
     "Decrease Volume": {
       "localizations": {
         "ja": {
@@ -1953,6 +1887,28 @@
         }
       }
     },
+    "Delete Playlist…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストを削除…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除歌单…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除播放清單…"
+          }
+        }
+      }
+    },
     "Delete “%@”?": {
       "localizations": {
         "ja": {
@@ -1971,28 +1927,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除「%@」？"
-          }
-        }
-      }
-    },
-    "Delete…": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除…"
           }
         }
       }
@@ -2129,28 +2063,6 @@
         }
       }
     },
-    "Duration": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "長さ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时长"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "長度"
-          }
-        }
-      }
-    },
     "Electric": {
       "localizations": {
         "ja": {
@@ -2239,6 +2151,28 @@
         }
       }
     },
+    "Evens out loudness using the ReplayGain tags in your files.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの ReplayGain タグを使って音量を揃えます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根据文件中的 ReplayGain 标签平衡响度。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依據檔案中的 ReplayGain 標籤平衡響度。"
+          }
+        }
+      }
+    },
     "Export Playlist": {
       "localizations": {
         "ja": {
@@ -2261,24 +2195,24 @@
         }
       }
     },
-    "Export…": {
+    "Export Playlist…": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "書き出す…"
+            "value": "プレイリストを書き出す…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "导出…"
+            "value": "导出歌单…"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "匯出…"
+            "value": "匯出播放清單…"
           }
         }
       }
@@ -2437,6 +2371,28 @@
         }
       }
     },
+    "Flat": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フラット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平直"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平坦"
+          }
+        }
+      }
+    },
     "Folders": {
       "localizations": {
         "ja": {
@@ -2503,24 +2459,24 @@
         }
       }
     },
-    "Gapless": {
+    "From Your Sources": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ギャップレス"
+            "value": "あなたのソースから"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无缝衔接"
+            "value": "来自你的来源"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無縫銜接"
+            "value": "來自你的來源"
           }
         }
       }
@@ -2543,6 +2499,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "前往專輯"
+          }
+        }
+      }
+    },
+    "Go to Artist": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーティストへ移動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前往艺人"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前往藝人"
           }
         }
       }
@@ -2811,28 +2789,6 @@
         }
       }
     },
-    "Import…": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "読み込む…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "匯入…"
-          }
-        }
-      }
-    },
     "Increase Volume": {
       "localizations": {
         "ja": {
@@ -3009,24 +2965,24 @@
         }
       }
     },
-    "Its sign-in and settings are removed too.": {
+    "Its settings and sign-in are removed.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サインイン情報と設定も削除されます。"
+            "value": "設定とサインイン情報が削除されます。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "其登录信息和设置也会一并移除。"
+            "value": "其设置和登录信息将被移除。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "其登入資訊和設定也會一併移除。"
+            "value": "其設定和登入資訊將被移除。"
           }
         }
       }
@@ -3137,28 +3093,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "潟湖"
-          }
-        }
-      }
-    },
-    "Language": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "言語"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "语言"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "語言"
           }
         }
       }
@@ -3471,46 +3405,24 @@
         }
       }
     },
-    "Make one with New Playlist, or import an M3U file.": {
+    "Make a playlist to keep songs together.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「新規プレイリスト」で作るか、M3U ファイルを読み込んでください。"
+            "value": "プレイリストを作って曲をまとめましょう。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用“新建歌单”创建一个，或导入 M3U 文件。"
+            "value": "创建歌单，把歌曲放在一起。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "用「新增播放清單」建立一個，或匯入 M3U 檔案。"
-          }
-        }
-      }
-    },
-    "Mark songs you love with Add to Favourites. They gather here.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好きな曲を「お気に入りに追加」すると、ここに集まります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用“收藏”标记喜欢的歌曲，它们会汇集到这里。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用「加入最愛」標記喜歡的歌曲，它們會匯集到這裡。"
+            "value": "建立播放清單，把歌曲放在一起。"
           }
         }
       }
@@ -3735,6 +3647,28 @@
         }
       }
     },
+    "New Playlist…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規プレイリスト…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建歌单…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增播放清單…"
+          }
+        }
+      }
+    },
     "Next": {
       "localizations": {
         "ja": {
@@ -3757,68 +3691,46 @@
         }
       }
     },
-    "No": {
+    "No Albums Yet": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "いいえ"
+            "value": "アルバムはまだありません"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "否"
+            "value": "还没有专辑"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "否"
+            "value": "還沒有專輯"
           }
         }
       }
     },
-    "No Albums": {
+    "No Artists Yet": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アルバムがありません"
+            "value": "アーティストはまだいません"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "没有专辑"
+            "value": "还没有艺人"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "沒有專輯"
-          }
-        }
-      }
-    },
-    "No Artists": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アーティストがいません"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有艺人"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "沒有藝人"
+            "value": "還沒有藝人"
           }
         }
       }
@@ -3867,24 +3779,24 @@
         }
       }
     },
-    "No Playlists": {
+    "No Playlists Yet": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プレイリストがありません"
+            "value": "プレイリストはまだありません"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "没有歌单"
+            "value": "还没有歌单"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "沒有播放清單"
+            "value": "還沒有播放清單"
           }
         }
       }
@@ -3911,46 +3823,46 @@
         }
       }
     },
-    "No Songs": {
+    "No Songs Yet": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "曲がありません"
+            "value": "曲はまだありません"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "没有歌曲"
+            "value": "还没有歌曲"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "沒有歌曲"
+            "value": "還沒有歌曲"
           }
         }
       }
     },
-    "No Sources Yet": {
+    "No Sources Installed": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ソースはまだありません"
+            "value": "ソースはインストールされていません"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "还没有来源"
+            "value": "尚未安装来源"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "還沒有來源"
+            "value": "尚未安裝來源"
           }
         }
       }
@@ -3995,28 +3907,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "不需要登入"
-          }
-        }
-      }
-    },
-    "No sources installed": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ソースはインストールされていません"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未安装来源"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚未安裝來源"
           }
         }
       }
@@ -4105,6 +3995,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "未在播放"
+          }
+        }
+      }
+    },
+    "Nothing Up Next": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次に再生する曲はありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接下来没有歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接下來沒有歌曲"
           }
         }
       }
@@ -4351,28 +4263,6 @@
         }
       }
     },
-    "Open Sources Settings": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ソースの設定を開く"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开来源设置"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開啟來源設定"
-          }
-        }
-      }
-    },
     "Opens Now Playing": {
       "localizations": {
         "ja": {
@@ -4593,7 +4483,7 @@
         }
       }
     },
-    "Play Later": {
+    "Play Last": {
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -4659,28 +4549,6 @@
         }
       }
     },
-    "Play an album, a playlist or a song and it shows here.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アルバム、プレイリスト、曲を再生すると、ここに表示されます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放一张专辑、一个歌单或一首歌，就会显示在这里。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放一張專輯、一個播放清單或一首歌，就會顯示在這裡。"
-          }
-        }
-      }
-    },
     "Playback": {
       "localizations": {
         "ja": {
@@ -4699,6 +4567,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放"
+          }
+        }
+      }
+    },
+    "Playback stops and every song is removed from the queue.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生が止まり、キューのすべての曲が取り除かれます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放将停止，播放队列中的所有歌曲都会被移除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放將停止，播放佇列中的所有歌曲都會被移除。"
           }
         }
       }
@@ -4831,6 +4721,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "前級增益"
+          }
+        }
+      }
+    },
+    "Preset": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プリセット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "预设"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設集"
           }
         }
       }
@@ -5007,6 +4919,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除資料夾"
+          }
+        }
+      }
+    },
+    "Remove Folder…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを削除…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除文件夹…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除資料夾…"
           }
         }
       }
@@ -5209,28 +5143,6 @@
         }
       }
     },
-    "ReplayGain evens out loudness using the tags in your files.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ReplayGain はファイルのタグを使って音量を揃えます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ReplayGain 会根据文件中的标签平衡响度。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ReplayGain 會依據檔案中的標籤平衡響度。"
-          }
-        }
-      }
-    },
     "Rescan Library": {
       "localizations": {
         "ja": {
@@ -5315,28 +5227,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "皇家藍"
-          }
-        }
-      }
-    },
-    "Sample Rate": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サンプルレート"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "采样率"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取樣率"
           }
         }
       }
@@ -5473,7 +5363,7 @@
         }
       }
     },
-    "Server address": {
+    "Server Address": {
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -5803,28 +5693,6 @@
         }
       }
     },
-    "Size": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サイズ"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "大小"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "大小"
-          }
-        }
-      }
-    },
     "Skip Back 5 Seconds": {
       "localizations": {
         "ja": {
@@ -5935,28 +5803,6 @@
         }
       }
     },
-    "Song": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曲"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "歌曲"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "歌曲"
-          }
-        }
-      }
-    },
     "Songs": {
       "localizations": {
         "ja": {
@@ -5975,28 +5821,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "歌曲"
-          }
-        }
-      }
-    },
-    "Songs appear here once your music folders are scanned.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音楽フォルダのスキャンが終わると、ここに曲が表示されます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音乐文件夹扫描完成后，歌曲会显示在这里。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "音樂資料夾掃描完成後，歌曲會顯示在這裡。"
           }
         }
       }
@@ -6023,7 +5847,29 @@
         }
       }
     },
-    "Songs, albums, artists": {
+    "Songs you mark with the heart appear here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ハートを付けた曲がここに表示されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你用心形标记的歌曲会显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你用愛心標記的歌曲會顯示在這裡。"
+          }
+        }
+      }
+    },
+    "Songs, albums and artists": {
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6034,13 +5880,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "歌曲、专辑、艺人"
+            "value": "歌曲、专辑和艺人"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "歌曲、專輯、藝人"
+            "value": "歌曲、專輯和藝人"
           }
         }
       }
@@ -6199,46 +6045,46 @@
         }
       }
     },
-    "Sources Settings": {
+    "Sources Settings…": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ソースの設定"
+            "value": "ソースの設定…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "来源设置"
+            "value": "来源设置…"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "來源設定"
+            "value": "來源設定…"
           }
         }
       }
     },
-    "Sources bring music from servers and services into Jellyfesh. Install one from a .jfpkg file in Settings.": {
+    "Sources bring music from servers and services into Jellyfesh.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ソースを使うと、サーバーやサービスの音楽を Jellyfesh で聴けます。設定で .jfpkg ファイルからインストールしてください。"
+            "value": "ソースを使うと、サーバーやサービスの音楽を Jellyfesh で聴けます。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "来源可以把服务器和服务上的音乐带进 Jellyfesh。请在设置中从 .jfpkg 文件安装。"
+            "value": "来源可以把服务器和服务上的音乐带进 Jellyfesh。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "來源可以把伺服器和服務上的音樂帶進 Jellyfesh。請在設定中從 .jfpkg 檔案安裝。"
+            "value": "來源可以把伺服器和服務上的音樂帶進 Jellyfesh。"
           }
         }
       }
@@ -6305,6 +6151,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟 Jellyfesh 時從上次停下的地方繼續播放。"
+          }
+        }
+      }
+    },
+    "Startup": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟動"
           }
         }
       }
@@ -6415,28 +6283,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "深青"
-          }
-        }
-      }
-    },
-    "The Queue Is Empty": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "キューは空です"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放队列是空的"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "播放佇列是空的"
           }
         }
       }
@@ -6705,28 +6551,6 @@
         }
       }
     },
-    "Timing": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同期"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同步方式"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同步方式"
-          }
-        }
-      }
-    },
     "Title": {
       "localizations": {
         "ja": {
@@ -6789,6 +6613,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "透明度"
+          }
+        }
+      }
+    },
+    "Treble": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高音"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高音"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高音"
           }
         }
       }
@@ -6859,24 +6705,24 @@
         }
       }
     },
-    "Uninstall “%@”?": {
+    "Uninstall %@?": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「%@」をアンインストールしますか？"
+            "value": "%@ をアンインストールしますか？"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "卸载“%@”？"
+            "value": "卸载 %@？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "解除安裝「%@」？"
+            "value": "解除安裝 %@？"
           }
         }
       }
@@ -7035,6 +6881,28 @@
         }
       }
     },
+    "Use Play Next or Play Last on any song, album or playlist.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲・アルバム・プレイリストで「次に再生」か「最後に再生」を選んでください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任意歌曲、专辑或歌单上使用“下一首播放”或“最后播放”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何歌曲、專輯或播放清單上使用「接著播放」或「最後播放」。"
+          }
+        }
+      }
+    },
     "Vendor playback": {
       "localizations": {
         "ja": {
@@ -7057,24 +6925,46 @@
         }
       }
     },
-    "Version": {
+    "Version %@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バージョン"
+            "value": "バージョン %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "版本"
+            "value": "版本 %@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "版本"
+            "value": "版本 %@"
+          }
+        }
+      }
+    },
+    "Vocal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ボーカル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人声"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人聲"
           }
         }
       }
@@ -7211,28 +7101,6 @@
         }
       }
     },
-    "Yes": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "はい"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "是"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "是"
-          }
-        }
-      }
-    },
     "Your Jellyfin server": {
       "localizations": {
         "ja": {
@@ -7273,6 +7141,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的 Navidrome 伺服器"
+          }
+        }
+      }
+    },
+    "Your Sources": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたのソース"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的来源"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的來源"
           }
         }
       }

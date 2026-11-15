@@ -50,6 +50,10 @@ protocol CoreClient: AnyObject {
     /// Nanoseconds on the clock playback anchors are stamped with. Cheap: no core call.
     func monotonicNowNs() -> UInt64
 
+    /// The equalizer presets, in the order every app lists them (`eq_presets()`). Cheap: a fixed
+    /// list from the core's library, not a query of the running core.
+    func equalizerPresets() -> [EqualizerPreset]
+
     /// Saves the session and stops the core. Afterwards queries throw `.shutDown`.
     func shutdown()
 

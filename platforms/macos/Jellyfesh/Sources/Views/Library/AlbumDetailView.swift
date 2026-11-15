@@ -1,6 +1,6 @@
 // An album (after Apple Music): large artwork, the title, the artist in accent text (it opens the
-// artist), genre, year and song count, Play and Shuffle, its tracks in the core's order, and a
-// footer with the song count and length.
+// artist), genre, year and song count, Play, Shuffle and More (Play Next, Play Last, Add to
+// Playlist…), its tracks in the core's order, and a footer with the song count and length.
 
 import SwiftUI
 
@@ -95,8 +95,12 @@ struct AlbumDetailView: View {
                 ]))
                 .typography(Tokens.TypeRoles.listSecondary)
                 .foregroundStyle(palette[Tokens.Ink.ink70])
-                PlayShuffleButtons(collection: .album(id: album.id), disabled: songs.isEmpty)
-                    .padding(.top, Tokens.Space.s2)
+                HStack(spacing: Tokens.Space.s2) {
+                    PlayShuffleButtons(collection: .album(id: album.id), disabled: songs.isEmpty)
+                    CollectionMoreMenu(collection: .album(id: album.id))
+                        .disabled(songs.isEmpty)
+                }
+                .padding(.top, Tokens.Space.s2)
             }
             Spacer(minLength: 0)
         }
@@ -104,12 +108,10 @@ struct AlbumDetailView: View {
 
     /// Opens the artist page: the library's artist with this name, if it has one.
     private func openArtist(named name: String) {
-        let client = library.client
-        Task {
-            guard let found = try? await client.searchLibrary(name, limit: 25),
-                  let artist = found.artists.first(where: { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame })
-            else { return }
-            router.open(.artist(artist))
+        Task { @MainActor in
+            if let artist = await library.artist(named: name) {
+                router.open(.artist(artist))
+            }
         }
     }
 

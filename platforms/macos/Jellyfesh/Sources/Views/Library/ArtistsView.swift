@@ -39,8 +39,10 @@ struct ArtistsView: View {
                 .contextMenu {
                     Button("Play") { playback.play(.artist(id: artist.id)) }
                     Button("Shuffle") { playback.play(.artist(id: artist.id), shuffle: true) }
+                    Divider()
                     Button("Play Next") { playback.enqueue(.artist(id: artist.id), next: true) }
-                    Button("Play Later") { playback.enqueue(.artist(id: artist.id), next: false) }
+                    Button("Play Last") { playback.enqueue(.artist(id: artist.id), next: false) }
+                    AddToPlaylistMenu(collection: .artist(id: artist.id))
                 }
                 .onAppear { list.rowAppeared(artist) }
             }
@@ -48,8 +50,10 @@ struct ArtistsView: View {
         .fieldList()
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
-                EmptyState(title: "No Artists", symbol: "music.mic",
-                           message: "Artists appear here once your music folders are scanned.", error: list.error)
+                EmptyState(title: "No Artists Yet", symbol: "music.mic",
+                           message: "Add a music folder to see your albums here.", error: list.error) {
+                    AddMusicFolderButton()
+                }
             }
         }
         .navigationTitle(Text("Artists"))
@@ -87,7 +91,11 @@ struct ArtistDetailView: View {
                                albums.isEmpty ? nil : CountText.albums(albums.count),
                                songs.isEmpty ? nil : CountText.songs(songs.count),
                            ])) {
-                    PlayShuffleButtons(collection: .artist(id: artist.id), disabled: songs.isEmpty)
+                    HStack(spacing: Tokens.Space.s2) {
+                        PlayShuffleButtons(collection: .artist(id: artist.id), disabled: songs.isEmpty)
+                        CollectionMoreMenu(collection: .artist(id: artist.id))
+                            .disabled(songs.isEmpty)
+                    }
                 }
                 if !albums.isEmpty {
                     VStack(alignment: .leading, spacing: Tokens.Space.s3) {

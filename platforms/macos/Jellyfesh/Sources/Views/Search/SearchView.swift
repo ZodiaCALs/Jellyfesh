@@ -1,6 +1,6 @@
-// Unified search: the library and every enabled source, each source's results appearing as they
-// arrive, grouped by kind. Library albums, artists and playlists open their pages; a source's
-// containers open in Browse.
+// Unified search: the library's results first, then From Your Sources, one group per enabled
+// source, each appearing as it arrives, grouped by kind. Library albums, artists and playlists open
+// their pages; a source's containers open in Browse.
 
 import SwiftUI
 
@@ -17,7 +17,7 @@ struct SearchView: View {
                 HStack(spacing: Tokens.Space.s2) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(palette[Tokens.Ink.ink50])
-                    TextField("Songs, albums, artists", text: $search.text)
+                    TextField("Songs, albums and artists", text: $search.text)
                         .textFieldStyle(.plain)
                         .font(.system(size: 17))
                         .focused($fieldFocused)
@@ -52,10 +52,20 @@ struct SearchView: View {
                                message: "Try other words, or check the spelling.")
                         .frame(maxWidth: .infinity, minHeight: 320)
                 } else {
-                    let several = search.sections.count > 1
-                    ForEach(search.sections) { section in
-                        SearchSectionView(section: section,
-                                          showsSource: several || section.source != SearchStore.library)
+                    if let library = search.librarySection {
+                        SearchSectionView(section: library, showsSource: false)
+                    }
+                    let fromSources = search.sourceSections
+                    if !fromSources.isEmpty {
+                        VStack(alignment: .leading, spacing: Tokens.Space.s5) {
+                            Text("From Your Sources")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(palette[Tokens.Ink.ink90])
+                                .accessibilityAddTraits(.isHeader)
+                            ForEach(fromSources) { section in
+                                SearchSectionView(section: section, showsSource: true)
+                            }
+                        }
                     }
                 }
             }

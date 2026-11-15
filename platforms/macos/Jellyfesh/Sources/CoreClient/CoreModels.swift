@@ -222,6 +222,15 @@ enum EqualizerBandKind: Hashable, Sendable {
     case peaking, lowShelf, highShelf
 }
 
+/// An equalizer preset (`EqPreset`): every app offers the same ones, in the core's order.
+/// Applying one sets `AppSettings.eq` to its settings.
+struct EqualizerPreset: Identifiable, Hashable, Sendable {
+    /// Stable name: `flat`, `bass_boost`, `vocal`, `treble`.
+    var id: String
+    /// Its bands, switched on, with a 0 dB preamp.
+    var settings: EqualizerConfig
+}
+
 enum ReplayGainOption: Hashable, Sendable, CaseIterable {
     case off, track, album
 }

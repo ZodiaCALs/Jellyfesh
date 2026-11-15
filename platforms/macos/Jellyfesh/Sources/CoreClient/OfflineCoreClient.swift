@@ -22,6 +22,9 @@ final class OfflineCoreClient: CoreClient {
         DispatchTime.now().uptimeNanoseconds
     }
 
+    /// None: without the core there is no equalizer to set.
+    func equalizerPresets() -> [EqualizerPreset] { [] }
+
     func shutdown() {}
 
     private func fail<T>() throws -> T {

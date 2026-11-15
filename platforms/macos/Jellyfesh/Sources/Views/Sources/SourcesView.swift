@@ -1,5 +1,7 @@
-// Sources: the installed source plugins with their badges and accounts, and browsing a source's
-// catalogue page by page. Installing, signing in and settings live in Settings → Sources.
+// Sources (docs/ui.md): what sources are, Add a Source (the core's services, connected as in
+// Settings), Your Sources (the installed plugins with their badges and accounts; choosing one
+// browses its catalogue page by page) and Sources Settings…, where installing, enabling and each
+// source's settings live.
 
 import SwiftUI
 
@@ -8,16 +10,17 @@ struct SourcesView: View {
     @Environment(SourcesStore.self) private var sources
     @Environment(\.openSettings) private var openSettings
     @Environment(\.palette) private var palette
+    /// The service whose Connect sheet is open.
+    @State private var connecting: SourcePreset?
 
     var body: some View {
         List {
-            PageHeader(title: String(localized: "Sources"), subtitle: nil) {
-                Button {
-                    model.showSettings(.sources, using: openSettings)
-                } label: {
-                    Label("Sources Settings", systemImage: "gearshape")
-                }
-                .buttonStyle(.bordered)
+            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                PageHeader(title: String(localized: "Sources"), subtitle: nil)
+                Text("Sources bring music from servers and services into Jellyfesh.")
+                    .typography(Tokens.TypeRoles.listSecondary)
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.vertical, Tokens.Space.s4)
             .trackListRow()
@@ -25,6 +28,35 @@ struct SourcesView: View {
                 SourcesUnavailableNotice()
                     .padding(.bottom, Tokens.Space.s3)
                     .trackListRow()
+            }
+            if !sources.presets.isEmpty {
+                SectionTitle("Add a Source")
+                    .padding(.top, Tokens.Space.s3)
+                    .trackListRow()
+                ForEach(sources.presets) { preset in
+                    PresetRow(preset: preset, plugin: sources.plugin(preset.plugin), iconSize: 40) {
+                        connecting = preset
+                    }
+                    .typography(Tokens.TypeRoles.listTitle)
+                    .frame(minHeight: Tokens.Player.rowHeight)
+                    .trackListRow()
+                }
+            }
+            SectionTitle("Your Sources")
+                .padding(.top, Tokens.Space.s5)
+                .trackListRow()
+            if sources.plugins.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("No Sources Installed")
+                        .typography(Tokens.TypeRoles.listTitle)
+                        .foregroundStyle(palette[Tokens.Ink.ink90])
+                    Text("Install a source plugin from a .jfpkg file.")
+                        .typography(Tokens.TypeRoles.listSecondary)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                }
+                .padding(.vertical, Tokens.Space.s2)
+                .accessibilityElement(children: .combine)
+                .trackListRow()
             }
             ForEach(sources.plugins) { plugin in
                 if plugin.enabled && plugin.canBrowse {
@@ -37,22 +69,19 @@ struct SourcesView: View {
                         .trackListRow()
                 }
             }
+            HStack {
+                Button("Sources Settings…") {
+                    model.showSettings(.sources, using: openSettings)
+                }
+                .buttonStyle(.bordered)
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, Tokens.Space.s5)
+            .trackListRow()
         }
         .fieldList()
-        .overlay {
-            if sources.plugins.isEmpty {
-                ContentUnavailableView {
-                    Label("No Sources Yet", systemImage: "antenna.radiowaves.left.and.right")
-                } description: {
-                    Text("Sources bring music from servers and services into Jellyfesh. Install one from a .jfpkg file in Settings.")
-                } actions: {
-                    Button("Open Sources Settings") {
-                        model.showSettings(.sources, using: openSettings)
-                    }
-                }
-            }
-        }
         .navigationTitle(Text("Sources"))
+        .connectSourceFlow($connecting, in: .main)
     }
 }
 
@@ -232,6 +261,9 @@ struct BrowseView: View {
                     }
                     Button("Play Next") {
                         playback.enqueue(.source(plugin: item.source, id: item.itemID), next: true)
+                    }
+                    Button("Play Last") {
+                        playback.enqueue(.source(plugin: item.source, id: item.itemID), next: false)
                     }
                 }
         }

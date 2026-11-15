@@ -45,7 +45,7 @@ struct Sidebar: View {
                                 newName = playlist.name
                                 renaming = playlist
                             }
-                            Button("Delete…", role: .destructive) {
+                            Button("Delete Playlist…", role: .destructive) {
                                 deleting = playlist
                             }
                         }
@@ -55,13 +55,13 @@ struct Sidebar: View {
                     Text("Playlists")
                     Spacer()
                     Button {
-                        library.createPlaylist(name: String(localized: "New Playlist"))
+                        library.askForNewPlaylist()
                     } label: {
                         Image(systemName: "plus")
                     }
                     .buttonStyle(.plain)
-                    .help(Text("New Playlist"))
-                    .accessibilityLabel(Text("New Playlist"))
+                    .help(Text("New Playlist…"))
+                    .accessibilityLabel(Text("New Playlist…"))
                 }
             }
         }

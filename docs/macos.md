@@ -178,7 +178,7 @@ platforms/macos/
 │       ├── Design/         palette, type and motion from the tokens, glass and the
 │       │                   transparency setting, Misty field, controls, TimelineView schedules
 │       ├── Platform/       media session, Dock icon, device watcher, Low Power Mode and window
-│       │                   visibility, Space to play
+│       │                   visibility, the shared keys (Space, Shift-arrows, Esc)
 │       ├── Support/        artwork loader, JSON with ordered keys, schema forms, lyric layout,
 │       │                   QR codes, file panels, design math (seek bar, motion, swatches)
 │       └── Views/          root, sidebar, library pages, Now Playing, search, sources, settings
@@ -208,25 +208,59 @@ platforms/macos/
   album, artist, playlist and browse pages. The mini player (columns under
   900 pt) or the player bar (900 pt and wider) floats over the detail column
   with an edge blur; Now Playing opens over the window (Esc or Library closes
-  it).
+  it). Esc also goes back a page (`SharedKeyMonitor`, main window only, not
+  while text is edited or a sheet is open).
+* **Shared UI ([`ui.md`](ui.md)).** The pages, words, settings order and
+  confirmations follow the shared spec in the Mac's own mechanics:
+  * Home shows the library size, Recently Added (albums), Recently Played and
+    Most Played; with an empty library and no source signed in, the welcome
+    with Add Music Folder… and Add a Source (the Sources page).
+  * Empty Albums, Artists and Songs pages offer Add Music Folder…, Playlists
+    New Playlist….
+  * Songs has Play and Shuffle: the core has no collection for the whole
+    library, so `SongsModel.playAll` reads every song in the page's order (a
+    thousand at a time) and plays them as a track list (the core shuffles).
+  * Album, artist and playlist pages have a More menu (Play Next, Play Last,
+    Add to Playlist…; a playlist adds Rename…, Export Playlist… and Delete
+    Playlist…). Add to Playlist… is a submenu (New Playlist… and the
+    playlists); for a page the store reads the collection's tracks first
+    (`LibraryStore.tracks(of:)`), as the core adds tracks, not collections.
+  * New Playlist… (⌘N, the sidebar's +, Playlists, Add to Playlist…) asks for
+    the name in an alert before anything is created (`LibraryStore.newPlaylist`).
+  * The song menu is Play Next, Play Last, Add to Playlist…, Add to or Remove
+    from Favourites, Go to Album, Go to Artist and Show in Finder; rows that do
+    not carry a library song's album or file look them up when chosen, and Go
+    to Artist opens the library's artist of that name.
+  * The Sources page: what sources are, Add a Source (the core's services, the
+    same rows and Connect sheet as Settings), Your Sources (status; choosing one
+    browses it) and Sources Settings…. A sign-in sheet opens in the window its
+    flow started in (`SignInWindow`).
 * **Now Playing.** Artwork style (the core's baked backdrop, crossfading on
   dur-4, the scrubber thumb in Liquid Glass on macOS 26) or Misty style (the
   field at the artwork hue, the artwork on a Clear frame). Seek bar, transport,
   shuffle and repeat, volume, favourite, output device (Speakers chip), lyrics
   (word sweep, translation and romanization lines, 38 % anchor, manual scroll
-  pauses follow mode for 4 s, tap a line to seek), queue (drag to reorder,
-  Delete to remove, double-click to jump, pages past 50 entries), info.
+  pauses follow mode for 4 s, tap a line to seek), queue (Up Next: drag to
+  reorder, Delete to remove, double-click to jump, pages past 50 entries;
+  Clear Queue asks first; "Nothing Up Next" when empty), info (About This
+  Song: title, artist, album, year, length, format, lyrics and the file).
 * **Search.** One `Search` command for the library and every source; results
-  appear per source as they arrive, the library first. Library artwork comes
-  from one `searchLibrary` query; if the command fails, the library query alone
-  fills the page.
-* **Settings.** Appearance (theme, accent colour, transparency, Reduce Motion
-  and Transparency, Artwork or Misty, lyrics size, alignment, translations and
-  romanization, the app icon picker), Playback (output device, crossfade,
-  ReplayGain and preamp, equalizer), Library (folders, rescan, watch folders,
-  last scan), Sources (community switch with the ADR-0012 disclosure, enable,
-  sign-in by QR code, browser or fields, settings forms from each plugin's
-  JSON Schema, install a `.jfpkg`, uninstall).
+  appear per source as they arrive: the library's first, then From Your
+  Sources, one group per source. Library artwork comes from one
+  `searchLibrary` query; if the command fails, the library query alone fills
+  the page.
+* **Settings.** In the order of `ui.md`. Appearance (theme, accent colour,
+  transparency, Reduce Motion and Transparency, Artwork or Misty, lyrics size,
+  alignment, translations and romanization, the app icon picker), Playback
+  (output device; crossfade; Volume Levelling: ReplayGain and its preamp;
+  equalizer with the Preset picker from the core's `eq_presets()`, showing
+  Custom once a band moves, the preamp, the bands and Reset to Flat; Startup:
+  Resume Playback), Library (folders with Show in Finder, Remove Folder… and
+  Add Folder…; Watch Folders; Rescan Library with the scan's progress and Last
+  Scan), Sources (Add a Source; Installed with Install from File… in its
+  heading: enable, sign-in by QR code, browser or fields, settings forms from
+  each plugin's JSON Schema, "Version · Author", Uninstall…; Community Plugins
+  with the ADR-0012 disclosure).
 * **App icon (ADR-0017).** The bundle icon is Ice. Automatic shows Steel in the
   Dock while the system is dark; any other choice replaces the Dock icon while
   the app runs (`NSApplication.applicationIconImage`). Finder keeps Ice.
@@ -235,9 +269,12 @@ platforms/macos/
   stop; `MPRemoteCommandCenter` handles play, pause, toggle, stop, next,
   previous, position, repeat and shuffle.
 * **Menus.** Controls (Space plays and pauses outside text fields; ⌘→ ⌘← next
-  and previous; ⌥⌘→ ⌥⌘← skip 5 s; ⌘↑ ⌘↓ volume; ⌥⌘↓ mute; ⌘J current song),
-  View (⌘1–⌘7 sections, ⌘F search, ⌘L Now Playing, ⌥⌘L lyrics, ⌥⌘U queue),
-  File (⌘N new playlist, ⇧⌘O add folder, import playlist, install plugin).
+  and previous; ⇧→ ⇧← skip 5 s outside text fields, and ⌥⌘→ ⌥⌘← from the menu;
+  ⌘↑ ⌘↓ volume; ⌥⌘↓ mute; ⌘J current song), View (⌘1–⌘7 sections, ⌘F search,
+  ⌘L Now Playing, ⌥⌘L lyrics, ⌥⌘U queue), File (⌘N New Playlist…, ⇧⌘O add
+  folder, import playlist, install plugin). These carry the shared keys of
+  `ui.md`; Space, ⇧→ ⇧← and Esc (back) go through `SharedKeyMonitor` rather
+  than key equivalents, which would take them from text fields.
 * **Glass (ADR-0007).** Clear, Mist and Veil on the ultra-thin, thin and
   regular materials with the grade's tint, moved by the Transparency setting;
   solid Cloud under Reduce Transparency, Increase Contrast, Low Power Mode,
@@ -258,12 +295,14 @@ platforms/macos/
 ## Tests
 
 `build.sh --test` (or the scheme's Test action) runs the XCTest target:
-playback, settings, library, paging, search, sources, browse and queue stores on
-`FakeCoreClient`; JSON, schema forms, lyric layout, schedules, event batching,
-the Dock icon and formatting; the v0.0.4 design math (`DesignTests.swift`:
-seek geometry, Now Playing motion and the cascade, swatches and the OKLCH port
-against `design/tokens.json`, the transparency look, the new settings); and the
-shared contract tests (`platforms/shared/swift/Tests`, which replay
+playback, settings (with the equalizer presets), library (New Playlist… naming,
+collections into playlists), the Songs page's Play and Shuffle, the router (Esc),
+paging, search (From Your Sources), sources (which window shows a sign-in),
+browse and queue stores on `FakeCoreClient`; JSON, schema forms, lyric layout,
+schedules, event batching, the Dock icon and formatting; the v0.0.4 design math
+(`DesignTests.swift`: seek geometry, Now Playing motion and the cascade, swatches
+and the OKLCH port against `design/tokens.json`, the transparency look, the new
+settings); and the shared contract tests (`platforms/shared/swift/Tests`, which replay
 `tests/contract/lyrics-cursor.json`, `display-clock.json` and
 `glass-alpha.json`).
 
@@ -280,7 +319,9 @@ this revision (UniFFI 0.32.2) except `CoreConfig.bundledPlugins`.
   `playlistEntries(id:offset:limit:)`, `exportPlaylist(id:path:)`, `favorites(offset:limit:)`,
   `isFavorite(track:)`, `artworkThumbnail(hash:sizePx:) -> String?`, `queueWindow(offset:limit:)`,
   `roots()`, `stats()`. Free functions `outputDevices()`, `monotonicNowNs()`,
-  `defaultDataDir() -> String?`, `defaultCacheDir() -> String?`, `libraryVersion()`.
+  `defaultDataDir() -> String?`, `defaultCacheDir() -> String?`, `libraryVersion()`, and
+  **`eqPresets() -> [EqPreset]`** (record `EqPreset { id, settings: EqSettings }`; assumed from
+  `core/jf-ffi`, not yet checked against a generated file).
 * `protocol CoreListener: AnyObject, Sendable { func onEvent(event: Event) }`.
 * `CoreConfig(dataDir:cacheDir:output:)` with defaults for the rest; `OutputKind.device(name:)`;
   **`CoreConfig.bundledPlugins: [String]`** (assumed name and type, behind `JF_BUNDLED_PLUGINS`).
@@ -323,9 +364,6 @@ missing module.
 
 ## Known gaps
 
-* Equalizer presets live in jf-engine and are not in the FFI; the app edits the
-  core's bands and offers Reset to Flat. An `eq_presets()` query would let it
-  list them.
 * Artwork URLs from sources are not fetched (networking stays in the core);
   those rows show a placeholder until the core hands out file paths.
 * The macOS 26 layered icon (Icon Composer `.icon` with Ice and Steel) is not

@@ -14,6 +14,8 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.colorSchemeContrast) private var contrast
+    /// The name typed for a New Playlist….
+    @State private var playlistName = ""
 
     var body: some View {
         let effects = currentEffects
@@ -36,9 +38,27 @@ struct RootView: View {
             ToastOverlay()
         }
         .background {
-            WindowVisibilityReader { visible in
+            WindowVisibilityReader(onChange: { visible in
                 system.windowVisible = visible
+            }, onWindow: { window in
+                system.mainWindow = window
+            })
+        }
+        .alert("New Playlist", isPresented: Binding(
+            get: { model.library.newPlaylist != nil },
+            set: { if !$0 { model.library.cancelNewPlaylist() } }
+        )) {
+            TextField("Name", text: $playlistName)
+            Button("Create") {
+                model.library.createNewPlaylist(named: playlistName)
             }
+            Button("Cancel", role: .cancel) {
+                model.library.cancelNewPlaylist()
+            }
+        }
+        .onChange(of: model.library.newPlaylist?.id) { _, _ in
+            // Every New Playlist… starts with an empty name.
+            playlistName = ""
         }
         .frame(minWidth: 900, minHeight: 600)
         .toolbar(router.nowPlayingShown ? .hidden : .visible, for: .windowToolbar)

@@ -1,11 +1,13 @@
-// Home: counts, a welcome with Add Music Folder while the library is empty, recently added albums
-// (newest first, in the core's order) and recently and most played songs.
+// Home: the library's size, then recently added albums (newest first, in the core's order) and
+// recently and most played songs; with nothing in the library and no source signed in, a welcome
+// with Add Music Folder… and Add a Source instead.
 
 import SwiftUI
 
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(LibraryStore.self) private var library
+    @Environment(SourcesStore.self) private var sources
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.palette) private var palette
 
@@ -15,7 +17,7 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.s7) {
                 PageHeader(title: String(localized: "Home"), subtitle: statsLine)
-                if home.loaded && library.isEmpty && !library.scanning {
+                if home.loaded && library.isEmpty && !library.scanning && !sources.hasSignedInSource {
                     WelcomeCard()
                 }
                 if !home.recentAlbums.isEmpty {
@@ -74,9 +76,9 @@ struct HomeView: View {
     }
 }
 
-/// Shown on Home while the library is empty.
+/// Shown on Home while the library is empty and no source is signed in.
 struct WelcomeCard: View {
-    @Environment(LibraryStore.self) private var library
+    @Environment(Router.self) private var router
     @Environment(\.palette) private var palette
 
     var body: some View {
@@ -85,18 +87,18 @@ struct WelcomeCard: View {
                 .typography(Tokens.TypeRoles.section)
                 .foregroundStyle(palette[Tokens.Ink.ink90])
                 .accessibilityAddTraits(.isHeader)
-            Text("Add the folders that hold your music. Jellyfesh reads their tags, artwork and lyrics and keeps watching them.")
+            Text("Add your music folders, or connect a server in Sources.")
                 .font(.system(size: 14))
                 .foregroundStyle(palette[Tokens.Ink.ink70])
                 .fixedSize(horizontal: false, vertical: true)
-            Button {
-                FilePanels.chooseMusicFolders { urls in
-                    for url in urls { library.addFolder(url.path) }
+            HStack(spacing: Tokens.Space.s2) {
+                AddMusicFolderButton(prominent: true)
+                Button {
+                    router.select(.sources)
+                } label: {
+                    Label("Add a Source", systemImage: "antenna.radiowaves.left.and.right")
                 }
-            } label: {
-                Label("Add Music Folder…", systemImage: "folder.badge.plus")
             }
-            .buttonStyle(.borderedProminent)
             .controlSize(.large)
         }
         .padding(Tokens.Space.s6)

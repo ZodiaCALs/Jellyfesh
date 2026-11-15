@@ -70,6 +70,14 @@ final class Router {
         path.append(route)
     }
 
+    /// Back a page (Esc): false at a section's own page, where there is nothing to go back to.
+    @discardableResult
+    func back() -> Bool {
+        guard !path.isEmpty else { return false }
+        path.removeLast()
+        return true
+    }
+
     /// Opens or closes Now Playing: it rises from the player (`player.open-now-playing`) and
     /// sinks back on Exit (`player.close-now-playing`); with `reduceMotion`, a short fade.
     func showNowPlaying(_ shown: Bool, panel: NowPlayingPanel? = nil, reduceMotion: Bool) {

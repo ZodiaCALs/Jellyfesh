@@ -77,6 +77,25 @@ final class SearchStoreTests: XCTestCase {
         XCTAssertEqual(store.sections.first?.items.compactMap(\.track), [.library(id: 1), .library(id: 2)])
     }
 
+    func testTheLibraryComesFirstThenEachSourceThatFoundSomething() {
+        let client = FakeCoreClient()
+        let store = SearchStore(client: client, tracker: CommandTracker())
+        store.search("tide")
+        let request = client.lastCommandID
+        store.apply(SearchBatch(request: request, query: "tide", source: "org.example.empty", items: [], error: nil,
+                                done: false))
+        store.apply(SearchBatch(request: request, query: "tide", source: "org.example.subsonic",
+                                items: [Fixture.result("a", source: "org.example.subsonic")], error: nil, done: false))
+        store.apply(SearchBatch(request: request, query: "tide", source: "org.example.down", items: [],
+                                error: "The server did not answer.", done: false))
+        XCTAssertNil(store.librarySection, "the library found nothing yet")
+        store.apply(SearchBatch(request: request, query: "tide", source: SearchStore.library,
+                                items: [Fixture.result("b", source: SearchStore.library)], error: nil, done: true))
+        XCTAssertEqual(store.librarySection?.source, SearchStore.library)
+        // From Your Sources: in the order they answered, without the ones that found nothing.
+        XCTAssertEqual(store.sourceSections.map(\.source), ["org.example.subsonic", "org.example.down"])
+    }
+
     func testTypingWaitsForAPause() async {
         let client = FakeCoreClient()
         let store = SearchStore(client: client, tracker: CommandTracker())
@@ -292,6 +311,30 @@ final class SourcesStoreTests: XCTestCase {
             .setPluginSettings(id: plugin.id, json: #"{"server_url":"http://old.example"}"#),
             .connectSource(preset: "navidrome", address: "http://192.168.1.20:4533", method: .passwordExchange),
         ])
+    }
+
+    func testASignInSheetOpensInTheWindowItStartedIn() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.connect(Fixture.preset(), address: "http://192.168.1.20:4533", method: .passwordExchange, in: .main)
+        XCTAssertNotNil(store.signInFlow(in: .main), "the Sources page shows it")
+        XCTAssertNil(store.signInFlow(in: .settings), "Settings does not show it as well")
+        store.beginSignIn(Fixture.plugin(), method: .passwordExchange)
+        XCTAssertNotNil(store.signInFlow(in: .settings), "Settings › Sources starts its own flows")
+        XCTAssertNil(store.signInFlow(in: .main))
+    }
+
+    func testHomeKnowsWhetherASourceIsSignedIn() {
+        let store = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        var signedIn = Fixture.plugin()
+        signedIn.account = "ada"
+        store.apply(SourcesState(version: 1, plugins: [Fixture.plugin("org.example.other")], allowCommunity: false))
+        XCTAssertFalse(store.hasSignedInSource)
+        store.apply(SourcesState(version: 2, plugins: [signedIn], allowCommunity: false))
+        XCTAssertTrue(store.hasSignedInSource)
+        signedIn.enabled = false
+        store.apply(SourcesState(version: 3, plugins: [signedIn], allowCommunity: false))
+        XCTAssertFalse(store.hasSignedInSource, "a source that is off brings no music")
     }
 
     func testSourceNames() {

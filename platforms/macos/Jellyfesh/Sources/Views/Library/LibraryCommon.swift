@@ -64,8 +64,10 @@ struct AlbumCard: View {
         .contextMenu {
             Button("Play") { playback.play(.album(id: album.id)) }
             Button("Shuffle") { playback.play(.album(id: album.id), shuffle: true) }
+            Divider()
             Button("Play Next") { playback.enqueue(.album(id: album.id), next: true) }
-            Button("Play Later") { playback.enqueue(.album(id: album.id), next: false) }
+            Button("Play Last") { playback.enqueue(.album(id: album.id), next: false) }
+            AddToPlaylistMenu(collection: .album(id: album.id))
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(album.albumArtist.map { "\(album.title), \($0)" } ?? album.title))
@@ -128,12 +130,14 @@ extension View {
     }
 }
 
-/// A centred state for an empty or failed page.
-struct EmptyState: View {
+/// A centred state for an empty or failed page, with what to do about it (not while a failure
+/// shows: the action would not help).
+struct EmptyState<Actions: View>: View {
     var title: LocalizedStringKey
     var symbol: String
     var message: LocalizedStringKey?
     var error: String?
+    @ViewBuilder var actions: Actions
 
     var body: some View {
         ContentUnavailableView {
@@ -144,6 +148,37 @@ struct EmptyState: View {
             } else if let message {
                 Text(message)
             }
+        } actions: {
+            if error == nil {
+                actions
+            }
+        }
+    }
+}
+
+extension EmptyState where Actions == EmptyView {
+    init(title: LocalizedStringKey, symbol: String, message: LocalizedStringKey? = nil, error: String? = nil) {
+        self.init(title: title, symbol: symbol, message: message, error: error) { EmptyView() }
+    }
+}
+
+/// Add Music Folder…: the folders chosen join the library (Home, the empty library pages).
+struct AddMusicFolderButton: View {
+    var prominent = false
+    @Environment(LibraryStore.self) private var library
+
+    var body: some View {
+        let button = Button {
+            FilePanels.chooseMusicFolders { urls in
+                for url in urls { library.addFolder(url.path) }
+            }
+        } label: {
+            Label("Add Music Folder…", systemImage: "folder.badge.plus")
+        }
+        if prominent {
+            button.buttonStyle(.borderedProminent)
+        } else {
+            button
         }
     }
 }

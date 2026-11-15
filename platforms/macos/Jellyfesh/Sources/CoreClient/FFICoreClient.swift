@@ -70,6 +70,10 @@ final class FFICoreClient: CoreClient, @unchecked Sendable {
         JellyfeshFFI.monotonicNowNs()
     }
 
+    func equalizerPresets() -> [EqualizerPreset] {
+        JellyfeshFFI.eqPresets().map(EqualizerPreset.init)
+    }
+
     func shutdown() {
         core.shutdown()
         listener = nil

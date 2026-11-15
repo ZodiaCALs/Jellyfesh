@@ -73,6 +73,9 @@ final class AlbumsModel {
 @MainActor
 @Observable
 final class SongsModel {
+    /// Songs per query when the whole list is read to play it.
+    static let playPageSize = 1_000
+
     private let client: CoreClient
     private(set) var sort: SongSort = .artist
     private(set) var descending = false
@@ -94,6 +97,30 @@ final class SongsModel {
     /// The query of the loaded order, to play the list from a row.
     var query: SongQuery {
         SongQuery(offset: 0, limit: 0, sort: sort, descending: descending)
+    }
+
+    /// Play and Shuffle on the Songs page: every song, in this order or shuffled by the core. The
+    /// core has no collection for the whole library, so they go as a list of tracks; should
+    /// reading them fail, the songs loaded so far play.
+    func playAll(shuffle: Bool, on playback: PlaybackStore) async {
+        var tracks = list.items.map(\.reference)
+        if let all = try? await allTracks() {
+            tracks = all
+        }
+        guard !tracks.isEmpty else { return }
+        playback.play(.tracks(tracks), shuffle: shuffle)
+    }
+
+    /// Every song in this order, a page at a time.
+    func allTracks() async throws -> [TrackReference] {
+        var tracks: [TrackReference] = []
+        var page: [Song] = []
+        repeat {
+            page = try await client.songs(SongQuery(offset: tracks.count, limit: Self.playPageSize, sort: sort,
+                                                    descending: descending))
+            tracks.append(contentsOf: page.map(\.reference))
+        } while page.count == Self.playPageSize && tracks.count < LibraryStore.trackLimit
+        return tracks
     }
 
     private static func makeList(client: CoreClient, sort: SongSort, descending: Bool) -> PagedList<Song> {

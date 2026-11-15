@@ -234,7 +234,9 @@ private struct LevelBars: View {
     }
 }
 
-/// Play Next, Play Later, Add to Playlist, Favourite, Go to Album, Show in Finder.
+/// A song's menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to or Remove from
+/// Favourites, Go to Album, Go to Artist and Show in Finder. Rows that do not carry a library
+/// song's album or file look them up when chosen.
 struct TrackActionsMenu: View {
     /// The rows the actions apply to (the selection, or the row clicked).
     var items: [TrackItem]
@@ -249,17 +251,14 @@ struct TrackActionsMenu: View {
 
     var body: some View {
         if !tracks.isEmpty {
-            Button("Play") {
-                playback.play(tracks: tracks)
-            }
             Button("Play Next") {
                 playback.enqueue(tracks, next: true)
             }
-            Button("Play Later") {
+            Button("Play Last") {
                 playback.enqueue(tracks, next: false)
             }
             Divider()
-            AddToPlaylistMenu(tracks: tracks)
+            AddToPlaylistMenu(collection: .tracks(tracks))
             if items.count == 1, let item = items.first, let track = item.track {
                 if item.favorite == true {
                     Button("Remove from Favourites") { library.setFavorite(track, false) }
@@ -273,42 +272,151 @@ struct TrackActionsMenu: View {
             }
         }
         if items.count == 1, let item = items.first {
-            if let albumID = item.albumID {
+            if !tracks.isEmpty && (Self.hasAlbum(item) || Self.hasArtist(item) || Self.hasFile(item)) {
                 Divider()
-                Button("Go to Album") {
-                    router.showNowPlaying(false, reduceMotion: true)
-                    router.open(.album(AlbumSummary(id: albumID, title: item.album ?? "", albumArtist: item.artist,
-                                                    year: nil, trackCount: 0, artworkHash: nil)))
-                }
             }
-            if let path = item.path {
-                Button("Show in Finder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-                }
+            if Self.hasAlbum(item) {
+                Button("Go to Album") { goToAlbum(item) }
+            }
+            if Self.hasArtist(item) {
+                Button("Go to Artist") { goToArtist(item) }
+            }
+            if Self.hasFile(item) {
+                Button("Show in Finder") { showInFinder(item) }
             }
         }
     }
+
+    /// The library id of a library song.
+    private static func songID(_ item: TrackItem) -> Int64? {
+        if case .library(let id)? = item.track { return id }
+        return nil
+    }
+
+    /// A file played without the library.
+    private static func filePath(_ item: TrackItem) -> String? {
+        if case .file(let path)? = item.track { return path }
+        return nil
+    }
+
+    private static func hasAlbum(_ item: TrackItem) -> Bool {
+        item.albumID != nil || (songID(item) != nil && !(item.album ?? "").isEmpty)
+    }
+
+    private static func hasArtist(_ item: TrackItem) -> Bool {
+        songID(item) != nil && !(item.artist ?? "").isEmpty
+    }
+
+    private static func hasFile(_ item: TrackItem) -> Bool {
+        item.path != nil || filePath(item) != nil || songID(item) != nil
+    }
+
+    private func goToAlbum(_ item: TrackItem) {
+        router.showNowPlaying(false, reduceMotion: true)
+        if let albumID = item.albumID {
+            router.open(.album(AlbumSummary(id: albumID, title: item.album ?? "", albumArtist: item.artist,
+                                            year: nil, trackCount: 0, artworkHash: nil)))
+            return
+        }
+        guard let id = Self.songID(item) else { return }
+        Task { @MainActor in
+            guard let song = await library.song(id: id), let albumID = song.albumID else { return }
+            router.open(.album(AlbumSummary(id: albumID, title: song.album ?? "",
+                                            albumArtist: song.albumArtist ?? song.artist, year: song.year,
+                                            trackCount: 0, artworkHash: song.artworkHash)))
+        }
+    }
+
+    private func goToArtist(_ item: TrackItem) {
+        guard let name = item.artist else { return }
+        router.showNowPlaying(false, reduceMotion: true)
+        Task { @MainActor in
+            if let artist = await library.artist(named: name) {
+                router.open(.artist(artist))
+            }
+        }
+    }
+
+    private func showInFinder(_ item: TrackItem) {
+        if let path = item.path ?? Self.filePath(item) {
+            Self.reveal(path)
+            return
+        }
+        guard let id = Self.songID(item) else { return }
+        Task { @MainActor in
+            if let song = await library.song(id: id) {
+                Self.reveal(song.path)
+            }
+        }
+    }
+
+    private static func reveal(_ path: String) {
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
 }
 
-/// The playlists to add tracks to, and a new one.
+/// Add to Playlist…: a new playlist (named first) or one of the person's, for the songs chosen or a
+/// whole album, artist or playlist. `excluding` leaves out the playlist whose page it is on.
 struct AddToPlaylistMenu: View {
-    var tracks: [TrackReference]
+    var collection: CollectionReference
+    var excluding: Int64?
     @Environment(LibraryStore.self) private var library
 
     var body: some View {
-        Menu("Add to Playlist") {
-            Button("New Playlist") {
-                library.createPlaylist(name: String(localized: "New Playlist"), tracks: tracks)
+        Menu("Add to Playlist…") {
+            Button("New Playlist…") {
+                library.askForNewPlaylist(with: collection)
             }
-            if !library.playlists.isEmpty {
+            if !targets.isEmpty {
                 Divider()
-                ForEach(library.playlists) { playlist in
+                ForEach(targets) { playlist in
                     Button(playlist.name) {
-                        library.add(tracks, toPlaylist: playlist.id)
+                        library.add(collection, toPlaylist: playlist.id)
                     }
                 }
             }
         }
+    }
+
+    private var targets: [PlaylistInfo] {
+        library.playlists.filter { $0.id != excluding }
+    }
+}
+
+/// The More menu of an album, artist or playlist page (docs/ui.md): Play Next, Play Last and Add
+/// to Playlist…, then what the page adds (a playlist's Rename…, Export Playlist… and Delete
+/// Playlist…).
+struct CollectionMoreMenu<Extra: View>: View {
+    var collection: CollectionReference
+    /// The playlist whose page this is, left out of Add to Playlist….
+    var playlistID: Int64?
+    @ViewBuilder var extra: Extra
+    @Environment(PlaybackStore.self) private var playback
+
+    var body: some View {
+        Menu {
+            Button("Play Next") {
+                playback.enqueue(collection, next: true)
+            }
+            Button("Play Last") {
+                playback.enqueue(collection, next: false)
+            }
+            AddToPlaylistMenu(collection: collection, excluding: playlistID)
+            extra
+        } label: {
+            Label("More", systemImage: "ellipsis")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .fixedSize()
+        .accessibilityLabel(Text("More Actions"))
+    }
+}
+
+extension CollectionMoreMenu where Extra == EmptyView {
+    init(collection: CollectionReference) {
+        self.init(collection: collection, playlistID: nil) { EmptyView() }
     }
 }
 
@@ -345,28 +453,50 @@ extension PageHeader where Actions == EmptyView {
     }
 }
 
-/// Play (the page's one accent fill) and Shuffle (glass) for a collection, as a page's actions.
+/// Play (the page's one accent fill) and Shuffle (glass), as a page's actions: for a collection
+/// the core plays, or for a list it has no collection for (Songs), which `play` plays.
 struct PlayShuffleButtons: View {
-    var collection: CollectionReference
-    var disabled = false
+    private let collection: CollectionReference?
+    private let action: ((_ shuffle: Bool) -> Void)?
+    private let disabled: Bool
     @Environment(PlaybackStore.self) private var playback
+
+    init(collection: CollectionReference, disabled: Bool = false) {
+        self.collection = collection
+        self.action = nil
+        self.disabled = disabled
+    }
+
+    init(disabled: Bool = false, play: @escaping (_ shuffle: Bool) -> Void) {
+        self.collection = nil
+        self.action = play
+        self.disabled = disabled
+    }
 
     var body: some View {
         HStack(spacing: Tokens.Space.s2) {
             Button {
-                playback.play(collection)
+                play(shuffle: false)
             } label: {
                 Label("Play", systemImage: "play.fill")
             }
             .buttonStyle(PillButtonStyle(prominent: true))
             Button {
-                playback.play(collection, shuffle: true)
+                play(shuffle: true)
             } label: {
                 Label("Shuffle", systemImage: "shuffle")
             }
             .buttonStyle(PillButtonStyle(prominent: false))
         }
         .disabled(disabled)
+    }
+
+    private func play(shuffle: Bool) {
+        if let action {
+            action(shuffle)
+        } else if let collection {
+            playback.play(collection, shuffle: shuffle)
+        }
     }
 }
 

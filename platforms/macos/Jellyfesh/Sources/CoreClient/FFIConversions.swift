@@ -220,6 +220,12 @@ extension EqualizerConfig {
     }
 }
 
+extension EqualizerPreset {
+    init(_ p: EqPreset) {
+        self.init(id: p.id, settings: EqualizerConfig(p.settings))
+    }
+}
+
 extension ReplayGainOption {
     init(_ m: ReplayGainMode) {
         switch m {

@@ -1,5 +1,6 @@
-// Songs: every track, sorted by the core, a page at a time. Playing from a row queues the rows
-// loaded so far, from that row; more load as the list scrolls.
+// Songs: Play and Shuffle for every song, then every track, sorted by the core, a page at a time.
+// Playing from a row queues the rows loaded so far, from that row; more load as the list scrolls.
+// And Favourites: the songs marked with the heart.
 
 import SwiftUI
 
@@ -16,10 +17,16 @@ struct SongsView: View {
         let list = songs.list
         let items = list.items.map { TrackItem(song: $0, favorite: favorites.contains($0.reference)) }
         List(selection: $selection) {
-            PageHeader(title: String(localized: "Songs"), subtitle: subtitle)
-                .padding(.vertical, Tokens.Space.s4)
-                .trackListRow()
-                .selectionDisabled()
+            PageHeader(title: String(localized: "Songs"), subtitle: subtitle) {
+                PlayShuffleButtons(disabled: list.items.isEmpty) { shuffle in
+                    Task { @MainActor in
+                        await songs.playAll(shuffle: shuffle, on: playback)
+                    }
+                }
+            }
+            .padding(.vertical, Tokens.Space.s4)
+            .trackListRow()
+            .selectionDisabled()
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 TrackRowView(item: item, isCurrent: item.track == playback.nowPlaying?.track,
                              isPlaying: playback.isPlaying)
@@ -34,8 +41,10 @@ struct SongsView: View {
         }
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
-                EmptyState(title: "No Songs", symbol: "music.note",
-                           message: "Songs appear here once your music folders are scanned.", error: list.error)
+                EmptyState(title: "No Songs Yet", symbol: "music.note",
+                           message: "Add a music folder to see your albums here.", error: list.error) {
+                    AddMusicFolderButton()
+                }
             }
         }
         .navigationTitle(Text("Songs"))
@@ -46,12 +55,11 @@ struct SongsView: View {
                         get: { songs.sort },
                         set: { sort in Task { @MainActor in await songs.setSort(sort, descending: songs.descending, revision: library.revision) } }
                     )) {
-                        Text("Artist").tag(SongSort.artist)
                         Text("Title").tag(SongSort.title)
+                        Text("Artist").tag(SongSort.artist)
                         Text("Album").tag(SongSort.album)
                         Text("Year").tag(SongSort.year)
-                        Text("Duration").tag(SongSort.duration)
-                        Text("Date Added").tag(SongSort.added)
+                        Text("Recently Added").tag(SongSort.added)
                     }
                     .pickerStyle(.inline)
                     Toggle("Descending", isOn: Binding(
@@ -115,7 +123,7 @@ struct FavoritesView: View {
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
                 EmptyState(title: "No Favourites Yet", symbol: "heart",
-                           message: "Mark songs you love with Add to Favourites. They gather here.", error: list.error)
+                           message: "Songs you mark with the heart appear here.", error: list.error)
             }
         }
         .navigationTitle(Text("Favourites"))

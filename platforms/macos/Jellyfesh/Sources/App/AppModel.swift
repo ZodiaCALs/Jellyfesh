@@ -40,7 +40,7 @@ final class AppModel {
 
     private let nowPlayingCenter: NowPlayingCenter
     private let dockIcon: DockIcon
-    private let spaceKey: SpaceKeyMonitor
+    private let keys: SharedKeyMonitor
     @ObservationIgnored private var deviceWatcher: DeviceWatcher?
     @ObservationIgnored private var started = false
     @ObservationIgnored private var appliedAppearance: AppearanceOption?
@@ -68,7 +68,7 @@ final class AppModel {
         pages = LibraryPages(client: client)
         nowPlayingCenter = NowPlayingCenter(playback: playback, artwork: artwork)
         dockIcon = DockIcon()
-        spaceKey = SpaceKeyMonitor()
+        keys = SharedKeyMonitor()
     }
 
     /// Starts the core in the default folders with the plugins bundled in the app. When it
@@ -109,15 +109,19 @@ final class AppModel {
         }
         watcher.start()
         deviceWatcher = watcher
-        spaceKey.start { [weak self] in
+        keys.start(playPause: { [weak self] in
             self?.playback.togglePlayPause()
-        }
+        }, skip: { [weak self] forward in
+            self?.skip(forward: forward) ?? false
+        }, back: { [weak self] window in
+            self?.goBack(in: window) ?? false
+        })
     }
 
     /// Saves the session and stops the core (the app is quitting).
     func shutdown() {
         deviceWatcher?.stop()
-        spaceKey.stop()
+        keys.stop()
         client.shutdown()
     }
 
@@ -229,5 +233,18 @@ final class AppModel {
     func showSettings(_ tab: SettingsTab, using openSettings: OpenSettingsAction) {
         settingsTab = tab
         openSettings()
+    }
+
+    /// Shift-Right and Shift-Left: 5 seconds forward or back, while something plays.
+    private func skip(forward: Bool) -> Bool {
+        guard playback.hasTrack else { return false }
+        playback.seek(byUs: forward ? 5_000_000 : -5_000_000)
+        return true
+    }
+
+    /// Esc in the main window goes back a page; Now Playing closes on its own Esc.
+    private func goBack(in window: NSWindow) -> Bool {
+        guard window === system.mainWindow, !router.nowPlayingShown else { return false }
+        return router.back()
     }
 }

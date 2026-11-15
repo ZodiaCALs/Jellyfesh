@@ -180,6 +180,42 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(toasts.message, "settings could not be saved")
     }
 
+    func testPresetsComeFromTheCore() {
+        let client = FakeCoreClient()
+        client.equalizerPresetsResult = Fixture.equalizerPresets
+        let store = SettingsStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        XCTAssertEqual(store.equalizerPresets.map(\.id), ["flat", "bass_boost", "vocal", "treble"])
+        XCTAssertEqual(EqualizerPresetText.name("bass_boost"), String(localized: "Bass Boost"))
+        XCTAssertEqual(EqualizerPresetText.name("late_night"), "Late night", "an id this build does not know")
+    }
+
+    func testThePresetFollowsTheBandsAndShowsCustomOnceOneMoves() {
+        let client = FakeCoreClient()
+        client.equalizerPresetsResult = Fixture.equalizerPresets
+        let store = SettingsStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        // The preamp and the switch are not part of the choice.
+        let boosted = Fixture.equalizer([6, 5, 4, 2, 0.5, 0, 0, 0, 0, 0], preampDb: -3, enabled: false)
+        XCTAssertEqual(store.equalizerPreset(matching: boosted)?.id, "bass_boost")
+        var moved = boosted
+        moved.bands[9].gainDb = 1.5
+        XCTAssertNil(store.equalizerPreset(matching: moved), "Custom")
+        XCTAssertNil(store.equalizerPreset(matching: EqualizerConfig(enabled: false, preampDb: 0, bands: [])))
+    }
+
+    func testApplyingAPresetSendsItsSettings() {
+        let client = FakeCoreClient()
+        client.equalizerPresetsResult = Fixture.equalizerPresets
+        let store = SettingsStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.apply(.defaults)
+        store.applyEqualizerPreset(Fixture.equalizerPresets[2])
+        guard case .setSettings(let sent)? = client.sent.last else {
+            return XCTFail("expected SetSettings")
+        }
+        XCTAssertEqual(sent.eq, Fixture.equalizerPresets[2].settings)
+        XCTAssertTrue(sent.eq.enabled, "a preset switches the equalizer on")
+        XCTAssertEqual(store.equalizerPreset(matching: store.current.eq)?.id, "vocal")
+    }
+
     func testIconChoicesMatchTheTokens() {
         let ids = AppIconChoice.allCases.dropFirst().map(\.rawValue).joined(separator: ", ")
         XCTAssertEqual(ids, Tokens.Brand.iconOptions)
@@ -232,6 +268,69 @@ final class LibraryStoreTests: XCTestCase {
         XCTAssertEqual(client.sent.last, .renamePlaylist(id: 3, name: "Evening"))
     }
 
+    func testNewPlaylistAsksForTheNameFirst() {
+        let client = FakeCoreClient()
+        let store = LibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.askForNewPlaylist()
+        XCTAssertNotNil(store.newPlaylist)
+        XCTAssertTrue(client.sent.isEmpty, "nothing is made before the name")
+        store.createNewPlaylist(named: "  Road Trip ")
+        XCTAssertEqual(client.sent, [.createPlaylist(name: "Road Trip", tracks: [])])
+        XCTAssertNil(store.newPlaylist)
+        // The playlist opens once the core names it.
+        store.playlistCreated(request: client.lastCommandID, id: 12)
+        XCTAssertEqual(store.consumeCreatedPlaylist(), 12)
+    }
+
+    func testABlankNameGivesTheDefaultAndCancelMakesNothing() {
+        let client = FakeCoreClient()
+        let store = LibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.askForNewPlaylist()
+        store.cancelNewPlaylist()
+        store.createNewPlaylist(named: "Ignored")
+        XCTAssertTrue(client.sent.isEmpty)
+        store.askForNewPlaylist(with: .tracks([.library(id: 4)]))
+        store.createNewPlaylist(named: " ")
+        XCTAssertEqual(client.sent, [.createPlaylist(name: String(localized: "New Playlist"), tracks: [.library(id: 4)])])
+    }
+
+    func testAnAlbumGoesIntoAPlaylistAsItsSongs() async {
+        let client = FakeCoreClient()
+        client.songsResult = [Fixture.song(1, album: 7), Fixture.song(2, album: 7), Fixture.song(3, album: 8)]
+        let store = LibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.add(.album(id: 7), toPlaylist: 5)
+        await eventually { !client.sent.isEmpty }
+        XCTAssertEqual(client.sent, [.addToPlaylist(id: 5, tracks: [.library(id: 1), .library(id: 2)])])
+        // Songs chosen in a list go at once.
+        store.add(.tracks([.library(id: 3)]), toPlaylist: 5)
+        XCTAssertEqual(client.sent.last, .addToPlaylist(id: 5, tracks: [.library(id: 3)]))
+    }
+
+    func testANewPlaylistFromAPageStartsWithItsSongs() async {
+        let client = FakeCoreClient()
+        client.songsResult = [Fixture.song(1, album: 7), Fixture.song(2, album: 7)]
+        let store = LibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.askForNewPlaylist(with: .album(id: 7))
+        store.createNewPlaylist(named: "Album Mix")
+        await eventually { !client.sent.isEmpty }
+        XCTAssertEqual(client.sent, [.createPlaylist(name: "Album Mix", tracks: [.library(id: 1), .library(id: 2)])])
+    }
+
+    func testAPlaylistIsReadPageByPage() async throws {
+        let client = FakeCoreClient()
+        client.playlistEntriesResult[3] = (0..<1_200).map { index in
+            PlaylistRow(entryID: Int64(index), position: UInt32(index),
+                        row: SongRow(track: .library(id: Int64(index)), title: "Song", artist: nil, album: nil,
+                                     durationMs: nil, artwork: nil, artworkHash: nil, favorite: false, missing: false))
+        }
+        let store = LibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let tracks = try await store.tracks(of: .playlist(id: 3))
+        XCTAssertEqual(tracks.count, 1_200)
+        XCTAssertEqual(tracks.last, .library(id: 1_199))
+        let none = try await store.tracks(of: .source(plugin: "p", id: "x"))
+        XCTAssertTrue(none.isEmpty, "a source's container has no tracks to add")
+    }
+
     func testTheRevisionRefreshesFoldersAndPlaylists() async {
         let client = FakeCoreClient()
         client.rootsResult = ["/Music"]
@@ -240,6 +339,47 @@ final class LibraryStoreTests: XCTestCase {
         let store = LibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
         store.apply(revision: 3)
         await eventually { store.roots == ["/Music"] && store.playlists.count == 1 }
+    }
+}
+
+@MainActor
+final class SongsPageTests: XCTestCase {
+    func testPlayAndShuffleTakeEverySongInTheOrderShown() async {
+        let client = FakeCoreClient()
+        client.songsResult = (1...2_500).map { Fixture.song(Int64($0)) }
+        let model = SongsModel(client: client)
+        let playback = PlaybackStore(client: client, tracker: CommandTracker())
+        await model.playAll(shuffle: true, on: playback)
+        guard case .playCollection(.tracks(let tracks), let start, let shuffle)? = client.sent.last else {
+            return XCTFail("expected PlayCollection")
+        }
+        XCTAssertEqual(tracks.count, 2_500, "every song, not only the rows loaded")
+        XCTAssertEqual(tracks.first, .library(id: 1))
+        XCTAssertEqual(start, 0)
+        XCTAssertTrue(shuffle)
+    }
+
+    func testAnEmptyLibraryPlaysNothing() async {
+        let client = FakeCoreClient()
+        let model = SongsModel(client: client)
+        await model.playAll(shuffle: false, on: PlaybackStore(client: client, tracker: CommandTracker()))
+        XCTAssertTrue(client.sent.isEmpty)
+    }
+}
+
+@MainActor
+final class RouterTests: XCTestCase {
+    func testEscGoesBackAPageAtATime() {
+        let router = Router()
+        router.select(.playlists)
+        router.open(.playlist(1))
+        router.open(.playlist(2))
+        XCTAssertTrue(router.back())
+        XCTAssertEqual(router.path, [.playlist(1)])
+        XCTAssertTrue(router.back())
+        XCTAssertTrue(router.path.isEmpty)
+        XCTAssertFalse(router.back(), "a section's own page has nothing to go back to")
+        XCTAssertEqual(router.selection, .playlists)
     }
 }
 

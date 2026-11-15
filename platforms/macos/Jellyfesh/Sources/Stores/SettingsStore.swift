@@ -12,6 +12,8 @@ final class SettingsStore {
     private let tracker: CommandTracker
     private let toasts: ToastCenter
 
+    /// The equalizer presets, in the core's order (`eq_presets()`).
+    let equalizerPresets: [EqualizerPreset]
     /// The settings as the core last reported them.
     private(set) var settings: AppSettings = .defaults
     /// The copy sent last, shown until the core reports it back. Every change builds on it, so
@@ -27,6 +29,7 @@ final class SettingsStore {
         self.client = client
         self.tracker = tracker
         self.toasts = toasts
+        equalizerPresets = client.equalizerPresets()
     }
 
     /// What controls show: the change in flight, else the core's settings.
@@ -96,6 +99,28 @@ final class SettingsStore {
     func setPreamp(_ db: Float) { update { $0.preampDb = min(max(db, -15), 15) } }
     func setEqualizer(_ eq: EqualizerConfig) { update { $0.eq = eq } }
     func setResumeOnLaunch(_ value: Bool) { update { $0.resumeOnLaunch = value } }
+
+    /// Applies a preset as the core defines it: its bands, switched on, with a 0 dB preamp.
+    func applyEqualizerPreset(_ preset: EqualizerPreset) { setEqualizer(preset.settings) }
+
+    /// The preset with these bands, or nil once a band has moved (the Preset picker shows Custom).
+    /// The preamp and the on/off switch are not part of the choice.
+    func equalizerPreset(matching eq: EqualizerConfig) -> EqualizerPreset? {
+        equalizerPresets.first { Self.sameBands($0.settings.bands, eq.bands) }
+    }
+
+    /// Bands that sound the same: shape, frequency, width and gain, within what the sliders show.
+    nonisolated static func sameBands(_ a: [EqualizerBand], _ b: [EqualizerBand]) -> Bool {
+        guard a.count == b.count else { return false }
+        for (x, y) in zip(a, b) {
+            let sameShape = x.kind == y.kind && x.enabled == y.enabled
+            let sameFrequency: Bool = abs(x.freqHz - y.freqHz) < 0.5
+            let sameWidth: Bool = abs(x.q - y.q) < 0.01
+            let sameGain: Bool = abs(x.gainDb - y.gainDb) < 0.05
+            if !(sameShape && sameFrequency && sameWidth && sameGain) { return false }
+        }
+        return true
+    }
 
     // MARK: Library and sources
 

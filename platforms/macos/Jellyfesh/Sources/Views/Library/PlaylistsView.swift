@@ -1,5 +1,6 @@
-// Playlists: the person's playlists, new and imported ones, and a playlist's page with its entries
-// in order (drag to reorder, Delete to remove), Rename, Export as M3U and Delete.
+// Playlists: the person's playlists, new (named first) and imported ones, and a playlist's page
+// with its entries in order (drag to reorder, Delete to remove) and More: Play Next, Play Last, Add
+// to Playlist…, Rename…, Export Playlist… (M3U8) and Delete Playlist… (which asks first).
 
 import SwiftUI
 
@@ -15,14 +16,14 @@ struct PlaylistsView: View {
                        subtitle: library.playlists.isEmpty ? nil : String(localized: "\(library.playlists.count) playlists")) {
                 HStack(spacing: Tokens.Space.s2) {
                     Button {
-                        library.createPlaylist(name: String(localized: "New Playlist"))
+                        library.askForNewPlaylist()
                     } label: {
-                        Label("New Playlist", systemImage: "plus")
+                        Label("New Playlist…", systemImage: "plus")
                     }
                     Button {
                         FilePanels.choosePlaylist { url in library.importPlaylist(url.path) }
                     } label: {
-                        Label("Import…", systemImage: "square.and.arrow.down")
+                        Label("Import Playlist…", systemImage: "square.and.arrow.down")
                     }
                 }
                 .buttonStyle(.bordered)
@@ -54,10 +55,12 @@ struct PlaylistsView: View {
                 .contextMenu {
                     Button("Play") { playback.play(.playlist(id: playlist.id)) }
                     Button("Shuffle") { playback.play(.playlist(id: playlist.id), shuffle: true) }
-                    Button("Play Next") { playback.enqueue(.playlist(id: playlist.id), next: true) }
-                    Button("Play Later") { playback.enqueue(.playlist(id: playlist.id), next: false) }
                     Divider()
-                    Button("Export…") {
+                    Button("Play Next") { playback.enqueue(.playlist(id: playlist.id), next: true) }
+                    Button("Play Last") { playback.enqueue(.playlist(id: playlist.id), next: false) }
+                    AddToPlaylistMenu(collection: .playlist(id: playlist.id), excluding: playlist.id)
+                    Divider()
+                    Button("Export Playlist…") {
                         FilePanels.savePlaylist(named: playlist.name) { url in
                             Task { @MainActor in await library.exportPlaylist(playlist.id, to: url.path) }
                         }
@@ -68,8 +71,12 @@ struct PlaylistsView: View {
         .fieldList()
         .overlay {
             if library.playlists.isEmpty {
-                EmptyState(title: "No Playlists", symbol: "music.note.list",
-                           message: "Make one with New Playlist, or import an M3U file.")
+                EmptyState(title: "No Playlists Yet", symbol: "music.note.list",
+                           message: "Make a playlist to keep songs together.") {
+                    Button("New Playlist…") {
+                        library.askForNewPlaylist()
+                    }
+                }
             }
         }
         .navigationTitle(Text("Playlists"))
@@ -174,26 +181,20 @@ struct PlaylistDetailView: View {
                 .foregroundStyle(palette[Tokens.Ink.ink70])
                 HStack(spacing: Tokens.Space.s2) {
                     PlayShuffleButtons(collection: .playlist(id: playlistID), disabled: count == 0)
-                    Menu {
+                    CollectionMoreMenu(collection: .playlist(id: playlistID), playlistID: playlistID) {
+                        Divider()
                         Button("Rename…") {
                             newName = info?.name ?? ""
                             renaming = true
                         }
-                        Button("Export…") {
+                        Button("Export Playlist…") {
                             FilePanels.savePlaylist(named: info?.name ?? String(localized: "Playlist")) { url in
                                 Task { @MainActor in await library.exportPlaylist(playlistID, to: url.path) }
                             }
                         }
                         Divider()
-                        Button("Delete…", role: .destructive) { confirmDelete = true }
-                    } label: {
-                        Label("More", systemImage: "ellipsis")
+                        Button("Delete Playlist…", role: .destructive) { confirmDelete = true }
                     }
-                    .menuStyle(.button)
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .fixedSize()
-                    .accessibilityLabel(Text("More Actions"))
                 }
                 .padding(.top, Tokens.Space.s2)
             }

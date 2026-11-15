@@ -24,6 +24,8 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     var statsResult = LibraryStatistics(roots: 0, tracks: 0, albums: 0, artists: 0, artwork: 0,
                                         totalDurationMs: 0, totalBytes: 0)
     var playlistsResult: [PlaylistInfo] = []
+    var playlistEntriesResult: [Int64: [PlaylistRow]] = [:]
+    var equalizerPresetsResult: [EqualizerPreset] = []
     var mutedResult = false
     /// When set, every query throws it.
     var failure: CoreClientError?
@@ -48,6 +50,7 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     var lastCommandID: CommandID { lastID }
 
     func monotonicNowNs() -> UInt64 { nowNs }
+    func equalizerPresets() -> [EqualizerPreset] { equalizerPresetsResult }
     func shutdown() {}
 
     private func check() throws {
@@ -101,7 +104,11 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     func mostPlayed(limit: Int) async throws -> [SongRow] { try check(); return [] }
     func playlists() async throws -> [PlaylistInfo] { try check(); return playlistsResult }
     func playlist(id: Int64) async throws -> PlaylistInfo? { try check(); return playlistsResult.first { $0.id == id } }
-    func playlistEntries(id: Int64, offset: Int, limit: Int) async throws -> [PlaylistRow] { try check(); return [] }
+    func playlistEntries(id: Int64, offset: Int, limit: Int) async throws -> [PlaylistRow] {
+        try check()
+        return Array((playlistEntriesResult[id] ?? []).dropFirst(offset).prefix(limit))
+    }
+
     func exportPlaylist(id: Int64, to path: String) async throws { try check() }
     func favorites(offset: Int, limit: Int) async throws -> [SongRow] { try check(); return [] }
 
@@ -187,6 +194,23 @@ enum Fixture {
         SourcePreset(id: id, name: name, plugin: plugin, signInMethods: methods, needsAddress: needsAddress,
                      address: nil, addressExample: needsAddress ? "http://192.168.1.20:4533" : nil, account: nil)
     }
+
+    /// Ten one-octave peaking bands with these gains, as the core's presets have them.
+    static func equalizer(_ gains: [Float], preampDb: Float = 0, enabled: Bool = true) -> EqualizerConfig {
+        let frequencies: [Float] = [31, 62, 125, 250, 500, 1_000, 2_000, 4_000, 8_000, 16_000]
+        let bands = zip(frequencies, gains).map { frequency, gain in
+            EqualizerBand(kind: .peaking, freqHz: frequency, gainDb: gain, q: 1.41, enabled: true)
+        }
+        return EqualizerConfig(enabled: enabled, preampDb: preampDb, bands: bands)
+    }
+
+    /// The core's four presets (`eq_presets()`), in its order.
+    static let equalizerPresets: [EqualizerPreset] = [
+        EqualizerPreset(id: "flat", settings: Fixture.equalizer([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])),
+        EqualizerPreset(id: "bass_boost", settings: Fixture.equalizer([6, 5, 4, 2, 0.5, 0, 0, 0, 0, 0])),
+        EqualizerPreset(id: "vocal", settings: Fixture.equalizer([-2, -2, -1, 0, 1.5, 3, 3, 2, 0, -1])),
+        EqualizerPreset(id: "treble", settings: Fixture.equalizer([0, 0, 0, 0, 0, 0, 1.5, 3, 4.5, 6])),
+    ]
 
     static func result(_ id: String, source: String, kind: ResultKind = .track,
                        track: TrackReference? = nil) -> SourceResult {

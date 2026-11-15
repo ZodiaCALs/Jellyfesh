@@ -1,5 +1,5 @@
-// Library: the music folders (add, remove, show), rescanning, watching folders for changes, and
-// what the last scan did.
+// Library, in the order of docs/ui.md: the music folders (show, remove, add), watching folders for
+// changes, and rescanning with the scan's progress and what the last scan did.
 
 import AppKit
 import SwiftUI
@@ -39,22 +39,17 @@ struct LibrarySettings: View {
                             Image(systemName: "minus.circle")
                         }
                         .buttonStyle(.borderless)
-                        .help(Text("Remove Folder"))
-                        .accessibilityLabel(Text("Remove Folder"))
+                        .help(Text("Remove Folder…"))
+                        .accessibilityLabel(Text("Remove Folder…"))
                     }
                 }
                 HStack {
+                    Spacer()
                     Button("Add Folder…") {
                         FilePanels.chooseMusicFolders { urls in
                             for url in urls { library.addFolder(url.path) }
                         }
                     }
-                    Spacer()
-                    Button("Rescan Library") {
-                        library.rescan()
-                    }
-                    .disabled(library.scanning || library.roots.isEmpty)
-                    .help(Text("Look for new, changed and removed files."))
                 }
             } header: {
                 Text("Music Folders")
@@ -69,17 +64,16 @@ struct LibrarySettings: View {
                     Text("Watch Folders")
                     Text("Update the library when files change.")
                 }
-                if let stats = library.stats, stats.tracks > 0 {
-                    LabeledContent("Library") {
-                        Text(CountText.joined([
-                            CountText.songs(Int(stats.tracks)),
-                            CountText.albums(Int(stats.albums)),
-                            CountText.artists(Int(stats.artists)),
-                        ]))
+            }
+
+            Section {
+                LabeledContent {
+                    Button("Rescan Library") {
+                        library.rescan()
                     }
-                    LabeledContent("Size") {
-                        Text(ByteCountFormatter.string(fromByteCount: Int64(clamping: stats.totalBytes), countStyle: .file))
-                    }
+                    .disabled(library.scanning || library.roots.isEmpty)
+                } label: {
+                    Text("Look for new, changed and removed files.")
                 }
                 scanStatus
             }

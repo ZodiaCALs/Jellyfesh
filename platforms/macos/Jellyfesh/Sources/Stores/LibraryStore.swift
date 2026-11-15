@@ -4,9 +4,22 @@
 import Foundation
 import Observation
 
+/// A New Playlist… waiting for its name: the window asks for one before anything is created
+/// (docs/ui.md). `contents` is what the playlist starts with: no songs (`.tracks([])`), the songs
+/// chosen, or an album, artist or playlist page's songs.
+struct NewPlaylistRequest: Identifiable, Equatable {
+    let id = UUID()
+    var contents: CollectionReference
+}
+
 @MainActor
 @Observable
 final class LibraryStore {
+    /// Rows per query when a whole collection is read (`tracks(of:)`).
+    static let pageSize = 500
+    /// At most this many songs go into a playlist at once.
+    static let trackLimit = 100_000
+
     let client: CoreClient
     private let tracker: CommandTracker
     private let toasts: ToastCenter
@@ -21,6 +34,8 @@ final class LibraryStore {
     private(set) var playlists: [PlaylistInfo] = []
     /// A playlist created from this window, to open when the core names it.
     private(set) var createdPlaylist: Int64?
+    /// The New Playlist… whose name the window is asking for.
+    private(set) var newPlaylist: NewPlaylistRequest?
 
     @ObservationIgnored private var pendingCreate: CommandID?
     @ObservationIgnored private var loadedRevision: UInt64?
@@ -99,6 +114,38 @@ final class LibraryStore {
         pendingCreate = send(.createPlaylist(name: name, tracks: tracks))
     }
 
+    /// New Playlist…: asks for the name first (the window shows the question), then makes the
+    /// playlist with `contents`.
+    func askForNewPlaylist(with contents: CollectionReference = .tracks([])) {
+        newPlaylist = NewPlaylistRequest(contents: contents)
+    }
+
+    /// The name was given: makes the playlist. A blank name gives the default one.
+    func createNewPlaylist(named name: String) {
+        guard let request = newPlaylist else { return }
+        newPlaylist = nil
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = trimmed.isEmpty ? String(localized: "New Playlist") : trimmed
+        if case .tracks(let tracks) = request.contents {
+            createPlaylist(name: title, tracks: tracks)
+            return
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let tracks = try await self.tracks(of: request.contents)
+                self.createPlaylist(name: title, tracks: tracks)
+            } catch {
+                self.toasts.show(CoreClientError.describe(error))
+            }
+        }
+    }
+
+    /// The question was dismissed: nothing is made.
+    func cancelNewPlaylist() {
+        newPlaylist = nil
+    }
+
     func renamePlaylist(_ id: Int64, to name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -112,6 +159,79 @@ final class LibraryStore {
     func add(_ tracks: [TrackReference], toPlaylist id: Int64) {
         guard !tracks.isEmpty else { return }
         send(.addToPlaylist(id: id, tracks: tracks))
+    }
+
+    /// Add to Playlist… for songs, or for a whole album, artist or playlist: the core adds tracks,
+    /// so a collection's are read first, in its order.
+    func add(_ collection: CollectionReference, toPlaylist id: Int64) {
+        if case .tracks(let tracks) = collection {
+            add(tracks, toPlaylist: id)
+            return
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let tracks = try await self.tracks(of: collection)
+                self.add(tracks, toPlaylist: id)
+            } catch {
+                self.toasts.show(CoreClientError.describe(error))
+            }
+        }
+    }
+
+    /// A library collection's tracks in its order (the core's queries page them). A source's
+    /// containers have none here: the core plays them, but cannot list them for a playlist.
+    func tracks(of collection: CollectionReference) async throws -> [TrackReference] {
+        let client = self.client
+        switch collection {
+        case .tracks(let tracks):
+            return tracks
+        case .album(let id):
+            return try await client.albumSongs(albumID: id).map(\.reference)
+        case .artist(let id):
+            let songs: [Song] = try await Self.everyPage { offset, limit in
+                try await client.songs(SongQuery(offset: offset, limit: limit, sort: .album, artistID: id))
+            }
+            return songs.map(\.reference)
+        case .playlist(let id):
+            let rows: [PlaylistRow] = try await Self.everyPage { offset, limit in
+                try await client.playlistEntries(id: id, offset: offset, limit: limit)
+            }
+            return rows.map(\.row.track)
+        case .favorites:
+            let rows: [SongRow] = try await Self.everyPage { offset, limit in
+                try await client.favorites(offset: offset, limit: limit)
+            }
+            return rows.map(\.track)
+        case .source:
+            return []
+        }
+    }
+
+    /// Every page of a paged query, in order, up to `trackLimit` rows.
+    private static func everyPage<Item>(
+        _ fetch: (_ offset: Int, _ limit: Int) async throws -> [Item]
+    ) async throws -> [Item] {
+        var items: [Item] = []
+        var page: [Item] = []
+        repeat {
+            page = try await fetch(items.count, pageSize)
+            items.append(contentsOf: page)
+        } while page.count == pageSize && items.count < trackLimit
+        return items
+    }
+
+    // MARK: Lookups for a song's menu
+
+    /// A library track, for what its row does not carry (its album, its file).
+    func song(id: Int64) async -> Song? {
+        try? await client.song(id: id)
+    }
+
+    /// The library's artist with this name (Go to Artist): songs carry only the artist's name.
+    func artist(named name: String) async -> ArtistSummary? {
+        guard !name.isEmpty, let found = try? await client.searchLibrary(name, limit: 25) else { return nil }
+        return found.artists.first { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
     }
 
     func removeEntries(_ entries: [Int64], fromPlaylist id: Int64) {

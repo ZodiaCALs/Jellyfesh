@@ -7,12 +7,19 @@
 import Foundation
 import Observation
 
+/// The window whose sign-in sheet follows a flow: Settings (Sources), or the main window (its
+/// Sources page). The flow's sheet opens where it was started, and only there.
+enum SignInWindow: Hashable {
+    case settings, main
+}
+
 /// A sign-in flow in progress, as the sign-in sheet shows it.
 struct SignInFlow: Identifiable, Equatable {
     let id: UUID
     var plugin: String
     var pluginName: String
     var method: SignInMethod
+    var window: SignInWindow = .settings
     /// The core's flow id, from its first step.
     var flow: UInt64?
     /// The step to show; nil while the core prepares the first one.
@@ -69,6 +76,13 @@ final class SourcesStore {
     var plugins: [SourcePlugin] { sources.plugins }
     /// The services Add a Source offers.
     var presets: [SourcePreset] { sources.presets }
+    /// Some source is on and signed in (Home welcomes the person only while none is).
+    var hasSignedInSource: Bool { sources.plugins.contains { $0.enabled && $0.account != nil } }
+
+    /// The sign-in flow whose sheet `window` shows, if any.
+    func signInFlow(in window: SignInWindow) -> SignInFlow? {
+        signIn?.window == window ? signIn : nil
+    }
 
     func plugin(_ id: String) -> SourcePlugin? {
         sources.plugins.first { $0.id == id }
@@ -136,10 +150,10 @@ final class SourcesStore {
 
     // MARK: Sign-in
 
-    func beginSignIn(_ plugin: SourcePlugin, method: SignInMethod) {
+    func beginSignIn(_ plugin: SourcePlugin, method: SignInMethod, in window: SignInWindow = .settings) {
         // The core handles commands in order: an address still in its field arrives first.
         commitSettings(plugin.id)
-        let flowID = startFlow(plugin: plugin.id, pluginName: plugin.name, method: method)
+        let flowID = startFlow(plugin: plugin.id, pluginName: plugin.name, method: method, window: window)
         watchSignIn(client.send(.beginLogin(plugin: plugin.id, method: method)), flow: flowID)
     }
 
@@ -150,13 +164,14 @@ final class SourcesStore {
 
     /// Connects to a service from Add a Source. The core sets the address, turns the plugin on and
     /// signs in as for `beginSignIn`, so the sign-in sheet follows the same steps, under the
-    /// service's name.
-    func connect(_ preset: SourcePreset, address: String, method: SignInMethod) {
+    /// service's name, in the window it was chosen in.
+    func connect(_ preset: SourcePreset, address: String, method: SignInMethod,
+                 in window: SignInWindow = .settings) {
         guard canConnect(preset, address: address) else { return }
         // Anything still typed into the plugin's settings goes first, so it cannot replace this
         // address afterwards.
         commitSettings(preset.plugin)
-        let flowID = startFlow(plugin: preset.plugin, pluginName: preset.name, method: method)
+        let flowID = startFlow(plugin: preset.plugin, pluginName: preset.name, method: method, window: window)
         let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
         let command = CoreCommand.connectSource(preset: preset.id, address: preset.needsAddress ? trimmed : nil,
                                                 method: method)
@@ -165,12 +180,13 @@ final class SourcesStore {
 
     /// Shows a new flow in the sign-in sheet and returns its id. A flow the core is still running
     /// is cancelled first: the sheet follows one flow at a time.
-    private func startFlow(plugin: String, pluginName: String, method: SignInMethod) -> UUID {
+    private func startFlow(plugin: String, pluginName: String, method: SignInMethod,
+                           window: SignInWindow) -> UUID {
         if let current = signIn, !current.isOver, let flow = current.flow {
             client.send(.cancelLogin(plugin: current.plugin, flow: flow))
         }
         let flowID = UUID()
-        signIn = SignInFlow(id: flowID, plugin: plugin, pluginName: pluginName, method: method)
+        signIn = SignInFlow(id: flowID, plugin: plugin, pluginName: pluginName, method: method, window: window)
         return flowID
     }
 

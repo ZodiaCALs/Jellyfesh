@@ -1,6 +1,8 @@
 // The menu bar: File (playlists, folders, plugins), View (sections, search, Now Playing) and
-// Controls (transport, volume, shuffle and repeat), with the shortcuts other Mac players use.
-// Space plays and pauses through SpaceKeyMonitor, so text fields keep it.
+// Controls (transport, volume, shuffle and repeat), with the keys every Jellyfesh shares
+// (docs/ui.md, "Keyboard"). Space (play and pause), Shift-Right and Shift-Left (skip 5 seconds)
+// and Esc (back) go through SharedKeyMonitor instead of key equivalents, so text fields keep them;
+// the skip items also answer Option-Command-arrows, as before.
 
 import SwiftUI
 
@@ -32,10 +34,10 @@ private struct FileMenuItems: View {
     let model: AppModel
 
     var body: some View {
-        Button("New Playlist") {
-            model.library.createPlaylist(name: String(localized: "New Playlist"))
+        Button("New Playlist…") {
+            // The window asks for the name, then opens the playlist the core makes.
             model.router.showNowPlaying(false, reduceMotion: true)
-            model.router.select(.playlists)
+            model.library.askForNewPlaylist()
         }
         .keyboardShortcut("n")
         .disabled(model.startupError != nil)

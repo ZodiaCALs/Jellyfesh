@@ -1,5 +1,6 @@
 // The queue: what plays now and Up Next in playback order. Drag to reorder, Delete to remove,
-// double-click or Return to jump; Up Next pages past the slice's 50 entries as it scrolls.
+// double-click or Return to jump; Up Next pages past the slice's 50 entries as it scrolls, and
+// Clear Queue asks first. And Info: About This Song.
 
 import SwiftUI
 
@@ -8,6 +9,7 @@ struct QueuePanel: View {
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.palette) private var palette
     @State private var selection = Set<UInt64>()
+    @State private var confirmClear = false
 
     var body: some View {
         let rows = queue.upNextRows
@@ -42,6 +44,11 @@ struct QueuePanel: View {
                     .trackListRow()
                     .selectionDisabled()
                     .task(id: queue.upNext.count) { await queue.loadMore() }
+                } else if rows.isEmpty && queue.current != nil {
+                    NothingUpNext()
+                        .padding(.vertical, Tokens.Space.s4)
+                        .trackListRow()
+                        .selectionDisabled()
                 }
             } header: {
                 HStack {
@@ -49,14 +56,13 @@ struct QueuePanel: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(palette[Tokens.Ink.ink70])
                     Spacer()
-                    if !rows.isEmpty {
-                        Button("Clear") {
-                            playback.clearQueue()
+                    if queue.current != nil || !rows.isEmpty {
+                        Button("Clear Queue") {
+                            confirmClear = true
                         }
                         .buttonStyle(.plain)
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(palette[Tokens.Accent.accentText])
-                        .help(Text("Clear the queue"))
                     }
                 }
             }
@@ -78,11 +84,37 @@ struct QueuePanel: View {
         }
         .overlay {
             if queue.current == nil && rows.isEmpty {
-                EmptyState(title: "The Queue Is Empty", symbol: "list.bullet",
-                           message: "Play an album, a playlist or a song and it shows here.")
+                EmptyState(title: "Nothing Up Next", symbol: "list.bullet",
+                           message: "Use Play Next or Play Last on any song, album or playlist.")
             }
         }
+        .confirmationDialog(Text("Clear the Queue?"), isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Clear Queue", role: .destructive) {
+                playback.clearQueue()
+            }
+        } message: {
+            Text("Playback stops and every song is removed from the queue.")
+        }
         .accessibilityLabel(Text("Queue"))
+    }
+}
+
+/// Up Next with nothing after the song playing.
+private struct NothingUpNext: View {
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        VStack(spacing: Tokens.Space.s1) {
+            Text("Nothing Up Next")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(palette[Tokens.Ink.ink70])
+            Text("Use Play Next or Play Last on any song, album or playlist.")
+                .font(.system(size: 12))
+                .foregroundStyle(palette[Tokens.Ink.ink50])
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -104,74 +136,76 @@ private struct QueueRowView: View {
     }
 }
 
-/// What is playing and how: the stream's format, the file and where the lyrics came from.
+/// About This Song (docs/ui.md): title, artist, album, year, length, format, lyrics and the file
+/// (or the source it plays from).
 struct InfoPanel: View {
     @Environment(PlaybackStore.self) private var playback
     @Environment(LyricsStore.self) private var lyrics
+    @Environment(LibraryStore.self) private var library
+    @Environment(SourcesStore.self) private var sources
     @Environment(\.palette) private var palette
+    /// The library song playing, for what Now Playing does not carry (its year).
+    @State private var song: Song?
 
     var body: some View {
         if let now = playback.nowPlaying {
             ScrollView {
-                VStack(alignment: .leading, spacing: Tokens.Space.s5) {
-                    group("Song") {
+                VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                    Text("About This Song")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(palette[Tokens.Ink.ink50])
+                        .accessibilityAddTraits(.isHeader)
+                    VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                         row("Title", now.title)
                         row("Artist", now.artist)
                         row("Album", now.album)
-                        row("Duration", playback.durationUs.map { TimeText.from(microseconds: $0) })
+                        row("Year", (song?.year).map { String($0) })
+                        row("Length", playback.durationUs.map { TimeText.from(microseconds: $0) })
+                        row("Format", now.format.map { Self.formatText($0) })
+                        row("Lyrics", lyricsText(now))
+                        place(now)
                     }
-                    if let format = now.format {
-                        group("Format") {
-                            row("Codec", format.codec)
-                            row("Sample Rate", String(localized: "\(Self.kilohertz(format.sampleRate)) kHz"))
-                            row("Channels", String(localized: "\(Int(format.channels)) channels"))
-                            row("Bit Rate", format.bitrate.map { String(localized: "\(Int($0 / 1000)) kbps") })
-                            row("Gapless", format.gapless ? String(localized: "Yes") : String(localized: "No"))
-                        }
-                    }
-                    if let document = lyrics.document(for: now.uid) {
-                        group("Lyrics") {
-                            row("Format", document.format)
-                            row("Timing", timingText(document.timing))
-                            row("Language", document.language)
-                            row("Source", document.origin)
-                        }
-                    }
-                    if let path = now.path {
-                        group("File") {
-                            Text(path)
-                                .font(.system(size: 12))
-                                .foregroundStyle(palette[Tokens.Ink.ink70])
-                                .textSelection(.enabled)
-                                .lineLimit(4)
-                            Button("Show in Finder") {
-                                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-                            }
-                            .buttonStyle(.link)
-                        }
-                    }
+                    .padding(Tokens.Space.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
                 }
                 .padding(.vertical, Tokens.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .scrollIndicators(.automatic)
+            .task(id: now.uid) {
+                song = nil
+                if case .library(let id) = now.track {
+                    song = await library.song(id: id)
+                }
+            }
         } else {
             EmptyState(title: "Nothing Is Playing", symbol: "info.circle")
         }
     }
 
-    private func group<Content: View>(_ title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(palette[Tokens.Ink.ink50])
-                .accessibilityAddTraits(.isHeader)
-            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                content()
+    /// The file, with Show in Finder; a source's song names its source.
+    @ViewBuilder private func place(_ now: NowPlayingInfo) -> some View {
+        if let path = now.path {
+            LabeledContent {
+                VStack(alignment: .trailing, spacing: Tokens.Space.s1) {
+                    Text(path)
+                        .foregroundStyle(palette[Tokens.Ink.ink90])
+                        .textSelection(.enabled)
+                        .multilineTextAlignment(.trailing)
+                        .lineLimit(4)
+                    Button("Show in Finder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+                    }
+                    .buttonStyle(.link)
+                }
+            } label: {
+                Text("File")
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
             }
-            .padding(Tokens.Space.s4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+            .font(.system(size: 13))
+        } else if case .source(let source) = now.track {
+            row("Source", sources.name(of: source.plugin))
         }
     }
 
@@ -188,6 +222,22 @@ struct InfoPanel: View {
             }
             .font(.system(size: 13))
         }
+    }
+
+    /// "FLAC · 44.1 kHz · 2 channels · 1,411 kbps": the stream as the engine opened it.
+    private static func formatText(_ format: StreamFormat) -> String {
+        CountText.joined([
+            format.codec,
+            String(localized: "\(kilohertz(format.sampleRate)) kHz"),
+            String(localized: "\(Int(format.channels)) channels"),
+            format.bitrate.map { String(localized: "\(Int($0 / 1000)) kbps") },
+        ])
+    }
+
+    /// "LRC · By line · en": where the lyrics are and how they are timed; "No Lyrics" without.
+    private func lyricsText(_ now: NowPlayingInfo) -> String {
+        guard let document = lyrics.document(for: now.uid) else { return String(localized: "No Lyrics") }
+        return CountText.joined([document.format, timingText(document.timing), document.language])
     }
 
     /// 44.1, 48, 96: kilohertz with at most one decimal.

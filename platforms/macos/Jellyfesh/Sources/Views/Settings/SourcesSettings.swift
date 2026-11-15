@@ -1,7 +1,7 @@
-// Sources: the community-plugin switch with ADR-0012's disclosure; the services to add, each
-// connected from a sheet with its server's address and a sign-in method; every installed plugin
-// with its badge, enabling, account and sign-in flows, settings from its JSON Schema, and
-// uninstalling; plus installing a `.jfpkg` file.
+// Sources, in the order of docs/ui.md: the services to add, each connected from a sheet with its
+// server's address and a sign-in method; every installed plugin with its badge, enabling, account
+// and sign-in flows, settings from its JSON Schema and uninstalling, with installing a `.jfpkg`
+// file in the heading; and the community-plugin switch with ADR-0012's disclosure.
 
 import SwiftUI
 
@@ -11,8 +11,6 @@ struct SourcesSettings: View {
     @State private var disclosure: CommunityDisclosure?
     /// The service whose Connect sheet is open.
     @State private var connecting: SourcePreset?
-    /// What was chosen in that sheet, acted on once it has gone (`connectChosen`).
-    @State private var chosen: ConnectChoice?
 
     var body: some View {
         Form {
@@ -20,24 +18,6 @@ struct SourcesSettings: View {
                 Section {
                     SourcesUnavailableNotice()
                 }
-            }
-            Section {
-                Toggle(isOn: Binding(
-                    get: { settings.current.allowCommunityPlugins },
-                    set: { allow in
-                        if allow {
-                            // Turning it on needs the disclosure first.
-                            disclosure = CommunityDisclosure(pluginID: nil, pluginName: nil)
-                        } else {
-                            settings.setAllowCommunityPlugins(false)
-                        }
-                    }
-                )) {
-                    Text("Allow Community Plugins")
-                    Text("Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.")
-                }
-            } header: {
-                Text("Community Plugins")
             }
 
             if !sources.presets.isEmpty {
@@ -55,7 +35,7 @@ struct SourcesSettings: View {
             Section {
                 if sources.plugins.isEmpty {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("No sources installed")
+                        Text("No Sources Installed")
                         Text("Install a source plugin from a .jfpkg file.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
@@ -75,6 +55,25 @@ struct SourcesSettings: View {
                     .buttonStyle(.link)
                 }
             }
+
+            Section {
+                Toggle(isOn: Binding(
+                    get: { settings.current.allowCommunityPlugins },
+                    set: { allow in
+                        if allow {
+                            // Turning it on needs the disclosure first.
+                            disclosure = CommunityDisclosure(pluginID: nil, pluginName: nil)
+                        } else {
+                            settings.setAllowCommunityPlugins(false)
+                        }
+                    }
+                )) {
+                    Text("Allow Community Plugins")
+                    Text("Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.")
+                }
+            } header: {
+                Text("Community Plugins")
+            }
         }
         .formStyle(.grouped)
         .communityDisclosure($disclosure) { request in
@@ -84,16 +83,39 @@ struct SourcesSettings: View {
                 settings.setAllowCommunityPlugins(true)
             }
         }
-        .sheet(item: $connecting, onDismiss: connectChosen) { preset in
-            ConnectSourceSheet(preset: preset) { address, method in
-                chosen = ConnectChoice(preset: preset, address: address, method: method)
+        .connectSourceFlow($connecting, in: .settings)
+    }
+}
+
+extension View {
+    /// Add a Source's steps, for a view that lists the services: the Connect sheet of the service
+    /// in `connecting`, then the sheet of the sign-in flow it starts. Every flow started in
+    /// `window` (an installed source's sign-in buttons too) shows its sheet here.
+    func connectSourceFlow(_ connecting: Binding<SourcePreset?>, in window: SignInWindow) -> some View {
+        modifier(ConnectSourceFlow(connecting: connecting, window: window))
+    }
+}
+
+private struct ConnectSourceFlow: ViewModifier {
+    @Binding var connecting: SourcePreset?
+    var window: SignInWindow
+
+    @Environment(SourcesStore.self) private var sources
+    /// What was chosen in the Connect sheet, acted on once it has gone (`connectChosen`).
+    @State private var chosen: ConnectChoice?
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(item: $connecting, onDismiss: { connectChosen() }) { preset in
+                ConnectSourceSheet(preset: preset) { address, method in
+                    chosen = ConnectChoice(preset: preset, address: address, method: method)
+                }
             }
-        }
-        .sheet(item: Binding(get: { sources.signIn }, set: { flow in
-            if flow == nil { sources.endSignIn() }
-        })) { _ in
-            SignInSheet()
-        }
+            .sheet(item: Binding(get: { sources.signInFlow(in: window) }, set: { flow in
+                if flow == nil { sources.endSignIn() }
+            })) { _ in
+                SignInSheet()
+            }
     }
 
     /// Starts the sign-in chosen in the Connect sheet. Only once that sheet has gone: a window
@@ -101,7 +123,7 @@ struct SourcesSettings: View {
     private func connectChosen() {
         guard let choice = chosen else { return }
         chosen = nil
-        sources.connect(choice.preset, address: choice.address, method: choice.method)
+        sources.connect(choice.preset, address: choice.address, method: choice.method, in: window)
     }
 }
 
@@ -112,16 +134,18 @@ private struct ConnectChoice {
     var method: SignInMethod
 }
 
-/// A service in Add a Source: its plugin's icon, its name, and what it is or its account.
-private struct PresetRow: View {
+/// A service in Add a Source (Settings and the Sources page): its plugin's icon, its name, and what
+/// it is or its account.
+struct PresetRow: View {
     var preset: SourcePreset
     var plugin: SourcePlugin?
+    var iconSize: CGFloat = 28
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: Tokens.Space.s3) {
-                PluginIcon(plugin: plugin, size: 28)
+                PluginIcon(plugin: plugin, size: iconSize)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(preset.name)
                     if let detail = SourceText.detail(preset) {
@@ -169,9 +193,9 @@ private struct ConnectSourceSheet: View {
                 VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                     // Outside a form a field shows only its prompt, so the label goes above it; the
                     // field keeps its own for VoiceOver.
-                    Text("Server address")
+                    Text("Server Address")
                         .accessibilityHidden(true)
-                    TextField("Server address", text: $address, prompt: preset.addressExample.map { Text($0) })
+                    TextField("Server Address", text: $address, prompt: preset.addressExample.map { Text($0) })
                         .textFieldStyle(.roundedBorder)
                         .labelsHidden()
                 }
@@ -234,9 +258,10 @@ private struct PluginSettingsRow: View {
 
             PluginSettingsForm(plugin: plugin)
 
-            LabeledContent("Version", value: plugin.version)
-            LabeledContent("Author", value: plugin.author)
             HStack {
+                Text(CountText.joined([String(localized: "Version \(plugin.version)"), plugin.author]))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Button("Uninstall…", role: .destructive) {
                     confirmUninstall = true
@@ -255,13 +280,13 @@ private struct PluginSettingsRow: View {
                 BadgeLabel(badge: plugin.badge)
             }
         }
-        .confirmationDialog(Text("Uninstall “\(plugin.name)”?"), isPresented: $confirmUninstall,
+        .confirmationDialog(Text("Uninstall \(plugin.name)?"), isPresented: $confirmUninstall,
                             titleVisibility: .visible) {
             Button("Uninstall", role: .destructive) {
                 sources.uninstall(plugin.id)
             }
         } message: {
-            Text("Its sign-in and settings are removed too.")
+            Text("Its settings and sign-in are removed.")
         }
     }
 
