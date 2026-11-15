@@ -132,3 +132,45 @@ fn settings_share_the_cores_names_and_defaults() {
     assert!((loaded.transparency - 0.2).abs() < 1e-6);
     assert!(loaded.crossfade.enabled);
 }
+
+#[test]
+fn library_text_rules_match_the_library() {
+    for text in [
+        "Beyoncé",
+        "ＭＯＯＮ　Ｌｉｇｈｔ",
+        "Sigur Rós",
+        "ﬁre",
+        "  a \t b  ",
+        "が",
+        "Ágætis byrjun",
+        "Мусоргский",
+    ] {
+        assert_eq!(
+            jf_web::library::normalize(text),
+            jf_library::rules::normalize(text),
+            "{text:?}"
+        );
+    }
+    for text in [
+        "A; B",
+        "A；B",
+        "A / B",
+        "AC/DC",
+        "A feat. B",
+        "A Feat B",
+        "A ft. B; C",
+        "A (feat. B)",
+        "A [featuring B / C]",
+        "Simon & Garfunkel",
+        "Earth, Wind & Fire",
+        "Defeated",
+        "feat. B",
+        "",
+    ] {
+        assert_eq!(
+            jf_web::library::split_artists(text),
+            jf_library::rules::split_artists(text),
+            "{text:?}"
+        );
+    }
+}

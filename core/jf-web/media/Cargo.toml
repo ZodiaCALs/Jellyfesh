@@ -25,3 +25,5 @@ wasm-bindgen.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 image.workspace = true
+# The rules mirrored from the library are compared with the originals.
+jf-library.workspace = true

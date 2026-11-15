@@ -8,7 +8,7 @@ use unicode_normalization::UnicodeNormalization;
 ///
 /// Only combining marks in U+0300–U+036F are removed, so Japanese voicing marks
 /// (U+3099/U+309A) and Arabic vowel marks survive: `が` never becomes `か`.
-pub(crate) fn normalize(text: &str) -> String {
+pub fn normalize(text: &str) -> String {
     let lower = text.nfkc().collect::<String>().to_lowercase();
     let folded: String = lower
         .nfd()

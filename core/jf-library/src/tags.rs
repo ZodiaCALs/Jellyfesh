@@ -389,7 +389,7 @@ fn leading_number(text: &str) -> Option<u32> {
 }
 
 /// The first four-digit run: "2021", "2021-04-01", "2021/04" and "(P) 2021" give 2021.
-fn parse_year(text: &str) -> Option<i32> {
+pub fn parse_year(text: &str) -> Option<i32> {
     let bytes = text.as_bytes();
     bytes
         .windows(4)
@@ -414,7 +414,7 @@ fn parse_year(text: &str) -> Option<i32> {
 /// Never splits on `&`, `,`, `and`, `x` or `vs.`, which occur inside names
 /// ("Simon & Garfunkel", "Earth, Wind & Fire"). A tag with several values, or an
 /// explicit ARTISTS tag, is used as given instead.
-pub(crate) fn split_artists(text: &str) -> Vec<String> {
+pub fn split_artists(text: &str) -> Vec<String> {
     let mut parts = Vec::new();
     let (main, featured) = split_featuring(text);
     for piece in [Some(main), featured].into_iter().flatten() {

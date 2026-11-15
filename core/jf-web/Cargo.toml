@@ -25,6 +25,10 @@ jf-plugin-model.workspace = true
 qrcode.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# Comparing a bundled plugin's version with one installed from a file.
+semver.workspace = true
+# The library's text matching (mirrors jf-library).
+unicode-normalization.workspace = true
 url.workspace = true
 wasm-bindgen.workspace = true
 zeroize.workspace = true
@@ -38,3 +42,4 @@ getrandom = { workspace = true, features = ["wasm_js"] }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 jf-core.workspace = true
 jf-engine.workspace = true
+jf-library.workspace = true

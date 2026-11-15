@@ -4,7 +4,10 @@
 //! needs SQLite and the file system, so the rules are mirrored here):
 //!
 //! * tags in priority order, the format's primary tag first;
-//! * the artist as tagged, else the ARTISTS list joined;
+//! * the artist as tagged, else the ARTISTS list joined; the ARTIST values and the ARTISTS list
+//!   as they are, for the library to split into artists (`jf_web::library`);
+//! * the year: the first four-digit run of the recording, year, original release or release
+//!   date;
 //! * ReplayGain gains like `-6.20 dB` (decimal comma allowed, at most ±64 dB)
 //!   and peaks (0 to 64);
 //! * lyrics: text lyrics with LRC stamps first, then ID3v2 SYLT frames with
@@ -38,6 +41,11 @@ pub struct FileTags {
     pub artist: Option<String>,
     pub album: Option<String>,
     pub album_artist: Option<String>,
+    /// Each ARTIST value, as tagged.
+    pub artist_values: Vec<String>,
+    /// The ARTISTS list, when the file has one.
+    pub explicit_artists: Vec<String>,
+    pub year: Option<i32>,
     pub track_no: Option<u32>,
     pub disc_no: Option<u32>,
     pub duration_ms: Option<u64>,
@@ -85,8 +93,9 @@ fn tags_of(file: &TaggedFile, file_type: Option<FileType>, synced: &[Vec<(u32, S
     let mut tags: Vec<&Tag> = file.tags().iter().collect();
     tags.sort_by_key(|tag| tag.tag_type() != primary);
     let properties = file.properties();
-    let artist =
-        joined(&texts(&tags, ItemKey::TrackArtist)).or_else(|| joined(&texts(&tags, ItemKey::TrackArtists)));
+    let artist_values = texts(&tags, ItemKey::TrackArtist);
+    let explicit_artists = texts(&tags, ItemKey::TrackArtists);
+    let artist = joined(&artist_values).or_else(|| joined(&explicit_artists));
     let replaygain = ReplayGainInfo {
         track_gain_db: text(&tags, ItemKey::ReplayGainTrackGain).and_then(|s| parse_gain(&s)),
         track_peak: text(&tags, ItemKey::ReplayGainTrackPeak).and_then(|s| parse_peak(&s)),
@@ -111,6 +120,16 @@ fn tags_of(file: &TaggedFile, file_type: Option<FileType>, synced: &[Vec<(u32, S
         artist,
         album: text(&tags, ItemKey::AlbumTitle),
         album_artist: joined(&texts(&tags, ItemKey::AlbumArtist)),
+        artist_values,
+        explicit_artists,
+        year: [
+            ItemKey::RecordingDate,
+            ItemKey::Year,
+            ItemKey::OriginalReleaseDate,
+            ItemKey::ReleaseDate,
+        ]
+        .into_iter()
+        .find_map(|key| text(&tags, key).and_then(|s| parse_year(&s))),
         track_no: text(&tags, ItemKey::TrackNumber).and_then(|s| leading_number(&s)),
         disc_no: text(&tags, ItemKey::DiscNumber).and_then(|s| leading_number(&s)),
         duration_ms: (!duration.is_zero()).then_some(duration.as_millis() as u64),
@@ -123,6 +142,21 @@ fn tags_of(file: &TaggedFile, file_type: Option<FileType>, synced: &[Vec<(u32, S
         cover_mime: cover.and_then(|p| p.mime_type().map(|m| m.as_str().to_owned())),
         cover: cover.map(|p| p.data().to_vec()),
     }
+}
+
+/// The first four-digit run: "2021", "2021-04-01", "2021/04" and "(P) 2021" give 2021.
+pub fn parse_year(text: &str) -> Option<i32> {
+    let bytes = text.as_bytes();
+    bytes
+        .windows(4)
+        .enumerate()
+        .find(|(start, window)| {
+            window.iter().all(u8::is_ascii_digit)
+                && !bytes.get(start + 4).is_some_and(u8::is_ascii_digit)
+                && (*start == 0 || !bytes[start - 1].is_ascii_digit())
+        })
+        .and_then(|(_, window)| std::str::from_utf8(window).ok()?.parse().ok())
+        .filter(|&year| year > 0)
 }
 
 fn front_cover<'a>(tags: &[&'a Tag]) -> Option<&'a Picture> {

@@ -24,6 +24,7 @@
 //! `Uint8Array`. Nothing here runs per frame: drawing time is the shell's
 //! port of `DisplayClock` and the lyric cursor.
 
+pub mod library;
 pub mod lyrics;
 pub mod qr;
 pub mod rules;
@@ -136,6 +137,20 @@ impl Core {
     pub fn add_file(&mut self, meta: &str) -> Result<(), JsError> {
         self.session.add_file(parse::<FileMeta>(meta, "file")?);
         Ok(())
+    }
+
+    /// Adds many files at once (`[FileMeta]`): the library's songs, so they can be queued.
+    pub fn add_files(&mut self, metas: &str) -> Result<(), JsError> {
+        for meta in parse::<Vec<FileMeta>>(metas, "files")? {
+            self.session.add_file(meta);
+        }
+        Ok(())
+    }
+
+    /// The ids of queued files without tags (library files of a restored queue): `[id]`. Hand
+    /// each back with `add_file`.
+    pub fn missing_files(&self) -> String {
+        json(&self.session.missing_files())
     }
 
     /// Remembers items a source listed (an `Item` list).
@@ -320,6 +335,177 @@ pub fn source_presets() -> String {
         })
         .collect();
     json(&list)
+}
+
+// ---- the music library -------------------------------------------------------------------------
+
+/// The catalogue of the person's music folders (`library`): the page loads the tracks it keeps,
+/// tells it what a scan found, and asks it for lists.
+#[wasm_bindgen]
+#[derive(Debug, Default)]
+pub struct Library(library::Library);
+
+#[wasm_bindgen]
+impl Library {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> Library {
+        Library::default()
+    }
+
+    /// Replaces every track (`[LibTrack]`).
+    pub fn load(&mut self, tracks: &str) -> Result<(), JsError> {
+        self.0.load(parse(tracks, "tracks")?);
+        Ok(())
+    }
+
+    /// Adds tracks, replacing those with the same key.
+    pub fn upsert(&mut self, tracks: &str) -> Result<(), JsError> {
+        self.0.upsert(parse(tracks, "tracks")?);
+        Ok(())
+    }
+
+    /// Removes tracks by key (`[key]`).
+    pub fn remove(&mut self, keys: &str) -> Result<(), JsError> {
+        let keys: Vec<String> = parse(keys, "keys")?;
+        self.0.remove(&keys);
+        Ok(())
+    }
+
+    pub fn remove_folder(&mut self, folder: u32) {
+        self.0.remove_folder(folder);
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// `{tracks, albums, artists, duration_ms}`.
+    pub fn stats(&mut self) -> String {
+        json(&self.0.stats())
+    }
+
+    /// A page of albums: `sort` is `title`, `artist`, `year` or `added`.
+    pub fn albums(
+        &mut self,
+        sort: &str,
+        descending: bool,
+        offset: usize,
+        limit: usize,
+    ) -> Result<String, JsError> {
+        let sort: library::AlbumSort = parse(&json(&sort), "sort")?;
+        Ok(json(&self.0.albums(sort, descending, offset, limit)))
+    }
+
+    /// `{album, tracks}`, or `null` when there is no such album.
+    pub fn album(&mut self, id: &str) -> String {
+        json(
+            &self
+                .0
+                .album(id)
+                .map(|(album, tracks)| serde_json::json!({ "album": album, "tracks": tracks })),
+        )
+    }
+
+    /// A page of artists, by name.
+    pub fn artists(&mut self, offset: usize, limit: usize) -> String {
+        json(&self.0.artists(offset, limit))
+    }
+
+    /// `{artist, albums, tracks}`, or `null`.
+    pub fn artist(&mut self, id: &str) -> String {
+        json(&self.0.artist(id).map(|(artist, albums, tracks)| {
+            serde_json::json!({ "artist": artist, "albums": albums, "tracks": tracks })
+        }))
+    }
+
+    /// A page of tracks: `sort` is `title`, `artist`, `album`, `year`, `duration`, `path` or `added`.
+    pub fn tracks(
+        &mut self,
+        sort: &str,
+        descending: bool,
+        offset: usize,
+        limit: usize,
+    ) -> Result<String, JsError> {
+        let sort: library::TrackSort = parse(&json(&sort), "sort")?;
+        Ok(json(&self.0.tracks(sort, descending, offset, limit)))
+    }
+
+    /// Every track's key in that order (to play the whole list).
+    pub fn track_keys(&mut self, sort: &str, descending: bool) -> Result<String, JsError> {
+        let sort: library::TrackSort = parse(&json(&sort), "sort")?;
+        Ok(json(&self.0.track_keys(sort, descending)))
+    }
+
+    /// `{tracks, albums, artists}` matching `text`, at most `limit` of each.
+    pub fn search(&mut self, text: &str, limit: usize) -> String {
+        json(&self.0.search(text, limit))
+    }
+}
+
+/// The artists a track is credited to (`library::artists_of`), for the page to show.
+#[wasm_bindgen]
+pub fn track_artists(artist_values: &str, explicit_artists: &str) -> Result<String, JsError> {
+    let values: Vec<String> = parse(artist_values, "artist values")?;
+    let explicit: Vec<String> = parse(explicit_artists, "artists")?;
+    Ok(json(&library::artists_of(&values, &explicit)))
+}
+
+// ---- installing plugins ------------------------------------------------------------------------
+
+/// The largest package Sources → Install from File… reads, in bytes (as the native host).
+#[wasm_bindgen]
+pub fn max_package_bytes() -> f64 {
+    jf_plugin_model::install::MAX_PACKAGE_FILE as f64
+}
+
+/// Why a package cannot be installed now, in the native host's words, or `None`.
+///
+/// `package` is `{"id", "name", "signature"}` from the package (`jf_web_sandbox::PackageInfo`);
+/// `installed` is the `signature` of the version installed now, left out when nothing with this
+/// id is installed. Community packages are refused while community plugins are off, and an
+/// update must be signed by the same key as the installed version.
+#[wasm_bindgen]
+pub fn install_refusal(
+    package: &str,
+    installed: Option<String>,
+    allow_community: bool,
+) -> Result<Option<String>, JsError> {
+    #[derive(serde::Deserialize)]
+    struct Package {
+        id: String,
+        name: String,
+        signature: jf_plugin_model::SignatureStatus,
+    }
+    let package: Package = parse(package, "package")?;
+    let installed: Option<jf_plugin_model::SignatureStatus> =
+        installed.map(|text| parse(&text, "installed")).transpose()?;
+    let remembered = installed.as_ref().map(jf_plugin_model::install::signer);
+    Ok(
+        match jf_plugin_model::install::check(
+            &package.id,
+            &package.signature,
+            remembered.as_ref().map(Option::as_deref),
+            allow_community,
+        ) {
+            Ok(()) => None,
+            Err(jf_plugin_model::HostError::CommunityDisabled) => Some(
+                jf_plugin_model::install::community_refusal(Some((&package.name, &package.id))),
+            ),
+            Err(other) => Some(other.to_string()),
+        },
+    )
+}
+
+/// Whether a bundled package of version `bundled` replaces the installed version `installed`
+/// (only a newer one does).
+#[wasm_bindgen]
+pub fn bundled_updates(installed: &str, bundled: &str) -> bool {
+    semver::Version::parse(bundled)
+        .is_ok_and(|bundled| jf_plugin_model::install::bundled_updates(installed, &bundled))
 }
 
 /// The equaliser presets: `[[name, EqSettings], …]`.

@@ -68,6 +68,14 @@ pub use error::LibraryError;
 pub use fs::{FileEntry, FileSystem, PathKind, ReadSeek, StdFileSystem};
 pub use watch::{LibraryWatcher, WatchErrorKind};
 
+/// The text rules the library indexes and groups by, for Jellyfesh Web's mirror of them
+/// (`core/jf-web`) to be tested against. Not part of the library's API.
+#[doc(hidden)]
+pub mod rules {
+    pub use crate::normalize::normalize;
+    pub use crate::tags::{parse_year, split_artists};
+}
+
 /// Row id of a track. Stable while the file keeps its path.
 pub type TrackId = i64;
 

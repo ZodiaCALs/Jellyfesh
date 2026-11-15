@@ -3,10 +3,11 @@
 //!
 //! The queue is `jf_session::Queue`, the same as in every app. Entries are
 //! source tracks (`TrackRef::Source`, with the display data the source gave)
-//! and files the person dragged in (`TrackRef::File` with a path under
-//! `/dropped/`, whose tags this session keeps). Dragged-in files live only as
-//! long as the page: [`Session::state`] leaves them out, so a restored queue
-//! holds source tracks only.
+//! and files: the person's library (`TrackRef::File` under `/library/`) and
+//! files dragged in (under `/dropped/`), whose tags this session keeps.
+//! Dragged-in files live only as long as the page: [`Session::state`] leaves
+//! them out. Library files are saved with the queue; after a restore the page
+//! hands their tags back ([`Session::missing_files`]).
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -24,6 +25,27 @@ pub const UP_NEXT_WINDOW: usize = 50;
 const ITEM_GENERATION: usize = 10_000;
 /// Where dragged-in files live in the queue's paths.
 const DROPPED: &str = "/dropped/";
+/// Where library files live in the queue's paths.
+const LIBRARY: &str = "/library/";
+/// The page's ids for library files start with this (`lib:<key>`).
+pub const LIBRARY_ID: &str = "lib:";
+
+/// The queue path of the file the page calls `id`.
+fn file_path(id: &str) -> PathBuf {
+    match id.strip_prefix(LIBRARY_ID) {
+        Some(key) => PathBuf::from(format!("{LIBRARY}{key}")),
+        None => PathBuf::from(format!("{DROPPED}{id}")),
+    }
+}
+
+/// The page's id of the file at a queue path.
+fn file_id(path: &std::path::Path) -> Option<String> {
+    let path = path.to_str()?;
+    if let Some(id) = path.strip_prefix(DROPPED) {
+        return Some(id.to_owned());
+    }
+    path.strip_prefix(LIBRARY).map(|key| format!("{LIBRARY_ID}{key}"))
+}
 /// The album-key scope of dragged-in files.
 const FILE_SCOPE: &str = "file";
 
@@ -167,9 +189,14 @@ impl Session {
     /// A session from a saved [`Session::state`].
     pub fn restore(state: QueueState) -> Result<Session, QueueError> {
         let mut queue = Queue::from_state(state)?;
+        // Only source tracks and library files belong in a saved web queue.
         let dropped: Vec<u64> = queue
             .iter()
-            .filter(|i| matches!(i.track, TrackRef::File(_) | TrackRef::Library(_)))
+            .filter(|i| match &i.track {
+                TrackRef::File(path) => !path.starts_with(LIBRARY),
+                TrackRef::Library(_) => true,
+                _ => false,
+            })
             .map(|i| i.uid)
             .collect();
         for uid in dropped {
@@ -188,7 +215,7 @@ impl Session {
         let mut copy = self.queue.clone();
         let files: Vec<u64> = copy
             .iter()
-            .filter(|i| matches!(i.track, TrackRef::File(_)))
+            .filter(|i| matches!(&i.track, TrackRef::File(path) if path.starts_with(DROPPED)))
             .map(|i| i.uid)
             .collect();
         for uid in files {
@@ -205,6 +232,22 @@ impl Session {
     /// The tags of a dragged-in file.
     pub fn file(&self, id: &str) -> Option<&FileMeta> {
         self.files.get(id)
+    }
+
+    /// The ids of queued files whose tags this session does not have: library files of a
+    /// restored queue, for the page to hand back with [`Session::add_file`].
+    pub fn missing_files(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self
+            .queue
+            .iter()
+            .filter_map(|i| match &i.track {
+                TrackRef::File(path) => file_id(path).filter(|id| !self.files.contains_key(id)),
+                _ => None,
+            })
+            .collect();
+        ids.sort();
+        ids.dedup();
+        ids
     }
 
     /// Remembers items a source listed, so the queue can hand them back.
@@ -226,7 +269,7 @@ impl Session {
             NewEntry::File { id } => self
                 .files
                 .contains_key(&id)
-                .then(|| TrackRef::File(PathBuf::from(format!("{DROPPED}{id}")))),
+                .then(|| TrackRef::File(file_path(&id))),
         }
     }
 
@@ -381,8 +424,7 @@ impl Session {
         let TrackRef::File(path) = self.queue.get(uid)? else {
             return None;
         };
-        let id = path.to_str()?.strip_prefix(DROPPED)?;
-        self.files.get(id)
+        self.files.get(&file_id(path)?)
     }
 
     /// An entry started playing at `now_ms` (wall clock): it goes into the
@@ -469,11 +511,7 @@ impl Session {
                 album_key: rules::album_key(Some(&t.plugin), t.album.as_deref(), t.artist.as_deref()),
             },
             TrackRef::File(path) => {
-                let id = path
-                    .to_str()
-                    .and_then(|p| p.strip_prefix(DROPPED))
-                    .unwrap_or_default()
-                    .to_owned();
+                let id = file_id(path).unwrap_or_default();
                 let meta = self.files.get(&id);
                 Row {
                     uid,
@@ -684,6 +722,45 @@ mod tests {
         let history = s.history(10);
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].played_at_ms, 1_700_000_100_000);
+    }
+
+    #[test]
+    fn library_files_are_saved_and_their_tags_handed_back() {
+        let meta = FileMeta {
+            id: "lib:3/Album/01 Tone.flac".into(),
+            name: "01 Tone.flac".into(),
+            title: "Tone".into(),
+            artist: Some("Aurora".into()),
+            album: Some("Sky".into()),
+            duration_ms: Some(5_000),
+            replaygain: None,
+        };
+        let mut s = Session::new(1);
+        s.add_file(meta.clone());
+        s.add_file(FileMeta {
+            id: "f1".into(),
+            ..meta.clone()
+        });
+        s.play(
+            vec![
+                NewEntry::File { id: meta.id.clone() },
+                NewEntry::File { id: "f1".into() },
+            ],
+            0,
+            false,
+        )
+        .unwrap();
+        assert!(s.missing_files().is_empty());
+        let saved = s.state();
+        assert_eq!(saved.items.len(), 1, "the dropped file is not saved");
+        let mut restored = Session::restore(saved).unwrap();
+        assert_eq!(restored.missing_files(), std::slice::from_ref(&meta.id));
+        let uid = restored.window(0, 1)[0].uid;
+        assert!(restored.file_of(uid).is_none());
+        restored.add_file(meta.clone());
+        assert!(restored.missing_files().is_empty());
+        assert_eq!(restored.file_of(uid), Some(&meta));
+        assert_eq!(restored.current().unwrap().title, "Tone");
     }
 
     #[test]

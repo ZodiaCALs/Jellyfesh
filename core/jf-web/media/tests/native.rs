@@ -32,3 +32,24 @@ fn backdrops_and_hues_match_the_native_bake() {
     let hue = jf_web_media::theme::for_artwork(&artwork).hue;
     assert_eq!(hue, jf_palette::extract_hue_from_bytes(&png).unwrap().hue);
 }
+
+#[test]
+fn years_are_read_as_the_library_reads_them() {
+    for text in [
+        "2021",
+        "2021-04-01",
+        "2021/04",
+        "(P) 2021",
+        "12021",
+        "0000",
+        "",
+        "Spring 1999 tour",
+        "20210401",
+    ] {
+        assert_eq!(
+            jf_web_media::tags::parse_year(text),
+            jf_library::rules::parse_year(text),
+            "{text:?}"
+        );
+    }
+}
