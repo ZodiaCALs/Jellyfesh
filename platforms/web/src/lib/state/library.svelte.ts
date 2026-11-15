@@ -21,7 +21,7 @@ import type {
   TrackSort,
 } from '../core/types';
 import { readTags } from '../media/client';
-import { fileAt, type FolderFile, keepsFolders, mayRead, type PickedFolder, pickFolder, walk } from '../library/folders';
+import { fileAt, type FolderFile, type PickedFolder, pickFolder, walk } from '../library/folders';
 import type { Cover, Folder, LibraryStore, ScanReport } from '../library/store';
 
 /** The library's id where views take a source's id. */
@@ -35,9 +35,8 @@ export const COVER_SCHEME = 'jf-library:';
 export interface FolderView {
   id: number;
   name: string;
-  /** `ready`: readable now; `ask`: the browser wants a click to allow reading it again;
-   *  `pick`: this browser keeps no access, so the folder must be picked again this visit. */
-  access: 'ready' | 'ask' | 'pick';
+  /** `ready`: picked this visit, so its songs play; `pick`: to be picked again first. */
+  access: 'ready' | 'pick';
   lastScan: ScanReport | null;
 }
 
@@ -157,13 +156,12 @@ export class Library {
   stats = $state.raw<LibStats>({ tracks: 0, albums: 0, artists: 0, duration_ms: 0 });
   /** The last scan's problem, if it could not run. */
   problem = $state<string | null>(null);
-  readonly keepsFolders = keepsFolders();
   private catalogue: InstanceType<Jf['Library']>;
   private tracks = new Map<string, LibTrack>();
   private records = new Map<number, Folder>();
-  /** Folders whose handle the page may read now. */
-  private readable = new Set<number>();
-  /** Files of folders picked this visit, where the browser keeps no access: path → file. */
+  /** Folders picked this visit with the browser's folder picker: their handles. */
+  private handles = new Map<number, FileSystemDirectoryHandle>();
+  /** Folders picked this visit with `<input webkitdirectory>`: path → file. */
   private visit = new Map<number, Map<string, File>>();
   private covers = new Map<string, Promise<string | null>>();
   private scanning: Promise<void> | null = null;
@@ -185,16 +183,24 @@ export class Library {
     for (const track of tracks) this.tracks.set(track.key, track);
     this.catalogue.load(JSON.stringify(tracks));
     this.core.add_files(JSON.stringify(tracks.map((t) => this.metaOf(t))));
-    await Promise.all(
-      folders.map(async (folder) => {
-        if (folder.handle && (await mayRead(folder.handle, false).catch(() => false))) this.readable.add(folder.id);
-      }),
-    );
     this.publish();
   }
 
   get isEmpty(): boolean {
     return this.tracks.size === 0;
+  }
+
+  /** Whether a folder was picked this visit. */
+  private isReady(id: number): boolean {
+    return this.handles.has(id) || this.visit.has(id);
+  }
+
+  /** Remembers what the person picked for a folder, for this visit. */
+  private holdPicked(id: number, picked: PickedFolder) {
+    this.handles.delete(id);
+    this.visit.delete(id);
+    if (picked.handle) this.handles.set(id, picked.handle);
+    if (picked.files) this.visit.set(id, new Map(picked.files.map((f) => [f.path, f.file])));
   }
 
   private publish() {
@@ -203,7 +209,7 @@ export class Library {
       .map((f) => ({
         id: f.id,
         name: f.name,
-        access: this.readable.has(f.id) || this.visit.has(f.id) ? 'ready' : f.handle ? 'ask' : 'pick',
+        access: this.isReady(f.id) ? 'ready' : 'pick',
         lastScan: f.lastScan,
       }));
     this.stats = JSON.parse(this.catalogue.stats()) as LibStats;
@@ -216,32 +222,21 @@ export class Library {
   async addFolder(): Promise<boolean> {
     const picked = await pickFolder(this.pickFallback);
     if (!picked) return false;
-    const folder = await this.store.addFolder(picked.name, picked.handle);
+    const folder = await this.store.addFolder(picked.name);
     this.records.set(folder.id, folder);
-    if (picked.handle) this.readable.add(folder.id);
-    if (picked.files) this.visit.set(folder.id, new Map(picked.files.map((f) => [f.path, f.file])));
+    this.holdPicked(folder.id, picked);
     this.publish();
     await this.scan([folder.id]);
     return true;
   }
 
-  /** Lets the page read a kept folder again (Chrome and Edge ask once per visit). */
-  async allowAccess(id: number): Promise<boolean> {
-    const folder = this.records.get(id);
-    if (!folder?.handle) return false;
-    const allowed = await mayRead(folder.handle, true).catch(() => false);
-    if (allowed) this.readable.add(id);
-    this.publish();
-    return allowed;
-  }
-
-  /** Picks a folder again where the browser keeps no access, and reads what changed. */
+  /** Picks a folder again (each visit, before its songs play), and reads what changed. */
   async pickAgain(id: number): Promise<boolean> {
     const folder = this.records.get(id);
     if (!folder) return false;
-    const picked = await this.pickFallback();
-    if (!picked?.files) return false;
-    this.visit.set(id, new Map(picked.files.map((f) => [f.path, f.file])));
+    const picked = await pickFolder(this.pickFallback);
+    if (!picked) return false;
+    this.holdPicked(id, picked);
     if (picked.name !== folder.name) {
       folder.name = picked.name;
       await this.store.saveFolder(folder);
@@ -254,7 +249,7 @@ export class Library {
   async removeFolder(id: number) {
     await this.store.removeFolder(id);
     this.records.delete(id);
-    this.readable.delete(id);
+    this.handles.delete(id);
     this.visit.delete(id);
     for (const [key, track] of this.tracks) if (track.folder === id) this.tracks.delete(key);
     this.catalogue.remove_folder(id);
@@ -270,7 +265,7 @@ export class Library {
 
   /** Reads every folder the page can read now again: new, changed and removed files. */
   async rescan() {
-    await this.scan([...this.records.keys()].filter((id) => this.readable.has(id) || this.visit.has(id)));
+    await this.scan([...this.records.keys()].filter((id) => this.isReady(id)));
   }
 
   private async scan(ids: number[]) {
@@ -299,10 +294,11 @@ export class Library {
 
   private async *filesOf(folder: Folder): AsyncGenerator<FolderFile> {
     const visit = this.visit.get(folder.id);
+    const handle = this.handles.get(folder.id);
     if (visit) {
       for (const [path, file] of visit) yield { path, file };
-    } else if (folder.handle && this.readable.has(folder.id)) {
-      yield* walk(folder.handle);
+    } else if (handle) {
+      yield* walk(handle);
     }
   }
 
@@ -521,15 +517,15 @@ export class Library {
     const folder = this.records.get(track.folder);
     if (!folder) return null;
     const visit = this.visit.get(folder.id);
+    const handle = this.handles.get(folder.id);
     let file: File | null = null;
     let sidecar: File | null = null;
     if (visit) {
       file = visit.get(track.path) ?? null;
       sidecar = track.lyrics_path ? (visit.get(track.lyrics_path) ?? null) : null;
-    } else if (folder.handle && (this.readable.has(folder.id) || (await mayRead(folder.handle, false).catch(() => false)))) {
-      this.readable.add(folder.id);
-      file = await fileAt(folder.handle, track.path);
-      sidecar = track.lyrics_path ? await fileAt(folder.handle, track.lyrics_path) : null;
+    } else if (handle) {
+      file = await fileAt(handle, track.path);
+      sidecar = track.lyrics_path ? await fileAt(handle, track.lyrics_path) : null;
     }
     if (!file) return null;
     const cover = track.artwork ? await this.store.cover(track.artwork) : null;
@@ -537,12 +533,11 @@ export class Library {
   }
 
   /** Why a song cannot be opened, for people. */
-  unavailable(key: string): 'ask' | 'pick' | 'gone' {
+  unavailable(key: string): 'pick' | 'gone' {
     const track = this.tracks.get(key);
     const folder = track ? this.records.get(track.folder) : undefined;
     if (!folder) return 'gone';
-    if (folder.handle) return this.readable.has(folder.id) ? 'gone' : 'ask';
-    return this.visit.has(folder.id) ? 'gone' : 'pick';
+    return this.isReady(folder.id) ? 'gone' : 'pick';
   }
 
   /** An object URL for a cover (`jf-library:<id>`); the most recent ones are kept. */

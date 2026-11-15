@@ -238,15 +238,11 @@
   "Albums": "專輯",
   "Artists": "藝人",
   "Songs": "歌曲",
-  "Allow Jellyfesh to read “{name}” again to play its songs.": "允許 Jellyfesh 再次讀取「{name}」，以播放其中的歌曲。",
-  "Pick “{name}” again to play its songs: this browser does not keep access to folders.": "請再次選擇「{name}」以播放其中的歌曲：此瀏覽器不會保留資料夾的存取權限。",
-  "Allow Access": "允許存取",
   "Pick Folder…": "選擇資料夾…",
   "Add Music Folder…": "加入音樂資料夾…",
   "Reading “{name}”… {count} songs so far": "正在讀取「{name}」… 已找到 {count} 首歌曲",
   "Sort": "排序",
   "Descending": "遞減",
-  "Allow Jellyfesh to read your music folder again in Settings › Library to play this song.": "請在「設定 › 資料庫」中允許 Jellyfesh 再次讀取你的音樂資料夾，以播放這首歌曲。",
   "Pick the folder of this song again in Settings › Library to play it.": "請在「設定 › 資料庫」中再次選擇這首歌曲所在的資料夾以播放它。",
   "This song is no longer in its folder.": "這首歌曲已不在其資料夾中。",
   "Year": "年份",
@@ -263,8 +259,6 @@
   "updated {n}": "更新 {n}",
   "removed {n}": "移除 {n}",
   "Music Folders": "音樂資料夾",
-  "Jellyfesh reads every audio file in these folders. This browser keeps access to them; it may ask again after a restart.": "Jellyfesh 會讀取這些資料夾中的所有音訊檔案。此瀏覽器會保留存取權限，重新啟動後可能會再次詢問。",
-  "Jellyfesh reads every audio file in these folders. This browser does not keep access to folders, so pick them again to play their songs on your next visit; what Jellyfesh read is kept.": "Jellyfesh 會讀取這些資料夾中的所有音訊檔案。此瀏覽器不會保留資料夾的存取權限，下次造訪時請再次選擇它們以播放其中的歌曲；已讀取的資訊會被保留。",
   "No folders yet": "還沒有資料夾",
   "Remove Folder…": "移除資料夾…",
   "Add Folder…": "加入資料夾…",
@@ -317,5 +311,7 @@
   "Skip Forward 5 Seconds": "快轉 5 秒",
   "Skip Back 5 Seconds": "倒轉 5 秒",
   "Volume Up": "調高音量",
-  "Volume Down": "調低音量"
+  "Volume Down": "調低音量",
+  "Pick “{name}” again to play its songs on this visit.": "請再次選擇「{name}」，以在本次造訪中播放其中的歌曲。",
+  "Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.": "Jellyfesh 會讀取這些資料夾中的所有音訊檔案。讀取的資訊會被保留；每次造訪時，播放歌曲前請再次選擇資料夾。"
 }

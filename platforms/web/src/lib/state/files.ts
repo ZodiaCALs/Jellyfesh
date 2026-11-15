@@ -93,7 +93,7 @@ export class Files {
   }
 
   /** Why a file cannot play, for people. */
-  whyClosed(id: string): 'dropped' | 'ask' | 'pick' | 'gone' {
+  whyClosed(id: string): 'dropped' | 'pick' | 'gone' {
     if (!id.startsWith(LIBRARY_ID) || !this.library) return 'dropped';
     return this.library.unavailable(id.slice(LIBRARY_ID.length));
   }

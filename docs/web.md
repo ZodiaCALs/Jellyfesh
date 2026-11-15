@@ -36,12 +36,14 @@ secret).
   is uploaded), keeps what the songs' tags say in IndexedDB, and lists it
   under Albums, Artists and Songs, with Search and Home's Recently Added.
   Lyrics files beside a song (`.lrc`, `.ttml`, `.vtt`) and embedded lyrics
-  are used. Chrome and Edge keep access to the folder: on a later visit they
-  ask once ("Allow Access"). Firefox and Safari give pages a folder's files
-  only for the visit: the library is kept, and you pick the folder again
-  ("Pick Folder…") to play from it. Rescan Library reads new, changed and
-  removed files; browsers do not tell pages when files change, so there is
-  no Watch Folders.
+  are used. The library is kept between visits, but not access to the
+  folders: on a later visit you pick a folder again ("Pick Folder…") before
+  its songs play. Chrome and Edge could keep a folder's handle, but reading
+  a kept handle back has crashed Chromium-based browsers (the Chromium the
+  tests run in, and [reports for Opera](https://forums.opera.com/post/382777)),
+  and that crash would come at every start, so no browser keeps one. Rescan
+  Library reads new, changed and removed files; browsers do not tell pages
+  when files change, so there is no Watch Folders.
 * **Add a source**: Sources → Add a Source (also in Settings › Sources) lists
   the services this copy's official plugins connect to (Jellyfin, Navidrome,
   other Subsonic servers); choosing one opens the sign-in below with the
@@ -271,7 +273,7 @@ URL in it is relative. Notes:
 
 | | Apps | Jellyfesh Web |
 | --- | --- | --- |
-| Library | Folders scanned into a local library (SQLite) | Folders read through the browser, catalogued in IndexedDB by the same grouping, sorting and search rules (`jf_web::library`); re-picked each visit where the browser keeps no folder access; no Watch Folders |
+| Library | Folders scanned into a local library (SQLite) | Folders read through the browser, catalogued in IndexedDB by the same grouping, sorting and search rules (`jf_web::library`); each folder picked again on a new visit before its songs play; no Watch Folders |
 | Playlists, favourites, history | Kept locally | Not in this version; the server's playlists can be browsed and played |
 | Audio | `jf-engine` on a thread of its own, cpal output | The browser's decoders and Web Audio (below) |
 | Gapless | Sample-accurate | Near-gapless: the next song starts by the element clock (below) |
@@ -380,8 +382,7 @@ served from gets the static files and nothing else (no analytics, no
 cookies). In the browser it keeps your settings, volume and queue
 (`localStorage`; dropped files are never stored); per plugin, its state,
 settings, plain values and encrypted secrets, and the packages you installed
-(IndexedDB `jellyfesh`); and your library: the folders (with the browser's
-folder handles where it keeps them), what the songs' tags say and their
+(IndexedDB `jellyfesh`); and your library: the folders' names, what the songs' tags say and their
 covers (IndexedDB `jellyfesh-library`). The music files themselves are never
 copied. Clearing the site's data in the browser removes all of it.
 

@@ -1,16 +1,9 @@
-// Reading the person's music folders through the browser.
-//
-// Chrome and Edge let a page keep a folder (the File System Access API): `showDirectoryPicker`
-// gives a handle the library stores, and later visits ask for permission again with one click.
-// Other browsers only hand over the files of a folder picked with `<input webkitdirectory>`, for
-// the visit: the catalogue is kept, and the person picks the folder again to play from it.
+// Reading the person's music folders through the browser, for one visit: Chrome and Edge's folder
+// picker (`showDirectoryPicker`) gives a handle the library walks; other browsers hand over the
+// files of a folder picked with `<input webkitdirectory>`. Nothing is kept between visits (see
+// ./store.ts): the catalogue stays, and the person picks the folder again to play from it.
 
 /** The part of the File System Access API the library uses (not in every TypeScript DOM lib). */
-interface PermissionsHandle {
-  queryPermission?(options: { mode: 'read' }): Promise<PermissionState>;
-  requestPermission?(options: { mode: 'read' }): Promise<PermissionState>;
-}
-
 interface IterableDirectory {
   values(): AsyncIterable<FileSystemDirectoryHandle | FileSystemFileHandle>;
 }
@@ -26,7 +19,7 @@ export interface FolderFile {
 /** A folder the person picked. */
 export interface PickedFolder {
   name: string;
-  /** Kept between visits (Chrome, Edge). */
+  /** Chrome and Edge's handle, for this visit. */
   handle: FileSystemDirectoryHandle | null;
   /** The files, when the browser gave them instead of a handle. */
   files: FolderFile[] | null;
@@ -35,11 +28,6 @@ export interface PickedFolder {
 function picker(): DirectoryPicker | null {
   const pick = (globalThis as unknown as { showDirectoryPicker?: DirectoryPicker }).showDirectoryPicker;
   return typeof pick === 'function' ? pick : null;
-}
-
-/** Whether this browser lets the library keep folders between visits. */
-export function keepsFolders(): boolean {
-  return picker() !== null;
 }
 
 /** The files `<input webkitdirectory>` gave, as paths inside the picked folder. */
@@ -60,9 +48,9 @@ export function filesOfInput(list: FileList | File[]): PickedFolder | null {
 }
 
 /**
- * Asks the person for a folder: the browser's folder picker where pages may keep folders, else
- * `fallback`, which must open an `<input webkitdirectory>` and resolve with what it picked. Null
- * when the person cancelled.
+ * Asks the person for a folder: the browser's folder picker where it has one, else `fallback`,
+ * which must open an `<input webkitdirectory>` and resolve with what it picked. Null when the
+ * person cancelled.
  */
 export async function pickFolder(fallback: () => Promise<PickedFolder | null>): Promise<PickedFolder | null> {
   const pick = picker();
@@ -74,15 +62,6 @@ export async function pickFolder(fallback: () => Promise<PickedFolder | null>): 
     if ((error as DOMException).name === 'AbortError') return null;
     throw error;
   }
-}
-
-/** Whether the page may read `handle` now; with `ask`, asks the person (needs a click). */
-export async function mayRead(handle: FileSystemDirectoryHandle, ask: boolean): Promise<boolean> {
-  const h = handle as unknown as PermissionsHandle;
-  const options = { mode: 'read' } as const;
-  if ((await h.queryPermission?.(options)) === 'granted') return true;
-  if (!ask) return false;
-  return (await h.requestPermission?.(options)) === 'granted';
 }
 
 /** Every file in a folder and its subfolders. Hidden files and folders are skipped. */

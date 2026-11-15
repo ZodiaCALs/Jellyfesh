@@ -1,7 +1,6 @@
 <script lang="ts">
-  // What the library pages show above their lists: folders the browser wants a click for before
-  // Jellyfesh may read them again (Chrome, Edge) or that must be picked again this visit (other
-  // browsers), and, with nothing in the library, the empty page (docs/ui.md: "No Albums Yet", the
+  // What the library pages show above their lists: folders to pick again this visit before their
+  // songs play, and, with nothing in the library, the empty page (docs/ui.md: "No Albums Yet", the
   // text, Add Music Folder…).
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
@@ -24,14 +23,8 @@
 {#each waiting as folder (folder.id)}
   <p class="notice" role="note">
     <Icon name="folder" size={18} />
-    <span>
-      {folder.access === 'ask'
-        ? t('Allow Jellyfesh to read “{name}” again to play its songs.', { name: folder.name })
-        : t('Pick “{name}” again to play its songs: this browser does not keep access to folders.', { name: folder.name })}
-    </span>
-    <button onclick={() => (folder.access === 'ask' ? app.library.allowAccess(folder.id) : app.library.pickAgain(folder.id))}>
-      {folder.access === 'ask' ? t('Allow Access') : t('Pick Folder…')}
-    </button>
+    <span>{t('Pick “{name}” again to play its songs on this visit.', { name: folder.name })}</span>
+    <button onclick={() => app.library.pickAgain(folder.id)}>{t('Pick Folder…')}</button>
   </p>
 {/each}
 

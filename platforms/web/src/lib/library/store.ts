@@ -1,9 +1,10 @@
 // Where the music library lives in the browser: IndexedDB `jellyfesh-library`, apart from the
 // plugins' database.
 //
-// * folders: the folders the person added; where the browser allows it (Chrome, Edge) with the
-//   handle the browser gave, so the folder can be read again on later visits after a permission
-//   prompt; elsewhere only its name, and the person picks it again each visit;
+// * folders: the folders the person added, by name only. No folder handles are kept, in any
+//   browser: reading a kept handle back has crashed Chromium-based browsers (the Chromium these
+//   tests run in, and reports for Opera), and a crash there would come at every start. The
+//   person picks a folder again on each visit before its songs play;
 // * tracks: what the scan read from each song's tags (`LibTrack`), by key `<folder>/<path>`;
 // * artwork: each embedded cover once, by the SHA-256 of its bytes.
 //
@@ -24,8 +25,6 @@ export interface ScanReport {
 export interface Folder {
   id: number;
   name: string;
-  /** The browser's handle, where it lets pages keep folders. */
-  handle: FileSystemDirectoryHandle | null;
   addedAt: number;
   lastScan: ScanReport | null;
 }
@@ -39,7 +38,7 @@ export interface LibraryStore {
   readonly persistent: boolean;
   folders(): Promise<Folder[]>;
   /** Adds a folder and returns it with its new id. */
-  addFolder(name: string, handle: FileSystemDirectoryHandle | null): Promise<Folder>;
+  addFolder(name: string): Promise<Folder>;
   saveFolder(folder: Folder): Promise<void>;
   /** Removes a folder and every track of it. */
   removeFolder(id: number): Promise<void>;
@@ -81,9 +80,9 @@ class IndexedLibrary implements LibraryStore {
     return (await request(tx.objectStore('folders').getAll())) as Folder[];
   }
 
-  async addFolder(name: string, handle: FileSystemDirectoryHandle | null): Promise<Folder> {
+  async addFolder(name: string): Promise<Folder> {
     const tx = this.db.transaction('folders', 'readwrite');
-    const record: Omit<Folder, 'id'> = { name, handle, addedAt: Date.now(), lastScan: null };
+    const record: Omit<Folder, 'id'> = { name, addedAt: Date.now(), lastScan: null };
     const id = (await request(tx.objectStore('folders').add(record))) as number;
     await done(tx);
     return { id, ...record };
@@ -164,8 +163,8 @@ class MemoryLibrary implements LibraryStore {
     return [...this.folderList.values()];
   }
 
-  async addFolder(name: string, handle: FileSystemDirectoryHandle | null): Promise<Folder> {
-    const folder: Folder = { id: this.next++, name, handle, addedAt: Date.now(), lastScan: null };
+  async addFolder(name: string): Promise<Folder> {
+    const folder: Folder = { id: this.next++, name, addedAt: Date.now(), lastScan: null };
     this.folderList.set(folder.id, folder);
     return folder;
   }

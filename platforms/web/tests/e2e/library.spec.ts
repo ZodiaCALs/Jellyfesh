@@ -1,6 +1,7 @@
 // The music library: a folder of generated, tagged sine tones (invented titles) added with the
-// folder picker browsers without folder handles use, then browsed, searched, played, kept across a
-// reload and removed.
+// folder picker of browsers without a native one, then browsed, searched, played, kept across a
+// reload (picked again to play) and removed; and a folder read through a folder handle, as Chrome
+// and Edge's picker gives.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -73,17 +74,17 @@ test('adds a folder, browses, searches and plays it, and keeps it across a reloa
   await page.getByRole('searchbox', { name: 'Search' }).fill('lantern');
   await expect(page.getByRole('region', { name: 'Songs' }).getByRole('button', { name: 'Play Lantern' })).toBeVisible();
 
-  // The catalogue and the queue come back after a reload; this browser asks for the folder again.
+  // The catalogue and the queue come back after a reload; the folder is picked again to play.
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Search', level: 1 })).toBeVisible();
   await expect.poll(() => page.evaluate(() => (globalThis as any).jellyfesh.library.stats.tracks)).toBe(3);
   expect((await snapshot(page)).title).toBe('Harbour');
   await nav(page, 'Songs').click();
-  await expect(page.getByText('Pick “Music” again to play its songs')).toBeVisible();
+  await expect(page.getByText('Pick “Music” again to play its songs on this visit.')).toBeVisible();
   const again = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Pick Folder…' }).click();
   await (await again).setFiles(folder);
-  await expect(page.getByText('Pick “Music” again to play its songs')).toBeHidden();
+  await expect(page.getByText('Pick “Music” again to play its songs on this visit.')).toBeHidden();
   await page.getByRole('button', { name: 'Play Solo' }).click();
   await waitPlaying(page, 'Solo');
 });
@@ -109,4 +110,43 @@ test('removes a folder after asking', async ({ page }) => {
   await confirm.getByRole('button', { name: 'Remove Folder', exact: true }).click();
   await expect(page.getByText('No folders yet')).toBeVisible();
   await expect.poll(() => page.evaluate(() => (globalThis as any).jellyfesh.library.stats.tracks)).toBe(0);
+});
+
+test('reads and plays a folder through a folder handle', async ({ page }) => {
+  // Chromium's origin private file system gives real folder handles, like the ones the folder
+  // picker gives in Chrome and Edge.
+  const song = taggedWav(3, 392, { title: 'Kept', artist: 'Dana', album: 'Handles', track: 1 }).toString('base64');
+  await page.addInitScript(() => {
+    (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker = async () => {
+      const root = await navigator.storage.getDirectory();
+      return root.getDirectoryHandle('Kept Music');
+    };
+  });
+  await openApp(page);
+  await page.evaluate(async (data) => {
+    const root = await navigator.storage.getDirectory();
+    await root.removeEntry('Kept Music', { recursive: true }).catch(() => undefined);
+    const folder = await root.getDirectoryHandle('Kept Music', { create: true });
+    const album = await folder.getDirectoryHandle('Handles', { create: true });
+    const writable = await (await album.getFileHandle('01 Kept.wav', { create: true })).createWritable();
+    await writable.write(Uint8Array.from(atob(data), (c) => c.charCodeAt(0)));
+    await writable.close();
+  }, song);
+  await nav(page, 'Settings').click();
+  await page.getByRole('tab', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'Add Folder…' }).click();
+  await expect(page.getByText('Kept Music', { exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (globalThis as any).jellyfesh.library.stats.tracks)).toBe(1);
+  // Picked this visit: nothing to pick again.
+  await expect(page.getByRole('button', { name: 'Pick Folder…' })).toHaveCount(0);
+
+  await nav(page, 'Songs').click();
+  await page.getByRole('button', { name: 'Play Kept' }).click();
+  await waitPlaying(page, 'Kept');
+
+  await nav(page, 'Settings').click();
+  await page.getByRole('tab', { name: 'Library' }).click();
+  await page.getByRole('button', { name: 'Remove Folder…' }).click();
+  await page.getByRole('button', { name: 'Remove Folder', exact: true }).click();
+  await expect(page.getByText('No folders yet')).toBeVisible();
 });

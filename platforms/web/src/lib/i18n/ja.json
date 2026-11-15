@@ -238,15 +238,11 @@
   "Albums": "アルバム",
   "Artists": "アーティスト",
   "Songs": "曲",
-  "Allow Jellyfesh to read “{name}” again to play its songs.": "「{name}」の曲を再生するには、Jellyfesh に再びフォルダの読み取りを許可してください。",
-  "Pick “{name}” again to play its songs: this browser does not keep access to folders.": "「{name}」の曲を再生するには、もう一度フォルダを選んでください。このブラウザはフォルダへのアクセスを保持しません。",
-  "Allow Access": "アクセスを許可",
   "Pick Folder…": "フォルダを選択…",
   "Add Music Folder…": "ミュージックフォルダを追加…",
   "Reading “{name}”… {count} songs so far": "「{name}」を読み込み中… これまでに {count} 曲",
   "Sort": "並べ替え",
   "Descending": "降順",
-  "Allow Jellyfesh to read your music folder again in Settings › Library to play this song.": "この曲を再生するには、「設定 › ライブラリ」で Jellyfesh にミュージックフォルダの読み取りを再び許可してください。",
   "Pick the folder of this song again in Settings › Library to play it.": "この曲を再生するには、「設定 › ライブラリ」でこの曲のフォルダをもう一度選んでください。",
   "This song is no longer in its folder.": "この曲はもうフォルダにありません。",
   "Year": "年",
@@ -263,8 +259,6 @@
   "updated {n}": "更新 {n}",
   "removed {n}": "削除 {n}",
   "Music Folders": "ミュージックフォルダ",
-  "Jellyfesh reads every audio file in these folders. This browser keeps access to them; it may ask again after a restart.": "Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み込みます。このブラウザはアクセスを保持しますが、再起動後にもう一度確認されることがあります。",
-  "Jellyfesh reads every audio file in these folders. This browser does not keep access to folders, so pick them again to play their songs on your next visit; what Jellyfesh read is kept.": "Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み込みます。このブラウザはフォルダへのアクセスを保持しないため、次回は曲を再生する前にもう一度フォルダを選んでください。読み込んだ情報は保持されます。",
   "No folders yet": "フォルダはまだありません",
   "Remove Folder…": "フォルダを削除…",
   "Add Folder…": "フォルダを追加…",
@@ -317,5 +311,7 @@
   "Skip Forward 5 Seconds": "5 秒先へ",
   "Skip Back 5 Seconds": "5 秒戻る",
   "Volume Up": "音量を上げる",
-  "Volume Down": "音量を下げる"
+  "Volume Down": "音量を下げる",
+  "Pick “{name}” again to play its songs on this visit.": "今回の訪問で「{name}」の曲を再生するには、もう一度フォルダを選んでください。",
+  "Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.": "Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み込みます。読み込んだ情報は保持されます。訪問のたびに、曲を再生する前にもう一度フォルダを選んでください。"
 }

@@ -41,9 +41,7 @@
 <section class="group" aria-labelledby="g-folders">
   <h2 id="g-folders" class="section">{t('Music Folders')}</h2>
   <p class="note">
-    {library.keepsFolders
-      ? t('Jellyfesh reads every audio file in these folders. This browser keeps access to them; it may ask again after a restart.')
-      : t('Jellyfesh reads every audio file in these folders. This browser does not keep access to folders, so pick them again to play their songs on your next visit; what Jellyfesh read is kept.')}
+    {t('Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.')}
   </p>
   <div class="card">
     {#if library.folders.length === 0}
@@ -56,9 +54,7 @@
           <span class="label">{folder.name}</span>
           <span class="help">{lastScan(folder)}</span>
         </span>
-        {#if folder.access === 'ask'}
-          <button class="button" disabled={busy} onclick={() => run(() => library.allowAccess(folder.id))}>{t('Allow Access')}</button>
-        {:else if folder.access === 'pick'}
+        {#if folder.access === 'pick'}
           <button class="button" disabled={busy} onclick={() => run(() => library.pickAgain(folder.id))}>{t('Pick Folder…')}</button>
         {/if}
         <button class="button quiet" disabled={busy} onclick={() => (removing = folder)}>{t('Remove Folder…')}</button>

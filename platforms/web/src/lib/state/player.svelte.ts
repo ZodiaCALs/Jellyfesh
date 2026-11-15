@@ -564,8 +564,6 @@ export class Player {
       const dropped = meta ? await this.files.open(meta.id) : undefined;
       if (!meta || !dropped) {
         switch (this.files.whyClosed(meta?.id ?? row.id)) {
-          case 'ask':
-            throw new Error(t('Allow Jellyfesh to read your music folder again in Settings › Library to play this song.'));
           case 'pick':
             throw new Error(t('Pick the folder of this song again in Settings › Library to play it.'));
           case 'gone':
