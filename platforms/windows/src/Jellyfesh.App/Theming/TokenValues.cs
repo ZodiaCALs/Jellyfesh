@@ -29,6 +29,7 @@ internal static class TokenValues
         ["Space.S8"] = Tokens.Space.S8,
         ["Space.S9"] = Tokens.Space.S9,
         ["Space.S10"] = Tokens.Space.S10,
+        ["Field.AuroraStrength"] = Tokens.Field.AuroraStrength,
         ["Artwork.RadiusList"] = Tokens.Artwork.RadiusList,
         ["Artwork.RadiusGrid"] = Tokens.Artwork.RadiusGrid,
         ["Artwork.RadiusHero"] = Tokens.Artwork.RadiusHero,

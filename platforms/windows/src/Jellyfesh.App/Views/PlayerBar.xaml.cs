@@ -45,6 +45,12 @@ public sealed partial class PlayerBar : UserControl
 
     private void OnQueueClick(object sender, RoutedEventArgs e) => OpenRequested?.Invoke(this, NowPlayingPanel.Queue);
 
+    /// <summary>The output devices, or Devices in a remote session.</summary>
+    private void OnDeviceClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowDevices(DeviceButton, Player, Shell.Services);
+
+    /// <summary>More: Open in {Service}, Stop Controlling.</summary>
+    private void OnMoreClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowMore(MoreButton, Player, Shell.Services);
+
     private void OnProgressChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(ProgressPresenter.Fraction) or nameof(ProgressPresenter.DurationText))

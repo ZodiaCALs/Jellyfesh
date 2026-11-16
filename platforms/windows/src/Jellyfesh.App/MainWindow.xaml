@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The shell: the title bar, the navigation pane over the window material (Mica on Windows 11,
-    the solid field otherwise, ADR-0007), the library pages on the Misty field (MAT-02), the
-    floating mini player (under 900 px) or player bar (900 px and wider), Now Playing over
-    everything below the title bar, and one notice at a time.
+    The shell (Luminous, v0.0.6): the title bar on the window material (Mica Alt on Windows 11, the
+    solid field otherwise, ADR-0007); below it the field with four glows at the artwork's hue
+    behind everything, the navigation pane as Clear glass over it, the library pages, the floating
+    mini player (under 900 px) or player bar (900 px and wider) with the content fading out just
+    above it, Now Playing over everything below the title bar, and one notice at a time.
 -->
 <Window
     x:Class="Jellyfesh.App.MainWindow"
@@ -42,6 +43,14 @@
             <KeyboardAccelerator Key="GoBack" Invoked="OnBackKey" />
         </Grid.KeyboardAccelerators>
 
+        <!-- The Luminous field at the theme hue: the sky and four large glows (no photograph, MAT-02), behind the pane too. -->
+        <Grid x:Name="Field" Grid.Row="1" Background="{ThemeResource JfSky}" IsHitTestVisible="False">
+            <Rectangle Fill="{ThemeResource JfAuroraGlow1}" />
+            <Rectangle Fill="{ThemeResource JfAuroraGlow2}" />
+            <Rectangle Fill="{ThemeResource JfAuroraGlow3}" />
+            <Rectangle Fill="{ThemeResource JfAuroraGlow4}" />
+        </Grid>
+
         <TitleBar
             x:Name="AppTitleBar"
             Title="Jellyfesh"
@@ -65,9 +74,9 @@
             PaneDisplayMode="Auto"
             SelectionChanged="OnNavSelectionChanged">
             <NavigationView.Resources>
-                <!-- The pane shows the window material; the content area draws the field itself. -->
-                <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="Transparent" />
+                <!-- The pane is Clear glass over the field (in-app acrylic; solid Cloud without transparency); the content area shows the field. -->
+                <StaticResource x:Key="NavigationViewDefaultPaneBackground" ResourceKey="JfGlassClear" />
+                <StaticResource x:Key="NavigationViewExpandedPaneBackground" ResourceKey="JfGlassClear" />
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
             </NavigationView.Resources>
@@ -122,13 +131,15 @@
             </NavigationView.PaneFooter>
 
             <Grid x:Name="ContentArea" SizeChanged="OnContentAreaSizeChanged">
-                <!-- The Misty field at the theme hue: sky and three aurora glows (no photograph, MAT-02). -->
-                <Grid x:Name="Field" Background="{ThemeResource JfSky}" IsHitTestVisible="False">
-                    <Rectangle Fill="{ThemeResource JfAuroraGlow1}" />
-                    <Rectangle Fill="{ThemeResource JfAuroraGlow2}" />
-                    <Rectangle Fill="{ThemeResource JfAuroraGlow3}" />
-                </Grid>
                 <Frame x:Name="ContentFrame" CacheSize="8" Navigated="OnNavigated" />
+                <!-- The content fades out just above the floating player (Luminous). -->
+                <Rectangle
+                    x:Name="ContentFade"
+                    Height="152"
+                    VerticalAlignment="Bottom"
+                    Fill="{ThemeResource JfContentFade}"
+                    IsHitTestVisible="False"
+                    Visibility="Collapsed" />
                 <views:MiniPlayer
                     x:Name="Mini"
                     Margin="16,0,16,16"

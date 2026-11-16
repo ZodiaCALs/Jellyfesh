@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The lyrics (docs/lyrics-model.md, lyrics tokens, docs/design-controls.md "v0.0.4"): the active
-    line in ink-90 at full size, the others at 96 %, held at 38 % of the viewport by a 380 ms Fluid
-    scroll in which each following line starts 30 ms after the one above (a cascade), the sung word
-    swept linearly while it is sung, translation and romanization under each line, sized and aligned
-    by the Lyrics settings. Scrolling by hand pauses the follow for four seconds; reduced motion
-    jumps and lights whole lines. Selecting a line seeks to it.
+    The lyrics (docs/lyrics-model.md, lyrics tokens, docs/design-controls.md "v0.0.4", Luminous): the
+    active line in ink-90 at full size (40 epx bold in a wide pane), the others at 92 %, held at 38 %
+    of the viewport by a 380 ms Fluid scroll in which each following line starts 40 ms after the
+    one above (a cascade), the sung word swept linearly while it is sung, translation and
+    romanization under each line, sized and aligned by the Lyrics settings. Scrolling by hand
+    pauses the follow for four seconds; reduced motion jumps and lights whole lines. Selecting a
+    line seeks to it. In a remote session: "Lyrics aren't shown while {Service} plays."
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.LyricsView"
@@ -48,6 +49,14 @@
             VerticalAlignment="Center"
             Style="{StaticResource JfSecondaryBodyText}"
             Text="No Lyrics for This Song"
-            Visibility="{x:Bind shell:Bind.Collapsed(Presenter.HasLyrics), Mode=OneWay}" />
+            Visibility="{x:Bind shell:Bind.VisibleIfNeither(Presenter.HasLyrics, Player.IsRemote), Mode=OneWay}" />
+        <TextBlock
+            MaxWidth="420"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            Style="{StaticResource JfSecondaryBodyText}"
+            Text="{x:Bind Player.RemoteLyricsText, Mode=OneWay}"
+            TextAlignment="Center"
+            Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}" />
     </Grid>
 </UserControl>

@@ -93,6 +93,9 @@ public sealed partial class MainWindow : Window
 
         InitializeComponent();
 
+        // Shadows of the library (covers, groups, the player bar) fall on the field (ThemeShadow receivers).
+        Elevation.AddReceiver(Elevation.Library, Field);
+
         Title = "Jellyfesh";
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -328,6 +331,7 @@ public sealed partial class MainWindow : Window
         var bar = floating && _wide;
         Mini.Visibility = mini ? Visibility.Visible : Visibility.Collapsed;
         Bar.Visibility = bar ? Visibility.Visible : Visibility.Collapsed;
+        ContentFade.Visibility = mini || bar ? Visibility.Visible : Visibility.Collapsed;
         player.Progress.IsActive = _visible && _nowPlayingOpen && !_compact;
         player.BarProgress.IsActive = _visible && bar;
         player.MiniProgress.IsActive = _visible && (mini || _compact);

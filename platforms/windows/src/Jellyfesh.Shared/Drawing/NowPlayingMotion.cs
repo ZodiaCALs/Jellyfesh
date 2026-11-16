@@ -19,17 +19,17 @@ public enum LyricLineRole
 public readonly record struct CascadeKeyframe(double Progress, double Offset);
 
 /// <summary>
-/// Now Playing's motion after Apple Music (docs/design-controls.md, "v0.0.4"), as numbers the views
-/// animate with the toolkit: the artwork's pause scale, lyric sizes and the lyrics cascade. With
-/// reduced motion the artwork stays at full size and the lyrics jump.
+/// Now Playing's motion after Apple Music (docs/design-controls.md, "v0.0.4"; Luminous, docs/ui.md,
+/// v0.0.6), as numbers the views animate with the toolkit: the artwork's pause scale, lyric sizes
+/// and the lyrics cascade. With reduced motion the artwork stays at full size and the lyrics jump.
 /// </summary>
 public static class NowPlayingMotion
 {
     /// <summary>player.artwork-paused-scale.</summary>
     public const double ArtworkPausedScale = 0.88;
 
-    /// <summary>lyrics.scale-inactive: every line but the active one, scaled from its start edge.</summary>
-    public const double InactiveLineScale = 0.96;
+    /// <summary>lyrics.scale-inactive (Luminous: 92 %): every line but the active one, scaled from its start edge.</summary>
+    public const double InactiveLineScale = 0.92;
 
     /// <summary>lyrics.scale-small.</summary>
     public const double SmallLyrics = 0.8;
@@ -37,8 +37,8 @@ public static class NowPlayingMotion
     /// <summary>lyrics.scale-large.</summary>
     public const double LargeLyrics = 1.2;
 
-    /// <summary>lyrics.stagger: each following line starts this much after the one above.</summary>
-    public static readonly TimeSpan Stagger = TimeSpan.FromMilliseconds(30);
+    /// <summary>lyrics.stagger (Luminous: 40 ms): each following line starts this much after the one above.</summary>
+    public static readonly TimeSpan Stagger = TimeSpan.FromMilliseconds(40);
 
     /// <summary>Lines further below the active one than this start together, so the cascade never drags.</summary>
     public const int MaxStaggeredLines = 8;
@@ -46,6 +46,17 @@ public static class NowPlayingMotion
     /// <summary>The artwork's scale: 1 while playing, 0.88 when paused; always 1 with reduced motion.</summary>
     public static double ArtworkScale(bool playing, bool reduceMotion) =>
         playing || reduceMotion ? 1 : ArtworkPausedScale;
+
+    /// <summary>The pane width at and above which lyric lines take their full token size (Luminous: 40).</summary>
+    public const double FullLyricsWidth = 640;
+
+    /// <summary>
+    /// The lyric line size for a lyrics pane <paramref name="paneWidth"/> wide, before the Lyrics size
+    /// setting: lyrics.line (40, the fluid maximum) from a 640 epx pane, smaller in narrower panes but
+    /// never under the fluid minimum (28).
+    /// </summary>
+    public static double LyricLineSize(double paneWidth, double min, double max) =>
+        double.IsFinite(paneWidth) && paneWidth > 0 ? Math.Clamp(max * paneWidth / FullLyricsWidth, min, max) : min;
 
     /// <summary>The Lyrics size setting as a factor of the token sizes (line, translation, romanization).</summary>
     public static double LyricsScale(LyricsSize size) => size switch

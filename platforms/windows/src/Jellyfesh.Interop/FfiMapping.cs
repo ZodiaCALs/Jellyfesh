@@ -25,7 +25,8 @@ public static class FfiMapping
         ToModel(s.Settings),
         ToModel(s.Devices),
         ToModel(s.Sources),
-        s.Muted);
+        s.Muted,
+        s.Remote is null ? M.RemoteState.Initial : ToModel(s.Remote));
 
     public static M.CoreEvent ToModel(F.Event e) => e switch
     {
@@ -40,6 +41,7 @@ public static class FfiMapping
         F.Event.Settings st => new M.CoreEvent.Settings(ToModel(st.Snapshot)),
         F.Event.Devices d => new M.CoreEvent.Devices(ToModel(d.Snapshot)),
         F.Event.Sources so => new M.CoreEvent.Sources(ToModel(so.Snapshot)),
+        F.Event.Remote r => new M.CoreEvent.Remote(ToModel(r.Snapshot)),
         F.Event.Auth a => new M.CoreEvent.Auth(ToModel(a.Update)),
         F.Event.SearchResults sr => new M.CoreEvent.SearchResults(ToModel(sr.Update)),
         F.Event.BrowsePage bp => new M.CoreEvent.BrowsePage(ToModel(bp.Update)),
@@ -112,7 +114,8 @@ public static class FfiMapping
     public static M.NowPlayingInfo ToModel(F.NowPlaying n) => new(
         n.Uid, ToModel(n.Track), n.Path, n.Title, n.Artist, n.Album, n.DurationMs,
         n.Artwork is null ? null : ToModel(n.Artwork),
-        n.Format is null ? null : new M.TrackFormat(n.Format.Codec, n.Format.SampleRate, n.Format.Channels, n.Format.DurationUs, n.Format.Gapless, n.Format.Bitrate));
+        n.Format is null ? null : new M.TrackFormat(n.Format.Codec, n.Format.SampleRate, n.Format.Channels, n.Format.DurationUs, n.Format.Gapless, n.Format.Bitrate),
+        n.Link);
 
     public static M.ArtworkRef ToModel(F.ArtworkRef a) => a switch
     {
@@ -224,7 +227,7 @@ public static class FfiMapping
         p.Id, p.Name, p.Version, p.Author,
         p.Badge == F.PluginBadge.Official ? M.PluginBadge.Official : M.PluginBadge.Community,
         p.VendorPlayback, p.Capabilities.ToArray(), List(p.AuthMethods, ToModel), p.Enabled, p.Account,
-        p.NeedsDisclosure, p.SettingsSchemaJson, p.SettingsJson, p.Icon);
+        p.NeedsDisclosure, p.SettingsSchemaJson, p.SettingsJson, p.Icon, p.RemotePlayback);
 
     public static M.AuthMethod ToModel(F.AuthMethod a) => a switch
     {
@@ -266,7 +269,37 @@ public static class FfiMapping
         i.Artwork is null ? null : ToModel(i.Artwork),
         i.Playable, i.UnplayableReason,
         i.Track is null ? null : ToModel(i.Track),
-        i.AlsoIn.ToArray());
+        i.AlsoIn.ToArray(),
+        i.Link);
+
+    public static M.RemoteState ToModel(F.RemoteSnapshot r) => new(
+        r.Version,
+        r.Source,
+        r.SourceName,
+        ToModel(r.Status),
+        r.Item is null ? null : ToModel(r.Item),
+        r.Context is null ? null : ToModel(r.Context),
+        ToModel(r.Anchor),
+        r.Shuffle,
+        ToModel(r.Repeat),
+        r.Device is null ? null : ToModel(r.Device),
+        List(r.Devices, ToModel),
+        r.Error);
+
+    public static M.RemoteDevice ToModel(F.RemoteDevice d) => new(
+        d.Id,
+        d.Name,
+        d.Kind switch
+        {
+            F.RemoteDeviceKind.Computer => M.RemoteDeviceKind.Computer,
+            F.RemoteDeviceKind.Smartphone => M.RemoteDeviceKind.Smartphone,
+            F.RemoteDeviceKind.Speaker => M.RemoteDeviceKind.Speaker,
+            F.RemoteDeviceKind.Tv => M.RemoteDeviceKind.Tv,
+            F.RemoteDeviceKind.Car => M.RemoteDeviceKind.Car,
+            _ => M.RemoteDeviceKind.Other,
+        },
+        d.Active,
+        d.VolumePercent);
 
     public static M.ScanStatus ToModel(F.ScanStatus s) => s switch
     {
@@ -354,7 +387,17 @@ public static class FfiMapping
         M.CoreCommand.Logout l => new F.Command.Logout(l.Plugin),
         M.CoreCommand.Search s => new F.Command.Search(s.Query, ToFfi(s.Scope)),
         M.CoreCommand.Browse b => new F.Command.Browse(b.Plugin, b.Node, b.Page),
+        M.CoreCommand.Remote r => new F.Command.Remote(ToFfi(r.Action)),
         _ => throw new ArgumentOutOfRangeException(nameof(c), c, "unknown command"),
+    };
+
+    public static F.RemoteAction ToFfi(M.RemoteAction a) => a switch
+    {
+        M.RemoteAction.Refresh => new F.RemoteAction.Refresh(),
+        M.RemoteAction.Transfer t => new F.RemoteAction.Transfer(t.Device),
+        M.RemoteAction.SetVolume v => new F.RemoteAction.SetVolume(Math.Min(v.Percent, 100u)),
+        M.RemoteAction.End => new F.RemoteAction.End(),
+        _ => throw new ArgumentOutOfRangeException(nameof(a), a, "unknown remote action"),
     };
 
     public static F.TrackRef ToFfi(M.TrackRef t) => t switch

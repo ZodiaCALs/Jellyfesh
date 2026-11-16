@@ -8,10 +8,11 @@ using Windows.UI.ViewManagement;
 namespace Jellyfesh.App.Theming;
 
 /// <summary>
-/// The window material and the glass fallbacks (ADR-0007): Mica on Windows 11; the solid field on
-/// Windows 10 (Mica falls back to a solid colour there anyway); and solid Cloud for every glass
-/// surface when transparency effects are off, in Battery Saver, in high contrast or with Reduce
-/// effects (Misty MAT-08). Blur and tint never animate (MAT-10): a change swaps them.
+/// The window material and the glass fallbacks (ADR-0007): Mica Alt on Windows 11 (Luminous,
+/// v0.0.6: the title bar's material; the navigation pane is Clear glass over the field); the solid
+/// field on Windows 10 (Mica falls back to a solid colour there anyway); and solid Cloud for every
+/// glass surface when transparency effects are off, in Battery Saver, in high contrast or with
+/// Reduce effects (Misty MAT-08). Blur and tint never animate (MAT-10): a change swaps them.
 /// </summary>
 internal sealed class BackdropController
 {
@@ -55,7 +56,7 @@ internal sealed class BackdropController
         var mica = !solid && MicaController.IsSupported();
         if (mica)
         {
-            _mica ??= new MicaBackdrop { Kind = MicaKind.Base };
+            _mica ??= new MicaBackdrop { Kind = MicaKind.BaseAlt };
             if (!ReferenceEquals(_window.SystemBackdrop, _mica))
             {
                 _window.SystemBackdrop = _mica;

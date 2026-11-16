@@ -2,7 +2,8 @@
 <!--
     The queue in playback order: "Up Next", Clear Queue (it asks first), "Nothing Up Next" when empty.
     Drag a row to reorder it (or Alt+Up and Alt+Down), Delete removes it, selecting it jumps there. The
-    core's next Queue slice is always the truth.
+    core's next Queue slice is always the truth. In a remote session the service keeps its own queue:
+    "Up Next is in {Service}."
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.QueueView"
@@ -10,50 +11,60 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:shell="using:Jellyfesh.App.Shell">
 
-    <Grid RowSpacing="12">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
-        <Grid ColumnSpacing="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Uid="Queue_UpNext" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Up Next" />
-            <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="{x:Bind Queue.Summary, Mode=OneWay}" />
-            <Button x:Uid="Queue_Clear" Grid.Column="2" Command="{x:Bind Queue.ClearCommand}" Content="Clear Queue" IsEnabled="{x:Bind shell:Bind.Not(Queue.IsEmpty), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
-        </Grid>
-        <ListView
-            x:Name="List"
-            x:Uid="Queue_List"
-            Grid.Row="1"
-            Padding="0,0,0,24"
-            AllowDrop="True"
-            AutomationProperties.Name="Up Next"
-            CanDragItems="True"
-            CanReorderItems="True"
-            DragItemsCompleted="OnDragItemsCompleted"
-            IsItemClickEnabled="True"
-            ItemClick="OnItemClick"
-            ItemContainerStyle="{StaticResource JfTrackRowStyle}"
-            ItemTemplate="{StaticResource QueueRowTemplate}"
-            ItemsSource="{x:Bind Queue.UpNext}"
-            SelectionMode="Single">
-            <ListView.KeyboardAccelerators>
-                <KeyboardAccelerator Key="Up" Modifiers="Menu" Invoked="OnMoveUp" />
-                <KeyboardAccelerator Key="Down" Modifiers="Menu" Invoked="OnMoveDown" />
-                <KeyboardAccelerator Key="Delete" Invoked="OnRemoveKey" />
-            </ListView.KeyboardAccelerators>
-        </ListView>
+    <Grid>
         <TextBlock
-            x:Uid="Queue_Empty"
-            Grid.Row="1"
+            MaxWidth="420"
             HorizontalAlignment="Center"
             VerticalAlignment="Center"
             Style="{StaticResource JfSecondaryBodyText}"
-            Text="Nothing Up Next"
-            Visibility="{x:Bind shell:Bind.Visible(Queue.IsEmpty), Mode=OneWay}" />
+            Text="{x:Bind Player.RemoteQueueText, Mode=OneWay}"
+            TextAlignment="Center"
+            Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}" />
+        <Grid RowSpacing="12" Visibility="{x:Bind shell:Bind.Collapsed(Player.IsRemote), Mode=OneWay}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Uid="Queue_UpNext" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Up Next" />
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="{x:Bind Queue.Summary, Mode=OneWay}" />
+                <Button x:Uid="Queue_Clear" Grid.Column="2" Command="{x:Bind Queue.ClearCommand}" Content="Clear Queue" IsEnabled="{x:Bind shell:Bind.Not(Queue.IsEmpty), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
+            </Grid>
+            <ListView
+                x:Name="List"
+                x:Uid="Queue_List"
+                Grid.Row="1"
+                Padding="0,0,0,24"
+                AllowDrop="True"
+                AutomationProperties.Name="Up Next"
+                CanDragItems="True"
+                CanReorderItems="True"
+                DragItemsCompleted="OnDragItemsCompleted"
+                IsItemClickEnabled="True"
+                ItemClick="OnItemClick"
+                ItemContainerStyle="{StaticResource JfTrackRowStyle}"
+                ItemTemplate="{StaticResource QueueRowTemplate}"
+                ItemsSource="{x:Bind Queue.UpNext}"
+                SelectionMode="Single">
+                <ListView.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="Up" Modifiers="Menu" Invoked="OnMoveUp" />
+                    <KeyboardAccelerator Key="Down" Modifiers="Menu" Invoked="OnMoveDown" />
+                    <KeyboardAccelerator Key="Delete" Invoked="OnRemoveKey" />
+                </ListView.KeyboardAccelerators>
+            </ListView>
+            <TextBlock
+                x:Uid="Queue_Empty"
+                Grid.Row="1"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Style="{StaticResource JfSecondaryBodyText}"
+                Text="Nothing Up Next"
+                Visibility="{x:Bind shell:Bind.Visible(Queue.IsEmpty), Mode=OneWay}" />
+        </Grid>
     </Grid>
 </UserControl>

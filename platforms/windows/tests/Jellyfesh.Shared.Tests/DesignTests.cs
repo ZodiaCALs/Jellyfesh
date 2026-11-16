@@ -117,20 +117,21 @@ public class DesignTests
         Assert.Equal(LyricLineRole.Upcoming, NowPlayingMotion.Role(4, 3));
         Assert.Equal(LyricLineRole.Upcoming, NowPlayingMotion.Role(0, -1)); // before the first line
         Assert.Equal(1, NowPlayingMotion.LineScale(LyricLineRole.Active));
-        Assert.Equal(0.96, NowPlayingMotion.LineScale(LyricLineRole.Sung));
+        Assert.Equal(0.92, NowPlayingMotion.LineScale(LyricLineRole.Sung)); // Luminous
         Assert.Equal(0.8, NowPlayingMotion.LyricsScale(LyricsSize.Small));
         Assert.Equal(1, NowPlayingMotion.LyricsScale(LyricsSize.Medium));
         Assert.Equal(1.2, NowPlayingMotion.LyricsScale(LyricsSize.Large));
     }
 
     [Fact]
-    public void Each_following_line_starts_thirty_milliseconds_later()
+    public void Each_following_line_starts_forty_milliseconds_later()
     {
+        // Luminous (v0.0.6): lyrics.stagger is 40 ms.
         Assert.Equal(TimeSpan.Zero, NowPlayingMotion.CascadeDelay(2, 4));
         Assert.Equal(TimeSpan.Zero, NowPlayingMotion.CascadeDelay(4, 4));
-        Assert.Equal(TimeSpan.FromMilliseconds(30), NowPlayingMotion.CascadeDelay(5, 4));
-        Assert.Equal(TimeSpan.FromMilliseconds(90), NowPlayingMotion.CascadeDelay(7, 4));
-        Assert.Equal(TimeSpan.FromMilliseconds(240), NowPlayingMotion.CascadeDelay(40, 4)); // capped at eight lines
+        Assert.Equal(TimeSpan.FromMilliseconds(40), NowPlayingMotion.CascadeDelay(5, 4));
+        Assert.Equal(TimeSpan.FromMilliseconds(120), NowPlayingMotion.CascadeDelay(7, 4));
+        Assert.Equal(TimeSpan.FromMilliseconds(320), NowPlayingMotion.CascadeDelay(40, 4)); // capped at eight lines
         Assert.Equal(TimeSpan.Zero, NowPlayingMotion.CascadeDelay(5, -1));
     }
 

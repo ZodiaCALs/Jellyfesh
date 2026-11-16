@@ -515,6 +515,9 @@
   <data name="Library_WatchTitle.Text" xml:space="preserve">
     <value>フォルダを監視</value>
   </data>
+  <data name="Link_OpenIn" xml:space="preserve">
+    <value>{0} で開く</value>
+  </data>
   <data name="Lyrics_InfoFrom" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
@@ -680,9 +683,6 @@
   <data name="NowPlaying_LyricsTab.Content" xml:space="preserve">
     <value>歌詞</value>
   </data>
-  <data name="NowPlaying_Output.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>出力デバイス</value>
-  </data>
   <data name="NowPlaying_PlayerTab.Content" xml:space="preserve">
     <value>プレーヤー</value>
   </data>
@@ -809,6 +809,9 @@
   <data name="Player_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>次へ (Ctrl+→)</value>
   </data>
+  <data name="Player_OutputDevice" xml:space="preserve">
+    <value>出力デバイス</value>
+  </data>
   <data name="Player_Pause" xml:space="preserve">
     <value>一時停止</value>
   </data>
@@ -922,6 +925,24 @@
   </data>
   <data name="Queue_UpNext.Text" xml:space="preserve">
     <value>次に再生</value>
+  </data>
+  <data name="Remote_Devices" xml:space="preserve">
+    <value>デバイス</value>
+  </data>
+  <data name="Remote_Ended" xml:space="preserve">
+    <value>{0} のコントロールを停止しました</value>
+  </data>
+  <data name="Remote_Lyrics" xml:space="preserve">
+    <value>{0} の再生中は歌詞を表示しません。</value>
+  </data>
+  <data name="Remote_PlayingOn" xml:space="preserve">
+    <value>{0} で再生中</value>
+  </data>
+  <data name="Remote_Queue" xml:space="preserve">
+    <value>「次に再生」は {0} にあります。</value>
+  </data>
+  <data name="Remote_StopControlling" xml:space="preserve">
+    <value>コントロールを停止</value>
   </data>
   <data name="Scan_Failed" xml:space="preserve">
     <value>スキャンに失敗しました</value>

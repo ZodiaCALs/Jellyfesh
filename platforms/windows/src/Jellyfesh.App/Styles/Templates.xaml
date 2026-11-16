@@ -3,7 +3,8 @@
     Row and tile templates shared by the library pages, compiled with x:Bind (no reflection). Rows
     start as placeholders and fill in when their page of the core's query arrives; artwork is a
     thumbnail file the view decodes at twice the drawn size (crisp up to 200 % scaling). Track rows
-    are 52 px (player tokens), list art radius 6, grid covers 12.
+    are 52 px (player tokens), list art radius 6, grid covers 16 (Luminous). A song that cannot play
+    here shows why beside its other facts (choosing it opens its link when it has one).
 -->
 <ResourceDictionary
     x:Class="Jellyfesh.App.Styles.Templates"
@@ -31,6 +32,8 @@
                 <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
             </StackPanel>
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="12">
+                <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind UnplayableNote, Mode=OneWay}"
+                           Visibility="{x:Bind shell:Bind.VisibleIf(UnplayableNote), Mode=OneWay}" />
                 <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind Origin, Mode=OneWay}"
                            Visibility="{x:Bind shell:Bind.VisibleIf(Origin), Mode=OneWay}" />
                 <TextBlock Style="{StaticResource JfTimeText}" Text="{x:Bind Duration, Mode=OneWay}" />

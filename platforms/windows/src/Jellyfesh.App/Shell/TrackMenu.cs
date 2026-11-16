@@ -1,15 +1,18 @@
 using Jellyfesh.App.Views;
 using Jellyfesh.Core;
 using Jellyfesh.ViewModels;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
 namespace Jellyfesh.App.Shell;
 
 /// <summary>
 /// The song menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to Favourites or Remove
-/// from Favourites, Go to Album, Go to Artist and Show in Explorer, and an optional removal (from a
-/// playlist, from favourites). It only sends commands and opens pages. One menu serves every row of
-/// a list; it reads its row when it opens.
+/// from Favourites, Go to Album, Go to Artist, Open in {Service} (songs with a link) and Show in
+/// Explorer, and an optional removal (from a playlist, from favourites). A remote source's songs
+/// are never queued, so they have no Play Next, Play Last or Add to Playlist… (ADR-0018). It only
+/// sends commands and opens pages. One menu serves every row of a list; it reads its row when it
+/// opens.
 /// </summary>
 internal sealed class TrackMenu
 {
@@ -20,6 +23,7 @@ internal sealed class TrackMenu
     private readonly MenuFlyoutItem _favorite;
     private readonly MenuFlyoutItem _goToAlbum;
     private readonly MenuFlyoutItem _goToArtist;
+    private readonly MenuFlyoutItem _openLink;
     private readonly MenuFlyoutItem _showFile;
     private readonly MenuFlyoutItem? _remove;
     private TrackItem? _item;
@@ -41,6 +45,7 @@ internal sealed class TrackMenu
         });
         _goToAlbum = Item(l.Get("Menu_GoToAlbum"), GoToAlbum);
         _goToArtist = Item(l.Get("Menu_GoToArtist"), GoToArtist);
+        _openLink = Item(string.Empty, () => ItemLinks.Open(_s, _item?.Link));
         _showFile = Item(l.Get("Menu_ShowInExplorer"), ShowFile);
         Flyout.Items.Add(_playNext);
         Flyout.Items.Add(_playLast);
@@ -49,6 +54,7 @@ internal sealed class TrackMenu
         Flyout.Items.Add(new MenuFlyoutSeparator());
         Flyout.Items.Add(_goToAlbum);
         Flyout.Items.Add(_goToArtist);
+        Flyout.Items.Add(_openLink);
         Flyout.Items.Add(_showFile);
         if (removeKey is not null && onRemove is not null)
         {
@@ -106,8 +112,15 @@ internal sealed class TrackMenu
         _item = Lists.ItemOf<TrackItem>(Flyout);
         var loaded = _item is { IsLoaded: true };
         var playable = _item is { IsLoaded: true, IsPlayable: true };
+        var queues = _item is null || TrackActions.CanQueue(_s, _item);
+        var queueVisibility = queues ? Visibility.Visible : Visibility.Collapsed;
+        _playNext.Visibility = queueVisibility;
+        _playLast.Visibility = queueVisibility;
+        _playlists.Visibility = queueVisibility;
         _playNext.IsEnabled = playable;
         _playLast.IsEnabled = playable;
+        _openLink.Visibility = _item?.Link is null ? Visibility.Collapsed : Visibility.Visible;
+        _openLink.Text = ItemLinks.OpenInLabel(_s.L, ItemLinks.ServiceName(_s.Hub.State.Sources, _item?.SourceId));
         _favorite.Text = _s.L.Get(_item?.IsFavorite == true ? "Menu_Unfavorite" : "Menu_Favorite");
         _favorite.IsEnabled = loaded && _item?.Ref is TrackRef.Library or TrackRef.Source;
         _goToAlbum.IsEnabled = loaded && TrackPlaces.HasPages(_item!);

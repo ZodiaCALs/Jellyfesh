@@ -121,6 +121,8 @@ public sealed partial class NotificationsViewModel(ILocalizer l) : ObservableObj
 
     public void Error(string title, string message) => Add(new Notification(NotificationSeverity.Error, title, message));
 
+    public void Warning(string title, string message) => Add(new Notification(NotificationSeverity.Warning, title, message));
+
     public void Dismiss(Notification n) => Items.Remove(n);
 
     /// <summary>Turns core notifications into messages; returns true when it showed one.</summary>

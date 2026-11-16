@@ -11,8 +11,9 @@ namespace Jellyfesh.App.Platform;
 /// <summary>
 /// System Media Transport Controls for the window (ISystemMediaTransportControlsInterop
 /// GetForWindow, what Chromium uses with its own audio engine; architecture §11): media keys, the
-/// volume flyout and the lock screen show and control what the core plays. Updated from the
-/// player's state and from playback anchors, never on a timer.
+/// volume flyout and the lock screen show and control what the core plays, or the remote session
+/// it controls (the player shows that instead). Updated from the player's state and from anchors,
+/// never on a timer.
 /// </summary>
 internal sealed class MediaTransport : IDisposable
 {
@@ -20,7 +21,7 @@ internal sealed class MediaTransport : IDisposable
     private readonly PlayerViewModel _player;
     private readonly ShellServices _s;
     private readonly DispatcherQueue _queue;
-    private ulong? _shownUid;
+    private string? _shownKey;
 
     public MediaTransport(nint hwnd, PlayerViewModel player, ShellServices services, DispatcherQueue queue)
     {
@@ -86,7 +87,8 @@ internal sealed class MediaTransport : IDisposable
     private void OnPlayerChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PlayerViewModel.Title) or nameof(PlayerViewModel.Artist) or nameof(PlayerViewModel.Album)
-            or nameof(PlayerViewModel.ArtworkPath) or nameof(PlayerViewModel.IsPlaying) or nameof(PlayerViewModel.HasTrack)
+            or nameof(PlayerViewModel.ArtworkPath) or nameof(PlayerViewModel.ArtworkUri) or nameof(PlayerViewModel.IsPlaying)
+            or nameof(PlayerViewModel.HasTrack) or nameof(PlayerViewModel.TrackKey)
             or nameof(PlayerViewModel.CanGoNext) or nameof(PlayerViewModel.CanGoPrevious))
         {
             Update();
@@ -95,17 +97,19 @@ internal sealed class MediaTransport : IDisposable
 
     private void OnSlices(SliceChange changes)
     {
-        if (changes.HasFlag(SliceChange.Playback))
+        var state = _s.Hub.State;
+        var remote = state.Remote.HasSession;
+        if (remote ? changes.HasFlag(SliceChange.Remote) : changes.HasFlag(SliceChange.Playback) || changes.HasFlag(SliceChange.Remote))
         {
-            var p = _s.Hub.State.Playback;
-            var duration = TimeSpan.FromMicroseconds(Math.Max(0, p.Anchor.DurationUs ?? 0));
+            var anchor = remote ? state.Remote.Anchor : state.Playback.Anchor;
+            var duration = TimeSpan.FromMicroseconds(Math.Max(0, anchor.DurationUs ?? 0));
             _smtc.UpdateTimelineProperties(new SystemMediaTransportControlsTimelineProperties
             {
                 StartTime = TimeSpan.Zero,
                 MinSeekTime = TimeSpan.Zero,
                 EndTime = duration,
                 MaxSeekTime = duration,
-                Position = TimeSpan.FromMicroseconds(Math.Clamp(p.Anchor.PositionUs, 0, Math.Max(0, p.Anchor.DurationUs ?? long.MaxValue))),
+                Position = TimeSpan.FromMicroseconds(Math.Clamp(anchor.PositionUs, 0, Math.Max(0, anchor.DurationUs ?? long.MaxValue))),
             });
         }
     }
@@ -118,16 +122,16 @@ internal sealed class MediaTransport : IDisposable
             : MediaPlaybackStatus.Paused;
         _smtc.IsNextEnabled = _player.CanGoNext;
         _smtc.IsPreviousEnabled = _player.CanGoPrevious;
-        var uid = _player.NowPlaying?.Uid;
-        if (uid == _shownUid)
+        var key = _player.HasTrack ? _player.TrackKey : null;
+        if (key == _shownKey)
         {
             return;
         }
 
-        _shownUid = uid;
+        _shownKey = key;
         var updater = _smtc.DisplayUpdater;
         updater.ClearAll();
-        if (_player.NowPlaying is null)
+        if (key is null)
         {
             updater.Update();
             return;
@@ -142,7 +146,7 @@ internal sealed class MediaTransport : IDisposable
             if (_player.ArtworkPath is { } path)
             {
                 var file = await StorageFile.GetFileFromPathAsync(path);
-                if (_shownUid != uid)
+                if (_shownKey != key)
                 {
                     return; // the track changed while the file opened
                 }

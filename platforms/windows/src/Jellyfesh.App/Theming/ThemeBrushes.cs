@@ -1,5 +1,6 @@
 using Jellyfesh.Appearance;
 using Jellyfesh.Core;
+using Jellyfesh.Drawing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
@@ -22,7 +23,9 @@ internal static class ThemeBrushes
 {
     private static readonly Dictionary<string, SolidColorBrush> Solid = [];
     private static readonly Dictionary<string, AcrylicBrush> Glass = [];
-    private static readonly List<(RadialGradientBrush Brush, string Color)> Auroras = [];
+    private static readonly List<(RadialGradientBrush Brush, string Color, double Alpha)> Auroras = [];
+    private static readonly SolidColorBrush MistSurface = new();
+    private static readonly LinearGradientBrush ContentFade = new() { StartPoint = new Windows.Foundation.Point(0, 0), EndPoint = new Windows.Foundation.Point(0, 1) };
     private static ThemePalette _current = FallbackTheme.Value.Light;
     private static ThemePalette? _from;
     private static ThemePalette? _to;
@@ -50,10 +53,24 @@ internal static class ThemeBrushes
             ApplyGlass(key, tint);
         }
 
-        // The Misty field: three soft aurora glows over the sky (MAT-02), at the theme hue.
-        resources["JfAuroraGlow1"] = Aurora("field.aurora-1", 0.10, 0.08, 0.60, 0.55);
-        resources["JfAuroraGlow2"] = Aurora("field.aurora-2", 0.92, 0.92, 0.55, 0.55);
-        resources["JfAuroraGlow3"] = Aurora("field.aurora-3", 0.04, 0.98, 0.45, 0.50);
+        // Grouped surfaces (Settings groups, cards): the Mist tint without live blur (Luminous), so a
+        // screen stays within the glass budget.
+        resources["JfMistSurface"] = MistSurface;
+
+        // Content fades out just above the floating player bar and mini player (Luminous).
+        ContentFade.GradientStops.Add(new GradientStop { Offset = 0 });
+        ContentFade.GradientStops.Add(new GradientStop { Offset = 1 });
+        resources["JfContentFade"] = ContentFade;
+
+        // The Luminous field: four large glows at the theme hue over the sky, as strong as
+        // field.aurora-strength (Jellyfesh.Drawing.AuroraField, shared with the tests).
+        var strength = TokenValues.Number("Field.AuroraStrength");
+        for (var i = 0; i < AuroraField.Glows.Count; i++)
+        {
+            resources[$"JfAuroraGlow{i + 1}"] = Aurora(AuroraField.Glows[i], strength);
+        }
+
+        ApplySurfaces();
     }
 
     /// <summary>Shows <paramref name="palette"/>; crossfades unless <paramref name="instant"/>.</summary>
@@ -89,6 +106,7 @@ internal static class ThemeBrushes
         ApplyGlass("JfGlassClear", "JfTintClear");
         ApplyGlass("JfGlassMist", "JfTintMist");
         ApplyGlass("JfGlassVeil", "JfTintVeil");
+        ApplySurfaces();
     }
 
     /// <summary>The Transparency setting (0 solid … 1 clearest): re-tints the three glass grades at once.</summary>
@@ -103,6 +121,7 @@ internal static class ThemeBrushes
         ApplyGlass("JfGlassClear", "JfTintClear");
         ApplyGlass("JfGlassMist", "JfTintMist");
         ApplyGlass("JfGlassVeil", "JfTintVeil");
+        ApplySurfaces();
     }
 
     /// <summary>High contrast: the system's colours instead of the theme's.</summary>
@@ -171,17 +190,38 @@ internal static class ThemeBrushes
         ApplyGlass("JfGlassClear", "JfTintClear");
         ApplyGlass("JfGlassMist", "JfTintMist");
         ApplyGlass("JfGlassVeil", "JfTintVeil");
-        foreach (var (brush, color) in Auroras)
+        ApplySurfaces();
+        foreach (var (brush, color, alpha) in Auroras)
         {
             var a = from[color] ?? to[color];
             var b = to[color] ?? a;
             if (a is { } ca && b is { } cb)
             {
                 var c = ToColor(Rgba.Lerp(ca, cb, t));
-                brush.GradientStops[0].Color = c;
+                brush.GradientStops[0].Color = Color.FromArgb((byte)Math.Round(c.A * alpha), c.R, c.G, c.B);
                 brush.GradientStops[1].Color = Color.FromArgb(0, c.R, c.G, c.B);
             }
         }
+    }
+
+    /// <summary>
+    /// The brushes that follow the glass setting without being glass: grouped surfaces in the Mist
+    /// tint at its glass alpha (solid Cloud when glass is off), and the fade above the player.
+    /// </summary>
+    private static void ApplySurfaces()
+    {
+        if (!Solid.TryGetValue("JfTintMist", out var mist) || !Solid.TryGetValue("JfCloud", out var cloud) || !Solid.TryGetValue("JfSky", out var sky))
+        {
+            return; // during Install
+        }
+
+        var alpha = global::Jellyfesh.Shared.Glass.Alpha(mist.Color.A / 255f, _transparency);
+        MistSurface.Color = _solidGlass || alpha >= 0.999f
+            ? cloud.Color
+            : Color.FromArgb((byte)Math.Round(alpha * 255), mist.Color.R, mist.Color.G, mist.Color.B);
+        var c = sky.Color;
+        ContentFade.GradientStops[0].Color = Color.FromArgb(0, c.R, c.G, c.B);
+        ContentFade.GradientStops[1].Color = Color.FromArgb(178, c.R, c.G, c.B);
     }
 
     private static void ApplyGlass(string key, string tintKey)
@@ -201,20 +241,21 @@ internal static class ThemeBrushes
         brush.AlwaysUseFallback = _solidGlass || alpha >= 0.999f;
     }
 
-    private static RadialGradientBrush Aurora(string color, double x, double y, double rx, double ry)
+    private static RadialGradientBrush Aurora(AuroraGlow glow, double strength)
     {
-        var c = ToColor(_current[color]);
+        var c = ToColor(_current[glow.Color]);
+        var alpha = glow.Alpha(strength);
         var brush = new RadialGradientBrush
         {
-            Center = new Windows.Foundation.Point(x, y),
-            GradientOrigin = new Windows.Foundation.Point(x, y),
-            RadiusX = rx,
-            RadiusY = ry,
+            Center = new Windows.Foundation.Point(glow.X, glow.Y),
+            GradientOrigin = new Windows.Foundation.Point(glow.X, glow.Y),
+            RadiusX = glow.RadiusX,
+            RadiusY = glow.RadiusY,
             MappingMode = BrushMappingMode.RelativeToBoundingBox,
         };
-        brush.GradientStops.Add(new GradientStop { Color = c, Offset = 0 });
-        brush.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0, c.R, c.G, c.B), Offset = 0.7 });
-        Auroras.Add((brush, color));
+        brush.GradientStops.Add(new GradientStop { Color = Color.FromArgb((byte)Math.Round(c.A * alpha), c.R, c.G, c.B), Offset = 0 });
+        brush.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0, c.R, c.G, c.B), Offset = glow.FadeEnd });
+        Auroras.Add((brush, glow.Color, alpha));
         return brush;
     }
 

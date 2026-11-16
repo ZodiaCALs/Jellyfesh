@@ -13,12 +13,16 @@ public sealed partial class SearchPage : JfPage
     /// <summary>The song menu, shared by the library's songs and every source's.</summary>
     private readonly FlyoutBase _menu;
 
+    /// <summary>The menu of the sources' albums, artists, playlists and folders (Play, Open in {Service}).</summary>
+    private readonly FlyoutBase _entryMenu;
+
     public SearchPage()
     {
         ViewModel = AppHost.App.CreateSearch();
         PageModel = ViewModel;
         InitializeComponent();
         _menu = new TrackMenu(AppHost.Services).Flyout;
+        _entryMenu = new EntryMenu(AppHost.Services).Flyout;
         Lists.Attach(TrackList, 40, menu: _menu);
         Lists.Attach(AlbumShelf, 168);
         Lists.Attach(ArtistShelf, 0);
@@ -54,13 +58,13 @@ public sealed partial class SearchPage : JfPage
         }
     }
 
-    /// <summary>A source's group of albums, artists, playlists and folders: thumbnails, once per list.</summary>
+    /// <summary>A source's group of albums, artists, playlists and folders: thumbnails and their menu, once per list.</summary>
     private void OnOnlineEntriesLoaded(object sender, RoutedEventArgs e)
     {
         if (sender is ListView { Tag: null } list)
         {
             list.Tag = this;
-            Lists.Attach(list, 40);
+            Lists.Attach(list, 40, menu: _entryMenu);
         }
     }
 

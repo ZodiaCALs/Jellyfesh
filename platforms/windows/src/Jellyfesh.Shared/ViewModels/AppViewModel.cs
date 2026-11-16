@@ -15,6 +15,7 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
 {
     private bool _systemIsDark;
     private bool _systemReducesMotion;
+    private bool _lyricsHidden;
     private bool _disposed;
 
     [ObservableProperty]
@@ -120,9 +121,12 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
             Queue.OnQueue(state.Queue);
         }
 
-        if (changes.HasFlag(SliceChange.Lyrics) || changes.HasFlag(SliceChange.NowPlaying))
+        var remote = state.Remote.HasSession;
+        if (changes.HasFlag(SliceChange.Lyrics) || changes.HasFlag(SliceChange.NowPlaying) || remote != _lyricsHidden)
         {
-            Lyrics.Load(state.Lyrics, state.NowPlaying?.Uid);
+            // A remote session's service plays its own lyrics, if any: none are shown meanwhile.
+            _lyricsHidden = remote;
+            Lyrics.Load(remote ? null : state.Lyrics, remote ? null : state.NowPlaying?.Uid);
             Services.Ticker.Invalidate();
         }
 

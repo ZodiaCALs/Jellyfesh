@@ -46,8 +46,56 @@ public class FfiMappingTests
             mapped[name] = mapped.GetValueOrDefault(name) + 1;
         }
 
-        Assert.True(mapped["Event"] >= 17, "every event variant has a sample");
-        Assert.True(mapped["Command"] >= 40, "every command variant has a sample");
+        Assert.True(mapped["Event"] >= 18, "every event variant has a sample");
+        Assert.True(mapped["Command"] >= 41, "every command variant has a sample");
+    }
+
+    [Fact]
+    public void The_remote_slice_maps_with_its_track_devices_and_error()
+    {
+        using var contract = Contract.Read("ffi-types.json");
+        var events = contract.RootElement.GetProperty("samples").EnumerateArray()
+            .Where(s => s.GetProperty("name").GetString() == "Event")
+            .Select(s => s.GetProperty("json"))
+            .Where(j => j.GetProperty("type").GetString() == "Remote")
+            .Select(j => Assert.IsType<M.CoreEvent.Remote>(FfiMapping.ToModel(j.Deserialize(F.JellyfeshJsonContext.Default.Event)!)).State)
+            .ToList();
+        Assert.Equal(2, events.Count);
+
+        var session = events.Single(r => r.HasSession);
+        Assert.Equal(("org.x", "Example Source", M.PlaybackStatus.Playing), (session.Source, session.SourceName, session.Status));
+        Assert.Equal(("Lantern", "Sample Artist", "https://music.example.com/song/42"), (session.Item!.Title, session.Item.Subtitle, session.Item.Link));
+        Assert.Equal(M.ItemKind.Album, session.Context!.Kind);
+        Assert.Equal(new M.PlaybackAnchor(3, 12_345_678, 987_654_321_012, 1f, 184_000_000), session.Anchor);
+        Assert.Equal((true, M.RepeatMode.One), (session.Shuffle, session.Repeat));
+        Assert.Equal(new M.RemoteDevice("phone", "Phone", M.RemoteDeviceKind.Smartphone, true, 70), session.Device);
+        Assert.Equal([new M.RemoteDevice("desk", "Desk Speaker", M.RemoteDeviceKind.Speaker, false, null), session.Device!], session.Devices);
+        Assert.Equal("the service asked to slow down", session.Error);
+
+        var ended = events.Single(r => !r.HasSession);
+        Assert.Null(ended.Device);
+        Assert.Empty(ended.Devices);
+
+        // The snapshot carries the slice too; links and the remote-playback flag come through.
+        var snapshot = contract.RootElement.GetProperty("samples").EnumerateArray()
+            .First(s => s.GetProperty("name").GetString() == "Snapshot").GetProperty("json");
+        var state = FfiMapping.ToModel(snapshot.Deserialize(F.JellyfeshJsonContext.Default.Snapshot)!);
+        Assert.Equal("org.x", state.Remote.Source);
+        Assert.Equal(M.RemoteState.Initial, FfiMapping.ToModel(snapshot.Deserialize(F.JellyfeshJsonContext.Default.Snapshot)! with { Remote = null }).Remote);
+        var plugin = FfiMapping.ToModel(new F.PluginSummary("org.spotify", "Spotify", "1.0.0", "Someone", null, F.PluginBadge.Community, null, false, [], [], true, null, null, false, null, "{}", "{}", null, RemotePlayback: true));
+        Assert.True(plugin.RemotePlayback);
+        var np = FfiMapping.ToModel(new F.NowPlaying(1, new F.TrackRef.Library(2), null, "T", null, null, null, null, null, "https://music.example.com/song/2"));
+        Assert.Equal("https://music.example.com/song/2", np.Link);
+    }
+
+    [Fact]
+    public void Remote_actions_serialise_as_the_core_expects()
+    {
+        string Json(M.CoreCommand c) => JsonSerializer.Serialize(FfiMapping.ToFfi(c), F.JellyfeshJsonContext.Default.Command);
+        Assert.Equal("""{"type":"Remote","action":{"type":"Refresh"}}""", Json(new M.CoreCommand.Remote(new M.RemoteAction.Refresh())));
+        Assert.Equal("""{"type":"Remote","action":{"type":"Transfer","device":"phone"}}""", Json(new M.CoreCommand.Remote(new M.RemoteAction.Transfer("phone"))));
+        Assert.Equal("""{"type":"Remote","action":{"type":"SetVolume","percent":100}}""", Json(new M.CoreCommand.Remote(new M.RemoteAction.SetVolume(140))));
+        Assert.Equal("""{"type":"Remote","action":{"type":"End"}}""", Json(new M.CoreCommand.Remote(new M.RemoteAction.End())));
     }
 
     [Fact]
@@ -259,6 +307,14 @@ public class FfiMappingTests
             _ => new M.SearchScope.All(),
         }),
         F.Command.Browse b => new M.CoreCommand.Browse(b.Plugin, b.Node, b.Page),
+        F.Command.Remote r => new M.CoreCommand.Remote(r.Action switch
+        {
+            F.RemoteAction.Refresh => new M.RemoteAction.Refresh(),
+            F.RemoteAction.Transfer t => new M.RemoteAction.Transfer(t.Device),
+            F.RemoteAction.SetVolume v => new M.RemoteAction.SetVolume(v.Percent),
+            F.RemoteAction.End => new M.RemoteAction.End(),
+            _ => throw new Xunit.Sdk.XunitException("unknown remote action"),
+        }),
         _ => throw new Xunit.Sdk.XunitException($"no model command for {c.GetType().Name}"),
     };
 

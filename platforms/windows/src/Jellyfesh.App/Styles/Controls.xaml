@@ -38,6 +38,12 @@
     <x:String x:Key="IconInfo">M12 21 a9 9 0 1 0 0 -18 a9 9 0 0 0 0 18 z M12 11 v5 M12 8 h0.01</x:String>
     <x:String x:Key="IconMiniPlayer">M4 6 h16 v12 H4 z M12 12 h6 v4 h-6 z</x:String>
     <x:String x:Key="IconExpand">M14 4 h6 v6 M20 4 l-7 7 M10 20 H4 v-6 M4 20 l7 -7</x:String>
+    <!-- Devices a remote source plays on (Devices, the device button); speakers use IconSpeaker. -->
+    <x:String x:Key="IconDeviceComputer">M5 6 h14 v9 H5 z M3 18 h18</x:String>
+    <x:String x:Key="IconDevicePhone">M8 3 h8 a1 1 0 0 1 1 1 v16 a1 1 0 0 1 -1 1 H8 a1 1 0 0 1 -1 -1 V4 a1 1 0 0 1 1 -1 z M11 18 h2</x:String>
+    <x:String x:Key="IconDeviceTv">M3 6 h18 v11 H3 z M8 21 h8 M12 17 v4</x:String>
+    <x:String x:Key="IconDeviceCar">M3 15 v-3 l2.5 -5 h13 l2.5 5 v3 z M7 18 v-3 M17 18 v-3 M3 12 h18</x:String>
+    <x:String x:Key="IconDeviceOther">M4 5 h11 v14 H4 z M17 9 h3 v10 h-3 z</x:String>
 
     <!-- Radii as resources for markup that cannot use {th:Token} (Misty r-full). -->
     <CornerRadius x:Key="JfFullRadius">999</CornerRadius>
@@ -52,9 +58,9 @@
         <Setter Property="OpticalMarginAlignment" Value="TrimSideBearings" />
     </Style>
 
-    <!-- Library pages start with a large title (type.text-h2, bold; after Apple Music) that scrolls with the content. -->
+    <!-- Library pages start with a large title that scrolls with the content (after Apple Music); Luminous: 48 epx (type.text-h1). -->
     <Style x:Key="JfLargeTitleText" TargetType="TextBlock" BasedOn="{StaticResource JfPageTitleText}">
-        <Setter Property="FontSize" Value="{th:Token Key=Type.H2}" />
+        <Setter Property="FontSize" Value="{th:Token Key=Type.H1}" />
         <Setter Property="Margin" Value="0,8,0,4" />
     </Style>
 
@@ -113,14 +119,33 @@
         <Setter Property="Foreground" Value="{ThemeResource JfInk70}" />
     </Style>
 
+    <!-- Playing on {Device} under the title while a remote session shows (accent text). -->
+    <Style x:Key="JfRemoteLineText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{ThemeResource JfAccentText}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <!-- The remote session's error: a quieter line below Playing on {Device}. -->
+    <Style x:Key="JfQuietLineText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{ThemeResource JfInk50}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
     <!-- ===== Surfaces ===== -->
 
-    <!-- A card: solid Cloud, one 1 px edge, radius r-lg (Misty). -->
+    <!--
+        A grouped surface (Settings groups, cards; Luminous): the Mist tint without live blur over the
+        field, so a screen stays within the glass budget, a glass edge and radius r-2xl. Solid Cloud
+        when transparency is off. The page casts shadow-1 under it (Controls/Elevation).
+    -->
     <Style x:Key="JfCardStyle" TargetType="Border">
-        <Setter Property="Background" Value="{ThemeResource JfCloud}" />
-        <Setter Property="BorderBrush" Value="{ThemeResource JfLine}" />
+        <Setter Property="Background" Value="{ThemeResource JfMistSurface}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource JfGlassEdgeSoft}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="CornerRadius" Value="{th:Token Key=Radius.Lg, Kind=Corner}" />
+        <Setter Property="CornerRadius" Value="{th:Token Key=Radius.2xl, Kind=Corner}" />
         <Setter Property="Padding" Value="{th:Token Key=Space.S5, Kind=Thickness}" />
     </Style>
 
@@ -130,6 +155,12 @@
         <Setter Property="BorderBrush" Value="{ThemeResource JfGlassEdgeSoft}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="{th:Token Key=Radius.Full, Kind=Corner}" />
+    </Style>
+
+    <!-- Now Playing's dock (Luminous): every control in one floating Veil capsule, 80 high on desktops. -->
+    <Style x:Key="JfDockStyle" TargetType="Border" BasedOn="{StaticResource JfVeilCapsuleStyle}">
+        <Setter Property="MinHeight" Value="{th:Token Key=Player.BarHeight}" />
+        <Setter Property="Padding" Value="20,8,24,8" />
     </Style>
 
     <!-- ===== Buttons ===== -->
@@ -281,6 +312,14 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- A floating round button on Now Playing's stage (back, mini player): the Mist tint without live blur and a glass edge. -->
+    <Style x:Key="JfStageButtonStyle" TargetType="Button" BasedOn="{StaticResource JfIconButtonStyle}">
+        <Setter Property="Foreground" Value="{ThemeResource JfInk90}" />
+        <Setter Property="Background" Value="{ThemeResource JfMistSurface}" />
+        <Setter Property="BorderBrush" Value="{ThemeResource JfGlassEdgeSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
     </Style>
 
     <!-- The album grid's play button: a 36 px Mist glass circle in the cover's bottom start corner. -->

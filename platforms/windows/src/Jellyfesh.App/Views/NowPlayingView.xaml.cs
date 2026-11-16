@@ -21,6 +21,9 @@ public sealed partial class NowPlayingView : UserControl
     private const double CompactWidth = 760;
     private const double MediumWidth = 1100;
 
+    /// <summary>Now Playing's artwork on wide windows (Luminous).</summary>
+    private const double ArtworkSize = 380;
+
     private Image _front;
     private Image _back;
     private string? _backdropPath = string.Empty;
@@ -42,6 +45,11 @@ public sealed partial class NowPlayingView : UserControl
         _back = BackdropB;
         Player.Progress.PropertyChanged += OnProgressChanged;
         Player.PropertyChanged += OnPlayerChanged;
+
+        // The stage's shadows (the artwork's shadow-3) fall on its backdrop (ThemeShadow receivers).
+        Elevation.AddReceiver(Elevation.Stage, MistyBackdrop);
+        Elevation.AddReceiver(Elevation.Stage, BackdropA);
+        Elevation.AddReceiver(Elevation.Stage, BackdropB);
         Seek.SeekRequested += OnSeekRequested;
         Seek.ScrubMoved += OnScrubMoved;
         Seek.StepsChanged += (_, steps) => Player.Progress.Steps = steps;
@@ -160,12 +168,11 @@ public sealed partial class NowPlayingView : UserControl
         var misty = Shell.Settings.Style == BackdropStyle.Misty;
         var resources = Application.Current.Resources;
 
-        // Misty: the artwork as hero media on a Clear frame. Artwork: the artwork alone, lifted.
+        // Misty: the artwork as hero media on a Clear frame. Artwork: the artwork alone, on shadow-3 (Luminous).
         ArtFrame.Padding = new Thickness(misty ? 12 : 0);
         ArtFrame.BorderThickness = new Thickness(misty ? 1 : 0);
         ArtFrame.Background = misty ? (Brush)resources["JfGlassClear"] : null;
-        ArtBorder.Translation = misty ? default : new System.Numerics.Vector3(0, 0, 32);
-        ArtBorder.Shadow = misty ? null : new ThemeShadow();
+        Elevation.Cast(ArtBorder, misty ? 0 : Elevation.Shadow3, Elevation.Stage);
 
         var path = misty ? null : Shell.BackdropPath;
         if (path != _backdropPath)
@@ -309,25 +316,11 @@ public sealed partial class NowPlayingView : UserControl
         }
     }
 
-    private void OnDevicesOpening(object? sender, object e)
-    {
-        DevicesMenu.Items.Clear();
-        foreach (var device in Player.Devices)
-        {
-            var item = new RadioMenuFlyoutItem
-            {
-                Text = device.Name,
-                GroupName = "OutputDevices",
-                IsChecked = Equals(device, Player.SelectedDevice),
-            };
-            var choice = device;
-            item.Click += (_, _) => Player.SelectedDevice = choice;
-            DevicesMenu.Items.Add(item);
-        }
+    /// <summary>The output devices, or Devices in a remote session (it asks the service for its devices).</summary>
+    private void OnDeviceClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowDevices(DeviceButton, Player, Shell.Services);
 
-        // A good moment to look again: the core never polls for devices (ADR-0009).
-        Shell.Services.Send(new CoreCommand.RefreshDevices());
-    }
+    /// <summary>More: Open in {Service}, Stop Controlling.</summary>
+    private void OnMoreClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowMore(MoreButton, Player, Shell.Services);
 
     // ---- panels ----
 
@@ -338,9 +331,12 @@ public sealed partial class NowPlayingView : UserControl
         var width = e.NewSize.Width;
         _compact = width < CompactWidth;
         var medium = width < MediumWidth;
-        PlayerPanel.Width = _compact ? Math.Min(400, Math.Max(240, width - 48)) : medium ? 320 : 400;
-        Body.Padding = _compact ? new Thickness(24, 16, 24, 24) : medium ? new Thickness(32, 24, 32, 32) : new Thickness(48, 32, 48, 40);
+
+        // The artwork is 380 epx on wide windows (Luminous), smaller as the window narrows.
+        PlayerPanel.Width = _compact ? Math.Min(ArtworkSize, Math.Max(240, width - 48)) : medium ? 320 : ArtworkSize;
+        Body.Padding = _compact ? new Thickness(24, 12, 24, 12) : medium ? new Thickness(32, 20, 32, 20) : new Thickness(64, 24, 48, 24);
         Body.ColumnSpacing = _compact ? 0 : medium ? 32 : 56;
+        ArrangeDock(_compact, medium);
         PlayerTab.Visibility = _compact ? Visibility.Visible : Visibility.Collapsed;
         if (!_compact && PlayerTab.IsChecked == true)
         {
@@ -348,6 +344,26 @@ public sealed partial class NowPlayingView : UserControl
         }
 
         UpdatePanels();
+    }
+
+    /// <summary>
+    /// The dock in one row (wide), or the scrubber above the transport, the device button and More
+    /// without the volume (narrow windows, where one row would not fit).
+    /// </summary>
+    private void ArrangeDock(bool narrow, bool medium)
+    {
+        Grid.SetColumn(ScrubRow, narrow ? 0 : 1);
+        Grid.SetColumnSpan(ScrubRow, narrow ? 5 : 1);
+        Grid.SetRow(Transport, narrow ? 1 : 0);
+        Grid.SetColumnSpan(Transport, narrow ? 3 : 1);
+        Transport.HorizontalAlignment = narrow ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        Grid.SetRow(DeviceButton, narrow ? 1 : 0);
+        Grid.SetRow(MoreButton, narrow ? 1 : 0);
+        VolumeGroup.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+        VolumeSlider.Width = medium ? 100 : 140;
+        DockGrid.ColumnSpacing = narrow ? 8 : medium ? 14 : 20;
+        Dock.CornerRadius = new CornerRadius(narrow ? TokenValues.Number("Radius.2xl") : TokenValues.Number("Radius.Full"));
+        Dock.Margin = narrow ? new Thickness(12, 0, 12, 12) : medium ? new Thickness(32, 0, 32, 20) : new Thickness(64, 0, 64, 24);
     }
 
     /// <summary>Wide: the player and one side panel. Compact: one of the four at a time.</summary>

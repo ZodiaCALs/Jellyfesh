@@ -226,10 +226,22 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
     /// <summary>Why a source item cannot play here (region, paywall); never bypassed.</summary>
     public string? UnplayableReason { get; private set; }
 
+    /// <summary>The reason shown on the row, beside its other facts: only while it cannot play.</summary>
+    public string? UnplayableNote => IsPlayable ? null : UnplayableReason;
+
+    /// <summary>The source the row comes from (its plugin id), for Open in {Service}; null for library rows.</summary>
+    public string? SourceId { get; private set; }
+
+    /// <summary>Opens the song in its service (Open in {Service}), when its source declares links.</summary>
+    public string? Link { get; private set; }
+
+    /// <summary>It cannot play here but has a link: choosing the row opens the link (docs/ui.md).</summary>
+    public bool OpensLink => !IsPlayable && Link is not null;
+
     public ILocalizer? Localizer { get; set; }
 
-    /// <summary>"Title, Artist, 3:52" for Narrator (and the source, for search results).</summary>
-    public string AccessibleName => string.Join(", ", new[] { Title, Subtitle, Duration, Origin }.Where(s => !string.IsNullOrEmpty(s)));
+    /// <summary>"Title, Artist, 3:52" for Narrator (and the source, for search results; why it cannot play).</summary>
+    public string AccessibleName => string.Join(", ", new[] { Title, Subtitle, Duration, Origin, UnplayableNote }.Where(s => !string.IsNullOrEmpty(s)));
 
     public void Load(Track model)
     {
@@ -272,6 +284,8 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         Duration = TimeFormat.Duration(item.DurationMs);
         IsPlayable = item.Playable && item.Track is not null;
         UnplayableReason = item.UnplayableReason ?? (item.Playable ? null : l.Get("Track_Unplayable"));
+        SourceId = item.Source;
+        Link = ItemLinks.Usable(item.Link);
         SetArtwork(item.Artwork, null);
         Done();
     }
@@ -283,6 +297,7 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
     private void Done()
     {
         IsLoaded = true;
+        OnPropertyChanged(nameof(UnplayableNote));
         OnPropertyChanged(nameof(AccessibleName));
     }
 }
@@ -321,8 +336,14 @@ public sealed class SourceEntryItem : ArtworkItem
         Title = item.Title;
         Subtitle = item.Subtitle ?? string.Empty;
         KindLabel = l.Get("Kind_" + item.Kind);
+        Link = ItemLinks.Usable(item.Link);
         SetArtwork(item.Artwork, null);
     }
+
+    /// <summary>Opens the album, artist, playlist or folder in its service (Open in {Service}).</summary>
+    public string? Link { get; }
+
+    public bool HasLink => Link is not null;
 
     public SourceItem Item { get; }
 

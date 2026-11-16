@@ -19,6 +19,9 @@ public static class Bind
 
     public static Visibility VisibleIfAll(bool a, bool b) => a && b ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>Visible when neither <paramref name="a"/> nor <paramref name="b"/> holds.</summary>
+    public static Visibility VisibleIfNeither(bool a, bool b) => !a && !b ? Visibility.Visible : Visibility.Collapsed;
+
     /// <summary>Visible when <paramref name="a"/> holds and <paramref name="b"/> does not.</summary>
     public static Visibility VisibleIfButNot(bool a, bool b) => a && !b ? Visibility.Visible : Visibility.Collapsed;
 
@@ -48,6 +51,9 @@ public static class Bind
 
     public static string VolumeGlyph(double volume, bool muted) =>
         Glyph(muted || volume <= 0 ? "IconMuted" : volume < 50 ? "IconVolumeLow" : "IconVolumeHigh");
+
+    /// <summary>" · text" to follow another line's text, or nothing when <paramref name="text"/> is empty.</summary>
+    public static string After(string? text) => string.IsNullOrEmpty(text) ? string.Empty : " · " + text;
 
     /// <summary>A localised string for a key held by a view model (form errors, labels).</summary>
     public static string Text(string? key) => string.IsNullOrEmpty(key) ? string.Empty : AppHost.L.Get(key);

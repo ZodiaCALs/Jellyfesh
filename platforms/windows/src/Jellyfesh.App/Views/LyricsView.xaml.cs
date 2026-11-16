@@ -29,6 +29,7 @@ public sealed partial class LyricsView : UserControl
     {
         _app = AppHost.App;
         Presenter = _app.Lyrics;
+        Player = _app.Player;
         InitializeComponent();
         Presenter.PropertyChanged += OnPresenterChanged;
         Presenter.SweepChanged += OnSweepChanged;
@@ -44,6 +45,9 @@ public sealed partial class LyricsView : UserControl
     }
 
     public LyricsPresenter Presenter { get; }
+
+    /// <summary>The player, for the remote session's message.</summary>
+    public PlayerViewModel Player { get; }
 
     /// <summary>The lyrics came into view: jump to the line being sung once layout has run.</summary>
     public void Refresh()
@@ -145,8 +149,9 @@ public sealed partial class LyricsView : UserControl
 
     /// <summary>
     /// The lines below the new active line follow the scroll one after another, each starting
-    /// lyrics.stagger (30 ms) after the one above, so they settle in a cascade (Apple Music). Each
-    /// gets a compositor keyframe animation of its Translation; nothing runs per frame here.
+    /// lyrics.stagger (Luminous: 40 ms) after the one above, so they settle in a cascade (Apple
+    /// Music). Each gets a compositor keyframe animation of its Translation; nothing runs per frame
+    /// here. Reduced motion (the system's or Reduce Motion and Transparency) has no cascade.
     /// </summary>
     private void Cascade(double distance)
     {
@@ -174,11 +179,9 @@ public sealed partial class LyricsView : UserControl
         var anchor = TokenValues.Number("Lyrics.AnchorPosition");
         Lines.Margin = new Thickness(0, e.NewSize.Height * anchor, 0, e.NewSize.Height * (1 - anchor));
 
-        // The line size follows the width, 24 to 40 (lyrics tokens: 30 at a typical width), times
-        // the Lyrics size setting (lyrics.scale-small, 1, lyrics.scale-large).
-        var min = TokenValues.Number("Lyrics.LineMin");
-        var max = TokenValues.Number("Lyrics.LineMax");
-        _widthSize = Math.Clamp(min + ((e.NewSize.Width - 400) * (max - min) / 800), min, max);
+        // The line size follows the pane's width (Luminous: lyrics.line, 40, from a 640 epx pane, down
+        // to the fluid minimum, 28), times the Lyrics size setting (lyrics.scale-small, 1, -large).
+        _widthSize = NowPlayingMotion.LyricLineSize(e.NewSize.Width, TokenValues.Number("Lyrics.LineMin"), TokenValues.Number("Lyrics.LineMax"));
         ApplyLyricsSettings();
     }
 

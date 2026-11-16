@@ -1,0 +1,109 @@
+using Jellyfesh.Core;
+using Jellyfesh.ViewModels;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+
+namespace Jellyfesh.App.Shell;
+
+/// <summary>
+/// The device button and More of the player bar and Now Playing's dock (docs/ui.md, "Links and
+/// remote playback"). The device button lists the output devices, or in a remote session
+/// Devices: every device of the service with its kind's icon, the playing one checked; it asks
+/// the service for its devices as it opens, and choosing one moves playback there. More holds
+/// Open in {Service} and, in a remote session, Stop Controlling.
+/// </summary>
+internal static class PlayerMenus
+{
+    /// <summary>Opens the output devices or, in a remote session, Devices above <paramref name="target"/>.</summary>
+    public static void ShowDevices(FrameworkElement target, PlayerViewModel player, ShellServices s)
+    {
+        var menu = new MenuFlyout { Placement = FlyoutPlacementMode.TopEdgeAlignedRight };
+        if (player.IsRemote)
+        {
+            FillRemote(menu, player, s.L);
+
+            // The answer to Refresh arrives as a Remote slice: the open menu follows it.
+            void OnChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => FillRemote(menu, player, s.L);
+            player.RemoteDevices.CollectionChanged += OnChanged;
+            menu.Closed += (_, _) => player.RemoteDevices.CollectionChanged -= OnChanged;
+            player.RefreshRemoteDevices();
+        }
+        else
+        {
+            foreach (var device in player.Devices)
+            {
+                var item = new RadioMenuFlyoutItem
+                {
+                    Text = device.Name,
+                    GroupName = "OutputDevices",
+                    IsChecked = Equals(device, player.SelectedDevice),
+                };
+                var choice = device;
+                item.Click += (_, _) => player.SelectedDevice = choice;
+                menu.Items.Add(item);
+            }
+
+            // A good moment to look again: the core never polls for devices (ADR-0009).
+            s.Send(new CoreCommand.RefreshDevices());
+        }
+
+        menu.ShowAt(target);
+    }
+
+    /// <summary>More: Open in {Service} when the song has a link, Stop Controlling in a remote session.</summary>
+    public static void ShowMore(FrameworkElement target, PlayerViewModel player, ShellServices s)
+    {
+        var menu = new MenuFlyout { Placement = FlyoutPlacementMode.TopEdgeAlignedRight };
+        if (player.HasLink)
+        {
+            var open = new MenuFlyoutItem { Text = player.OpenLinkLabel, Icon = new FontIcon { Glyph = "" } };
+            open.Click += (_, _) => player.OpenLinkCommand.Execute(null);
+            menu.Items.Add(open);
+        }
+
+        if (player.IsRemote)
+        {
+            var stop = new MenuFlyoutItem { Text = s.L.Get("Remote_StopControlling") };
+            stop.Click += (_, _) => player.StopControllingCommand.Execute(null);
+            menu.Items.Add(stop);
+        }
+
+        if (menu.Items.Count > 0)
+        {
+            menu.ShowAt(target);
+        }
+    }
+
+    /// <summary>Devices: its title, then each device with its kind's icon, the playing one checked.</summary>
+    private static void FillRemote(MenuFlyout menu, PlayerViewModel player, Jellyfesh.Formatting.ILocalizer l)
+    {
+        menu.Items.Clear();
+        menu.Items.Add(new MenuFlyoutItem { Text = l.Get("Remote_Devices"), IsEnabled = false, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+        menu.Items.Add(new MenuFlyoutSeparator());
+        foreach (var device in player.RemoteDevices)
+        {
+            var item = new RadioMenuFlyoutItem
+            {
+                Text = device.Name,
+                GroupName = "RemoteDevices",
+                IsChecked = device.IsPlaying,
+                Icon = new FontIcon { Glyph = KindGlyph(device.Kind) },
+            };
+            var choice = device;
+            item.Click += (_, _) => player.TransferToCommand.Execute(choice);
+            menu.Items.Add(item);
+        }
+    }
+
+    /// <summary>Segoe Fluent Icons (Segoe MDL2 Assets on Windows 10) for each kind of device.</summary>
+    private static string KindGlyph(RemoteDeviceKind kind) => kind switch
+    {
+        RemoteDeviceKind.Computer => "",   // DeviceLaptopNoPic
+        RemoteDeviceKind.Smartphone => "", // CellPhone
+        RemoteDeviceKind.Speaker => "",    // Speakers
+        RemoteDeviceKind.Tv => "",         // TVMonitor
+        RemoteDeviceKind.Car => "",        // Car
+        _ => "",                           // Devices
+    };
+}

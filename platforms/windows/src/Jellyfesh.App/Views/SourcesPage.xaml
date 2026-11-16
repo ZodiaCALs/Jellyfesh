@@ -3,7 +3,8 @@
     Sources (docs/ui.md): the intro line, Add a Source (the core's presets, through the Connect dialog),
     Your Sources (each installed source with its status; choosing one browses it) and Sources Settings….
     Browsing a source shows its catalogue behind a breadcrumb whose first crumb leads back here: drill into
-    folders and artists, play albums and playlists whole.
+    folders and artists, play albums and playlists whole. Rows with a link offer Open in {Service} (an
+    item that cannot play here opens it when chosen), and so does More for an artist being browsed.
 -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.SourcesPage"
@@ -117,7 +118,27 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <BreadcrumbBar x:Name="Crumbs" ItemClicked="OnCrumbClicked" ItemsSource="{x:Bind ViewModel.Path}" />
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <BreadcrumbBar x:Name="Crumbs" VerticalAlignment="Center" ItemClicked="OnCrumbClicked" ItemsSource="{x:Bind ViewModel.Path}" />
+                <Button
+                    x:Uid="More_Button"
+                    Grid.Column="1"
+                    AutomationProperties.Name="More"
+                    Style="{StaticResource JfIconButtonStyle}"
+                    ToolTipService.ToolTip="More"
+                    Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.LevelLink), Mode=OneWay}">
+                    <controls:StrokeIcon Data="{StaticResource IconMore}" Size="18" />
+                    <Button.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuFlyoutItem Command="{x:Bind ViewModel.OpenLevelLinkCommand}" Text="{x:Bind ViewModel.OpenInLabel, Mode=OneWay}" />
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+            </Grid>
             <ScrollViewer Grid.Row="1">
                 <StackPanel Padding="0,0,0,112" Spacing="8">
                     <ListView x:Name="EntryList" x:Uid="Sources_Entries" AutomationProperties.Name="Folders, Albums and Playlists" IsItemClickEnabled="True" ItemClick="OnEntryClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind ViewModel.Entries}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />

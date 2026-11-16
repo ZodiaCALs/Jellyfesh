@@ -17,9 +17,10 @@ using Windows.Foundation;
 namespace Jellyfesh.App.Controls;
 
 /// <summary>
-/// One lyric line (after Apple Music, docs/design-controls.md "v0.0.4"). Lines still to come are
-/// lyrics.ink-inactive (ink-50), sung ones ink-30, both at lyrics.scale-inactive (96 %) scaled from
-/// their start edge; the active line is ink-90 at full size, and when it has word timing its words
+/// One lyric line (after Apple Music, docs/design-controls.md "v0.0.4"; Luminous: 40 epx bold at
+/// line height 1.18). Lines still to come are lyrics.ink-inactive (ink-50), sung ones ink-30, both
+/// at lyrics.scale-inactive (92 %) scaled from their start edge; the active line is ink-90 at full
+/// size, and when it has word timing its words
 /// are laid out separately so the word being sung can be swept: a clip slides across a sung-colour
 /// copy of the word with a linear, compositor-run animation over the word's remaining duration
 /// (Misty MOT-06: progress is linear). Scale changes run dur-3 Fluid on the compositor. No app
@@ -228,7 +229,7 @@ public sealed partial class LyricLineView : StackPanel
         _background.Foreground = (Brush)res[role == LyricLineRole.Sung ? "JfInk30" : "JfInk50"];
     }
 
-    /// <summary>Full size for the active line, 96 % for the others, from the start edge (the centre when centred).</summary>
+    /// <summary>Full size for the active line, 92 % for the others, from the start edge (the centre when centred).</summary>
     private void ApplyScale(bool animate)
     {
         var role = Line?.IsActive == true ? LyricLineRole.Active : Line?.Role ?? LyricLineRole.Upcoming;
@@ -276,13 +277,16 @@ public sealed partial class LyricLineView : StackPanel
             part.Apply(size, height);
         }
 
-        // Translation 18 and romanization 15 at a 30 px line, scaled with it (lyrics tokens).
-        _translation.FontSize = Math.Round(size * 0.6);
-        _romanization.FontSize = Math.Round(size * 0.5);
-        _background.FontSize = Math.Round(size * 0.6);
+        // Translation and romanization keep their token sizes' ratio to the line (18 and 15 at 40).
+        var line = TokenValues.Number("Lyrics.LineSize");
+        _translation.FontSize = Math.Round(size * TokenValues.Number("Lyrics.TranslationSize") / line);
+        _romanization.FontSize = Math.Round(size * TokenValues.Number("Lyrics.RomanizationSize") / line);
+        _background.FontSize = _translation.FontSize;
     }
 
-    private static double LineHeight(LyricLineViewModel? line) => line?.IsCjk == true ? 1.6 : 1.3;
+    /// <summary>lyrics.line's line height (1.18), or the taller one Han, Kana and Hangul need.</summary>
+    private static double LineHeight(LyricLineViewModel? line) =>
+        TokenValues.Number(line?.IsCjk == true ? "Lyrics.CjkLineHeight" : "Lyrics.LineHeight");
 
     private void StopSweep()
     {

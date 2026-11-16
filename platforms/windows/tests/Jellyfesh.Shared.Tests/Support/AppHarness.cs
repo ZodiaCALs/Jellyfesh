@@ -55,9 +55,9 @@ internal sealed class FakePlatform : IShellPlatform
 /// <summary>An AppViewModel over a FakeCore, with a dispatcher, clock and timer the test drives.</summary>
 internal sealed class AppHarness : IDisposable
 {
-    public AppHarness()
+    public AppHarness(ILocalizer? localizer = null)
     {
-        App = new AppViewModel(Core, Ui, KeyLocalizer.Instance, Platform, PortDrawingTime.Instance, Clock, Timer);
+        App = new AppViewModel(Core, Ui, localizer ?? KeyLocalizer.Instance, Platform, PortDrawingTime.Instance, Clock, Timer);
     }
 
     public FakeCore Core { get; } = new();

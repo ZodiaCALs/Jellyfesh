@@ -28,6 +28,8 @@ public sealed record QueueState(
 }
 
 /// <summary>What is playing, with display metadata.</summary>
+/// <param name="Link">Opens the song in its service (Open in {Service}), for songs from a source
+/// that declares links.</param>
 public sealed record NowPlayingInfo(
     ulong Uid,
     TrackRef Track,
@@ -37,7 +39,8 @@ public sealed record NowPlayingInfo(
     string? Album,
     ulong? DurationMs,
     ArtworkRef? Artwork,
-    TrackFormat? Format);
+    TrackFormat? Format,
+    string? Link = null);
 
 public enum LyricTiming
 {
@@ -176,6 +179,39 @@ public sealed record SourcesState(ulong Version, IReadOnlyList<PluginInfo> Plugi
     public static SourcesState Initial { get; } = new(0, [], [], false);
 }
 
+/// <summary>
+/// The <c>Remote</c> slice (ADR-0018): the remote session while Jellyfesh controls a service's own
+/// player. While <see cref="Source"/> is set, the player shows its track instead of the engine's,
+/// and the transport commands control the service (the core routes them).
+/// </summary>
+/// <param name="SourceName">The source's name: Open in {Service}, and the Lyrics and Queue panes.</param>
+/// <param name="Item">The track playing, as the service reports it.</param>
+/// <param name="Context">The album or playlist it plays from, when the service says.</param>
+/// <param name="Anchor">The time base for progress, like the Playback slice's.</param>
+/// <param name="Device">The device playing: Playing on {Device}.</param>
+/// <param name="Devices">Every device the service lists, for Devices.</param>
+/// <param name="Error">What went wrong last talking to the service; after the session ended, why it ended.</param>
+public sealed record RemoteState(
+    ulong Version,
+    string? Source,
+    string? SourceName,
+    PlaybackStatus Status,
+    SourceItem? Item,
+    SourceItem? Context,
+    PlaybackAnchor Anchor,
+    bool Shuffle,
+    RepeatMode Repeat,
+    RemoteDevice? Device,
+    IReadOnlyList<RemoteDevice> Devices,
+    string? Error)
+{
+    public static RemoteState Initial { get; } =
+        new(0, null, null, PlaybackStatus.Stopped, null, null, default, false, RepeatMode.Off, null, [], null);
+
+    /// <summary>A remote session runs: the player shows it.</summary>
+    public bool HasSession => Source is not null;
+}
+
 /// <summary>Everything a UI mirrors; each slice carries its own version where the core has one.</summary>
 public sealed record CoreSnapshot(
     PlaybackState Playback,
@@ -188,9 +224,10 @@ public sealed record CoreSnapshot(
     AppSettings Settings,
     DevicesState Devices,
     SourcesState Sources,
-    bool Muted)
+    bool Muted,
+    RemoteState Remote)
 {
     public static CoreSnapshot Initial { get; } = new(
         PlaybackState.Initial, QueueState.Initial, null, null, null, 0, false,
-        AppSettings.Default, DevicesState.Initial, SourcesState.Initial, false);
+        AppSettings.Default, DevicesState.Initial, SourcesState.Initial, false, RemoteState.Initial);
 }

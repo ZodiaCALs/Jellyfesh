@@ -4,13 +4,14 @@
     player.mini-radius corners, the artwork, two lines of type and exactly one control, play/pause
     (Misty CMP-02), never accent-filled (COL-04). Its progress is a straight 2 px line along the
     bottom edge, inset by the corners, drawn at whole-pixel steps only. Selecting the capsule opens
-    Now Playing.
+    Now Playing. In a remote session the second line is Playing on {Device}.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.MiniPlayer"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Jellyfesh.App.Controls"
+    xmlns:shell="using:Jellyfesh.App.Shell"
     xmlns:th="using:Jellyfesh.App.Theming">
 
     <Grid
@@ -44,7 +45,8 @@
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" Visibility="{x:Bind shell:Bind.Collapsed(Player.IsRemote), Mode=OneWay}" />
+                        <TextBlock Style="{StaticResource JfRemoteLineText}" Text="{x:Bind Player.RemoteDeviceText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}" />
                     </StackPanel>
                 </Grid>
             </Button>

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Jellyfesh.App.Shell;
 using Jellyfesh.Formatting;
 using Jellyfesh.Services;
 using Microsoft.UI.Xaml;
@@ -48,12 +49,30 @@ internal sealed class ShellPlatform(Window window, ILocalizer l) : IShellPlatfor
         return result?.Path;
     }
 
-    /// <summary>Opens web addresses only: sign-in steps come from plugins, so other schemes are refused.</summary>
-    public void OpenUrl(string url)
+    /// <summary>
+    /// Opens web addresses only (sign-in steps and item links come from plugins, so other schemes
+    /// are refused), with the app that handles them: the browser, or a service's own app where it
+    /// registered for its links (Open in {Service}). Launcher.LaunchUriAsync may be called from
+    /// desktop apps while the window is visible; it answers false when nothing was launched.
+    /// </summary>
+    public async void OpenUrl(string url)
     {
-        if (Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
         {
-            Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true });
+            return;
+        }
+
+        try
+        {
+            if (!await Windows.System.Launcher.LaunchUriAsync(uri))
+            {
+                AppLog.Write($"nothing opened {uri.Host}", null);
+            }
+        }
+        catch (Exception e)
+        {
+            // async void: an exception would end the app. The link simply does not open.
+            AppLog.Write("opening a link failed", e);
         }
     }
 

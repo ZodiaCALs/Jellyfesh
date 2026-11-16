@@ -15,6 +15,7 @@ public sealed partial class QueueView : UserControl
     public QueueView()
     {
         Queue = AppHost.App.Queue;
+        Player = AppHost.App.Player;
         InitializeComponent();
         var l = AppHost.L;
         var playNext = new MenuFlyoutItem { Text = l.Get("Menu_PlayNext") };
@@ -28,6 +29,9 @@ public sealed partial class QueueView : UserControl
     }
 
     public QueueViewModel Queue { get; }
+
+    /// <summary>The player, for the remote session's message.</summary>
+    public PlayerViewModel Player { get; }
 
     private void OnItemClick(object sender, ItemClickEventArgs e) => Queue.JumpToCommand.Execute(e.ClickedItem as QueueEntryItem);
 

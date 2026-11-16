@@ -515,6 +515,9 @@
   <data name="Library_WatchTitle.Text" xml:space="preserve">
     <value>Watch Folders</value>
   </data>
+  <data name="Link_OpenIn" xml:space="preserve">
+    <value>Open in {0}</value>
+  </data>
   <data name="Lyrics_InfoFrom" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
@@ -680,9 +683,6 @@
   <data name="NowPlaying_LyricsTab.Content" xml:space="preserve">
     <value>Lyrics</value>
   </data>
-  <data name="NowPlaying_Output.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Output Device</value>
-  </data>
   <data name="NowPlaying_PlayerTab.Content" xml:space="preserve">
     <value>Player</value>
   </data>
@@ -809,6 +809,9 @@
   <data name="Player_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Next (Ctrl+→)</value>
   </data>
+  <data name="Player_OutputDevice" xml:space="preserve">
+    <value>Output Device</value>
+  </data>
   <data name="Player_Pause" xml:space="preserve">
     <value>Pause</value>
   </data>
@@ -922,6 +925,24 @@
   </data>
   <data name="Queue_UpNext.Text" xml:space="preserve">
     <value>Up Next</value>
+  </data>
+  <data name="Remote_Devices" xml:space="preserve">
+    <value>Devices</value>
+  </data>
+  <data name="Remote_Ended" xml:space="preserve">
+    <value>Stopped Controlling {0}</value>
+  </data>
+  <data name="Remote_Lyrics" xml:space="preserve">
+    <value>Lyrics aren't shown while {0} plays.</value>
+  </data>
+  <data name="Remote_PlayingOn" xml:space="preserve">
+    <value>Playing on {0}</value>
+  </data>
+  <data name="Remote_Queue" xml:space="preserve">
+    <value>Up Next is in {0}.</value>
+  </data>
+  <data name="Remote_StopControlling" xml:space="preserve">
+    <value>Stop Controlling</value>
   </data>
   <data name="Scan_Failed" xml:space="preserve">
     <value>Scan Failed</value>

@@ -29,6 +29,9 @@ public abstract record CoreEvent
 
     public sealed record Sources(SourcesState State) : CoreEvent;
 
+    /// <summary>The remote session changed (ADR-0018).</summary>
+    public sealed record Remote(RemoteState State) : CoreEvent;
+
     public sealed record Auth(AuthUpdate Update) : CoreEvent;
 
     public sealed record SearchResults(SearchUpdate Update) : CoreEvent;

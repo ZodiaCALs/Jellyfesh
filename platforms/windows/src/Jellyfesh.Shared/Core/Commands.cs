@@ -122,4 +122,31 @@ public abstract record CoreCommand
     public sealed record Search(string Query, SearchScope Scope) : CoreCommand;
 
     public sealed record Browse(string Plugin, string? Node, uint Page) : CoreCommand;
+
+    // ---- remote sessions ----
+
+    /// <summary>
+    /// What the transport commands cannot say to a remote session (ADR-0018). While a session runs,
+    /// Play, Pause, TogglePlayPause, Stop, Next, Previous, Seek, SetShuffle and SetRepeat control the
+    /// service's player instead of the engine.
+    /// </summary>
+    public sealed record Remote(RemoteAction Action) : CoreCommand;
+}
+
+/// <summary>What <see cref="CoreCommand.Remote"/> asks of the remote session.</summary>
+public abstract record RemoteAction
+{
+    private RemoteAction() { }
+
+    /// <summary>Asks the service for its devices and state now (when Devices opens).</summary>
+    public sealed record Refresh : RemoteAction;
+
+    /// <summary>Moves playback to the device with this id, playing there.</summary>
+    public sealed record Transfer(string Device) : RemoteAction;
+
+    /// <summary>The playing device's volume, 0–100.</summary>
+    public sealed record SetVolume(uint Percent) : RemoteAction;
+
+    /// <summary>Stop Controlling: the service's player carries on as it was.</summary>
+    public sealed record End : RemoteAction;
 }

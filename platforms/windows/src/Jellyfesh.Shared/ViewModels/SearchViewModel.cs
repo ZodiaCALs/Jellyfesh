@@ -125,6 +125,7 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         }
     }
 
+    /// <summary>Plays the song; one that cannot play here but has a link opens it instead (docs/ui.md).</summary>
     [RelayCommand]
     private void PlayTrack(TrackItem? item)
     {
@@ -132,14 +133,23 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         {
             S.Send(new CoreCommand.PlayTracks([r], 0));
         }
+        else if (item is { OpensLink: true })
+        {
+            ItemLinks.Open(S, item.Link);
+        }
     }
 
+    /// <summary>Plays an album or playlist; anything else with a link opens it in its service.</summary>
     [RelayCommand]
     private void PlayEntry(SourceEntryItem? item)
     {
         if (item is { CanPlay: true })
         {
             S.Send(new CoreCommand.PlayCollection(new Collection.Source(item.Item.Source, item.Item.Id), 0, false));
+        }
+        else if (item is { HasLink: true })
+        {
+            ItemLinks.Open(S, item.Link);
         }
     }
 

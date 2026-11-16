@@ -28,9 +28,16 @@ public static class TrackActions
         }
     }
 
+    /// <summary>
+    /// Whether Play Next, Play Last and Add to Playlist are offered for the song: not for a remote
+    /// source's songs, which play on the person's own devices and never join the queue (ADR-0018).
+    /// </summary>
+    public static bool CanQueue(ShellServices s, TrackItem? item) =>
+        item?.Ref is { } r && !ItemLinks.IsRemote(s.Hub.State.Sources, r);
+
     public static void AddToPlaylist(ShellServices s, long playlistId, IEnumerable<TrackItem> items)
     {
-        var refs = items.Select(i => i.Ref).OfType<TrackRef>().ToArray();
+        var refs = items.Where(i => CanQueue(s, i)).Select(i => i.Ref).OfType<TrackRef>().ToArray();
         if (refs.Length > 0)
         {
             s.Send(new CoreCommand.AddToPlaylist(playlistId, refs));
@@ -39,7 +46,7 @@ public static class TrackActions
 
     private static void Enqueue(ShellServices s, IEnumerable<TrackItem> items, bool playNext)
     {
-        var refs = items.Where(i => i.IsPlayable).Select(i => i.Ref).OfType<TrackRef>().ToArray();
+        var refs = items.Where(i => i.IsPlayable && CanQueue(s, i)).Select(i => i.Ref).OfType<TrackRef>().ToArray();
         if (refs.Length > 0)
         {
             s.Send(new CoreCommand.Enqueue(refs, playNext));

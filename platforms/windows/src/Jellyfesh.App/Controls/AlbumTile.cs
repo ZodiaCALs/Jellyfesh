@@ -12,10 +12,11 @@ using Microsoft.UI.Xaml.Media;
 namespace Jellyfesh.App.Controls;
 
 /// <summary>
-/// An album in the grid (after Apple Music and Media Player): the cover at artwork.radius-grid
-/// with its title and artist below. Hovering lifts the cover by 2 px with a shadow and shows a
-/// 36 px glass play button in its bottom start corner that plays the album; a press scales the
-/// cover to 97 %. Motion runs on the compositor (dur-1 Fluid) and becomes instant with reduced motion.
+/// An album in the grid (after Apple Music and Media Player; Luminous): the cover at
+/// artwork.radius-grid (16) on shadow-2, with its title and artist below. Pointing at it or giving
+/// its tile keyboard focus lifts the cover by 4 epx onto a deeper shadow and shows a 36 px glass
+/// play button in its bottom start corner that plays the album; a press scales the cover to 97 %.
+/// Motion runs on the compositor (dur-1 Fluid) and becomes instant with reduced motion.
 /// </summary>
 public sealed partial class AlbumTile : StackPanel
 {
@@ -38,6 +39,9 @@ public sealed partial class AlbumTile : StackPanel
     private readonly TextBlock _title = new();
     private readonly TextBlock _subtitle = new();
     private bool _hovered;
+    private bool _focused;
+    private bool _lifted;
+    private Microsoft.UI.Xaml.Controls.Primitives.SelectorItem? _container;
 
     public AlbumTile()
     {
@@ -75,9 +79,12 @@ public sealed partial class AlbumTile : StackPanel
         _subtitle.Style = (Style)resources["JfListSecondaryText"];
         Children.Add(_cover);
         Children.Add(new StackPanel { Spacing = 2, Children = { _title, _subtitle } });
+        Elevation.Cast(_cover, Elevation.Shadow2);
         PointerEntered += (_, _) => SetHovered(true);
         PointerExited += (_, _) => SetHovered(false);
         PointerCanceled += (_, _) => SetHovered(false);
+        Loaded += (_, _) => WatchContainerFocus();
+        Unloaded += (_, _) => WatchContainerFocus(stop: true);
         PointerPressed += OnPressed;
         PointerReleased += (_, _) => Press(false);
         PointerCaptureLost += (_, _) => Press(false);
@@ -122,13 +129,60 @@ public sealed partial class AlbumTile : StackPanel
         }
 
         _hovered = hovered;
-        _cover.Shadow = hovered ? new ThemeShadow() : null;
-        Motion.Translate(_cover, new Vector3(0, hovered ? -2 : 0, hovered ? 16 : 0), Duration, TokenValues.Fluid);
-        Motion.Fade(_play, hovered && IsReady ? 1 : 0, Duration, TokenValues.Fluid);
+        UpdateLift();
         if (!hovered)
         {
             Press(false);
         }
+    }
+
+    /// <summary>The tile's container (the grid item) takes keyboard focus: the cover lifts as on hover.</summary>
+    private void WatchContainerFocus(bool stop = false)
+    {
+        if (_container is not null)
+        {
+            _container.GotFocus -= OnContainerFocus;
+            _container.LostFocus -= OnContainerFocus;
+            _container = null;
+        }
+
+        if (stop)
+        {
+            return;
+        }
+
+        DependencyObject? node = this;
+        while (node is not null and not Microsoft.UI.Xaml.Controls.Primitives.SelectorItem)
+        {
+            node = VisualTreeHelper.GetParent(node);
+        }
+
+        _container = node as Microsoft.UI.Xaml.Controls.Primitives.SelectorItem;
+        if (_container is not null)
+        {
+            _container.GotFocus += OnContainerFocus;
+            _container.LostFocus += OnContainerFocus;
+        }
+    }
+
+    private void OnContainerFocus(object sender, RoutedEventArgs e)
+    {
+        _focused = _container is { FocusState: FocusState.Keyboard or FocusState.Programmatic };
+        UpdateLift();
+    }
+
+    /// <summary>Lifted 4 epx onto shadow-3 while pointed at or focused, else on shadow-2 (Luminous).</summary>
+    private void UpdateLift()
+    {
+        var lifted = _hovered || _focused;
+        if (lifted == _lifted)
+        {
+            return;
+        }
+
+        _lifted = lifted;
+        Motion.Translate(_cover, new Vector3(0, lifted ? -4 : 0, lifted ? Elevation.Shadow3 : Elevation.Shadow2), Duration, TokenValues.Fluid);
+        Motion.Fade(_play, lifted && IsReady ? 1 : 0, Duration, TokenValues.Fluid);
     }
 
     private void OnPressed(object sender, PointerRoutedEventArgs e)

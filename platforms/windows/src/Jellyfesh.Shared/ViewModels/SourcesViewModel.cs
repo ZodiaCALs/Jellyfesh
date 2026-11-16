@@ -238,7 +238,7 @@ public sealed class SourceChoice
 /// One level of a source's catalogue (a breadcrumb shows its title). The first crumb,
 /// <see cref="IsSources"/>, leads back to the list of sources.
 /// </summary>
-public sealed record BrowseLevel(string? Node, string Title, bool IsSources = false)
+public sealed record BrowseLevel(string? Node, string Title, bool IsSources = false, string? Link = null)
 {
     public override string ToString() => Title;
 }
@@ -256,6 +256,7 @@ public sealed partial class SourcesViewModel : PageViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSourceOpen))]
+    [NotifyPropertyChangedFor(nameof(OpenInLabel))]
     private SourceChoice? _selected;
 
     /// <summary>A page of the catalogue is on its way.</summary>
@@ -270,6 +271,7 @@ public sealed partial class SourcesViewModel : PageViewModel
     {
         SignIns = new SourceSignIns(services);
         SignIns.Requested += flow => SignInRequested?.Invoke(flow);
+        Path.CollectionChanged += (_, _) => OnPropertyChanged(nameof(LevelLink));
     }
 
     public SourceSignIns SignIns { get; }
@@ -402,14 +404,28 @@ public sealed partial class SourcesViewModel : PageViewModel
 
         if (entry.Item.Kind is ItemKind.Folder or ItemKind.Artist)
         {
-            Path.Add(new BrowseLevel(entry.Item.Id, entry.Title));
+            Path.Add(new BrowseLevel(entry.Item.Id, entry.Title, Link: entry.Link));
             Browse(entry.Item.Id, 0, clear: true);
         }
         else if (entry.CanPlay)
         {
             S.Send(new CoreCommand.PlayCollection(new Collection.Source(entry.Item.Source, entry.Item.Id), 0, false));
         }
+        else if (entry.HasLink)
+        {
+            ItemLinks.Open(S, entry.Link); // cannot play here: its link is the main action
+        }
     }
+
+    /// <summary>The level being browsed has a link (an artist): More offers Open in {Service}.</summary>
+    public string? LevelLink => Path.Count > 0 ? Path[^1].Link : null;
+
+    /// <summary>"Open in {Service}" for the browsed source.</summary>
+    public string OpenInLabel => ItemLinks.OpenInLabel(S.L, Selected?.Name ?? string.Empty);
+
+    /// <summary>More › Open in {Service} for the level being browsed.</summary>
+    [RelayCommand]
+    private void OpenLevelLink() => ItemLinks.Open(S, LevelLink);
 
     /// <summary>Back to a level of the breadcrumb; its first crumb leads back to the list of sources.</summary>
     [RelayCommand]
@@ -449,6 +465,7 @@ public sealed partial class SourcesViewModel : PageViewModel
         }
     }
 
+    /// <summary>Plays the songs from this one; one that cannot play here but has a link opens it instead.</summary>
     [RelayCommand]
     private void PlayTrack(TrackItem? item)
     {
@@ -456,6 +473,10 @@ public sealed partial class SourcesViewModel : PageViewModel
         {
             var refs = Tracks.Where(t => t.IsPlayable).Select(t => t.Ref).OfType<TrackRef>().ToArray();
             S.Send(new CoreCommand.PlayTracks(refs, (uint)Math.Max(0, Array.IndexOf(refs, r))));
+        }
+        else if (item is { OpensLink: true })
+        {
+            ItemLinks.Open(S, item.Link);
         }
     }
 

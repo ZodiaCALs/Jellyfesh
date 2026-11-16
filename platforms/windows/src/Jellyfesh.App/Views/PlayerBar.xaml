@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     The player bar for windows 900 px and wider (docs/design-controls.md, "v0.0.4"), after Media
-    Player and Apple Music: a floating Veil bar 80 px high with r-xl corners. Start: the artwork and
-    two lines of type (they open Now Playing). Middle: the transport capsule (shuffle, previous,
-    play, next, repeat; play is the only accent fill) above the seek bar with its times. End:
-    Lyrics, Queue and the volume. It bends CMP-02 (one control) on purpose, for desktop use.
+    Player and Apple Music: a floating Veil bar 80 px high with r-xl corners (Luminous: the content
+    fades out just above it). Start: the artwork and two lines of type (they open Now Playing), and
+    in a remote session Playing on {Device} with the session's error, quieter, after it. Middle: the
+    transport capsule (shuffle, previous, play, next, repeat; play is the only accent fill) above
+    the seek bar with its times. End: Lyrics, Queue, the device button (output devices, or Devices
+    in a remote session), the volume (hidden when a remote device has none) and More (Open in
+    {Service}, Stop Controlling). It bends CMP-02 (one control) on purpose, for desktop use.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.PlayerBar"
@@ -20,7 +23,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" MinWidth="180" />
                 <ColumnDefinition Width="2*" MaxWidth="560" />
-                <ColumnDefinition Width="*" MinWidth="220" />
+                <ColumnDefinition Width="*" MinWidth="280" />
             </Grid.ColumnDefinitions>
 
             <!-- Start: what is playing; opens Now Playing. -->
@@ -45,6 +48,10 @@
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                         <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        <!-- A remote session: Playing on {Device}, and its error quieter after it. -->
+                        <TextBlock Style="{StaticResource JfRemoteLineText}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}">
+                            <Run Text="{x:Bind Player.RemoteDeviceText, Mode=OneWay}" /><Run Foreground="{ThemeResource JfInk50}" FontWeight="Normal" Text="{x:Bind shell:Bind.After(Player.RemoteError), Mode=OneWay}" />
+                        </TextBlock>
                     </StackPanel>
                 </Grid>
             </Button>
@@ -109,7 +116,7 @@
                 </Grid>
             </StackPanel>
 
-            <!-- End: Lyrics, Queue and the volume. -->
+            <!-- End: Lyrics, Queue, the device button, the volume and More. -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" Spacing="2">
                 <Button x:Uid="Bar_Lyrics" AutomationProperties.Name="Lyrics" Click="OnLyricsClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Lyrics">
                     <controls:StrokeIcon Data="{StaticResource IconLyrics}" Size="18" />
@@ -117,18 +124,42 @@
                 <Button x:Uid="Bar_Queue" AutomationProperties.Name="Queue" Click="OnQueueClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Queue">
                     <controls:StrokeIcon Data="{StaticResource IconQueue}" Size="18" />
                 </Button>
-                <Button AutomationProperties.Name="{x:Bind Player.MuteLabel, Mode=OneWay}" Command="{x:Bind Player.ToggleMuteCommand}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="{x:Bind Player.MuteLabel, Mode=OneWay}">
+                <Button
+                    x:Name="DeviceButton"
+                    AutomationProperties.Name="{x:Bind Player.OutputLabel, Mode=OneWay}"
+                    Click="OnDeviceClick"
+                    Style="{StaticResource JfIconButtonStyle}"
+                    ToolTipService.ToolTip="{x:Bind Player.OutputName, Mode=OneWay}">
+                    <controls:StrokeIcon Data="{x:Bind shell:Bind.Glyph(Player.OutputGlyph), Mode=OneWay}" Size="18" />
+                </Button>
+                <Button
+                    AutomationProperties.Name="{x:Bind Player.MuteLabel, Mode=OneWay}"
+                    Command="{x:Bind Player.ToggleMuteCommand}"
+                    Style="{StaticResource JfIconButtonStyle}"
+                    ToolTipService.ToolTip="{x:Bind Player.MuteLabel, Mode=OneWay}"
+                    Visibility="{x:Bind shell:Bind.Visible(Player.CanMute), Mode=OneWay}">
                     <controls:StrokeIcon Data="{x:Bind shell:Bind.VolumeGlyph(Player.Volume, Player.IsMuted), Mode=OneWay}" Size="18" />
                 </Button>
                 <Slider
                     x:Name="VolumeSlider"
                     x:Uid="NowPlaying_Volume"
-                    Width="112"
+                    Width="96"
                     VerticalAlignment="Center"
                     AutomationProperties.Name="Volume"
                     Style="{StaticResource JfThinSliderStyle}"
                     Value="{x:Bind Player.Volume, Mode=OneWay}"
-                    ValueChanged="OnVolumeChanged" />
+                    ValueChanged="OnVolumeChanged"
+                    Visibility="{x:Bind shell:Bind.Visible(Player.ShowsVolume), Mode=OneWay}" />
+                <Button
+                    x:Name="MoreButton"
+                    x:Uid="More_Button"
+                    AutomationProperties.Name="More"
+                    Click="OnMoreClick"
+                    Style="{StaticResource JfIconButtonStyle}"
+                    ToolTipService.ToolTip="More"
+                    Visibility="{x:Bind shell:Bind.Visible(Player.HasMore), Mode=OneWay}">
+                    <controls:StrokeIcon Data="{StaticResource IconMore}" Size="18" />
+                </Button>
             </StackPanel>
         </Grid>
     </Grid>

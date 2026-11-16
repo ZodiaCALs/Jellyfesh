@@ -284,6 +284,9 @@ public enum PluginBadge
 }
 
 /// <summary>One installed source.</summary>
+/// <param name="RemotePlayback">The service plays on the person's own devices and Jellyfesh is its
+/// remote control (ADR-0018): its songs start a remote session and never join the queue, so Play
+/// Next, Play Last and Add to Playlist are not offered for them.</param>
 public sealed record PluginInfo(
     string Id,
     string Name,
@@ -298,7 +301,8 @@ public sealed record PluginInfo(
     bool NeedsDisclosure,
     string SettingsSchemaJson,
     string SettingsJson,
-    string? Icon);
+    string? Icon,
+    bool RemotePlayback = false);
 
 /// <summary>
 /// A music service offered in Settings → Sources → Add a Source, listed while its official plugin
@@ -353,6 +357,8 @@ public enum ItemKind
 }
 
 /// <summary>A search or browse result from the library or a source.</summary>
+/// <param name="Link">An https link that opens the item in its service (Open in {Service}), when
+/// its source declares one; the main action for an item that cannot play here.</param>
 public sealed record SourceItem(
     string Source,
     ItemKind Kind,
@@ -365,7 +371,8 @@ public sealed record SourceItem(
     bool Playable,
     string? UnplayableReason,
     TrackRef? Track,
-    IReadOnlyList<string> AlsoIn);
+    IReadOnlyList<string> AlsoIn,
+    string? Link = null);
 
 /// <summary>Results from one source for one search.</summary>
 public sealed record SearchUpdate(
@@ -414,3 +421,20 @@ public abstract record SearchScope
 
     public sealed record Plugin(string Id) : SearchScope;
 }
+
+/// <summary>What kind of device a remote source plays on; Devices shows its glyph.</summary>
+public enum RemoteDeviceKind
+{
+    Computer,
+    Smartphone,
+    Speaker,
+    Tv,
+    Car,
+    Other,
+}
+
+/// <summary>A device a remote source can play on (ADR-0018).</summary>
+/// <param name="Id">What <see cref="RemoteAction.Transfer"/> takes.</param>
+/// <param name="Active">The device playing (or last playing) for the account.</param>
+/// <param name="VolumePercent">Its volume, 0–100, when it lets Jellyfesh change it.</param>
+public sealed record RemoteDevice(string Id, string Name, RemoteDeviceKind Kind, bool Active, uint? VolumePercent);

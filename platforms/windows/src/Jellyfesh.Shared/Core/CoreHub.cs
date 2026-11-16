@@ -25,7 +25,8 @@ public enum SliceChange
     Devices = 1 << 8,
     Sources = 1 << 9,
     Muted = 1 << 10,
-    All = (1 << 11) - 1,
+    Remote = 1 << 11,
+    All = (1 << 12) - 1,
 }
 
 /// <summary>
@@ -205,6 +206,7 @@ public sealed class CoreHub : IDisposable
         public AppSettings? Settings;
         public DevicesState? Devices;
         public SourcesState? Sources;
+        public RemoteState? Remote;
         public readonly List<CoreEvent> Notifications = [];
 
         public void Add(CoreEvent e)
@@ -248,7 +250,10 @@ public sealed class CoreHub : IDisposable
                 case CoreEvent.Sources so when Sources is null || so.State.Version >= Sources.Version:
                     Sources = so.State;
                     break;
-                case CoreEvent.Playback or CoreEvent.Queue or CoreEvent.Devices or CoreEvent.Sources:
+                case CoreEvent.Remote r when Remote is null || r.State.Version >= Remote.Version:
+                    Remote = r.State;
+                    break;
+                case CoreEvent.Playback or CoreEvent.Queue or CoreEvent.Devices or CoreEvent.Sources or CoreEvent.Remote:
                     break; // an older version than one already pending
                 default:
                     Notifications.Add(e);
@@ -326,6 +331,12 @@ public sealed class CoreHub : IDisposable
             {
                 s = s with { Sources = so };
                 changes |= SliceChange.Sources;
+            }
+
+            if (Remote is { } r && r.Version >= s.Remote.Version)
+            {
+                s = s with { Remote = r };
+                changes |= SliceChange.Remote;
             }
 
             return (s, changes);

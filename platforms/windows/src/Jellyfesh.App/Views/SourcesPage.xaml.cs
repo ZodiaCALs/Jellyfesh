@@ -12,7 +12,7 @@ public sealed partial class SourcesPage : JfPage
         ViewModel = AppHost.App.CreateSources();
         PageModel = ViewModel;
         InitializeComponent();
-        Lists.Attach(EntryList, 40);
+        Lists.Attach(EntryList, 40, menu: new EntryMenu(AppHost.Services).Flyout);
         Lists.Attach(TrackList, 40, menu: new TrackMenu(AppHost.Services).Flyout);
         ViewModel.SignInRequested += SourceDialogs.ShowSignIn;
     }

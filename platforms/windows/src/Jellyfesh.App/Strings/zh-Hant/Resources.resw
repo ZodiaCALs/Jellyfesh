@@ -515,6 +515,9 @@
   <data name="Library_WatchTitle.Text" xml:space="preserve">
     <value>監看資料夾</value>
   </data>
+  <data name="Link_OpenIn" xml:space="preserve">
+    <value>在 {0} 中開啟</value>
+  </data>
   <data name="Lyrics_InfoFrom" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
@@ -680,9 +683,6 @@
   <data name="NowPlaying_LyricsTab.Content" xml:space="preserve">
     <value>歌詞</value>
   </data>
-  <data name="NowPlaying_Output.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>輸出裝置</value>
-  </data>
   <data name="NowPlaying_PlayerTab.Content" xml:space="preserve">
     <value>播放器</value>
   </data>
@@ -809,6 +809,9 @@
   <data name="Player_NextButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>下一首 (Ctrl+→)</value>
   </data>
+  <data name="Player_OutputDevice" xml:space="preserve">
+    <value>輸出裝置</value>
+  </data>
   <data name="Player_Pause" xml:space="preserve">
     <value>暫停</value>
   </data>
@@ -922,6 +925,24 @@
   </data>
   <data name="Queue_UpNext.Text" xml:space="preserve">
     <value>接下來播放</value>
+  </data>
+  <data name="Remote_Devices" xml:space="preserve">
+    <value>裝置</value>
+  </data>
+  <data name="Remote_Ended" xml:space="preserve">
+    <value>已停止控制 {0}</value>
+  </data>
+  <data name="Remote_Lyrics" xml:space="preserve">
+    <value>{0} 播放時不顯示歌詞。</value>
+  </data>
+  <data name="Remote_PlayingOn" xml:space="preserve">
+    <value>正在 {0} 上播放</value>
+  </data>
+  <data name="Remote_Queue" xml:space="preserve">
+    <value>「接下來播放」在 {0} 中。</value>
+  </data>
+  <data name="Remote_StopControlling" xml:space="preserve">
+    <value>停止控制</value>
   </data>
   <data name="Scan_Failed" xml:space="preserve">
     <value>掃描失敗</value>

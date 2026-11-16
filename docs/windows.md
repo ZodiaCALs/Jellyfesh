@@ -1,9 +1,48 @@
-# The Windows app (v0.0.5)
+# The Windows app (v0.0.6)
 
 WinUI 3 (Windows App SDK 2.6.5) in C# on .NET 10 (LTS), over the Rust core through
 the hand-written `Jellyfesh.Ffi` binding ([`ffi.md`](ffi.md)). Windows 10 1809
 or later; Mica on Windows 11. Everything except XAML and WinUI builds and is
 tested on any OS.
+
+## v0.0.6: links, remote playback and Luminous
+
+* **Links** ([`ui.md`](ui.md), "Links and remote playback"): an item with a `link` offers **Open in
+  {Service}** (the source's name): in the song menu after Go to Artist, in a menu on the sources'
+  albums, artists, playlists and folders (search and browse), in More for an artist being browsed,
+  in the player's More and in Now Playing › Info under About This Song. A row that cannot play here
+  shows why and opens its link when chosen. Links open with `Launcher.LaunchUriAsync`, web
+  addresses only (`ItemLinks`, `ShellPlatform.OpenUrl`).
+* **Remote playback** (ADR-0018): while the `Remote` slice has a source, `PlayerViewModel` shows its
+  track (title, artist, artwork URL, progress from its anchor through the same `DisplayClock`),
+  **Playing on {Device}** under the title and the session's error in a quieter line (the mini and
+  compact players show the device line instead of the artist). The transport sends the usual
+  commands; the volume sets the device's volume (`Remote { SetVolume }`) and hides when it has none;
+  the device button opens **Devices** (`Remote { Refresh }` as it opens, each device with its
+  kind's icon, the playing one checked, choosing one sends `Transfer`); More holds Open in {Service}
+  and **Stop Controlling** (`End`). Lyrics say "Lyrics aren't shown while {Service} plays.", Queue
+  "Up Next is in {Service}."; a session that ends with an error says so once in the notice bar. A
+  remote source's songs have no Play Next, Play Last or Add to Playlist….
+* **Luminous** (the owner's direction C): the field with four larger glows at
+  `field.aurora-strength` (`Drawing/AuroraField.cs`) behind every page and the navigation pane,
+  which is Clear glass (in-app acrylic) under a Mica Alt title bar; grouped surfaces in the Mist
+  tint without blur (`JfMistSurface`); the player bar floats above content that fades out just
+  above it; Now Playing is a stage: the Artwork backdrop, 380 epx artwork on shadow-3, lyrics
+  40 epx bold (line height 1.18) from a 640 epx pane, inactive lines at 92 %, a 40 ms cascade, and
+  every control in one floating Veil dock (one row; two on narrow windows, without the volume);
+  grid covers at radius 16 on shadow-2 lift 4 epx on pointer-over or keyboard focus; page titles
+  48 epx. Shadows are `ThemeShadow`s shared per layer and cast onto the field or the stage's
+  backdrop (`Controls/Elevation.cs`; outside popups they need receivers). Translucent glass casts
+  none, since a rectangular `ThemeShadow` would show through it. Without transparency (or with
+  Reduce Motion and Transparency) the glass and the Mist surfaces are solid Cloud and the lyrics
+  do not cascade.
+
+**Checked here, not built:** the portable tests pass (118); the app's C# compiles against the
+Windows App SDK 2.6.5 reference assemblies with generated stand-ins for the XAML compiler's members,
+every XAML event handler against its event, every `x:Bind` (474) as a typed assignment, and every
+literal XAML attribute (1,578) as an assignment to the WinUI property it names; every resource key
+the XAML uses is defined and every `x:Uid` has resources in the four languages. The XAML compiler,
+acrylic, `ThemeShadow` and everything at run time first run on Windows in CI.
 
 ## v0.0.4 design pass
 
