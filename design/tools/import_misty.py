@@ -51,6 +51,9 @@ def tok(type_, value, description, flagged=True, **ext):
     return t
 
 
+# Tokens added after Step 0 (lyrics.scale-inactive and .stagger, field.aurora-strength, the
+# Luminous deviations of Misty base tokens such as type.text-h1) are kept in design/tokens.json
+# itself; carry them over by hand when re-importing Misty.
 JELLYFESH = {
     "brand": {
         "$description": "Brand intent. Not rendered; guides review.",
@@ -85,8 +88,9 @@ JELLYFESH = {
                     "Roboto (Android). CJK falls back to PingFang/Hiragino/Apple SD Gothic Neo, "
                     "Microsoft YaHei UI/JhengHei UI/Yu Gothic UI/Malgun Gothic, Noto Sans CJK.",
                     flagged=False),
-        "now-playing-title": tok("typography", {"fontSize": dim(28), "lineHeight": 1.1, "fontWeight": 700},
-                                 "Track title on Now Playing (Misty Title)."),
+        "now-playing-title": tok("typography", {"fontSize": dim(32), "lineHeight": 1.1, "fontWeight": 700},
+                                 "Track title on Now Playing (Misty Title).", flagged=False,
+                                 luminous="0.0.6", decided="2026-11-16"),
         "now-playing-artist": tok("typography", {"fontSize": dim(16), "lineHeight": 1.4, "fontWeight": 600},
                                   "Artist and album line on Now Playing."),
         "list-title": tok("typography", {"fontSize": dim(14), "lineHeight": 1.3, "fontWeight": 500},
@@ -98,9 +102,10 @@ JELLYFESH = {
     },
     "lyrics": {
         "$description": "Lyrics view. Restrained: no blur, no scale jumps on inactive lines.",
-        "line": tok("typography", {"fontSize": dim(30), "lineHeight": 1.3, "fontWeight": 700},
-                    "Every lyric line, active or not; size never changes, so nothing reflows.",
-                    fluid={"min": 24, "max": 40, "basis": "window width"}),
+        "line": tok("typography", {"fontSize": dim(40), "lineHeight": 1.18, "fontWeight": 700},
+                    "Every lyric line, active or not; size never changes, so nothing reflows. "
+                    "Luminous: 40 px, the fluid maximum.", flagged=False,
+                    fluid={"min": 28, "max": 40, "basis": "window width"}, luminous="0.0.6", decided="2026-11-16"),
         "line-cjk-line-height": tok("number", 1.6, "Line height for Han, Kana and Hangul lines "
                                     "(Misty TYP-08 uses 1.7 for body; display-size lyrics need less)."),
         "translation": tok("typography", {"fontSize": dim(18), "lineHeight": 1.45, "fontWeight": 500},
@@ -120,7 +125,8 @@ JELLYFESH = {
     },
     "artwork": {
         "radius-list": tok("dimension", dim(6), "List thumbnails (Misty r-sm, list icon tiles)."),
-        "radius-grid": tok("dimension", dim(12), "Album grid covers (Misty r-lg, cards)."),
+        "radius-grid": tok("dimension", dim(16), "Album grid covers (Misty r-xl). Luminous: with shadow-2, "
+                           "lifting 4 px on hover or focus.", flagged=False, luminous="0.0.6", decided="2026-11-16"),
         "radius-hero": tok("dimension", dim(24), "Now Playing artwork (Misty r-2xl, hero media)."),
         "size-mini": tok("dimension", dim(40), "Mini-player artwork."),
     },

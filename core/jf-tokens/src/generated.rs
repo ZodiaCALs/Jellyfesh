@@ -97,8 +97,8 @@ pub mod accent {
 
 /// The `artwork` tokens.
 pub mod artwork {
-    /// Album grid covers (Misty r-lg, cards).
-    pub const RADIUS_GRID: f32 = 12.0;
+    /// Album grid covers (Misty r-xl). Luminous: with shadow-2, lifting 4 px on hover or focus.
+    pub const RADIUS_GRID: f32 = 16.0;
     /// Now Playing artwork (Misty r-2xl, hero media).
     pub const RADIUS_HERO: f32 = 24.0;
     /// List thumbnails (Misty r-sm, list icon tiles).
@@ -270,6 +270,8 @@ pub mod field {
         light: Lcha::relative(0.915, 0.052, -70.0, 1.0),
         dark: Lcha::relative(0.325, 0.06, -70.0, 1.0),
     };
+    /// How strongly the aurora glows on every screen, 0 to 1 (Luminous; Misty's field is about 0.45). Four glows at the artwork's hue.
+    pub const AURORA_STRENGTH: f32 = 0.75;
     pub const GRAIN: Themed = Themed::new(0.045, 0.065);
     pub const SKY: ColorDef = ColorDef {
         name: "field.sky",
@@ -483,7 +485,7 @@ pub mod line {
     };
 }
 
-/// Lyrics view. Restrained: no blur, no scale jumps on inactive lines.
+/// Lyrics view (Luminous): large bold lines on the artwork, inactive lines a little smaller, settling in a cascade.
 pub mod lyrics {
     use crate::{Fluid, Typography};
 
@@ -497,11 +499,11 @@ pub mod lyrics {
     pub const INK_SUNG: &str = "ink-90";
     /// Words not yet sung in the active line: brighter than inactive lines (ink-50), so the active line reads at a glance.
     pub const INK_UNSUNG: &str = "ink-70";
-    /// Every lyric line, active or not; size never changes, so nothing reflows.
-    pub const LINE: Typography = Typography::new(30.0, 1.3, 700);
+    /// Every lyric line, active or not; size never changes, so nothing reflows. Luminous: 40 px, the fluid maximum.
+    pub const LINE: Typography = Typography::new(40.0, 1.18, 700);
     /// Fluid range of `LINE` in px; `vw` is its preferred size in % of the viewport width.
     /// Scales with the window width.
-    pub const LINE_FLUID: Fluid = Fluid::new(24.0, 40.0, None);
+    pub const LINE_FLUID: Fluid = Fluid::new(28.0, 40.0, None);
     /// Line height for Han, Kana and Hangul lines (Misty TYP-08 uses 1.7 for body; display-size lyrics need less).
     pub const LINE_CJK_LINE_HEIGHT: f32 = 1.6;
     /// Space between lyric lines (Misty s5).
@@ -509,7 +511,7 @@ pub mod lyrics {
     /// Romanization track under a line.
     pub const ROMANIZATION: Typography = Typography::new(15.0, 1.45, 500);
     /// Lines other than the active one, scaled from their start edge (or centre when centred).
-    pub const SCALE_INACTIVE: f32 = 0.96;
+    pub const SCALE_INACTIVE: f32 = 0.92;
     /// Lyrics size Large: line, translation and romanization sizes multiply by this.
     pub const SCALE_LARGE: f32 = 1.2;
     /// Lyrics size Small: line, translation and romanization sizes multiply by this.
@@ -517,7 +519,7 @@ pub mod lyrics {
     /// Line advance: 380 ms, Fluid. Reduced motion: jump.
     pub const SCROLL: &str = "dur-3 fluid";
     /// Delay between successive lines as the lyrics scroll, so they settle in a cascade.
-    pub const STAGGER_MS: u32 = 30;
+    pub const STAGGER_MS: u32 = 40;
     /// Translation track under a line.
     pub const TRANSLATION: Typography = Typography::new(18.0, 1.45, 500);
     /// Karaoke fill is progress, so Linear (Misty MOT-06). Reduced motion: whole line highlights at once.
@@ -659,8 +661,8 @@ pub mod type_ {
     pub const TEXT_DISPLAY: f32 = 52.0;
     /// Fluid range of `TEXT_DISPLAY` in px; `vw` is its preferred size in % of the viewport width.
     pub const TEXT_DISPLAY_FLUID: Fluid = Fluid::new(52.0, 92.0, Some(6.6));
-    /// Source: `2.4rem`.
-    pub const TEXT_H1: f32 = 38.4;
+    /// Source: `3rem`.
+    pub const TEXT_H1: f32 = 48.0;
     /// Fluid range of `TEXT_H1` in px; `vw` is its preferred size in % of the viewport width.
     pub const TEXT_H1_FLUID: Fluid = Fluid::new(38.4, 60.0, Some(4.6));
     /// Source: `1.9rem`.
@@ -690,7 +692,7 @@ pub mod type_roles {
     /// Artist and album line on Now Playing.
     pub const NOW_PLAYING_ARTIST: Typography = Typography::new(16.0, 1.4, 600);
     /// Track title on Now Playing (Misty Title).
-    pub const NOW_PLAYING_TITLE: Typography = Typography::new(28.0, 1.1, 700);
+    pub const NOW_PLAYING_TITLE: Typography = Typography::new(32.0, 1.1, 700);
     /// Section headings in Library and Search (Misty Heading).
     pub const SECTION: Typography = Typography::new(20.0, 1.2, 700);
 }

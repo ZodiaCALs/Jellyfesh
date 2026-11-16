@@ -235,7 +235,7 @@ mod tests {
         assert_eq!(space::S12, 96.0);
         assert_eq!(radius::R_SM, 6.0);
         assert_eq!(radius::R_FULL, 999.0);
-        assert_eq!(type_::TEXT_H1, 38.4);
+        assert_eq!(type_::TEXT_H1, 48.0);
         assert_eq!(type_::TEXT_DISPLAY_FLUID, Fluid::new(52.0, 92.0, Some(6.6)));
         assert_eq!(motion::DUR_0_MS, 80);
         assert_eq!(motion::DUR_4_MS, 600);
@@ -244,7 +244,7 @@ mod tests {
         assert_eq!(layout::NAV_H, 72.0);
         assert_eq!(field::GRAIN, Themed::new(0.045, 0.065));
         assert_eq!(type_roles::LIST_TITLE, Typography::new(14.0, 1.3, 500));
-        assert_eq!(lyrics::LINE_FLUID, Fluid::new(24.0, 40.0, None));
+        assert_eq!(lyrics::LINE_FLUID, Fluid::new(28.0, 40.0, None));
         assert_eq!(lyrics::ANCHOR_POSITION, 0.38);
         assert_eq!(backdrop::L_BAND_DARK, [0.16, 0.34]);
         assert_eq!(backdrop::L_BAND_LIGHT, [0.86, 0.95]);

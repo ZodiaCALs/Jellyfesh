@@ -45,6 +45,10 @@ acting.
 | Length (crossfade) | Length in seconds, Seconds |
 | Reset to Flat | Flat (as a button) |
 | Violet (last accent) | Purple |
+| Open in {Service} (the plugin's name: Open in QQ Music) | Open in Browser, Open Link |
+| Playing on {Device} | Connected to, Casting to |
+| Devices (the picker's title) | Speakers, Outputs |
+| Stop Controlling | Disconnect, Stop Remote |
 
 ## Navigation
 
@@ -111,6 +115,68 @@ previous, play, next, repeat, volume with mute), and three panes: **Lyrics**,
 "Nothing Up Next" when empty. Info: "About This Song" with Title, Artist,
 Album, Year, Length, Format, Lyrics and File. Desktops close it with
 **Library**; phones with the ⌄ button.
+
+**Links and remote playback** (v0.0.6, ADR-0018). Every item with a
+`link` (search and browse rows, album, artist and playlist pages, Now
+Playing) offers **Open in {Service}**: in the song menu and the More
+menus, after Go to Artist, and in Now Playing's Info pane under About This
+Song. An item that cannot play here but has a link opens it as its main
+action (click, Enter or tap), next to its unplayable reason.
+
+A remote source (`PluginSummary.remote_playback`, such as Spotify) plays on
+the person's own devices: Play and Shuffle work as usual and start a remote
+session; Play Next, Play Last and Add to Playlist are not offered for its
+songs. While the `Remote` slice has a `source`, the player bar, the
+mini-player and Now Playing show its track instead of the engine's, with
+**Playing on {Device}** under the title (and `error`, when set, in a
+quieter line below). The transport controls send the usual commands (the
+core routes them). The device button opens **Devices** (it sends
+`Remote { Refresh }` when it opens): every device with its kind's icon, the
+playing one checked; choosing one sends `Transfer`. The volume control sets
+the playing device's volume (`SetVolume { percent }`) and is hidden when the
+device has none. More holds Open in {Service} and **Stop Controlling**
+(`Remote { End }`). The Lyrics pane says "Lyrics aren't shown while
+{Service} plays." and the Queue pane says "Up Next is in {Service}." When a
+session ends with an `error` ("Sign in to Spotify again."), show it once as
+a notice. A source with `attribution` names its service in its views
+("Content from Spotify"); no logos until they are approved.
+
+## Luminous (v0.0.6 design)
+
+The owner chose direction C, **Luminous: the cover's colour fills the
+room**. Misty's two signatures, the aurora and the glass, are turned up on
+every screen; Now Playing becomes a stage.
+
+* **Field.** The aurora at about 75 % (`field.aurora-strength`, was about
+  45 %) with four larger glows at the artwork's hue, on every screen, light
+  and dark; colours crossfade on every song change (`dur-4`, Fluid).
+* **Glass.** The sidebar is Clear glass; grouped surfaces (Settings groups,
+  lists, cards) take the Mist tint **without live blur** plus `shadow-1`, so
+  a screen stays within the glass budget (three live blur layers on
+  desktops, two on phones); the player bar, the mini-player and the phone
+  tab bar are Veil capsules floating above the content, which fades out
+  just above them. Platforms use their own materials: the macOS sidebar
+  material, Mica and Acrylic on Windows, `backdrop-filter` on GTK 4.22 and
+  later, blur on Android 12 and later. Older Android and GTK fall back to
+  solid Cloud.
+* **Now Playing.** The Artwork backdrop (the core's bake) behind
+  everything; artwork 380 px with `shadow-3`; title 32 px
+  (`type-roles.now-playing-title`); lyrics 40 px bold, line height 1.18
+  (`lyrics.line`), inactive lines at 92 % (`lyrics.scale-inactive`), the
+  cascade 40 ms apart (`lyrics.stagger`); every control in one floating
+  Veil **dock** (radius 40, 80 high on desktops; a rounded dock card on
+  phones): shuffle, previous, play, next, repeat, the scrubber with times,
+  volume, and on the right the device button and More.
+* **Type and covers.** Page titles 48 px (`type.text-h1`); grid covers with
+  radius 16 (`artwork.radius-grid`), `shadow-2`, lifting 4 px on hover or
+  focus; four large covers per row on wide windows.
+* **Contrast.** Text keeps WCAG AA on the stronger field: ink on glass
+  never drops below `ink-70` for secondary text, and the dark backdrop bake
+  keeps its lightness band (0.16–0.34) so white ink holds on any cover.
+  Reduce Motion and Transparency turns blur and the cascade off (solid
+  Cloud, no stagger), as before.
+* The Artwork backdrop stays the default, so no Misty Core claim while it is
+  selected (as in v0.0.5).
 
 ## Settings
 
