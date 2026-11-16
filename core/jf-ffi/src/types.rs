@@ -247,6 +247,26 @@ pub enum Command {
         node: Option<String>,
         page: u32,
     },
+    /// The remote session (ADR-0018): what the transport commands cannot say. While a session
+    /// runs, Play, Pause, TogglePlayPause, Stop, Next, Previous, Seek, SetShuffle and SetRepeat
+    /// control the service's player instead of the engine.
+    Remote {
+        action: RemoteAction,
+    },
+}
+
+/// What `Command::Remote` asks of the remote session.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum RemoteAction {
+    /// Asks the service for its devices and state now (when the device picker opens).
+    Refresh,
+    /// Moves playback to the device with this id, playing there.
+    Transfer { device: String },
+    /// The playing device's volume, 0–100.
+    SetVolume { percent: u32 },
+    /// Stops controlling the service; its player carries on as it was.
+    End,
 }
 
 /// What a queue entry plays.
@@ -512,8 +532,11 @@ pub struct PluginSummary {
     pub signing_key: Option<String>,
     /// Vendor playback: the service plays it, so no EQ, crossfade or visualization.
     pub vendor_playback: bool,
+    /// Remote playback: the service plays on the person's own devices and Jellyfesh is its
+    /// remote control. Playing its tracks starts a remote session; they never join the queue.
+    pub remote_playback: bool,
     /// Manifest names: `auth`, `search`, `browse`, `resolve_stream`, `lyrics`, `artwork`,
-    /// `recommendations`.
+    /// `recommendations`, `remote`.
     pub capabilities: Vec<String>,
     pub auth_methods: Vec<AuthMethod>,
     /// Whether the plugin can be used now.
@@ -687,10 +710,14 @@ pub struct SourceItem {
     /// False for items the service will not play here (region, paywall).
     pub playable: bool,
     pub unplayable_reason: Option<String>,
-    /// For playable tracks: what goes into the queue.
+    /// For playable tracks: what goes into the queue (or, for a remote source, what starts its
+    /// remote session).
     pub track: Option<TrackRef>,
     /// Other sources that have the same item (unified search).
     pub also_in: Vec<String>,
+    /// An `https` link that opens the item in its service ("Open in {Service}"), when its
+    /// source declares one. The main action for items that cannot play here.
+    pub link: Option<String>,
 }
 
 /// Results from one source for one search.
@@ -1028,6 +1055,8 @@ pub struct NowPlaying {
     pub artwork: Option<ArtworkRef>,
     /// Stream format, once the engine has opened the file.
     pub format: Option<TrackInfo>,
+    /// Opens the track in its service, for source tracks whose plugin declares links.
+    pub link: Option<String>,
 }
 
 // ---- lyrics -------------------------------------------------------------------------------------
@@ -1257,6 +1286,57 @@ pub struct ThemeSnapshot {
     pub backdrop_dark: Option<String>,
 }
 
+// ---- remote sessions ----------------------------------------------------------------------------
+
+/// What a remote device is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum RemoteDeviceKind {
+    Computer,
+    Smartphone,
+    Speaker,
+    Tv,
+    Car,
+    Other,
+}
+
+/// A device a remote source can play on.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct RemoteDevice {
+    pub id: String,
+    pub name: String,
+    pub kind: RemoteDeviceKind,
+    /// The device playing (or last playing) for this account.
+    pub active: bool,
+    /// Its volume, 0–100, when it lets Jellyfesh change it.
+    pub volume_percent: Option<u32>,
+}
+
+/// The `Remote` slice: the remote session, while Jellyfesh controls a service's own player.
+/// Apps show it as Now Playing instead of the engine's track while `source` is set.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct RemoteSnapshot {
+    pub version: u64,
+    /// The source in control; `None` when there is no remote session.
+    pub source: Option<String>,
+    /// That source's name, for "Playing on {device} · {source}".
+    pub source_name: Option<String>,
+    pub status: Status,
+    /// The track playing, as the service reports it.
+    pub item: Option<SourceItem>,
+    /// The album or playlist it plays from, when the service says.
+    pub context: Option<SourceItem>,
+    /// Time base for the progress bar, like the playback slice's.
+    pub anchor: PlaybackAnchor,
+    pub shuffle: bool,
+    pub repeat: RepeatMode,
+    /// The device playing.
+    pub device: Option<RemoteDevice>,
+    /// Every device the service lists, for the device picker.
+    pub devices: Vec<RemoteDevice>,
+    /// What went wrong last talking to the service, until a call succeeds.
+    pub error: Option<String>,
+}
+
 // ---- snapshot and events ------------------------------------------------------------------------
 
 /// Everything a UI mirrors. Each slice carries its own version.
@@ -1272,12 +1352,17 @@ pub struct Snapshot {
     pub settings: Settings,
     pub devices: DevicesSnapshot,
     pub sources: SourcesSnapshot,
+    pub remote: RemoteSnapshot,
     pub muted: bool,
 }
 
 /// What the core tells the listener. Slices arrive whole whenever their version changes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Enum)]
 #[serde(tag = "type")]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "UniFFI enums cannot hold boxes; each event is built once and handed to the listener"
+)]
 pub enum Event {
     Playback {
         snapshot: PlaybackSnapshot,
@@ -1316,6 +1401,10 @@ pub enum Event {
     },
     Sources {
         snapshot: SourcesSnapshot,
+    },
+    /// The remote session changed.
+    Remote {
+        snapshot: RemoteSnapshot,
     },
     Auth {
         update: AuthUpdate,

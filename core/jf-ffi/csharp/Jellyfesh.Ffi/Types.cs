@@ -107,6 +107,7 @@ public abstract record OutputKind
 [JsonDerivedType(typeof(Command.Logout), "Logout")]
 [JsonDerivedType(typeof(Command.Search), "Search")]
 [JsonDerivedType(typeof(Command.Browse), "Browse")]
+[JsonDerivedType(typeof(Command.Remote), "Remote")]
 public abstract record Command
 {
     private Command() { }
@@ -225,6 +226,36 @@ public abstract record Command
 
     /// <summary>Browse a source's catalogue: a null Node is its root.</summary>
     public sealed record Browse(string Plugin, string? Node, uint Page) : Command;
+
+    /// <summary>
+    /// The remote session (ADR-0018): what the transport commands cannot say. While a session
+    /// runs, Play, Pause, TogglePlayPause, Stop, Next, Previous, Seek, SetShuffle and SetRepeat
+    /// control the service's player instead of the engine.
+    /// </summary>
+    public sealed record Remote(RemoteAction Action) : Command;
+}
+
+/// <summary>What Command.Remote asks of the remote session.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(RemoteAction.Refresh), "Refresh")]
+[JsonDerivedType(typeof(RemoteAction.Transfer), "Transfer")]
+[JsonDerivedType(typeof(RemoteAction.SetVolume), "SetVolume")]
+[JsonDerivedType(typeof(RemoteAction.End), "End")]
+public abstract record RemoteAction
+{
+    private RemoteAction() { }
+
+    /// <summary>Asks the service for its devices and state now (when the device picker opens).</summary>
+    public sealed record Refresh : RemoteAction;
+
+    /// <summary>Moves playback to the device with this id, playing there.</summary>
+    public sealed record Transfer(string Device) : RemoteAction;
+
+    /// <summary>The playing device's volume, 0–100.</summary>
+    public sealed record SetVolume(uint Percent) : RemoteAction;
+
+    /// <summary>Stops controlling the service; its player carries on as it was.</summary>
+    public sealed record End : RemoteAction;
 }
 
 /// <summary>What a queue entry plays.</summary>
@@ -442,6 +473,9 @@ public enum PluginBadge
 /// plugins are off.</param>
 /// <param name="Attribution">Attribution its views must show, if any.</param>
 /// <param name="Icon">The package's icon as a PNG file in the cache folder.</param>
+/// <param name="RemotePlayback">Remote playback: the service plays on the person's own devices
+/// and Jellyfesh is its remote control; its tracks start a remote session and never join the
+/// queue.</param>
 public sealed record PluginSummary(
     string Id,
     string Name,
@@ -460,7 +494,8 @@ public sealed record PluginSummary(
     string? Attribution,
     string SettingsSchemaJson,
     string SettingsJson,
-    string? Icon);
+    string? Icon,
+    bool RemotePlayback = false);
 
 /// <summary>Where sign-ins are kept.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<SecretStorage>))]
@@ -579,6 +614,8 @@ public abstract record ArtworkRef
 }
 
 /// <summary>A search or browse result from the library or a source.</summary>
+/// <param name="Link">An https link that opens the item in its service ("Open in {Service}"),
+/// when its source declares one; the main action for items that cannot play here.</param>
 public sealed record SourceItem(
     string Source,
     ItemKind Kind,
@@ -591,7 +628,8 @@ public sealed record SourceItem(
     bool Playable,
     string? UnplayableReason,
     TrackRef? Track,
-    IReadOnlyList<string> AlsoIn);
+    IReadOnlyList<string> AlsoIn,
+    string? Link = null);
 
 /// <summary>Results from one source for one search; Done on the last.</summary>
 public sealed record SearchUpdate(
@@ -791,6 +829,8 @@ public sealed record HistoryEntry(TrackRef Track, long PlayedAtMs);
 public sealed record TrackInfo(string Codec, uint SampleRate, ushort Channels, long? DurationUs, bool Gapless, uint? Bitrate);
 
 /// <summary>What is playing, with display metadata.</summary>
+/// <param name="Link">Opens the track in its service, for source tracks whose plugin declares
+/// links.</param>
 public sealed record NowPlaying(
     ulong Uid,
     TrackRef Track,
@@ -800,7 +840,52 @@ public sealed record NowPlaying(
     string? Album,
     ulong? DurationMs,
     ArtworkRef? Artwork,
-    TrackInfo? Format);
+    TrackInfo? Format,
+    string? Link = null);
+
+// ---- remote sessions ------------------------------------------------------------------------
+
+[JsonConverter(typeof(JsonStringEnumConverter<RemoteDeviceKind>))]
+public enum RemoteDeviceKind
+{
+    Computer,
+    Smartphone,
+    Speaker,
+    Tv,
+    Car,
+    Other,
+}
+
+/// <summary>A device a remote source can play on.</summary>
+/// <param name="Active">The device playing (or last playing) for this account.</param>
+/// <param name="VolumePercent">Its volume, 0–100, when it lets Jellyfesh change it.</param>
+public sealed record RemoteDevice(string Id, string Name, RemoteDeviceKind Kind, bool Active, uint? VolumePercent);
+
+/// <summary>
+/// The Remote slice: the remote session, while Jellyfesh controls a service's own player. Apps
+/// show it as Now Playing instead of the engine's track while Source is set.
+/// </summary>
+/// <param name="Source">The source in control; null when there is no remote session.</param>
+/// <param name="SourceName">That source's name, for "Playing on {device} · {source}".</param>
+/// <param name="Item">The track playing, as the service reports it.</param>
+/// <param name="Context">The album or playlist it plays from, when the service says.</param>
+/// <param name="Anchor">Time base for the progress bar, like the playback slice's.</param>
+/// <param name="Device">The device playing.</param>
+/// <param name="Devices">Every device the service lists, for the device picker.</param>
+/// <param name="Error">What went wrong last talking to the service, until a call succeeds.</param>
+public sealed record RemoteSnapshot(
+    ulong Version,
+    string? Source,
+    string? SourceName,
+    Status Status,
+    SourceItem? Item,
+    SourceItem? Context,
+    PlaybackAnchor Anchor,
+    bool Shuffle,
+    RepeatMode Repeat,
+    RemoteDevice? Device,
+    IReadOnlyList<RemoteDevice> Devices,
+    string? Error);
 
 // ---- lyrics ---------------------------------------------------------------------------------
 
@@ -950,7 +1035,8 @@ public sealed record Snapshot(
     Settings Settings,
     DevicesSnapshot Devices,
     SourcesSnapshot Sources,
-    bool Muted);
+    bool Muted,
+    RemoteSnapshot? Remote = null);
 
 /// <summary>What the core tells the listener. Slice events carry the slice as Snapshot.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -965,6 +1051,7 @@ public sealed record Snapshot(
 [JsonDerivedType(typeof(Event.Settings), "Settings")]
 [JsonDerivedType(typeof(Event.Devices), "Devices")]
 [JsonDerivedType(typeof(Event.Sources), "Sources")]
+[JsonDerivedType(typeof(Event.Remote), "Remote")]
 [JsonDerivedType(typeof(Event.Auth), "Auth")]
 [JsonDerivedType(typeof(Event.SearchResults), "SearchResults")]
 [JsonDerivedType(typeof(Event.BrowsePage), "BrowsePage")]
@@ -998,6 +1085,9 @@ public abstract record Event
     public sealed record Devices(DevicesSnapshot Snapshot) : Event;
 
     public sealed record Sources(SourcesSnapshot Snapshot) : Event;
+
+    /// <summary>The remote session changed.</summary>
+    public sealed record Remote(RemoteSnapshot Snapshot) : Event;
 
     public sealed record Auth(AuthUpdate Update) : Event;
 

@@ -127,7 +127,7 @@ fn search(ctx: &Ctx, job: &SearchJob, jobs: &Receiver<SearchJob>) -> Option<Sear
         match result {
             Ok(Ok(page)) => {
                 ctx.remember(&plugin, &page.items);
-                answers.push(Answer::plugin(&plugin, page.items));
+                answers.push(Answer::plugin(&plugin, page.items, &ctx.links(&plugin)));
                 let mut sections = convert::sections(&answers);
                 let own = sections.pop().unwrap_or_default();
                 for (answer, (section, last)) in answers.iter().zip(sections.into_iter().zip(sent.iter_mut()))

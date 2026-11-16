@@ -1,4 +1,4 @@
-# The core API (v0.0.5)
+# The core API (v0.0.6)
 
 Every UI (the Linux app in Rust, the macOS, Windows and Android apps through
 the FFI bindings, and the `jf` CLI) talks to `jf-core` the same way, and
@@ -35,12 +35,13 @@ per-source search deadline, 8 s) and `bundled_plugins: Vec<PathBuf>` (see
 | --- | --- | --- |
 | `playback: PlaybackSnapshot` | `Playback` | status, **anchor**, volume, eq, ReplayGain |
 | `queue: QueueSnapshot` | `Queue` | length, position, current, shuffle, repeat, next 50 entries (`queue_window` pages the rest) |
-| `now_playing` | `NowPlaying` | uid, track, title, artist, album, duration, artwork (`ArtworkRef::File` or `Url`), stream format |
+| `now_playing` | `NowPlaying` | uid, track, title, artist, album, duration, artwork (`ArtworkRef::File` or `Url`), stream format, `link` (opens a source track in its service) |
 | `lyrics` | `Lyrics` | `LyricDoc` + `LyricTimeline` for the current track, or none |
 | `theme` | `Theme` | hue, light and dark Misty themes, baked backdrops (light, dark) |
 | `settings: Settings` | `Settings` | all preferences (below) |
 | `devices: DevicesSnapshot` | `Devices` | output devices and the selected one (`None` = system default) |
-| `sources: SourcesSnapshot` | `Sources` | installed plugins (badge, signing key, capabilities, sign-in methods, account, settings schema and values, icon, why one is off), the services offered in Add a Source (`presets`), community allowed, where sign-ins are kept, why sources are unavailable |
+| `sources: SourcesSnapshot` | `Sources` | installed plugins (badge, signing key, capabilities, sign-in methods, account, settings schema and values, icon, why one is off, vendor or remote playback), the services offered in Add a Source (`presets`), community allowed, where sign-ins are kept, why sources are unavailable |
+| `remote: RemoteSnapshot` | `Remote` | the remote session (ADR-0018): source and its name, status, the track and its album or playlist (as `SourceItem`s), **anchor**, shuffle, repeat, the playing device, every device, the last error; `source` is `None` without a session |
 | `muted`, `scanning`, `library_revision` | `LibraryChanged`, `Scan` | `LibraryChanged` after any catalogue, playlist, favourite or play-count change: lists query again |
 
 Other events: `PlaylistCreated { request, id }` (after `CreatePlaylist` and
@@ -69,7 +70,9 @@ on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`.
   `BeginLogin`, `ConnectSource` (a service from `presets`), `SubmitLogin`,
   `CancelLogin`, `Logout`, `Search` (library and
   sources, merged and de-duplicated), `Browse`; `PlayCollection` and
-  `EnqueueCollection` with `Collection::Source`. See "Online sources".
+  `EnqueueCollection` with `Collection::Source`; `Remote { action }`
+  (`Refresh`, `Transfer { device }`, `SetVolume { percent }`, `End`). See
+  "Online sources".
 
 ## Queries (synchronous, on the caller's thread)
 
@@ -226,6 +229,28 @@ or hanging plugin never holds up a command or a snapshot.
   Items the service will not play here (`playable: false`, region,
   paywall) never reach the queue: their `unplayable_reason` is shown, never
   bypassed.
+* **Links** (API 1.1). `SourceItem::link` and `NowPlaying::link` are
+  `https` links that open the item in its service, filled in from the
+  plugin's `[links]` templates. Offer **Open in {Service}** (the plugin's
+  name) wherever an item has one, as the main action for items that cannot
+  play here.
+* **Remote sources** (API 1.1, ADR-0018). A plugin with
+  `PluginSummary::remote_playback` plays on the person's own devices (its
+  items still carry `track`). `PlayTracks`, or `PlayCollection` with its
+  tracks or containers, pauses the engine and starts a **remote session**:
+  the core sends the service the command, then asks for its state every
+  second while it plays, every five while paused, every fifteen while
+  nothing plays (less often after errors), and publishes the `Remote`
+  slice. While a session runs, `Play`, `Pause`, `TogglePlayPause`, `Next`,
+  `Previous` (restarts after 3 s), `Seek`, `SetShuffle` and `SetRepeat`
+  control the service's player, and `Stop` pauses it and ends the session;
+  `Remote { Refresh }` asks for the devices again (open the device picker
+  with it), `Transfer { device }` moves playback, `SetVolume { percent }`
+  sets the playing device's volume, `End` stops controlling it (it keeps
+  playing). Starting local playback ends the session too, and so do ten
+  minutes without playing and a service that wants a new sign-in (`error`
+  then says so). Remote sources' tracks never join the queue: `Enqueue`
+  and `EnqueueCollection` with them fail.
 
 ## Status in this release's development
 

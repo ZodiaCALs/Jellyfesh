@@ -296,6 +296,15 @@ mirror_enum!(CoreCommand => Command {
     Logout { plugin },
     Search { query, scope },
     Browse { plugin, node, page },
+    Remote { action },
+});
+
+use jf::RemoteAction as CoreRemoteAction;
+mirror_enum!(CoreRemoteAction => RemoteAction {
+    Refresh,
+    Transfer { device },
+    SetVolume { percent },
+    End,
 });
 
 impl From<jf::TrackRef> for TrackRef {
@@ -416,6 +425,7 @@ mirror_struct!(jf::PluginSummary => PluginSummary {
     badge,
     signing_key,
     vendor_playback,
+    remote_playback,
     capabilities,
     auth_methods,
     enabled,
@@ -506,6 +516,7 @@ mirror_struct!(jf::SourceItem => SourceItem {
     unplayable_reason,
     track,
     also_in,
+    link,
 });
 
 impl Conv<u64> for jf::CommandId {
@@ -672,6 +683,29 @@ mirror_struct!(jf::NowPlaying => NowPlaying {
     duration_ms,
     artwork,
     format,
+    link,
+});
+
+// ---- remote sessions ----------------------------------------------------------------------------
+
+use jf::RemoteDeviceKind as CoreRemoteDeviceKind;
+mirror_enum!(CoreRemoteDeviceKind => RemoteDeviceKind { Computer, Smartphone, Speaker, Tv, Car, Other });
+
+mirror_struct!(jf::RemoteDevice => RemoteDevice { id, name, kind, active, volume_percent });
+
+mirror_struct!(jf::RemoteSnapshot => RemoteSnapshot {
+    version,
+    source,
+    source_name,
+    status,
+    item,
+    context,
+    anchor,
+    shuffle,
+    repeat,
+    device,
+    devices,
+    error,
 });
 
 // ---- lyrics -------------------------------------------------------------------------------------
@@ -770,6 +804,7 @@ into_arc!(
     Settings => jf::Settings,
     DevicesSnapshot => jf::DevicesSnapshot,
     SourcesSnapshot => jf::SourcesSnapshot,
+    RemoteSnapshot => jf::RemoteSnapshot,
     SearchUpdate => jf::SearchUpdate,
     BrowseUpdate => jf::BrowseUpdate,
 );
@@ -787,6 +822,7 @@ impl From<jf::Snapshot> for Snapshot {
             settings: value.settings.conv(),
             devices: value.devices.conv(),
             sources: value.sources.conv(),
+            remote: value.remote.conv(),
             muted: value.muted,
         }
     }
@@ -805,6 +841,7 @@ impl From<Snapshot> for jf::Snapshot {
             settings: value.settings.conv(),
             devices: value.devices.conv(),
             sources: value.sources.conv(),
+            remote: value.remote.conv(),
             muted: value.muted,
         }
     }
@@ -845,6 +882,9 @@ impl From<jf::Event> for Event {
             jf::Event::Sources(snapshot) => Event::Sources {
                 snapshot: snapshot.conv(),
             },
+            jf::Event::Remote(snapshot) => Event::Remote {
+                snapshot: snapshot.conv(),
+            },
             jf::Event::Auth(update) => Event::Auth {
                 update: update.conv(),
             },
@@ -878,6 +918,7 @@ impl From<Event> for jf::Event {
             Event::Settings { snapshot } => jf::Event::Settings(snapshot.conv()),
             Event::Devices { snapshot } => jf::Event::Devices(snapshot.conv()),
             Event::Sources { snapshot } => jf::Event::Sources(snapshot.conv()),
+            Event::Remote { snapshot } => jf::Event::Remote(snapshot.conv()),
             Event::Auth { update } => jf::Event::Auth(update.conv()),
             Event::SearchResults { update } => jf::Event::SearchResults(update.conv()),
             Event::BrowsePage { update } => jf::Event::BrowsePage(update.conv()),

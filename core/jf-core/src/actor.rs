@@ -9,6 +9,7 @@
 //! no timers tick.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -23,11 +24,12 @@ use jf_plugin_host::{ImageRef, Item};
 use jf_session::{Advance, PlaybackState, Queue, QueueItem, SessionStore, SourceTrack, TrackRef};
 
 use crate::CoreError;
+use crate::remote::{self, Op};
 use crate::sources::{self, Answer, Bundled, Ctx, Done, SearchJob, Sources, SourcesMsg, Then};
 use crate::types::{
     ArtworkRef, Collection, Command, CommandId, Config, DevicesSnapshot, Event, HueSource, LyricsSnapshot,
-    LyricsSource, NowPlaying, PlaybackSnapshot, QueueSnapshot, ScanStatus, SearchScope, SearchUpdate,
-    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UP_NEXT_WINDOW,
+    LyricsSource, NowPlaying, PlaybackSnapshot, QueueSnapshot, RemoteAction, ScanStatus, SearchScope,
+    SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UP_NEXT_WINDOW,
 };
 use crate::{items, lyrics, theme};
 
@@ -126,6 +128,8 @@ pub(crate) struct Shared {
     pub(crate) snapshot: RwLock<Snapshot>,
     pub(crate) subscribers: Mutex<Vec<Sender<Event>>>,
     pub(crate) queue: RwLock<Queue>,
+    /// The remote session whose updates the `Remote` slice takes (0: none).
+    pub(crate) remote_session: AtomicU64,
 }
 
 pub(crate) struct Actor {
@@ -176,6 +180,8 @@ pub(crate) struct Actor {
     /// The entry the core announced as buffering while its stream URL was
     /// resolved; cleared when it starts (or something else plays).
     buffering_uid: Option<u64>,
+    /// The remote session, while Jellyfesh controls a service's player.
+    remote: Option<remote::Session>,
 }
 
 impl Shared {
@@ -219,10 +225,12 @@ impl Shared {
                     secret_storage: Default::default(),
                     unavailable: None,
                 }),
+                remote: Arc::new(remote::ended(0, None)),
                 muted: false,
             }),
             subscribers: Mutex::new(Vec::new()),
             queue: RwLock::new(queue),
+            remote_session: AtomicU64::new(0),
         }
     }
 
@@ -371,6 +379,7 @@ impl Actor {
             sources,
             pending_start: None,
             buffering_uid: None,
+            remote: None,
         };
         let revision = actor.library.revision().unwrap_or(0);
         actor.library_revision = revision;
@@ -469,11 +478,29 @@ impl Actor {
     }
 
     fn apply(&mut self, id: CommandId, cmd: Command) -> Result<(), CoreError> {
+        if self.remote.as_ref().is_some_and(|s| !s.is_alive()) {
+            self.remote = None;
+        }
+        if let Some(op) = self.remote_op(&cmd) {
+            let stop = op == Op::Stop;
+            if let Some(session) = &self.remote {
+                session.send(op);
+            }
+            if stop {
+                // The worker pauses the player and ends; the slice is cleared now.
+                remote::end(&self.shared, self.remote.take());
+            }
+            return Ok(());
+        }
         match cmd {
             Command::PlayTracks { tracks, start } => {
                 if tracks.is_empty() {
                     return Err(CoreError::Other("nothing to play".into()));
                 }
+                if let Some(plugin) = self.remote_plugin(&tracks, start) {
+                    return self.play_remote_tracks(&plugin, &tracks, start, None);
+                }
+                self.refuse_remote_tracks(&tracks)?;
                 self.shared.write_queue().set_items(tracks, Some(start))?;
                 self.resume_at = None;
                 self.failures = 0;
@@ -481,6 +508,7 @@ impl Actor {
                 self.start_current()?;
             }
             Command::Enqueue { tracks, play_next } => {
+                self.refuse_remote_tracks(&tracks)?;
                 {
                     let mut q = self.shared.write_queue();
                     if play_next {
@@ -610,15 +638,30 @@ impl Actor {
                 collection: Collection::Source { plugin, id: node },
                 start,
                 shuffle,
-            } => self
-                .sources
-                .fetch_collection(id, plugin, node, Then::Play { start, shuffle })?,
+            } => {
+                if self.sources.is_remote(&plugin) {
+                    let context = self.sources.remote_node(&plugin, &node)?;
+                    let op = Op::Play {
+                        context: Some(Box::new(context)),
+                        tracks: Vec::new(),
+                        start: u32::try_from(start).unwrap_or(u32::MAX),
+                        shuffle: Some(shuffle),
+                    };
+                    return self.start_remote(&plugin, op);
+                }
+                self.sources
+                    .fetch_collection(id, plugin, node, Then::Play { start, shuffle })?;
+            }
             Command::EnqueueCollection {
                 collection: Collection::Source { plugin, id: node },
                 play_next,
-            } => self
-                .sources
-                .fetch_collection(id, plugin, node, Then::Enqueue { play_next })?,
+            } => {
+                if self.sources.is_remote(&plugin) {
+                    return Err(self.remote_queue_refusal(&plugin));
+                }
+                self.sources
+                    .fetch_collection(id, plugin, node, Then::Enqueue { play_next })?;
+            }
             Command::PlayCollection {
                 collection,
                 start,
@@ -629,6 +672,10 @@ impl Actor {
                     return Err(CoreError::Other("nothing to play".into()));
                 }
                 let start = start.min(tracks.len() - 1);
+                if let Some(plugin) = self.remote_plugin(&tracks, start) {
+                    return self.play_remote_tracks(&plugin, &tracks, start, Some(shuffle));
+                }
+                self.refuse_remote_tracks(&tracks)?;
                 {
                     let mut q = self.shared.write_queue();
                     q.set_shuffle(shuffle);
@@ -644,6 +691,7 @@ impl Actor {
                 play_next,
             } => {
                 let tracks = self.collection_tracks(&collection)?;
+                self.refuse_remote_tracks(&tracks)?;
                 {
                     let mut q = self.shared.write_queue();
                     if play_next {
@@ -783,8 +831,122 @@ impl Actor {
             Command::CancelLogin { plugin, flow } => self.sources.cancel_login(&plugin, flow)?,
             Command::Logout { plugin } => self.sources.logout(id, plugin)?,
             Command::Browse { plugin, node, page } => self.sources.browse(id, plugin, node, page)?,
+            Command::Remote { action } => self.remote_action(action)?,
         }
         Ok(())
+    }
+
+    // ---- remote sessions (ADR-0018) -----------------------------------------
+
+    /// While a remote session runs, the transport commands it takes.
+    fn remote_op(&self, cmd: &Command) -> Option<Op> {
+        self.remote.as_ref().filter(|s| s.is_alive())?;
+        Some(match cmd {
+            Command::Play => Op::Resume,
+            Command::Pause => Op::Pause,
+            Command::TogglePlayPause => Op::Toggle,
+            Command::Stop => Op::Stop,
+            Command::Next => Op::Next,
+            Command::Previous => Op::Previous,
+            Command::Seek { position_ms } => Op::Seek(*position_ms),
+            Command::SetShuffle { on } => Op::Shuffle(*on),
+            Command::SetRepeat { mode } => Op::Repeat(*mode),
+            _ => return None,
+        })
+    }
+
+    fn remote_action(&mut self, action: RemoteAction) -> Result<(), CoreError> {
+        if matches!(action, RemoteAction::End) {
+            remote::end(&self.shared, self.remote.take());
+            return Ok(());
+        }
+        let Some(session) = self.remote.as_ref().filter(|s| s.is_alive()) else {
+            return Err(CoreError::Other("nothing is playing on another device".into()));
+        };
+        session.send(match action {
+            RemoteAction::Refresh => Op::Refresh,
+            RemoteAction::Transfer { device } => Op::Transfer(device),
+            RemoteAction::SetVolume { percent } => Op::Volume(percent.min(100)),
+            RemoteAction::End => unreachable!("handled above"),
+        });
+        Ok(())
+    }
+
+    /// The remote source whose track `start` is, if it is one.
+    fn remote_plugin(&self, tracks: &[TrackRef], start: usize) -> Option<String> {
+        match tracks.get(start)? {
+            TrackRef::Source(track) if self.sources.is_remote(&track.plugin) => Some(track.plugin.clone()),
+            _ => None,
+        }
+    }
+
+    /// Remote sources' tracks never join the queue (`mixed_queue` is theirs
+    /// to decide, and the engine cannot play them anyway).
+    fn refuse_remote_tracks(&self, tracks: &[TrackRef]) -> Result<(), CoreError> {
+        match tracks.iter().find_map(|t| match t {
+            TrackRef::Source(track) if self.sources.is_remote(&track.plugin) => Some(track.plugin.clone()),
+            _ => None,
+        }) {
+            Some(plugin) => Err(self.remote_queue_refusal(&plugin)),
+            None => Ok(()),
+        }
+    }
+
+    fn remote_queue_refusal(&self, plugin: &str) -> CoreError {
+        CoreError::Other(format!(
+            "{} plays on your own devices; its songs cannot join the queue",
+            self.sources.display_name(plugin)
+        ))
+    }
+
+    /// Plays the tracks of one remote source (others in the list are left
+    /// out), from `start`.
+    fn play_remote_tracks(
+        &mut self,
+        plugin: &str,
+        tracks: &[TrackRef],
+        start: usize,
+        shuffle: Option<bool>,
+    ) -> Result<(), CoreError> {
+        let mut items = Vec::new();
+        let mut first = 0;
+        for (i, track) in tracks.iter().enumerate() {
+            if let TrackRef::Source(track) = track
+                && track.plugin == plugin
+            {
+                if i == start {
+                    first = items.len();
+                }
+                items.push(self.sources.remote_track(track)?);
+            }
+        }
+        let op = Op::Play {
+            context: None,
+            tracks: items,
+            start: u32::try_from(first).unwrap_or(0),
+            shuffle,
+        };
+        self.start_remote(plugin, op)
+    }
+
+    /// Pauses local playback and starts a session with `first`.
+    fn start_remote(&mut self, plugin: &str, first: Op) -> Result<(), CoreError> {
+        let (backend, source) = self.sources.remote_backend(plugin)?;
+        if self.status == Status::Playing {
+            self.pause();
+        }
+        // The new session takes the slice over first, so the old one ends quietly.
+        let session = remote::Session::start(Box::new(backend), source, self.shared.clone(), first)?;
+        self.remote = Some(session);
+        Ok(())
+    }
+
+    /// Local playback is starting: a remote session ends (the service's
+    /// player carries on as it was).
+    fn end_remote(&mut self) {
+        if self.remote.is_some() {
+            remote::end(&self.shared, self.remote.take());
+        }
     }
 
     /// The tracks of a collection, in its natural order.
@@ -1087,6 +1249,7 @@ impl Actor {
     /// known yet waits for it (`pending_start`); [`Actor::on_sources`]
     /// starts it once its plugin has answered.
     fn start_current(&mut self) -> Result<(), CoreError> {
+        self.end_remote();
         self.finish_play(false);
         self.pending_start = None;
         let len = self.shared.read_queue().len();
@@ -1494,7 +1657,13 @@ impl Actor {
     /// What to show for a queue entry.
     fn now_playing(&self, item: &QueueItem) -> Result<NowPlaying, CoreError> {
         match &item.track {
-            TrackRef::Source(track) => Ok(source_now_playing(item, track)),
+            TrackRef::Source(track) => {
+                let link = self.sources.ctx().and_then(|ctx| {
+                    ctx.links(&track.plugin)
+                        .url_for(jf_plugin_host::ItemKind::Track, &track.id)
+                });
+                Ok(source_now_playing(item, track, link))
+            }
             TrackRef::Library(_) | TrackRef::File(_) => Ok(self.resolve_local(item)?.1),
         }
     }
@@ -1539,6 +1708,7 @@ impl Actor {
                     duration_ms: track.duration_ms,
                     artwork: artwork.map(ArtworkRef::File),
                     format: None,
+                    link: None,
                 };
                 Ok((play, now))
             }
@@ -1581,6 +1751,7 @@ impl Actor {
                     duration_ms: tags.duration_ms,
                     artwork: theme::folder_artwork(path).map(ArtworkRef::File),
                     format: None,
+                    link: None,
                 };
                 Ok((play, now))
             }
@@ -1996,7 +2167,7 @@ fn source_play_item(uid: u64, track: &SourceTrack, source: HttpSource) -> PlayIt
 }
 
 /// What to show for a source track: the metadata it was listed with.
-fn source_now_playing(item: &QueueItem, track: &SourceTrack) -> NowPlaying {
+fn source_now_playing(item: &QueueItem, track: &SourceTrack, link: Option<String>) -> NowPlaying {
     NowPlaying {
         uid: item.uid,
         track: item.track.clone(),
@@ -2007,6 +2178,7 @@ fn source_now_playing(item: &QueueItem, track: &SourceTrack) -> NowPlaying {
         duration_ms: track.duration_ms,
         artwork: track.artwork_url.clone().map(ArtworkRef::Url),
         format: None,
+        link,
     }
 }
 

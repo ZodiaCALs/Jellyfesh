@@ -46,7 +46,7 @@ use jf_plugin_host::{
 };
 use jf_session::{SourceTrack, TrackRef};
 
-pub(crate) use convert::{Answer, LIBRARY, library_answer, source_track, unplayable_reason};
+pub(crate) use convert::{Answer, LIBRARY, library_answer, source_item, source_track, unplayable_reason};
 pub(crate) use search::SearchJob;
 
 use crate::CoreError;
@@ -228,6 +228,14 @@ impl Ctx {
             .get(&track.plugin, &track.id, &[HostKind::Track])
             .filter(|i| i.kind == HostKind::Track)
             .unwrap_or_else(|| convert::track_item(track))
+    }
+
+    /// A plugin's links (ADR-0018); none when it declares none.
+    pub(crate) fn links(&self, plugin: &str) -> jf_plugin_host::links::Links {
+        self.host
+            .plugin(plugin)
+            .map(|info| info.links)
+            .unwrap_or_default()
     }
 
     /// A plugin's display name.
@@ -658,6 +666,57 @@ impl Sources {
             }));
         }
         Ok(info)
+    }
+
+    // ---- remote sessions --------------------------------------------------
+
+    /// Whether `plugin` is a remote source (`playback_mode = "remote"`).
+    pub(crate) fn is_remote(&self, plugin: &str) -> bool {
+        self.ctx.as_ref().is_some_and(|ctx| {
+            ctx.host
+                .plugin(plugin)
+                .is_some_and(|info| info.playback_mode == PlaybackMode::Remote)
+        })
+    }
+
+    /// A plugin's name, or its id when it is not installed.
+    pub(crate) fn display_name(&self, plugin: &str) -> String {
+        self.ctx
+            .as_ref()
+            .map_or_else(|| plugin.to_owned(), |ctx| ctx.name(plugin))
+    }
+
+    /// What a remote session needs to control `plugin`: it must be usable
+    /// and declare `remote`.
+    pub(crate) fn remote_backend(
+        &self,
+        plugin: &str,
+    ) -> Result<(crate::remote::PluginBackend, crate::remote::Source), CoreError> {
+        let info = self.usable(plugin, Capability::Remote)?;
+        let ctx = self.require()?;
+        Ok((
+            crate::remote::PluginBackend {
+                host: ctx.host.clone(),
+                plugin: plugin.to_owned(),
+            },
+            crate::remote::Source {
+                id: plugin.to_owned(),
+                name: info.name,
+                links: info.links,
+            },
+        ))
+    }
+
+    /// The item to hand a remote source for one of its tracks.
+    pub(crate) fn remote_track(&self, track: &jf_session::SourceTrack) -> Result<Item, CoreError> {
+        Ok(self.require()?.track_item(track))
+    }
+
+    /// The listed container `node` of a remote source, to play as a context.
+    pub(crate) fn remote_node(&self, plugin: &str, node: &str) -> Result<Item, CoreError> {
+        Ok(self
+            .require()?
+            .node(plugin, node, COLLECTION_KINDS, HostKind::Album))
     }
 
     // ---- the slice ------------------------------------------------------
@@ -1380,6 +1439,7 @@ fn browse_page(
             tables.insert(key.clone(), cursors.clone());
         }
         if at == wanted {
+            let links = ctx.links(&plugin);
             return BrowseUpdate {
                 request,
                 plugin: plugin.clone(),
@@ -1387,7 +1447,7 @@ fn browse_page(
                 items: answer
                     .items
                     .iter()
-                    .map(|i| convert::source_item(&plugin, i))
+                    .map(|i| convert::source_item(&plugin, i, &links))
                     .collect(),
                 next_page: answer.next.map(|_| page.saturating_add(1)),
                 error: None,

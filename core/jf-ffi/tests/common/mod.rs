@@ -320,6 +320,16 @@ pub fn commands() -> Vec<jf::Command> {
     out.push(SetRepeat {
         mode: jf::RepeatMode::Off,
     });
+    for action in [
+        jf::RemoteAction::Refresh,
+        jf::RemoteAction::Transfer {
+            device: "phone".into(),
+        },
+        jf::RemoteAction::SetVolume { percent: 40 },
+        jf::RemoteAction::End,
+    ] {
+        out.push(Remote { action });
+    }
     out
 }
 
@@ -410,6 +420,7 @@ pub fn source_item() -> jf::SourceItem {
         unplayable_reason: Some("not in this region".into()),
         track: Some(jf::TrackRef::Library(42)),
         also_in: vec!["org.x".into()],
+        link: Some("https://music.example.com/song/42".into()),
     }
 }
 
@@ -534,6 +545,49 @@ pub fn now_playing() -> jf::NowPlaying {
             gapless: true,
             bitrate: Some(912_000),
         }),
+        link: None,
+    }
+}
+
+/// A remote session playing on the second of two invented devices.
+pub fn remote() -> jf::RemoteSnapshot {
+    let desk = jf::RemoteDevice {
+        id: "desk".into(),
+        name: "Desk Speaker".into(),
+        kind: jf::RemoteDeviceKind::Speaker,
+        active: false,
+        volume_percent: None,
+    };
+    let phone = jf::RemoteDevice {
+        id: "phone".into(),
+        name: "Phone".into(),
+        kind: jf::RemoteDeviceKind::Smartphone,
+        active: true,
+        volume_percent: Some(70),
+    };
+    jf::RemoteSnapshot {
+        version: 4,
+        source: Some("org.x".into()),
+        source_name: Some("Example Source".into()),
+        status: jf::Status::Playing,
+        item: Some(jf::SourceItem {
+            source: "org.x".into(),
+            id: "t9".into(),
+            ..source_item()
+        }),
+        context: Some(jf::SourceItem {
+            source: "org.x".into(),
+            kind: jf::ItemKind::Album,
+            id: "al3".into(),
+            track: None,
+            ..source_item()
+        }),
+        anchor: anchor(),
+        shuffle: true,
+        repeat: jf::RepeatMode::One,
+        device: Some(phone.clone()),
+        devices: vec![desk, phone],
+        error: Some("the service asked to slow down".into()),
     }
 }
 
@@ -586,6 +640,7 @@ pub fn sources() -> jf::SourcesSnapshot {
             badge: jf::PluginBadge::Community,
             signing_key: Some("0123456789abcdef".into()),
             vendor_playback: false,
+            remote_playback: false,
             capabilities: vec!["search".into(), "resolve_stream".into()],
             auth_methods: vec![jf::AuthMethod::Oauth, jf::AuthMethod::ApiKey],
             enabled: false,
@@ -625,6 +680,7 @@ pub fn snapshot() -> jf::Snapshot {
         settings: Arc::new(settings()),
         devices: Arc::new(devices()),
         sources: Arc::new(sources()),
+        remote: Arc::new(remote()),
         muted: true,
     }
 }
@@ -737,6 +793,18 @@ pub fn events() -> Vec<jf::Event> {
             }],
             next_page: Some(3),
             error: None,
+        })),
+        Remote(Arc::new(remote())),
+        Remote(Arc::new(jf::RemoteSnapshot {
+            source: None,
+            source_name: None,
+            status: jf::Status::Stopped,
+            item: None,
+            context: None,
+            device: None,
+            devices: Vec::new(),
+            error: None,
+            ..remote()
         })),
         Buffering {
             uid: 2,

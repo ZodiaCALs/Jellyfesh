@@ -1,6 +1,7 @@
 //! Between the plugin host's types (the WIT records) and the core API's.
 
 use jf_library::SearchResults;
+use jf_plugin_host::links::Links;
 use jf_plugin_host::merge::MergedItem;
 use jf_plugin_host::{
     AuthKind, AuthStep as HostStep, FieldKind, FieldSpec, ImageRef, Item, ItemKind as HostKind, LyricFormat,
@@ -84,8 +85,8 @@ pub(crate) fn source_track(plugin: &str, item: &Item) -> SourceTrack {
     }
 }
 
-/// A plugin's item as a list row.
-pub(crate) fn source_item(plugin: &str, item: &Item) -> SourceItem {
+/// A plugin's item as a list row; `links` are the plugin's (ADR-0018).
+pub(crate) fn source_item(plugin: &str, item: &Item, links: &Links) -> SourceItem {
     let track =
         (item.kind == HostKind::Track && item.playable).then(|| TrackRef::Source(source_track(plugin, item)));
     SourceItem {
@@ -101,6 +102,7 @@ pub(crate) fn source_item(plugin: &str, item: &Item) -> SourceItem {
         unplayable_reason: unplayable_reason(item),
         track,
         also_in: Vec::new(),
+        link: links.url_for(item.kind, &item.id),
     }
 }
 
@@ -175,6 +177,7 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             unplayable_reason: None,
             track: Some(TrackRef::Library(t.id)),
             also_in: Vec::new(),
+            link: None,
         });
     }
     for a in &results.albums {
@@ -194,6 +197,7 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             unplayable_reason: None,
             track: None,
             also_in: Vec::new(),
+            link: None,
         });
     }
     for a in &results.artists {
@@ -211,6 +215,7 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             unplayable_reason: None,
             track: None,
             also_in: Vec::new(),
+            link: None,
         });
     }
     (items, rows)
@@ -225,9 +230,9 @@ pub(crate) struct Answer {
 }
 
 impl Answer {
-    /// A plugin's answer.
-    pub(crate) fn plugin(plugin: &str, items: Vec<Item>) -> Answer {
-        let rows = items.iter().map(|i| source_item(plugin, i)).collect();
+    /// A plugin's answer; `links` are the plugin's.
+    pub(crate) fn plugin(plugin: &str, items: Vec<Item>, links: &Links) -> Answer {
+        let rows = items.iter().map(|i| source_item(plugin, i, links)).collect();
         Answer {
             source: plugin.to_owned(),
             items,
@@ -376,6 +381,7 @@ pub(crate) fn summary(
             SignatureStatus::Unsigned | SignatureStatus::Trusted { .. } => None,
         },
         vendor_playback: matches!(info.playback_mode, PlaybackMode::Vendor | PlaybackMode::Remote),
+        remote_playback: info.playback_mode == PlaybackMode::Remote,
         capabilities: info
             .capabilities
             .iter()
@@ -479,6 +485,11 @@ mod tests {
     use super::*;
     use jf_library::{Album, Artist, ReplayGain, Track};
 
+    /// A plugin's answer, without links.
+    fn answer(plugin: &str, items: Vec<Item>) -> Answer {
+        Answer::plugin(plugin, items, &Links::default())
+    }
+
     fn track(id: &str, title: &str, artist: &str, duration_ms: u32, isrc: Option<&str>) -> Item {
         let mut item = bare(id, HostKind::Track, title);
         item.artist = Some(artist.into());
@@ -549,7 +560,7 @@ mod tests {
             library_track(7, "Blue Hour", "Someone", 200_000, None),
             library_track(8, "Other Song", "Someone", 150_000, Some("USRC17607839")),
         ]);
-        let a = Answer::plugin(
+        let a = answer(
             "org.example.a",
             vec![
                 // Same title and primary artist, within 2 s: the library's track.
@@ -600,7 +611,7 @@ mod tests {
             library_track(3, "Blue Hour", "Someone", 200_000, None),
         ]);
         // The plugin's best hit is the library's third track.
-        let a = Answer::plugin("p", vec![track("x", "Blue Hour", "Someone", 200_500, None)]);
+        let a = answer("p", vec![track("x", "Blue Hour", "Someone", 200_500, None)]);
         let sections = sections(&[lib, a]);
         let titles: Vec<&str> = tracks_of(&sections[0]).iter().map(|r| r.title.as_str()).collect();
         assert_eq!(titles, vec!["One", "Two", "Blue Hour"]);
@@ -621,7 +632,7 @@ mod tests {
     #[test]
     fn a_take_three_seconds_apart_is_another_recording() {
         let lib = library(vec![library_track(7, "Song", "Someone", 200_000, None)]);
-        let a = Answer::plugin("p", vec![track("x", "Song", "Someone", 203_100, None)]);
+        let a = answer("p", vec![track("x", "Song", "Someone", 203_100, None)]);
         let sections = sections(&[lib, a]);
         assert_eq!(tracks_of(&sections[0]).len(), 1);
         assert_eq!(tracks_of(&sections[1]).len(), 1);
@@ -636,17 +647,14 @@ mod tests {
             message: None,
         });
         let open = track("y", "Song", "Someone", 200_400, Some("USRC17607839"));
-        let both = sections(&[
-            Answer::plugin("a", vec![locked.clone()]),
-            Answer::plugin("b", vec![open]),
-        ]);
+        let both = sections(&[answer("a", vec![locked.clone()]), answer("b", vec![open])]);
         assert!(both[0].is_empty(), "{both:#?}");
         assert_eq!(both[1].len(), 1);
         assert_eq!((both[1][0].source.as_str(), both[1][0].id.as_str()), ("b", "y"));
         assert_eq!(both[1][0].also_in, vec!["a".to_string()]);
         assert!(both[1][0].playable && both[1][0].track.is_some());
 
-        let alone = sections(&[Answer::plugin("a", vec![locked])]);
+        let alone = sections(&[answer("a", vec![locked])]);
         assert!(!alone[0][0].playable);
         assert_eq!(
             alone[0][0].track, None,
@@ -660,7 +668,7 @@ mod tests {
 
     #[test]
     fn an_item_listed_twice_by_one_source_is_two_rows() {
-        let a = Answer::plugin(
+        let a = answer(
             "p",
             vec![
                 track("x", "Song", "Someone", 200_000, None),

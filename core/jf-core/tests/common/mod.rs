@@ -34,6 +34,7 @@ const PLUGINS: &[(&str, &str)] = &[
     ("echo", "jf-test-echo"),
     ("spin", "jf-test-spin"),
     ("catalog", "jf-core-test-catalog"),
+    ("remote", "jf-test-remote"),
 ];
 
 /// The cargo target directory this test binary was built in.

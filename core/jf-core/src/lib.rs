@@ -22,6 +22,7 @@ mod actor;
 mod items;
 pub mod lyrics;
 pub mod paths;
+mod remote;
 mod secrets;
 mod sources;
 pub mod targets;
