@@ -31,9 +31,13 @@ import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.library.ArtistMatch
+import org.jellyfesh.logic.library.CollectionMenu
 import org.jellyfesh.logic.library.CollectionTracks
+import org.jellyfesh.logic.library.CollectionMenuItem
 import org.jellyfesh.logic.library.TrackMenu
 import org.jellyfesh.logic.library.TrackMenuItem
+import org.jellyfesh.logic.player.RemoteModel
+import org.jellyfesh.logic.sources.Links
 
 /** What a row's More menu acts on. Unknown details (null) are looked up when the menu opens. */
 data class TrackTarget(
@@ -45,6 +49,10 @@ data class TrackTarget(
     val favorite: Boolean? = null,
     /** The song's artist, for Go to Artist. */
     val artist: String? = null,
+    /** Opens the song in its service (Open in {Service}). */
+    val link: String? = null,
+    /** The source the link belongs to (a plugin id), for the service's name; else the song's own source. */
+    val source: String? = null,
 )
 
 /**
@@ -80,6 +88,23 @@ class TrackActions internal constructor(
         overlays.toast(s(R.string.toast_added_to_queue))
     }
 
+    /** Open in {Service}: the service's app or the browser; a short message when nothing can open it. */
+    fun openLink(link: String) {
+        if (!openLinkIntent(context, link)) overlays.toast(s(R.string.link_no_app))
+    }
+
+    /** "Open in QQ Music": the label of the link of an item from [source] (a plugin id). */
+    fun openInLabel(source: String): String = s(R.string.action_open_in, Links.serviceName(graph.store.state.value.sources, source))
+
+    /** A sheet of [actions] under [title] (and [subtitle]). */
+    fun showSheetActions(title: String, subtitle: String?, actions: List<SheetAction>) = overlays.showActions(title, subtitle, actions)
+
+    /** The Open in {Service} action of an item from [source], when [link] may be opened. */
+    fun openLinkAction(link: String?, source: String?): SheetAction? {
+        val url = Links.openable(link) ?: return null
+        return SheetAction(openInLabel(source.orEmpty()), R.drawable.ic_external) { openLink(url) }
+    }
+
     /**
      * The menu of one song: Play Next, Play Last, Add to Playlist…, Add to or Remove from
      * Favourites, Go to Album, Go to Artist ([TrackMenu]), then [extra]. What the row did not
@@ -88,7 +113,8 @@ class TrackActions internal constructor(
     fun showFor(target: TrackTarget, extra: List<SheetAction> = emptyList()) {
         val library = target.track as? TrackRef.Library
         val needsDetails = library != null && (target.albumId == null || target.artist == null)
-        if (target.favorite != null && !needsDetails) {
+        // Sources keep their own favourites: a source's song offers no heart unless the row knows it.
+        if ((target.favorite != null || target.track is TrackRef.Source) && !needsDetails) {
             present(target, extra)
             return
         }
@@ -107,8 +133,17 @@ class TrackActions internal constructor(
     private fun present(target: TrackTarget, extra: List<SheetAction>) {
         val albumId = target.albumId
         val artist = target.artist?.takeIf { it.isNotBlank() && target.track is TrackRef.Library }
-        val items = TrackMenu.items(target.track, target.favorite, hasAlbum = albumId != null, hasArtist = artist != null)
-        val actions = items.map { item ->
+        val sources = graph.store.state.value.sources
+        val linkAction = openLinkAction(target.link, target.source ?: (target.track as? TrackRef.Source)?.track?.plugin)
+        val items = TrackMenu.items(
+            target.track,
+            target.favorite,
+            hasAlbum = albumId != null,
+            hasArtist = artist != null,
+            remote = RemoteModel.isRemote(sources, target.track),
+            hasLink = linkAction != null,
+        )
+        val actions = items.mapNotNull { item ->
             when (item) {
                 TrackMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(listOf(target.track)) }
                 TrackMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(listOf(target.track)) }
@@ -117,6 +152,7 @@ class TrackActions internal constructor(
                 TrackMenuItem.RemoveFromFavourites -> SheetAction(s(R.string.action_unfavourite), R.drawable.ic_heart_filled) { graph.send(Command.SetFavorite(target.track, false)) }
                 TrackMenuItem.GoToAlbum -> SheetAction(s(R.string.action_go_to_album), R.drawable.ic_album) { albumId?.let { nav.openAlbum(it, target.albumTitle ?: target.title) } }
                 TrackMenuItem.GoToArtist -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) { artist?.let(::goToArtist) }
+                TrackMenuItem.OpenLink -> linkAction
             }
         }
         overlays.showActions(target.title, target.subtitle, actions + extra)
@@ -131,9 +167,10 @@ class TrackActions internal constructor(
     }
 
     /**
-     * The More menu of an album, an artist or a playlist: Play Next, Play Last and Add to
-     * Playlist…, then [extra] (a playlist's Rename…, Export Playlist… and Delete Playlist…).
-     * Lists without Play and Shuffle buttons ([withPlay]) offer those first.
+     * The More menu of an album, an artist or a playlist ([CollectionMenu]): Play Next, Play Last
+     * and Add to Playlist… (none of them for a remote source's), Open in {Service} when it has a
+     * [link], then [extra] (a playlist's Rename…, Export Playlist… and Delete Playlist…). Lists
+     * without Play and Shuffle buttons ([withPlay]) offer those first.
      */
     fun showForCollection(
         title: String,
@@ -141,19 +178,21 @@ class TrackActions internal constructor(
         collection: CollectionRef,
         extra: List<SheetAction> = emptyList(),
         withPlay: Boolean = true,
+        link: String? = null,
     ) {
-        val actions = buildList {
-            if (withPlay) {
-                add(SheetAction(s(R.string.action_play), R.drawable.ic_play) { graph.send(Command.PlayCollection(collection, 0, false)) })
-                add(SheetAction(s(R.string.action_shuffle), R.drawable.ic_shuffle) { graph.send(Command.PlayCollection(collection, 0, true)) })
+        val sources = graph.store.state.value.sources
+        val linkAction = openLinkAction(link, (collection as? CollectionRef.Source)?.plugin)
+        val items = CollectionMenu.items(collection, withPlay, remote = RemoteModel.isRemote(sources, collection), hasLink = linkAction != null)
+        val actions = items.mapNotNull { item ->
+            when (item) {
+                CollectionMenuItem.Play -> SheetAction(s(R.string.action_play), R.drawable.ic_play) { graph.send(Command.PlayCollection(collection, 0, false)) }
+                CollectionMenuItem.Shuffle -> SheetAction(s(R.string.action_shuffle), R.drawable.ic_shuffle) { graph.send(Command.PlayCollection(collection, 0, true)) }
+                CollectionMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(collection) }
+                CollectionMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(collection) }
+                CollectionMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(collection) }
+                CollectionMenuItem.OpenLink -> linkAction
             }
-            add(SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(collection) })
-            add(SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(collection) })
-            if (CollectionTracks.canAdd(collection)) {
-                add(SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(collection) })
-            }
-            addAll(extra)
-        }
+        } + extra
         overlays.showActions(title, subtitle, actions)
     }
 

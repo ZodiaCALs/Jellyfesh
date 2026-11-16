@@ -398,4 +398,20 @@
     <plurals name="count_hours">
         <item quantity="other">%d 小时</item>
     </plurals>
+
+    <!-- v0.0.6：条目链接与远程播放 -->
+    <string name="action_open_in">在 %1$s 中打开</string>
+    <string name="link_no_app">这台手机上没有能打开此链接的应用。</string>
+    <string name="remote_playing_on">正在 %1$s 上播放</string>
+    <string name="remote_devices">设备</string>
+    <string name="remote_no_devices">暂无设备。请在手机、电脑或音箱上打开 %1$s，然后再看一次。</string>
+    <string name="remote_stop">停止控制</string>
+    <string name="remote_lyrics">%1$s 播放时不显示歌词。</string>
+    <string name="remote_queue">接下来播放的内容在 %1$s 中。</string>
+    <string name="device_computer">电脑</string>
+    <string name="device_smartphone">手机</string>
+    <string name="device_speaker">音箱</string>
+    <string name="device_tv">电视</string>
+    <string name="device_car">汽车</string>
+    <string name="device_other">设备</string>
 </resources>

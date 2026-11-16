@@ -61,6 +61,8 @@ class StringsTest {
             "Preferences", "Add a music folder…", "Scan again", "Play Later", "Add to queue", "The Queue Is Empty",
             "About this track", "Date Added", "Nothing found.", "Installed sources", "Install from a file…",
             "Server address", "Sign in with a QR code", "Manage sources", "Follow System", "Length in seconds", "Purple",
+            // v0.0.6: links and remote playback.
+            "Open in Browser", "Open Link", "Connected to", "Casting to", "Disconnect", "Stop Remote",
         )
         for (word in avoided) {
             assertTrue(english.none { it.contains(word) }, "\"$word\" is in the strings")
@@ -72,5 +74,11 @@ class StringsTest {
         assertEquals("Sources Settings…", names.getValue("sources_settings").single())
         assertEquals("Uninstall…", names.getValue("action_uninstall_ask").single())
         assertEquals("Violet", names.getValue("accent_violet").single())
+        assertEquals("Open in %1\$s", names.getValue("action_open_in").single())
+        assertEquals("Playing on %1\$s", names.getValue("remote_playing_on").single())
+        assertEquals("Devices", names.getValue("remote_devices").single())
+        assertEquals("Stop Controlling", names.getValue("remote_stop").single())
+        assertEquals("Lyrics aren’t shown while %1\$s plays.", names.getValue("remote_lyrics").single())
+        assertEquals("Up Next is in %1\$s.", names.getValue("remote_queue").single())
     }
 }

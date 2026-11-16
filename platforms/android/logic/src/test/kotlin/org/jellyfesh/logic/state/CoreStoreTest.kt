@@ -18,6 +18,7 @@ import org.jellyfesh.logic.core.LyricsSnapshot
 import org.jellyfesh.logic.core.NowPlaying
 import org.jellyfesh.logic.core.PlaybackSnapshot
 import org.jellyfesh.logic.core.QueueSnapshot
+import org.jellyfesh.logic.core.RemoteSnapshot
 import org.jellyfesh.logic.core.ScanStatus
 import org.jellyfesh.logic.core.Settings
 import org.jellyfesh.logic.core.SourcesSnapshot
@@ -96,6 +97,47 @@ class CoreStoreTest {
         assertTrue(state.isBuffering, "another uid's end does not clear it")
         state = CoreReducer.reduce(state, CoreEvent.Buffering(4, false))
         assertFalse(state.isBuffering)
+    }
+
+    private fun remote(version: Long, source: String?, error: String? = null) =
+        RemoteSnapshot.Empty.copy(version = version, source = source, sourceName = source?.let { "Spotify" }, status = Status.Playing, error = error)
+
+    @Test
+    fun theRemoteSliceFollowsItsVersion() {
+        var state = CoreReducer.reduce(CoreState(), CoreEvent.Remote(remote(3, "spotify")))
+        assertEquals("spotify", state.remote.source)
+        state = CoreReducer.reduce(state, CoreEvent.Remote(remote(2, null)))
+        assertEquals("spotify", state.remote.source, "an older slice never replaces a newer one")
+        state = CoreReducer.merge(state, snapshot().copy(remote = remote(1, null)))
+        assertEquals(3, state.remote.version, "the snapshot keeps the newer event")
+        state = CoreReducer.merge(state, snapshot().copy(remote = remote(4, null)))
+        assertNull(state.remote.source)
+    }
+
+    @Test
+    fun aSessionEndsWhenTheSourceGoes() {
+        assertTrue(CoreReducer.endsRemoteSession(remote(1, "spotify"), remote(2, null, "Sign in to Spotify again.")))
+        assertFalse(CoreReducer.endsRemoteSession(remote(1, null), remote(2, null, "Sign in to Spotify again.")), "no session to end")
+        assertFalse(CoreReducer.endsRemoteSession(remote(1, "spotify"), remote(2, "spotify", "Timed out")), "an error during a session")
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class) // runCurrent
+    @Test
+    fun theSliceThatEndsASessionIsForwardedOnce() = runTest {
+        val client = FakeCoreClient(snapshot())
+        val store = CoreStore()
+        val signals = mutableListOf<CoreEvent>()
+        backgroundScope.launch { store.signals.collect { signals += it } }
+        runCurrent()
+        store.attach(client)
+        // The session starts, fails to reach the service and ends right away: both slices arrive
+        // back to back, and the one that ends it reaches the signal stream once.
+        client.emit(CoreEvent.Remote(remote(1, "spotify")))
+        client.emit(CoreEvent.Remote(remote(2, null, "Sign in to Spotify again.")))
+        client.emit(CoreEvent.Remote(remote(3, null, "Sign in to Spotify again.")))
+        runCurrent()
+        assertEquals(listOf<CoreEvent>(CoreEvent.Remote(remote(2, null, "Sign in to Spotify again."))), signals)
+        assertEquals(3, store.state.value.remote.version)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class) // runCurrent

@@ -73,17 +73,19 @@ import org.jellyfesh.logic.lyrics.LyricsLayout
 import org.jellyfesh.logic.lyrics.SweepGeometry
 import org.jellyfesh.logic.player.LyricLineRole
 import org.jellyfesh.logic.player.NowPlayingMotion
+import org.jellyfesh.logic.theme.Luminous
 import org.jellyfesh.logic.time.LyricCursor
 import org.jellyfesh.logic.time.TimeDemand
 import org.jellyfesh.tokens.Tokens
 
 /**
- * The lyrics of the track playing (docs/lyrics-model.md, "Display behaviour"; after Apple Music in
- * v0.0.4): the active line in ink-90 at full size, lines still to come in lyrics.ink-inactive
- * (ink-50) and sung ones in ink-30, both at 96 % from their start edge, the karaoke sweep filling
- * words linearly as they are sung. The active line sits at 38 % of the view and moves there in
- * 380 ms (Fluid), each following line starting 30 ms after the one above so they settle in a
- * cascade; scrolling by hand pauses that for 4 s. The Lyrics size and alignment settings apply
+ * The lyrics of the track playing (docs/lyrics-model.md, "Display behaviour"; Luminous in
+ * v0.0.6): bold lines up to 40 sp (lyrics.line, scaled for phones as its fluid range allows), the
+ * active line in ink-90 at full size, lines still to come in lyrics.ink-inactive (ink-50) and sung
+ * ones in ink-30, both at 92 % from their start edge, the karaoke sweep filling words linearly as
+ * they are sung. The active line sits at 38 % of the view and moves there in 380 ms (Fluid), each
+ * following line starting 40 ms after the one above so they settle in a cascade; scrolling by
+ * hand pauses that for 4 s. The Lyrics size and alignment settings apply
  * live. Under reduced motion there is no sweep, no cascade and no scrolling animation: the
  * active line lights whole and the view jumps.
  *
@@ -175,11 +177,10 @@ fun LyricsView(
     }
 }
 
-/** Lyric size: fluid from 24 to 40 sp with the view's width (Tokens.Lyrics.lineFluid). */
+/** Lyric size: fluid from 28 to 40 sp with the view's width (Tokens.Lyrics.lineFluid, Luminous). */
 private fun lyricSize(widthDp: Float): androidx.compose.ui.unit.TextUnit {
     val fluid = Tokens.Lyrics.lineFluid
-    val t = ((widthDp - 360f) / (1200f - 360f)).coerceIn(0f, 1f)
-    return (fluid.min + (fluid.max - fluid.min) * t).sp
+    return Luminous.lyricLineSp(widthDp, fluid.min, fluid.max).sp
 }
 
 /** A line change's scroll: lines below [active] follow [distance] (px) one after another (the cascade). */

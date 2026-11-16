@@ -16,6 +16,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.jellyfesh.android.AppGraph
+import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.time.PlaybackTicker
 import org.jellyfesh.logic.time.TimeDemand
 
@@ -46,7 +47,8 @@ fun rememberPlaybackTime(graph: AppGraph): PlaybackTime {
     }
     val position = ticker.positionUs.collectAsState()
     LaunchedEffect(ticker) {
-        graph.store.state.map { it.playback.anchor }.distinctUntilChanged().collect(ticker::onAnchor)
+        // The remote session's anchor while one runs (the player views show its song), else the engine's.
+        graph.store.state.map { PlayerModel.anchor(it) }.distinctUntilChanged().collect(ticker::onAnchor)
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(ticker, lifecycle) {

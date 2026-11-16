@@ -398,4 +398,20 @@
     <plurals name="count_hours">
         <item quantity="other">%d 小時</item>
     </plurals>
+
+    <!-- v0.0.6：項目連結與遠端播放 -->
+    <string name="action_open_in">在 %1$s 中開啟</string>
+    <string name="link_no_app">這支手機上沒有能開啟此連結的應用程式。</string>
+    <string name="remote_playing_on">正在 %1$s 上播放</string>
+    <string name="remote_devices">裝置</string>
+    <string name="remote_no_devices">目前沒有裝置。請在手機、電腦或喇叭上開啟 %1$s，然後再看一次。</string>
+    <string name="remote_stop">停止控制</string>
+    <string name="remote_lyrics">%1$s 播放時不會顯示歌詞。</string>
+    <string name="remote_queue">接下來播放的內容在 %1$s 中。</string>
+    <string name="device_computer">電腦</string>
+    <string name="device_smartphone">手機</string>
+    <string name="device_speaker">喇叭</string>
+    <string name="device_tv">電視</string>
+    <string name="device_car">汽車</string>
+    <string name="device_other">裝置</string>
 </resources>

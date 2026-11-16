@@ -22,6 +22,8 @@ import org.jellyfesh.logic.seek.SeekGeometry
 import org.jellyfesh.logic.seek.SeekKey
 import org.jellyfesh.logic.settings.SettingsEdits
 import org.jellyfesh.logic.theme.AccentChoices
+import org.jellyfesh.logic.theme.AuroraColour
+import org.jellyfesh.logic.theme.Luminous
 import org.jellyfesh.logic.theme.Oklch
 
 /**
@@ -113,10 +115,12 @@ class DesignTest {
         assertEquals(LyricLineRole.Active, NowPlayingMotion.role(3, 3))
         assertEquals(LyricLineRole.Upcoming, NowPlayingMotion.role(4, 3))
         assertEquals(LyricLineRole.Upcoming, NowPlayingMotion.role(0, null))
-        assertEquals(0.96f, NowPlayingMotion.lineScale(LyricLineRole.Upcoming))
+        // Luminous: inactive lines at 92 %, the cascade 40 ms apart.
+        assertEquals(0.92f, NowPlayingMotion.lineScale(LyricLineRole.Upcoming))
+        assertEquals(1f, NowPlayingMotion.lineScale(LyricLineRole.Active))
         assertEquals(0, NowPlayingMotion.cascadeDelayMs(3, 3))
-        assertEquals(60, NowPlayingMotion.cascadeDelayMs(5, 3))
-        assertEquals(240, NowPlayingMotion.cascadeDelayMs(50, 3))
+        assertEquals(80, NowPlayingMotion.cascadeDelayMs(5, 3))
+        assertEquals(320, NowPlayingMotion.cascadeDelayMs(50, 3))
     }
 
     @Test
@@ -133,6 +137,48 @@ class DesignTest {
             val drawn = 60f * fluid.ease(t / 380f) - f.offset
             assertEquals(60f * fluid.ease((t - 90f) / 380f), drawn, 1e-4f)
         }
+    }
+
+    private fun fluid(group: String, key: String, field: String): Double =
+        tokens.getValue(group).jsonObject.getValue(key).jsonObject.getValue("\$extensions").jsonObject
+            .getValue("org.jellyfesh").jsonObject.getValue("fluid").jsonObject.getValue(field).jsonPrimitive.double
+
+    @Test
+    fun theLuminousFieldHasFourGlowsAtTheTokensStrength() {
+        val strength = token("field", "aurora-strength")
+        assertEquals(Luminous.REFERENCE_STRENGTH.toDouble(), strength, 1e-6)
+        val glows = Luminous.glows(strength.toFloat())
+        assertEquals(4, glows.size)
+        assertEquals(listOf(0.80f, 0.72f, 0.66f, 0.46f), glows.map { it.alpha })
+        assertEquals(listOf(AuroraColour.Aurora1, AuroraColour.Aurora2, AuroraColour.Aurora3, AuroraColour.Aurora1), glows.map { it.colour })
+        // Larger than Misty's three (60 % by 55 % at most): the first spans 62 % by 58 %.
+        assertEquals(0.62f, glows.first().rx)
+        // The strength scales every glow and never goes past opaque.
+        assertEquals(0.40f, Luminous.glows(0.375f).first().alpha, 1e-6f)
+        assertTrue(Luminous.glows(1f).all { it.alpha <= 1f })
+        assertTrue(Luminous.glows(0f).all { it.alpha == 0f })
+        assertTrue(Luminous.glows(Float.NaN).all { it.alpha == 0f })
+    }
+
+    @Test
+    fun lyricsAndTitlesScaleForPhones() {
+        val lyrics = tokens.getValue("lyrics").jsonObject.getValue("line").jsonObject.getValue("\$value").jsonObject
+        val max = lyrics.getValue("fontSize").jsonObject.getValue("value").jsonPrimitive.double.toFloat()
+        val min = fluid("lyrics", "line", "min").toFloat()
+        assertEquals(40f, max)
+        assertEquals(min, Luminous.lyricLineSp(360f, min, max), "a phone gets the token's minimum")
+        assertEquals(max, Luminous.lyricLineSp(1280f, min, max))
+        assertEquals((min + max) / 2f, Luminous.lyricLineSp(780f, min, max), 1e-4f)
+        // Page titles: text-h1 (48) where the window allows, the fluid minimum (38.4) on phones.
+        val h1 = token("type", "text-h1").toFloat() * 16f
+        val h1Min = fluid("type", "text-h1", "min").toFloat() * 16f
+        val vw = fluid("type", "text-h1", "vw").toFloat()
+        assertEquals(48f, h1, 1e-4f)
+        assertEquals(h1Min, Luminous.pageTitleSp(390f, h1Min, vw, h1), 1e-4f)
+        assertEquals(48f, Luminous.pageTitleSp(1280f, h1Min, vw, h1), 1e-4f)
+        // The Now Playing title: 25 on the reference 390 dp phone, the full 32 from 600 dp.
+        assertEquals(25f, Luminous.nowPlayingTitleSp(390f, 32f), 1e-4f)
+        assertEquals(32f, Luminous.nowPlayingTitleSp(800f, 32f))
     }
 
     @Test

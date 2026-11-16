@@ -71,4 +71,26 @@ sealed interface Command {
     data class Logout(val plugin: String) : Command
     data class Search(val query: String, val scope: SearchScope) : Command
     data class Browse(val plugin: String, val node: String?, val page: Int) : Command
+
+    /**
+     * The remote session (ADR-0018): what the transport commands cannot say. While a session runs,
+     * Play, Pause, TogglePlayPause, Stop, Next, Previous, Seek, SetShuffle and SetRepeat control
+     * the service's player instead of the engine (the core routes them).
+     */
+    data class Remote(val action: RemoteAction) : Command
+}
+
+/** What [Command.Remote] asks of the remote session. */
+sealed interface RemoteAction {
+    /** Asks the service for its devices and state now (the Devices sheet opens). */
+    data object Refresh : RemoteAction
+
+    /** Moves playback to the device with this id, playing there. */
+    data class Transfer(val device: String) : RemoteAction
+
+    /** The playing device's volume, 0–100. */
+    data class SetVolume(val percent: Int) : RemoteAction
+
+    /** Stops controlling the service (Stop Controlling); its player carries on as it was. */
+    data object End : RemoteAction
 }

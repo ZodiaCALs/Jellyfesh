@@ -49,8 +49,8 @@ object NowPlayingMotion {
     /** player.artwork-paused-scale. */
     const val ARTWORK_PAUSED_SCALE = 0.88f
 
-    /** lyrics.scale-inactive. */
-    const val INACTIVE_LINE_SCALE = 0.96f
+    /** lyrics.scale-inactive (Luminous: 92 %). */
+    const val INACTIVE_LINE_SCALE = 0.92f
 
     /** lyrics.scale-small. */
     const val SMALL_LYRICS = 0.8f
@@ -58,8 +58,8 @@ object NowPlayingMotion {
     /** lyrics.scale-large. */
     const val LARGE_LYRICS = 1.2f
 
-    /** lyrics.stagger: each following line starts this much after the one above. */
-    const val STAGGER_MS = 30
+    /** lyrics.stagger: each following line starts this much after the one above (Luminous: 40 ms). */
+    const val STAGGER_MS = 40
 
     /** Lines further below the active one start together, so the cascade never drags. */
     const val MAX_STAGGERED_LINES = 8
@@ -84,7 +84,7 @@ object NowPlayingMotion {
 
     fun lineScale(role: LyricLineRole): Float = if (role == LyricLineRole.Active) 1f else INACTIVE_LINE_SCALE
 
-    /** How much later than the scroll line [index] starts moving: 0 at and above [active], then 30 ms per line. */
+    /** How much later than the scroll line [index] starts moving: 0 at and above [active], then 40 ms per line. */
     fun cascadeDelayMs(index: Int, active: Int?): Int =
         if (active == null || index <= active) 0 else STAGGER_MS * min(index - active, MAX_STAGGERED_LINES)
 

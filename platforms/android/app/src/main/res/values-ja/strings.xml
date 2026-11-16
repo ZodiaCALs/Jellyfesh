@@ -398,4 +398,20 @@
     <plurals name="count_hours">
         <item quantity="other">%d 時間</item>
     </plurals>
+
+    <!-- v0.0.6：項目のリンクとリモート再生 -->
+    <string name="action_open_in">%1$s で開く</string>
+    <string name="link_no_app">このリンクを開けるアプリがこのスマートフォンにありません。</string>
+    <string name="remote_playing_on">%1$s で再生中</string>
+    <string name="remote_devices">デバイス</string>
+    <string name="remote_no_devices">デバイスがまだありません。スマートフォン、コンピュータ、またはスピーカーで %1$s を開いてから、もう一度確認してください。</string>
+    <string name="remote_stop">操作を終了</string>
+    <string name="remote_lyrics">%1$s で再生している間は歌詞を表示しません。</string>
+    <string name="remote_queue">次に再生する曲は %1$s にあります。</string>
+    <string name="device_computer">コンピュータ</string>
+    <string name="device_smartphone">スマートフォン</string>
+    <string name="device_speaker">スピーカー</string>
+    <string name="device_tv">テレビ</string>
+    <string name="device_car">車</string>
+    <string name="device_other">デバイス</string>
 </resources>

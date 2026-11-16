@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import org.jellyfesh.android.R
 import org.jellyfesh.android.images.ArtKey
 import org.jellyfesh.android.images.rememberArtwork
+import org.jellyfesh.android.ui.LocalWindowWidthDp
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.theme.ButtonStyle
 import org.jellyfesh.android.ui.theme.GlassGrade
@@ -67,8 +68,10 @@ import org.jellyfesh.android.ui.theme.JfMotion
 import org.jellyfesh.android.ui.theme.LevelGlyph
 import org.jellyfesh.android.ui.theme.LocalPlaybackRunning
 import org.jellyfesh.android.ui.theme.JfType
+import org.jellyfesh.android.ui.theme.jfShadow
 import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.format.TimeFormat
+import org.jellyfesh.logic.theme.Luminous
 import org.jellyfesh.tokens.Tokens
 
 /**
@@ -122,6 +125,10 @@ fun TrackRow(
     favorite: Boolean = false,
     onMore: (() -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
+    /** False for a row that does nothing when chosen (a missing file, a song that cannot play here and has no link). */
+    enabled: Boolean = !missing,
+    /** Drawn in the faint ink: a missing file, or a source's song that cannot play here (its [subtitle] says why). */
+    dimmed: Boolean = missing,
 ) {
     val colors = Jf.colors
     val moreLabel = stringResource(R.string.action_more)
@@ -130,7 +137,7 @@ fun TrackRow(
             .fillMaxWidth()
             .heightIn(min = Tokens.Player.rowHeight.dp + 8.dp)
             .then(if (playing) Modifier.padding(horizontal = 6.dp).background(colors.accentSoft, RoundedCornerShape(Tokens.Radius.rMd.dp)) else Modifier)
-            .clickable(enabled = !missing, role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics { selected = playing }
             .padding(horizontal = if (playing) 10.dp else 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -151,7 +158,7 @@ fun TrackRow(
                 title,
                 style = JfType.listTitle,
                 color = when {
-                    missing -> colors.ink30
+                    dimmed -> colors.ink30
                     playing -> colors.accentText
                     else -> colors.ink90
                 },
@@ -178,6 +185,8 @@ fun NavRow(
     modifier: Modifier = Modifier,
     leading: @Composable () -> Unit = {},
     onMore: (() -> Unit)? = null,
+    /** The glyph at the end: the chevron of a row that opens a page, or another (Open in {Service}). */
+    trailingIcon: Int = R.drawable.ic_chevron_right,
 ) {
     val colors = Jf.colors
     Row(
@@ -195,7 +204,7 @@ fun NavRow(
             if (subtitle != null) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
         }
         if (onMore != null) JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), onMore, size = 40.dp, iconSize = 20.dp)
-        JfIcon(R.drawable.ic_chevron_right, colors.ink30, size = 18.dp)
+        JfIcon(trailingIcon, colors.ink30, size = 18.dp)
     }
 }
 
@@ -209,9 +218,10 @@ fun InitialTile(text: String, size: Dp = 44.dp, icon: Int? = null) {
 }
 
 /**
- * An album card for grids and shelves: square artwork (radius 12), title and artist. With a mouse
- * (desktop mode), hovering lifts the cover by 2 dp with shadow-2 and shows a 36 dp glass play
- * button in its bottom start corner ([onPlay]); a press scales it to 97 % (after Apple Music).
+ * An album card for grids and shelves (Luminous): square artwork with artwork.radius-grid (16)
+ * and shadow-2, title and artist. Hovering with a mouse (desktop mode) or keyboard focus lifts the
+ * cover 4 dp and shows a 36 dp glass play button in its bottom start corner ([onPlay]); a press
+ * scales it to 97 % (after Apple Music).
  */
 @Composable
 fun AlbumCard(
@@ -228,10 +238,12 @@ fun AlbumCard(
     val reduce = Jf.effects.reduceMotion
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
+    val focused by interaction.collectIsFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
-    val lift by animateDpAsState(if (hovered) 2.dp else 0.dp, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "lift")
+    val raised = hovered || focused
+    val lift by animateDpAsState(if (raised) 4.dp else 0.dp, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "lift")
     val press by animateFloatAsState(if (pressed) 0.97f else 1f, JfMotion.spring(Tokens.Motion.dur0Ms, reduce), label = "press")
-    val playAlpha by animateFloatAsState(if (hovered && onPlay != null) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "play")
+    val playAlpha by animateFloatAsState(if (raised && onPlay != null) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "play")
     val coverShape = RoundedCornerShape(Tokens.Artwork.radiusGrid.dp)
     Column(
         modifier
@@ -249,7 +261,7 @@ fun AlbumCard(
                     scaleX = press
                     scaleY = press
                 }
-                .shadow(lift * 6, coverShape, clip = false, ambientColor = colors[Tokens.Elevation.shadow2Layer0], spotColor = colors[Tokens.Elevation.shadow2Layer1]),
+                .jfShadow(if (raised) 3 else 2, coverShape),
         ) {
             ArtworkFill(art, title, coverShape, sizePx)
             if (onPlay != null && playAlpha > 0f) {
@@ -264,6 +276,8 @@ fun AlbumCard(
                         .semantics { contentDescription = playLabel },
                     grade = GlassGrade.Mist,
                     shape = CircleShape,
+                    // A third live layer would break the glass budget; the tint alone reads on any cover.
+                    blur = false,
                 ) {
                     JfIcon(R.drawable.ic_play, colors.ink90, Modifier.align(Alignment.Center), size = 16.dp)
                 }
@@ -288,16 +302,21 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier, action: (@Composa
     }
 }
 
-/** A screen's title block: a large title, a line under it and actions on the right. */
+/**
+ * A screen's title block: a large title (Luminous: type.text-h1, 48 where the window allows and
+ * its fluid minimum on phones), a line under it and actions on the right.
+ */
 @Composable
 fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
     val colors = Jf.colors
+    val width = LocalWindowWidthDp.current
+    val size = Luminous.pageTitleSp(width, Tokens.TypeScale.textH1Fluid.min, Tokens.TypeScale.textH1Fluid.vw ?: 0f, Tokens.TypeScale.textH1)
     Row(
         modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            JfText(title, style = JfType.title, maxLines = 2, modifier = Modifier.semantics { heading() })
+            JfText(title, style = JfType.pageTitle(size), maxLines = 2, modifier = Modifier.semantics { heading() })
             if (subtitle != null) JfText(subtitle, style = JfType.small, color = colors.ink70, maxLines = 2)
         }
         actions()
@@ -372,21 +391,22 @@ fun LoadingRow(modifier: Modifier = Modifier) {
     }
 }
 
-/** A settings group: a Cloud panel with Misty's edge (radius 12). */
+/**
+ * A grouped surface (Luminous): settings groups and short lists take the Mist glass tint without
+ * live blur, Misty's edge and shadow-1, radius 24 (r-2xl); solid Cloud where glass falls back.
+ */
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    val colors = Jf.colors
-    val shape = RoundedCornerShape(Tokens.Radius.rLg.dp)
-    Column(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(shape)
-            .background(colors.cloud)
-            .border(1.dp, colors.line, shape)
-            .padding(vertical = 4.dp),
-        content = content,
-    )
+    val shape = RoundedCornerShape(Tokens.Radius.r2xl.dp)
+    GlassSurface(
+        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        grade = GlassGrade.Mist,
+        shape = shape,
+        blur = false,
+        raised = true,
+    ) {
+        Column(Modifier.fillMaxWidth().clip(shape).padding(vertical = 4.dp), content = content)
+    }
 }
 
 /** A row inside a [Panel]: a title, an optional description and a control at the end. */

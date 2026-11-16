@@ -13,10 +13,13 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -33,15 +36,18 @@ import org.jellyfesh.tokens.Tokens
 // Glass, ADR-0005: GlassSurface is the app's only entry point to Cloudy (pinned at 0.7.1), so a
 // swap to Haze touches this file alone. Screens never import Cloudy.
 //
-//  API 33+ (and not low-RAM, battery saver or reduce effects): Cloudy backdrop blur, progressive
-//    at an edge where asked, with the Misty tint and edge.
+//  API 33+ (and not low-RAM, battery saver, reduce effects or the system's blur and contrast
+//    settings): Cloudy backdrop blur (RenderEffect), progressive at an edge where asked, with the
+//    Misty tint and edge.
 //  API 31-32: Cloudy uniform blur; a progressive edge becomes a gradient scrim.
-//  Below 31: no blur; Misty Cloud at the dialog glass alpha (86 %), the translucent fallback.
-//  Low-RAM, battery saver or reduce effects: solid Misty Cloud (MAT-08), no blur.
+//  Below 31 (Luminous, v0.0.6: blur only on Android 12 and later), low-RAM, battery saver, reduce
+//    effects, the system's blur turned off or more contrast asked for: solid Misty Cloud (MAT-08).
 //
 // The blur's radius, saturation and tint never animate (MAT-10). At most two live glass layers
 // per screen (Tokens.GlassBudget.liveLayersMobile): the mini-player and the tab bar on library
-// screens, the top bar and the transport capsule on Now Playing.
+// screens, the dock on Now Playing. Grouped surfaces (settings groups, lists, the Now Playing top
+// controls) take a glass tint without live blur ([GlassSurface] with `blur = false`), so they cost
+// no layer.
 //
 // The Transparency setting (v0.0.4) sets each grade's tint alpha through the shared glass-alpha
 // port (platforms/shared/kotlin, tests/contract/glass-alpha.json): the token's alpha at 50 %,
@@ -72,7 +78,7 @@ private val LocalGlassBackdrop = staticCompositionLocalOf { GlassBackdropState(n
 fun GlassBackdrop(modifier: Modifier = Modifier, invalidateKey: Any? = null, content: @Composable BoxScope.() -> Unit) {
     val tier = Jf.effects.glassTier
     // At 0 % transparency every grade is opaque (solid Cloud): nothing to capture.
-    if (tier == GlassTier.Solid || tier == GlassTier.Translucent || Jf.effects.transparency <= 0f) {
+    if (tier == GlassTier.Solid || Jf.effects.transparency <= 0f) {
         CompositionLocalProvider(LocalGlassBackdrop provides GlassBackdropState(null)) {
             Box(modifier, content = content)
         }
@@ -90,7 +96,9 @@ fun GlassBackdrop(modifier: Modifier = Modifier, invalidateKey: Any? = null, con
 
 /**
  * A Misty glass surface: tinted backdrop blur where the device can afford it, else solid Cloud.
- * One 1 px inset edge and, when [floating], one shadow (MAT-04: no simulated thickness).
+ * One 1 px inset edge and, when [floating], shadow-2 (MAT-04: no simulated thickness); [raised]
+ * gives shadow-1 instead (Luminous grouped surfaces). With [blur] off it is the tint alone over
+ * whatever lies behind: no live layer, for surfaces nothing scrolls under.
  */
 @Composable
 fun GlassSurface(
@@ -100,6 +108,8 @@ fun GlassSurface(
     edge: GlassEdge = GlassEdge.None,
     floating: Boolean = false,
     showEdge: Boolean = true,
+    blur: Boolean = true,
+    raised: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val colors = Jf.colors
@@ -110,21 +120,18 @@ fun GlassSurface(
     val sky = LocalGlassBackdrop.current.sky
     val edgeColor = colors.glassEdge
     var m = modifier
-    if (floating) {
-        m = m.shadow(
-            elevation = 10.dp,
-            shape = shape,
-            clip = false,
-            ambientColor = colors[Tokens.Elevation.shadow2Layer0],
-            spotColor = colors[Tokens.Elevation.shadow2Layer1],
-        )
+    when {
+        floating -> m = m.jfShadow(2, shape)
+        raised -> m = m.jfShadow(1, shape)
     }
     when {
-        tier == GlassTier.Translucent ->
-            // No blur below API 31: Cloud at Misty's dialog glass alpha lets the field show faintly.
-            m = m.background((if (grade == GlassGrade.Clear) colors.cloudSoft else colors.cloud).copy(alpha = glassAlpha(TRANSLUCENT_ALPHA, effects.transparency)), shape)
-        tier == GlassTier.Solid || sky == null ->
+        tier == GlassTier.Solid ->
             // Misty Cloud: the solid surface every glass grade falls back to.
+            m = m.background(if (grade == GlassGrade.Clear) colors.cloudSoft else colors.cloud, shape)
+        !blur ->
+            // The tint alone: the surface sits on the field or the backdrop, where a blur would change nothing.
+            m = m.background(tint, shape)
+        sky == null ->
             m = m.background(if (grade == GlassGrade.Clear) colors.cloudSoft else colors.cloud, shape)
         tier == GlassTier.Uniform && edge != GlassEdge.None ->
             // API 31-32 blur only uniformly: a progressive edge becomes a gradient scrim.
@@ -144,8 +151,20 @@ fun GlassSurface(
     Box(m, content = content)
 }
 
-/** Misty's dialog glass alpha, for the translucent fallback. */
-private const val TRANSLUCENT_ALPHA = 0.86f
+/**
+ * One of Misty's shadows (elevation.shadow-1 to -3) under [shape]: its two layers' colours from
+ * the theme, at about the depth of its larger layer.
+ */
+@Composable
+fun Modifier.jfShadow(level: Int, shape: Shape): Modifier {
+    val colors = Jf.colors
+    val (elevation, ambient, spot) = when (level) {
+        1 -> Triple(4.dp, Tokens.Elevation.shadow1Layer0, Tokens.Elevation.shadow1Layer1)
+        2 -> Triple(10.dp, Tokens.Elevation.shadow2Layer0, Tokens.Elevation.shadow2Layer1)
+        else -> Triple(20.dp, Tokens.Elevation.shadow3Layer0, Tokens.Elevation.shadow3Layer1)
+    }
+    return shadow(elevation = elevation, shape = shape, clip = false, ambientColor = colors[ambient], spotColor = colors[spot])
+}
 
 /** The tint of a grade from the theme (glass.tint-clear, -mist, -veil), resolved at the hue. */
 private fun tint(colors: JfColors, grade: GlassGrade): Color = when (grade) {
@@ -180,6 +199,20 @@ fun Modifier.topEdgeFade(color: Color, height: Dp): Modifier = drawWithContent {
         size = size.copy(height = h),
     )
 }
+
+/**
+ * Fades what this draws out towards the floating chrome (Luminous): opaque until [fade] above
+ * [bottom] (measured from the bottom edge), transparent from there down, so rows scrolling under
+ * the mini-player and the tab bar fade out just above them and the glass shows the field.
+ */
+fun Modifier.fadeOutAbove(bottom: Dp, fade: Dp = Tokens.EdgeBlur.bottomHeight.dp): Modifier =
+    graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val end = size.height - bottom.toPx()
+            val start = end - fade.toPx()
+            drawRect(Brush.verticalGradient(listOf(Color.Black, Color.Transparent), startY = start, endY = end), blendMode = BlendMode.DstIn)
+        }
 
 /** [topEdgeFade] under the status bar and a little below it, in the field colour. */
 @Composable

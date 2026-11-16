@@ -20,6 +20,8 @@ import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreException
+import org.jellyfesh.logic.core.RemoteAction
+import org.jellyfesh.logic.core.RemoteDeviceKind
 import org.jellyfesh.logic.core.ScanStatus
 import org.jellyfesh.logic.core.Status
 import org.jellyfesh.logic.core.TrackQuery
@@ -168,12 +170,66 @@ class UniffiCoreClientTest {
             Command.SubmitLogin("p", 1, mapOf("a" to "b")),
             Command.CancelLogin("p", 1), Command.Logout("p"),
             Command.Search("tide", org.jellyfesh.logic.core.SearchScope.Plugin("p")), Command.Browse("p", null, 0),
+            Command.Remote(RemoteAction.Refresh), Command.Remote(RemoteAction.Transfer("d-1")),
+            Command.Remote(RemoteAction.SetVolume(64)), Command.Remote(RemoteAction.End),
         )
         val mapped = commands.map { FfiMapping.ffi(it) }
         assertEquals(commands.size, mapped.size)
         // Out-of-range values are clamped rather than wrapped.
         assertEquals(org.jellyfesh.ffi.Command.Seek(positionMs = 0uL), mapped[6])
         assertEquals(org.jellyfesh.ffi.Command.SetVolume(volume = 1f), mapped[7])
+        assertEquals(
+            org.jellyfesh.ffi.Command.Remote(org.jellyfesh.ffi.RemoteAction.SetVolume(percent = 100u)),
+            FfiMapping.ffi(Command.Remote(RemoteAction.SetVolume(140))),
+        )
+        assertEquals(org.jellyfesh.ffi.Command.Remote(org.jellyfesh.ffi.RemoteAction.Transfer(device = "d-1")), mapped[mapped.size - 3])
+        assertEquals(org.jellyfesh.ffi.Command.Remote(org.jellyfesh.ffi.RemoteAction.End), mapped.last())
+    }
+
+    @Test
+    fun theRemoteSliceAndLinksMapIntoTheShellsModel() {
+        val kitchen = org.jellyfesh.ffi.RemoteDevice("d-1", "Kitchen", org.jellyfesh.ffi.RemoteDeviceKind.SPEAKER, true, 64u)
+        val tv = org.jellyfesh.ffi.RemoteDevice("d-2", "Living Room", org.jellyfesh.ffi.RemoteDeviceKind.TV, false, null)
+        val item = org.jellyfesh.ffi.SourceItem(
+            source = "spotify",
+            kind = org.jellyfesh.ffi.ItemKind.TRACK,
+            id = "t-9",
+            title = "Gulls at Noon",
+            subtitle = "Saskia Merrowhill",
+            album = null,
+            durationMs = 178_000uL,
+            artwork = org.jellyfesh.ffi.ArtworkRef.Url("https://images.example/a.jpg"),
+            playable = true,
+            unplayableReason = null,
+            track = null,
+            alsoIn = emptyList(),
+            link = "https://open.example/track/9",
+        )
+        val slice = org.jellyfesh.ffi.RemoteSnapshot(
+            version = 4uL,
+            source = "spotify",
+            sourceName = "Spotify",
+            status = org.jellyfesh.ffi.Status.PLAYING,
+            item = item,
+            context = null,
+            anchor = org.jellyfesh.ffi.PlaybackAnchor(3uL, 42_000_000, 7uL, 1f, 180_000_000),
+            shuffle = true,
+            repeat = org.jellyfesh.ffi.RepeatMode.ONE,
+            device = kitchen,
+            devices = listOf(kitchen, tv),
+            error = null,
+        )
+        val event = with(FfiMapping) { org.jellyfesh.ffi.Event.Remote(slice).toLogic { PortLyricTimeline(it) } }
+        val remote = (event as CoreEvent.Remote).snapshot
+        assertEquals(4L, remote.version)
+        assertEquals("Spotify", remote.sourceName)
+        assertEquals(Status.Playing, remote.status)
+        assertEquals("https://open.example/track/9", remote.item?.link)
+        assertEquals(org.jellyfesh.logic.core.PlaybackAnchor(3, 42_000_000, 7, 1f, 180_000_000), remote.anchor)
+        assertEquals(org.jellyfesh.logic.core.RepeatMode.One, remote.repeat)
+        assertEquals(64, remote.device?.volumePercent)
+        assertEquals(listOf(RemoteDeviceKind.Speaker, RemoteDeviceKind.Tv), remote.devices.map { it.kind })
+        assertNull(remote.devices[1].volumePercent)
     }
 
     @Test

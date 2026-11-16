@@ -175,6 +175,11 @@ data class PluginSummary(
     val settingsSchemaJson: String,
     val settingsJson: String,
     val icon: String?,
+    /**
+     * Remote playback (ADR-0018): the service plays on the person's own devices and Jellyfesh is
+     * its remote control. Playing its songs starts a remote session; they never join the queue.
+     */
+    val remotePlayback: Boolean = false,
 )
 
 /**
@@ -247,6 +252,11 @@ data class SourceItem(
     val unplayableReason: String?,
     val track: TrackRef?,
     val alsoIn: List<String>,
+    /**
+     * An `https` link that opens the item in its service ("Open in {Service}"), when its source
+     * declares one; the main action of an item that cannot play here.
+     */
+    val link: String? = null,
 )
 
 data class SearchUpdate(
@@ -428,6 +438,8 @@ data class NowPlaying(
     val durationMs: Long?,
     val artwork: ArtworkRef?,
     val format: TrackInfo?,
+    /** Opens the track in its service, for source tracks whose plugin declares links. */
+    val link: String? = null,
 )
 
 // ---- lyrics --------------------------------------------------------------------------------------
@@ -489,6 +501,70 @@ data class LyricsSnapshot(
     val source: LyricsSource?,
 )
 
+// ---- remote sessions (ADR-0018) -------------------------------------------------------------------
+
+/** What a remote device is; the Devices sheet shows its kind's icon. */
+enum class RemoteDeviceKind { Computer, Smartphone, Speaker, Tv, Car, Other }
+
+/** A device a remote source can play on. */
+data class RemoteDevice(
+    val id: String,
+    val name: String,
+    val kind: RemoteDeviceKind,
+    /** The device playing (or last playing) for this account. */
+    val active: Boolean,
+    /** Its volume, 0–100, when it lets Jellyfesh change it; null hides the volume control. */
+    val volumePercent: Int?,
+)
+
+/**
+ * The Remote slice: the remote session while Jellyfesh controls a service's own player (a source
+ * with [PluginSummary.remotePlayback]). The player views show it instead of the engine's track
+ * while [source] is set.
+ */
+data class RemoteSnapshot(
+    val version: Long,
+    /** The source in control; null when there is no remote session. */
+    val source: String?,
+    /** That source's name, for "Open in {Service}" and the notes in Lyrics and Up Next. */
+    val sourceName: String?,
+    val status: Status,
+    /** The track playing, as the service reports it. */
+    val item: SourceItem?,
+    /** The album or playlist it plays from, when the service says. */
+    val context: SourceItem?,
+    /** Time base for the progress bar, like the Playback slice's. */
+    val anchor: PlaybackAnchor,
+    val shuffle: Boolean,
+    val repeat: RepeatMode,
+    /** The device playing. */
+    val device: RemoteDevice?,
+    /** Every device the service lists, for the Devices sheet. */
+    val devices: List<RemoteDevice>,
+    /** What went wrong last talking to the service, until a call succeeds. */
+    val error: String?,
+) {
+    /** Whether a remote session runs (the player views show it). */
+    val isActive: Boolean get() = source != null
+
+    companion object {
+        val Empty = RemoteSnapshot(
+            version = 0,
+            source = null,
+            sourceName = null,
+            status = Status.Stopped,
+            item = null,
+            context = null,
+            anchor = PlaybackAnchor.Zero,
+            shuffle = false,
+            repeat = RepeatMode.Off,
+            device = null,
+            devices = emptyList(),
+            error = null,
+        )
+    }
+}
+
 // ---- theme -------------------------------------------------------------------------------------
 
 enum class Appearance { Light, Dark }
@@ -522,4 +598,5 @@ data class CoreSnapshot(
     val devices: DevicesSnapshot,
     val sources: SourcesSnapshot,
     val muted: Boolean,
+    val remote: RemoteSnapshot = RemoteSnapshot.Empty,
 )

@@ -1,6 +1,7 @@
 package org.jellyfesh.android.system
 
 import android.app.ActivityManager
+import android.app.UiModeManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
@@ -12,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.view.WindowManager
 import org.jellyfesh.logic.settings.AppIcon
 import org.jellyfesh.logic.settings.AppIcons
 
@@ -77,15 +79,16 @@ enum class GlassTier {
     /** API 31-32: uniform blur; progressive edges become a gradient scrim. */
     Uniform,
 
-    /** API < 31: no blur; Misty Cloud at the dialog glass alpha (86 %), so the field shows faintly. */
-    Translucent,
-
-    /** Low-RAM, battery saver or reduce effects: solid Misty Cloud, no blur (MAT-08). */
+    /**
+     * Solid Misty Cloud, no blur (MAT-08): Android before 12 (Luminous blurs only from 12), low-RAM
+     * devices, battery saver, Reduce Motion and Transparency, and the system's own equivalents.
+     */
     Solid,
 }
 
 /** The device-side inputs of motion and glass decisions. */
 object DeviceEffects {
+    /** Pass the activity's context: the window manager's blur state belongs to a window. */
     fun glassTier(context: Context, reduceEffects: Boolean): GlassTier {
         val activity = context.getSystemService(ActivityManager::class.java)
         val power = context.getSystemService(PowerManager::class.java)
@@ -93,10 +96,28 @@ object DeviceEffects {
             reduceEffects -> GlassTier.Solid
             activity?.isLowRamDevice == true -> GlassTier.Solid
             power?.isPowerSaveMode == true -> GlassTier.Solid
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> GlassTier.Translucent
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> GlassTier.Solid
+            systemReducesTransparency(context) -> GlassTier.Solid
             Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU -> GlassTier.Uniform
             else -> GlassTier.Progressive
         }
+    }
+
+    /**
+     * Android's equivalents of "reduce transparency": blur turned off for the system (the
+     * accessibility "Reduce blur" setting and the developer option "Allow window-level blurs";
+     * also off in battery saver or on GPUs that cannot afford it, API 31+), and more colour
+     * contrast asked for (API 34+).
+     */
+    fun systemReducesTransparency(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+        val window = context.getSystemService(WindowManager::class.java)
+        if (window != null && !window.isCrossWindowBlurEnabled) return true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val contrast = context.getSystemService(UiModeManager::class.java)?.contrast ?: 0f
+            if (contrast > 0f) return true
+        }
+        return false
     }
 
     /** The system's "remove animations" (animator duration scale 0). */

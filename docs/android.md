@@ -1,4 +1,4 @@
-# The Android app (v0.0.5)
+# The Android app (v0.0.6)
 
 Kotlin and Jetpack Compose over the Rust core through the UniFFI Kotlin bindings
 (docs/ffi.md). minSdk 26 (cpal's AAudio output, ADR-0009), compileSdk and targetSdk 37.
@@ -10,6 +10,54 @@ APK has never been built and the app has never run. The parts that need no Andro
 and tested here (`:logic`), the FFI adapter is compiled and run against the real core on the
 JVM (`:ffi-check`), and the whole app except the Media3 session is compiled on the JVM against
 stand-ins (`:ui-check`). The first CI build is the first real compile; see "Risks" below.
+
+## v0.0.6: links, remote playback and Luminous
+
+What docs/ui.md's "Links and remote playback" and "Luminous" ask of phones, with the rules in
+`:logic` and tested (`player/RemoteModel.kt`, `player/PlayerModel.kt`, `sources/Links.kt`,
+`library/LibraryModel.kt`, `theme/Luminous.kt`).
+
+* **Links.** `SourceItem.link` and `NowPlaying.link` map into the models; only `https` links are
+  ever handed to the system (`Links.openable`, scheme lower-cased). Open in {Service} (the plugin's
+  name) is in the song menu after Go to Artist, in the More menu of a source's album, artist or
+  playlist (search rows and the browse page), in Now Playing's More and under About This Song.
+  It starts `ACTION_VIEW` (category browsable), so the service's own app opens the link when it
+  handles it, else the browser; nothing installed to open it gives a short message. A source row
+  that cannot play here but has a link opens it as its main action, beside its reason, with the
+  external glyph at its end (`SourceItems.mainAction`).
+* **Remote playback.** `CoreState.remote` mirrors the Remote slice (versioned like the others).
+  While it has a source, the mini-player, the player bar and Now Playing show the service's song
+  (`PlayerModel.track`) with "Playing on {Device}" and the last error in a quieter line; progress
+  comes from the session's anchor through the one ticker; the transport sends the usual commands.
+  The device button opens Devices (it sends `Remote { Refresh }`; the list follows the slice; kind
+  glyphs; the playing device checked; choosing another sends `Transfer`). The volume sets the
+  playing device's volume when the finger lifts and is hidden when the device has none; More holds
+  Open in {Service} and Stop Controlling. Lyrics and Queue say "Lyrics aren't shown while
+  {Service} plays." and "Up Next is in {Service}."; the Now Playing backdrop is the Misty field
+  (the core bakes none for the service's song). The store forwards the slice that ends a session
+  on its signal stream, so an ending error shows once as a message, even when the session ends
+  right after it starts. A remote source's songs and lists never offer Play Next, Play Last or Add
+  to Playlist. The system media session still shows the engine (`SessionModels` is unchanged).
+* **Luminous.** The field draws four larger glows at `field.aurora-strength` (75 %) on every
+  screen. The tab bar and the mini-player are floating Veil capsules (68 dp, and a 64 dp pill with
+  round artwork) and the screens fade out just above them (`fadeOutAbove`, an offscreen layer
+  masked with `DstIn`). Settings groups, source panels and Home's lists are Mist-tinted surfaces
+  with the edge and shadow-1, without live blur (`GlassSurface(blur = false)`). Now Playing: the
+  Artwork backdrop, artwork with shadow-3, a title from 24 sp on phones to 32 sp, lyrics on the
+  token's fluid range (28 to 40 sp) with inactive lines at 92 % and the cascade 40 ms apart, round
+  glass top controls (tint only) and every control in one floating Veil dock: a rounded card on
+  phones, an 80 dp bar with radius 40 on wide windows. Page titles are `type.text-h1` (48) where
+  the window allows and its fluid minimum (38.4) on phones; grid covers have radius 16 and
+  shadow-2 and lift 4 dp on hover or focus. Blur runs only on Android 12 and later; before that,
+  and with battery saver, low RAM, Reduce Motion and Transparency, the system's blur turned off
+  (`WindowManager.isCrossWindowBlurEnabled`) or more contrast asked for (`UiModeManager.getContrast`,
+  Android 14+), glass is solid Cloud. These and "Remove animations" are read again whenever the
+  app returns to the foreground; Compose scales every animation by the system's animation scale.
+  Live blur layers: the tab bar and the mini-player on library screens, the dock on Now Playing.
+
+**Checked for this pass:** `:logic` 168 tests pass, `:ffi-check` 5 tests pass against the core
+built from this release (bindings and tokens regenerated), and `:ui-check` compiles with no
+errors. The app itself was not built here (no Android SDK), and nothing ran on a device.
 
 ## v0.0.4 design pass
 

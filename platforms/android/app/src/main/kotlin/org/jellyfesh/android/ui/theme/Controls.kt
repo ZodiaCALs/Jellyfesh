@@ -246,27 +246,6 @@ fun PlayPauseGlyph(playing: Boolean, tint: Color, size: Dp) {
     }
 }
 
-/** Previous, play and next grouped in one glass capsule (Controls D). */
-@Composable
-fun TransportCapsule(
-    playing: Boolean,
-    playDescription: String,
-    previousDescription: String,
-    nextDescription: String,
-    onPrevious: () -> Unit,
-    onPlayPause: () -> Unit,
-    onNext: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    GlassSurface(modifier, grade = GlassGrade.Veil, shape = CircleShape, floating = true) {
-        Row(Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            JfIconButton(R.drawable.ic_previous, previousDescription, onPrevious, tint = Jf.colors.ink90, size = 52.dp, iconSize = 24.dp)
-            PlayPauseButton(playing, playDescription, onPlayPause)
-            JfIconButton(R.drawable.ic_next, nextDescription, onNext, tint = Jf.colors.ink90, size = 52.dp, iconSize = 24.dp)
-        }
-    }
-}
-
 /**
  * The seek bar of v0.0.4 (docs/design-controls.md): a straight line with round caps and times at
  * both ends, the played part ink-90 over ink-30 (the caller passes `line-strong` on plain
@@ -426,10 +405,10 @@ fun VolumeBar(
     muted: Boolean,
     description: String,
     valueText: String,
-    muteDescription: String,
+    muteDescription: String?,
     onVolume: (Float) -> Unit,
     onVolumeEnd: () -> Unit,
-    onToggleMute: () -> Unit,
+    onToggleMute: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val colors = Jf.colors
@@ -449,7 +428,12 @@ fun VolumeBar(
     val thickness by animateFloatAsState(SeekGeometry.thickness(state, touch), JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "volume")
     val thumb by animateFloatAsState(if (SeekGeometry.showsThumb(state, touch)) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "volume-thumb")
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        JfIconButton(R.drawable.ic_volume_low, muteDescription, onToggleMute, tint = colors.ink50, size = 40.dp, iconSize = 18.dp)
+        if (muteDescription != null && onToggleMute != null) {
+            JfIconButton(R.drawable.ic_volume_low, muteDescription, onToggleMute, tint = colors.ink50, size = 40.dp, iconSize = 18.dp)
+        } else {
+            // A remote device has no mute: the low glyph only marks the line's quiet end.
+            JfIcon(R.drawable.ic_volume_low, colors.ink50, Modifier.padding(horizontal = 11.dp), size = 18.dp)
+        }
         var widthPx by remember { mutableFloatStateOf(1f) }
         val density = androidx.compose.ui.platform.LocalDensity.current.density
         fun at(x: Float): Float = SeekGeometry.fractionAt(x / density, widthPx / density, touch, rtl)
@@ -520,15 +504,16 @@ fun VolumeBar(
 
 /**
  * The mini-player's progress (v0.0.4): a straight 2 dp line along the capsule's bottom edge,
- * inset by its corners (player.mini-radius), read in the draw phase so it redraws without
- * recomposing. Decorative: the capsule's button carries the state for TalkBack.
+ * inset by its corners ([inset]: player.mini-radius, or the Luminous pill's round ends), read in
+ * the draw phase so it redraws without recomposing. Decorative: the capsule's button carries the
+ * state for TalkBack.
  */
 @Composable
-fun MiniProgressLine(fraction: () -> Float, modifier: Modifier = Modifier) {
+fun MiniProgressLine(fraction: () -> Float, modifier: Modifier = Modifier, inset: Dp = SeekGeometry.MINI_RADIUS.dp) {
     val colors = Jf.colors
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     Canvas(modifier.fillMaxWidth().height(SeekGeometry.MINI_PROGRESS.dp)) {
-        val inset = SeekGeometry.MINI_RADIUS.dp.toPx()
+        val inset = inset.toPx()
         val cy = size.height / 2f
         val length = (size.width - 2 * inset).coerceAtLeast(0f)
         drawLine(colors.ink10, Offset(inset, cy), Offset(inset + length, cy), size.height, StrokeCap.Round)

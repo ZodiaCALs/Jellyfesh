@@ -54,8 +54,10 @@ import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.library.barFade
 import org.jellyfesh.android.ui.library.listPadding
 import org.jellyfesh.android.ui.nav.LocalNav
+import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.search.SourceItemRow
-import org.jellyfesh.android.ui.search.openSourceItem
+import org.jellyfesh.android.ui.search.runItemAction
+import org.jellyfesh.android.ui.search.sourceItemMenu
 import org.jellyfesh.android.ui.signals.describeFailure
 import org.jellyfesh.android.ui.theme.Badge
 import org.jellyfesh.android.ui.theme.ButtonStyle
@@ -69,6 +71,7 @@ import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.android.ui.theme.topEdgeFade
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.BrowseUpdate
+import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.PluginBadge
@@ -79,6 +82,7 @@ import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.sources.AuthFlow
 import org.jellyfesh.logic.sources.Disclosure
+import org.jellyfesh.logic.sources.SourceItems
 import org.jellyfesh.logic.state.CoreState
 
 /**
@@ -433,12 +437,14 @@ private fun signInIcon(method: AuthMethod): Int = when (method) {
 
 /**
  * A source's own folders and lists (`Command.Browse`), page by page: the core answers with a
- * BrowsePage event for the request id `send` returned.
+ * BrowsePage event for the request id `send` returned. An album, artist or playlist has a More
+ * menu (Play, Shuffle, Play Next and Play Last, and Open in {Service} with its [link]).
  */
 @Composable
-fun SourceBrowseScreen(pluginId: String, node: String?, title: String, state: CoreState) {
+fun SourceBrowseScreen(pluginId: String, node: String?, title: String, link: String?, state: CoreState) {
     val graph = LocalGraph.current
     val nav = LocalNav.current
+    val actions = rememberTrackActions()
     val context = LocalContext.current
     var items by remember(pluginId, node) { mutableStateOf<List<SourceItem>>(emptyList()) }
     var nextPage by remember(pluginId, node) { mutableStateOf<Int?>(0) }
@@ -476,9 +482,11 @@ fun SourceBrowseScreen(pluginId: String, node: String?, title: String, state: Co
         LazyColumn(Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
             item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
             item(key = "title") { ScreenTitle(title) }
-            val playable = items.mapNotNull { it.track }
             itemsIndexed(items, key = { i, it -> "$i-${it.id}" }) { _, item ->
-                SourceItemRow(item, playing) { openSourceItem(item, playable, graph::send) { nav.push(it) } }
+                val action = SourceItems.mainAction(item, items)
+                SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
+                    runItemAction(action, graph::send, nav::push, actions::openLink)
+                }
             }
             val e = error
             if (e != null) item(key = "error") { Notice(e, warning = true) }
@@ -490,6 +498,12 @@ fun SourceBrowseScreen(pluginId: String, node: String?, title: String, state: Co
                 items.isEmpty() && e == null -> item(key = "empty") { EmptyState(R.drawable.ic_folder, stringResource(R.string.browse_empty), null) }
             }
         }
-        BackBar(onBack = nav::back, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars))
+        BackBar(onBack = nav::back, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+            if (node != null) {
+                JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
+                    actions.showForCollection(title, null, CollectionRef.Source(pluginId, node), link = link)
+                }, tint = Jf.colors.ink90)
+            }
+        }
     }
 }

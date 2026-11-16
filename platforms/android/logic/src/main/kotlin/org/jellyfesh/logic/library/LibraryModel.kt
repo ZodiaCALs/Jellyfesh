@@ -100,18 +100,29 @@ object HomeModel {
 }
 
 /** The items of a song's menu (long press or More), in the order every app lists them. */
-enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist }
+enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist, OpenLink }
 
 object TrackMenu {
     /**
-     * The song menu (docs/ui.md, "Song menu"): Play Next, Play Last, Add to Playlist… (songs a
-     * playlist can hold), Add to or Remove from Favourites (when the favourite state is known),
-     * Go to Album and Go to Artist (when the library has them).
+     * The song menu (docs/ui.md, "Song menu" and "Links and remote playback"): Play Next, Play
+     * Last and Add to Playlist… (songs a playlist can hold), none of them for a remote source's
+     * songs, which never join the queue; Add to or Remove from Favourites (when the favourite
+     * state is known); Go to Album and Go to Artist (when the library has them); then Open in
+     * {Service} when the song has a link.
      */
-    fun items(track: TrackRef, favourite: Boolean?, hasAlbum: Boolean, hasArtist: Boolean): List<TrackMenuItem> = buildList {
-        add(TrackMenuItem.PlayNext)
-        add(TrackMenuItem.PlayLast)
-        if (CollectionTracks.playlistCanHold(track)) add(TrackMenuItem.AddToPlaylist)
+    fun items(
+        track: TrackRef,
+        favourite: Boolean?,
+        hasAlbum: Boolean,
+        hasArtist: Boolean,
+        remote: Boolean = false,
+        hasLink: Boolean = false,
+    ): List<TrackMenuItem> = buildList {
+        if (!remote) {
+            add(TrackMenuItem.PlayNext)
+            add(TrackMenuItem.PlayLast)
+            if (CollectionTracks.playlistCanHold(track)) add(TrackMenuItem.AddToPlaylist)
+        }
         when (favourite) {
             true -> add(TrackMenuItem.RemoveFromFavourites)
             false -> add(TrackMenuItem.AddToFavourites)
@@ -119,5 +130,30 @@ object TrackMenu {
         }
         if (hasAlbum) add(TrackMenuItem.GoToAlbum)
         if (hasArtist) add(TrackMenuItem.GoToArtist)
+        if (hasLink) add(TrackMenuItem.OpenLink)
+    }
+}
+
+/** The items of an album's, artist's or playlist's More menu, before a playlist's own (Rename… and on). */
+enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, OpenLink }
+
+object CollectionMenu {
+    /**
+     * The More menu of an album, artist or playlist (docs/ui.md, "Album, artist and playlist
+     * pages"): Play and Shuffle where the list has no buttons for them ([withPlay]); Play Next and
+     * Play Last, except for a remote source's (its songs never join the queue); Add to Playlist…
+     * when the songs can be gathered here; then Open in {Service} when it has a link.
+     */
+    fun items(collection: CollectionRef, withPlay: Boolean, remote: Boolean = false, hasLink: Boolean = false): List<CollectionMenuItem> = buildList {
+        if (withPlay) {
+            add(CollectionMenuItem.Play)
+            add(CollectionMenuItem.Shuffle)
+        }
+        if (!remote) {
+            add(CollectionMenuItem.PlayNext)
+            add(CollectionMenuItem.PlayLast)
+            if (CollectionTracks.canAdd(collection)) add(CollectionMenuItem.AddToPlaylist)
+        }
+        if (hasLink) add(CollectionMenuItem.OpenLink)
     }
 }

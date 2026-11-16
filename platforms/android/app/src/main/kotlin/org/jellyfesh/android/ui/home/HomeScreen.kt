@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
@@ -26,8 +25,10 @@ import org.jellyfesh.android.ui.LocalChromePadding
 import org.jellyfesh.android.ui.actions.TrackTarget
 import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.components.AlbumCard
+import org.jellyfesh.android.ui.components.Divider
 import org.jellyfesh.android.ui.components.EmptyState
 import org.jellyfesh.android.ui.components.Notice
+import org.jellyfesh.android.ui.components.Panel
 import org.jellyfesh.android.ui.components.ScreenTitle
 import org.jellyfesh.android.ui.components.SectionHeader
 import org.jellyfesh.android.ui.components.TrackRow
@@ -131,7 +132,10 @@ fun HomeScreen(state: CoreState) {
     }
 }
 
-/** A titled list of rows; tapping one plays the list from there. */
+/**
+ * A titled list of rows on one grouped surface (Luminous: the Mist tint, edge and shadow-1; at
+ * most [RECENT_ROWS] rows, so they are laid out at once); tapping one plays the list from there.
+ */
 private fun androidx.compose.foundation.lazy.LazyListScope.trackSection(
     key: String,
     result: QueryResult<List<CoreTrackRow>>,
@@ -144,17 +148,22 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trackSection(
     if (rows.isEmpty()) return
     item(key = "$key-h") { SectionHeader(stringResource(title)) }
     val refs = rows.map { it.track }
-    itemsIndexed(rows, key = { i, row -> "$key-$i-${row.track}" }) { index, row ->
-        TrackRow(
-            title = row.title,
-            subtitle = Labels.artistAlbum(row.artist, row.album),
-            art = ArtKey.ofHash(row.artworkHash) ?: ArtKey.of(row.artwork),
-            durationMs = row.durationMs,
-            playing = row.track == playing,
-            missing = row.missing,
-            favorite = row.favorite,
-            onClick = { send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
-            onMore = { more(TrackTarget(row.track, row.title, Labels.artistAlbum(row.artist, row.album), favorite = row.favorite, artist = row.artist)) },
-        )
+    item(key = key) {
+        Panel {
+            rows.forEachIndexed { index, row ->
+                if (index > 0) Divider()
+                TrackRow(
+                    title = row.title,
+                    subtitle = Labels.artistAlbum(row.artist, row.album),
+                    art = ArtKey.ofHash(row.artworkHash) ?: ArtKey.of(row.artwork),
+                    durationMs = row.durationMs,
+                    playing = row.track == playing,
+                    missing = row.missing,
+                    favorite = row.favorite,
+                    onClick = { send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
+                    onMore = { more(TrackTarget(row.track, row.title, Labels.artistAlbum(row.artist, row.album), favorite = row.favorite, artist = row.artist)) },
+                )
+            }
+        }
     }
 }

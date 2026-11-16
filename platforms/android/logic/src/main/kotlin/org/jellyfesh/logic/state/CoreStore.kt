@@ -16,6 +16,7 @@ import org.jellyfesh.logic.core.LyricsSnapshot
 import org.jellyfesh.logic.core.NowPlaying
 import org.jellyfesh.logic.core.PlaybackSnapshot
 import org.jellyfesh.logic.core.QueueSnapshot
+import org.jellyfesh.logic.core.RemoteSnapshot
 import org.jellyfesh.logic.core.ScanStatus
 import org.jellyfesh.logic.core.Settings
 import org.jellyfesh.logic.core.SourcesSnapshot
@@ -39,6 +40,8 @@ data class CoreState(
     val settings: Settings = Settings(),
     val devices: DevicesSnapshot = DevicesSnapshot.Empty,
     val sources: SourcesSnapshot = SourcesSnapshot.Empty,
+    /** The remote session (ADR-0018); the player views show it while it has a source. */
+    val remote: RemoteSnapshot = RemoteSnapshot.Empty,
     val muted: Boolean = false,
     /** The uid a source is buffering, if any. */
     val bufferingUid: Long? = null,
@@ -72,6 +75,8 @@ object CoreReducer {
             if (event.snapshot.version >= state.devices.version) state.copy(devices = event.snapshot) else state
         is CoreEvent.Sources ->
             if (event.snapshot.version >= state.sources.version) state.copy(sources = event.snapshot) else state
+        is CoreEvent.Remote ->
+            if (event.snapshot.version >= state.remote.version) state.copy(remote = event.snapshot) else state
         is CoreEvent.Buffering -> when {
             event.buffering -> state.copy(bufferingUid = event.uid)
             state.bufferingUid == event.uid -> state.copy(bufferingUid = null)
@@ -97,8 +102,16 @@ object CoreReducer {
         settings = snapshot.settings,
         devices = newer(state.devices, snapshot.devices) { it.version },
         sources = newer(state.sources, snapshot.sources) { it.version },
+        remote = newer(state.remote, snapshot.remote) { it.version },
         muted = snapshot.muted,
     )
+
+    /**
+     * Whether going from [before] to [after] ends a remote session: the slice had a source and
+     * now has none. Its `error`, when set ("Sign in to Spotify again."), is shown once.
+     */
+    fun endsRemoteSession(before: RemoteSnapshot, after: RemoteSnapshot): Boolean =
+        before.source != null && after.source == null
 
     private inline fun <T> newer(current: T, incoming: T, version: (T) -> Long): T =
         if (version(incoming) >= version(current)) incoming else current
@@ -117,7 +130,11 @@ class CoreStore {
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
 
-    /** Search results, sign-in steps, browse pages, failures and toasts, as they arrive. */
+    /**
+     * Search results, sign-in steps, browse pages, failures and toasts, as they arrive; and the
+     * Remote slice that ends a remote session ([CoreReducer.endsRemoteSession]), so its error is
+     * shown once even when the session ends right after it starts.
+     */
     val signals: SharedFlow<CoreEvent> = _signals.asSharedFlow()
 
     /** Listens to [client] and loads its snapshot (set the listener first, then read). */
@@ -128,7 +145,10 @@ class CoreStore {
     }
 
     fun onEvent(event: CoreEvent) {
-        _state.update { CoreReducer.reduce(it, event) }
-        if (event.isSignal) _signals.tryEmit(event)
+        var endsSession = false
+        _state.update { before ->
+            CoreReducer.reduce(before, event).also { after -> endsSession = CoreReducer.endsRemoteSession(before.remote, after.remote) }
+        }
+        if (event.isSignal || endsSession) _signals.tryEmit(event)
     }
 }

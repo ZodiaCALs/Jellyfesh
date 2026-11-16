@@ -3,11 +3,37 @@ package org.jellyfesh.logic.player
 import org.jellyfesh.logic.core.ArtworkRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.DevicesSnapshot
+import org.jellyfesh.logic.core.NowPlaying
 import org.jellyfesh.logic.core.PlaybackAnchor
 import org.jellyfesh.logic.core.RepeatMode
 import org.jellyfesh.logic.core.Status
+import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.format.Labels
+import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.state.CoreState
+
+/**
+ * The track the player views show (the mini-player, the player bar and Now Playing): the engine's,
+ * or the remote session's while one runs (docs/ui.md, "Links and remote playback").
+ */
+data class PlayerTrack(
+    /** Changes with the track: what the views remember per track keys on it. */
+    val key: String,
+    val title: String,
+    val artist: String?,
+    val album: String?,
+    /** A cached file for library tracks; a URL (shown as the placeholder) for online ones. */
+    val artwork: ArtworkRef?,
+    /** Opens the track in its service ("Open in {Service}"); only `https` links. */
+    val link: String?,
+    /** The source the track comes from (a plugin id), for the service's name; null for local tracks. */
+    val source: String?,
+    /** The engine's entry; null for the remote session's track. */
+    val local: NowPlaying?,
+) {
+    /** `Artist · Album`, either part alone, or null. */
+    val subtitle: String? get() = Labels.artistAlbum(artist, album)
+}
 
 /** Small derived values the player views share. */
 object PlayerModel {
@@ -20,9 +46,61 @@ object PlayerModel {
 
     fun isPlaying(status: Status): Boolean = status == Status.Playing
 
-    /** The track's duration: the anchor's once the engine knows it, else the tags'. */
-    fun durationUs(state: CoreState): Long? =
+    /**
+     * What the player views show: while the Remote slice has a source, the service's track (or,
+     * before the service names one, the service itself); else the engine's; null for nothing.
+     */
+    fun track(state: CoreState): PlayerTrack? {
+        val remote = state.remote
+        val source = remote.source
+        if (source != null) {
+            val item = remote.item
+            return PlayerTrack(
+                key = "remote:$source:${item?.id.orEmpty()}",
+                title = item?.title ?: RemoteModel.serviceName(remote, state.sources),
+                artist = item?.subtitle,
+                album = item?.album,
+                artwork = item?.artwork,
+                link = Links.openable(item?.link),
+                source = source,
+                local = null,
+            )
+        }
+        val now = state.nowPlaying ?: return null
+        return PlayerTrack(
+            key = "np:${now.uid}",
+            title = now.title,
+            artist = now.artist,
+            album = now.album,
+            artwork = now.artwork,
+            link = Links.openable(now.link),
+            source = (now.track as? TrackRef.Source)?.track?.plugin,
+            local = now,
+        )
+    }
+
+    /** Whether the player shows a remote session (its controls reach the service's player). */
+    fun isRemote(state: CoreState): Boolean = state.remote.isActive
+
+    /** Playing, paused or stopped: the remote session's while one runs, else the engine's. */
+    fun status(state: CoreState): Status = if (state.remote.isActive) state.remote.status else state.playback.status
+
+    /** The time base views draw progress and lyrics from (fed to the one ticker). */
+    fun anchor(state: CoreState): PlaybackAnchor = if (state.remote.isActive) state.remote.anchor else state.playback.anchor
+
+    fun shuffle(state: CoreState): Boolean = if (state.remote.isActive) state.remote.shuffle else state.queue.shuffle
+
+    fun repeat(state: CoreState): RepeatMode = if (state.remote.isActive) state.remote.repeat else state.queue.repeat
+
+    /**
+     * The track's duration: the anchor's once it is known, else the tags' (the engine's track) or
+     * the service's (the remote session's).
+     */
+    fun durationUs(state: CoreState): Long? = if (state.remote.isActive) {
+        state.remote.anchor.durationUs ?: state.remote.item?.durationMs?.let { it * 1_000 }
+    } else {
         state.playback.anchor.durationUs ?: state.nowPlaying?.durationMs?.let { it * 1_000 }
+    }
 
     /** The chosen output device's name, or null when following the system default. */
     fun deviceName(devices: DevicesSnapshot): String? {

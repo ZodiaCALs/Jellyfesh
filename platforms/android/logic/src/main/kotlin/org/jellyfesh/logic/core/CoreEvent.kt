@@ -13,6 +13,8 @@ sealed interface CoreEvent {
     data class SettingsChanged(val snapshot: Settings) : CoreEvent
     data class Devices(val snapshot: DevicesSnapshot) : CoreEvent
     data class Sources(val snapshot: SourcesSnapshot) : CoreEvent
+    /** The remote session changed (ADR-0018). */
+    data class Remote(val snapshot: RemoteSnapshot) : CoreEvent
     data class Auth(val update: AuthUpdate) : CoreEvent
     data class SearchResults(val update: SearchUpdate) : CoreEvent
     data class BrowsePage(val update: BrowseUpdate) : CoreEvent

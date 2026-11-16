@@ -47,6 +47,7 @@ import kotlinx.coroutines.delay
 import org.jellyfesh.android.QueryResult
 import org.jellyfesh.android.R
 import org.jellyfesh.android.images.ArtKey
+import org.jellyfesh.android.ui.actions.TrackActions
 import org.jellyfesh.android.ui.actions.TrackTarget
 import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.components.AlbumCard
@@ -78,6 +79,8 @@ import org.jellyfesh.logic.images.ArtworkSizes
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.search.SearchModel
 import org.jellyfesh.logic.search.SearchState
+import org.jellyfesh.logic.sources.ItemAction
+import org.jellyfesh.logic.sources.SourceItems
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.tokens.Tokens
 
@@ -211,10 +214,10 @@ fun SearchScreen(state: CoreState) {
                 item(key = "src-${section.source}-$kind") {
                     JfText(stringResource(kindLabel(kind)), style = JfType.label, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                 }
-                val playable = items.mapNotNull { it.track }
                 itemsIndexed(items, key = { i, it -> "src-${section.source}-$kind-$i-${it.id}" }) { _, item ->
-                    SourceItemRow(item, playing) {
-                        openSourceItem(item, playable, graph::send) { nav.push(it) }
+                    val action = SourceItems.mainAction(item, items)
+                    SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
+                        runItemAction(action, graph::send, nav::push, actions::openLink)
                     }
                 }
             }
@@ -227,13 +230,36 @@ fun SearchScreen(state: CoreState) {
     }
 }
 
-/** Plays a source track (with the other playable rows of its list), or opens a container. */
-fun openSourceItem(item: SourceItem, playable: List<TrackRef>, send: (Command) -> Long, push: (Screen) -> Unit) {
+/**
+ * Does what choosing a source row does ([SourceItems.mainAction]): plays a song with the other
+ * playable songs of its list, opens a container, or opens the link of an item that cannot play
+ * here (Open in {Service}).
+ */
+fun runItemAction(action: ItemAction, send: (Command) -> Long, push: (Screen) -> Unit, openLink: (String) -> Unit) {
+    when (action) {
+        is ItemAction.Play -> send(Command.PlayTracks(action.tracks, action.start))
+        is ItemAction.Browse -> push(Screen.SourceBrowse(action.plugin, action.node, action.title, action.link))
+        is ItemAction.OpenLink -> openLink(action.url)
+        ItemAction.None -> Unit
+    }
+}
+
+/**
+ * The More menu of a source row, or null when it would be empty: the song menu for a song that
+ * plays here, the More menu of an album, artist or playlist that does, and for an item that
+ * cannot play here only Open in {Service} (when it has a link).
+ */
+fun sourceItemMenu(item: SourceItem, actions: TrackActions): (() -> Unit)? {
     val track = item.track
-    when {
-        track != null && item.playable -> send(Command.PlayTracks(playable, playable.indexOf(track).coerceAtLeast(0)))
-        item.kind == ItemKind.Album || item.kind == ItemKind.Playlist || item.kind == ItemKind.Folder || item.kind == ItemKind.Artist ->
-            push(Screen.SourceBrowse(item.source, item.id, item.title))
+    val subtitle = Labels.artistAlbum(item.subtitle, item.album)
+    return when {
+        item.playable && track != null -> {
+            { actions.showFor(TrackTarget(track, item.title, subtitle, artist = item.subtitle, link = item.link, source = item.source)) }
+        }
+        item.playable && (item.kind == ItemKind.Album || item.kind == ItemKind.Playlist || item.kind == ItemKind.Artist) -> {
+            { actions.showForCollection(item.title, subtitle, CollectionRef.Source(item.source, item.id), link = item.link) }
+        }
+        else -> actions.openLinkAction(item.link, item.source)?.let { open -> { actions.showSheetActions(item.title, item.unplayableReason ?: subtitle, listOf(open)) } }
     }
 }
 
@@ -245,26 +271,42 @@ fun kindLabel(kind: ItemKind): Int = when (kind) {
     ItemKind.Folder -> R.string.kind_folders
 }
 
-/** A result from an online source: playable rows play, containers open; unplayable rows say why. */
+/**
+ * A result from an online source: playable rows play and containers open ([action]); a row that
+ * cannot play here says why, dimmed, and opens its link in its service when it has one (with the
+ * external glyph at its end).
+ */
 @Composable
-fun SourceItemRow(item: SourceItem, playing: TrackRef?, onClick: () -> Unit) {
+fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMore: (() -> Unit)?, onClick: () -> Unit) {
     val subtitle = when {
         !item.playable && item.unplayableReason != null -> item.unplayableReason
         item.alsoIn.isNotEmpty() -> listOfNotNull(item.subtitle, stringResource(R.string.search_also_in, item.alsoIn.joinToString())).joinToString(" · ")
         else -> Labels.artistAlbum(item.subtitle, item.album)
     }
+    val opensLink = action is ItemAction.OpenLink
     if (item.kind == ItemKind.Track) {
+        val openIn = if (opensLink) rememberTrackActions().openInLabel(item.source) else null
         TrackRow(
             title = item.title,
             subtitle = subtitle,
             art = ArtKey.of(item.artwork),
             durationMs = item.durationMs,
             playing = item.track != null && item.track == playing,
-            missing = !item.playable,
+            dimmed = !item.playable,
+            enabled = action != ItemAction.None,
             onClick = onClick,
+            onMore = onMore,
+            trailing = openIn?.let { label -> { JfIcon(R.drawable.ic_external, Jf.colors.ink50, size = 18.dp, description = label) } },
         )
     } else {
-        NavRow(item.title, subtitle, onClick = onClick, leading = { InitialTile(item.title, icon = kindIcon(item.kind)) })
+        NavRow(
+            item.title,
+            subtitle,
+            onClick = onClick,
+            leading = { InitialTile(item.title, icon = kindIcon(item.kind)) },
+            onMore = onMore,
+            trailingIcon = if (opensLink) R.drawable.ic_external else R.drawable.ic_chevron_right,
+        )
     }
 }
 

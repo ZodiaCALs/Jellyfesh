@@ -28,6 +28,9 @@ object JfType {
 
     // Misty interface scale. Large titles (v0.0.4, after Apple Music): type.text-h2, bold.
     val title = style(Tokens.TypeScale.textH2, 1.1f, 700)
+
+    /** Page titles (Luminous: type.text-h1, bold) at [size] for the window ([org.jellyfesh.logic.theme.Luminous.pageTitleSp]). */
+    fun pageTitle(size: Float): TextStyle = style(size, 1.05f, 700)
     val heading = style(20f, 1.2f, 700)
     val body = style(16f, 1.7f, 400)
     val small = style(14f, 1.6f, 400)

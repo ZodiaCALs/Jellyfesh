@@ -442,4 +442,20 @@
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>
     </plurals>
+
+    <!-- v0.0.6: item links and remote playback (docs/ui.md, "Links and remote playback"). -->
+    <string name="action_open_in">Open in %1$s</string>
+    <string name="link_no_app">No app on this phone can open this link.</string>
+    <string name="remote_playing_on">Playing on %1$s</string>
+    <string name="remote_devices">Devices</string>
+    <string name="remote_no_devices">No devices yet. Open %1$s on a phone, computer or speaker, then look again.</string>
+    <string name="remote_stop">Stop Controlling</string>
+    <string name="remote_lyrics">Lyrics aren’t shown while %1$s plays.</string>
+    <string name="remote_queue">Up Next is in %1$s.</string>
+    <string name="device_computer">Computer</string>
+    <string name="device_smartphone">Phone</string>
+    <string name="device_speaker">Speaker</string>
+    <string name="device_tv">TV</string>
+    <string name="device_car">Car</string>
+    <string name="device_other">Device</string>
 </resources>

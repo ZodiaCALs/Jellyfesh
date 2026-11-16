@@ -22,7 +22,8 @@ sealed interface Screen {
     data class Artist(val id: Long, val name: String) : Screen
     data class Playlist(val id: Long, val name: String) : Screen
     data class Source(val pluginId: String) : Screen
-    data class SourceBrowse(val pluginId: String, val node: String?, val title: String) : Screen
+    /** A source's catalogue: its root ([node] null) or an album, artist, playlist or folder with its Open in {Service} [link]. */
+    data class SourceBrowse(val pluginId: String, val node: String?, val title: String, val link: String? = null) : Screen
     data class Settings(val section: SettingsSection? = null) : Screen
 }
 

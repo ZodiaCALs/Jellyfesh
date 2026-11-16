@@ -13,3 +13,6 @@ val LocalAuthRedirects = staticCompositionLocalOf<SharedFlow<String>?> { null }
  * so their last rows can scroll above it.
  */
 val LocalChromePadding = staticCompositionLocalOf { PaddingValues(0.dp) }
+
+/** The window's width in dp, for sizes that follow it (Luminous page titles, Now Playing). */
+val LocalWindowWidthDp = staticCompositionLocalOf { 400f }

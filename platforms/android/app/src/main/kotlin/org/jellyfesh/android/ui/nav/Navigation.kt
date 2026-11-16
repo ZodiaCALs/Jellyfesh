@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -37,7 +38,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import org.jellyfesh.android.R
@@ -46,7 +50,6 @@ import org.jellyfesh.android.ui.components.ArtworkImage
 import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.data.LocalGraph
-import org.jellyfesh.android.ui.theme.GlassEdge
 import org.jellyfesh.android.ui.theme.GlassGrade
 import org.jellyfesh.android.ui.theme.GlassSurface
 import org.jellyfesh.android.ui.theme.Jf
@@ -57,12 +60,12 @@ import org.jellyfesh.android.ui.theme.MiniProgressLine
 import org.jellyfesh.android.ui.theme.PlayPauseButton
 import org.jellyfesh.android.ui.theme.PlayPauseGlyph
 import org.jellyfesh.android.ui.theme.TouchTarget
+import org.jellyfesh.android.ui.player.DeviceButton
 import org.jellyfesh.android.ui.player.NowPlayingPanel
 import org.jellyfesh.android.ui.player.PlayerVolume
 import org.jellyfesh.android.ui.player.SeekWithTimes
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.TimeDemandEffect
-import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.nav.LibrarySection
 import org.jellyfesh.logic.nav.NavState
 import org.jellyfesh.logic.nav.Navigator
@@ -72,6 +75,9 @@ import org.jellyfesh.logic.nav.Tab
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.RepeatMode
 import org.jellyfesh.logic.player.PlayerModel
+import org.jellyfesh.logic.player.PlayerTrack
+import org.jellyfesh.logic.player.RemoteModel
+import org.jellyfesh.logic.player.RemoteSession
 import org.jellyfesh.logic.seek.SeekGeometry
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.time.TimeDemand
@@ -111,16 +117,35 @@ class NavController(private val state: MutableStateFlow<NavState>) {
 
 val LocalNav = staticCompositionLocalOf<NavController> { error("NavController is missing") }
 
-/** The mini-player's height on Android (Tokens.Player.miniHeight is the desktop's 64). */
-val MiniPlayerHeight = 72.dp
+/** The mini-player pill's height (Luminous phone screens: 64, half of it the pill's radius). */
+val MiniPlayerHeight = 64.dp
+
+/** The floating tab bar capsule's height. */
+val TabBarHeight = 68.dp
 
 /** The player bar's height (player.bar-height), for windows 900 dp and wider. */
 val PlayerBarHeight = Tokens.Player.barHeight.dp
 
+/** Between the floating capsules and the screen's sides, and between the two capsules. */
+private val ChromeSide = 14.dp
+private val ChromeGap = 8.dp
+
+/** Below the tab bar capsule, above the system navigation bar. */
+private val ChromeBottom = 10.dp
+
 /**
- * The floating chrome at the bottom of the library screens: the mini-player (when something is
- * queued; the player bar from 900 dp, tablets and desktop mode) above the tab bar, each a Veil
- * glass layer, the two live blur layers Android's budget allows (Tokens.GlassBudget.liveLayersMobile).
+ * How much of the screen's bottom the floating chrome covers (the system navigation bar not
+ * included): the tab bar, and the mini-player or the player bar when something plays. Screens
+ * leave this free under their last rows, and their content fades out just above it.
+ */
+fun chromeHeight(hasPlayer: Boolean, wide: Boolean): Dp =
+    ChromeBottom + TabBarHeight + if (!hasPlayer) 0.dp else ChromeGap + if (wide) PlayerBarHeight else MiniPlayerHeight
+
+/**
+ * The floating chrome at the bottom of the library screens (Luminous): the mini-player pill (when
+ * something plays; the player bar from 900 dp, tablets and desktop mode) above the tab bar
+ * capsule, each a floating Veil glass layer: the two live blur layers Android's budget allows
+ * (Tokens.GlassBudget.liveLayersMobile).
  */
 @Composable
 fun BottomChrome(
@@ -131,54 +156,63 @@ fun BottomChrome(
     onOpenNowPlaying: (NowPlayingPanel?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (state.nowPlaying != null) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(start = ChromeSide, end = ChromeSide, bottom = ChromeBottom),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(ChromeGap),
+    ) {
+        if (PlayerModel.track(state) != null) {
             if (wide) {
-                PlayerBar(state, onOpenNowPlaying, Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp).widthIn(max = 1240.dp))
+                PlayerBar(state, onOpenNowPlaying, Modifier.widthIn(max = 1240.dp))
             } else {
-                MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp).widthIn(max = 600.dp))
+                MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = 600.dp))
             }
         }
-        TabBar(tab, onSelect)
+        TabBar(tab, onSelect, Modifier.widthIn(max = 600.dp))
     }
 }
 
+/** The tab bar: a floating Veil capsule, each tab's glyph in a pill that takes the accent's soft tint when chosen. */
 @Composable
-private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
+private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier) {
     val colors = Jf.colors
-    GlassSurface(Modifier.fillMaxWidth(), grade = GlassGrade.Veil, edge = GlassEdge.None, showEdge = false) {
-        Column {
-            // Misty's one edge, along the top of the bar.
-            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.glassEdge))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .height(Tokens.Layout.navH.dp)
-                    .selectableGroup(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Tab.entries.forEach { tab ->
-                    val isSelected = tab == selected
-                    val label = stringResource(tabLabel(tab))
-                    Column(
+    GlassSurface(
+        modifier.fillMaxWidth().height(TabBarHeight),
+        grade = GlassGrade.Veil,
+        shape = RoundedCornerShape(TabBarHeight / 2),
+        floating = true,
+    ) {
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 6.dp)
+                .selectableGroup(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Tab.entries.forEach { tab ->
+                val isSelected = tab == selected
+                val label = stringResource(tabLabel(tab))
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .selectable(isSelected, remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { onSelect(tab) }
+                        .padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Box(
                         Modifier
-                            .weight(1f)
-                            .selectable(isSelected, remember { MutableInteractionSource() }, indication = null, role = Role.Tab) { onSelect(tab) }
-                            .padding(vertical = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                            .size(width = 54.dp, height = 30.dp)
+                            .background(if (isSelected) colors.accentSoft else Color.Transparent, RoundedCornerShape(15.dp)),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Box(
-                            Modifier
-                                .then(if (isSelected) Modifier.background(colors.accentSoft, CircleShape) else Modifier)
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                        ) {
-                            JfIcon(tabIcon(tab), if (isSelected) colors.accentText else colors.ink70, size = 22.dp)
-                        }
-                        JfText(label, style = JfType.micro, color = if (isSelected) colors.accentText else colors.ink70, maxLines = 1)
+                        JfIcon(tabIcon(tab), if (isSelected) colors.accentText else colors.ink70, size = 21.dp)
                     }
+                    JfText(label, style = JfType.micro, color = if (isSelected) colors.accentText else colors.ink70, maxLines = 1)
                 }
             }
         }
@@ -200,19 +234,29 @@ private fun tabIcon(tab: Tab): Int = when (tab) {
 }
 
 /**
- * The mini-player under 900 dp (docs/design-controls.md, "v0.0.4"): a floating Veil capsule with
- * player.mini-radius corners, the artwork, two lines of type and one control, play or pause (Misty
- * CMP-02, never accent-filled, COL-04), and a straight 2 dp progress line along its bottom edge,
- * inset by its corners, redrawn only when it grows by a pixel. Tapping or swiping it up opens Now
- * Playing.
+ * The line under the title in the mini-player and the player bar: "Playing on {Device}" while a
+ * remote session names its device, else `Artist · Album`.
+ */
+@Composable
+fun playerSecondLine(track: PlayerTrack, remote: RemoteSession?): String? =
+    remote?.device?.let { stringResource(R.string.remote_playing_on, it.name) } ?: track.subtitle
+
+/**
+ * The mini-player under 900 dp (Luminous): a floating Veil pill with round artwork, two lines of
+ * type ("Playing on {Device}" for a remote session, its error in a quieter third line) and one
+ * control, play or pause (Misty CMP-02, never accent-filled, COL-04), and a straight 2 dp progress
+ * line along its bottom edge, inset by its round ends, redrawn only when it grows by a pixel.
+ * Tapping or swiping it up opens Now Playing.
  */
 @Composable
 fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifier) {
-    val now = state.nowPlaying ?: return
+    val track = PlayerModel.track(state) ?: return
+    val remote = RemoteModel.session(state)
     val graph = LocalGraph.current
     val colors = Jf.colors
     val time = LocalPlaybackTime.current
-    val playing = PlayerModel.isPlaying(state.playback.status)
+    val status = PlayerModel.status(state)
+    val playing = PlayerModel.isPlaying(status)
     val durationUs = PlayerModel.durationUs(state)
     val density = LocalDensity.current
     var steps by remember { androidx.compose.runtime.mutableIntStateOf(300) }
@@ -222,7 +266,7 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
         if (d == null || d <= 0) 0f else (time.positionUs.toFloat() / d).coerceIn(0f, 1f)
     }
     val openLabel = stringResource(R.string.a11y_open_now_playing)
-    val subtitle = Labels.nowPlayingSubtitle(now)
+    val subtitle = playerSecondLine(track, remote)
     val percent by remember(durationUs) {
         derivedStateOf {
             val d = durationUs
@@ -234,7 +278,7 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
         stringResource(if (playing) R.string.a11y_pause else R.string.a11y_play),
         percent,
     )
-    val shape = RoundedCornerShape(SeekGeometry.MINI_RADIUS.dp)
+    val shape = RoundedCornerShape(MiniPlayerHeight / 2)
     GlassSurface(
         modifier
             .fillMaxWidth()
@@ -259,24 +303,26 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
                         true
                     }
                 }
-                .padding(start = 12.dp, end = 10.dp),
+                .padding(start = 10.dp, end = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ArtworkImage(ArtKey.of(now.artwork), now.title, Tokens.Artwork.sizeMini.dp + 4.dp, RoundedCornerShape(Tokens.Radius.rMd.dp))
+            ArtworkImage(ArtKey.of(track.artwork), track.title, 44.dp, CircleShape)
             Column(Modifier.weight(1f)) {
-                JfText(now.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
+                JfText(track.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
                 if (subtitle != null) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
+                remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
             }
-            MiniPlayButton(playing, buttonLabel) { graph.send(PlayerModel.playPause(state.playback.status)) }
+            MiniPlayButton(playing, buttonLabel) { graph.send(PlayerModel.playPause(status)) }
         }
-        MiniProgressLine(fraction, Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp))
+        MiniProgressLine(fraction, Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp), inset = MiniPlayerHeight / 2 + 2.dp)
     }
 }
 
-/** The mini-player's one control: play or pause, morphing, on no fill (COL-04). */
+/** The mini-player's one control: play or pause, morphing, on a quiet round fill (never the accent, COL-04). */
 @Composable
 private fun MiniPlayButton(playing: Boolean, description: String, onClick: () -> Unit) {
+    val colors = Jf.colors
     Box(
         Modifier
             .size(TouchTarget)
@@ -284,7 +330,9 @@ private fun MiniPlayButton(playing: Boolean, description: String, onClick: () ->
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        PlayPauseGlyph(playing, Jf.colors.ink90, 20.dp)
+        Box(Modifier.size(44.dp).background(colors[Tokens.Line.fillHover], CircleShape), contentAlignment = Alignment.Center) {
+            PlayPauseGlyph(playing, colors.ink90, 20.dp)
+        }
     }
 }
 
@@ -297,16 +345,19 @@ private fun MiniPlayButton(playing: Boolean, description: String, onClick: () ->
  */
 @Composable
 fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Modifier = Modifier) {
-    val now = state.nowPlaying ?: return
+    val track = PlayerModel.track(state) ?: return
+    val remote = RemoteModel.session(state)
     val graph = LocalGraph.current
     val colors = Jf.colors
-    val playing = PlayerModel.isPlaying(state.playback.status)
-    val queue = state.queue
+    val status = PlayerModel.status(state)
+    val playing = PlayerModel.isPlaying(status)
+    val shuffle = PlayerModel.shuffle(state)
+    val repeat = PlayerModel.repeat(state)
     val openLabel = stringResource(R.string.a11y_open_now_playing)
     GlassSurface(
         modifier.fillMaxWidth().height(PlayerBarHeight),
         grade = GlassGrade.Veil,
-        shape = RoundedCornerShape(Tokens.Radius.rXl.dp),
+        shape = RoundedCornerShape(Tokens.Radius.r2xl.dp),
         floating = true,
     ) {
         Row(
@@ -322,10 +373,11 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ArtworkImage(ArtKey.of(now.artwork), now.title, 48.dp, RoundedCornerShape(Tokens.Radius.rMd.dp))
+                ArtworkImage(ArtKey.of(track.artwork), track.title, 48.dp, RoundedCornerShape(Tokens.Radius.rMd.dp))
                 Column(Modifier.weight(1f)) {
-                    JfText(now.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
-                    Labels.nowPlayingSubtitle(now)?.let { JfText(it, style = JfType.listSecondary, color = colors.ink70, maxLines = 1) }
+                    JfText(track.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
+                    playerSecondLine(track, remote)?.let { JfText(it, style = JfType.listSecondary, color = colors.ink70, maxLines = 1) }
+                    remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
                 }
             }
             Column(Modifier.weight(2f).widthIn(max = 560.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -333,26 +385,26 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
                     JfToggleIconButton(
                         R.drawable.ic_shuffle,
                         stringResource(R.string.a11y_shuffle),
-                        stringResource(if (queue.shuffle) R.string.state_on else R.string.state_off),
-                        queue.shuffle,
+                        stringResource(if (shuffle) R.string.state_on else R.string.state_off),
+                        shuffle,
                         { graph.send(Command.SetShuffle(it)) },
                         size = 36.dp,
                     )
                     JfIconButton(R.drawable.ic_previous, stringResource(R.string.a11y_previous), { graph.send(Command.Previous) }, tint = colors.ink90, size = 36.dp, iconSize = 20.dp)
-                    PlayPauseButton(playing, stringResource(if (playing) R.string.a11y_pause else R.string.a11y_play), { graph.send(PlayerModel.playPause(state.playback.status)) }, size = 40.dp)
+                    PlayPauseButton(playing, stringResource(if (playing) R.string.a11y_pause else R.string.a11y_play), { graph.send(PlayerModel.playPause(status)) }, size = 40.dp)
                     JfIconButton(R.drawable.ic_next, stringResource(R.string.a11y_next), { graph.send(Command.Next) }, tint = colors.ink90, size = 36.dp, iconSize = 20.dp)
                     JfToggleIconButton(
-                        if (queue.repeat == RepeatMode.One) R.drawable.ic_repeat_one else R.drawable.ic_repeat,
+                        if (repeat == RepeatMode.One) R.drawable.ic_repeat_one else R.drawable.ic_repeat,
                         stringResource(R.string.a11y_repeat),
                         stringResource(
-                            when (queue.repeat) {
+                            when (repeat) {
                                 RepeatMode.Off -> R.string.state_off
                                 RepeatMode.All -> R.string.repeat_all
                                 RepeatMode.One -> R.string.repeat_one
                             },
                         ),
-                        queue.repeat != RepeatMode.Off,
-                        { graph.send(Command.SetRepeat(PlayerModel.nextRepeat(queue.repeat))) },
+                        repeat != RepeatMode.Off,
+                        { graph.send(Command.SetRepeat(PlayerModel.nextRepeat(repeat))) },
                         size = 36.dp,
                     )
                 }
@@ -361,6 +413,7 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 JfIconButton(R.drawable.ic_lyrics, stringResource(R.string.np_lyrics), { onOpen(NowPlayingPanel.Lyrics) }, size = 40.dp, iconSize = 20.dp)
                 JfIconButton(R.drawable.ic_queue, stringResource(R.string.np_queue), { onOpen(NowPlayingPanel.Queue) }, size = 40.dp, iconSize = 20.dp)
+                DeviceButton(state, size = 40.dp)
                 PlayerVolume(state, Modifier.widthIn(max = 200.dp))
             }
         }

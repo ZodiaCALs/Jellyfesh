@@ -172,4 +172,43 @@ class LibraryModelTest {
         val items = TrackMenu.items(TrackRef.Source(SourceTrack("p", "1", "S")), favourite = null, hasAlbum = false, hasArtist = false)
         assertEquals(listOf(TrackMenuItem.PlayNext, TrackMenuItem.PlayLast), items)
     }
+
+    @Test
+    fun openInTheServiceComesLastWhenTheSongHasALink() {
+        val items = TrackMenu.items(TrackRef.Library(1), favourite = false, hasAlbum = true, hasArtist = true, hasLink = true)
+        assertEquals(TrackMenuItem.OpenLink, items.last())
+        assertEquals(TrackMenuItem.GoToArtist, items[items.size - 2], "after Go to Artist")
+        assertFalse(TrackMenuItem.OpenLink in TrackMenu.items(TrackRef.Library(1), favourite = false, hasAlbum = true, hasArtist = true))
+    }
+
+    @Test
+    fun aRemoteSourcesSongNeverOffersTheQueue() {
+        val song = TrackRef.Source(SourceTrack("spotify", "7", "Song"))
+        assertEquals(listOf(TrackMenuItem.OpenLink), TrackMenu.items(song, favourite = null, hasAlbum = false, hasArtist = false, remote = true, hasLink = true))
+        assertEquals(emptyList(), TrackMenu.items(song, favourite = null, hasAlbum = false, hasArtist = false, remote = true))
+    }
+
+    @Test
+    fun theMoreMenuOfACollection() {
+        val album = CollectionRef.Album(4)
+        assertEquals(
+            listOf(CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.AddToPlaylist),
+            CollectionMenu.items(album, withPlay = false),
+        )
+        assertEquals(
+            listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.AddToPlaylist),
+            CollectionMenu.items(album, withPlay = true),
+        )
+        val sourceAlbum = CollectionRef.Source("org.jellyfesh.subsonic", "al-1")
+        assertEquals(
+            listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.OpenLink),
+            CollectionMenu.items(sourceAlbum, withPlay = true, hasLink = true),
+            "a source's album cannot be gathered into a playlist",
+        )
+        assertEquals(
+            listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.OpenLink),
+            CollectionMenu.items(CollectionRef.Source("spotify", "pl-1"), withPlay = true, remote = true, hasLink = true),
+            "a remote source's playlist plays (a remote session) but never joins the queue",
+        )
+    }
 }

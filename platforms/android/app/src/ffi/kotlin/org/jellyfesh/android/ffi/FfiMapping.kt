@@ -50,6 +50,10 @@ import org.jellyfesh.ffi.PluginBadge as FPluginBadge
 import org.jellyfesh.ffi.PluginSummary as FPluginSummary
 import org.jellyfesh.ffi.QueueItem as FQueueItem
 import org.jellyfesh.ffi.QueueSnapshot as FQueueSnapshot
+import org.jellyfesh.ffi.RemoteAction as FRemoteAction
+import org.jellyfesh.ffi.RemoteDevice as FRemoteDevice
+import org.jellyfesh.ffi.RemoteDeviceKind as FRemoteDeviceKind
+import org.jellyfesh.ffi.RemoteSnapshot as FRemoteSnapshot
 import org.jellyfesh.ffi.RepeatMode as FRepeatMode
 import org.jellyfesh.ffi.ReplayGainMode as FReplayGainMode
 import org.jellyfesh.ffi.ScanStatus as FScanStatus
@@ -122,6 +126,10 @@ import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.core.QueueItem
 import org.jellyfesh.logic.core.QueueSnapshot
+import org.jellyfesh.logic.core.RemoteAction
+import org.jellyfesh.logic.core.RemoteDevice
+import org.jellyfesh.logic.core.RemoteDeviceKind
+import org.jellyfesh.logic.core.RemoteSnapshot
 import org.jellyfesh.logic.core.RepeatMode
 import org.jellyfesh.logic.core.ReplayGainMode
 import org.jellyfesh.logic.core.ScanStatus
@@ -198,6 +206,14 @@ object FfiMapping {
         is Command.Logout -> FCommand.Logout(plugin = command.plugin)
         is Command.Search -> FCommand.Search(query = command.query, scope = ffi(command.scope))
         is Command.Browse -> FCommand.Browse(plugin = command.plugin, node = command.node, page = command.page.u32())
+        is Command.Remote -> FCommand.Remote(action = ffi(command.action))
+    }
+
+    fun ffi(action: RemoteAction): FRemoteAction = when (action) {
+        RemoteAction.Refresh -> FRemoteAction.Refresh
+        is RemoteAction.Transfer -> FRemoteAction.Transfer(device = action.device)
+        is RemoteAction.SetVolume -> FRemoteAction.SetVolume(percent = action.percent.coerceIn(0, 100).toUInt())
+        RemoteAction.End -> FRemoteAction.End
     }
 
     fun ffi(track: TrackRef): FTrackRef = when (track) {
@@ -362,6 +378,7 @@ object FfiMapping {
         is FEvent.Settings -> CoreEvent.SettingsChanged(snapshot.toLogic())
         is FEvent.Devices -> CoreEvent.Devices(snapshot.toLogic())
         is FEvent.Sources -> CoreEvent.Sources(snapshot.toLogic())
+        is FEvent.Remote -> CoreEvent.Remote(snapshot.toLogic())
         is FEvent.Auth -> CoreEvent.Auth(update.toLogic())
         is FEvent.SearchResults -> CoreEvent.SearchResults(update.toLogic())
         is FEvent.BrowsePage -> CoreEvent.BrowsePage(update.toLogic())
@@ -382,6 +399,7 @@ object FfiMapping {
         devices = devices.toLogic(),
         sources = sources.toLogic(),
         muted = muted,
+        remote = remote.toLogic(),
     )
 
     fun FTrackRef.toLogic(): TrackRef = when (this) {
@@ -473,6 +491,7 @@ object FfiMapping {
         durationMs = durationMs?.toLong(),
         artwork = artwork?.toLogic(),
         format = format?.toLogic(),
+        link = link,
     )
 
     private fun FWord.toLogic(): LyricWord = LyricWord(startMs.toLong(), endMs.toLong(), text, joinsNext)
@@ -648,6 +667,7 @@ object FfiMapping {
         settingsSchemaJson = settingsSchemaJson,
         settingsJson = settingsJson,
         icon = icon,
+        remotePlayback = remotePlayback,
     )
 
     fun FSourcePreset.toLogic(): SourcePreset = SourcePreset(
@@ -700,6 +720,37 @@ object FfiMapping {
         unplayableReason = unplayableReason,
         track = track?.toLogic(),
         alsoIn = alsoIn,
+        link = link,
+    )
+
+    fun FRemoteDevice.toLogic(): RemoteDevice = RemoteDevice(
+        id = id,
+        name = name,
+        kind = when (kind) {
+            FRemoteDeviceKind.COMPUTER -> RemoteDeviceKind.Computer
+            FRemoteDeviceKind.SMARTPHONE -> RemoteDeviceKind.Smartphone
+            FRemoteDeviceKind.SPEAKER -> RemoteDeviceKind.Speaker
+            FRemoteDeviceKind.TV -> RemoteDeviceKind.Tv
+            FRemoteDeviceKind.CAR -> RemoteDeviceKind.Car
+            FRemoteDeviceKind.OTHER -> RemoteDeviceKind.Other
+        },
+        active = active,
+        volumePercent = volumePercent?.toInt(),
+    )
+
+    fun FRemoteSnapshot.toLogic(): RemoteSnapshot = RemoteSnapshot(
+        version = version.toLong(),
+        source = source,
+        sourceName = sourceName,
+        status = status.toLogic(),
+        item = item?.toLogic(),
+        context = context?.toLogic(),
+        anchor = anchor.toLogic(),
+        shuffle = shuffle,
+        repeat = repeat.toLogic(),
+        device = device?.toLogic(),
+        devices = devices.map { it.toLogic() },
+        error = error,
     )
 
     fun FSearchUpdate.toLogic(): SearchUpdate =
