@@ -5,14 +5,15 @@
   // (the core's next_change); a sweeping word is a CSS animation, so nothing runs per frame
   // otherwise.
   //
-  // After Apple Music (v0.0.4): when the line changes, the lines move up in a cascade. The pane
-  // jumps to its new scroll position, every line on screen is put back where it was drawn with a
-  // translate, and CSS transitions (dur-3 Fluid) bring them home, each line lyrics.stagger (30 ms)
-  // after the one above (a per-line transition-delay). The active line is ink-90 at full size; the
-  // others fade to lyrics.ink-inactive (sung ones ink-30) through opacity and scale to
-  // lyrics.scale-inactive from their start edge: transform and opacity only, which the compositor
-  // runs, and no blur. Size and alignment follow the settings; tapping a line seeks to it. Reduced
-  // motion: lines jump, words light up whole.
+  // After Apple Music (v0.0.4; Luminous v0.0.6): when the line changes, the lines move up in a
+  // cascade. The pane jumps to its new scroll position, every line on screen is put back where it
+  // was drawn with a translate, and CSS transitions (dur-3 Fluid) bring them home, each line
+  // lyrics.stagger (40 ms) after the one above (a per-line transition-delay). Lines are
+  // lyrics.line (40 px bold where the pane is wide, line height 1.18); the active line is ink-90
+  // at full size, the others fade to lyrics.ink-inactive (sung ones ink-30) through opacity and
+  // scale to lyrics.scale-inactive (92 %) from their start edge: transform and opacity only, which
+  // the compositor runs, and no blur. Size and alignment follow the settings; tapping a line seeks
+  // to it. Reduced motion: lines jump, words light up whole.
   import { tick, untrack } from 'svelte';
   import { useApp } from '../lib/app';
   import type { Line, Lyrics } from '../lib/core/types';
@@ -252,7 +253,7 @@
     overscroll-behavior: contain;
     scrollbar-width: none;
     padding: 0 var(--jf-space-s2);
-    mask-image: linear-gradient(to bottom, transparent 0, black 64px, black calc(100% - 64px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, black 72px, black calc(100% - 96px), transparent 100%);
   }
   .lyrics::-webkit-scrollbar {
     display: none;
@@ -324,9 +325,11 @@
     border-radius: var(--jf-radius-r-md);
     background: none;
     font: inherit;
-    font-size: calc(clamp(var(--jf-lyrics-line-fluid-min), 2.6vw, var(--jf-lyrics-line-fluid-max)) * var(--size, 1));
+    /* lyrics.line between its fluid ends, by the pane's width (Now Playing's pane is a container). */
+    font-size: calc(clamp(var(--jf-lyrics-line-fluid-min), 6.4cqi, var(--jf-lyrics-line-fluid-max)) * var(--size, 1));
     line-height: var(--jf-lyrics-line-line-height);
     font-weight: var(--jf-lyrics-line-weight);
+    letter-spacing: -0.02em;
     text-align: inherit;
     color: var(--jf-ink-90);
     overflow-wrap: anywhere;
@@ -422,6 +425,6 @@
   .credit {
     margin: 0 8px var(--jf-space-s8);
     font-size: 12px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
 </style>

@@ -15,7 +15,11 @@
 * writes releases.json (version, the files with platform, label, size,
   SHA-256 and URL, and web_app when the site has Jellyfesh Web) for the
   download page, shots.json from docs/screenshots/linux/, the release notes
-  as releases/latest.html and THIRD_PARTY_NOTICES.html.
+  as releases/latest.html and THIRD_PARTY_NOTICES.html;
+* copies the picture of the app under the home page's hero
+  (assets/app-now-playing.png) from Jellyfesh Web's screenshots, taken
+  against the test servers' invented library: the page labels it as sample
+  music.
 
 Only files that exist are listed: platforms without a build show "coming
 soon" on the page instead of a link.
@@ -209,6 +213,10 @@ def main():
         manifest["web_app"] = "app/"
     with open(os.path.join(site, "releases.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
+
+    hero_shot = os.path.join(ROOT, "docs", "screenshots", "web", "now-playing-artwork-dark-desktop-mock-server.png")
+    if os.path.exists(hero_shot):
+        shutil.copy2(hero_shot, os.path.join(site, "assets", "app-now-playing.png"))
 
     shots = []
     shot_dir = os.path.join(ROOT, "docs", "screenshots", "linux")

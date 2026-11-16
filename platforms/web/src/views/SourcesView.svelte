@@ -117,7 +117,7 @@
     font-size: 0.875em;
   }
   .muted {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .settings {
     display: inline-flex;

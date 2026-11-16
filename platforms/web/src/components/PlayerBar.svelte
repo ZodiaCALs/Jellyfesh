@@ -1,9 +1,10 @@
 <script lang="ts">
-  // The player bar on windows 900 px wide and wider (v0.0.4, after Media Player and Apple Music):
-  // a floating Veil bar, player.bar-height (80 px) high with r-xl corners. The artwork (48 px) and
-  // two lines open Now Playing; in the middle the transport capsule sits above the seek bar and its
-  // times; Lyrics, Queue and the volume are at the end. It bends CMP-02 (one control) on purpose,
-  // for desktop use; play stays its only accent fill. The seek bar's clock sleeps while inactive.
+  // The player bar on windows 900 px wide and wider (v0.0.4, after Media Player and Apple Music;
+  // Luminous v0.0.6): a floating Veil capsule, player.bar-height (80 px) high with r-2xl corners.
+  // The artwork (56 px) and two lines open Now Playing; in the middle the transport sits above the
+  // seek bar and its times; Lyrics, Queue and the volume are at the end. It bends CMP-02 (one
+  // control) on purpose, for desktop use; play stays its only accent fill. The seek bar's clock
+  // sleeps while inactive.
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
   import Icon from './Icon.svelte';
@@ -23,7 +24,7 @@
 
 {#if row}
   <div class="bar" role="region" aria-label={t('Now Playing')}>
-    <div class="inner">
+    <div class="inner glass-veil">
       <button class="open" onclick={() => nav.openNowPlaying()} aria-label={t('Open Now Playing')}>
         <span class="art">
           {#if theme.artwork}<img src={theme.artwork} alt="" />{/if}
@@ -62,27 +63,18 @@
     align-items: center;
     gap: var(--jf-space-s4);
     height: var(--jf-player-bar-height);
-    padding: 0 var(--jf-space-s3) 0 var(--jf-space-s2);
-    border-radius: var(--jf-radius-r-xl);
-    background: var(--jf-tint-veil);
-    backdrop-filter: blur(var(--jf-glass-veil-blur)) saturate(var(--jf-glass-sat));
-    box-shadow:
-      inset 0 0 0 1px var(--jf-glass-edge-soft),
-      var(--jf-elevation-shadow-2);
-  }
-  :global([data-effects='reduced']) .inner {
-    background: var(--jf-cloud);
-    backdrop-filter: none;
+    padding: 0 var(--jf-space-s4) 0 var(--jf-space-s2);
+    border-radius: var(--jf-radius-r-2xl);
   }
   .open {
     min-width: 0;
     display: flex;
     align-items: center;
     gap: var(--jf-space-s3);
-    height: 64px;
-    padding: 0 var(--jf-space-s2);
+    height: 68px;
+    padding: 0 var(--jf-space-s2) 0 6px;
     border: 0;
-    border-radius: var(--jf-radius-r-lg);
+    border-radius: var(--jf-radius-r-xl);
     background: transparent;
     color: inherit;
     font: inherit;
@@ -94,12 +86,14 @@
   }
   .art {
     flex: none;
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     overflow: hidden;
-    border-radius: var(--jf-artwork-radius-list);
+    border-radius: var(--jf-radius-r-lg);
     background: linear-gradient(135deg, var(--jf-aurora-1), var(--jf-aurora-2));
-    box-shadow: inset 0 0 0 1px var(--jf-line-soft);
+    box-shadow:
+      inset 0 0 0 1px var(--jf-line-soft),
+      var(--jf-elevation-shadow-1);
   }
   .art img {
     display: block;
@@ -124,13 +118,13 @@
     white-space: nowrap;
   }
   .title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--jf-ink-90);
   }
   .second {
-    font-size: 12px;
-    color: var(--jf-ink-50);
+    font-size: 12.5px;
+    color: var(--jf-ink-70);
   }
   .middle {
     min-width: 0;

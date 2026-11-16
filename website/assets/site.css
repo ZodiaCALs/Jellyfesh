@@ -1,9 +1,14 @@
-/* Jellyfesh website. Misty colours at the brand hue (262°), from the core's
-   theme resolver (jf theme); light and dark follow the visitor's system. */
+/* Jellyfesh website, Luminous (v0.0.6). Misty colours at the brand hue (262°),
+   from the core's theme resolver (jf theme); light and dark follow the
+   visitor's system. The hero is always the dark aurora. */
 
 :root {
   --field: #eff3f9;
   --field-2: #e5ebf4;
+  /* field.aurora-1..3 at 262° (light), at Luminous strength (field.aurora-strength 0.75). */
+  --aurora-1: rgba(167, 205, 255, 0.75);
+  --aurora-2: rgba(239, 201, 253, 0.6);
+  --aurora-3: rgba(188, 239, 236, 0.55);
   --ink-90: rgba(18, 23, 32, 0.92);
   --ink-70: rgba(18, 23, 32, 0.72);
   --ink-50: rgba(18, 23, 32, 0.62);
@@ -11,8 +16,9 @@
   --accent-text: #2953a5;
   --accent-soft: rgba(216, 233, 255, 0.72);
   --on-accent: #fafcff;
-  --glass: rgba(255, 255, 255, 0.62);
-  --glass-edge: rgba(255, 255, 255, 0.85);
+  /* glass.tint-mist and its edge: grouped surfaces, without a blur layer. */
+  --glass: rgba(252, 253, 255, 0.42);
+  --glass-edge: rgba(255, 255, 255, 0.55);
   --line: rgba(18, 23, 32, 0.1);
   --shadow: 0 1px 2px rgba(10, 20, 40, 0.06), 0 12px 32px rgba(10, 30, 80, 0.08);
   --radius-l: 22px;
@@ -26,6 +32,9 @@
   :root {
     --field: #0c0f16;
     --field-2: #131824;
+    --aurora-1: rgba(48, 78, 134, 0.75);
+    --aurora-2: rgba(82, 50, 93, 0.7);
+    --aurora-3: rgba(0, 61, 60, 0.6);
     --ink-90: rgba(247, 248, 252, 0.92);
     --ink-70: rgba(247, 248, 252, 0.72);
     --ink-50: rgba(247, 248, 252, 0.55);
@@ -33,8 +42,8 @@
     --accent-text: #a3cbff;
     --accent-soft: rgba(33, 50, 81, 0.7);
     --on-accent: #0a0e17;
-    --glass: rgba(24, 30, 44, 0.62);
-    --glass-edge: rgba(255, 255, 255, 0.08);
+    --glass: rgba(20, 26, 35, 0.5);
+    --glass-edge: rgba(255, 255, 255, 0.1);
     --line: rgba(247, 248, 252, 0.1);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px rgba(0, 0, 0, 0.35);
     color-scheme: dark;
@@ -46,12 +55,22 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--field);
+  isolation: isolate;
   color: var(--ink-90);
   font: 16px/1.55 system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 :lang(zh-Hant) body, body:lang(zh-Hant) { font-family: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", sans-serif; }
 :lang(ja) body, body:lang(ja) { font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans CJK JP", "Yu Gothic UI", sans-serif; }
+/* The Luminous field behind every page: a fixed layer, so scrolling never repaints it. */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(62% 58% at 4% 0%, var(--aurora-1) 0%, transparent 72%),
+    radial-gradient(58% 64% at 100% 96%, var(--aurora-2) 0%, transparent 72%),
+    radial-gradient(44% 52% at 0% 100%, var(--aurora-3) 0%, transparent 70%),
+    var(--field);
+}
 a { color: var(--accent-text); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 3px; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
@@ -59,12 +78,12 @@ img { max-width: 100%; display: block; }
 
 .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
 
-/* Top bar: a quiet glass strip. */
+/* Top bar: a strip of Clear glass (the page's one live blur besides the hero's capsule). */
 .top {
   position: sticky; top: 0; z-index: 10;
-  background: color-mix(in srgb, var(--field) 72%, transparent);
-  backdrop-filter: saturate(1.4) blur(18px);
-  -webkit-backdrop-filter: saturate(1.4) blur(18px);
+  background: color-mix(in srgb, var(--field) 62%, transparent);
+  backdrop-filter: saturate(1.75) blur(24px);
+  -webkit-backdrop-filter: saturate(1.75) blur(24px);
   border-bottom: 1px solid var(--line);
 }
 .top .wrap { display: flex; align-items: center; gap: 16px; height: 60px; }
@@ -76,39 +95,73 @@ img { max-width: 100%; display: block; }
 .top nav a[aria-current="page"], .top nav a:hover { color: var(--ink-90); background: var(--accent-soft); text-decoration: none; }
 .lang { font: inherit; font-size: 14px; color: var(--ink-70); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
 
-/* Hero: the bioluminescent glass wordmark on its own deep field. */
-.hero { background: #020a1f; color: #f4f8ff; overflow: hidden; padding: 0; }
-.hero .art { width: 100%; height: auto; aspect-ratio: 1600 / 720; object-fit: cover; }
-.hero .copy { padding: 4px 0 64px; text-align: center; }
-.hero h1 { font-size: clamp(26px, 4.2vw, 42px); line-height: 1.2; margin: 0 0 12px; font-weight: 600; letter-spacing: -0.01em; }
-.hero p { margin: 0 auto 28px; max-width: 46ch; color: rgba(244, 248, 255, 0.78); font-size: 18px; }
-.cta { display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.button {
-  display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 999px;
-  background: #8db7ff; color: #06101f; font-weight: 600; transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease);
-  box-shadow: 0 0 0 0 rgba(141, 183, 255, 0.0);
+/* Hero (Luminous): the dark aurora at the brand hue (field.aurora-1..3 of the dark theme at 262°,
+   strong), the site's monoline lettering as a glass tube, a glass capsule holding Download, and
+   the app glowing under it. Dark in both appearances. */
+.hero {
+  position: relative; overflow: hidden; padding: 56px 0 0; text-align: center; color: rgba(247, 248, 252, 0.92);
+  background:
+    radial-gradient(60% 70% at 10% 0%, rgba(48, 78, 134, 0.92) 0%, transparent 70%),
+    radial-gradient(55% 70% at 100% 30%, rgba(82, 50, 93, 0.85) 0%, transparent 70%),
+    radial-gradient(50% 60% at 30% 100%, rgba(0, 61, 60, 0.7) 0%, transparent 70%),
+    #0c0f16;
 }
-.button:hover { text-decoration: none; box-shadow: 0 0 0 6px rgba(141, 183, 255, 0.22); }
+.hero .lettering { width: min(520px, 84vw); height: auto; margin: 0 auto 8px; }
+.hero .copy { position: relative; z-index: 1; }
+.hero h1 { font-size: clamp(28px, 4.2vw, 40px); line-height: 1.1; margin: 0 0 14px; font-weight: 600; letter-spacing: -0.018em; }
+.hero p { margin: 0 auto 28px; max-width: 46ch; color: rgba(247, 248, 252, 0.72); font-size: 18px; }
+/* The capsule: Veil glass (dark) over the aurora. */
+.cta {
+  display: inline-flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 6px; border-radius: 999px;
+  background: rgba(20, 26, 35, 0.68);
+  backdrop-filter: saturate(1.75) blur(32px);
+  -webkit-backdrop-filter: saturate(1.75) blur(32px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 2px 6px rgba(0, 0, 0, 0.28), 0 24px 52px -22px rgba(0, 0, 0, 0.65);
+}
+.button {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 24px; border-radius: 999px;
+  background: #8db7ff; color: #0a0e17; font-weight: 600; white-space: nowrap;
+  transition: transform 0.16s var(--ease), box-shadow 0.16s var(--ease), background-color 0.16s var(--ease);
+}
+.button:hover { text-decoration: none; background: #99c4ff; }
 .button:active { transform: scale(0.96); }
-.button.ghost { background: transparent; color: #dce9ff; border: 1px solid rgba(220, 233, 255, 0.35); }
+.button.ghost { background: transparent; color: rgba(247, 248, 252, 0.92); }
+.button.ghost:hover { background: rgba(255, 255, 255, 0.09); }
 .button.solid { background: var(--accent); color: var(--on-accent); }
 .button[hidden] { display: none; }
+.hero :focus-visible { outline-color: #8db7ff; }
+/* The app, glowing in the accent under its own light. */
+.hero .app { position: relative; width: min(860px, 100% - 32px); margin: 56px auto 0; }
+.hero .app[hidden] { display: none; }
+.hero .app .pool {
+  position: absolute; left: 4%; right: 4%; top: 4%; height: 92%; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(141, 183, 255, 0.55), transparent);
+  filter: blur(10px); opacity: 0.75;
+}
+.hero .app img {
+  position: relative; width: 100%; height: auto; border-radius: 18px 18px 0 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.35), 0 44px 84px -28px rgba(0, 0, 0, 0.78);
+}
+.hero .app figcaption {
+  position: absolute; right: 14px; bottom: 12px; padding: 4px 10px; border-radius: 999px;
+  background: rgba(20, 26, 35, 0.68); color: rgba(247, 248, 252, 0.8); font-size: 12px; font-weight: 600;
+}
 
 section { padding: 72px 0; }
 section h2 { font-size: clamp(22px, 3vw, 30px); margin: 0 0 8px; letter-spacing: -0.01em; font-weight: 600; }
 section .lead { color: var(--ink-70); margin: 0 0 32px; max-width: 60ch; }
 
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+/* Grouped surfaces: the Mist tint and shadow-1, without a blur layer (Luminous). */
 .card {
-  background: var(--glass); border: 1px solid var(--glass-edge); border-radius: var(--radius-l);
+  background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 24px;
   padding: 22px; box-shadow: var(--shadow);
-  backdrop-filter: saturate(1.3) blur(16px); -webkit-backdrop-filter: saturate(1.3) blur(16px);
 }
 .card h3 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
 .card p { margin: 0; color: var(--ink-70); }
 .card .mark { width: 36px; height: 36px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); display: grid; place-items: center; margin-bottom: 14px; font-size: 18px; }
 
-.band { background: linear-gradient(180deg, var(--field) 0%, var(--field-2) 100%); }
+.band { background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--field-2) 70%, transparent) 100%); }
 .shots { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
 .shots figure { margin: 0; }
 .shots img { border-radius: var(--radius-m); box-shadow: var(--shadow); border: 1px solid var(--line); }
@@ -144,6 +197,9 @@ footer img { height: 12px; width: auto; opacity: 0.7; }
 }
 
 @media (max-width: 520px) {
+  .hero { padding-top: 36px; }
+  .cta { border-radius: 28px; }
+  .cta .button { flex: 1 1 100%; justify-content: center; }
   .brand span { display: none; }
   .top nav { gap: 2px; flex-wrap: nowrap; }
   .top nav a { padding: 6px 8px; font-size: 14px; white-space: nowrap; }

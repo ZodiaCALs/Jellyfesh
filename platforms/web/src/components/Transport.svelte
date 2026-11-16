@@ -1,21 +1,22 @@
 <script lang="ts">
   // Style D's transport: shuffle and repeat as accent-soft circles when on; previous, play and
-  // next grouped in one glass capsule, play an accent circle (the view's one accent fill, COL-04)
-  // whose play and pause glyphs morph into each other (dur-2 Spring), with a soft halo on hover and
-  // a 92 % press. Compact (the player bar): 44 px targets, and the capsule a quiet fill rather than
-  // glass, since the bar is glass already (MAT-06).
+  // next grouped together, play an accent circle (the view's one accent fill, COL-04) whose play
+  // and pause glyphs morph into each other (dur-2 Spring), with a soft halo on hover and a 92 %
+  // press. Compact (the player bar) and dock (Now Playing's Luminous dock): 44 px targets on glass
+  // that is already there (MAT-06), so the group has no glass of its own; the dock's play button
+  // is 54 px (66 px on phones).
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
   import Icon from './Icon.svelte';
   import PlayGlyph from './PlayGlyph.svelte';
 
-  let { compact = false }: { compact?: boolean } = $props();
+  let { compact = false, dock = false }: { compact?: boolean; dock?: boolean } = $props();
   const { player } = useApp();
   const repeat = $derived(player.queue.repeat);
   const repeatLabel = $derived(repeat === 'one' ? t('Repeat one') : repeat === 'all' ? t('Repeat all') : t('Repeat, off'));
 </script>
 
-<div class="transport" class:compact>
+<div class="transport" class:compact class:dock>
   <button
     class="toggle"
     class:on={player.queue.shuffle}
@@ -38,7 +39,7 @@
       disabled={!player.current}
       onclick={() => player.toggle()}
     >
-      <PlayGlyph playing={player.playing} size={compact ? 22 : 28} />
+      <PlayGlyph playing={player.playing} size={compact ? 22 : dock ? 26 : 28} />
     </button>
     <button class="skip" aria-label={t('Next')} title={t('Next')} onclick={() => player.next()}>
       <Icon name="next" size={compact ? 20 : 24} />
@@ -110,30 +111,34 @@
     padding: 6px;
     border-radius: var(--jf-radius-r-full);
     background: var(--jf-tint-veil);
-    backdrop-filter: blur(var(--jf-glass-veil-blur)) saturate(var(--jf-glass-sat));
     box-shadow:
       inset 0 0 0 1px var(--jf-glass-edge-soft),
       var(--jf-elevation-shadow-1);
   }
   :global([data-effects='reduced']) .capsule {
     background: var(--jf-cloud);
-    backdrop-filter: none;
   }
   .compact .capsule,
-  :global([data-effects='reduced']) .compact .capsule {
-    gap: 2px;
+  .dock .capsule,
+  :global([data-effects='reduced']) .compact .capsule,
+  :global([data-effects='reduced']) .dock .capsule {
+    gap: 4px;
     padding: 0;
-    background: var(--jf-fill);
-    backdrop-filter: none;
-    box-shadow: inset 0 0 0 1px var(--jf-line-soft);
+    background: none;
+    box-shadow: none;
   }
   .skip {
     width: 52px;
     height: 52px;
   }
-  .compact .skip {
+  .compact .skip,
+  .dock .skip {
     width: 44px;
     height: 44px;
+  }
+  .dock {
+    justify-content: flex-start;
+    gap: 6px;
   }
   .skip:hover {
     background: var(--jf-fill-hover);
@@ -149,6 +154,24 @@
     width: 44px;
     height: 44px;
     box-shadow: none;
+  }
+  .dock .play {
+    width: 54px;
+    height: 54px;
+    box-shadow: var(--jf-elevation-shadow-1);
+  }
+  /* Phones: the dock is a card; the transport spans it, play 66 px. */
+  @media (max-width: 760px) {
+    .dock {
+      justify-content: space-between;
+    }
+    .dock .capsule {
+      gap: var(--jf-space-s5);
+    }
+    .dock .play {
+      width: 66px;
+      height: 66px;
+    }
   }
   .play:hover:not(:disabled) {
     box-shadow:

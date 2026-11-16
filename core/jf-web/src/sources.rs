@@ -6,13 +6,14 @@
 
 use jf_plugin_model::allow::Allowlist;
 use jf_plugin_model::auth::{AuthHost, Machine, Next, Request};
+use jf_plugin_model::links::Links;
 use jf_plugin_model::manifest::AllowRule;
 use jf_plugin_model::merge::{self, MergedItem};
 use jf_plugin_model::sanitize::{self, Checker};
 use jf_plugin_model::schema::SettingsSchema;
 use jf_plugin_model::{
-    AuthKind, AuthStep, CallError, ContentPolicy, FieldValue, Flow, FlowStep, ImageRef, Item, ItemPage,
-    LyricPayload, StreamInfo,
+    AuthKind, AuthStep, CallError, ContentPolicy, FieldValue, Flow, FlowStep, ImageRef, Item, ItemKind,
+    ItemPage, LyricPayload, StreamInfo,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -45,13 +46,15 @@ fn parse_schema(schema: &Value) -> Result<SettingsSchema, String> {
 }
 
 /// One installed source as the browser's host uses it: its id, name,
-/// effective allowlist and content policy.
+/// effective allowlist, content policy and link templates.
 #[derive(Debug, Clone)]
 pub struct Source {
     pub id: String,
     pub name: String,
     pub allowlist: Allowlist,
     pub content_policy: ContentPolicy,
+    /// The manifest's `[links]` (API 1.1); empty for 1.0 plugins.
+    pub links: Links,
 }
 
 impl Source {
@@ -68,7 +71,24 @@ impl Source {
             name: name.to_owned(),
             allowlist: Allowlist::new(rules, settings),
             content_policy,
+            links: Links::default(),
         }
+    }
+
+    /// The same source with the link templates of its manifest.
+    pub fn with_links(self, links: Links) -> Source {
+        Source { links, ..self }
+    }
+
+    /// The link that opens the item `id` of `kind` in the service, filled in
+    /// from the manifest's templates as the core fills in `SourceItem::link`
+    /// (`jf_plugin_model::links`), or `None` when the plugin has none for
+    /// that kind. Only `https` links come out: the templates reach the page
+    /// as JSON, so what they make is checked again before a browser opens it.
+    pub fn link(&self, kind: ItemKind, id: &str) -> Option<String> {
+        self.links
+            .url_for(kind, id)
+            .filter(|link| Url::parse(link).is_ok_and(|url| url.scheme() == "https"))
     }
 
     /// Whether the allowlist covers `url`.
@@ -348,7 +368,7 @@ impl SignIn {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jf_plugin_model::{CodeDisplay, ItemKind, Step};
+    use jf_plugin_model::{CodeDisplay, Step};
     use serde_json::json;
 
     const SCHEMA: &str = r#"{"type": "object", "properties": {
@@ -445,6 +465,51 @@ mod tests {
         );
         assert_eq!(page.items.len(), 1);
         assert!(page.items[0].artwork.is_none());
+    }
+
+    #[test]
+    fn links_open_items_in_their_service() {
+        let source = Source::new(
+            "org.example.music",
+            "Example",
+            &[],
+            &json!({}),
+            ContentPolicy::default(),
+        );
+        assert_eq!(
+            source.link(ItemKind::Track, "1"),
+            None,
+            "a 1.0 plugin has no links"
+        );
+        let source = source.with_links(Links {
+            track: Some("https://music.example.com/song/{id}".into()),
+            album: Some("https://music.example.com/album?id={id}&from=jf".into()),
+            artist: None,
+            playlist: None,
+        });
+        assert_eq!(
+            source.link(ItemKind::Track, "003 a/b").as_deref(),
+            Some("https://music.example.com/song/003%20a%2Fb")
+        );
+        assert_eq!(
+            source.link(ItemKind::Album, "x&y").as_deref(),
+            Some("https://music.example.com/album?id=x%26y&from=jf")
+        );
+        assert_eq!(source.link(ItemKind::Artist, "1"), None);
+        assert_eq!(source.link(ItemKind::Folder, "1"), None);
+        assert_eq!(source.link(ItemKind::Track, ""), None);
+        // Templates arrive from the page as JSON, unchecked: only https links come out.
+        for template in [
+            "javascript:alert({id})",
+            "http://music.example.com/{id}",
+            "music.example.com/{id}",
+        ] {
+            let bad = source.clone().with_links(Links {
+                track: Some(template.into()),
+                ..Links::default()
+            });
+            assert_eq!(bad.link(ItemKind::Track, "1"), None, "{template}");
+        }
     }
 
     #[test]

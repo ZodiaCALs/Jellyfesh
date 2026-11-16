@@ -24,6 +24,7 @@
 use jf_plugin_model::allow::{Access, Allowlist};
 use jf_plugin_model::crypto;
 use jf_plugin_model::http::{self as rules, TokenBucket};
+use jf_plugin_model::links::Links;
 use jf_plugin_model::manifest::AllowRule;
 use jf_plugin_model::package;
 use jf_plugin_model::trust::TrustList;
@@ -160,6 +161,9 @@ pub struct PackageInfo {
     pub settings_schema: Box<RawValue>,
     pub settings_defaults: Value,
     pub content_policy: ContentPolicy,
+    /// The manifest's `[links]` templates (API 1.1), checked by the manifest
+    /// parser; the page fills them in with `jf_web::Source::link`.
+    pub links: Links,
     /// Lowercase hex SHA-256 of `plugin.wasm`, to match the transpiled
     /// component the page loads.
     pub wasm_sha256: String,
@@ -190,6 +194,7 @@ pub fn read_package(bytes: &[u8]) -> Result<(PackageInfo, Vec<u8>), String> {
             .map_err(|e| e.to_string())?,
         settings_defaults: package.settings_schema.defaults(),
         content_policy: manifest.content_policy.clone(),
+        links: manifest.links.clone(),
         wasm_sha256: sha256_hex(&package.wasm),
         has_icon: package.icon.is_some(),
     };
@@ -349,6 +354,32 @@ schema = "settings.schema.json"
         let (info, _) = read_package(&signed).unwrap();
         assert!(!info.official);
         assert!(matches!(info.signature, SignatureStatus::Community { .. }));
+        // A 1.0 package has no links.
+        assert!(info.links.is_empty());
+    }
+
+    #[test]
+    fn hands_the_page_the_link_templates() {
+        let manifest = MANIFEST.replace("api_version = \"1.0\"", "api_version = \"1.1\"")
+            + "\n[links]\ntrack = \"https://music.example.com/song/{id}\"\n";
+        let bytes = PackageBuilder::new()
+            .manifest(&manifest)
+            .wasm(b"\0asm-test".to_vec())
+            .file("settings.schema.json", SCHEMA.as_bytes().to_vec())
+            .build()
+            .unwrap();
+        let (info, _) = read_package(&bytes).unwrap();
+        assert_eq!(info.api_version, "1.1");
+        assert_eq!(
+            info.links.track.as_deref(),
+            Some("https://music.example.com/song/{id}")
+        );
+        assert_eq!(info.links.album, None);
+        let text = json(&info);
+        assert!(
+            text.contains(r#""links":{"track":"https://music.example.com/song/{id}","album":null"#),
+            "{text}"
+        );
     }
 
     fn sandbox() -> Sandbox {

@@ -8,7 +8,7 @@ const STRINGS = {
     "hero.title": "An elegant, very light music player",
     "hero.sub": "Your music, local and online, with lyrics that follow every word. For macOS, Windows, Linux, Android and the web.",
     "hero.download": "Download", "hero.notes": "What’s new",
-    "hero.web": "Open Jellyfesh Web",
+    "hero.web": "Open Jellyfesh Web", "hero.downloadFor": "Download for {os}", "hero.sample": "Jellyfesh Web with sample music.",
     "features.title": "Made to be listened to",
     "features.lead": "One small Rust core does the work; each system gets a native app on top.",
     "f1.t": "Every word, on time", "f1.d": "Word-by-word lyrics with translation and romanization, drawn in step with what you hear.",
@@ -50,7 +50,7 @@ const STRINGS = {
     "hero.title": "优雅、轻盈的音乐播放器",
     "hero.sub": "本地与在线音乐，歌词逐字跟随。支持 macOS、Windows、Linux、Android 和网页。",
     "hero.download": "下载", "hero.notes": "更新内容",
-    "hero.web": "打开 Jellyfesh Web",
+    "hero.web": "打开 Jellyfesh Web", "hero.downloadFor": "下载 {os} 版", "hero.sample": "Jellyfesh Web，播放示例音乐。",
     "features.title": "为聆听而生",
     "features.lead": "由一个小巧的 Rust 内核完成工作，每个系统上都是原生应用。",
     "f1.t": "每个字，都准时", "f1.d": "逐字歌词，含翻译与罗马音，与你听到的声音同步呈现。",
@@ -92,7 +92,7 @@ const STRINGS = {
     "hero.title": "優雅、輕盈的音樂播放器",
     "hero.sub": "本機與線上音樂，歌詞逐字跟隨。支援 macOS、Windows、Linux、Android 與網頁。",
     "hero.download": "下載", "hero.notes": "更新內容",
-    "hero.web": "開啟 Jellyfesh Web",
+    "hero.web": "開啟 Jellyfesh Web", "hero.downloadFor": "下載 {os} 版", "hero.sample": "Jellyfesh Web，播放範例音樂。",
     "features.title": "為聆聽而生",
     "features.lead": "由一個小巧的 Rust 核心完成工作，每個系統上都是原生應用程式。",
     "f1.t": "每個字，都準時", "f1.d": "逐字歌詞，含翻譯與羅馬拼音，與你聽到的聲音同步呈現。",
@@ -134,7 +134,7 @@ const STRINGS = {
     "hero.title": "上品で、とても軽い音楽プレーヤー",
     "hero.sub": "ローカルもオンラインも。歌詞は一語ずつ寄り添います。macOS、Windows、Linux、Android、Web に対応。",
     "hero.download": "ダウンロード", "hero.notes": "新機能",
-    "hero.web": "Jellyfesh Web を開く",
+    "hero.web": "Jellyfesh Web を開く", "hero.downloadFor": "{os} 版をダウンロード", "hero.sample": "サンプル音楽を再生中の Jellyfesh Web。",
     "features.title": "聴くためにつくられました",
     "features.lead": "小さな Rust コアがすべてを担い、各システムにはネイティブのアプリを。",
     "f1.t": "一語一語、ぴったりに", "f1.d": "翻訳とローマ字付きの逐語歌詞を、聴こえる音に合わせて表示します。",
@@ -199,6 +199,11 @@ function applyLanguage() {
   document.documentElement.lang = lang;
   for (const el of document.querySelectorAll("[data-i18n]")) {
     el.textContent = t(el.dataset.i18n, window.__vars || {});
+  }
+  // The hero's Download names the visitor's system when it is one Jellyfesh is made for.
+  const os = detectOs();
+  for (const el of document.querySelectorAll("[data-download-for]")) {
+    if (os) el.textContent = t("hero.downloadFor", { os: t(`os.${os}`) });
   }
   const select = document.querySelector(".lang");
   if (select) select.value = lang;
@@ -349,7 +354,19 @@ async function setupWebLink() {
   } catch (_) { /* opened from a file: no link */ }
 }
 
+// The picture of the app is copied in when the site is built (tools/release/build_site.py); a
+// copy of website/ opened as files has none, so the figure goes rather than show a broken image.
+function setupAppShot() {
+  const figure = document.querySelector("[data-app-shot]");
+  const img = figure && figure.querySelector("img");
+  if (!img) return;
+  const hide = () => { figure.hidden = true; };
+  if (img.complete && img.naturalWidth === 0) hide();
+  else img.addEventListener("error", hide);
+}
+
 setupLanguagePicker();
 applyLanguage();
 setupDownloads();
 setupWebLink();
+setupAppShot();

@@ -25,12 +25,19 @@ body {
   margin: 0;
 }
 
+/* The Luminous field (v0.0.6, docs/ui.md): four large glows at the artwork's hue, as strong as
+ * field.aurora-strength, behind every screen in both appearances. The aurora colours are registered
+ * properties, so a new song's colours crossfade over dur-4 (theme.svelte.ts). Painted once: the
+ * page itself never scrolls, only the content column does. */
 body {
+  --jf-glow: var(--jf-field-aurora-strength, 0.75);
   overflow: hidden;
   color: var(--jf-ink-90);
   background:
-    radial-gradient(70% 60% at 0% 0%, color-mix(in srgb, var(--jf-aurora-1, transparent) 45%, transparent) 0%, transparent 70%),
-    radial-gradient(60% 60% at 100% 100%, color-mix(in srgb, var(--jf-aurora-2, transparent) 40%, transparent) 0%, transparent 70%),
+    radial-gradient(62% 58% at 4% 0%, color-mix(in srgb, var(--jf-aurora-1, transparent) calc(var(--jf-glow) * 107%), transparent) 0%, transparent 72%),
+    radial-gradient(58% 64% at 100% 96%, color-mix(in srgb, var(--jf-aurora-2, transparent) calc(var(--jf-glow) * 96%), transparent) 0%, transparent 72%),
+    radial-gradient(44% 52% at 0% 100%, color-mix(in srgb, var(--jf-aurora-3, transparent) calc(var(--jf-glow) * 88%), transparent) 0%, transparent 70%),
+    radial-gradient(38% 40% at 92% 4%, color-mix(in srgb, var(--jf-aurora-1, transparent) calc(var(--jf-glow) * 61%), transparent) 0%, transparent 70%),
     var(--jf-sky);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -52,13 +59,14 @@ select {
   line-height: 1.6;
 }
 
-/* Large titles (after Apple Music): each page starts with its title, which scrolls with it. */
+/* Large titles (after Apple Music): each page starts with its title, which scrolls with it;
+ * Luminous: 48 px (type.text-h1) on wide windows. */
 .page-title {
   margin: 0 0 var(--jf-space-s6);
   font-size: var(--jf-type-text-h2);
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+  line-height: 1.05;
+  letter-spacing: -0.024em;
 }
 
 .section {
@@ -127,6 +135,47 @@ select {
   .page-title {
     margin-bottom: var(--jf-space-s4);
   }
+}
+
+/* Glass (Misty's grades, Luminous v0.0.6). Live blur only where the glass budget allows it
+ * (glass.budget-live-layers: three on desktops, two on phones): the sidebar (Clear), the player
+ * bar or mini-player and the phone tab bar (Veil capsules), Now Playing's dock and its top
+ * controls. Grouped surfaces take the Mist tint without blur, with shadow-1. Reduce Motion and
+ * Transparency makes every one of them solid Cloud. */
+.glass-clear {
+  background: var(--jf-tint-clear);
+  backdrop-filter: blur(var(--jf-glass-clear-blur)) saturate(var(--jf-glass-sat));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge),
+    var(--jf-elevation-shadow-1);
+}
+
+.glass-veil {
+  background: var(--jf-tint-veil);
+  backdrop-filter: blur(var(--jf-glass-veil-blur)) saturate(var(--jf-glass-sat));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge-soft),
+    var(--jf-elevation-shadow-2);
+}
+
+/* Veil without a live blur layer of its own (small controls over a backdrop that is already soft). */
+.glass-veil-flat {
+  background: var(--jf-tint-veil);
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge-soft),
+    var(--jf-elevation-shadow-1);
+}
+
+.surface-mist {
+  background: var(--jf-tint-mist);
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge-soft),
+    var(--jf-elevation-shadow-1);
+}
+
+:root[data-effects='reduced'] :is(.glass-clear, .glass-veil, .glass-veil-flat) {
+  background: var(--jf-cloud);
+  backdrop-filter: none;
 }
 
 /* Read by screen readers, not shown (a label the heading above already shows). */

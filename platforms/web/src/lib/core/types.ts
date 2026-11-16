@@ -69,7 +69,16 @@ export interface LyricPayload {
   attribution: string | null;
 }
 
-export type Capability = 'Auth' | 'Search' | 'Browse' | 'ResolveStream' | 'Lyrics' | 'Artwork' | 'Recommendations';
+export type Capability =
+  | 'Auth'
+  | 'Search'
+  | 'Browse'
+  | 'ResolveStream'
+  | 'Lyrics'
+  | 'Artwork'
+  | 'Recommendations'
+  /** API 1.1: plays on the person's own devices (a manifest capability; Jellyfesh Web refuses such plugins). */
+  | 'Remote';
 export type AuthKind = 'Qr' | 'Oauth' | 'CookieImport' | 'PasswordExchange' | 'ApiKey';
 export type FieldKind = 'Text' | 'Email' | 'Url' | 'Number' | 'CookieHeader';
 
@@ -167,6 +176,14 @@ export type SignatureStatus =
   | { Trusted: { key_id: string; label: string } }
   | { Community: { key_id: string } };
 
+/** The manifest's `[links]` (API 1.1): https URL templates holding `{id}`, filled in by jf-web. */
+export interface Links {
+  track: string | null;
+  album: string | null;
+  artist: string | null;
+  playlist: string | null;
+}
+
 /** A package as a plugin worker read and verified it (jf_web_sandbox::PackageInfo). */
 export interface PackageInfo {
   id: string;
@@ -185,6 +202,8 @@ export interface PackageInfo {
   settings_schema: SettingsSchema;
   settings_defaults: Record<string, unknown>;
   content_policy: ContentPolicy;
+  /** Missing from packages kept before API 1.1. */
+  links?: Links;
   wasm_sha256: string;
   has_icon: boolean;
 }

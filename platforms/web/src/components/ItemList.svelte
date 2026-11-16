@@ -76,7 +76,7 @@
   </div>
 {/if}
 {#if tracks.length}
-  <div class="rows">
+  <div class="rows surface-mist">
     {#each tracks as item, index (item.id + ':' + index)}
       <ItemRow
         {plugin}
@@ -107,7 +107,7 @@
     min-height: 56px;
     padding: 0 var(--jf-space-s4);
     border: 0;
-    border-radius: var(--jf-radius-r-lg);
+    border-radius: var(--jf-radius-r-xl);
     background: var(--jf-tint-mist);
     color: var(--jf-ink-90);
     font: inherit;
@@ -142,14 +142,27 @@
   .folders + .rows {
     margin-top: var(--jf-space-s6);
   }
+  /* Luminous: large covers, four to a row on a 1280 px window. */
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: var(--jf-space-s2);
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: var(--jf-space-s3) var(--jf-space-s3);
   }
+  /* A list is a grouped surface: Mist without a blur layer, with shadow-1. */
   .rows {
     display: flex;
     flex-direction: column;
+    padding: var(--jf-space-s1) var(--jf-space-s2);
+    border-radius: var(--jf-radius-r-2xl);
+  }
+  @media (max-width: 760px) {
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: var(--jf-space-s1);
+    }
+    .rows {
+      padding: 2px var(--jf-space-s1);
+    }
   }
   .grid + .rows {
     margin-top: var(--jf-space-s6);

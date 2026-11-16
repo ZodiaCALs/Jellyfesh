@@ -65,6 +65,6 @@
     color: var(--jf-warning);
   }
   .muted {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
 </style>

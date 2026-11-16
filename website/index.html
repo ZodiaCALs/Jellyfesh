@@ -23,17 +23,24 @@
   </header>
 
   <main>
+    <!-- Luminous (v0.0.6): a dark aurora at the brand hue, the site's own lettering as glass, a
+         glass Download capsule, and the app glowing under it. -->
     <section class="hero" aria-labelledby="hero-title">
-      <img class="art" src="assets/hero.svg" alt="Jellyfesh">
+      <img class="lettering" src="assets/lettering.svg" alt="Jellyfesh" width="890" height="290">
       <div class="wrap copy">
         <h1 id="hero-title" data-i18n="hero.title">An elegant, very light music player</h1>
         <p data-i18n="hero.sub">Your music, local and online, with lyrics that follow every word. For macOS, Windows, Linux, Android and the web.</p>
         <div class="cta">
-          <a class="button" href="download.html" data-i18n="hero.download">Download</a>
+          <a class="button" href="download.html" data-i18n="hero.download" data-download-for>Download</a>
           <a class="button ghost" href="app/" data-web-app data-i18n="hero.web" hidden>Open Jellyfesh Web</a>
           <a class="button ghost" href="releases/latest.html" data-i18n="hero.notes">What’s new</a>
         </div>
       </div>
+      <figure class="app" data-app-shot>
+        <span class="pool" aria-hidden="true"></span>
+        <img src="assets/app-now-playing.png" alt="Jellyfesh Web’s Now Playing, dark, with the lyrics following the song" width="1280" height="800" loading="lazy" decoding="async">
+        <figcaption data-i18n="hero.sample">Jellyfesh Web with sample music.</figcaption>
+      </figure>
     </section>
 
     <section aria-labelledby="features-title">

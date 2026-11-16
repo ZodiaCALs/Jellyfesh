@@ -175,7 +175,7 @@
 
 <style>
   .muted {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .server {
     display: flex;
@@ -252,7 +252,7 @@
   .help {
     margin: 0;
     font-size: 12px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .code {
     margin: var(--jf-space-s4) 0 0;

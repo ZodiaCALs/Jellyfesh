@@ -78,7 +78,8 @@ test('shows the player bar at 1280 px', async () => {
   const bar = page.getByRole('region', { name: 'Now Playing' });
   await expect(bar).toBeVisible();
   expect(await height(bar)).toBe(80);
-  expect(await style(bar.locator('.inner'), 'border-radius')).toBe('16px');
+  // A Veil capsule (Luminous): r-2xl.
+  expect(await style(bar.locator('.inner'), 'border-radius')).toBe('24px');
   await expect(bar).toContainText('Morning Harbour');
   for (const name of ['Previous', 'Next', 'Lyrics', 'Queue', 'Shuffle, off', 'Repeat, off']) {
     await expect(bar.getByRole('button', { name, exact: true })).toBeVisible();
@@ -100,6 +101,68 @@ test('shows the player bar at 1280 px', async () => {
   await expect(page.getByRole('region', { name: 'Lyrics' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Now Playing' })).toBeHidden();
+});
+
+/** The visible elements that blur what is behind them (live backdrop-filter layers). */
+function liveBlurLayers(target: Page): Promise<string[]> {
+  return target.evaluate(() =>
+    [...document.querySelectorAll('*')]
+      .filter((element) => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return style.backdropFilter !== 'none' && style.display !== 'none' && box.width > 0 && box.height > 0;
+      })
+      .map((element) => `${element.tagName.toLowerCase()}.${[...element.classList].join('.')}`),
+  );
+}
+
+test('follows Luminous: type, covers and the glass budget', async () => {
+  // Page titles 48 px (type.text-h1); the sidebar is Clear glass.
+  await nav(page, 'Home').click();
+  expect(await style(page.locator('.page-title').first(), 'font-size')).toBe('48px');
+  expect(await style(page.locator('nav.sidebar'), 'backdrop-filter')).toContain('blur(24px)');
+  // Grid covers: radius 16 with shadow-2.
+  await openAlbum(page, 'Subsonic', 'Slow Tide');
+  // The artist's page shows its albums in a grid.
+  await page.locator('button.artist').click();
+  const cover = page.locator('.card .cover').first();
+  await expect(cover).toBeVisible();
+  expect(await style(cover, 'border-top-left-radius')).toBe('16px');
+  expect(await style(cover, 'box-shadow')).not.toBe('none');
+  // At most three live blur layers on a desktop, in the library and in Now Playing (40 px lyrics).
+  const library = await liveBlurLayers(page);
+  expect(library.length, library.join(', ')).toBeLessThanOrEqual(3);
+  await page.getByRole('button', { name: 'Open Now Playing' }).click();
+  await expect(page.getByRole('region', { name: 'Lyrics' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.viewTransition ?? '')).toBe('');
+  const nowPlaying = await liveBlurLayers(page);
+  expect(nowPlaying.length, nowPlaying.join(', ')).toBeLessThanOrEqual(3);
+  expect(await style(page.locator('.lyrics .line .text').first(), 'font-size')).toBe('40px');
+  // Reduce Motion and Transparency: no blur at all.
+  await page.evaluate(() => (globalThis as any).jellyfesh.settings.update((d: any) => (d.reduce_effects = true)));
+  try {
+    await expect.poll(() => liveBlurLayers(page)).toEqual([]);
+  } finally {
+    await page.evaluate(() => (globalThis as any).jellyfesh.settings.update((d: any) => (d.reduce_effects = false)));
+  }
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Now Playing' })).toBeHidden();
+  // Two on a phone.
+  await page.setViewportSize({ width: 390, height: 844 });
+  try {
+    await nav(page, 'Home').click();
+    await expect(page.getByRole('region', { name: 'Now Playing' })).toBeVisible();
+    const phone = await liveBlurLayers(page);
+    expect(phone.length, phone.join(', ')).toBeLessThanOrEqual(2);
+    await page.getByRole('button', { name: 'Open Now Playing' }).click();
+    await expect(page.getByRole('dialog', { name: 'Now Playing' })).toBeVisible();
+    const phoneNowPlaying = await liveBlurLayers(page);
+    expect(phoneNowPlaying.length, phoneNowPlaying.join(', ')).toBeLessThanOrEqual(2);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Now Playing' })).toBeHidden();
+  } finally {
+    await page.setViewportSize({ width: 1280, height: 800 });
+  }
 });
 
 test('shows the capsule with a straight 2 px line at 390 px', async () => {

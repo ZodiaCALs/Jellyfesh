@@ -133,7 +133,7 @@
     padding: 0 var(--jf-space-s4);
     border-radius: var(--jf-radius-r-full);
     background: var(--jf-fill);
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
     box-shadow: inset 0 0 0 1px var(--jf-line-soft);
   }
   .field:focus-within {
@@ -166,7 +166,7 @@
     margin-top: var(--jf-space-s7);
   }
   .muted {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .problem {
     display: flex;

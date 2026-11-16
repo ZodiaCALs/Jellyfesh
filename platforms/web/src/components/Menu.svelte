@@ -95,7 +95,7 @@
     border: 0;
     border-radius: var(--jf-radius-r-full);
     background: transparent;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
     cursor: pointer;
   }
   .more:hover {

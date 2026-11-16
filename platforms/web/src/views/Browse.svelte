@@ -11,7 +11,7 @@
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t, tn } from '../lib/i18n/index.svelte';
-  import { artistOf, itemMenu, secondary, summary, tracksFrom } from '../lib/items';
+  import { artistOf, itemMenu, linkOf, openLink, secondary, summary, tracksFrom } from '../lib/items';
   import { toast } from '../lib/state/toast.svelte';
   import { LIBRARY } from '../lib/state/library.svelte';
   import { explain } from '../lib/state/sources.svelte';
@@ -67,6 +67,10 @@
   const tracks = $derived(items.filter((i) => i.kind === 'Track'));
   const playable = $derived(tracks.some((i) => i.playable));
   const complete = $derived(!loading && next === null);
+  // Open in {Service} (API 1.1): in More, and the main action of a page whose songs cannot play here.
+  const link = $derived((void app.sources.revision, linkOf(app, plugin, item)));
+  const opensLink = $derived(link !== null && complete && tracks.length > 0 && !playable);
+  const menu = $derived(itemMenu(app, plugin, item, toast, { queue: playable }));
   /** Albums and playlists get the large header. */
   const collection = $derived(item.kind === 'Album' || item.kind === 'Playlist');
   const artist = $derived(item.kind === 'Album' ? artistOf(item) : null);
@@ -103,7 +107,18 @@
         <div class="actions">
           <button class="primary" onclick={() => play(false)}><Icon name="play" size={18} />{t('Play')}</button>
           <button class="secondary" onclick={() => play(true)}><Icon name="shuffle" size={18} />{t('Shuffle')}</button>
-          <Menu items={itemMenu(app, plugin, item, toast)} label={t('More for {title}', { title: item.title })} />
+          <Menu items={menu} label={t('More for {title}', { title: item.title })} />
+        </div>
+      {:else if opensLink && link}
+        <div class="actions">
+          <button class="primary" onclick={() => openLink(link.url)}>
+            <Icon name="external" size={18} />{t('Open in {service}', { service: link.service })}
+          </button>
+          <Menu items={menu} label={t('More for {title}', { title: item.title })} />
+        </div>
+      {:else if link}
+        <div class="actions">
+          <Menu items={menu} label={t('More for {title}', { title: item.title })} />
         </div>
       {/if}
     </div>
@@ -168,7 +183,7 @@
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   h1 {
     margin: 4px 0;
@@ -201,7 +216,7 @@
     margin: 4px 0 0;
     font-size: 13px;
     font-weight: 600;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .actions {
     display: flex;
@@ -272,12 +287,12 @@
   }
   .empty,
   .loading {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .footer {
     margin: var(--jf-space-s4) var(--jf-space-s2) 0;
     font-size: 13px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   /* Phones: the artwork takes the full width. */
   @media (max-width: 760px) {

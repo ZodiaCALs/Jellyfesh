@@ -278,7 +278,7 @@
   .facts {
     margin: 0;
     font-size: 13px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .package-input {
     display: none;
@@ -353,7 +353,7 @@
   }
   .server {
     font-weight: 400;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
     overflow-wrap: anywhere;
   }
   .problem {

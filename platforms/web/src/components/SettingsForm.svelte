@@ -145,7 +145,7 @@
     margin: 0;
     font-size: 12px;
     line-height: 1.45;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   details {
     display: flex;

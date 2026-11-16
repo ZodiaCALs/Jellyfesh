@@ -1,8 +1,9 @@
 <script lang="ts">
-  // An album, artist, playlist or folder in a grid: artwork and two lines of type. After Apple
-  // Music: hovering lifts the cover by 2 px with shadow-2 and shows a 36 px glass play button in
-  // its bottom start corner that plays the album or playlist; a press scales the cover to 97 %.
-  // The lift is a translate and the shadow fades in with opacity (compositor work only).
+  // An album, artist, playlist or folder in a grid: artwork and two lines of type. Luminous
+  // (v0.0.6): covers have artwork.radius-grid (16 px) and shadow-2; hovering or focusing lifts the
+  // cover by 4 px with shadow-3 and shows a 40 px glass play button in its bottom start corner
+  // that plays the album or playlist; a press scales the cover to 97 %. The lift is a translate
+  // and the deeper shadow fades in with opacity (compositor work only).
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
@@ -80,30 +81,34 @@
   .cover {
     position: relative;
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     border-radius: var(--jf-artwork-radius-grid);
+    box-shadow: var(--jf-elevation-shadow-2);
   }
   .cover :global(.art) {
     width: 100%;
     height: auto;
     aspect-ratio: 1;
   }
-  /* shadow-2 under the lifted cover, faded in with opacity. */
+  /* shadow-3 under the lifted cover, faded in with opacity. */
   .cover::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    box-shadow: var(--jf-elevation-shadow-2);
+    box-shadow: var(--jf-elevation-shadow-3);
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--jf-motion-dur-1) var(--jf-motion-ease-fluid);
   }
   .card:hover .cover,
-  .card:hover .overlay {
-    translate: 0 -2px;
+  .card:hover .overlay,
+  .card:has(.open:focus-visible) .cover,
+  .card:has(.open:focus-visible) .overlay {
+    translate: 0 -4px;
   }
-  .card:hover .cover::after {
+  .card:hover .cover::after,
+  .card:has(.open:focus-visible) .cover::after {
     opacity: 1;
   }
   .open:active .cover {
@@ -128,12 +133,12 @@
   }
   .play {
     position: absolute;
-    inset-inline-start: 8px;
-    bottom: 8px;
+    inset-inline-start: 12px;
+    bottom: 12px;
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     padding: 0;
     border: 0;
     border-radius: var(--jf-radius-r-full);
@@ -183,14 +188,21 @@
     white-space: nowrap;
   }
   .title {
-    font-size: var(--jf-type-roles-list-title-size);
+    font-size: 15px;
     font-weight: 600;
     color: var(--jf-ink-90);
   }
   .second {
     min-height: 1.3em;
-    font-size: var(--jf-type-roles-list-secondary-size);
-    color: var(--jf-ink-50);
+    font-size: 13px;
+    color: var(--jf-ink-70);
+  }
+  /* Phones (two lifts' budget of blur is taken by the capsules): the play button is Veil without
+     its own blur layer. */
+  @media (max-width: 760px) {
+    .play {
+      backdrop-filter: none;
+    }
   }
   .more {
     position: absolute;

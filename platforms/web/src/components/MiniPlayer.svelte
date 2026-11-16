@@ -64,7 +64,7 @@
 </script>
 
 {#if row}
-  <div class="mini" role="region" aria-label={t('Now Playing')}>
+  <div class="mini glass-veil" role="region" aria-label={t('Now Playing')}>
     <button class="open" onclick={() => nav.openNowPlaying()} aria-label={t('Open Now Playing')}>
       <span class="art">
         {#if theme.artwork}<img src={theme.artwork} alt="" />{/if}
@@ -99,16 +99,7 @@
     padding: 0 var(--jf-space-s2) 0 var(--jf-space-s2);
     overflow: hidden;
     border-radius: var(--jf-radius-r-full);
-    background: var(--jf-tint-veil);
-    backdrop-filter: blur(var(--jf-glass-veil-blur)) saturate(var(--jf-glass-sat));
-    box-shadow:
-      inset 0 0 0 1px var(--jf-glass-edge-soft),
-      var(--jf-elevation-shadow-2);
     pointer-events: auto;
-  }
-  :global([data-effects='reduced']) .mini {
-    background: var(--jf-cloud);
-    backdrop-filter: none;
   }
   .open {
     flex: 1;
@@ -155,23 +146,23 @@
     white-space: nowrap;
   }
   .title {
-    font-size: 14px;
+    font-size: 14.5px;
     font-weight: 600;
     color: var(--jf-ink-90);
   }
   .second {
     font-size: 12px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .play {
     flex: none;
     display: grid;
     place-items: center;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border: 0;
     border-radius: var(--jf-radius-r-full);
-    background: transparent;
+    background: var(--jf-fill-hover);
     color: var(--jf-ink-90);
     cursor: pointer;
     transition: scale var(--jf-motion-dur-0) var(--jf-motion-ease-spring);
@@ -183,7 +174,7 @@
     scale: none;
   }
   .play:hover {
-    background: var(--jf-fill-hover);
+    background: var(--jf-fill-press);
   }
   button:focus-visible {
     outline: none;

@@ -32,10 +32,11 @@ pub mod session;
 pub mod settings;
 pub mod sources;
 
+use jf_plugin_model::links::Links;
 use jf_plugin_model::manifest::AllowRule;
 use jf_plugin_model::{
-    AuthKind, ContentPolicy, FieldValue, FlowStep, ImageRef, Item, ItemPage, LyricPayload, Quality,
-    StreamInfo,
+    AuthKind, ContentPolicy, FieldValue, FlowStep, ImageRef, Item, ItemKind, ItemPage, LyricPayload,
+    PlaybackMode, Quality, StreamInfo,
 };
 use jf_session::{Advance, QueueState, RepeatMode};
 use serde::Serialize;
@@ -462,12 +463,22 @@ pub fn max_package_bytes() -> f64 {
     jf_plugin_model::install::MAX_PACKAGE_FILE as f64
 }
 
+/// What Jellyfesh Web says when a package plays on the person's own devices (`playback_mode =
+/// "remote"`, ADR-0018): the page has no remote sessions in this version.
+pub fn remote_refusal(name: &str) -> String {
+    format!(
+        "{name} plays on your own devices, which Jellyfesh Web cannot do yet. Use the Jellyfesh app on your computer or phone."
+    )
+}
+
 /// Why a package cannot be installed now, in the native host's words, or `None`.
 ///
-/// `package` is `{"id", "name", "signature"}` from the package (`jf_web_sandbox::PackageInfo`);
-/// `installed` is the `signature` of the version installed now, left out when nothing with this
-/// id is installed. Community packages are refused while community plugins are off, and an
-/// update must be signed by the same key as the installed version.
+/// `package` is `{"id", "name", "signature", "playback_mode"}` from the package
+/// (`jf_web_sandbox::PackageInfo`; `playback_mode` may be left out); `installed` is the
+/// `signature` of the version installed now, left out when nothing with this id is installed.
+/// Remote sources are refused first, whoever signed them: Jellyfesh Web has no remote sessions
+/// (ADR-0018). Community packages are refused while community plugins are off, and an update
+/// must be signed by the same key as the installed version.
 #[wasm_bindgen]
 pub fn install_refusal(
     package: &str,
@@ -479,8 +490,13 @@ pub fn install_refusal(
         id: String,
         name: String,
         signature: jf_plugin_model::SignatureStatus,
+        #[serde(default)]
+        playback_mode: Option<PlaybackMode>,
     }
     let package: Package = parse(package, "package")?;
+    if package.playback_mode == Some(PlaybackMode::Remote) {
+        return Ok(Some(remote_refusal(&package.name)));
+    }
     let installed: Option<jf_plugin_model::SignatureStatus> =
         installed.map(|text| parse(&text, "installed")).transpose()?;
     let remembered = installed.as_ref().map(jf_plugin_model::install::signer);
@@ -589,21 +605,41 @@ pub struct Source {
 
 #[wasm_bindgen]
 impl Source {
-    /// The source for its allow rules (`AllowRule` list), settings and
-    /// content policy.
+    /// The source for its allow rules (`AllowRule` list), settings, content
+    /// policy and the manifest's link templates (`Links`, API 1.1; left out
+    /// or `null` for none).
     #[wasm_bindgen(constructor)]
-    pub fn new(id: &str, name: &str, rules: &str, settings: &str, policy: &str) -> Result<Source, JsError> {
+    pub fn new(
+        id: &str,
+        name: &str,
+        rules: &str,
+        settings: &str,
+        policy: &str,
+        links: Option<String>,
+    ) -> Result<Source, JsError> {
         let rules: Vec<AllowRule> = parse(rules, "allow rules")?;
         let settings: Value = parse(settings, "settings")?;
         let policy: ContentPolicy = parse(policy, "content policy")?;
+        let links: Links = match links {
+            Some(text) => parse::<Option<Links>>(&text, "links")?.unwrap_or_default(),
+            None => Links::default(),
+        };
         Ok(Source {
-            inner: sources::Source::new(id, name, &rules, &settings, policy),
+            inner: sources::Source::new(id, name, &rules, &settings, policy).with_links(links),
         })
     }
 
     /// Whether the allowlist covers `url`.
     pub fn allows(&self, url: &str) -> bool {
         self.inner.allows(url)
+    }
+
+    /// The `https` link that opens an item of this source in its service (`kind` is `"Track"`,
+    /// `"Album"`, `"Artist"`, `"Playlist"` or `"Folder"`), filled in from the manifest's
+    /// templates, or `undefined` (Open in {Service}, docs/ui.md).
+    pub fn link(&self, kind: &str, id: &str) -> Option<String> {
+        let kind: ItemKind = serde_json::from_value(Value::String(kind.to_owned())).ok()?;
+        self.inner.link(kind, id)
     }
 
     /// An `ItemPage` answer, checked and cut to `limit`.

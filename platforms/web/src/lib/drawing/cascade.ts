@@ -1,5 +1,5 @@
 // The lyrics cascade's order (presentation timing for LyricsPane): when the active line changes,
-// the lines on screen move to their new places one lyrics.stagger (30 ms) after the line above.
+// the lines on screen move to their new places one lyrics.stagger (40 ms) after the line above.
 // The lines above the line that was active start together, so the cascade begins where the eye is.
 
 /** Lines further down than this many steps start together, so the cascade never drags. */

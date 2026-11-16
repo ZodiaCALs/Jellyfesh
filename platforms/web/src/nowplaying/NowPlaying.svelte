@@ -1,17 +1,25 @@
 <script lang="ts">
-  // Now Playing, in the person's backdrop style: Artwork (the core's baked backdrop of the cover,
-  // tone-mapped for the appearance) or Misty (the Misty field in the theme's hue). A veil bar with
-  // the segmented control (Lyrics, Queue, Info); the player on one side and the chosen pane on the
-  // other, or stacked on a phone. After Apple Music: the artwork scales to 0.88 while paused and
-  // springs back when playing, the backdrop crossfades between songs, and the whole view opens
-  // with Deeper and closes with Back (src/lib/motion.ts).
+  // Now Playing as a stage (Luminous, v0.0.6), in the person's backdrop style: Artwork (the core's
+  // baked backdrop of the cover, tone-mapped for the appearance) or Misty (the Misty field in the
+  // theme's hue) behind everything. Library (⌄ on phones) and the segmented control (Lyrics, Queue,
+  // Info) float at the top; the artwork (380 px, shadow-3) and the titles on one side and the
+  // chosen pane on the other, or stacked on a phone; every control in one floating Veil dock
+  // (radius 40, 80 px high; a rounded card on phones): shuffle, previous, play, next, repeat, the
+  // seek bar with its times, the volume and More. There is no device button: a browser decides
+  // where sound goes, and Jellyfesh Web has no remote sessions (ADR-0018). After Apple Music: the
+  // artwork scales to 0.88 while paused and springs back when playing, the backdrop crossfades
+  // between songs, and the whole view opens with Deeper and closes with Back (src/lib/motion.ts).
+  // The dock is the view's one live blur layer; the top controls are Veil without blur.
+  import { MediaQuery } from 'svelte/reactivity';
   import Art from '../components/Art.svelte';
   import Icon from '../components/Icon.svelte';
+  import Menu from '../components/Menu.svelte';
   import SeekBar from '../components/SeekBar.svelte';
   import Transport from '../components/Transport.svelte';
   import Volume from '../components/Volume.svelte';
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
+  import { nowPlayingMenu } from '../lib/items';
   import { back, deeper } from '../lib/motion';
   import type { Pane } from '../lib/state/nav.svelte';
   import InfoPane from './InfoPane.svelte';
@@ -24,6 +32,9 @@
   const row = $derived(player.current);
   /** On a phone the pane replaces the artwork while one is chosen. */
   let phonePane = $state(false);
+  /** Wider than a phone: the dock is one row, with the seek bar's times beside it. */
+  const wide = new MediaQuery('min-width: 761px');
+  const more = $derived((void app.sources.revision, nowPlayingMenu(app, row)));
 
   // The backdrop crossfades over dur-4 when the artwork changes (instant with reduced motion).
   let layers = $state<{ id: number; url: string }[]>([]);
@@ -80,12 +91,11 @@
     {/each}
   </div>
 
-  <header class="bar">
-    <button class="back" onclick={() => nav.closeNowPlaying()} aria-label={t('Back to Library')}>
+  <header class="top">
+    <button class="back glass-veil-flat" onclick={() => nav.closeNowPlaying()} aria-label={t('Back to Library')}>
       <Icon name="down" /><span class="back-label">{t('Library')}</span>
     </button>
-    <p class="heading">{t('Now Playing')}</p>
-    <div class="segmented" role="toolbar" aria-label={t('Now Playing views')}>
+    <div class="segmented glass-veil-flat" role="toolbar" aria-label={t('Now Playing views')}>
       {#each PANES as [id, label, icon] (id)}
         <button
           aria-pressed={nav.pane === id}
@@ -95,19 +105,19 @@
           title={t(label)}
           onclick={() => choose(id)}
         >
-          <Icon name={icon} />
+          <span class="seg-icon"><Icon name={icon} /></span><span class="seg-label">{t(label)}</span>
         </button>
       {/each}
     </div>
   </header>
 
-  <main class="body">
+  <main class="stage">
     <section class="player" aria-label={t('Player')}>
       <div class="hero" class:paused={!player.playing}>
         {#if theme.artwork}
           <img class="cover" src={theme.artwork} alt={t('Artwork of {title}', { title: row?.title ?? '' })} />
         {:else}
-          <Art kind="Album" size={400} radius="hero" />
+          <Art kind="Album" size={380} radius="hero" />
         {/if}
       </div>
       <div class="titles">
@@ -121,9 +131,6 @@
       {#if player.problem}
         <p class="problem" role="alert"><Icon name="alert" size={18} />{player.problem}</p>
       {/if}
-      <SeekBar anchor={player.anchor} durationMs={player.durationMs} onseek={(ms) => player.seek(ms)} disabled={!row} />
-      <Transport />
-      <Volume />
     </section>
 
     <section class="pane" aria-label={t(PANES.find((p) => p[0] === nav.pane)?.[1] ?? 'Lyrics')}>
@@ -149,15 +156,30 @@
       {/if}
     </section>
   </main>
+
+  <div class="dock glass-veil" class:has-more={more.length > 0} role="group" aria-label={t('Playback')}>
+    <div class="transport"><Transport dock /></div>
+    <div class="seek">
+      <SeekBar anchor={player.anchor} durationMs={player.durationMs} onseek={(ms) => player.seek(ms)} disabled={!row} compact={wide.current} />
+    </div>
+    <div class="vol"><Volume /></div>
+    {#if more.length > 0}
+      <div class="more"><Menu items={more} label={t('More')} /></div>
+    {/if}
+  </div>
 </div>
 
 <style>
   .np {
+    /* The artwork: 380 px, smaller in short windows. */
+    --art: clamp(200px, calc(100dvh - 400px), 380px);
+    --side: clamp(var(--jf-space-s6), 7.5vw, 96px);
+    --top: calc(78px + env(safe-area-inset-top));
+    --dock-h: var(--jf-player-bar-height);
+    --dock-bottom: max(28px, env(safe-area-inset-bottom));
     position: fixed;
     inset: 0;
     z-index: 20;
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
     color: var(--jf-ink-90);
     background: var(--jf-sky);
@@ -190,91 +212,100 @@
   :global(:root[data-motion='reduced']) .layer {
     animation-duration: var(--jf-motion-dur-1);
   }
-  .bar {
-    position: relative;
-    display: flex;
+
+  /* Library and the segmented control, floating at the top. */
+  .top {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    justify-content: space-between;
-    gap: var(--jf-space-s3);
-    min-height: 56px;
-    padding: 6px max(var(--jf-space-s5), env(safe-area-inset-right)) 6px max(var(--jf-space-s5), env(safe-area-inset-left));
-    padding-top: max(6px, env(safe-area-inset-top));
-    background: var(--jf-tint-veil);
-    backdrop-filter: blur(var(--jf-glass-veil-blur)) saturate(var(--jf-glass-sat));
-    box-shadow: inset 0 -1px 0 var(--jf-glass-edge-soft);
-  }
-  :global([data-effects='reduced']) .bar {
-    background: var(--jf-cloud);
-    backdrop-filter: none;
+    height: var(--top);
+    padding: env(safe-area-inset-top) max(28px, env(safe-area-inset-right)) 0 max(28px, env(safe-area-inset-left));
   }
   .back {
+    justify-self: start;
     display: flex;
     align-items: center;
     gap: 6px;
-    min-height: 44px;
-    padding: 0 10px;
+    height: 44px;
+    padding: 0 18px 0 12px;
     border: 0;
-    border-radius: var(--jf-radius-r-md);
+    border-radius: var(--jf-radius-r-full);
+    color: var(--jf-ink-90);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .segmented {
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: var(--jf-radius-r-full);
+  }
+  .segmented button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 44px;
+    height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: var(--jf-radius-r-full);
     background: transparent;
     color: var(--jf-ink-70);
     font: inherit;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
+    transition:
+      background-color var(--jf-motion-dur-1) var(--jf-motion-ease-fluid),
+      color var(--jf-motion-dur-1) var(--jf-motion-ease-fluid);
   }
-  .heading {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--jf-ink-70);
-  }
-  .segmented {
-    display: flex;
-    gap: 2px;
-    padding: 3px;
-    border-radius: var(--jf-radius-r-full);
-    background: var(--jf-fill);
-  }
-  .segmented button {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 38px;
-    border: 0;
-    border-radius: var(--jf-radius-r-full);
-    background: transparent;
-    color: var(--jf-ink-70);
-    cursor: pointer;
+  .segmented button:hover:not(.on) {
+    background: var(--jf-fill-hover);
+    color: var(--jf-ink-90);
   }
   .segmented button.on {
-    background: var(--jf-cloud-soft);
-    color: var(--jf-ink-90);
-    box-shadow: var(--jf-elevation-shadow-1);
+    background: var(--jf-ink-90);
+    color: var(--jf-sky);
+  }
+  .seg-icon {
+    display: none;
   }
   button:focus-visible {
     outline: none;
     box-shadow: var(--jf-elevation-focus);
   }
-  .body {
-    position: relative;
-    flex: 1;
-    min-height: 0;
+
+  /* The stage: the artwork and titles, and the pane, between the top controls and the dock. */
+  .stage {
+    position: absolute;
+    top: var(--top);
+    bottom: calc(var(--dock-bottom) + var(--dock-h) + var(--jf-space-s5));
+    left: var(--side);
+    right: var(--side);
+    max-width: 1320px;
+    margin-inline: auto;
     display: grid;
-    grid-template-columns: minmax(300px, 400px) minmax(0, 640px);
-    justify-content: center;
-    align-items: center;
-    gap: 56px;
-    padding: var(--jf-space-s7) var(--jf-space-s9) var(--jf-space-s9);
+    grid-template-columns: var(--art) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: clamp(var(--jf-space-s7), 5vw, var(--jf-space-s10));
+    align-items: start;
   }
   .player {
     display: flex;
     flex-direction: column;
-    gap: var(--jf-space-s5);
+    gap: var(--jf-space-s7);
     min-width: 0;
+    padding-top: 22px;
   }
   .hero {
-    width: 100%;
-    aspect-ratio: 1;
+    width: var(--art);
+    height: var(--art);
     display: grid;
     place-items: center;
     container-type: size;
@@ -310,7 +341,7 @@
   .titles {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     min-width: 0;
   }
   .title {
@@ -318,14 +349,14 @@
     font-size: var(--jf-type-roles-now-playing-title-size);
     line-height: var(--jf-type-roles-now-playing-title-line-height);
     font-weight: var(--jf-type-roles-now-playing-title-weight);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.018em;
     overflow-wrap: anywhere;
   }
   .artist {
     margin: 0;
-    font-size: var(--jf-type-roles-now-playing-artist-size);
+    font-size: 17px;
     line-height: var(--jf-type-roles-now-playing-artist-line-height);
-    font-weight: var(--jf-type-roles-now-playing-artist-weight);
+    font-weight: 500;
     color: var(--jf-ink-70);
     overflow-wrap: anywhere;
   }
@@ -334,7 +365,7 @@
     gap: var(--jf-space-s2);
     margin: 0;
     padding: var(--jf-space-s3);
-    border-radius: var(--jf-radius-r-md);
+    border-radius: var(--jf-radius-r-lg);
     background: var(--jf-tint-veil);
     color: var(--jf-ink-90);
     font-size: 14px;
@@ -345,15 +376,18 @@
     color: var(--jf-warning);
   }
   .pane {
-    height: min(100%, 720px);
+    height: 100%;
     min-height: 0;
     min-width: 0;
+    /* Lyrics size themselves to the pane (lyrics.line: 40 px, the fluid maximum, where it is wide). */
+    container-type: inline-size;
   }
   .muted {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .no-lyrics {
     max-width: 420px;
+    padding-top: 22px;
     color: var(--jf-ink-70);
   }
   .title-2 {
@@ -362,53 +396,143 @@
     color: var(--jf-ink-90);
   }
 
-  /* Phones: one column; the chosen pane replaces the artwork. */
-  @media (max-width: 760px) {
-    .heading,
-    .back-label {
+  /* Every control in one floating Veil dock. */
+  .dock {
+    position: absolute;
+    left: var(--side);
+    right: var(--side);
+    bottom: var(--dock-bottom);
+    z-index: 3;
+    max-width: 1320px;
+    height: var(--dock-h);
+    margin-inline: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) minmax(120px, 200px);
+    grid-template-areas: 'transport seek vol';
+    align-items: center;
+    column-gap: var(--jf-space-s6);
+    padding: 0 var(--jf-space-s6) 0 var(--jf-space-s4);
+    border-radius: 40px;
+  }
+  .dock.has-more {
+    grid-template-columns: auto minmax(0, 1fr) minmax(120px, 200px) auto;
+    grid-template-areas: 'transport seek vol more';
+    padding-inline-end: var(--jf-space-s3);
+    column-gap: var(--jf-space-s5);
+  }
+  .transport {
+    grid-area: transport;
+  }
+  .seek {
+    grid-area: seek;
+    min-width: 0;
+  }
+  .vol {
+    grid-area: vol;
+    min-width: 0;
+  }
+  .more {
+    grid-area: more;
+  }
+  /* A narrower dock keeps the mute button and drops the volume line; Ctrl+↑/↓ still change it. */
+  @media (min-width: 761px) and (max-width: 1040px) {
+    .dock,
+    .dock.has-more {
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+      column-gap: var(--jf-space-s3);
+    }
+    .vol :global(.line),
+    .vol :global(.glyph) {
       display: none;
     }
-    .body {
+  }
+
+  /* Phones: one column under the top controls; the chosen pane replaces the artwork; the dock is
+     a rounded card with the seek bar, the transport, and the volume with More. */
+  @media (max-width: 760px) {
+    .np {
+      --top: calc(64px + env(safe-area-inset-top));
+      --side: var(--jf-space-s4);
+      --dock-bottom: max(var(--jf-space-s4), env(safe-area-inset-bottom));
+      --dock-h: 216px;
+    }
+    .top {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      padding-inline: max(18px, env(safe-area-inset-left)) max(18px, env(safe-area-inset-right));
+    }
+    .back {
+      width: 44px;
+      padding: 0;
+      justify-content: center;
+    }
+    .back-label,
+    .seg-label {
+      display: none;
+    }
+    .segmented {
+      grid-column: 3;
+    }
+    .segmented button {
+      width: 44px;
+      padding: 0;
+    }
+    .seg-icon {
+      display: grid;
+    }
+    .segmented button.on:not(.phone-on) {
+      background: transparent;
+      color: var(--jf-ink-70);
+    }
+    .stage {
+      left: var(--jf-space-s6);
+      right: var(--jf-space-s6);
       display: flex;
       flex-direction: column;
       align-items: stretch;
-      gap: var(--jf-space-s4);
-      padding: var(--jf-space-s4) var(--jf-space-s4) max(var(--jf-space-s5), env(safe-area-inset-bottom));
+      gap: var(--jf-space-s5);
+      padding-top: var(--jf-space-s3);
     }
     .player {
       flex: 1;
       min-height: 0;
-      justify-content: flex-end;
-      gap: var(--jf-space-s4);
+      gap: var(--jf-space-s5);
+      padding-top: 0;
     }
     .hero {
       flex: 1;
       min-height: 0;
       width: 100%;
-      aspect-ratio: auto;
+      height: auto;
+    }
+    .title {
+      font-size: 25px;
+    }
+    .artist {
+      font-size: 15.5px;
     }
     .pane {
       display: none;
     }
     .pane-open .pane {
       display: block;
-      order: -1;
       flex: 1;
       height: auto;
-    }
-    .pane-open .hero {
-      display: none;
+      min-height: 0;
     }
     .pane-open .player {
-      flex: none;
+      display: none;
     }
-    .segmented button.on:not(.phone-on) {
-      background: transparent;
-      box-shadow: none;
-      color: var(--jf-ink-70);
-    }
-    .title {
-      font-size: 22px;
+    .dock,
+    .dock.has-more {
+      height: auto;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'seek seek'
+        'transport transport'
+        'vol more';
+      row-gap: var(--jf-space-s2);
+      padding: var(--jf-space-s5) 22px var(--jf-space-s3);
+      border-radius: 32px;
     }
   }
 </style>

@@ -598,23 +598,25 @@
   .row.end {
     justify-content: flex-end;
   }
+  /* Luminous (v0.0.6): each group is a card of Mist glass with its heading inside, without a
+     blur layer of its own, so it shows the transparency setting at once. */
   .group {
-    margin-bottom: var(--jf-space-s8);
-  }
-  /* A card of settings: Mist glass, so it shows the transparency setting at once. */
-  .card {
-    padding: 0 var(--jf-space-s4);
-    border-radius: var(--jf-radius-r-xl);
+    margin-bottom: var(--jf-space-s5);
+    padding: var(--jf-space-s5) var(--jf-space-s6) var(--jf-space-s2);
+    border-radius: var(--jf-radius-r-2xl);
     background: var(--jf-tint-mist);
     box-shadow:
       inset 0 0 0 1px var(--jf-glass-edge-soft),
       var(--jf-elevation-shadow-1);
   }
+  .group > :global(.section) {
+    margin-bottom: var(--jf-space-s1);
+  }
   .card + .card {
     margin-top: var(--jf-space-s3);
   }
   .card.padded {
-    padding: var(--jf-space-s4);
+    padding: var(--jf-space-s3) 0 var(--jf-space-s4);
   }
   .row {
     display: flex;
@@ -649,7 +651,7 @@
   .note {
     font-size: 13px;
     line-height: 1.45;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .note {
     margin: calc(-1 * var(--jf-space-s2)) 0 var(--jf-space-s3);
@@ -920,6 +922,12 @@
     backdrop-filter: blur(6px) saturate(var(--jf-glass-sat));
     box-shadow: inset 0 0 0 1px var(--jf-glass-edge-soft);
   }
+  /* Phones: the tab bar and the mini-player take the two live blur layers there. */
+  @media (max-width: 760px) {
+    .pane {
+      backdrop-filter: none;
+    }
+  }
   .pane .pv-line {
     top: 12px;
     left: 10px;
@@ -937,7 +945,7 @@
     min-width: 0;
     font-size: 13px;
     font-weight: 600;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   button:focus-visible,
   select:focus-visible,
@@ -980,7 +988,7 @@
     align-items: center;
     gap: var(--jf-space-s2);
     font-size: 11px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .band input {
     writing-mode: vertical-lr;

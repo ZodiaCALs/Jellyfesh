@@ -88,8 +88,9 @@ export async function openSignIn(page: Page, source: string) {
   return sheet;
 }
 
-export async function signInSubsonic(page: Page, server = SUBSONIC) {
-  const sheet = await openSignIn(page, 'Subsonic');
+/** Signs in to the mock Subsonic server with `source` (the bundled Subsonic plugin, or a test plugin made from it). */
+export async function signInSubsonic(page: Page, server = SUBSONIC, source = 'Subsonic') {
+  const sheet = await openSignIn(page, source);
   await sheet.getByLabel('Server Address').fill(server);
   await sheet.getByRole('button', { name: 'Continue' }).click();
   await sheet.getByRole('button', { name: 'Sign In', exact: true }).click();

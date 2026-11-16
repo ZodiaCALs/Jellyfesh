@@ -1,10 +1,42 @@
-// What the views do with items: queue entries, the rows' second line, and the "More" menu. The
-// library's items (`LIBRARY`) play as files; everything else as a source's tracks.
+// What the views do with items: queue entries, the rows' second line, links that open an item in
+// its service, and the "More" menus. The library's items (`LIBRARY`) play as files; everything
+// else as a source's tracks.
 
 import type { App } from './app';
-import type { Item, NewEntry } from './core/types';
+import type { Item, NewEntry, Row } from './core/types';
 import { t, tn } from './i18n/index.svelte';
 import { LIBRARY, LIBRARY_ID } from './state/library.svelte';
+
+/** One entry of a "More" menu. */
+export interface MenuEntry {
+  label: string;
+  action: () => void;
+  disabled?: boolean;
+}
+
+/** Where Open in {Service} goes: the link the core filled in, and the plugin's name. */
+export interface ItemLink {
+  url: string;
+  service: string;
+}
+
+/** The link that opens `item` in its service (API 1.1, docs/ui.md), or null. */
+export function linkOf(app: App, plugin: string, item: Item): ItemLink | null {
+  if (plugin === LIBRARY) return null;
+  const source = app.sources.get(plugin);
+  const url = source?.link(item) ?? null;
+  return source && url ? { url, service: source.name } : null;
+}
+
+/** Opens an item's link in a new tab, which gets no hold on this page. */
+export function openLink(url: string) {
+  window.open(url, '_blank', 'noopener');
+}
+
+/** The Open in {Service} entry of a menu. */
+function openInEntry(link: ItemLink): MenuEntry {
+  return { label: t('Open in {service}', { service: link.service }), action: () => openLink(link.url) };
+}
 
 export function entryOf(plugin: string, item: Item): NewEntry {
   if (plugin === LIBRARY) return { kind: 'file', id: `${LIBRARY_ID}${item.id}` };
@@ -82,9 +114,19 @@ export function artistOf(item: Item): Item | null {
   return item.artist_id ? stub('Artist', item.artist_id, item.artist ?? t('Unknown Artist'), null) : null;
 }
 
-/** The "More" menu of a row. */
-export function itemMenu(app: App, plugin: string, item: Item, toast: (text: string) => void) {
-  const menu: { label: string; action: () => void; disabled?: boolean }[] = [];
+/**
+ * The "More" menu of a row or page: Play Next and Play Last (left out with `queue: false`, for a
+ * page with nothing to play), Go to Album, Go to Artist, then Open in {Service} when the item has
+ * a link.
+ */
+export function itemMenu(
+  app: App,
+  plugin: string,
+  item: Item,
+  toast: (text: string) => void,
+  { queue = true }: { queue?: boolean } = {},
+): MenuEntry[] {
+  const menu: MenuEntry[] = [];
   if (item.kind === 'Track') {
     menu.push(
       {
@@ -106,7 +148,7 @@ export function itemMenu(app: App, plugin: string, item: Item, toast: (text: str
     );
     const album = albumOf(item);
     if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
-  } else {
+  } else if (queue) {
     menu.push(
       { label: t('Play Next'), action: () => void queueContainer(app, plugin, item, true, toast) },
       { label: t('Play Last'), action: () => void queueContainer(app, plugin, item, false, toast) },
@@ -114,6 +156,26 @@ export function itemMenu(app: App, plugin: string, item: Item, toast: (text: str
   }
   const artist = item.kind !== 'Artist' ? artistOf(item) : null;
   if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
+  const link = linkOf(app, plugin, item);
+  if (link) menu.push(openInEntry(link));
+  return menu;
+}
+
+/**
+ * Now Playing's "More": Go to Album, Go to Artist and Open in {Service} for a source's song (empty
+ * for files). Going to a page closes Now Playing; Back returns to it.
+ */
+export function nowPlayingMenu(app: App, row: Row | null): MenuEntry[] {
+  const found = row ? app.player.sourceItem(row) : null;
+  if (!found) return [];
+  const plugin = found.plugin.id;
+  const menu: MenuEntry[] = [];
+  const album = albumOf(found.item);
+  if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
+  const artist = artistOf(found.item);
+  if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
+  const link = linkOf(app, plugin, found.item);
+  if (link) menu.push(openInEntry(link));
   return menu;
 }
 

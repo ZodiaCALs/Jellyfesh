@@ -120,12 +120,11 @@
 {/if}
 
 <style>
+  /* Luminous: each group is a Mist card with its heading inside (as in Settings.svelte). */
   .group {
-    margin-bottom: var(--jf-space-s8);
-  }
-  .card {
-    padding: 0 var(--jf-space-s4);
-    border-radius: var(--jf-radius-r-xl);
+    margin-bottom: var(--jf-space-s5);
+    padding: var(--jf-space-s5) var(--jf-space-s6) var(--jf-space-s2);
+    border-radius: var(--jf-radius-r-2xl);
     background: var(--jf-tint-mist);
     box-shadow:
       inset 0 0 0 1px var(--jf-glass-edge-soft),
@@ -166,7 +165,7 @@
   .muted {
     font-size: 13px;
     line-height: 1.45;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .note {
     margin: calc(-1 * var(--jf-space-s2)) 0 var(--jf-space-s3);

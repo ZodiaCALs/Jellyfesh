@@ -73,7 +73,7 @@ function fade(): TransitionConfig {
 }
 
 type ViewTransitionDocument = Document & {
-  startViewTransition?: (update: () => Promise<void>) => { finished: Promise<void> };
+  startViewTransition?: (update: () => Promise<void>) => { ready: Promise<void>; finished: Promise<void> };
 };
 
 /** The view transition running, by the name `viewTransition` gave it. */
@@ -95,6 +95,9 @@ export function viewTransition(name: string, update: () => Promise<void>): void 
   const root = document.documentElement;
   root.dataset.viewTransition = name;
   const transition = doc.startViewTransition(update);
+  // A transition the browser skips (another one started, or it could not capture the page)
+  // still runs the update: the change happens without the morph. Its `ready` then rejects.
+  transition.ready.catch(() => undefined);
   transition.finished
     .catch(() => undefined)
     .finally(() => {

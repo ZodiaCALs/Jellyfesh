@@ -313,5 +313,7 @@
   "Volume Up": "音量を上げる",
   "Volume Down": "音量を下げる",
   "Pick “{name}” again to play its songs on this visit.": "今回の訪問で「{name}」の曲を再生するには、もう一度フォルダを選んでください。",
-  "Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.": "Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み込みます。読み込んだ情報は保持されます。訪問のたびに、曲を再生する前にもう一度フォルダを選んでください。"
+  "Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.": "Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み込みます。読み込んだ情報は保持されます。訪問のたびに、曲を再生する前にもう一度フォルダを選んでください。",
+  "Open in {service}": "{service} で開く",
+  "Open {title} in {service}": "{title} を {service} で開く"
 }

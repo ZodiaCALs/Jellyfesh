@@ -313,5 +313,7 @@
   "Volume Up": "調高音量",
   "Volume Down": "調低音量",
   "Pick “{name}” again to play its songs on this visit.": "請再次選擇「{name}」，以在本次造訪中播放其中的歌曲。",
-  "Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.": "Jellyfesh 會讀取這些資料夾中的所有音訊檔案。讀取的資訊會被保留；每次造訪時，播放歌曲前請再次選擇資料夾。"
+  "Jellyfesh reads every audio file in these folders. What it read is kept; pick a folder again on each visit before its songs play.": "Jellyfesh 會讀取這些資料夾中的所有音訊檔案。讀取的資訊會被保留；每次造訪時，播放歌曲前請再次選擇資料夾。",
+  "Open in {service}": "在 {service} 中開啟",
+  "Open {title} in {service}": "在 {service} 中開啟 {title}"
 }

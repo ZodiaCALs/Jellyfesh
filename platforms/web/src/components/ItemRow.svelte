@@ -2,11 +2,12 @@
   // One item in a list: artwork (or the track number), two lines of type, the length or a
   // chevron, and "More". After Apple Music and Media Player: hover fills the row, a track number
   // turns into a play glyph, and the playing row is accent-soft with accent text and a level glyph
-  // that moves only while playing.
+  // that moves only while playing. A song that cannot play here but has a link (API 1.1) opens it
+  // in its service instead, next to its reason (docs/ui.md, Open in {Service}).
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { formatTime, t } from '../lib/i18n/index.svelte';
-  import { itemMenu, secondary } from '../lib/items';
+  import { itemMenu, linkOf, openLink, secondary } from '../lib/items';
   import { LIBRARY, LIBRARY_ID } from '../lib/state/library.svelte';
   import { toast } from '../lib/state/toast.svelte';
   import Art from './Art.svelte';
@@ -38,14 +39,33 @@
         : app.player.current?.kind === 'source' && app.player.current.plugin === plugin && app.player.current.id === item.id),
   );
   const unplayable = $derived(item.kind === 'Track' && !item.playable);
+  // Known once the source's package has been read (it has, for anything it listed).
+  const link = $derived((void app.sources.revision, linkOf(app, plugin, item)));
+  /** The row's main action opens the item in its service. */
+  const opensLink = $derived(unplayable && link !== null);
   const second = $derived(secondary(item));
   const label = $derived(
-    item.kind === 'Track' ? t('Play {title}', { title: item.title }) : t('Open {title}', { title: item.title }),
+    opensLink && link
+      ? t('Open {title} in {service}', { title: item.title, service: link.service })
+      : item.kind === 'Track'
+        ? t('Play {title}', { title: item.title })
+        : t('Open {title}', { title: item.title }),
   );
+
+  function activate() {
+    if (opensLink && link) openLink(link.url);
+    else onactivate();
+  }
 </script>
 
-<div class="row" class:playing class:unplayable>
-  <button class="main" onclick={onactivate} disabled={unplayable} aria-label={label} aria-current={playing ? 'true' : undefined}>
+<div class="row" class:playing class:unplayable class:linked={opensLink}>
+  <button
+    class="main"
+    onclick={activate}
+    disabled={unplayable && !opensLink}
+    aria-label={label}
+    aria-current={playing ? 'true' : undefined}
+  >
     {#if number !== null}
       <span class="number" aria-hidden="true">
         {#if playing}
@@ -70,7 +90,10 @@
         </span>
       {/if}
     </span>
-    {#if item.kind === 'Track'}
+    {#if opensLink}
+      <span class="length">{item.duration_ms ? formatTime(item.duration_ms) : ''}</span>
+      <span class="chevron" aria-hidden="true"><Icon name="external" size={18} /></span>
+    {:else if item.kind === 'Track'}
       <span class="length">{item.duration_ms ? formatTime(item.duration_ms) : ''}</span>
     {:else}
       <span class="chevron" aria-hidden="true"><Icon name="forward" size={18} /></span>
@@ -124,7 +147,7 @@
     place-items: center;
     width: 40px;
     font-variant-numeric: tabular-nums;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
     font-size: 14px;
   }
   .glyph {
@@ -182,14 +205,21 @@
   .second {
     font-size: var(--jf-type-roles-list-secondary-size);
     line-height: var(--jf-type-roles-list-secondary-line-height);
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .also {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .unplayable .title,
   .unplayable .number {
     color: var(--jf-ink-30);
+  }
+  /* It opens in its service: still readable, as a link is something to do. */
+  .unplayable.linked .title {
+    color: var(--jf-ink-70);
+  }
+  .linked .main {
+    cursor: pointer;
   }
   .badge {
     display: inline-grid;
@@ -208,7 +238,7 @@
     flex: none;
     font-size: 13px;
     font-variant-numeric: tabular-nums;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .chevron {
     flex: none;

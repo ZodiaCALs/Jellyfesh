@@ -305,6 +305,7 @@ export class Plugin {
       JSON.stringify(this.info.allow),
       JSON.stringify(this.settings),
       JSON.stringify(this.info.content_policy),
+      JSON.stringify(this.info.links ?? null),
     );
   }
 
@@ -530,6 +531,14 @@ export class Plugin {
     return this.source?.allows(url) ?? false;
   }
 
+  /**
+   * The https link that opens `item` in the service, filled in by the core from the manifest's
+   * `[links]` (API 1.1), or null: Open in {Service}. Known once the package has been read.
+   */
+  link(item: Item): string | null {
+    return this.source?.link(item.kind, item.id) ?? null;
+  }
+
   async search(query: string, limit = 50, wallMs = SEARCH_MS): Promise<ItemPage> {
     const page = await this.call('catalog.search', [query, { kinds: [] }, pageRequestToJco(null, limit)], { wallMs });
     return JSON.parse(this.checker().check_page(JSON.stringify(pageFromJco(page)), limit));
@@ -661,10 +670,11 @@ export class PluginHost {
 
   /**
    * Installs (or updates) a plugin from a `.jfpkg` file, as the native host does: checks the
-   * package and its signature, refuses community packages while they are off and updates signed
-   * by another key, transpiles the component for this browser, starts it once and checks the
-   * capabilities it reports. Official packages start on; community ones wait for the disclosure.
-   * An update keeps the settings, account and secrets. Throws why it was refused.
+   * package and its signature, refuses remote sources (no remote sessions in the browser,
+   * ADR-0018), community packages while they are off and updates signed by another key (the
+   * core's `install_refusal`), transpiles the component for this browser, starts it once and
+   * checks the capabilities it reports. Official packages start on; community ones wait for the
+   * disclosure. An update keeps the settings, account and secrets. Throws why it was refused.
    */
   async install(file: File): Promise<Plugin> {
     const limit = this.jf.max_package_bytes();
@@ -675,7 +685,7 @@ export class PluginHost {
     const existing = this.get(info.id);
     if (existing) await existing.verify().catch(() => undefined);
     const refusal = this.jf.install_refusal(
-      JSON.stringify({ id: info.id, name: info.name, signature: info.signature }),
+      JSON.stringify({ id: info.id, name: info.name, signature: info.signature, playback_mode: info.playback_mode }),
       existing?.info ? JSON.stringify(existing.info.signature) : undefined,
       this.allowCommunity,
     );

@@ -40,6 +40,8 @@
     sort: 'M8 5v14M5 16l3 3 3-3M16 19V5M13 8l3-3 3 3',
     library: 'M5 4.5v15M9.5 4.5v15M14 5.5l4.5 13.5',
     'folder-plus': 'M3.5 6.5a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1zM12 10.5v5M9.5 13h5',
+    // Open in {Service}: out of the box, to another place.
+    external: 'M13.5 4.5h6v6M19.5 4.5 11 13M17.5 13.5v5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1h5',
   };
   const FILLED: Record<string, string> = {
     play: 'M8 5.6v12.8a.9.9 0 0 0 1.4.8l10-6.4a.9.9 0 0 0 0-1.6l-10-6.4A.9.9 0 0 0 8 5.6z',

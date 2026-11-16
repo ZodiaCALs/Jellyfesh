@@ -2,7 +2,9 @@
   // The shell: navigation (a sidebar on wide screens, tabs on phones), the current page, the
   // player (the capsule under 900 px, the player bar from 900 px on; only the one shown exists, so
   // only its clock runs), Now Playing over everything, files dropped anywhere, and the keyboard
-  // shortcuts of the Linux app.
+  // shortcuts of the Linux app. Luminous (v0.0.6): the sidebar is a floating panel of Clear glass,
+  // the player and the phone tabs are Veil capsules floating over the content, which fades out
+  // just above them.
   import { MediaQuery } from 'svelte/reactivity';
   import Icon from './components/Icon.svelte';
   import MiniPlayer from './components/MiniPlayer.svelte';
@@ -159,8 +161,8 @@
 
 <a class="skip" href="#main">{t('Skip to content')}</a>
 
-<div class="shell" inert={nav.nowPlaying}>
-  <nav class="sidebar" aria-label={t('Library sections')}>
+<div class="shell" class:with-player={player.current !== null} inert={nav.nowPlaying}>
+  <nav class="sidebar glass-clear" aria-label={t('Library sections')}>
     <div class="brand">
       <img src="./icons/icon.svg" alt="" width="32" height="32" />
       <span>Jellyfesh</span>
@@ -236,10 +238,10 @@
     {/if}
   </div>
 
-  <nav class="tabs" aria-label={t('Library sections')}>
+  <nav class="tabs glass-veil" aria-label={t('Library sections')}>
     {#each PHONE_TABS as [id, label, icon] (id)}
       <button class:on={onTab(id)} aria-current={onTab(id) ? 'page' : undefined} onclick={() => nav.switchTab(id)}>
-        <Icon name={icon} /><span>{t(label)}</span>
+        <span class="pill"><Icon name={icon} /></span><span>{t(label)}</span>
       </button>
     {/each}
   </nav>
@@ -291,44 +293,55 @@
     left: 8px;
   }
   .shell {
+    /* How far the floating capsules reach up from the bottom of the window: the content fades
+       out just above them (edge-blur.bottom-height), and its last row can scroll clear of them. */
+    --floor: 0px;
+    --fade: var(--jf-edge-blur-bottom-height);
     display: grid;
-    grid-template-columns: 232px minmax(0, 1fr);
+    grid-template-columns: 248px minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     height: 100dvh;
   }
+  .shell.with-player {
+    /* The player bar, 16 px above the bottom. */
+    --floor: calc(var(--jf-player-bar-height) + var(--jf-space-s4) + max(0px, env(safe-area-inset-bottom)));
+  }
+  /* A floating panel of Clear glass (Luminous), r-2xl, 12 px from the window's edges. */
   .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: max(var(--jf-space-s5), env(safe-area-inset-top)) var(--jf-space-s3) var(--jf-space-s5);
-    background: var(--jf-tint-clear);
-    box-shadow: inset -1px 0 0 var(--jf-line-soft);
+    gap: 3px;
+    min-height: 0;
+    margin: max(var(--jf-space-s3), env(safe-area-inset-top)) 0 var(--jf-space-s3) max(var(--jf-space-s3), env(safe-area-inset-left));
+    padding: var(--jf-space-s5) var(--jf-space-s3);
+    overflow-y: auto;
+    border-radius: var(--jf-radius-r-2xl);
   }
   .brand {
     display: flex;
     align-items: center;
-    gap: var(--jf-space-s2);
-    padding: 0 var(--jf-space-s2) var(--jf-space-s5);
+    gap: 11px;
+    padding: 0 10px var(--jf-space-s6);
     font-weight: 700;
-    font-size: 18px;
+    font-size: 16px;
     letter-spacing: -0.01em;
   }
   .brand img {
-    border-radius: 8px;
+    border-radius: 9px;
   }
   .nav-item {
     display: flex;
     align-items: center;
     gap: var(--jf-space-s3);
-    min-height: 44px;
+    min-height: 42px;
     padding: 0 var(--jf-space-s3);
     border: 0;
-    border-radius: var(--jf-radius-r-md);
+    border-radius: var(--jf-radius-r-lg);
     background: transparent;
     color: var(--jf-ink-70);
     font: inherit;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 14.5px;
+    font-weight: 500;
     text-align: start;
     cursor: pointer;
   }
@@ -339,6 +352,7 @@
   .nav-item.on {
     background: var(--jf-accent-soft);
     color: var(--jf-accent-text);
+    font-weight: 600;
   }
   .nav-gap {
     margin: var(--jf-space-s2) var(--jf-space-s3);
@@ -363,8 +377,13 @@
   .content {
     min-width: 0;
     overflow-y: auto;
-    padding: max(var(--jf-space-s7), env(safe-area-inset-top)) var(--jf-layout-gutter-fluid) 140px;
+    padding: max(var(--jf-space-s8), env(safe-area-inset-top)) var(--jf-layout-gutter-fluid)
+      calc(var(--floor) + var(--fade) + var(--jf-space-s7));
     outline: none;
+  }
+  /* The content fades out just above the floating capsules, so nothing reads through them. */
+  .with-player .content {
+    mask-image: linear-gradient(to top, transparent var(--floor), black calc(var(--floor) + var(--fade)));
   }
   .back {
     display: inline-flex;
@@ -396,7 +415,7 @@
   }
   .dock {
     position: fixed;
-    left: 232px;
+    left: 248px;
     right: 0;
     bottom: max(var(--jf-space-s4), env(safe-area-inset-bottom));
     z-index: 10;
@@ -499,50 +518,77 @@
     display: none;
   }
 
-  /* Phones: tabs at the bottom, the mini-player above them. */
+  /* Phones: the tabs a floating Veil capsule at the bottom, the mini-player a capsule above them. */
   @media (max-width: 760px) {
     .shell {
+      /* The tab bar: 68 px, 24 px above the bottom. */
+      --tabs-top: calc(68px + max(var(--jf-space-s6), env(safe-area-inset-bottom)));
+      --floor: var(--tabs-top);
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) auto;
+    }
+    .shell.with-player {
+      --floor: calc(var(--tabs-top) + var(--jf-space-s3) + var(--jf-player-mini-height));
     }
     .sidebar {
       display: none;
     }
     .content {
-      padding: max(var(--jf-space-s5), env(safe-area-inset-top)) var(--jf-space-s4) 150px;
+      padding: max(var(--jf-space-s5), env(safe-area-inset-top)) var(--jf-space-s4)
+        calc(var(--floor) + var(--fade) + var(--jf-space-s4));
+    }
+    .content,
+    .with-player .content {
+      mask-image: linear-gradient(to top, transparent var(--floor), black calc(var(--floor) + var(--fade)));
     }
     .dock {
       left: 0;
-      bottom: calc(64px + env(safe-area-inset-bottom) + var(--jf-space-s2));
-      padding: 0 var(--jf-space-s3);
+      bottom: calc(var(--tabs-top) + var(--jf-space-s3));
+      padding: 0 14px;
     }
     .tabs {
+      position: fixed;
+      left: 14px;
+      right: 14px;
+      bottom: max(var(--jf-space-s6), env(safe-area-inset-bottom));
+      z-index: 10;
       display: flex;
       justify-content: space-around;
-      padding: 4px 4px max(4px, env(safe-area-inset-bottom));
-      background: var(--jf-tint-veil);
-      backdrop-filter: blur(var(--jf-glass-veil-blur)) saturate(var(--jf-glass-sat));
-      box-shadow: inset 0 1px 0 var(--jf-line-soft);
+      align-items: center;
+      height: 68px;
+      padding: 0 6px;
+      border-radius: var(--jf-radius-r-full);
     }
     .tabs button {
       flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 3px;
+      min-width: 0;
       min-height: 56px;
-      padding: 6px 0 0;
+      padding: 4px 0 0;
       border: 0;
-      border-radius: var(--jf-radius-r-md);
+      border-radius: var(--jf-radius-r-lg);
       background: transparent;
-      color: var(--jf-ink-50);
+      color: var(--jf-ink-70);
       font: inherit;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
     }
+    .tabs .pill {
+      display: grid;
+      place-items: center;
+      width: 54px;
+      height: 30px;
+      border-radius: 15px;
+      transition: background-color var(--jf-motion-dur-1) var(--jf-motion-ease-fluid);
+    }
     .tabs button.on {
       color: var(--jf-accent-text);
+    }
+    .tabs button.on .pill {
+      background: var(--jf-accent-soft);
     }
     .library-tabs {
       display: flex;
@@ -567,6 +613,11 @@
       background: var(--jf-cloud);
       color: var(--jf-ink-90);
       box-shadow: var(--jf-elevation-shadow-1);
+    }
+  }
+  @media (max-width: 760px) and (hover: hover) {
+    .tabs button:hover:not(.on) .pill {
+      background: var(--jf-fill-hover);
     }
   }
 </style>

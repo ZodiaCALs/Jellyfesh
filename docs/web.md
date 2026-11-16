@@ -5,7 +5,8 @@ Jellyfesh Web is Jellyfesh in the browser. It streams and browses your
 music folders**, and installs **source plugins from `.jfpkg` files**, with
 the same Now Playing as the apps (artwork, both backdrop styles, lyrics that
 follow every word, with translation and romanization), the queue, search,
-sign-in and settings, in the Misty design. It is laid out like the apps
+sign-in and settings, in Luminous, the v0.0.6 design (Misty, with the cover's
+colour filling the room; [ui.md](ui.md)). It is laid out like the apps
 (Home, Albums, Artists, Songs, Search, Sources, Settings; [ui.md](ui.md)),
 installs as a web app, lives on the website at `/app/`, and plays audio
 files you drag onto it without keeping them.
@@ -53,7 +54,18 @@ secret).
 * **Install a plugin**: Settings › Sources › Install from File… reads a
   `.jfpkg` with the native host's checks (below), refuses community packages
   while community plugins are off and updates signed by another key, starts
-  it once, and keeps it. Uninstall… removes a plugin with its settings and
+  it once, and keeps it. Plugins for API 1.0 and 1.1 install alike. A source
+  that plays on your own devices (`playback_mode = "remote"`, such as
+  Spotify; ADR-0018) is refused, whoever signed it: "{Name} plays on your own
+  devices, which Jellyfesh Web cannot do yet. Use the Jellyfesh app on your
+  computer or phone."
+* **Open in {Service}**: a source whose manifest has `[links]` (API 1.1)
+  offers **Open in {Service}** (the plugin's name) for its songs, albums,
+  artists and playlists: in the song menu and the More menus after Go to
+  Artist, and in Now Playing's More and Info. A song that cannot play here
+  but has a link opens it as its main action, next to its reason, and an
+  album or playlist with nothing playable offers it instead of Play. Links
+  open in a new tab, without a hold on the page (`noopener`). Uninstall… removes a plugin with its settings and
   sign-in; a bundled plugin you uninstall stays uninstalled until you install
   it from a file again.
 * **Sign in**: Settings › Sources → Sign In on Subsonic or Jellyfin, or
@@ -77,21 +89,37 @@ secret).
 
 ## How it looks
 
-Jellyfesh Web keeps Misty and follows the controls of
+Jellyfesh Web follows Luminous, the owner's choice for v0.0.6
+([ui.md](ui.md), "Luminous"), over the controls of
 [design-controls.md](design-controls.md) ("v0.0.4: the controls as built"),
 after Apple Music and Windows Media Player.
 
 ![The player bar under an album, light, against the mock server](screenshots/web/player-bar-light-desktop-mock-server.png)
 
-* **The player.** In windows 900 px wide and wider, a floating **player
-  bar** sits at the bottom of the content column: 80 px high, Veil glass,
-  16 px corners. The artwork (48 px) and two lines open Now Playing; in the
-  middle the transport (shuffle, previous, play, next, repeat; play is its
-  one accent fill) sits above the seek bar and its times; at the end,
-  Lyrics, Queue and the volume (under about 1040 px the volume keeps only
-  its mute button). Narrower windows and phones keep the floating
-  **capsule** (artwork, two lines, the play button), with its progress as a
-  2 px straight line along its bottom edge, between the ends' curves.
+* **The field.** Every screen sits on the aurora at about 75 %
+  (`field.aurora-strength`): four large glows at the artwork's hue, in both
+  appearances, painted once (only the content column scrolls). A new song's
+  colours crossfade over `dur-4`.
+* **Glass.** The sidebar is a floating panel of Clear glass. Grouped
+  surfaces (Settings groups, lists, source cards, the welcome) take the Mist
+  tint without a blur of their own, with `shadow-1`. The player bar, the
+  mini-player and the phone tab bar are Veil capsules floating over the
+  content, which fades out just above them (`edge-blur.bottom-height`), so
+  nothing reads through them. Live blur layers stay within the glass budget:
+  the sidebar and the player bar in the library (with a cover's play button
+  under the pointer, or the Transparency preview in Settings, three), the
+  dock alone in Now Playing; on phones the tab bar and the mini-player, or
+  the dock (the end-to-end test counts them). **Reduce Motion and
+  Transparency** makes all of it solid Cloud.
+* **The player.** In windows 900 px wide and wider, the **player bar** floats
+  at the bottom of the content column: 80 px high, Veil, 24 px corners. The
+  artwork (56 px) and two lines open Now Playing; in the middle the transport
+  (shuffle, previous, play, next, repeat; play is its one accent fill) sits
+  above the seek bar and its times; at the end, Lyrics, Queue and the volume
+  (under about 1040 px the volume keeps only its mute button). Narrower
+  windows and phones keep the floating **capsule** (artwork, two lines, the
+  play button), with its progress as a 2 px straight line along its bottom
+  edge, between the ends' curves; on phones it floats above the tab bar.
 * **The seek bar** is a straight line with round caps, 4 px (6 px on touch
   screens), the played part in `ink-90` and the rest in `ink-30`, elapsed
   and remaining times at its ends. It has no thumb at rest: hovering or
@@ -101,24 +129,46 @@ after Apple Music and Windows Media Player.
   Right move 5 s, Page Up and Page Down 30 s, Home and End go to the ends;
   screen readers hear "1:23 of 3:45". The volume and the sliders in
   Settings are the same line.
-* **Now Playing**: the artwork settles at 88 % while paused and springs
-  back when playing; play and pause morph into each other; the backdrop
-  crossfades between songs; lyrics move up in a cascade, each line 30 ms
-  after the one above, the active line full size and the others faded and
-  at 96 %. Tap a line to go there. As it opens, its artwork grows out of
-  the player's (a view transition; where a browser has none, Now Playing
-  rises and fades in); it closes sinking back.
-* **Library**: large titles; album and playlist covers lift on hover and
-  show a glass play button; album pages with large artwork, the artist in
-  accent colour (it opens the artist), Play and Shuffle, and a footer such
-  as "12 songs, 48 minutes"; track numbers turn into a play glyph on hover,
-  and the playing song has a level glyph that moves only while it plays.
-  (The servers' plugins give no genre, so album pages show none.)
+* **Now Playing** is a stage: the Artwork backdrop (the core's bake) or the
+  Misty field behind everything; Library (⌄ on phones) and Lyrics, Queue and
+  Info float at the top; the artwork, 380 px with `shadow-3` (less in short
+  windows), and the title at 32 px (`type-roles.now-playing-title`); every
+  control in one floating Veil **dock**, radius 40 and 80 px high (a rounded
+  card on phones): shuffle, previous, play, next, repeat, the seek bar with
+  its times, the volume and More (Go to Album, Go to Artist, Open in
+  {Service}). It has no device button: a browser decides where sound goes,
+  and Jellyfesh Web has no remote sessions. The artwork settles at 88 %
+  while paused and springs back when playing; play and pause morph into each
+  other; the backdrop crossfades between songs; lyrics are 40 px bold at line
+  height 1.18 where the pane is wide (`lyrics.line`; 28 px on phones) and move
+  up in a cascade, each line 40 ms after the one above (`lyrics.stagger`), the
+  active line full size and the others faded and at 92 %
+  (`lyrics.scale-inactive`). Tap a line to go there. As it opens, its
+  artwork grows out of the player's (a view transition; where a browser has
+  none, Now Playing rises and fades in); it closes sinking back.
+* **Library**: page titles at 48 px (`type.text-h1`) on wide windows; covers
+  with 16 px corners (`artwork.radius-grid`) and `shadow-2`, four to a row on
+  a 1280 px window, lifting 4 px with `shadow-3` on hover or keyboard focus
+  and showing a glass play button; album pages with large artwork, the
+  artist in accent colour (it opens the artist), Play and Shuffle, and a
+  footer such as "12 songs, 48 minutes"; track numbers turn into a play
+  glyph on hover, and the playing song has a level glyph that moves only
+  while it plays. (The servers' plugins give no genre, so album pages show
+  none.) Secondary text is `ink-70` or stronger.
 * **Motion** comes from Misty's tokens: pages fade in and rise 8 px, sheets
   and menus grow from 96 %, theme colours crossfade over 600 ms. With the
   system's reduced-motion preference or **Reduce Motion and Transparency**,
   nothing moves: what changes fades briefly, the artwork keeps its size,
   lyrics jump and the level glyph stands still.
+* **Contrast** (WCAG AA) on the stronger field, checked with the core's
+  themes for every tenth hue in both appearances, with the field sampled
+  across a 1280 × 800 window as the page paints it and the glass at the
+  default and the clearest Transparency: `ink-90` at least 10:1, `ink-70`
+  at least 5.8:1 (6.0:1 on the bare field), accent text at least 4.58:1 on
+  the field and 4.66:1 on Veil and Mist, and 4.7:1 on its soft fill (the
+  current place in the sidebar); on the Artwork backdrop's lightness band
+  `ink-70` keeps 5.7:1 (light) and 6.6:1 (dark). The lyrics' sung lines
+  (`ink-30`, large text) stay below 3:1 by design, as in v0.0.5.
 
 **Settings** has the apps' sections, one at a time: Appearance, Playback,
 Library, Sources and About ([ui.md](ui.md)). **Settings › Appearance**, where
@@ -342,7 +392,11 @@ built-in trust list) and checks that the transpiled code came from that
 package's component (its SHA-256). Which packages may be installed, and the
 words for refusals, are `jf_plugin_model::install`, shared with the native
 host. Unsigned packages are Community plugins, off until you allow them, as
-in the apps (ADR-0012).
+in the apps (ADR-0012). Remote sources are refused at install by
+`jf_web::install_refusal` (the page has no remote sessions, ADR-0018), and
+an item's link is filled in by the core from the manifest's `[links]`
+(`jf_web::Source::link`, on `jf_plugin_model::links`, the apps' rule; only
+`https` links come out), never by the page.
 
 The WIT host imports are TypeScript, with the native rules where a browser
 allows them:
@@ -388,9 +442,10 @@ copied. Clearing the site's data in the browser removes all of it.
 
 ## Performance
 
-* First load, compressed: **498 KiB with gzip, 394 KiB with Brotli** (the
-  page, its script and styles, the core's WebAssembly, 410 KiB of it with gzip, the
-  manifest, icon and plugin list; `npm run build` prints the table). The
+* First load, compressed: **569 KiB with gzip, 448 KiB with Brotli** (the
+  page, its script and styles, the core's WebAssembly, 465 KiB of it with
+  gzip, the manifest, icon and plugin list; `npm run build` prints the
+  table), measured with the v0.0.6 working copy. The
   media worker (artwork colours, backdrops, tags), the plugin sandbox and the
   plugins load when first needed; translations load only for their language.
 * Nothing runs per frame unless something on screen moves, and what moves
@@ -411,6 +466,14 @@ copied. Clearing the site's data in the browser removes all of it.
   pages loaded as the end comes into view) and covers load when visible.
   Backdrops are baked once per song by the core (`jf-palette`), never
   blurred live; glass panels blur what is behind them with `backdrop-filter`.
+  What that costs was measured with the content scrolling under the glass
+  every frame for 4 s (Settings › Appearance at 1280 × 800, headless
+  Chromium 153, whose renderer is software): with any two live blur layers,
+  60 frames a second (16.7 to 17.5 ms a frame on average); with all three
+  that screen has (the sidebar, the player bar and the Transparency
+  preview), 20 to 23 ms on average, about 45 frames a second; without blur,
+  16.7 ms. Phones measured 16.7 ms with their two. A GPU does this work far
+  faster; the library and Now Playing keep to two layers and one.
   The sources write only the standard property: given it next to
   `-webkit-backdrop-filter`, the CSS minifier keeps only the prefixed one,
   which Chrome and Firefox ignore, so it adds the prefix itself, and
@@ -462,7 +525,8 @@ Tests:
   the design's presentation math: device-pixel redraw steps, the glass tints
   for each transparency (with the core's real `glass_alpha`), the lyric inks
   as opacities, the cascade's order, the motion curves read from the tokens
-  and the songs-and-minutes footer.
+  and the songs-and-minutes footer; and item links and the remote-source
+  refusal through the core's real exports.
 * **End to end** (`tests/e2e`): the built app in Chromium against
   `tests/mock`, a mock OpenSubsonic server and a mock Jellyfin server
   serving an invented library, generated sine tones and gradient covers:
@@ -475,7 +539,13 @@ Tests:
   the seek bar's straight geometry, hover and drag thickness, dragging,
   keys and value text, the touch seek bar, Transparency setting the glass
   tints, a swatch fixing the accent hue, lyrics size and alignment, reduced
-  motion, and nothing moving or redrawing while paused. `JF_APP_URL`
+  motion, nothing moving or redrawing while paused, and Luminous (48 px
+  titles, 40 px lyrics, covers at radius 16 with `shadow-2`, and the live blur
+  layers counted: three at most on a desktop, two on a phone, none with
+  Reduce Motion and Transparency); and API 1.1 (`links.spec.ts`): a plugin
+  made from the Subsonic package with `[links]` offers Open in {Service} in
+  search results and on its album page, and one with
+  `playback_mode = "remote"` is refused at install. `JF_APP_URL`
   points them at a copy served elsewhere (for example the website build at
   `/app/`).
 * **Screenshots**: `JF_SCREENSHOTS=1 npx playwright test screenshots

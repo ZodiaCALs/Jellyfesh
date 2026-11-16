@@ -102,12 +102,12 @@
 <style>
   .size {
     margin: calc(-1 * var(--jf-space-s3)) 0 var(--jf-space-s6);
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .hint {
     margin: var(--jf-space-s4) 0 0;
     font-size: 13px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .welcome {
     max-width: var(--jf-layout-reading);
@@ -171,6 +171,6 @@
     color: var(--jf-warning);
   }
   .muted {
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
 </style>

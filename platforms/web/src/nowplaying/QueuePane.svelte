@@ -168,12 +168,12 @@
   }
   .second {
     font-size: 12px;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .length {
     font-size: 13px;
     font-variant-numeric: tabular-nums;
-    color: var(--jf-ink-50);
+    color: var(--jf-ink-70);
   }
   .empty {
     padding: var(--jf-space-s6) var(--jf-space-s2);
