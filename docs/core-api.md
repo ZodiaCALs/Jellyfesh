@@ -251,6 +251,14 @@ or hanging plugin never holds up a command or a snapshot.
   minutes without playing and a service that wants a new sign-in (`error`
   then says so). Remote sources' tracks never join the queue: `Enqueue`
   and `EnqueueCollection` with them fail.
+* **Players an app provides** (ADR-0018 item 5). `Core::register_external_player(id, name,
+  player)` registers an `ExternalPlayer` (devices, state, play, the
+  transport, volume, shuffle, repeat, transfer) under a source id without
+  dots (`apple-music`). `PlayTracks` with `TrackRef::Source` tracks whose
+  `plugin` is that id, or `PlayCollection` with `Collection::Source { plugin:
+  id, .. }`, starts a remote session on it, and everything above applies.
+  The core calls it from the session's thread; its errors show as the
+  slice's `error`. `unregister_external_player(id)` removes it.
 
 ## Status in this release's development
 

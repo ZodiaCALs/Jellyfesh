@@ -23,6 +23,7 @@ mod api;
 pub mod c_api;
 mod convert;
 mod error;
+mod external;
 mod secrets;
 pub mod types;
 
@@ -31,5 +32,6 @@ pub use api::{
     monotonic_now_ns, output_devices,
 };
 pub use error::CoreFfiError;
+pub use external::{ExternalItem, ExternalPlayer, ExternalPlayerError, ExternalState};
 pub use secrets::{SecretStore, SecretStoreError};
 pub use types::*;

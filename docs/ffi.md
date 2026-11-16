@@ -282,6 +282,17 @@ resolves every colour from one hue at run time.
   `SecretStore` likewise; whatever it throws becomes a failed call, and
   `CoreConfig.BundledPlugins` is left out of the JSON when null.
 
+### Players the apps provide
+
+`ExternalPlayer` is a foreign trait (like `SecretStore`): the macOS app
+implements it over MusicKit and passes it to
+`JellyfeshCore.registerExternalPlayer(id:name:player:)`. The core calls it on
+a remote session's own thread and each call may block until the player
+answers, so a Swift implementation may wait for its `async` MusicKit calls
+there; it must never call back into the core synchronously from inside a
+call. Throw `ExternalPlayerError.Failed(reason:)` with a sentence the person
+can read. The C ABI has no external players (the Windows app has none).
+
 ## The C ABI (`core/jf-ffi/src/c_api.rs`)
 
 ```c

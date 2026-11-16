@@ -948,6 +948,65 @@ pub struct RemoteSnapshot {
     pub error: Option<String>,
 }
 
+/// An item an [`ExternalPlayer`] plays or reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalItem {
+    pub kind: ItemKind,
+    /// The player's own id for it.
+    pub id: String,
+    pub title: String,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub duration_ms: Option<u64>,
+    pub artwork_url: Option<String>,
+}
+
+/// What an [`ExternalPlayer`] is doing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExternalState {
+    pub item: Option<ExternalItem>,
+    /// The album or playlist it plays from, when it knows.
+    pub context: Option<ExternalItem>,
+    pub playing: bool,
+    pub position_ms: u64,
+    pub shuffle: bool,
+    pub repeat: RepeatMode,
+    pub device: Option<RemoteDevice>,
+}
+
+/// A player an app provides (ADR-0018 item 5), such as MusicKit's on macOS,
+/// registered with [`crate::Core::register_external_player`] under a
+/// reserved source id. The core drives it exactly like a remote source's
+/// `remote` export: playing tracks whose `SourceTrack::plugin` is that id
+/// starts a remote session, and the `Remote` slice follows it.
+///
+/// The core calls it from the remote session's own thread, never from the
+/// actor or the app's main thread; each call may block until the player
+/// answers (at most a few seconds). Errors are shown as the slice's `error`.
+pub trait ExternalPlayer: Send + Sync {
+    fn devices(&self) -> Result<Vec<RemoteDevice>, String>;
+    /// `None` when nothing plays.
+    fn state(&self) -> Result<Option<ExternalState>, String>;
+    /// Plays `tracks` from `start`, or the album or playlist `context` from
+    /// its track `start` (then `tracks` is empty).
+    fn play(
+        &self,
+        context: Option<ExternalItem>,
+        tracks: Vec<ExternalItem>,
+        start: u32,
+    ) -> Result<(), String>;
+    fn resume(&self) -> Result<(), String>;
+    fn pause(&self) -> Result<(), String>;
+    fn next(&self) -> Result<(), String>;
+    fn previous(&self) -> Result<(), String>;
+    fn seek(&self, position_ms: u64) -> Result<(), String>;
+    /// 0–100; players without a volume answer an error.
+    fn set_volume(&self, percent: u32) -> Result<(), String>;
+    fn set_shuffle(&self, on: bool) -> Result<(), String>;
+    fn set_repeat(&self, mode: RepeatMode) -> Result<(), String>;
+    fn transfer(&self, device: String) -> Result<(), String>;
+}
+
 /// Where lyrics came from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LyricsSource {

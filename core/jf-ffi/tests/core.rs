@@ -444,3 +444,129 @@ fn the_apps_secret_store_keeps_the_sign_ins() {
         core.shutdown();
     }
 }
+
+/// An app's player through the foreign trait: registered under a source id, its tracks start a
+/// remote session and the `Remote` event follows it. The player is a fake with one invented track.
+#[test]
+fn an_external_player_takes_a_remote_session() {
+    struct Player(Mutex<Option<ExternalState>>);
+    impl ExternalPlayer for Player {
+        fn devices(&self) -> Result<Vec<RemoteDevice>, ExternalPlayerError> {
+            Ok(vec![RemoteDevice {
+                id: "this".into(),
+                name: "This Computer".into(),
+                kind: RemoteDeviceKind::Computer,
+                active: true,
+                volume_percent: None,
+            }])
+        }
+        fn state(&self) -> Result<Option<ExternalState>, ExternalPlayerError> {
+            Ok(self.0.lock().unwrap().clone())
+        }
+        fn play(
+            &self,
+            context: Option<ExternalItem>,
+            tracks: Vec<ExternalItem>,
+            start: u32,
+        ) -> Result<(), ExternalPlayerError> {
+            *self.0.lock().unwrap() = Some(ExternalState {
+                item: tracks.get(start as usize).cloned(),
+                context,
+                playing: true,
+                position_ms: 0,
+                shuffle: false,
+                repeat: RepeatMode::Off,
+                device: None,
+            });
+            Ok(())
+        }
+        fn resume(&self) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+        fn pause(&self) -> Result<(), ExternalPlayerError> {
+            match self.0.lock().unwrap().as_mut() {
+                Some(state) => {
+                    state.playing = false;
+                    Ok(())
+                }
+                None => Err(ExternalPlayerError::Failed {
+                    reason: "Nothing is playing.".into(),
+                }),
+            }
+        }
+        fn next(&self) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+        fn previous(&self) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+        fn seek(&self, _position_ms: u64) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+        fn set_volume(&self, _percent: u32) -> Result<(), ExternalPlayerError> {
+            Err(ExternalPlayerError::Failed {
+                reason: "No volume here.".into(),
+            })
+        }
+        fn set_shuffle(&self, _on: bool) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+        fn set_repeat(&self, _mode: RepeatMode) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+        fn transfer(&self, _device: String) -> Result<(), ExternalPlayerError> {
+            Ok(())
+        }
+    }
+
+    let dir = tempfile::tempdir().unwrap();
+    let core = JellyfeshCore::new(config(dir.path(), OutputKind::Null { realtime: false })).unwrap();
+    let (tx, rx) = mpsc::channel();
+    core.set_listener(Some(Arc::new(Recorder(Mutex::new(tx)))));
+    let player = Arc::new(Player(Mutex::new(None)));
+    assert!(
+        core.register_external_player("a.b".into(), "Dots".into(), player.clone())
+            .is_err()
+    );
+    core.register_external_player("sample-music".into(), "Sample Music".into(), player)
+        .unwrap();
+    let track = TrackRef::Source {
+        track: SourceTrack {
+            plugin: "sample-music".into(),
+            id: "s1".into(),
+            title: "Sample One".into(),
+            artist: None,
+            album: None,
+            duration_ms: Some(120_000),
+            artwork_url: None,
+            isrc: None,
+        },
+    };
+    core.send(Command::PlayTracks {
+        tracks: vec![track],
+        start: 0,
+    });
+    let events = wait_for(
+        &rx,
+        Duration::from_secs(20),
+        |e| matches!(e, Event::Remote { snapshot } if snapshot.status == Status::Playing && snapshot.item.is_some()),
+    );
+    let Some(Event::Remote { snapshot }) = events.last() else {
+        unreachable!()
+    };
+    assert_eq!(snapshot.source_name.as_deref(), Some("Sample Music"));
+    assert_eq!(
+        snapshot.item.as_ref().map(|i| i.title.as_str()),
+        Some("Sample One")
+    );
+    core.send(Command::Remote {
+        action: RemoteAction::SetVolume { percent: 10 },
+    });
+    wait_for(
+        &rx,
+        Duration::from_secs(20),
+        |e| matches!(e, Event::Remote { snapshot } if snapshot.error.as_deref() == Some("No volume here.")),
+    );
+    core.unregister_external_player("sample-music".into());
+    core.shutdown();
+}

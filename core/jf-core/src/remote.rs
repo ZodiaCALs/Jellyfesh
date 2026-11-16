@@ -28,7 +28,10 @@ use jf_session::RepeatMode;
 
 use crate::actor::Shared;
 use crate::sources::source_item;
-use crate::types::{Event, RemoteDevice, RemoteDeviceKind, RemoteSnapshot, Status};
+use crate::types::{
+    Event, ExternalItem, ExternalPlayer, ExternalState, ItemKind, RemoteDevice, RemoteDeviceKind,
+    RemoteSnapshot, Status,
+};
 
 /// Longest wait for one call to the service.
 const CALL_WAIT: Duration = Duration::from_secs(15);
@@ -157,6 +160,144 @@ impl Backend for PluginBackend {
     fn transfer(&self, device: String, play: bool) -> Result<()> {
         self.wait(&self.host.remote_transfer(&self.plugin, device, play))
     }
+}
+
+/// A player an app registered ([`ExternalPlayer`]).
+pub(crate) struct ExternalBackend(pub Arc<dyn ExternalPlayer>);
+
+fn external_error(message: String) -> RemoteError {
+    RemoteError {
+        message,
+        sign_in: false,
+    }
+}
+
+impl Backend for ExternalBackend {
+    fn devices(&self) -> Result<Vec<HostDevice>> {
+        let devices = self.0.devices().map_err(external_error)?;
+        Ok(jf_plugin_host::sanitize::remote_devices(
+            devices.into_iter().map(host_device).collect(),
+        ))
+    }
+    fn state(&self) -> Result<Option<HostState>> {
+        let state = self.0.state().map_err(external_error)?;
+        Ok(state.map(host_state))
+    }
+    fn play(
+        &self,
+        _device: Option<String>,
+        context: Option<Item>,
+        tracks: Vec<Item>,
+        start: u32,
+    ) -> Result<()> {
+        self.0
+            .play(
+                context.as_ref().map(external_item),
+                tracks.iter().map(external_item).collect(),
+                start,
+            )
+            .map_err(external_error)
+    }
+    fn resume(&self) -> Result<()> {
+        self.0.resume().map_err(external_error)
+    }
+    fn pause(&self) -> Result<()> {
+        self.0.pause().map_err(external_error)
+    }
+    fn next(&self) -> Result<()> {
+        self.0.next().map_err(external_error)
+    }
+    fn previous(&self) -> Result<()> {
+        self.0.previous().map_err(external_error)
+    }
+    fn seek(&self, position_ms: u32) -> Result<()> {
+        self.0.seek(u64::from(position_ms)).map_err(external_error)
+    }
+    fn set_volume(&self, percent: u32) -> Result<()> {
+        self.0.set_volume(percent).map_err(external_error)
+    }
+    fn set_shuffle(&self, on: bool) -> Result<()> {
+        self.0.set_shuffle(on).map_err(external_error)
+    }
+    fn set_repeat(&self, mode: RemoteRepeat) -> Result<()> {
+        self.0.set_repeat(repeat_from_host(mode)).map_err(external_error)
+    }
+    fn transfer(&self, device: String, _play: bool) -> Result<()> {
+        self.0.transfer(device).map_err(external_error)
+    }
+}
+
+fn host_kind(kind: ItemKind) -> jf_plugin_host::ItemKind {
+    match kind {
+        ItemKind::Track => jf_plugin_host::ItemKind::Track,
+        ItemKind::Album => jf_plugin_host::ItemKind::Album,
+        ItemKind::Artist => jf_plugin_host::ItemKind::Artist,
+        ItemKind::Playlist => jf_plugin_host::ItemKind::Playlist,
+        ItemKind::Folder => jf_plugin_host::ItemKind::Folder,
+    }
+}
+
+fn external_item(item: &Item) -> ExternalItem {
+    ExternalItem {
+        kind: crate::sources::item_kind(item.kind),
+        id: item.id.clone(),
+        title: item.title.clone(),
+        artist: item.artist.clone(),
+        album: item.album.clone(),
+        duration_ms: item.duration_ms.map(u64::from),
+        artwork_url: item.artwork.as_ref().map(|a| a.url.clone()),
+    }
+}
+
+fn host_item(item: ExternalItem) -> Item {
+    let mut out = crate::sources::bare_item(&item.id, host_kind(item.kind));
+    out.title = item.title;
+    out.artist = item.artist;
+    out.album = item.album;
+    out.duration_ms = item.duration_ms.map(|d| u32::try_from(d).unwrap_or(u32::MAX));
+    out.artwork = item.artwork_url.map(|url| jf_plugin_host::ImageRef {
+        url,
+        headers: Vec::new(),
+        width: None,
+        height: None,
+    });
+    out
+}
+
+fn host_device(d: RemoteDevice) -> HostDevice {
+    HostDevice {
+        id: d.id,
+        name: d.name,
+        kind: match d.kind {
+            RemoteDeviceKind::Computer => HostKind::Computer,
+            RemoteDeviceKind::Smartphone => HostKind::Smartphone,
+            RemoteDeviceKind::Speaker => HostKind::Speaker,
+            RemoteDeviceKind::Tv => HostKind::Tv,
+            RemoteDeviceKind::Car => HostKind::Car,
+            RemoteDeviceKind::Other => HostKind::Other,
+        },
+        active: d.active,
+        supports_volume: d.volume_percent.is_some(),
+        volume_percent: d.volume_percent,
+    }
+}
+
+fn host_state(s: ExternalState) -> HostState {
+    // The app's answer is checked like a plugin's (titles, ids, positions).
+    let allow_none = |_: &url::Url| true;
+    let checker = jf_plugin_host::sanitize::Checker::new("external", &allow_none);
+    jf_plugin_host::sanitize::remote_state(
+        HostState {
+            device: s.device.map(host_device),
+            item: s.item.map(host_item),
+            context: s.context.map(host_item),
+            playing: s.playing,
+            position_ms: u32::try_from(s.position_ms).unwrap_or(u32::MAX),
+            shuffle: s.shuffle,
+            repeat: repeat_to_host(s.repeat),
+        },
+        &checker,
+    )
 }
 
 /// What the actor asks of a session.

@@ -60,11 +60,16 @@ Version 1.0 plugins must keep working unchanged.
    Content policy still applies: no synced lyrics while a source with
    `lyrics_sync = false` plays.
 5. **App-provided remote backends.** The same session accepts a backend
-   that an app implements through the FFI (a callback interface with the
-   shape of `remote`), registered under a reserved source id. The macOS app
-   uses it for Apple Music with `ApplicationMusicPlayer` (macOS 14+). Without
-   a MusicKit-enabled App ID and signing, MusicKit refuses authorisation, so
-   such builds hide Apple Music rather than show something that cannot work.
+   that an app implements through the FFI (`ExternalPlayer`, a foreign trait
+   with the shape of `remote`), registered with
+   `register_external_player` under a source id without dots, so it never
+   collides with a plugin id. Tracks whose `SourceTrack::plugin` is that id
+   start a session on it. The macOS app uses it for Apple Music with
+   `ApplicationMusicPlayer` (macOS 14+). Without a MusicKit-enabled App ID
+   and a provisioning profile, authorisation can still report success while
+   every token-backed request fails (Apple DTS), so the app shows Apple Music
+   only after a token probe and a subscription check succeed, and hides it
+   otherwise.
 6. **Access models**, each stated in the plugin's own sign-in screen:
    QQ Music's personal key per person; Spotify's bring-your-own client ID per
    person (Spotify caps a shared development app at a handful of users; a

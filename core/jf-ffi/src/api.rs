@@ -79,6 +79,27 @@ impl JellyfeshCore {
         }
     }
 
+    /// Registers a player the app provides under the source id `id` (no dots, for example
+    /// `apple-music`), shown as `name`; see [`ExternalPlayer`]. Registering an id again
+    /// replaces its player.
+    pub fn register_external_player(
+        &self,
+        id: String,
+        name: String,
+        player: Arc<dyn crate::ExternalPlayer>,
+    ) -> Result<(), CoreFfiError> {
+        self.query(|core| {
+            core.register_external_player(&id, &name, Arc::new(crate::external::Foreign(player)))
+        })
+    }
+
+    /// Removes the player registered under `id`.
+    pub fn unregister_external_player(&self, id: String) {
+        if let State::Running(core) = &*read(&self.state) {
+            core.unregister_external_player(&id);
+        }
+    }
+
     /// The current state of every slice.
     pub fn snapshot(&self) -> Snapshot {
         match &*read(&self.state) {

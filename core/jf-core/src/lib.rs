@@ -51,7 +51,7 @@ pub use jf_palette::{Appearance, Theme};
 pub use jf_plugin_host::{
     HostOptions, Limits, MemorySecretStore, SecretError, SecretStore, trust::TrustList,
 };
-pub use jf_session::{HistoryEntry, QueueItem, RepeatMode, TrackRef};
+pub use jf_session::{HistoryEntry, QueueItem, RepeatMode, SourceTrack, TrackRef};
 pub use timing::DisplayClock;
 pub use types::*;
 
@@ -143,6 +143,40 @@ impl Core {
     /// The current state of every slice.
     pub fn snapshot(&self) -> Snapshot {
         self.shared.snapshot()
+    }
+
+    /// Registers a player the app provides (ADR-0018 item 5) under the
+    /// source id `id`, shown as `name` (for example `apple-music`, "Apple
+    /// Music"). Ids must not look like plugin ids (no dots), so they never
+    /// collide. Registering an id again replaces its player; a remote session
+    /// already running with the old one carries on until it ends.
+    pub fn register_external_player(
+        &self,
+        id: &str,
+        name: &str,
+        player: Arc<dyn ExternalPlayer>,
+    ) -> Result<(), CoreError> {
+        if id.is_empty() || id.contains('.') || id.len() > 64 {
+            return Err(CoreError::Other(format!(
+                "{id:?} cannot name an external player: use a short id without dots"
+            )));
+        }
+        self.shared
+            .external
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(id.to_owned(), (name.to_owned(), player));
+        Ok(())
+    }
+
+    /// Removes the player registered under `id`; its tracks can no longer
+    /// start a session.
+    pub fn unregister_external_player(&self, id: &str) {
+        self.shared
+            .external
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(id);
     }
 
     /// A page of the queue in playback order.

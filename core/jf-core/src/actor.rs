@@ -8,6 +8,7 @@
 //! All of them park on a channel when idle, so an idle core uses no CPU and
 //! no timers tick.
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex, RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -27,9 +28,9 @@ use crate::CoreError;
 use crate::remote::{self, Op};
 use crate::sources::{self, Answer, Bundled, Ctx, Done, SearchJob, Sources, SourcesMsg, Then};
 use crate::types::{
-    ArtworkRef, Collection, Command, CommandId, Config, DevicesSnapshot, Event, HueSource, LyricsSnapshot,
-    LyricsSource, NowPlaying, PlaybackSnapshot, QueueSnapshot, RemoteAction, ScanStatus, SearchScope,
-    SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UP_NEXT_WINDOW,
+    ArtworkRef, Collection, Command, CommandId, Config, DevicesSnapshot, Event, ExternalPlayer, HueSource,
+    LyricsSnapshot, LyricsSource, NowPlaying, PlaybackSnapshot, QueueSnapshot, RemoteAction, ScanStatus,
+    SearchScope, SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UP_NEXT_WINDOW,
 };
 use crate::{items, lyrics, theme};
 
@@ -130,7 +131,12 @@ pub(crate) struct Shared {
     pub(crate) queue: RwLock<Queue>,
     /// The remote session whose updates the `Remote` slice takes (0: none).
     pub(crate) remote_session: AtomicU64,
+    /// Players the app registered, by source id.
+    pub(crate) external: RwLock<HashMap<String, External>>,
 }
+
+/// A player the app registered, with the name its source shows.
+pub(crate) type External = (String, Arc<dyn ExternalPlayer>);
 
 pub(crate) struct Actor {
     config: Config,
@@ -231,6 +237,7 @@ impl Shared {
             subscribers: Mutex::new(Vec::new()),
             queue: RwLock::new(queue),
             remote_session: AtomicU64::new(0),
+            external: RwLock::new(HashMap::new()),
         }
     }
 
@@ -639,8 +646,12 @@ impl Actor {
                 start,
                 shuffle,
             } => {
-                if self.sources.is_remote(&plugin) {
-                    let context = self.sources.remote_node(&plugin, &node)?;
+                if self.is_remote(&plugin) {
+                    let context = if self.external(&plugin).is_some() {
+                        sources::bare_item(&node, jf_plugin_host::ItemKind::Album)
+                    } else {
+                        self.sources.remote_node(&plugin, &node)?
+                    };
                     let op = Op::Play {
                         context: Some(Box::new(context)),
                         tracks: Vec::new(),
@@ -656,7 +667,7 @@ impl Actor {
                 collection: Collection::Source { plugin, id: node },
                 play_next,
             } => {
-                if self.sources.is_remote(&plugin) {
+                if self.is_remote(&plugin) {
                     return Err(self.remote_queue_refusal(&plugin));
                 }
                 self.sources
@@ -872,10 +883,25 @@ impl Actor {
         Ok(())
     }
 
+    /// The player an app registered under `source`, if any.
+    fn external(&self, source: &str) -> Option<External> {
+        self.shared
+            .external
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(source)
+            .cloned()
+    }
+
+    /// Whether `source` plays elsewhere: a remote plugin or an app's player.
+    fn is_remote(&self, source: &str) -> bool {
+        self.external(source).is_some() || self.sources.is_remote(source)
+    }
+
     /// The remote source whose track `start` is, if it is one.
     fn remote_plugin(&self, tracks: &[TrackRef], start: usize) -> Option<String> {
         match tracks.get(start)? {
-            TrackRef::Source(track) if self.sources.is_remote(&track.plugin) => Some(track.plugin.clone()),
+            TrackRef::Source(track) if self.is_remote(&track.plugin) => Some(track.plugin.clone()),
             _ => None,
         }
     }
@@ -884,7 +910,7 @@ impl Actor {
     /// to decide, and the engine cannot play them anyway).
     fn refuse_remote_tracks(&self, tracks: &[TrackRef]) -> Result<(), CoreError> {
         match tracks.iter().find_map(|t| match t {
-            TrackRef::Source(track) if self.sources.is_remote(&track.plugin) => Some(track.plugin.clone()),
+            TrackRef::Source(track) if self.is_remote(&track.plugin) => Some(track.plugin.clone()),
             _ => None,
         }) {
             Some(plugin) => Err(self.remote_queue_refusal(&plugin)),
@@ -893,9 +919,12 @@ impl Actor {
     }
 
     fn remote_queue_refusal(&self, plugin: &str) -> CoreError {
+        let name = match self.external(plugin) {
+            Some((name, _)) => name,
+            None => self.sources.display_name(plugin),
+        };
         CoreError::Other(format!(
-            "{} plays on your own devices; its songs cannot join the queue",
-            self.sources.display_name(plugin)
+            "{name} plays on your own devices; its songs cannot join the queue"
         ))
     }
 
@@ -917,7 +946,11 @@ impl Actor {
                 if i == start {
                     first = items.len();
                 }
-                items.push(self.sources.remote_track(track)?);
+                items.push(if self.external(plugin).is_some() {
+                    sources::track_item(track)
+                } else {
+                    self.sources.remote_track(track)?
+                });
             }
         }
         let op = Op::Play {
@@ -931,12 +964,25 @@ impl Actor {
 
     /// Pauses local playback and starts a session with `first`.
     fn start_remote(&mut self, plugin: &str, first: Op) -> Result<(), CoreError> {
-        let (backend, source) = self.sources.remote_backend(plugin)?;
+        let (backend, source): (Box<dyn remote::Backend>, remote::Source) = match self.external(plugin) {
+            Some((name, player)) => (
+                Box::new(remote::ExternalBackend(player)),
+                remote::Source {
+                    id: plugin.to_owned(),
+                    name,
+                    links: jf_plugin_host::links::Links::default(),
+                },
+            ),
+            None => {
+                let (backend, source) = self.sources.remote_backend(plugin)?;
+                (Box::new(backend), source)
+            }
+        };
         if self.status == Status::Playing {
             self.pause();
         }
         // The new session takes the slice over first, so the old one ends quietly.
-        let session = remote::Session::start(Box::new(backend), source, self.shared.clone(), first)?;
+        let session = remote::Session::start(backend, source, self.shared.clone(), first)?;
         self.remote = Some(session);
         Ok(())
     }

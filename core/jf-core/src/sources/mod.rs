@@ -46,7 +46,19 @@ use jf_plugin_host::{
 };
 use jf_session::{SourceTrack, TrackRef};
 
-pub(crate) use convert::{Answer, LIBRARY, library_answer, source_item, source_track, unplayable_reason};
+pub(crate) use convert::{
+    Answer, LIBRARY, library_answer, source_item, source_track, track_item, unplayable_reason,
+};
+
+/// The core's kind for a plugin item's kind.
+pub(crate) fn item_kind(kind: HostKind) -> crate::types::ItemKind {
+    convert::kind(kind)
+}
+
+/// An item that only has an id and a kind (its title is the id).
+pub(crate) fn bare_item(id: &str, kind: HostKind) -> Item {
+    convert::bare(id, kind, id)
+}
 pub(crate) use search::SearchJob;
 
 use crate::CoreError;
