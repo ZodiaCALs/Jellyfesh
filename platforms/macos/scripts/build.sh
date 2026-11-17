@@ -6,8 +6,11 @@
 #   3. the official plugins (dist/plugins/*.jfpkg, made by plugins/release.sh) copied into the
 #      app's resources, which the app hands to the core to install on first start,
 #   4. the Xcode project (XcodeGen),
-#   5. a universal Release build of Jellyfesh.app, ad-hoc signed (ADR-0016: no Developer ID yet),
-#   6. a DMG with the app and a link to /Applications.
+#   5. a universal Release build of Jellyfesh.app, ad-hoc signed, or signed with a Developer ID for
+#      notarization (JF_MACOS_SIGN_IDENTITY below),
+#   6. a DMG with the app and a link to /Applications (direct downloads; scripts/notarize.sh then
+#      notarizes and staples it), or, for the Mac App Store, the app in build/app-store/ for
+#      scripts/package-mas.sh.
 #
 # Needs macOS with Xcode 16 or later, rustup (or both Rust targets installed), CMake (the core
 # builds libopus with it) and XcodeGen (installed with Homebrew when missing).
@@ -19,6 +22,16 @@
 #   JF_MACOS_OUT       output folder (default: platforms/macos/build)
 #   JF_PLUGINS_DIR     where the official .jfpkg packages are (default: dist/plugins)
 #   CARGO_TARGET_DIR   honoured as usual
+#   JF_EDITION         community (default) or commercial; commercial builds bundle no unofficial
+#                      community plugins (ADR-0021 §4)
+#   JF_DISTRIBUTION    source (default), direct or app-store: the app's Info.plist keys JFEdition and
+#                      JFDistribution and Swift conditions JF_EDITION_* and JF_DISTRIBUTION_*
+#                      (project.yml); app-store builds are sandboxed (Jellyfesh-AppStore.entitlements)
+#                      and make no DMG
+#   JF_MACOS_SIGN_IDENTITY  a "Developer ID Application" identity: the direct download's app and DMG
+#                      are signed with it (hardened runtime, secure timestamp) instead of ad hoc;
+#                      JF_MACOS_KEYCHAIN names its keychain when it is not in the search list
+#                      (scripts/keychain.sh makes one in CI)
 #
 # Written for the bash 3.2 that macOS ships.
 set -euo pipefail
@@ -35,10 +48,32 @@ for arg in "$@"; do
   case "$arg" in
     --test) run_tests=1 ;;
     --skip-core) skip_core=1 ;;
-    -h | --help) sed -n '2,21p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,37p' "$0"; exit 0 ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
+
+edition="${JF_EDITION:-community}"
+distribution="${JF_DISTRIBUTION:-source}"
+case "$edition" in
+  community | commercial) ;;
+  *) echo "JF_EDITION must be community or commercial, not '$edition'" >&2; exit 2 ;;
+esac
+case "$distribution" in
+  source | direct | app-store) ;;
+  *) echo "JF_DISTRIBUTION must be source, direct or app-store, not '$distribution'" >&2; exit 2 ;;
+esac
+sign_identity="${JF_MACOS_SIGN_IDENTITY:--}"
+if [ "$distribution" = app-store ] && [ "$sign_identity" != "-" ]; then
+  echo "JF_MACOS_SIGN_IDENTITY signs direct downloads; scripts/package-mas.sh signs App Store builds" >&2
+  exit 2
+fi
+keychain_args=()
+if [ -n "${JF_MACOS_KEYCHAIN:-}" ]; then keychain_args=(--keychain "$JF_MACOS_KEYCHAIN"); fi
+# The Swift conditions of the edition and distribution, e.g. JF_EDITION_COMMERCIAL JF_DISTRIBUTION_APP_STORE.
+edition_conditions="JF_EDITION_$(printf '%s' "$edition" | tr 'a-z-' 'A-Z_') JF_DISTRIBUTION_$(printf '%s' "$distribution" | tr 'a-z-' 'A-Z_')"
+entitlements="Jellyfesh/Jellyfesh.entitlements"
+if [ "$distribution" = app-store ]; then entitlements="Jellyfesh/Jellyfesh-AppStore.entitlements"; fi
 
 # The deployment target of the app (project.yml) applies to the Rust and C objects too.
 export MACOSX_DEPLOYMENT_TARGET=14.2
@@ -122,7 +157,8 @@ fi
 
 step "Official plugins"
 # Bundled in Resources/Plugins (project.yml: Generated/Plugins) and installed by the core on first
-# start; they also ship as separate .jfpkg downloads.
+# start; they also ship as separate .jfpkg downloads. The commercial edition leaves out the
+# unofficial community plugins (community.unofficial.*), which stay separate downloads.
 plugins_dir="${JF_PLUGINS_DIR:-$root/dist/plugins}"
 rm -rf "$generated/Plugins"
 # The folder is always there, empty without packages: the project copies it into the app, and
@@ -134,8 +170,14 @@ if [ -d "$plugins_dir" ]; then
 fi
 if [ -n "$packages" ]; then
   printf '%s\n' "$packages" | while IFS= read -r package; do
+    name="$(basename "$package")"
+    if [ "$edition" = commercial ]; then
+      case "$name" in
+        community.unofficial.*) echo "commercial edition: not bundling $name"; continue ;;
+      esac
+    fi
     cp "$package" "$generated/Plugins/"
-    echo "bundling $(basename "$package")"
+    echo "bundling $name"
   done
   if [ -z "$conditions" ]; then
     echo "note: these bindings have no CoreConfig.bundledPlugins yet; the app carries the" \
@@ -162,13 +204,16 @@ swift_conditions="JF_SWIFT_CONDITIONS=$conditions"
 if [ -n "$conditions" ]; then
   echo "Swift conditions: $conditions"
 fi
+echo "edition $edition, distribution $distribution ($edition_conditions)"
+edition_settings=("JF_EDITION=$edition" "JF_DISTRIBUTION=$distribution"
+  "JF_EDITION_CONDITIONS=$edition_conditions" "JF_ENTITLEMENTS=$entitlements")
 
 derived="$out/DerivedData"
 if [ "$run_tests" -eq 1 ]; then
   step "Unit tests"
   xcodebuild -project "$macos/Jellyfesh.xcodeproj" -scheme Jellyfesh -configuration Debug \
     -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath "$derived" \
-    ${extra:+"$extra"} "$swift_conditions" test
+    ${extra:+"$extra"} "$swift_conditions" "${edition_settings[@]}" test
 fi
 
 step "Release build"
@@ -176,11 +221,26 @@ xcodebuild -project "$macos/Jellyfesh.xcodeproj" -scheme Jellyfesh -configuratio
   -destination "generic/platform=macOS" -derivedDataPath "$derived" \
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
-  ${extra:+"$extra"} "$swift_conditions" build
+  ${extra:+"$extra"} "$swift_conditions" "${edition_settings[@]}" build
 
 app="$derived/Build/Products/Release/Jellyfesh.app"
 echo "architectures: $(lipo -archs "$app/Contents/MacOS/Jellyfesh")"
+if [ "$sign_identity" != "-" ]; then
+  step "Developer ID signature"
+  # What notarization asks for: the hardened runtime and a secure timestamp. The app has one
+  # executable and no nested code (the core and the bindings are linked in statically).
+  codesign --force --options runtime --timestamp --entitlements "$macos/$entitlements" \
+    --sign "$sign_identity" ${keychain_args[@]+"${keychain_args[@]}"} "$app"
+fi
 codesign --verify --strict --verbose=2 "$app"
+
+if [ "$distribution" = app-store ]; then
+  rm -rf "$out/app-store"
+  mkdir -p "$out/app-store"
+  ditto "$app" "$out/app-store/Jellyfesh.app"
+  echo "built $out/app-store/Jellyfesh.app for the Mac App Store (scripts/package-mas.sh signs and packs it)"
+  exit 0
+fi
 
 step "DMG"
 stage="$out/dmg"
@@ -191,6 +251,10 @@ ln -s /Applications "$stage/Applications"
 dmg="$out/Jellyfesh-$version.dmg"
 rm -f "$dmg"
 hdiutil create -volname "Jellyfesh $version" -srcfolder "$stage" -ov -format UDZO "$dmg"
+if [ "$sign_identity" != "-" ]; then
+  codesign --force --timestamp --sign "$sign_identity" ${keychain_args[@]+"${keychain_args[@]}"} "$dmg"
+  codesign --verify --verbose=2 "$dmg"
+fi
 (cd "$out" && shasum -a 256 "$(basename "$dmg")" > "$(basename "$dmg").sha256")
 rm -rf "$stage"
 echo "built $dmg"
