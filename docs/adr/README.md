@@ -25,6 +25,10 @@ holds the pinned versions.
 | [0015](0015-secrets-and-credentials.md) | Secrets and credentials | OS keystores; no stored passwords | Proposed |
 | [0016](0016-distribution-licence-versions.md) | Distribution, licence and versions | Your answers 2, 3, 9, 14 | Accepted |
 | [0017](0017-app-icon-defaults-and-picker.md) | App icon defaults and the icon picker | Your icon decision | Accepted |
+| [0018](0018-plugin-api-1-1.md) | Plugin API 1.1: links and remote sessions | Service APIs (v0.0.6) | Accepted |
+| [0019](0019-ai-lyrics.md) | AI Lyrics: plugin API 1.2 audio and speech, Whisper on the device | Your AI lyrics answers (v0.0.7) | Accepted |
+| [0020](0020-customize.md) | Customize: appearance plugins and the Look slice | Your Customize answer (v0.0.7) | Accepted |
+| [0021](0021-jellyfesh-pro.md) | Jellyfesh Pro, editions and commercial readiness | Your Free + Pro answer (v0.0.7) | Accepted |
 
 The service-by-service findings behind 0010–0012 are in
 [`../sources-report.md`](../sources-report.md).

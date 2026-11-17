@@ -179,11 +179,52 @@ every screen; Now Playing becomes a stage.
 * The Artwork backdrop stays the default, so no Misty Core claim while it is
   selected (as in v0.0.5).
 
+## AI Lyrics, Customize and Pro (v0.0.7)
+
+**Lyrics pane.** With no lyrics: "No Lyrics" and, when the `AiLyrics`
+slice is `available` (or Pro is inactive, which opens the Pro sheet),
+**Create Synced Lyrics**. With plain lyrics: **Time These Lyrics** below
+them. While the current song has a job: its stage ("Reading Audio…",
+"Sending to {origin}…", "Recognising… 42%", "Timing Words…") with a
+progress bar and **Cancel**. When the slice says what is needed first:
+"Download the {Model} model ({size}) to make lyrics on this device." with
+**Download** (then "Downloading {Model}… 35%" and **Cancel**); "Add your
+API key to make lyrics online." with **Open AI Lyrics Settings**. A failed
+job: "Couldn't make lyrics: {message}" and **Try Again**. Made lyrics carry
+"Made by AI Lyrics · {engine}" under the last line and in the Info pane's
+Lyrics row, and the More menu adds **Make Again** and **Delete Made
+Lyrics** (asks first).
+
+**Sending audio** asks once per plugin and origin before the first online
+job: "Send This Song to {origin}?", "AI Lyrics will send the song's audio to
+{origin} to make its lyrics. The provider's terms and privacy policy apply,
+and it may charge your account.", Cancel, **Allow**.
+
+**Song menu** adds **Create Synced Lyrics** after Go to Artist for library
+songs while AI Lyrics is available.
+
+**The Pro sheet** opens from any Pro action while Pro is inactive: "Jellyfesh
+Pro", "AI Lyrics makes synced lyrics for any song. Customize makes
+Jellyfesh yours: corners, glass, type, lyrics and layout.", **Buy Jellyfesh
+Pro – {price}** and **Restore Purchases** (store builds), **Enter Licence
+Key…**, **Not Now**, and the links Licence Agreement and Privacy Policy.
+**Enter Licence Key** asks for the key ("JFP1-…"; Cancel, **Activate**).
+Its errors: "That doesn't look like a Jellyfesh licence key." (malformed),
+"This licence key isn't valid." (unknown key or bad signature), "This key is
+for another product." and "This licence key has been withdrawn."
+
+**The Look slice** (ADR-0020) applies live everywhere: corner radii, glass,
+aurora, typeface, text size, density, the lyrics' weight, glow and
+highlight, the order of the sidebar (navigation pane, Library switcher) and
+of Home, the Now Playing layout (Stage, Artwork, Lyrics) and the
+mini-player (Bar, Compact, Floating). With `customized` false every value is
+the v0.0.6 default.
+
 ## Settings
 
-Sections in this order: **Appearance · Playback · Library · Sources**, plus
-**About** where the platform keeps About in settings (Windows, Android,
-Web). Groups and rows in this order:
+Sections in this order: **Appearance · Playback · Library · Sources ·
+Extensions**, plus **About** where the platform keeps About in settings
+(Windows, Android, Web). Groups and rows in this order:
 
 **Appearance**
 1. **Theme**: System, Light, Dark (with pictures). "Light, dark, or the same
@@ -197,6 +238,8 @@ Web). Groups and rows in this order:
    here: no separate Lyrics section.
 6. **App Icon** (macOS, Windows, Android).
 7. **Language** (Web only).
+8. **Customize…**: "Corners, glass, type, lyrics style and layout." Opens
+   Extensions › Customize (with a Pro badge while Pro is inactive).
 
 **Playback**
 1. **Output**: Output Device (System Default, then the devices).
@@ -234,8 +277,29 @@ Web). Groups and rows in this order:
    Community plugins are made by others and are off unless you allow them."
    and **Allow Community Plugins**, which shows the disclosure first.
 
+**Extensions** (v0.0.7; ADR-0019, ADR-0020, ADR-0021)
+1. **Jellyfesh Pro**: with Pro Preview, "Pro features are free during the
+   public beta."; with Pro, "Jellyfesh Pro · Purchased" or "Jellyfesh Pro ·
+   Licence …ABCD" and **Remove Licence…** (asks first); without Pro, "AI
+   Lyrics and Customize are part of Jellyfesh Pro.", **Buy Jellyfesh Pro –
+   {price}** and **Restore Purchases** (store builds only), and **Enter
+   Licence Key…**. Then the links Licence Agreement, Privacy Policy and
+   Terms of Sale.
+2. **AI Lyrics**: Enabled; its settings (the localised schema, by group);
+   **Sign In** or Sign Out for the online mode's API key ("API Key Added");
+   **On-Device Models**, each "Name · Size" with **Download**, "Downloading…
+   35%" with **Cancel**, or "Ready" with **Delete…**; **Sending Audio**,
+   each allowed origin with **Stop Allowing**; "Version 1.2.0 · Author".
+3. **Customize**: Enabled; its settings by group (Look, Lyrics, Layout);
+   **Reset to Defaults**.
+4. Any other extension the same way, and **Install from File…** in the
+   section heading.
+
 **About**: the version (from the build, never typed in), and the website and
-the third-party licences where the build knows where they are published.
+the third-party licences where the build knows where they are published;
+**Licence Agreement** and **Privacy Policy**. Direct downloads also have
+**Check for Updates** and **Check for Updates Automatically**; when a newer
+version exists, "Jellyfesh {version} Is Available" and **View Release**.
 
 ## Steps that ask first
 
@@ -248,6 +312,9 @@ confirmation in every app, with these words (Cancel, then the action):
 | Uninstall… | Uninstall Name? | Its settings and sign-in are removed. | Uninstall |
 | Delete Playlist… | Delete “Name”? | The songs stay in your library. | Delete Playlist |
 | Clear Queue | Clear the Queue? | Playback stops and every song is removed from the queue. | Clear Queue |
+| Delete Made Lyrics | Delete These Lyrics? | You can make them again. | Delete |
+| Remove Licence… | Remove the Licence Key? | Pro features stop until you enter a key or buy Jellyfesh Pro. | Remove Licence |
+| Delete… (a speech model) | Delete the {Model} Model? | You can download it again. | Delete |
  Turning on a community plugin, or Allow
 Community Plugins, shows the disclosure (ADR-0012). New Playlist… asks for
 the name before it creates anything.
