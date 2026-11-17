@@ -1,0 +1,17 @@
+[package]
+name = "jf-community-testsupport"
+description = "Test support for the unofficial community plugins: builds a plugin with its mock-service feature, points its allowlist at a local mock service, and installs it unsigned as a community plugin in a real Jellyfesh plugin host."
+version = "0.1.1"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-build.workspace = true
+jf-plugin-host.workspace = true
+jf-plugin-testkit.workspace = true
+serde_json.workspace = true

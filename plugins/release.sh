@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Builds the official plugins in release mode and writes their packages:
+# Builds the plugins the apps bundle in release mode and writes their packages:
 #
-#   dist/plugins/org.jellyfesh.subsonic.jfpkg
+#   dist/plugins/org.jellyfesh.subsonic.jfpkg         the official plugins
 #   dist/plugins/org.jellyfesh.jellyfin.jfpkg
 #   dist/plugins/org.jellyfesh.qqmusic.jfpkg
 #   dist/plugins/org.jellyfesh.spotify.jfpkg
 #   dist/plugins/org.jellyfesh.netease.jfpkg
+#   dist/plugins/community.unofficial.netease.jfpkg   the community plugins of
+#   dist/plugins/community.unofficial.qqmusic.jfpkg   plugins/community, unsigned
 #
 # Signing: when JF_PLUGIN_SIGNING_KEY is set and not empty, it must hold the
 # Jellyfesh release key (64 hex characters, the ed25519 seed; a trailing
@@ -14,6 +16,13 @@
 # not trust. Set JF_PLUGIN_ALLOW_UNTRUSTED_KEY=1 to sign with another key
 # anyway (a fork, a dry run). When JF_PLUGIN_SIGNING_KEY is unset or empty,
 # the packages are unsigned.
+#
+# The community plugins (ADR-0012, amended for v0.0.6) are never signed, with
+# the release key or any other: they are built and packed without
+# JF_PLUGIN_SIGNING_KEY in their environment, and the script fails if one
+# comes out signed or with the tests' `mock_origin` setting (their
+# `mock-service` feature, which this script never turns on). The apps install
+# them only once the person allows community plugins.
 #
 # Run it from the repository root. It needs only Rust with the
 # wasm32-unknown-unknown target; it builds the jf-plugin tool on the way.
@@ -24,10 +33,12 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 out=dist/plugins
 plugins=(subsonic jellyfin qqmusic spotify netease)
+# plugins/community/<name>, packed as community.unofficial.<name>.jfpkg
+community=(netease qqmusic)
 
 if [ -n "${JF_PLUGIN_SIGNING_KEY:-}" ]; then
     sign=yes
-    echo "release.sh: signing the packages with the key in JF_PLUGIN_SIGNING_KEY"
+    echo "release.sh: signing the official packages with the key in JF_PLUGIN_SIGNING_KEY (never the community ones)"
 else
     sign=no
     echo "release.sh: JF_PLUGIN_SIGNING_KEY is not set; the packages will be unsigned"
@@ -37,6 +48,10 @@ fi
 cargo build --locked --package jf-plugin
 jf_plugin() {
     cargo run --locked --quiet --package jf-plugin -- "$@"
+}
+# The same for the community plugins, whose builds never see the release key.
+jf_plugin_community() {
+    env -u JF_PLUGIN_SIGNING_KEY cargo run --locked --quiet --package jf-plugin -- "$@"
 }
 
 mkdir -p "$out"
@@ -59,4 +74,24 @@ for name in "${plugins[@]}"; do
         echo "release.sh: $package is unsigned"
     fi
 done
-ls -l "$out"/org.jellyfesh.*.jfpkg
+
+for name in "${community[@]}"; do
+    package="$out/community.unofficial.$name.jfpkg"
+    rm -f "$package"
+    jf_plugin_community pack --release --path "plugins/community/$name" --out "$package"
+    report=$(jf_plugin_community verify "$package")
+    echo "$report"
+    if ! grep -q '^signature: none: unsigned' <<< "$report"; then
+        rm -f "$package"
+        echo "release.sh: $package is signed; a community plugin must ship unsigned" >&2
+        exit 1
+    fi
+    inspected=$(jf_plugin_community inspect --json "$package")
+    if grep -q mock_origin <<< "$inspected"; then
+        rm -f "$package"
+        echo "release.sh: $package has the tests' mock_origin setting" >&2
+        exit 1
+    fi
+    echo "release.sh: $package is unsigned (community plugin)"
+done
+ls -l "$out"/org.jellyfesh.*.jfpkg "$out"/community.unofficial.*.jfpkg

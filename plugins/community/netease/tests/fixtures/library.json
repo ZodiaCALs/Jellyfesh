@@ -1,0 +1,106 @@
+{
+  "_comment": "Invented data for the mock NetEase Cloud Music service in tests/mock. Nothing here comes from NetEase or from any account. Host names in URLs are the real ones only so that the plugin's checks on stream and picture hosts run; the paths are made up. `stream` describes what the mock's stream endpoint answers for a song and is not part of NetEase's answers.",
+  "account": { "userId": 90001, "nickname": "Mock Listener" },
+  "artists": [
+    { "id": 501, "name": "Mock Artist", "picUrl": "http://p1.music.126.net/mock/artist-501.jpg", "albumSize": 2 },
+    { "id": 502, "name": "Guest Mock", "picUrl": "http://p2.music.126.net/mock/artist-502.jpg", "albumSize": 0 }
+  ],
+  "albums": [
+    {
+      "id": 701, "name": "Mock Album", "picUrl": "http://p1.music.126.net/mock/album-701.jpg",
+      "artist": { "id": 501, "name": "Mock Artist" }, "artists": [{ "id": 501, "name": "Mock Artist" }],
+      "size": 3, "publishTime": 1577808000000, "songs": [1001, 1002, 1007]
+    },
+    {
+      "id": 702, "name": "Mock Members Album", "picUrl": "http://p3.music.126.net/mock/album-702.jpg",
+      "artist": { "id": 501, "name": "Mock Artist" }, "artists": [{ "id": 501, "name": "Mock Artist" }],
+      "size": 2, "publishTime": 1609430400000, "songs": [1003, 1004]
+    }
+  ],
+  "songs": [
+    {
+      "id": 1001, "name": "Mock Song One", "ar": [{ "id": 501, "name": "Mock Artist" }],
+      "al": { "id": 701, "name": "Mock Album", "picUrl": "http://p1.music.126.net/mock/album-701.jpg" },
+      "dt": 200000, "no": 1, "cd": "01", "fee": 8, "publishTime": 1577808000000,
+      "privilege": { "id": 1001, "fee": 8, "st": 0, "pl": 320000, "maxbr": 320000 },
+      "stream": { "kind": "full", "maxbr": 320000, "type": "mp3" }
+    },
+    {
+      "id": 1002, "name": "Mock Song Two", "ar": [{ "id": 501, "name": "Mock Artist" }, { "id": 502, "name": "Guest Mock" }],
+      "al": { "id": 701, "name": "Mock Album", "picUrl": "http://p1.music.126.net/mock/album-701.jpg" },
+      "dt": 180000, "no": 2, "cd": "01", "fee": 0, "publishTime": 1577808000000,
+      "privilege": { "id": 1002, "fee": 0, "st": 0, "pl": 320000, "maxbr": 320000 },
+      "stream": { "kind": "full", "maxbr": 320000, "type": "mp3" }
+    },
+    {
+      "id": 1003, "name": "Mock Members Song", "ar": [{ "id": 501, "name": "Mock Artist" }],
+      "al": { "id": 702, "name": "Mock Members Album", "picUrl": "http://p3.music.126.net/mock/album-702.jpg" },
+      "dt": 240000, "no": 1, "cd": "01", "fee": 1, "publishTime": 1609430400000,
+      "privilege": { "id": 1003, "fee": 1, "st": 0, "pl": 0, "maxbr": 999000 },
+      "stream": { "kind": "trial", "maxbr": 128000, "type": "mp3" }
+    },
+    {
+      "id": 1004, "name": "Mock Bought Album Song", "ar": [{ "id": 501, "name": "Mock Artist" }],
+      "al": { "id": 702, "name": "Mock Members Album", "picUrl": "http://p3.music.126.net/mock/album-702.jpg" },
+      "dt": 210000, "no": 2, "cd": "01", "fee": 4, "publishTime": 1609430400000,
+      "privilege": { "id": 1004, "fee": 4, "st": 0, "pl": 0, "maxbr": 320000 },
+      "stream": { "kind": "none" }
+    },
+    {
+      "id": 1005, "name": "Mock Withdrawn Song", "ar": [{ "id": 502, "name": "Guest Mock" }],
+      "al": { "id": 0, "name": "", "picUrl": null },
+      "dt": 190000, "no": 0, "cd": "", "fee": 0, "publishTime": 0,
+      "privilege": { "id": 1005, "fee": 0, "st": -200, "pl": 0, "maxbr": 0 },
+      "stream": { "kind": "none", "code": 404 }
+    },
+    {
+      "id": 1006, "name": "Mock Clipped Song", "ar": [{ "id": 502, "name": "Guest Mock" }],
+      "al": { "id": 0, "name": "", "picUrl": null },
+      "dt": 210000, "no": 0, "cd": "", "fee": 8, "publishTime": 0,
+      "privilege": { "id": 1006, "fee": 8, "st": 0, "pl": 128000, "maxbr": 320000 },
+      "stream": { "kind": "short", "maxbr": 128000, "type": "mp3" }
+    },
+    {
+      "id": 1007, "name": "Mock Lossless Song", "ar": [{ "id": 501, "name": "Mock Artist" }],
+      "al": { "id": 701, "name": "Mock Album", "picUrl": "http://p1.music.126.net/mock/album-701.jpg" },
+      "dt": 230000, "no": 3, "cd": "01", "fee": 8, "publishTime": 1577808000000,
+      "privilege": { "id": 1007, "fee": 8, "st": 0, "pl": 999000, "maxbr": 999000 },
+      "stream": { "kind": "full", "maxbr": 999000, "type": "flac" }
+    },
+    {
+      "id": 1008, "name": "Mock Elsewhere Song", "ar": [{ "id": 502, "name": "Guest Mock" }],
+      "al": { "id": 0, "name": "", "picUrl": null },
+      "dt": 150000, "no": 0, "cd": "", "fee": 0, "publishTime": 0,
+      "privilege": { "id": 1008, "fee": 0, "st": 0, "pl": 128000, "maxbr": 128000 },
+      "stream": { "kind": "elsewhere", "maxbr": 128000, "type": "mp3" }
+    }
+  ],
+  "playlists": [
+    {
+      "id": 3001, "name": "Mock Listener's Liked Songs", "specialType": 5, "userId": 90001,
+      "creator": { "userId": 90001, "nickname": "Mock Listener" }, "subscribed": false,
+      "coverImgUrl": "http://p4.music.126.net/mock/playlist-3001.jpg", "trackIds": [1002, 1001, 1007]
+    },
+    {
+      "id": 3002, "name": "Mock Road Trip", "specialType": 0, "userId": 90001,
+      "creator": { "userId": 90001, "nickname": "Mock Listener" }, "subscribed": false,
+      "coverImgUrl": "http://p4.music.126.net/mock/playlist-3002.jpg",
+      "trackIds": [1001, 1002, 1003, 1004, 1005, 1006, 1007]
+    },
+    {
+      "id": 3003, "name": "Mock Saved Mix", "specialType": 0, "userId": 90002,
+      "creator": { "userId": 90002, "nickname": "Someone Else (mock)" }, "subscribed": true,
+      "coverImgUrl": "http://p4.music.126.net/mock/playlist-3003.jpg", "trackIds": [1002, 1001]
+    }
+  ],
+  "liked": [1002, 1001, 1007],
+  "lyrics": {
+    "1001": {
+      "lrc": "{\"t\":0,\"c\":[{\"tx\":\"作词: \"},{\"tx\":\"Mock Writer\"}]}\n{\"t\":1000,\"c\":[{\"tx\":\"作曲: \"},{\"tx\":\"Mock Composer\"}]}\n[00:12.00]第一句歌词\n[00:15.50]第二句歌词\n[00:20.00]\n[00:22.25]最后一句\n",
+      "tlyric": "[by:mock translator]\n[00:12.00]The first line\n[00:15.50]The second line\n[00:22.25]The last line\n"
+    },
+    "1002": { "nolyric": true },
+    "1007": { "lrc": "Words without times\nA second line without times\n" },
+    "1006": { "lrc": "[99:00.00]纯音乐，请欣赏\n" }
+  }
+}

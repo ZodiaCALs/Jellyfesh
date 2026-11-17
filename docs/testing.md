@@ -36,6 +36,13 @@ against a mock server; the online services' mocks are written from their
 documentation (or, for NetEase, from what its official client sends) with
 invented data, and stand in for services these tests never reach.
 
+The community plugins' tests (`cargo test -p jf-community-netease
+-p jf-community-qqmusic -p jf-community-common -p jf-community-testsupport`)
+run their `mock-service` builds the same way, installed unsigned as
+community plugins, against mocks of the services' web interfaces written
+from the author's understanding of them, with invented data
+(`plugins/community/README.md`).
+
 ## 2. The real audio-device path without a sound card (cloud, CI)
 
 ```bash

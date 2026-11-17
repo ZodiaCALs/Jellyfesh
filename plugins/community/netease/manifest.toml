@@ -1,0 +1,25 @@
+id = "community.unofficial.netease"
+name = "NetEase Cloud Music (Unofficial)"
+version = "0.1.1"
+api_version = "1.0"
+author = "ZodiaCALs"
+description = "Unofficial community plugin, not made or endorsed by NetEase or Jellyfesh. Plays only what your account may play. Not yet tested against the live service."
+official = false
+capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork"]
+playback_mode = "stream"
+auth = ["qr"]
+
+[network]
+# The web player's API (music.163.com) and the hosts of its streams and
+# pictures (m701.music.126.net, p1.music.126.net, …). Nothing else.
+allow = ["music.163.com", "*.music.126.net"]
+# Browsing a page takes one or two requests; stay well below the host's cap.
+max_rps = 5
+
+[settings]
+schema = "settings.schema.json"
+
+[content_policy]
+# Streams are for this account only: Jellyfesh may keep track details in its
+# library, but never the audio.
+library_storage = "metadata"

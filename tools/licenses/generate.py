@@ -27,11 +27,12 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 OUT = os.path.join(ROOT, "THIRD_PARTY_NOTICES.md")
 # Everything shipped: the CLI, the Linux app, the FFI library inside the macOS,
-# Windows and Android apps, the plugin author tool, and the official plugins
-# every app bundles.
+# Windows and Android apps, the plugin author tool, and the official and
+# community plugins every app bundles.
 DEFAULT_PACKAGES = [
     "jf-cli", "jellyfesh-gtk", "jf-ffi", "jf-plugin",
     "jf-subsonic", "jf-jellyfin", "jf-qqmusic", "jf-spotify", "jf-netease",
+    "jf-community-netease", "jf-community-qqmusic",
 ]
 # Where an npm package's licence file goes on to list what the package's own
 # build tooling bundles, which does not reach the programs built with it.

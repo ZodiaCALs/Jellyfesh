@@ -2321,6 +2321,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "jf-community-common"
+version = "0.1.1"
+dependencies = [
+ "jf-plugin-sdk",
+ "serde_json",
+]
+
+[[package]]
+name = "jf-community-netease"
+version = "0.1.1"
+dependencies = [
+ "aes",
+ "cbc",
+ "jf-community-common",
+ "jf-community-testsupport",
+ "jf-plugin-host",
+ "jf-plugin-sdk",
+ "rsa",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "jf-community-qqmusic"
+version = "0.1.1"
+dependencies = [
+ "jf-community-common",
+ "jf-community-testsupport",
+ "jf-plugin-host",
+ "jf-plugin-sdk",
+ "md-5 0.11.0",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "jf-community-testsupport"
+version = "0.1.1"
+dependencies = [
+ "jf-plugin-build",
+ "jf-plugin-host",
+ "jf-plugin-testkit",
+ "serde_json",
+]
+
+[[package]]
 name = "jf-core"
 version = "0.0.6"
 dependencies = [

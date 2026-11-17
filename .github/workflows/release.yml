@@ -1,7 +1,8 @@
 name: Release
 
-# Builds every installation file: jf, the signed plugins, the Linux tarball and
-# Flatpak, the macOS DMG, the Windows zips, the Android APK and Jellyfesh Web.
+# Builds every installation file: jf, the signed official plugins and the
+# unsigned community plugins, the Linux tarball and Flatpak, the macOS DMG, the
+# Windows zips, the Android APK and Jellyfesh Web.
 #
 # * A version tag (vX.Y.Z) pushed on its own also publishes them as a GitHub
 #   release, builds that release's website (with Jellyfesh Web at /app/) and
@@ -16,7 +17,12 @@ name: Release
 # Secrets:
 #   JF_PLUGIN_SIGNING_KEY  ed25519 seed (64 hex characters) of the Jellyfesh
 #                          release key; without it the plugins ship unsigned
-#                          and show as Community.
+#                          and show as Community. The community plugins
+#                          (plugins/community) never get it: they always ship
+#                          unsigned (plugins/release.sh).
+#   JF_SPOTIFY_CLIENT_ID   the Client ID of Jellyfesh's Spotify app, read by the
+#                          Spotify plugin at compile time; without it the
+#                          plugin asks each person for their own.
 #   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
 #   ANDROID_KEY_PASSWORD   the APK's release keystore (base64) and its
 #                          passwords; without them the release has no APK.
@@ -156,7 +162,7 @@ jobs:
           path: jf-*
 
   plugins:
-    name: Official plugins
+    name: Official and community plugins
     needs: check
     runs-on: ubuntu-24.04
     env:
@@ -169,9 +175,11 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+      # Signs the official plugins; packs the community ones unsigned.
       - name: Build, pack and sign
         env:
           JF_PLUGIN_SIGNING_KEY: ${{ secrets.JF_PLUGIN_SIGNING_KEY }}
+          JF_SPOTIFY_CLIENT_ID: ${{ secrets.JF_SPOTIFY_CLIENT_ID }}
         run: plugins/release.sh
       - name: Third-party notices (every shipped component)
         run: python3 tools/licenses/generate.py
@@ -185,6 +193,9 @@ jobs:
           mkdir -p upload
           for id in subsonic jellyfin qqmusic spotify netease; do
             cp "dist/plugins/org.jellyfesh.$id.jfpkg" "upload/org.jellyfesh.$id-${NAME}.jfpkg"
+          done
+          for name in netease qqmusic; do
+            cp "dist/plugins/community.unofficial.$name.jfpkg" "upload/community.unofficial.$name-${NAME}.jfpkg"
           done
           (cd upload && sha256sum ./*.jfpkg | sed 's| \./| |' > plugins.sha256)
       # The apps bundle the packages under these names.
@@ -218,7 +229,9 @@ jobs:
           name: plugins
           path: dist/plugins
       - name: Third-party notices (the app and the plugins it bundles)
-        run: python3 tools/licenses/generate.py jellyfesh-gtk jf-subsonic jf-jellyfin jf-qqmusic jf-spotify jf-netease
+        run: >-
+          python3 tools/licenses/generate.py jellyfesh-gtk jf-subsonic jf-jellyfin jf-qqmusic jf-spotify jf-netease
+          jf-community-netease jf-community-qqmusic
       - name: Build and pack
         shell: bash
         run: |
@@ -397,7 +410,10 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: platforms/web/package-lock.json
-      # The signed packages of the plugins job, bundled into the app.
+      # The packages of the plugins job; Jellyfesh Web bundles only Subsonic and
+      # Jellyfin (platforms/web/scripts/build-plugins.mjs lists them). The
+      # community plugins stay out: their services' web interfaces do not allow
+      # calls from a page on another site (CORS).
       - uses: actions/download-artifact@v8
         with:
           name: plugins

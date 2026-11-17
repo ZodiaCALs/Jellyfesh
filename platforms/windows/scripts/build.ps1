@@ -140,7 +140,7 @@ $notices = Join-Path $Root 'THIRD_PARTY_NOTICES.md'
 if ($env:CI -eq 'true' -and -not $SkipNative) {
     Push-Location $Root
     try {
-        Invoke-Native python @((Join-Path $Root 'tools\licenses\generate.py'), 'jf-ffi', 'jf-subsonic', 'jf-jellyfin', 'jf-qqmusic', 'jf-spotify', 'jf-netease')
+        Invoke-Native python @((Join-Path $Root 'tools\licenses\generate.py'), 'jf-ffi', 'jf-subsonic', 'jf-jellyfin', 'jf-qqmusic', 'jf-spotify', 'jf-netease', 'jf-community-netease', 'jf-community-qqmusic')
     }
     finally {
         Pop-Location

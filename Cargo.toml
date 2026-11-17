@@ -18,6 +18,12 @@ members = [
     "plugins/qqmusic",
     "plugins/spotify",
     "plugins/netease",
+    # Unofficial community plugins (ADR-0012, amended for v0.0.6): bundled
+    # unsigned, off until the person allows community plugins.
+    "plugins/community/common",
+    "plugins/community/netease",
+    "plugins/community/qqmusic",
+    "plugins/community/testsupport",
     "plugins/test-plugins/*",
 ]
 # Guest crates (the plugin SDK and test plugins) target wasm32-unknown-unknown; they also
@@ -48,6 +54,8 @@ jf-plugin-sdk = { path = "plugins/sdk" }
 jf-plugin-build = { path = "tools/jf-plugin/plugin-build" }
 jf-plugin-testkit = { path = "plugins/testkit" }
 jf-ffi = { path = "core/jf-ffi" }
+jf-community-common = { path = "plugins/community/common" }
+jf-community-testsupport = { path = "plugins/community/testsupport" }
 
 # Versions checked against crates.io on 2026-11-06 (ADR-0014).
 anyhow = "1.0.104"
@@ -184,4 +192,15 @@ opt-level = "s"
 opt-level = "s"
 
 [profile.release.package.jf-netease]
+opt-level = "s"
+
+# The unofficial community plugins (plugins/community), the same way; their
+# shared helpers go only into them.
+[profile.release.package.jf-community-netease]
+opt-level = "s"
+
+[profile.release.package.jf-community-qqmusic]
+opt-level = "s"
+
+[profile.release.package.jf-community-common]
 opt-level = "s"

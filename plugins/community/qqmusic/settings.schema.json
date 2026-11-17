@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QQ Music (Unofficial)",
+  "type": "object",
+  "properties": {
+    "quality": {
+      "type": "string",
+      "title": "Streaming Quality",
+      "description": "\"app\" follows the quality you chose in Jellyfesh for each network; the other values always ask QQ Music for that quality. Your account decides what you get: without VIP, QQ Music may give a lower quality or nothing.",
+      "enum": ["app", "lossless", "high", "normal", "low"],
+      "default": "app"
+    },
+    "translations": {
+      "type": "boolean",
+      "title": "Translated Lyrics",
+      "description": "Show QQ Music's translation under each line of the lyrics when it has one.",
+      "default": true
+    }
+  },
+  "additionalProperties": false
+}

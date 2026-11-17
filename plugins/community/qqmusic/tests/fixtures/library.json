@@ -1,0 +1,110 @@
+{
+  "_comment": "Invented data for the mock QQ Music service in tests/mock. Nothing here comes from QQ Music, WeChat or any account; the mids, numbers, ISRCs and names are made up. Host names in URLs are the real ones only so that the plugin's checks on picture hosts run. `stream` and `result` describe what the mock's stream service answers for a song and are not part of QQ Music's answers.",
+  "account": { "musicid": 7000001, "nick": "Mock QQ Listener" },
+  "singers": [
+    { "singerID": 9101, "singerMID": "0000MockSinger", "singerName": "Mock Singer", "albumNum": 2 },
+    { "singerID": 9102, "singerMID": "0000MockGuest1", "singerName": "Guest Singer", "albumNum": 0 }
+  ],
+  "albums": [
+    {
+      "albumID": 9201, "albumMID": "0000MockAlbum1", "albumName": "Mock Album", "publicTime": "2020-05-01",
+      "singer_list": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
+      "songs": ["0000MockSong01", "0000MockSong02", "0000MockSong06"]
+    },
+    {
+      "albumID": 9202, "albumMID": "0000MockAlbum2", "albumName": "Mock Members Album", "publicTime": "2021-01-01",
+      "singer_list": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
+      "songs": ["0000MockSong03", "0000MockSong04"]
+    }
+  ],
+  "songs": [
+    {
+      "id": 9301, "mid": "0000MockSong01", "name": "Mock Song One", "title": "Mock Song One",
+      "singer": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
+      "album": { "id": 9201, "mid": "0000MockAlbum1", "name": "Mock Album" },
+      "interval": 200, "isrc": "CNZZ02000001", "index_album": 1, "time_public": "2020-05-01",
+      "file": { "media_mid": "0000MockMedia1", "size_96aac": 2400000, "size_128mp3": 3200000, "size_320mp3": 8000000, "size_flac": 0 },
+      "pay": { "pay_play": 0, "pay_month": 0, "price_track": 0, "price_album": 0 },
+      "stream": "full"
+    },
+    {
+      "id": 9302, "mid": "0000MockSong02", "name": "Mock Song Two", "title": "Mock Song Two",
+      "singer": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }, { "id": 9102, "mid": "0000MockGuest1", "name": "Guest Singer" }],
+      "album": { "id": 9201, "mid": "0000MockAlbum1", "name": "Mock Album" },
+      "interval": 180, "isrc": "", "index_album": 2, "time_public": "2020-05-01",
+      "file": { "media_mid": "0000MockMedia2", "size_96aac": 0, "size_128mp3": 2900000, "size_320mp3": 0, "size_flac": 0 },
+      "pay": { "pay_play": 0, "pay_month": 0, "price_track": 0, "price_album": 0 },
+      "stream": "full"
+    },
+    {
+      "id": 9303, "mid": "0000MockSong03", "name": "Mock Members Song", "title": "Mock Members Song",
+      "singer": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
+      "album": { "id": 9202, "mid": "0000MockAlbum2", "name": "Mock Members Album" },
+      "interval": 240, "isrc": "", "index_album": 1, "time_public": "2021-01-01",
+      "file": { "media_mid": "0000MockMedia3", "size_96aac": 2900000, "size_128mp3": 3800000, "size_320mp3": 9600000, "size_flac": 30000000 },
+      "pay": { "pay_play": 1, "pay_month": 1, "price_track": 200, "price_album": 0 },
+      "stream": "none"
+    },
+    {
+      "id": 9304, "mid": "0000MockSong04", "name": "Mock Preview Song", "title": "Mock Preview Song",
+      "singer": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
+      "album": { "id": 9202, "mid": "0000MockAlbum2", "name": "Mock Members Album" },
+      "interval": 210, "isrc": "", "index_album": 2, "time_public": "2021-01-01",
+      "file": { "media_mid": "0000MockMedia4", "size_96aac": 0, "size_128mp3": 3400000, "size_320mp3": 8400000, "size_flac": 0 },
+      "pay": { "pay_play": 0, "pay_month": 0, "price_track": 0, "price_album": 0 },
+      "stream": "preview"
+    },
+    {
+      "id": 9305, "mid": "0000MockSong05", "name": "Mock Silent Song", "title": "Mock Silent Song",
+      "singer": [{ "id": 9102, "mid": "0000MockGuest1", "name": "Guest Singer" }],
+      "album": { "id": 0, "mid": "", "name": "" },
+      "interval": 190, "isrc": "", "index_album": 0, "time_public": "",
+      "file": { "media_mid": "", "size_96aac": 0, "size_128mp3": 0, "size_320mp3": 0, "size_flac": 0 },
+      "pay": { "pay_play": 0, "pay_month": 0, "price_track": 0, "price_album": 0 },
+      "stream": "none"
+    },
+    {
+      "id": 9306, "mid": "0000MockSong06", "name": "Mock Lossless Song", "title": "Mock Lossless Song",
+      "singer": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
+      "album": { "id": 9201, "mid": "0000MockAlbum1", "name": "Mock Album" },
+      "interval": 230, "isrc": "", "index_album": 3, "time_public": "2020-05-01",
+      "file": { "media_mid": "0000MockMedia6", "size_96aac": 2700000, "size_128mp3": 3600000, "size_320mp3": 9000000, "size_flac": 26000000 },
+      "pay": { "pay_play": 0, "pay_month": 0, "price_track": 0, "price_album": 0 },
+      "stream": "full"
+    },
+    {
+      "id": 9307, "mid": "0000MockSong07", "name": "Mock Elsewhere Song", "title": "Mock Elsewhere Song",
+      "singer": [{ "id": 9102, "mid": "0000MockGuest1", "name": "Guest Singer" }],
+      "album": { "id": 0, "mid": "", "name": "" },
+      "interval": 150, "isrc": "", "index_album": 0, "time_public": "",
+      "file": { "media_mid": "0000MockMedia7", "size_96aac": 0, "size_128mp3": 2400000, "size_320mp3": 0, "size_flac": 0 },
+      "pay": { "pay_play": 0, "pay_month": 0, "price_track": 0, "price_album": 0 },
+      "stream": "none", "result": 104003
+    }
+  ],
+  "playlists": [
+    {
+      "tid": 8000001, "dirId": 201, "dirName": "我喜欢", "own": true,
+      "picUrl": "http://qpic.y.qq.com/music_cover/mock-liked/300",
+      "songs": ["0000MockSong02", "0000MockSong01", "0000MockSong06"]
+    },
+    {
+      "tid": 8000002, "dirId": 1, "dirName": "Mock Commute", "own": true,
+      "picUrl": "http://qpic.y.qq.com/music_cover/mock-commute/300",
+      "songs": ["0000MockSong01", "0000MockSong02", "0000MockSong03", "0000MockSong04", "0000MockSong05", "0000MockSong06", "0000MockSong07"]
+    },
+    {
+      "tid": 8000003, "dirId": 0, "dirName": "Mock Public Mix", "own": false, "owner": "Someone Else (mock)",
+      "picUrl": "http://qpic.y.qq.com/music_cover/mock-public/300",
+      "songs": ["0000MockSong01"]
+    }
+  ],
+  "lyrics": {
+    "0000MockSong01": {
+      "lyric": "[ti:Mock Song One]\n[ar:Mock Singer]\n[00:10.00]第一句歌词\n[00:14.20]It&apos;s the second line\n[00:20.00]最后一句\n",
+      "trans": "[00:10.00]The first line\n[00:14.20]//\n[00:20.00]The last line\n"
+    },
+    "0000MockSong02": { "lyric": "[00:00.00]此歌曲为没有填词的纯音乐，请您欣赏\n" },
+    "0000MockSong06": { "lyric": "[00:01.00]encrypted in the real service", "crypt": 1 }
+  }
+}

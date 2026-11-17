@@ -56,13 +56,16 @@ jellyfesh/
 │   ├── testkit/               runs a plugin in the real host against a mock HTTP server (tests)
 │   ├── subsonic/              Subsonic / OpenSubsonic (Navidrome and others) — Stream mode
 │   ├── jellyfin/              Jellyfin 10.9+ — Stream mode
+│   ├── community/             unofficial NetEase Cloud Music and QQ Music community plugins,
+│   │                          bundled unsigned (ADR-0012, amended for v0.0.6)
 │   ├── test-plugins/          small plugins for the host's happy-path and hostile tests
-│   └── release.sh             builds, packs and signs the official plugins into dist/plugins/
+│   └── release.sh             builds and packs the bundled plugins into dist/plugins/,
+│                              signing only the official ones
 │
 ├── tools/jf-plugin/           jf-plugin: new | build | pack | keygen | sign | verify | inspect
 │
-├── community-plugins/         NOT in this repo. Separate repository, separate CI, separate
-│                              releases; opt-in reference implementations (ADR-0012)
+├── community-plugins/         Other community plugins: NOT in this repo. Separate repository,
+│                              separate CI, separate releases (ADR-0012)
 │
 ├── design/
 │   ├── tokens.json            single token source (Misty 1.1 base + Jellyfesh groups)

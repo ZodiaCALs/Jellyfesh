@@ -393,4 +393,6 @@ per shell.
 * **Releases and updates:** GitHub Releases linked from the website; a daily
   check of the website's release feed (can be turned off); downloads go
   through the browser while builds are unsigned (ADR-0016). Release builds
-  never bundle community plugins (ADR-0012).
+  bundle two community plugins (`plugins/community`, unsigned), which the
+  core installs only once the person allows community plugins (ADR-0012,
+  amended for v0.0.6).

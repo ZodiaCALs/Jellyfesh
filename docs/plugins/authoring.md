@@ -24,6 +24,19 @@ The official plugins are complete examples of everything below:
 `plugins/qqmusic` (links only), `plugins/spotify` (remote control, OAuth) and
 `plugins/netease` (signed requests, QR sign-in).
 
+Two **community plugins** live here too, in `plugins/community/`: NetEase
+Cloud Music (Unofficial) and QQ Music (Unofficial)
+(`community.unofficial.netease` and `community.unofficial.qqmusic`, crates
+`jf-community-netease` and `jf-community-qqmusic`, with the shared
+`jf-community-common` and the test-only `jf-community-testsupport`). They
+keep ADR-0012's rules for community plugins (the services' web endpoints
+and web QR sign-in only, nothing taken from the services' apps, no paywall
+bypass), ship inside the apps but are never signed with the release key, so
+the apps install them only once the person allows community plugins
+(ADR-0012, amended for v0.0.6), and show how to test a service on fixed
+hosts through a `mock-service` cargo feature (`plugins/community/README.md`).
+Other community plugins live outside this repository.
+
 Build the tool once from a checkout, or run it through cargo:
 
 ```sh
@@ -274,25 +287,27 @@ private half is kept outside the repository. Any other valid signature makes
 a community package, and the app remembers its key on first install. The
 published test key (`--trust-test-key`) is for tests only.
 
-## 7. Release packages of the official plugins
+## 7. Release packages of the bundled plugins
 
 ```sh
 plugins/release.sh
 ```
 
-Run from the repository root, it builds the official plugins in release
-mode and writes exactly
+Run from the repository root, it builds the plugins the apps bundle in
+release mode and writes exactly
 
 * `dist/plugins/org.jellyfesh.subsonic.jfpkg`
 * `dist/plugins/org.jellyfesh.jellyfin.jfpkg`
 * `dist/plugins/org.jellyfesh.qqmusic.jfpkg`
 * `dist/plugins/org.jellyfesh.spotify.jfpkg`
 * `dist/plugins/org.jellyfesh.netease.jfpkg`
+* `dist/plugins/community.unofficial.netease.jfpkg` (community, unsigned)
+* `dist/plugins/community.unofficial.qqmusic.jfpkg` (community, unsigned)
 
 When `JF_PLUGIN_SIGNING_KEY` is set and not empty it must hold the Jellyfesh
-release key (64 hex characters): the packages are signed with it and must
-then verify as Official, or the script fails and removes the package, so a
-wrong secret cannot ship packages the apps refuse.
+release key (64 hex characters): the official packages are signed with it
+and must then verify as Official, or the script fails and removes the
+package, so a wrong secret cannot ship packages the apps refuse.
 `JF_PLUGIN_ALLOW_UNTRUSTED_KEY=1` accepts another key (a fork, a dry run).
 Without the variable the packages are unsigned. The script says which, never
 prints the key, and needs only Rust with the `wasm32-unknown-unknown`
@@ -300,6 +315,13 @@ target (it builds `jf-plugin` on the way), so it runs on a plain
 `ubuntu-24.04` runner. The release workflow (`.github/workflows/release.yml`)
 runs it with the secret; the apps bundle the files from `dist/plugins/`, and
 the same packages are published as separate downloads.
+
+The two community packages never get a signature: the script packs them
+without `JF_PLUGIN_SIGNING_KEY` in their environment and fails if one comes
+out signed, or with the tests' `mock_origin` setting. Jellyfesh Web bundles
+only the Subsonic and Jellyfin plugins (`platforms/web/scripts/build-plugins.mjs`
+lists them): the community plugins' services do not let a web page on
+another site call their web interfaces (CORS).
 
 ## Command reference
 

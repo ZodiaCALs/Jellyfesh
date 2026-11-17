@@ -1,0 +1,15 @@
+[package]
+name = "jf-community-common"
+description = "Helpers shared by the unofficial community plugins for NetEase Cloud Music and QQ Music: base64, LRC lyrics, paging, quality settings, matching items from other sources."
+version = "0.1.1"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-sdk.workspace = true
+serde_json.workspace = true
