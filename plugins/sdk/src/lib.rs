@@ -72,8 +72,8 @@
 //! * [`http`]: a request builder with query and form encoding, JSON bodies,
 //!   [`http::Request::send_json`], and status-to-error mapping;
 //! * [`kv`]: plain values (with JSON helpers) and [`kv::secret`]s;
-//! * [`crypto`]: digests, HMAC, AES, RSA encryption and random bytes, done by
-//!   the host;
+//! * [`crypto`]: digests, HMAC, AES, RSA encryption, RSA signing with a key
+//!   from the keystore (API 1.1) and random bytes, done by the host;
 //! * [`clock`]: wall and monotonic time (`std::time::SystemTime::now()`
 //!   panics on this target);
 //! * a `getrandom` backend over `crypto.random-bytes`, so crates such as

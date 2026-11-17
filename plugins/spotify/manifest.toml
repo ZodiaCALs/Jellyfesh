@@ -1,0 +1,43 @@
+id = "org.jellyfesh.spotify"
+name = "Spotify"
+version = "0.0.6"
+api_version = "1.1"
+author = "Jellyfesh"
+description = "Control Spotify on your own devices with the Client ID of your own Spotify app (beta)"
+official = true
+capabilities = ["auth", "search", "browse", "remote"]
+# Spotify allows only remote control of the person's own players: no stream,
+# and its items never join Jellyfesh's queue (ADR-0011, ADR-0018).
+playback_mode = "remote"
+auth = ["oauth"]
+
+[network]
+# Sign-in and tokens, the Web API, and cover pictures (i.scdn.co is the host in
+# the Web API reference's examples; mosaic.scdn.co serves playlist mosaics and
+# is not confirmed by the documentation).
+allow = ["accounts.spotify.com", "api.spotify.com", "i.scdn.co", "mosaic.scdn.co"]
+max_rps = 5
+
+[oauth]
+# Each person registers this exact Redirect URI in their own Spotify app:
+# http://127.0.0.1:29817/callback (Spotify allows http only for loopback IPs).
+redirect_port = 29817
+
+[settings]
+schema = "settings.schema.json"
+
+[content_policy]
+# Spotify's developer terms: Spotify stays in its own views, nothing is kept,
+# metadata is not cached for long, no synced lyrics, and its attribution shows.
+unified_search = false
+mixed_queue = false
+library_storage = "none"
+metadata_ttl = "1h"
+lyrics_sync = false
+attribution = "spotify"
+
+[links]
+track = "https://open.spotify.com/track/{id}"
+album = "https://open.spotify.com/album/{id}"
+artist = "https://open.spotify.com/artist/{id}"
+playlist = "https://open.spotify.com/playlist/{id}"

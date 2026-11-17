@@ -15,6 +15,8 @@
 //   a-z 0-9 . _ -), handed to the page to persist; a value containing a password typed for the
 //   login in progress is refused, as natively.
 // * crypto: jf_plugin_model::crypto in Rust (jf-web-sandbox); random bytes from getRandomValues.
+//   RSA signing with a key from the keystore (API 1.1, rsa-sign-pkcs1-sha256) is native only: here
+//   it answers invalid-input, "not supported in the browser".
 // * clock, log: Date.now and performance.now; log lines rate-limited (bursts of 100, then 20 a
 //   second), cut at 2 KiB, control characters escaped, typed passwords masked.
 
@@ -413,6 +415,10 @@ export function createImports(deps: HostDeps): Record<string, Record<string, unk
     randomBytes(length: number) {
       if (length > MAX_RANDOM) fail({ tag: 'too-large' });
       return deps.random(length);
+    },
+    // API 1.1: the native hosts sign with a private key from the system keystore; a page keeps none.
+    rsaSignPkcs1Sha256(_secret: string, _data: Uint8Array): Uint8Array {
+      fail({ tag: 'invalid-input', val: 'not supported in the browser' });
     },
   };
 

@@ -34,10 +34,14 @@ aes-gcm = { workspace = true, optional = true }
 cbc = { workspace = true, optional = true }
 ecb = { workspace = true, optional = true }
 rsa = { workspace = true, optional = true }
-sha1-for-rsa = { workspace = true, optional = true }
 getrandom = { workspace = true, optional = true }
 
 [features]
 default = []
-# Host crypto for plugins (`crypto` import): hashes, HMAC, AES, RSA public-key encryption.
-crypto = ["dep:sha1", "dep:md-5", "dep:hmac", "dep:aes", "dep:aes-gcm", "dep:cbc", "dep:ecb", "dep:rsa", "dep:sha1-for-rsa", "dep:getrandom"]
+# Host crypto for plugins (`crypto` import): hashes, HMAC, AES, RSA public-key encryption and
+# PKCS #1 v1.5 signing.
+crypto = ["dep:sha1", "dep:md-5", "dep:hmac", "dep:aes", "dep:aes-gcm", "dep:cbc", "dep:ecb", "dep:rsa", "dep:getrandom"]
+
+[dev-dependencies]
+# The crypto tests make RSA key pairs (rand_core 0.10's system RNG).
+getrandom = { workspace = true, features = ["sys_rng"] }

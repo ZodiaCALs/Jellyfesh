@@ -11,8 +11,10 @@
 //!
 //! * **qr** (also used for codes to type elsewhere): shows the code and polls
 //!   at the plugin's interval (0.2–30 s) until done, failed or expired;
-//! * **oauth**: before `begin` it binds a listener on `127.0.0.1` (random
-//!   port), makes a PKCE verifier and S256 challenge and a `state` value, and
+//! * **oauth**: before `begin` it binds a listener on `127.0.0.1` (the
+//!   manifest's `[oauth] redirect_port`, else a random port; a busy fixed port
+//!   ends the flow with a message that names it), makes a PKCE verifier and
+//!   S256 challenge and a `state` value, and
 //!   passes them in `flow.oauth`; when the plugin returns `open-url` with
 //!   loopback capture, the UI opens the URL in the system browser and the
 //!   driver waits for the redirect, checks `state`, answers the browser and
@@ -326,9 +328,10 @@ impl Driver {
 
     fn drive_inner(&self) -> Result<AuthStep, AuthStep> {
         let (loopback, oauth) = if self.kind == AuthKind::Oauth {
-            let listener = TcpListener::bind("127.0.0.1:0")
-                .and_then(|l| l.set_nonblocking(true).map(|()| l))
-                .map_err(|e| failed(format!("cannot listen for the browser: {e}")))?;
+            let listener = listen_for_browser(
+                self.plugin.manifest.oauth_redirect_port,
+                &self.plugin.manifest.name,
+            )?;
             let port = listener.local_addr().map_err(|e| failed(e.to_string()))?.port();
             let state = random_token(16);
             let oauth = Oauth::new(
@@ -406,6 +409,31 @@ impl Driver {
             }
         }
     }
+}
+
+/// The loopback listener of an oauth flow: on `port` when the manifest names
+/// one (the redirect URI the person registered with the service), else on a
+/// random free port.
+fn listen_for_browser(port: Option<u16>, service: &str) -> Result<TcpListener, AuthStep> {
+    let listener = match port {
+        Some(port) => TcpListener::bind(("127.0.0.1", port)).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::AddrInUse {
+                failed(format!(
+                    "Port {port} on this device is in use by another program, and {service} can only \
+                     send you back to http://127.0.0.1:{port}/callback. Close that program (or an \
+                     earlier sign-in still waiting) and try again."
+                ))
+            } else {
+                failed(format!("cannot listen for the browser on port {port}: {e}"))
+            }
+        })?,
+        None => TcpListener::bind("127.0.0.1:0")
+            .map_err(|e| failed(format!("cannot listen for the browser: {e}")))?,
+    };
+    listener
+        .set_nonblocking(true)
+        .map_err(|e| failed(format!("cannot listen for the browser: {e}")))?;
+    Ok(listener)
 }
 
 /// Handles one connection to the loopback listener. `None` means "not the
@@ -497,6 +525,27 @@ mod tests {
                 .bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
         );
+    }
+
+    #[test]
+    fn a_fixed_redirect_port_is_used_or_named_when_busy() {
+        let busy = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = busy.local_addr().unwrap().port();
+        match listen_for_browser(Some(port), "Example") {
+            Err(AuthStep::Failed { message }) => {
+                assert!(message.contains(&format!("Port {port}")), "{message}");
+                assert!(
+                    message.contains(&format!("http://127.0.0.1:{port}/callback")),
+                    "{message}"
+                );
+            }
+            other => panic!("expected a busy port, got {other:?}"),
+        }
+        drop(busy);
+        let listener = listen_for_browser(Some(port), "Example").unwrap();
+        assert_eq!(listener.local_addr().unwrap().port(), port);
+        let random = listen_for_browser(None, "Example").unwrap();
+        assert_ne!(random.local_addr().unwrap().port(), 0);
     }
 
     #[test]

@@ -188,6 +188,29 @@ impl crypto::Host for HostState {
     fn random_bytes(&mut self, len: u32) -> Result<Vec<u8>, CryptoError> {
         self.host(|_| host_crypto::random_bytes(len).map_err(Into::into))
     }
+
+    /// Signs with the private key in the plugin's own secret `secret`, read
+    /// here so that it never enters the plugin's memory.
+    fn rsa_sign_pkcs1_sha256(&mut self, secret: String, data: Vec<u8>) -> Result<Vec<u8>, CryptoError> {
+        self.host(|state| {
+            if !valid_secret_name(&secret) {
+                return Err(CryptoError::InvalidKey(
+                    "secret names are 1–64 characters of a-z 0-9 . _ -".into(),
+                ));
+            }
+            if data.len() > host_crypto::MAX_INPUT {
+                return Err(CryptoError::TooLarge);
+            }
+            let services = &state.services;
+            let key = services
+                .secrets
+                .get(&secret_key(&services.id, &secret))
+                .map_err(|e| CryptoError::InvalidKey(format!("the keystore is unavailable: {e}")))?
+                .map(zeroize::Zeroizing::new)
+                .ok_or_else(|| CryptoError::InvalidKey(format!("there is no secret named {secret:?}")))?;
+            host_crypto::rsa_sign_pkcs1_sha256(&key, &data).map_err(Into::into)
+        })
+    }
 }
 
 impl clock::Host for HostState {

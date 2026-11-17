@@ -1,0 +1,28 @@
+[package]
+name = "jf-spotify"
+description = "Jellyfesh source plugin for Spotify: remote control of your own Spotify devices through the Web API, with your own Client ID (beta)."
+# The plugin's own version: keep it equal to `version` in manifest.toml.
+version = "0.0.6"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-sdk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+jf-plugin-host.workspace = true
+jf-plugin-testkit.workspace = true
+# The mock checks PKCE (S256) on its own.
+sha2.workspace = true
+base64.workspace = true
+url.workspace = true

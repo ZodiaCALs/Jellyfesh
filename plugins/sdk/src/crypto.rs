@@ -43,6 +43,18 @@ pub fn rsa_encrypt(key: &RsaPublicKey, padding: RsaPadding, data: &[u8]) -> Resu
     Ok(wit::rsa_encrypt(key, padding, data)?)
 }
 
+/// An RSASSA-PKCS1-v1_5 signature with SHA-256 over `data`, made by the host
+/// with the RSA private key in the plugin's secret `secret` (API 1.1).
+///
+/// Store the key once with [`crate::kv::secret::set`] (PEM, or the DER in
+/// base64) when the person enters it, and never read it back: the host signs
+/// with it from the keystore, so it stays out of the plugin's memory. Errors
+/// arrive as [`CryptoError`]: `InvalidKey` for an unknown secret or a key the
+/// host cannot use. Jellyfesh Web cannot sign and answers `InvalidInput`.
+pub fn rsa_sign_pkcs1_sha256(secret: &str, data: &[u8]) -> core::result::Result<Vec<u8>, CryptoError> {
+    wit::rsa_sign_pkcs1_sha256(secret, data)
+}
+
 /// `len` random bytes from the operating system (at most 64 KiB per call).
 pub fn random_bytes(len: u32) -> Result<Vec<u8>> {
     Ok(wit::random_bytes(len)?)

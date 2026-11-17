@@ -1,0 +1,33 @@
+id = "org.jellyfesh.qqmusic"
+name = "QQ Music"
+version = "0.0.6"
+api_version = "1.1"
+author = "Jellyfesh"
+description = "Find music in QQ Music with your own API key, and open it in QQ Music"
+official = true
+capabilities = ["auth", "search", "browse", "recommendations"]
+# QQ Music's open API (qqmusic-skills) returns metadata and links, never audio:
+# nothing plays here, and every item opens in QQ Music through [links].
+playback_mode = "stream"
+auth = ["api-key"]
+
+[network]
+# The API's gateway. Its rate limit is not published, so stay low.
+allow = ["a.y.qq.com"]
+max_rps = 2
+
+[settings]
+schema = "settings.schema.json"
+
+[content_policy]
+# The key is for personal use: nothing goes into the library, and results stay
+# in QQ Music's own views instead of every search (fewer requests too).
+unified_search = false
+library_storage = "none"
+
+[links]
+# The H5 pages the API documentation builds from the ids it returns.
+track = "https://i2.y.qq.com/a/song/{id}"
+album = "https://i2.y.qq.com/a/album/{id}"
+artist = "https://i2.y.qq.com/a/singer/{id}"
+playlist = "https://i2.y.qq.com/a/playlist/{id}"

@@ -87,6 +87,55 @@ impl PluginFiles {
         }
     }
 
+    /// For a plugin of an online service, whose manifest allows only the
+    /// service's own hosts: the same files with a string setting `key`
+    /// (format `uri`) added to the settings schema and `${settings.<key>}` to
+    /// `[network] allow`, so a test can point the plugin at a
+    /// [`crate::TestServer`] instead of the service.
+    ///
+    /// Only test packages carry the setting. The host refuses settings that
+    /// the package's schema does not name, so a published plugin never
+    /// receives one and keeps to its fixed hosts. The manifest must list
+    /// `allow = [` on one line under `[network]`.
+    pub fn with_test_server_setting(mut self, key: &str) -> PluginFiles {
+        let entry = format!("\"${{settings.{key}}}\"");
+        let mut found = false;
+        let lines: Vec<String> = self
+            .manifest
+            .lines()
+            .map(|line| match line.trim_start().strip_prefix("allow = [") {
+                Some(rest) if !found => {
+                    found = true;
+                    let rest = rest.trim_start();
+                    if rest.starts_with(']') {
+                        format!("allow = [{entry}{rest}")
+                    } else {
+                        format!("allow = [{entry}, {rest}")
+                    }
+                }
+                _ => line.to_string(),
+            })
+            .collect();
+        assert!(found, "the manifest has no `allow = [` line under [network]");
+        self.manifest = lines.join("\n") + "\n";
+        let (name, text) = self.schema.take().expect("the manifest names a settings schema");
+        let mut schema: serde_json::Value = serde_json::from_str(&text).expect("the settings schema is JSON");
+        let properties = schema
+            .as_object_mut()
+            .and_then(|o| {
+                o.entry("properties")
+                    .or_insert_with(|| serde_json::json!({}))
+                    .as_object_mut()
+            })
+            .expect("the settings schema is an object");
+        properties.insert(
+            key.to_string(),
+            serde_json::json!({ "type": "string", "format": "uri", "title": "Test Server" }),
+        );
+        self.schema = Some((name, schema.to_string()));
+        self
+    }
+
     /// The plugin id from the manifest.
     pub fn id(&self) -> String {
         jf_plugin_host::manifest::parse(&self.manifest)
@@ -165,6 +214,18 @@ impl Env {
     /// packs and signs it with the test key, and installs it.
     pub fn install_crate(&self, crate_dir: &Path, package: &str) -> PluginInfo {
         let files = PluginFiles::read(crate_dir);
+        let bytes = files.package(component_in(crate_dir, package), true);
+        let path = self.dir.path().join(format!("{}.jfpkg", files.id()));
+        std::fs::write(&path, bytes).expect("writing the package");
+        self.host
+            .install(&path)
+            .unwrap_or_else(|e| panic!("installing {package}: {e}"))
+    }
+
+    /// Packs `files` (for example [`PluginFiles::with_test_server_setting`])
+    /// with the component of the crate in `crate_dir` (cargo package
+    /// `package`), signs it with the test key and installs it.
+    pub fn install_files(&self, crate_dir: &Path, package: &str, files: &PluginFiles) -> PluginInfo {
         let bytes = files.package(component_in(crate_dir, package), true);
         let path = self.dir.path().join(format!("{}.jfpkg", files.id()));
         std::fs::write(&path, bytes).expect("writing the package");

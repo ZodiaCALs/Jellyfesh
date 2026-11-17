@@ -42,6 +42,24 @@ pub const PRESETS: &[Preset] = &[
         address_setting: Some("server_url"),
         address_example: Some("https://music.example.com"),
     },
+    // Online services: no address; each person signs in with their own key or app (ADR-0018).
+    // Metadata and links to QQ Music, which plays its music itself.
+    Preset {
+        id: "qqmusic",
+        name: "QQ Music",
+        plugin: "org.jellyfesh.qqmusic",
+        address_setting: None,
+        address_example: None,
+    },
+    // Remote control of the person's own Spotify devices (beta).
+    Preset {
+        id: "spotify",
+        name: "Spotify",
+        plugin: "org.jellyfesh.spotify",
+        address_setting: None,
+        address_example: None,
+    },
+    // NetEase Cloud Music (org.jellyfesh.netease) is not listed until it can search.
 ];
 
 /// The service named `id`.
@@ -73,5 +91,14 @@ mod tests {
             Some("org.jellyfesh.subsonic")
         );
         assert!(preset("nothing").is_none());
+        // Online services ask for no address.
+        for id in ["qqmusic", "spotify"] {
+            let p = preset(id).unwrap();
+            assert_eq!((p.address_setting, p.address_example), (None, None), "{id}");
+        }
+        assert!(
+            PRESETS.iter().all(|p| p.plugin != "org.jellyfesh.netease"),
+            "NetEase cannot search yet"
+        );
     }
 }

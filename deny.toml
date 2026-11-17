@@ -31,12 +31,12 @@ ignore = [
   # paste is unmaintained (informational, no vulnerability). It is a
   # build-time proc-macro pulled in by lofty; revisit when lofty drops it.
   { id = "RUSTSEC-2024-0436", reason = "build-time macro via lofty; no known vulnerability" },
-  # rsa's Marvin attack is a timing side channel in private-key operations
-  # (decryption, signing). jf-plugin-model's crypto, behind the plugin import
-  # crypto.rsa-encrypt in jf-plugin-host and in Jellyfesh Web's plugin sandbox
-  # (jf-web-sandbox), only encrypts with public keys and never holds an RSA
-  # private key. Revisit when rsa 0.10 (constant-time arithmetic) is stable.
-  { id = "RUSTSEC-2023-0071", reason = "the plugin hosts use RSA public-key encryption only" },
+  # RUSTSEC-2023-0071 (rsa's Marvin attack, a timing side channel in private-key
+  # operations) is no longer ignored, decided 2026-11-16: the plugin import
+  # crypto.rsa-sign-pkcs1-sha256 (API 1.1, NetEase Cloud Music request signing)
+  # signs with a private key from the keystore, and rsa 0.10.0 (2026-11-08), the
+  # first release on constant-time crypto-bigint arithmetic, fixes the advisory.
+  # The workspace is on it; an older rsa must not come back.
   # basic-toml is unmaintained (informational, no vulnerability, no upgrade). askama's derive
   # macro reads its config with it at build time; askama renders UniFFI's binding templates
   # (uniffi_bindgen, used by jf-ffi-bindgen). Revisit when uniffi_bindgen moves off it.

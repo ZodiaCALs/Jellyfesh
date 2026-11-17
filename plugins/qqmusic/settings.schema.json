@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "QQ Music",
+  "description": "QQ Music needs no settings: sign in with your own API key.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

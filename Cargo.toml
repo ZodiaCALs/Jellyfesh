@@ -15,6 +15,9 @@ members = [
     "plugins/testkit",
     "plugins/subsonic",
     "plugins/jellyfin",
+    "plugins/qqmusic",
+    "plugins/spotify",
+    "plugins/netease",
     "plugins/test-plugins/*",
 ]
 # Guest crates (the plugin SDK and test plugins) target wasm32-unknown-unknown; they also
@@ -109,10 +112,11 @@ aes = "0.9.4"
 aes-gcm = { version = "0.11.1", default-features = false, features = ["aes", "alloc"] }
 cbc = { version = "0.2.1", features = ["alloc"] }
 ecb = { version = "0.2.1", features = ["alloc"] }
-# Public-key encryption only (RUSTSEC-2023-0071 concerns private-key operations; see deny.toml).
-rsa = { version = "0.9.10", default-features = false, features = ["std", "pem", "u64_digit", "sha2", "getrandom"] }
-# rsa 0.9 is on the digest 0.10 line; OAEP with SHA-1 needs the matching sha1.
-sha1-for-rsa = { package = "sha1", version = "0.10.7" }
+# The plugin `crypto` import: public-key encryption and PKCS #1 v1.5 signing with a key from the
+# keystore. Checked against crates.io on 2026-11-16: 0.10.0 (2026-11-08) is the first release on
+# constant-time crypto-bigint arithmetic, which fixes RUSTSEC-2023-0071 (the Marvin timing side
+# channel in private-key operations); it is on the digest 0.11 line, like sha1 and sha2 above.
+rsa = { version = "0.10.0", default-features = false, features = ["std", "encoding", "pkcs1v15", "getrandom"] }
 getrandom = "0.4.3"
 base64 = "0.23.1"
 zeroize = "1.9.1"
@@ -171,4 +175,13 @@ strip = false
 opt-level = "s"
 
 [profile.release.package.jf-jellyfin]
+opt-level = "s"
+
+[profile.release.package.jf-qqmusic]
+opt-level = "s"
+
+[profile.release.package.jf-spotify]
+opt-level = "s"
+
+[profile.release.package.jf-netease]
 opt-level = "s"

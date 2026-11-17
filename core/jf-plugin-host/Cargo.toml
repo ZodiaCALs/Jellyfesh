@@ -37,3 +37,6 @@ tempfile.workspace = true
 wit-component.workspace = true
 sha2.workspace = true
 zip.workspace = true
+# The signing tests make an RSA key pair and check the signatures.
+rsa.workspace = true
+getrandom = { workspace = true, features = ["sys_rng"] }

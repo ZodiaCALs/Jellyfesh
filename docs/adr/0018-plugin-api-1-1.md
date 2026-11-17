@@ -77,6 +77,25 @@ Version 1.0 plugins must keep working unchanged.
    credentials as the research shows they must be handled; Apple Music
    through the person's own subscription.
 
+7. **Additions for the official plugins (2026-11-16)**, still before any
+   1.1 release:
+   * `[oauth] redirect_port` (1024–65535, with `auth = ["oauth"]`): the
+     loopback port an oauth login listens on, so a person who registers
+     their own app (Spotify's bring-your-own Client ID) can register the
+     exact redirect URI `http://127.0.0.1:<port>/callback`. A busy port ends
+     the login with a message that names it.
+   * `crypto.rsa-sign-pkcs1-sha256(secret, data)`: an RSASSA-PKCS1-v1_5
+     SHA-256 signature with the RSA private key in one of the plugin's own
+     secrets, read by the host from the keystore, so the key does not stay
+     in plugin memory (NetEase Cloud Music signs every request with the
+     person's own key). Adding a function to an imported interface keeps 1.0
+     plugins loading; Jellyfesh Web answers it with "not supported in the
+     browser". The workspace moved to `rsa` 0.10, whose constant-time
+     arithmetic fixes RUSTSEC-2023-0071 (`deny.toml`).
+   * NetEase's access model (item 6): each person registers as an individual
+     developer and enters their own App ID and private key, then signs in by
+     QR; an App ID serves only its creator's account.
+
 ## Consequences
 
 * Plugins built with SDK 1.1 export `remote` (unsupported by default) and

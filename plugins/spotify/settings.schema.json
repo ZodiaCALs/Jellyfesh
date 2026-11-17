@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Spotify",
+  "description": "Spotify needs no settings: sign in with the Client ID of your own Spotify app.",
+  "type": "object",
+  "properties": {},
+  "additionalProperties": false
+}

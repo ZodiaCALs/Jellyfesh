@@ -19,8 +19,10 @@ You need Rust (the version in `rust-toolchain.toml`) with the
 | `tools/jf-plugin` (`jf-plugin`) | the tool: `new`, `build`, `pack`, `keygen`, `sign`, `verify`, `inspect` |
 | `plugins/testkit` (`jf-plugin-testkit`) | runs your component in the real host against a mock of your service, for `cargo test` |
 
-The official plugins, `plugins/subsonic` and `plugins/jellyfin`, are complete
-examples of everything below.
+The official plugins are complete examples of everything below:
+`plugins/subsonic` and `plugins/jellyfin` (servers the person runs),
+`plugins/qqmusic` (links only), `plugins/spotify` (remote control, OAuth) and
+`plugins/netease` (signed requests, QR sign-in).
 
 Build the tool once from a checkout, or run it through cargo:
 
@@ -112,7 +114,7 @@ what the manifest declares. Things to know:
 
 ### API 1.1: links and remote control
 
-Two things need `api_version = "1.1"` in the manifest (ADR-0018); without
+These need `api_version = "1.1"` in the manifest (ADR-0018); without
 them, keep `"1.0"` so the plugin also loads in apps that implement 1.0.
 
 * **Links** open an item in its service. Add a `[links]` table with an
@@ -141,6 +143,27 @@ them, keep `"1.0"` so the plugin also loads in apps that implement 1.0.
   `capabilities` cannot report `remote` (its enum is 1.0's); the host lists
   it whenever the manifest declares it. Jellyfesh Web does not run remote
   sources yet.
+
+* **A fixed OAuth redirect port.** An oauth login normally listens on a
+  random loopback port. Services where each person registers their own app
+  (and with it the exact redirect URI) need it fixed:
+
+  ```toml
+  [oauth]
+  redirect_port = 29817   # 1024–65535; the redirect URI is http://127.0.0.1:29817/callback
+  ```
+
+  `flow.oauth.redirect-uri` then always holds that URI; show it in your
+  sign-in help. If another program holds the port, the login ends with a
+  message that names it.
+
+* **Signing with a private key.** `crypto::rsa_sign_pkcs1_sha256(secret,
+  data)` signs with RSASSA-PKCS1-v1_5 and SHA-256 using the RSA private key
+  stored in your secret `secret` (PEM, PKCS #8 or #1, or the DER in base64).
+  The host reads the key from the keystore itself: store it once when the
+  person enters it and never read it back. A plugin that calls it needs
+  `api_version = "1.1"`; Jellyfesh Web cannot sign and answers
+  `invalid-input` ("not supported in the browser").
 
 Plugins built with this SDK always export `remote` (answering `unsupported`
 unless implemented); a 1.1 host looks it up only when the manifest declares
@@ -200,7 +223,13 @@ fn searches() {
 The testkit also drives sign-in flows (`login`, `next_step`, `final_step`,
 `fields`), fetches the URLs you hand out the way the engine would (`fetch`),
 shows what was requested (`server.requests()`), and finds files containing a
-secret (`env.files_containing`). Write the mock from the service's official
+secret (`env.files_containing`). For a service on fixed hosts, the test
+package can name a mock instead: `PluginFiles::read(dir)
+.with_test_server_setting("test_server")` adds that setting and its origin
+to a test copy of the manifest and schema, `env.install_files` installs it,
+and your plugin uses the setting when it is present (published packages do
+not have it, and the host refuses settings their schema does not name).
+Write the mock from the service's official
 API documentation, with invented data, never from anyone's account; keep
 expected output in golden files. The official plugins' `tests/` folders are
 full examples (mock servers, fixtures, golden lyrics).
@@ -251,11 +280,14 @@ published test key (`--trust-test-key`) is for tests only.
 plugins/release.sh
 ```
 
-Run from the repository root, it builds the Subsonic and Jellyfin plugins in
-release mode and writes exactly
+Run from the repository root, it builds the official plugins in release
+mode and writes exactly
 
 * `dist/plugins/org.jellyfesh.subsonic.jfpkg`
 * `dist/plugins/org.jellyfesh.jellyfin.jfpkg`
+* `dist/plugins/org.jellyfesh.qqmusic.jfpkg`
+* `dist/plugins/org.jellyfesh.spotify.jfpkg`
+* `dist/plugins/org.jellyfesh.netease.jfpkg`
 
 When `JF_PLUGIN_SIGNING_KEY` is set and not empty it must hold the Jellyfesh
 release key (64 hex characters): the packages are signed with it and must

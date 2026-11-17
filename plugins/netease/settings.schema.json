@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NetEase Cloud Music",
+  "type": "object",
+  "properties": {
+    "quality": {
+      "type": "string",
+      "title": "Streaming Quality",
+      "description": "\"app\" follows the quality you chose in Jellyfesh for each network: Low and Normal ask NetEase for 128 kbit/s, High for 320 kbit/s, Lossless for its lossless files (where your account may play them).",
+      "enum": ["app", "lossless", "high", "normal", "low"],
+      "default": "app"
+    }
+  },
+  "additionalProperties": false
+}

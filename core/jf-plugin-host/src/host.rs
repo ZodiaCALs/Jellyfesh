@@ -645,7 +645,13 @@ impl PluginHost {
                 .take(sanitize::MAX_REMOTE_TRACKS)
                 .map(wit::Item::from)
                 .collect();
-            let start = start.min(u32::try_from(tracks.len().saturating_sub(1)).unwrap_or(u32::MAX));
+            // Tracks start within the list; a container (empty `tracks`)
+            // plays from its own track `start`, which only the service knows.
+            let start = if tracks.is_empty() {
+                start
+            } else {
+                start.min(u32::try_from(tracks.len() - 1).unwrap_or(u32::MAX))
+            };
             let result = ctx.call_remote(budget, |remote, store| {
                 remote.jellyfesh_plugin_remote().call_play(
                     store,

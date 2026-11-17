@@ -30,8 +30,11 @@ Jellyfesh Web's build needs `wasm-bindgen-cli` and the plugin packages from
 `plugins/release.sh` first; its end-to-end tests run the built app against
 mock Subsonic and Jellyfin servers (`docs/web.md`, "Building and testing").
 
-The official plugins' tests (`cargo test -p jf-subsonic -p jf-jellyfin`) run
-each plugin in the real host against a mock server.
+The official plugins' tests (`cargo test -p jf-subsonic -p jf-jellyfin
+-p jf-qqmusic -p jf-spotify -p jf-netease`) run each plugin in the real host
+against a mock server; the online services' mocks are written from their
+documentation (or, for NetEase, from what its official client sends) with
+invented data, and stand in for services these tests never reach.
 
 ## 2. The real audio-device path without a sound card (cloud, CI)
 

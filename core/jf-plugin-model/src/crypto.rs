@@ -3,9 +3,12 @@
 //! The native host (`jf-plugin-host`) and Jellyfesh Web's plugin workers
 //! both run these, so a plugin gets the same answers everywhere.
 //!
-//! RSA is public-key encryption only: the host never holds an RSA private
-//! key, which is why RUSTSEC-2023-0071 (a timing side channel in private-key
-//! operations of the `rsa` crate) does not apply (see `deny.toml`).
+//! RSA: encryption with public keys, and PKCS #1 v1.5 signatures with a
+//! private key the native host reads from the plugin's keystore namespace
+//! (`crypto.rsa-sign-pkcs1-sha256`, API 1.1), so the key never enters the
+//! plugin's memory; Jellyfesh Web does not offer signing. `rsa` 0.10 does
+//! private-key arithmetic in constant time with blinding, which fixed
+//! RUSTSEC-2023-0071.
 
 use aes::cipher::block_padding::Pkcs7;
 use aes::cipher::consts::U12;
@@ -13,11 +16,13 @@ use aes::cipher::{BlockModeDecrypt, BlockModeEncrypt, KeyInit, KeyIvInit};
 use aes::{Aes128, Aes192, Aes256};
 use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{AesGcm, Nonce};
+use base64::Engine as _;
 use hmac::{Hmac, Mac};
-use rsa::pkcs1::DecodeRsaPublicKey;
-use rsa::pkcs8::DecodePublicKey;
-use rsa::{BigUint, Oaep, Pkcs1v15Encrypt, RsaPublicKey};
+use rsa::pkcs1::{DecodeRsaPrivateKey, DecodeRsaPublicKey};
+use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey};
+use rsa::{BoxedUint, PrivateKey, PublicKey};
 use sha2::Digest;
+use zeroize::Zeroizing;
 
 use crate::types::{
     AesMode, CryptoError, GcmParams, HashAlgorithm, RsaComponents, RsaPadding, RsaPublicKey as WitRsaKey,
@@ -27,6 +32,10 @@ use crate::types::{
 pub const MAX_INPUT: usize = 16 * 1024 * 1024;
 /// Most random bytes per call.
 pub const MAX_RANDOM: u32 = 64 * 1024;
+/// Smallest and largest RSA modulus accepted, in bits.
+const RSA_BITS: std::ops::RangeInclusive<usize> = 1024..=8192;
+/// Longest private-key text accepted (an 8192-bit key in PEM is about 6.5 KiB).
+const MAX_PRIVATE_KEY_TEXT: usize = 64 * 1024;
 
 fn check_size(data: &[u8]) -> Result<(), CryptoError> {
     if data.len() > MAX_INPUT {
@@ -151,35 +160,88 @@ fn gcm(key: &[u8], params: &GcmParams, data: &[u8], encrypt: bool) -> Result<Vec
     })
 }
 
-/// `crypto.rsa-encrypt`: public-key encryption only.
+/// `crypto.rsa-encrypt`: public-key encryption.
 pub fn rsa_encrypt(key: &WitRsaKey, padding: RsaPadding, data: &[u8]) -> Result<Vec<u8>, CryptoError> {
     check_size(data)?;
     let invalid = |e: &dyn std::fmt::Display| CryptoError::InvalidKey(format!("not an RSA public key: {e}"));
     let key = match key {
-        WitRsaKey::Pem(text) => RsaPublicKey::from_public_key_pem(text)
-            .or_else(|_| RsaPublicKey::from_pkcs1_pem(text))
+        WitRsaKey::Pem(text) => PublicKey::from_public_key_pem(text)
+            .or_else(|_| PublicKey::from_pkcs1_pem(text))
             .map_err(|e| invalid(&e))?,
-        WitRsaKey::Der(der) => RsaPublicKey::from_public_key_der(der)
-            .or_else(|_| RsaPublicKey::from_pkcs1_der(der))
+        WitRsaKey::Der(der) => PublicKey::from_public_key_der(der)
+            .or_else(|_| PublicKey::from_pkcs1_der(der))
             .map_err(|e| invalid(&e))?,
         WitRsaKey::Components(RsaComponents { modulus, exponent }) => {
             let bits = modulus.iter().skip_while(|b| **b == 0).count() * 8;
-            if !(1024..=8192).contains(&bits) {
+            if !RSA_BITS.contains(&bits) {
                 return Err(CryptoError::InvalidKey(
                     "the modulus must be 1024 to 8192 bits".into(),
                 ));
             }
-            RsaPublicKey::new(BigUint::from_bytes_be(modulus), BigUint::from_bytes_be(exponent))
-                .map_err(|e| invalid(&e))?
+            // Public numbers: variable time is fine.
+            PublicKey::new(
+                BoxedUint::from_be_slice_vartime(modulus),
+                BoxedUint::from_be_slice_vartime(exponent),
+            )
+            .map_err(|e| invalid(&e))?
         }
     };
-    let mut rng = rsa::rand_core::OsRng;
     let result = match padding {
-        RsaPadding::Pkcs1v15 => key.encrypt(&mut rng, Pkcs1v15Encrypt, data),
-        RsaPadding::OaepSha1 => key.encrypt(&mut rng, Oaep::new::<sha1_for_rsa::Sha1>(), data),
-        RsaPadding::OaepSha256 => key.encrypt(&mut rng, Oaep::new::<rsa::sha2::Sha256>(), data),
+        RsaPadding::Pkcs1v15 => key.pkcs1v15_encrypt(data),
+        RsaPadding::OaepSha1 => key.oaep_encrypt::<sha1::Sha1>(data),
+        RsaPadding::OaepSha256 => key.oaep_encrypt::<sha2::Sha256>(data),
     };
     result.map_err(|e| CryptoError::InvalidInput(e.to_string()))
+}
+
+/// The private-key half of `crypto.rsa-sign-pkcs1-sha256`: an RSASSA-PKCS1-v1_5
+/// signature with SHA-256 over `data` (RFC 8017), made with blinding.
+///
+/// `private_key` is the text a plugin stored as a secret: PEM
+/// (`BEGIN PRIVATE KEY`, PKCS #8, or `BEGIN RSA PRIVATE KEY`, PKCS #1), or
+/// the same DER structures in base64 without the armour lines, as some
+/// services' consoles show keys. Encrypted keys are refused. Error messages
+/// never quote the key.
+pub fn rsa_sign_pkcs1_sha256(private_key: &str, data: &[u8]) -> Result<Vec<u8>, CryptoError> {
+    check_size(data)?;
+    let key = parse_private_key(private_key)?;
+    let bits = rsa::traits::PublicKeyParts::size(&key) * 8;
+    if !RSA_BITS.contains(&bits) {
+        return Err(CryptoError::InvalidKey(
+            "the private key must be 1024 to 8192 bits".into(),
+        ));
+    }
+    key.pkcs1v15_sign::<sha2::Sha256>(data)
+        .map_err(|e| CryptoError::InvalidInput(format!("cannot sign: {e}")))
+}
+
+fn parse_private_key(text: &str) -> Result<PrivateKey, CryptoError> {
+    let unreadable =
+        || CryptoError::InvalidKey("not an RSA private key (PKCS #8 or PKCS #1, as PEM or base64)".into());
+    if text.len() > MAX_PRIVATE_KEY_TEXT {
+        return Err(unreadable());
+    }
+    let text = text.trim();
+    if text.contains("ENCRYPTED") {
+        return Err(CryptoError::InvalidKey(
+            "encrypted private keys are not supported; use the unencrypted key".into(),
+        ));
+    }
+    if text.starts_with("-----BEGIN") {
+        return PrivateKey::from_pkcs8_pem(text)
+            .or_else(|_| PrivateKey::from_pkcs1_pem(text))
+            .map_err(|_| unreadable());
+    }
+    // Bare base64: the DER of either structure, possibly wrapped over lines.
+    let compact: Zeroizing<String> = Zeroizing::new(text.split_ascii_whitespace().collect());
+    let der = Zeroizing::new(
+        base64::engine::general_purpose::STANDARD
+            .decode(compact.as_bytes())
+            .map_err(|_| unreadable())?,
+    );
+    PrivateKey::from_pkcs8_der(&der)
+        .or_else(|_| PrivateKey::from_pkcs1_der(&der))
+        .map_err(|_| unreadable())
 }
 
 /// `crypto.random-bytes`.
@@ -283,17 +345,22 @@ mod tests {
         ));
     }
 
+    /// A fresh key pair for a test (rand_core 0.10's system RNG).
+    fn key_pair(bits: usize) -> PrivateKey {
+        PrivateKey::new(&mut getrandom::SysRng, bits).unwrap()
+    }
+
     #[test]
-    fn rsa_encrypts_with_public_keys_only() {
+    fn rsa_encrypts_with_public_keys() {
         use rsa::pkcs8::EncodePublicKey;
         use rsa::traits::PublicKeyParts;
-        // A private key exists only in this test, to check the ciphertexts.
-        let private = rsa::RsaPrivateKey::new(&mut rsa::rand_core::OsRng, 1024).unwrap();
+        // The private key only checks the ciphertexts.
+        let private = key_pair(1024);
         let public = private.to_public_key();
         let pem = public.to_public_key_pem(rsa::pkcs8::LineEnding::LF).unwrap();
         let components = WitRsaKey::Components(RsaComponents {
-            modulus: public.n().to_bytes_be(),
-            exponent: public.e().to_bytes_be(),
+            modulus: public.n_bytes().to_vec(),
+            exponent: public.e_bytes().to_vec(),
         });
         for (key, padding) in [
             (WitRsaKey::Pem(pem.clone()), RsaPadding::Pkcs1v15),
@@ -302,9 +369,9 @@ mod tests {
         ] {
             let ct = rsa_encrypt(&key, padding, b"token").unwrap();
             let pt = match padding {
-                RsaPadding::Pkcs1v15 => private.decrypt(Pkcs1v15Encrypt, &ct),
-                RsaPadding::OaepSha1 => private.decrypt(Oaep::new::<sha1_for_rsa::Sha1>(), &ct),
-                RsaPadding::OaepSha256 => private.decrypt(Oaep::new::<rsa::sha2::Sha256>(), &ct),
+                RsaPadding::Pkcs1v15 => private.pkcs1v15_decrypt(&ct),
+                RsaPadding::OaepSha1 => private.oaep_decrypt::<sha1::Sha1>(&ct),
+                RsaPadding::OaepSha256 => private.oaep_decrypt::<sha2::Sha256>(&ct),
             };
             assert_eq!(pt.unwrap(), b"token");
         }
@@ -314,6 +381,80 @@ mod tests {
             exponent: vec![1, 0, 1],
         });
         assert!(rsa_encrypt(&tiny, RsaPadding::Pkcs1v15, b"x").is_err());
+    }
+
+    #[test]
+    fn rsa_signs_with_a_private_key_in_any_usual_encoding() {
+        use rsa::pkcs1::EncodeRsaPrivateKey;
+        use rsa::pkcs8::{EncodePrivateKey, LineEnding};
+        let private = key_pair(2048);
+        let public = private.to_public_key();
+        let pkcs8 = private.to_pkcs8_pem(LineEnding::LF).unwrap();
+        let pkcs1 = private.to_pkcs1_pem(LineEnding::CRLF).unwrap();
+        let der = private.to_pkcs8_der().unwrap();
+        let bare = base64::engine::general_purpose::STANDARD.encode(der.as_bytes());
+        // Wrapped at 64 columns with stray spaces, as pasted from a console.
+        let wrapped: String = bare
+            .as_bytes()
+            .chunks(64)
+            .map(|line| format!("  {}\n", std::str::from_utf8(line).unwrap()))
+            .collect();
+        let message = b"appId=a1&bizContent={}&timestamp=1";
+        let signature = rsa_sign_pkcs1_sha256(&pkcs8, message).unwrap();
+        assert_eq!(signature.len(), 256);
+        public
+            .pkcs1v15_verify::<sha2::Sha256>(message, &signature)
+            .unwrap();
+        // PKCS #1 v1.5 signatures are deterministic: every encoding signs alike.
+        for text in [pkcs1.as_str(), bare.as_str(), wrapped.as_str()] {
+            assert_eq!(rsa_sign_pkcs1_sha256(text, message).unwrap(), signature);
+        }
+        assert!(
+            public
+                .pkcs1v15_verify::<sha2::Sha256>(b"something else", &signature)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn rsa_signing_refuses_bad_keys_and_input_without_quoting_the_key() {
+        use rsa::pkcs8::{EncodePrivateKey, LineEnding};
+        let pem = key_pair(1024).to_pkcs8_pem(LineEnding::LF).unwrap();
+        let broken = pem.replace('A', "B");
+        for text in [
+            "",
+            "not a key",
+            "-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----",
+            "-----BEGIN ENCRYPTED PRIVATE KEY-----\nAAAA\n-----END ENCRYPTED PRIVATE KEY-----",
+            broken.as_str(),
+        ] {
+            match rsa_sign_pkcs1_sha256(text, b"x") {
+                Err(CryptoError::InvalidKey(why)) => {
+                    assert!(!why.contains("MII") && !why.contains("BEGIN"), "{why}");
+                }
+                other => panic!("{text:?}: expected an invalid key, got {other:?}"),
+            }
+        }
+        // A public key is not a private key.
+        let public = {
+            use rsa::pkcs8::EncodePublicKey;
+            key_pair(1024)
+                .to_public_key()
+                .to_public_key_pem(LineEnding::LF)
+                .unwrap()
+        };
+        assert!(matches!(
+            rsa_sign_pkcs1_sha256(&public, b"x"),
+            Err(CryptoError::InvalidKey(_))
+        ));
+        assert!(matches!(
+            rsa_sign_pkcs1_sha256(&"A".repeat(MAX_PRIVATE_KEY_TEXT + 1), b"x"),
+            Err(CryptoError::InvalidKey(_))
+        ));
+        assert_eq!(
+            rsa_sign_pkcs1_sha256(&pem, &vec![0; MAX_INPUT + 1]),
+            Err(CryptoError::TooLarge)
+        );
     }
 
     #[test]

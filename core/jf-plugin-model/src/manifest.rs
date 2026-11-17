@@ -33,10 +33,17 @@
 //!
 //! [links]                            # API 1.1: open an item in its service
 //! track = "https://music.example.com/song/{id}"    # also album, artist, playlist
+//!
+//! [oauth]                            # API 1.1, with auth = ["oauth"]
+//! redirect_port = 29817              # 1024–65535: the browser comes back to
+//!                                    # http://127.0.0.1:29817/callback
 //! ```
 //!
 //! API 1.1 also adds the `remote` capability, which goes with
-//! `playback_mode = "remote"` (ADR-0018).
+//! `playback_mode = "remote"` (ADR-0018). Without `redirect_port` an oauth
+//! login listens on a random port; services where each person registers
+//! their own app need the exact redirect URI in advance, so such a plugin
+//! names a fixed one (and shows it to the person).
 //!
 //! Unknown keys anywhere are an error, so a typo never silently weakens a
 //! policy. `network.allow` entries are a settings reference (the origin the
@@ -93,7 +100,14 @@ pub struct Manifest {
     pub cookie_import: Option<CookieImport>,
     /// Link templates (API 1.1).
     pub links: Links,
+    /// `[oauth] redirect_port` (API 1.1): the loopback port an oauth login
+    /// listens on, so the redirect URI is `http://127.0.0.1:<port>/callback`;
+    /// `None` picks a random free port.
+    pub oauth_redirect_port: Option<u16>,
 }
+
+/// The lowest `[oauth] redirect_port`: no privileged ports.
+pub const MIN_REDIRECT_PORT: u16 = 1024;
 
 /// `api_version`: the WIT package `major.minor`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -171,6 +185,15 @@ struct RawManifest {
     cookie_import: Option<RawCookieImport>,
     #[serde(default)]
     links: Option<RawLinks>,
+    #[serde(default)]
+    oauth: Option<RawOauth>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RawOauth {
+    #[serde(default)]
+    redirect_port: Option<i64>,
 }
 
 #[derive(Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -488,6 +511,27 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         None => Links::default(),
     };
 
+    let oauth_redirect_port = match raw.oauth {
+        Some(raw_oauth) => {
+            needs_1_1("[oauth]")?;
+            if !auth.contains(&AuthKind::Oauth) {
+                return Err(bad("[oauth] needs auth kind oauth"));
+            }
+            match raw_oauth.redirect_port {
+                Some(port) => match u16::try_from(port) {
+                    Ok(port) if port >= MIN_REDIRECT_PORT => Some(port),
+                    _ => {
+                        return Err(bad(format!(
+                            "oauth.redirect_port {port} must be {MIN_REDIRECT_PORT}–65535"
+                        )));
+                    }
+                },
+                None => return Err(bad("[oauth] needs redirect_port")),
+            }
+        }
+        None => None,
+    };
+
     Ok(Manifest {
         id: raw.id,
         name,
@@ -505,6 +549,7 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         content_policy,
         cookie_import,
         links,
+        oauth_redirect_port,
     })
 }
 
@@ -946,6 +991,44 @@ attribution = "spotify"
         assert!(parse(&format!("{v11}[links]\ntrack = \"http://e.com/{{id}}\"\n")).is_err());
         assert!(parse(&format!("{v11}[links]\nsong = \"https://e.com/{{id}}\"\n")).is_err());
         assert!(parse(&v11).unwrap().links.is_empty());
+    }
+
+    #[test]
+    fn oauth_redirect_port_needs_api_1_1_and_oauth() {
+        let v11 = MINIMAL
+            .replace("api_version = \"1.0\"", "api_version = \"1.1\"")
+            .replace("[\"search\"]", "[\"search\", \"auth\"]");
+        let oauth = format!("{v11}auth = [\"oauth\"]\n");
+        assert_eq!(parse(&oauth).unwrap().oauth_redirect_port, None);
+        let m = parse(&format!("{oauth}[oauth]\nredirect_port = 29817\n")).unwrap();
+        assert_eq!(m.oauth_redirect_port, Some(29817));
+        for (port, ok) in [
+            ("1024", true),
+            ("65535", true),
+            ("1023", false),
+            ("0", false),
+            ("65536", false),
+            ("-1", false),
+        ] {
+            let text = format!("{oauth}[oauth]\nredirect_port = {port}\n");
+            assert_eq!(parse(&text).is_ok(), ok, "port {port}");
+        }
+        for bad_text in [
+            // Not a number, an unknown key, an empty table.
+            format!("{oauth}[oauth]\nredirect_port = \"29817\"\n"),
+            format!("{oauth}[oauth]\nredirect_port = 29817\nredirect_host = \"0.0.0.0\"\n"),
+            format!("{oauth}[oauth]\n"),
+            // Only for oauth logins, and only from API 1.1.
+            format!("{v11}auth = [\"qr\"]\n[oauth]\nredirect_port = 29817\n"),
+            format!("{oauth}[oauth]\nredirect_port = 29817\n")
+                .replace("api_version = \"1.1\"", "api_version = \"1.0\""),
+        ] {
+            assert!(parse(&bad_text).is_err(), "accepted {bad_text}");
+        }
+        let err = parse(&format!("{oauth}[oauth]\nredirect_port = 80\n"))
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("1024–65535"), "{err}");
     }
 
     #[test]

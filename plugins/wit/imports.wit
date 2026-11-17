@@ -141,6 +141,8 @@ interface kv {
 /// Inputs are limited to 16 MiB per call. These primitives exist for service
 /// compatibility (request signing, legacy schemes); several of them (MD5,
 /// SHA-1, AES-ECB) are weak and must not be used to protect anything new.
+/// The only private-key operation, `rsa-sign-pkcs1-sha256` (API 1.1), uses a
+/// key the host reads from the plugin's keystore, never one the plugin holds.
 interface crypto {
     /// Hash function for `digest` and `hmac`.
     enum hash-algorithm {
@@ -219,9 +221,23 @@ interface crypto {
     aes-encrypt: func(mode: aes-mode, key: list<u8>, plaintext: list<u8>) -> result<list<u8>, crypto-error>;
     /// Decrypts with AES.
     aes-decrypt: func(mode: aes-mode, key: list<u8>, ciphertext: list<u8>) -> result<list<u8>, crypto-error>;
-    /// Encrypts with an RSA public key. There is deliberately no private-key
-    /// operation.
+    /// Encrypts with an RSA public key.
     rsa-encrypt: func(key: rsa-public-key, padding: rsa-padding, data: list<u8>) -> result<list<u8>, crypto-error>;
+    /// Signs `data` with RSASSA-PKCS1-v1_5 and SHA-256 (RFC 8017) using the
+    /// RSA private key stored in the plugin's secret `secret` (`kv`), and
+    /// returns the signature, as long as the key's modulus (API 1.1).
+    ///
+    /// The host reads the key from the keystore itself, so after the plugin
+    /// stores it once (when the person enters it at sign-in) the key never
+    /// enters the plugin's memory again; a plugin should not read it back.
+    /// The secret holds PEM (`BEGIN PRIVATE KEY`, PKCS #8, or
+    /// `BEGIN RSA PRIVATE KEY`, PKCS #1) or the same DER in base64 without
+    /// the armour lines; encrypted keys are refused. Keys of 1024 to 8192
+    /// bits. Errors: `invalid-key` when the secret name is invalid, no such
+    /// secret is stored, or it holds no usable key (the message never quotes
+    /// the key); `too-large` for more than 16 MiB of data. Jellyfesh Web
+    /// answers `invalid-input` ("not supported in the browser").
+    rsa-sign-pkcs1-sha256: func(secret: string, data: list<u8>) -> result<list<u8>, crypto-error>;
     /// Cryptographically secure random bytes from the operating system, at
     /// most 64 KiB per call. The SDK's `getrandom` backend uses this.
     random-bytes: func(len: u32) -> result<list<u8>, crypto-error>;

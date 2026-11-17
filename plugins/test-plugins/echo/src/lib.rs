@@ -46,6 +46,14 @@ struct Hit {
     playable: Option<bool>,
 }
 
+/// `ok:<hex signature>` or `err:<crypto error>`, for the signing tests.
+fn signed(result: core::result::Result<Vec<u8>, crypto::CryptoError>) -> String {
+    match result {
+        Ok(signature) => format!("ok:{}", crypto::hex(&signature)),
+        Err(error) => format!("err:{error:?}"),
+    }
+}
+
 fn command(command: &str) -> Result<ItemPage> {
     let out = match command {
         "kv" => {
@@ -88,6 +96,11 @@ fn command(command: &str) -> Result<ItemPage> {
                 crypto::random_hex(8)?,
             ]
         }
+        "rsa-sign-big" => {
+            // One byte over the 16 MiB input limit.
+            let data = vec![0u8; 16 * 1024 * 1024 + 1];
+            vec![signed(crypto::rsa_sign_pkcs1_sha256("signing-key", &data))]
+        }
         "clock" => vec![clock::now_utc_ms().to_string(), clock::monotonic_ms().to_string()],
         "random" => {
             let mut bytes = [0u8; 16];
@@ -112,6 +125,11 @@ fn command(command: &str) -> Result<ItemPage> {
             vec![response.status.to_string(), response.text()]
         }
         "seen" => vec![SEEN.with(|s| s.borrow().clone())],
+        // `rsa-sign:<secret>`: signs "jellyfesh" with the key in that secret.
+        other if other.starts_with("rsa-sign:") => {
+            let secret = &other["rsa-sign:".len()..];
+            vec![signed(crypto::rsa_sign_pkcs1_sha256(secret, b"jellyfesh"))]
+        }
         other => return Err(PluginError::invalid_input(format!("unknown command {other}"))),
     };
     Ok(titles(out))
