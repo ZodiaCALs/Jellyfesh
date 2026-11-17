@@ -31,6 +31,9 @@ pub struct State {
     pub issued: u32,
     /// A free account: player commands answer 403.
     pub free: bool,
+    /// An account the app has no seat for (Development Mode): every Web
+    /// API call answers 403.
+    pub no_seat: bool,
     /// Every request answers 429 with this many seconds.
     pub throttle: Option<u32>,
     pub playing: bool,
@@ -138,6 +141,13 @@ fn answer(state: &Mutex<State>, request: &Request) -> Response {
     let method = request.method.as_str();
     if rest.starts_with("/me/player") && method != "GET" {
         return player_command(&mut s, method, rest, &query, request.json());
+    }
+    if s.no_seat {
+        return api_error(
+            403,
+            "Check settings on developer.spotify.com/dashboard, the user may not be registered.",
+            None,
+        );
     }
     let ok = |value: Value| Response::json(&value);
     match (method, rest) {

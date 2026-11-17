@@ -137,6 +137,7 @@ impl Plugin for Spotify {
                 .and_then(Value::as_str)
                 .filter(|s| !s.is_empty()),
         );
+        api::set_own_client_id(settings.get("client_id").and_then(Value::as_str));
         Ok(())
     }
 

@@ -33,32 +33,39 @@ and show no synced lyrics, as Spotify's terms ask.
 * **Spotify Premium**: Spotify accepts playback commands only from Premium
   accounts. Without it you can browse and search, and every command says
   "Spotify Premium is needed to control playback."
-* **Your own Spotify app** (free): Spotify lets a development app serve only a
-  handful of people, so Jellyfesh cannot share one. In the Spotify Developer
-  Dashboard (developer.spotify.com/dashboard), create an app for the Web API
-  in Development Mode, add your own Spotify account as a user, and add this
-  Redirect URI exactly: `http://127.0.0.1:29817/callback`. Copy its
-  **Client ID** (32 letters and digits). No client secret is used.
+* **A seat in Jellyfesh's Spotify app**: release builds sign in through one
+  Spotify app that the Jellyfesh owner runs (its Client ID is built in from
+  the `JF_SPOTIFY_CLIENT_ID` secret), so you only sign in with your Spotify
+  account. Spotify lets such an app serve only the few accounts its owner
+  adds; if there is no seat for you, sign-in says so.
+* **Or your own Spotify app** (free), when there is no seat or the build has
+  no built-in app: in the Spotify Developer Dashboard
+  (developer.spotify.com/dashboard), create an app for the Web API in
+  Development Mode, add your own Spotify account as a user, and add this
+  Redirect URI exactly: `http://127.0.0.1:29817/callback`. Put its
+  **Client ID** (32 letters and digits) in the setting **Your Own Client
+  ID**, or paste it when a build without a built-in app asks. No client
+  secret is used.
 
 ## Signing in
 
-In Sources, choose **Spotify**, then **Sign In**. Paste the Client ID, then
-allow Jellyfesh in the browser page that opens; Spotify sends the browser
-back to Jellyfesh on port 29817 of this device. If another program uses that
-port, the sign-in says so: close it and try again.
+In Sources, choose **Spotify**, then **Sign In**, and allow Jellyfesh in the
+browser page that opens; Spotify sends the browser back to Jellyfesh on port
+29817 of this device. If another program uses that port, the sign-in says
+so: close it and try again.
 
 ## What is stored where
 
 | What | Where |
 | --- | --- |
-| Your Client ID and the sign-in tokens | your system's keystore |
+| The sign-in tokens (and a Client ID you typed) | your system's keystore |
 | How long Spotify asked Jellyfesh to wait after "too many requests" | the plugin's small private storage |
 | Spotify's tracks, albums and playlists | nowhere: they are not kept in the library |
 
 The tokens go only to Spotify (`accounts.spotify.com`, `api.spotify.com`).
 Spotify ends a sign-in after six months at the latest; Jellyfesh then asks
-you to sign in again. Signing out deletes the tokens and the Client ID from
-this device; to revoke access completely, remove Jellyfesh's app from your
+you to sign in again. Signing out deletes the tokens (and a typed Client ID)
+from this device; to revoke access completely, remove Jellyfesh's app from your
 Spotify account's apps page or delete the app in the dashboard.
 
 ## Known limits

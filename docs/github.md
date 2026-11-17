@@ -30,6 +30,7 @@ whose **release workflow** builds and publishes each version, and whose
    | Secret | Value | Without it |
    | --- | --- | --- |
    | `JF_PLUGIN_SIGNING_KEY` | `plugin-release-key/jellyfesh-release-signing-key.hex` | Plugins ship unsigned and show as Community |
+   | `JF_SPOTIFY_CLIENT_ID` | the Client ID of your Spotify app (see `docs/plugins/spotify.md`) | The Spotify plugin asks each person for their own Client ID |
    | `ANDROID_KEYSTORE_BASE64` | `android-release-keystore/ANDROID_KEYSTORE_BASE64.txt` | No APK in the release |
    | `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD` | `android-release-keystore/keystore-password.txt` (both) | No APK |
    | `ANDROID_KEY_ALIAS` | `jellyfesh` | No APK |

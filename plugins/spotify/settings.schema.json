@@ -1,8 +1,15 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Spotify",
-  "description": "Spotify needs no settings: sign in with the Client ID of your own Spotify app.",
+  "description": "Sign in with your Spotify account. Set your own Client ID only if Jellyfesh's Spotify app has no place for your account.",
   "type": "object",
-  "properties": {},
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "title": "Your Own Client ID",
+      "description": "Optional: the Client ID of your own Spotify app (32 letters and digits), with http://127.0.0.1:29817/callback as its Redirect URI. Leave empty to use Jellyfesh's.",
+      "default": ""
+    }
+  },
   "additionalProperties": false
 }

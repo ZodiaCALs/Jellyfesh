@@ -170,6 +170,65 @@ fn signs_in_with_pkce_and_the_persons_own_client_id() {
     assert!(matches!(next_step(&flow), AuthStep::OpenUrl { url } if url.contains(mock::CLIENT_ID)));
 }
 
+/// Runs a sign-in from the browser step to its last step.
+fn finish_sign_in(mock: &Mock, flow: &jf_plugin_host::AuthFlow, port: u16) -> AuthStep {
+    let AuthStep::OpenUrl { url } = next_step(flow) else {
+        panic!("expected the authorisation page");
+    };
+    let q = url_query(&url);
+    let redirect_uri = format!("http://127.0.0.1:{port}/callback");
+    {
+        let mut state = mock.state.lock().unwrap();
+        state.challenge = Some(q["code_challenge"].clone());
+        state.redirect_uri = Some(redirect_uri.clone());
+    }
+    let answer = browser_get(&format!("{redirect_uri}?code=good-code&state={}", q["state"]));
+    assert!(answer.starts_with("HTTP/1.1 200"), "{answer}");
+    final_step(flow)
+}
+
+#[test]
+fn the_own_client_id_setting_signs_in_without_the_form() {
+    let mock = mock::start();
+    let (env, port) = install(&mock);
+    env.settings(
+        ID,
+        json!({ "test_server": mock.server.url(), "client_id": mock::CLIENT_ID }),
+    );
+    let flow = login(&env.host, ID, AuthKind::Oauth);
+    // Straight to Spotify with the set Client ID: no form.
+    assert_eq!(
+        finish_sign_in(&mock, &flow, port),
+        AuthStep::Done {
+            account: "Mock Listener".into()
+        }
+    );
+    let exchange = mock.server.requests_to("/api/token").pop().unwrap();
+    let form: std::collections::HashMap<String, String> = exchange.form_pairs().into_iter().collect();
+    assert_eq!(form["client_id"], mock::CLIENT_ID);
+    // The setting holds it; nothing typed is stored, and the session knows
+    // which app its tokens belong to.
+    assert_eq!(stored(&env, "client-id"), None);
+    assert!(stored(&env, "session").unwrap().contains(mock::CLIENT_ID));
+}
+
+#[test]
+fn an_account_without_a_seat_is_told_why() {
+    let mock = mock::start();
+    let (env, port) = install(&mock);
+    env.settings(
+        ID,
+        json!({ "test_server": mock.server.url(), "client_id": mock::CLIENT_ID }),
+    );
+    mock.state.lock().unwrap().no_seat = true;
+    let flow = login(&env.host, ID, AuthKind::Oauth);
+    let AuthStep::Failed { message } = finish_sign_in(&mock, &flow, port) else {
+        panic!("expected a refusal");
+    };
+    assert!(message.contains("User Management"), "{message}");
+    assert_eq!(stored(&env, "session"), None, "no half sign-in is kept");
+}
+
 #[test]
 fn tokens_are_renewed_and_rotated_and_invalid_grant_asks_to_sign_in() {
     let mock = mock::start();

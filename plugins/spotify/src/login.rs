@@ -1,15 +1,20 @@
-//! Signing in: Authorization Code with PKCE in the system browser, with the
-//! Client ID of the person's own Spotify app.
+//! Signing in: Authorization Code with PKCE in the system browser.
 //!
-//! 1. `begin`: with no Client ID stored yet, a form asks for it (and shows
-//!    the exact Redirect URI to register); otherwise straight to step 2.
+//! The Client ID is the person's own when they set one (the `client_id`
+//! setting, or one typed at an earlier sign-in), else the one built into a
+//! release (`JF_SPOTIFY_CLIENT_ID`), so most people just sign in with their
+//! Spotify account.
+//!
+//! 1. `begin`: with no Client ID at all, a form asks for one (and shows the
+//!    exact Redirect URI to register); otherwise straight to step 2.
 //! 2. `open-url`: Spotify's authorisation page with the host's redirect URI,
 //!    S256 challenge and `state`; the host catches the redirect.
-//! 3. `submit` with the code: exchanged for tokens (no client secret). The
-//!    Client ID is stored only now, so a mistyped one is asked for again.
+//! 3. `submit` with the code: exchanged for tokens (no client secret). A
+//!    typed Client ID is stored only now, so a mistyped one is asked for
+//!    again. An account the app has no seat for is refused with a reason.
 //!
-//! The Client ID is kept with the tokens in the keystore: signing out
-//! forgets both, and the next sign-in asks for a Client ID again.
+//! A typed Client ID is kept with the tokens in the keystore: signing out
+//! forgets both.
 
 use jf_plugin_sdk::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -22,6 +27,9 @@ struct State {
     /// The Client ID the browser step uses (not a secret: it is in the URL).
     #[serde(default)]
     client_id: Option<String>,
+    /// The person typed it in this flow's form: keep it after sign-in.
+    #[serde(default)]
+    typed: bool,
 }
 
 fn state(flow: &Flow) -> State {
@@ -50,7 +58,7 @@ fn ask(redirect_uri: &str, problem: Option<&str>) -> FlowStep {
     .state("{}")
 }
 
-fn authorize(client_id: &str, oauth: &OauthRequest) -> Result<FlowStep> {
+fn authorize(client_id: &str, typed: bool, oauth: &OauthRequest) -> Result<FlowStep> {
     let query = http::form_encode(&[
         ("client_id", client_id),
         ("response_type", "code"),
@@ -62,6 +70,7 @@ fn authorize(client_id: &str, oauth: &OauthRequest) -> Result<FlowStep> {
     ]);
     let state = serde_json::to_string(&State {
         client_id: Some(client_id.to_owned()),
+        typed,
     })
     .map_err(|e| PluginError::internal(e.to_string()))?;
     Ok(FlowStep::new(Step::OpenUrl(OpenUrl {
@@ -83,7 +92,7 @@ pub fn begin(flow: Flow) -> Result<FlowStep> {
     }
     let oauth = oauth(&flow)?;
     match api::client_id()? {
-        Some(client_id) => authorize(&client_id, oauth),
+        Some(client_id) => authorize(&client_id, false, oauth),
         None => Ok(ask(&oauth.redirect_uri, None)),
     }
 }
@@ -97,7 +106,8 @@ pub fn submit(flow: Flow, fields: Vec<FieldValue>) -> Result<FlowStep> {
             .unwrap_or_default()
     };
     let oauth = oauth(&flow)?;
-    let Some(client_id) = state(&flow).client_id else {
+    let State { client_id, typed } = state(&flow);
+    let Some(client_id) = client_id else {
         // The form.
         let client_id = value("client-id");
         if !plausible_client_id(&client_id) {
@@ -106,7 +116,7 @@ pub fn submit(flow: Flow, fields: Vec<FieldValue>) -> Result<FlowStep> {
                 Some("That is not a Client ID: copy the 32 letters and digits from your app's settings."),
             ));
         }
-        return authorize(&client_id, oauth);
+        return authorize(&client_id, true, oauth);
     };
     // The code the host caught on the redirect.
     let (code, verifier, redirect_uri) = (value("code"), value("code-verifier"), value("redirect-uri"));
@@ -135,8 +145,11 @@ pub fn submit(flow: Flow, fields: Vec<FieldValue>) -> Result<FlowStep> {
             status => format!("Spotify answered HTTP {status}. Try again later."),
         }));
     }
-    let session = Session::from_answer(response.json()?, None, clock::now_utc_ms())?;
-    kv::secret::set(api::CLIENT_SECRET_NAME, &client_id)?;
+    let mut session = Session::from_answer(response.json()?, None, clock::now_utc_ms())?;
+    session.client_id = Some(client_id.clone());
+    if typed {
+        kv::secret::set(api::CLIENT_SECRET_NAME, &client_id)?;
+    }
     session.store()?;
     #[derive(Deserialize)]
     struct Me {
@@ -145,7 +158,27 @@ pub fn submit(flow: Flow, fields: Vec<FieldValue>) -> Result<FlowStep> {
         #[serde(default)]
         id: String,
     }
-    let me: Me = api::get_json("/me")?;
+    // Spotify signs in any account, then refuses its calls when the app has
+    // no seat for it (Development Mode).
+    let answer = api::send(http::Method::Get, "/me", None)?;
+    if answer.status == 403 {
+        kv::secret::delete(api::SESSION)?;
+        let built_in = api::built_in_client_id() == Some(client_id.as_str());
+        return Ok(FlowStep::failed(if built_in {
+            api::NO_SEAT.to_owned()
+        } else {
+            "Spotify refused this account for your app: add it under User Management in your app's \
+             settings in the Spotify Developer Dashboard, then sign in again."
+                .to_owned()
+        }));
+    }
+    if !answer.is_success() {
+        return Ok(FlowStep::failed(format!(
+            "Spotify answered HTTP {} after signing in. Try again later.",
+            answer.status
+        )));
+    }
+    let me: Me = answer.json()?;
     Ok(FlowStep::done(
         me.display_name.filter(|n| !n.trim().is_empty()).unwrap_or(me.id),
     ))
@@ -154,6 +187,20 @@ pub fn submit(flow: Flow, fields: Vec<FieldValue>) -> Result<FlowStep> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_persons_own_client_id_comes_first() {
+        let own = Some("0123456789abcdef0123456789abcdef");
+        let typed = Some("ffffffffffffffffffffffffffffffff");
+        let built_in = Some("00000000000000000000000000000000");
+        assert_eq!(api::choose_client_id(own, typed, built_in).as_deref(), own);
+        assert_eq!(
+            api::choose_client_id(Some("  "), typed, built_in).as_deref(),
+            typed
+        );
+        assert_eq!(api::choose_client_id(None, None, built_in).as_deref(), built_in);
+        assert_eq!(api::choose_client_id(None, None, None), None);
+    }
 
     #[test]
     fn client_ids_are_32_letters_and_digits() {

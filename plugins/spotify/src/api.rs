@@ -23,8 +23,18 @@ pub const API: &str = "https://api.spotify.com/v1";
 /// What the plugin asks the person to allow.
 pub const SCOPES: &str = "user-read-playback-state user-modify-playback-state user-read-currently-playing \
                           user-library-read playlist-read-private playlist-read-collaborative user-read-private";
-/// The person's own Client ID.
+/// The person's own Client ID, when they typed one at sign-in.
 pub const CLIENT_SECRET_NAME: &str = "client-id";
+/// The Client ID of the Spotify app a release build signs in with, from the
+/// `JF_SPOTIFY_CLIENT_ID` secret when the plugin was built (a public value:
+/// it is in every sign-in URL). Builds without it ask each person for their
+/// own.
+const BUILT_IN_CLIENT_ID: Option<&str> = option_env!("JF_SPOTIFY_CLIENT_ID");
+/// Shown when Spotify refuses an account the built-in app has no seat for.
+pub const NO_SEAT: &str = "Jellyfesh's Spotify app has no place for this account yet: Spotify lets such an \
+                           app sign in only a few people its owner adds. Ask whoever provides your Jellyfesh \
+                           build to add you, or enter the Client ID of your own Spotify app in this source's \
+                           settings (Your Own Client ID) and sign in again.";
 /// The tokens.
 pub const SESSION: &str = "session";
 /// Until when (ms) Spotify asked not to call it.
@@ -37,6 +47,36 @@ pub const NO_DEVICE: &str =
 
 thread_local! {
     static BASES: RefCell<(String, String)> = RefCell::new((ACCOUNTS.to_owned(), API.to_owned()));
+    /// The `client_id` setting: the person's own Client ID, if they set one.
+    static OWN_CLIENT_ID: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Takes the `client_id` setting.
+pub fn set_own_client_id(id: Option<&str>) {
+    let id = id.map(str::trim).filter(|id| !id.is_empty()).map(str::to_owned);
+    OWN_CLIENT_ID.with(|own| *own.borrow_mut() = id);
+}
+
+/// The built-in Client ID, when this build has a plausible one.
+pub fn built_in_client_id() -> Option<&'static str> {
+    BUILT_IN_CLIENT_ID
+        .map(str::trim)
+        .filter(|id| crate::login::plausible_client_id(id))
+}
+
+/// Which Client ID signs in: the person's own (the setting first, then one
+/// they typed at an earlier sign-in), else the built-in one.
+pub fn choose_client_id(
+    setting: Option<&str>,
+    typed: Option<&str>,
+    built_in: Option<&str>,
+) -> Option<String> {
+    [setting, typed, built_in]
+        .into_iter()
+        .flatten()
+        .map(str::trim)
+        .find(|id| !id.is_empty())
+        .map(str::to_owned)
 }
 
 /// Uses `server` for both services (tests), or Spotify's own when `None`.
@@ -65,6 +105,9 @@ pub struct Session {
     pub access_token: String,
     pub refresh_token: String,
     pub expires_at_ms: u64,
+    /// The Client ID the tokens belong to (renewals must use it).
+    #[serde(default)]
+    pub client_id: Option<String>,
 }
 
 /// A token answer of the accounts service.
@@ -99,6 +142,7 @@ impl Session {
             access_token: answer.access_token,
             refresh_token,
             expires_at_ms: now_ms + answer.expires_in.unwrap_or(3600).min(86_400) * 1000,
+            client_id: None,
         })
     }
 
@@ -109,7 +153,13 @@ impl Session {
 }
 
 pub fn client_id() -> Result<Option<String>> {
-    Ok(kv::secret::get(CLIENT_SECRET_NAME)?.filter(|c| !c.is_empty()))
+    let typed = kv::secret::get(CLIENT_SECRET_NAME)?;
+    let setting = OWN_CLIENT_ID.with(|own| own.borrow().clone());
+    Ok(choose_client_id(
+        setting.as_deref(),
+        typed.as_deref(),
+        built_in_client_id(),
+    ))
 }
 
 fn session() -> Result<Session> {
@@ -119,7 +169,10 @@ fn session() -> Result<Session> {
 
 /// Exchanges the stored refresh token for new tokens and stores them.
 fn refresh(old: &Session) -> Result<Session> {
-    let client_id = client_id()?.ok_or(PluginError::AuthRequired)?;
+    let client_id = match &old.client_id {
+        Some(id) => id.clone(),
+        None => client_id()?.ok_or(PluginError::AuthRequired)?,
+    };
     let response = http::Request::post(format!("{}/api/token", accounts()))
         .form(&[
             ("grant_type", "refresh_token"),
@@ -143,7 +196,8 @@ fn refresh(old: &Session) -> Result<Session> {
             response.status
         )));
     }
-    let session = Session::from_answer(response.json()?, Some(&old.refresh_token), clock::now_utc_ms())?;
+    let mut session = Session::from_answer(response.json()?, Some(&old.refresh_token), clock::now_utc_ms())?;
+    session.client_id = Some(client_id);
     session.store()?;
     Ok(session)
 }
