@@ -7,6 +7,9 @@
 #   JellyfeshCore.xcframework     libjf_ffi.a for arm64 and x86_64
 #   Tokens.swift                  design tokens (`cargo xtask tokens --target swift`)
 #   Plugins/                      the official .jfpkg packages, bundled as Resources/Plugins
+#
+# Jellyfesh/Jellyfesh.storekit is a StoreKit configuration for local purchase tests of Jellyfesh
+# Pro (org.jellyfesh.pro) when the app runs from Xcode; it is never part of a build.
 name: Jellyfesh
 
 options:
@@ -17,6 +20,9 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
   useBaseInternationalization: false
+
+fileGroups:
+  - Jellyfesh/Jellyfesh.storekit
 
 settings:
   base:
@@ -99,11 +105,22 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: org.jellyfesh.Jellyfesh
         # Core features the generated bindings have (scripts/build.sh sets JF_BUNDLED_PLUGINS).
         JF_SWIFT_CONDITIONS: ""
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) $(JF_SWIFT_CONDITIONS)
+        # Edition and distribution (ADR-0021, docs/github.md). scripts/build.sh sets all three from
+        # JF_EDITION (community, commercial) and JF_DISTRIBUTION (source, direct, app-store); a build
+        # in Xcode is the community edition from source. The app reads them as the Info.plist keys
+        # JFEdition and JFDistribution, or as the Swift conditions JF_EDITION_<EDITION> and
+        # JF_DISTRIBUTION_<DISTRIBUTION> (upper case, "-" as "_", e.g. JF_DISTRIBUTION_APP_STORE).
+        JF_EDITION: community
+        JF_DISTRIBUTION: source
+        JF_EDITION_CONDITIONS: JF_EDITION_COMMUNITY JF_DISTRIBUTION_SOURCE
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) $(JF_SWIFT_CONDITIONS) $(JF_EDITION_CONDITIONS)
         # Carries NSAppleMusicUsageDescription: MusicKit (Apple Music, ADR-0010) terminates an app that
         # uses it without one.
         INFOPLIST_FILE: Jellyfesh/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Jellyfesh/Jellyfesh.entitlements
+        # The direct download's entitlements; Mac App Store builds use the sandboxed
+        # Jellyfesh-AppStore.entitlements (scripts/build.sh with JF_DISTRIBUTION=app-store).
+        JF_ENTITLEMENTS: Jellyfesh/Jellyfesh.entitlements
+        CODE_SIGN_ENTITLEMENTS: $(JF_ENTITLEMENTS)
         ENABLE_HARDENED_RUNTIME: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
@@ -119,6 +136,8 @@ targets:
       testTargets:
         - JellyfeshTests
       gatherCoverageData: false
+      # Purchases of Jellyfesh Pro in a run from Xcode go to this local StoreKit configuration.
+      storeKitConfiguration: Jellyfesh/Jellyfesh.storekit
 
   JellyfeshTests:
     type: bundle.unit-test

@@ -33,6 +33,10 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 Jellyfesh. All rights reserved.</string>
+	<key>JFEdition</key>
+	<string>$(JF_EDITION)</string>
+	<key>JFDistribution</key>
+	<string>$(JF_DISTRIBUTION)</string>
 	<key>NSSupportsAutomaticTermination</key>
 	<false/>
 	<key>NSSupportsSuddenTermination</key>

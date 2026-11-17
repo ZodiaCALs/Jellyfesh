@@ -1,0 +1,32 @@
+{
+  "identifier" : "1EA63BD3",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "620CB5CA",
+      "localizations" : [
+        {
+          "description" : "Unlocks AI Lyrics and Customize.",
+          "displayName" : "Jellyfesh Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "org.jellyfesh.pro",
+      "referenceName" : "Jellyfesh Pro (local test)",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_billingGracePeriodEnabled" : false,
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "USA",
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}
