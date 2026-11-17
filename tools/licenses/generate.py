@@ -29,7 +29,10 @@ OUT = os.path.join(ROOT, "THIRD_PARTY_NOTICES.md")
 # Everything shipped: the CLI, the Linux app, the FFI library inside the macOS,
 # Windows and Android apps, the plugin author tool, and the official plugins
 # every app bundles.
-DEFAULT_PACKAGES = ["jf-cli", "jellyfesh-gtk", "jf-ffi", "jf-plugin", "jf-subsonic", "jf-jellyfin"]
+DEFAULT_PACKAGES = [
+    "jf-cli", "jellyfesh-gtk", "jf-ffi", "jf-plugin",
+    "jf-subsonic", "jf-jellyfin", "jf-qqmusic", "jf-spotify", "jf-netease",
+]
 # Where an npm package's licence file goes on to list what the package's own
 # build tooling bundles, which does not reach the programs built with it.
 NPM_BUNDLED_SECTION = "\n# Licenses of bundled dependencies"

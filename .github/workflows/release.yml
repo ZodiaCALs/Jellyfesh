@@ -183,7 +183,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p upload
-          for id in subsonic jellyfin; do
+          for id in subsonic jellyfin qqmusic spotify netease; do
             cp "dist/plugins/org.jellyfesh.$id.jfpkg" "upload/org.jellyfesh.$id-${NAME}.jfpkg"
           done
           (cd upload && sha256sum ./*.jfpkg | sed 's| \./| |' > plugins.sha256)
@@ -218,7 +218,7 @@ jobs:
           name: plugins
           path: dist/plugins
       - name: Third-party notices (the app and the plugins it bundles)
-        run: python3 tools/licenses/generate.py jellyfesh-gtk jf-subsonic jf-jellyfin
+        run: python3 tools/licenses/generate.py jellyfesh-gtk jf-subsonic jf-jellyfin jf-qqmusic jf-spotify jf-netease
       - name: Build and pack
         shell: bash
         run: |

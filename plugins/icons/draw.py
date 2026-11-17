@@ -1,6 +1,7 @@
-"""Draws the Subsonic and Jellyfin plugin icons (256x256 RGBA PNG) with
-signed distance functions, so edges are anti-aliased without any image
-library. Usage: python3 plugins/icons/draw.py plugins (writes <name>/icon.png for both)."""
+"""Draws the official plugins' icons (256x256 RGBA PNG) with signed distance
+functions, so edges are anti-aliased without any image library. The marks are
+Jellyfesh's own pictures of what a plugin does, never a service's logo.
+Usage: python3 plugins/icons/draw.py plugins (writes <name>/icon.png for each)."""
 
 import math
 import struct
@@ -124,7 +125,51 @@ def jellyfin(px, py):
     return max(coverage(outline), coverage(play))
 
 
+def note(px, py, cx, cy, scale=1.0):
+    """A quaver whose head is centred at (cx, cy)."""
+    head = math.hypot((px - cx) / 1.25, py - cy) - 22 * scale
+    stem_x = cx + 20 * scale
+    stem = segment(px, py, stem_x, cy - 4 * scale, stem_x, cy - 92 * scale) - 7 * scale
+    flag = segment(px, py, stem_x, cy - 92 * scale, stem_x + 34 * scale, cy - 66 * scale) - 7 * scale
+    return min(head, stem, flag)
+
+
+def qqmusic(px, py):
+    """A note with an arrow out of the tile: found here, played in the service's app."""
+    mark = note(px, py, 98, 176)
+    arrow = min(
+        segment(px, py, 150, 146, 200, 96),
+        segment(px, py, 200, 96, 166, 96),
+        segment(px, py, 200, 96, 200, 130),
+    ) - 7
+    return max(coverage(mark), coverage(arrow))
+
+
+def spotify(px, py):
+    """A device outline with a play button: controlling your own players."""
+    device = abs(rounded_rect(px, py, 76, 56, 180, 200, 22)) - 7
+    play = polygon(px, py, [(112, 98), (112, 158), (160, 128)]) - 3
+    home = segment(px, py, 116, 180, 140, 180) - 5
+    return max(coverage(device), coverage(play), coverage(home))
+
+
+def netease(px, py):
+    """A cloud with a note: your music from a cloud library."""
+    cloud = min(
+        math.hypot(px - 88, py - 140) - 34,
+        math.hypot(px - 130, py - 112) - 46,
+        math.hypot(px - 174, py - 140) - 32,
+        rounded_rect(px, py, 54, 136, 206, 174, 18),
+    )
+    outline = abs(cloud) - 6
+    mark = note(px, py, 122, 152, 0.55)
+    return max(coverage(outline), coverage(mark))
+
+
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "plugins"
     render(f"{out}/subsonic/icon.png", "#2a9bb5", "#23367f", subsonic)
     render(f"{out}/jellyfin/icon.png", "#8a5bd6", "#2b4aa8", jellyfin)
+    render(f"{out}/qqmusic/icon.png", "#e3a23c", "#b04a2c", qqmusic)
+    render(f"{out}/spotify/icon.png", "#4f74e3", "#2a2d86", spotify)
+    render(f"{out}/netease/icon.png", "#c64a82", "#5b2b7c", netease)

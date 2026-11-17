@@ -3,6 +3,9 @@
 #
 #   dist/plugins/org.jellyfesh.subsonic.jfpkg
 #   dist/plugins/org.jellyfesh.jellyfin.jfpkg
+#   dist/plugins/org.jellyfesh.qqmusic.jfpkg
+#   dist/plugins/org.jellyfesh.spotify.jfpkg
+#   dist/plugins/org.jellyfesh.netease.jfpkg
 #
 # Signing: when JF_PLUGIN_SIGNING_KEY is set and not empty, it must hold the
 # Jellyfesh release key (64 hex characters, the ed25519 seed; a trailing
@@ -20,7 +23,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 out=dist/plugins
-plugins=(subsonic jellyfin)
+plugins=(subsonic jellyfin qqmusic spotify netease)
 
 if [ -n "${JF_PLUGIN_SIGNING_KEY:-}" ]; then
     sign=yes
