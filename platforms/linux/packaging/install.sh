@@ -8,6 +8,10 @@
 # Needs msgfmt (gettext) for the translations; without it the app is
 # installed in English only. At run time the app needs GTK 4.14 or later
 # and libadwaita 1.5 or later.
+#
+# JF_EDITION=commercial (release builds, ADR-0021 §4) leaves out the
+# unofficial community plugins (community.unofficial.*.jfpkg); community,
+# the default for builds from source, installs every package in dist/plugins.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -25,6 +29,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "$binary" && -x "$binary" ]] || { echo "pass --binary path/to/jellyfesh" >&2; exit 2; }
+edition=${JF_EDITION:-community}
+[[ "$edition" == community || "$edition" == commercial ]] ||
+  { echo "JF_EDITION must be community or commercial, not '$edition'" >&2; exit 2; }
 
 root="$destdir$prefix"
 id=org.jellyfesh.Jellyfesh
@@ -46,7 +53,14 @@ fi
 # the core installs them on first start and updates them with the app.
 repo="$(cd "$app/../.." && pwd)"
 shopt -s nullglob
-plugins=("$repo"/dist/plugins/*.jfpkg)
+plugins=()
+for package in "$repo"/dist/plugins/*.jfpkg; do
+  if [[ "$edition" == commercial && "$(basename "$package")" == community.unofficial.* ]]; then
+    echo "commercial edition: not bundling $(basename "$package")" >&2
+    continue
+  fi
+  plugins+=("$package")
+done
 if (( ${#plugins[@]} )); then
   install -d "$root/share/jellyfesh/plugins"
   install -m644 "${plugins[@]}" "$root/share/jellyfesh/plugins/"
