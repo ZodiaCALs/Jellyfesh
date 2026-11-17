@@ -29,6 +29,7 @@ holds the pinned versions.
 | [0019](0019-ai-lyrics.md) | AI Lyrics: plugin API 1.2 audio and speech, Whisper on the device | Your AI lyrics answers (v0.0.7) | Accepted |
 | [0020](0020-customize.md) | Customize: appearance plugins and the Look slice | Your Customize answer (v0.0.7) | Accepted |
 | [0021](0021-jellyfesh-pro.md) | Jellyfesh Pro, editions and commercial readiness | Your Free + Pro answer (v0.0.7) | Accepted |
+| [0022](0022-discover-details-comments.md) | Discover, details, comments, covers and the lyrics bar | Your v0.0.7 additions | Accepted |
 
 The service-by-service findings behind 0010–0012 are in
 [`../sources-report.md`](../sources-report.md).

@@ -220,6 +220,54 @@ of Home, the Now Playing layout (Stage, Artwork, Lyrics) and the
 mini-player (Bar, Compact, Floating). With `customized` false every value is
 the v0.0.6 default.
 
+## Discover, details, comments and the lyrics bar (v0.0.7)
+
+**Discover.** Choosing a source on the Sources page opens its **Discover**
+page: the source's name and status, then its shelves from the core
+(`Event::Discover`), each with its title and **See All** when it has more
+(which browses it). Row shelves scroll sideways, grid shelves wrap, chart
+shelves are numbered lists. **Browse** (the source's own folders) is a
+button in the header. The library's Discover page is Home's sections.
+While loading: placeholders the shape of the shelves; on failure: the
+error and **Try Again**.
+
+**Singer and album.** Go to Artist and Go to Album work for source items
+too and open the same artist and album pages as the library's: the
+picture, the biography or notes (`Details`, "More" expands it), Play and
+Shuffle, the songs, and for artists the albums.
+
+**Details.** The song menu, album and artist More menus and Now Playing's
+Info pane offer **Get Info**: About This Song with Title, Artist, Album,
+Version, Year, Genre, Composer, Lyricist, Label, Length, then **Audio**:
+Quality (the core's label, such as "Hi-Res Lossless"), Format ("FLAC ·
+24-bit · 96 kHz · Stereo"), Bitrate, Size, ReplayGain, and File or Source.
+Rows without a value are left out. Now Playing's Info pane shows the same
+for what is playing, with the format actually being decoded.
+
+**Comments.** For sources whose `PluginSummary.comments` is true, Now
+Playing has a fourth pane, **Comments**: "Popular" (the hot comments) then
+"Latest", each with the author, picture, time, likes and text; more load
+at the end of the list. "Comments from {Service}" at the top. Read-only.
+Empty: "No Comments Yet".
+
+**Lyrics, word by word.** With word-timed lyrics, the current line fills
+word by word in the highlight colour, in Now Playing and in the **lyrics
+bar**: one line (and its translation when Show Translations is on) in the
+player bar on desktops and the web, and above the mini-player on Android.
+**Desktop Lyrics** (macOS, Windows, Linux on X11, the web in Chromium)
+opens a floating, always-on-top window with the current and next line; it
+can be locked so clicks pass through, and closed from its own button or
+the More menu. Settings › Appearance › Lyrics adds **Show Lyrics Bar** and
+**Desktop Lyrics**.
+
+**Jellyfesh Web and services that refuse browsers.** Before signing in to
+a source the browser cannot reach: "{Service} doesn't let browsers connect
+to it directly. Use the Jellyfesh app on your computer or phone, or set up
+a relay in Settings › Sources › Relay." Settings › Sources › **Relay**:
+Relay Address and Relay Token, with "A relay you run yourself lets
+Jellyfesh Web reach services that browsers can't. Jellyfesh doesn't run
+one for you."
+
 ## Settings
 
 Sections in this order: **Appearance · Playback · Library · Sources ·
