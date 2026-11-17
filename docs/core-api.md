@@ -157,7 +157,11 @@ or hanging plugin never holds up a command or a snapshot.
   app ships. At start the core installs each that is missing and updates one
   whose bundled version is newer, checked like any package (failures arrive
   as `Error`). One the person uninstalls is remembered in the settings store
-  and not installed again until they install it themselves.
+  and not installed again until they install it themselves. A bundled
+  **community** package (not signed by a trusted key) waits, without an
+  error, while community plugins are off and is installed when the person
+  allows them; like every community plugin it then stays off until its
+  disclosure is accepted (ADR-0012, amended for v0.0.6).
 * **The slice.** `Sources` is published at start and after every change:
   install, uninstall, on/off, settings, consent, sign-in and sign-out, and
   when the host turns a plugin off after it broke its limits three times in

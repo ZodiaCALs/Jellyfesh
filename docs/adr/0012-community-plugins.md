@@ -90,3 +90,16 @@ signing components extracted from official apps.
 * NetEase and QQ Music may move from "community" to "official" if their new
   platforms' terms allow third-party players; checking those terms is the
   first task of Milestone 6 (or earlier if you want them sooner).
+
+## Amendment (2026-11-17, v0.0.6): bundled community plugins
+
+The owner chose to ship the unofficial NetEase Cloud Music and QQ Music
+plugins (`community.unofficial.netease`, `community.unofficial.qqmusic`,
+sign-in by QR code with the person's own account) **inside the apps**, so
+nobody needs an API key or developer registration for them. They stay
+community plugins in every respect: built from `plugins/community/`, never
+signed with the Jellyfesh release key, shown as **Community · unofficial**,
+and installed only once the person turns on **Allow Community Plugins**
+(the core keeps the bundled packages back until then, without an error);
+each starts off until its disclosure is accepted. The official plugins keep
+to the services' official interfaces.

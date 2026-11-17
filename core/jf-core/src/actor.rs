@@ -1132,6 +1132,10 @@ impl Actor {
         if community_changed {
             self.sources
                 .set_allow_community(self.settings.allow_community_plugins);
+            if self.settings.allow_community_plugins {
+                // Bundled community plugins kept back until now (ADR-0012).
+                self.sources.install_deferred();
+            }
             self.publish_sources(true);
         }
         if devices_changed {

@@ -154,8 +154,11 @@ pub(crate) enum Bundled {
     /// Left alone: installed at this version or a newer one, or uninstalled
     /// by the person.
     Kept(String),
-    /// Unreadable, refused (its signature, community plugins being off) or
-    /// failed to install.
+    /// A community package while community plugins are off: kept back, and
+    /// installed (off, until its disclosure is accepted) once they are
+    /// allowed (ADR-0012).
+    Deferred(PathBuf),
+    /// Unreadable, refused (its signature) or failed to install.
     Failed { path: PathBuf, error: String },
 }
 
@@ -521,6 +524,9 @@ pub(crate) struct Sources {
     /// Bundled plugins the person uninstalled: never installed again until
     /// they install one themselves.
     declined: BTreeSet<String>,
+    /// Bundled community packages waiting for community plugins to be
+    /// allowed.
+    deferred: Vec<PathBuf>,
 }
 
 impl std::fmt::Debug for Sources {
@@ -567,6 +573,7 @@ impl Sources {
             jobs_in_flight: 0,
             bundled: BTreeSet::new(),
             declined: BTreeSet::new(),
+            deferred: Vec::new(),
         };
         if !config.sources.enabled {
             sources.unavailable = Some("online sources are turned off in this app's configuration".into());
@@ -912,8 +919,25 @@ impl Sources {
                 self.bundled.insert(id.clone());
                 None
             }
+            Bundled::Deferred(path) => {
+                if !self.deferred.contains(path) {
+                    self.deferred.push(path.clone());
+                }
+                None
+            }
             Bundled::Failed { .. } => None,
         }
+    }
+
+    /// Installs the bundled community packages kept back while community
+    /// plugins were off (call it when they are allowed).
+    pub(crate) fn install_deferred(&mut self) {
+        let paths = std::mem::take(&mut self.deferred);
+        if paths.is_empty() {
+            return;
+        }
+        let declined = self.declined.clone();
+        self.install_bundled(paths, declined);
     }
 
     /// The bundled plugins the person uninstalled, to remember.
@@ -1379,7 +1403,11 @@ fn install_bundled(
     }
     match host.install(path) {
         Ok(info) => Bundled::Installed(info.id),
-        Err(HostError::CommunityDisabled) => failed(community_refusal(path, trust)),
+        // Not an error: it waits until the person allows community plugins.
+        Err(HostError::CommunityDisabled) => {
+            tracing::info!(plugin = %id, "a bundled community plugin waits until community plugins are allowed");
+            Bundled::Deferred(path.to_owned())
+        }
         Err(e) => failed(e.to_string()),
     }
 }

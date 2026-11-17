@@ -1239,27 +1239,23 @@ fn bundled_plugins_are_installed_updated_and_stay_uninstalled() {
     let modified = |path: &Path| std::fs::metadata(path).unwrap().modified().unwrap();
 
     // First start: the missing packages are installed, checked like any
-    // package: an unsigned one is a community plugin, refused while those
-    // are off.
+    // package. An unsigned one is a community plugin: while those are off it
+    // waits, without an error, until the person allows them (ADR-0012).
     let env = Env::with(bundled(vec![catalog_v1.clone(), unsigned, echo.clone()]));
     let events = wait_for(
         &env.events,
         Duration::from_secs(60),
         |e| matches!(e, Event::Sources(s) if s.plugins.len() == 2),
     );
-    let refused: Vec<_> = events
+    let errors: Vec<_> = events
         .iter()
         .filter_map(|e| match e {
             Event::Error { message } => Some(message.as_str()),
             _ => None,
         })
         .collect();
-    assert_eq!(refused.len(), 1, "{refused:?}");
-    assert!(
-        refused[0].contains("spin-unsigned.jfpkg") && refused[0].contains("community plugins are turned off"),
-        "{}",
-        refused[0]
-    );
+    assert!(errors.is_empty(), "{errors:?}");
+    assert!(!env.sources().plugins.iter().any(|p| p.id == SPIN));
     let catalog = env.summary(CATALOG);
     assert_eq!(
         (catalog.version.as_str(), catalog.badge, catalog.enabled),
@@ -1267,6 +1263,21 @@ fn bundled_plugins_are_installed_updated_and_stay_uninstalled() {
     );
     assert!(env.summary(ECHO).enabled);
     let installed_at = modified(&package_file(&env));
+
+    // Allowing community plugins installs it, turned off until the person
+    // accepts its disclosure.
+    let mut settings = (*env.core.snapshot().settings).clone();
+    settings.allow_community_plugins = true;
+    env.run(Command::SetSettings { settings }, |e| has_plugin(e, SPIN));
+    let spin = env.summary(SPIN);
+    assert_eq!(spin.badge, PluginBadge::Community);
+    assert!(!spin.enabled && spin.needs_disclosure);
+    let mut settings = (*env.core.snapshot().settings).clone();
+    settings.allow_community_plugins = false;
+    env.run(
+        Command::SetSettings { settings },
+        |e| matches!(e, Event::Sources(s) if !s.allow_community),
+    );
 
     // The same packages again: nothing is reinstalled.
     let (first, path) = marker(1);
