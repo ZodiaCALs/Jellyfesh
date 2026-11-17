@@ -27,6 +27,12 @@ final class OfflineCoreClient: CoreClient {
 
     func shutdown() {}
 
+    func registerExternalPlayer(id: String, name: String, player: AppPlayer) throws {
+        throw CoreClientError.core(reason)
+    }
+
+    func unregisterExternalPlayer(id: String) {}
+
     private func fail<T>() throws -> T {
         throw CoreClientError.core(reason)
     }

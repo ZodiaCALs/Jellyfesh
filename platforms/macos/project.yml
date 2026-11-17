@@ -100,6 +100,8 @@ targets:
         # Core features the generated bindings have (scripts/build.sh sets JF_BUNDLED_PLUGINS).
         JF_SWIFT_CONDITIONS: ""
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) $(JF_SWIFT_CONDITIONS)
+        # Carries NSAppleMusicUsageDescription: MusicKit (Apple Music, ADR-0010) terminates an app that
+        # uses it without one.
         INFOPLIST_FILE: Jellyfesh/Info.plist
         CODE_SIGN_ENTITLEMENTS: Jellyfesh/Jellyfesh.entitlements
         ENABLE_HARDENED_RUNTIME: YES

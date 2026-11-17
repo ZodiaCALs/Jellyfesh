@@ -81,13 +81,14 @@ final class DesignTests: XCTestCase {
         XCTAssertEqual(NowPlayingMotion.role(index: 3, active: 3), .active)
         XCTAssertEqual(NowPlayingMotion.role(index: 4, active: 3), .upcoming)
         XCTAssertEqual(NowPlayingMotion.role(index: 0, active: nil), .upcoming)
-        XCTAssertEqual(NowPlayingMotion.lineScale(.upcoming), 0.96)
-        XCTAssertEqual(NowPlayingMotion.lineScale(.sung), 0.96)
+        // Luminous: inactive lines at 92 %, the cascade 40 ms apart.
+        XCTAssertEqual(NowPlayingMotion.lineScale(.upcoming), 0.92)
+        XCTAssertEqual(NowPlayingMotion.lineScale(.sung), 0.92)
         XCTAssertEqual(NowPlayingMotion.lineScale(.active), 1)
         XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 3, active: 3), 0)
         XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 2, active: 3), 0)
-        XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 5, active: 3), 60)
-        XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 50, active: 3), 240)
+        XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 5, active: 3), 80)
+        XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 50, active: 3), 320)
         XCTAssertEqual(NowPlayingMotion.cascadeDelayMs(index: 5, active: nil), 0)
     }
 
@@ -182,6 +183,44 @@ final class DesignTests: XCTestCase {
         XCTAssertEqual(GlassTransparency.alpha(0.62, transparency: 0.5), 0.62, accuracy: 1e-6)
         XCTAssertEqual(GlassTransparency.alpha(0.62, transparency: 0), 1, accuracy: 1e-6)
         XCTAssertEqual(GlassTransparency.alpha(0.62, transparency: 1), 0.31, accuracy: 1e-6)
+    }
+
+    func testLuminousFieldFollowsTheMockUpAtTheTokensStrength() {
+        XCTAssertEqual(Tokens.Field.auroraStrength, 0.75, accuracy: 1e-9)
+        XCTAssertEqual(LuminousField.referenceStrength, Tokens.Field.auroraStrength, accuracy: 1e-9)
+        let glows = LuminousField.glows
+        XCTAssertEqual(glows.count, 4, "four glows")
+        for (glow, expected) in zip(glows, [0.80, 0.72, 0.66, 0.46]) {
+            XCTAssertEqual(glow.alpha(strength: Tokens.Field.auroraStrength), expected, accuracy: 1e-9)
+        }
+        XCTAssertEqual(glows.map(\.color), [Tokens.Field.aurora1, Tokens.Field.aurora2, Tokens.Field.aurora3,
+                                             Tokens.Field.aurora1])
+        XCTAssertTrue(glows.allSatisfy { (0...1).contains($0.x) && (0...1).contains($0.y) && $0.fadeEnd <= 1 })
+        // Misty's field was about 0.45: weaker glows, and never past opaque.
+        XCTAssertEqual(glows[0].alpha(strength: 0.45), 0.48, accuracy: 1e-9)
+        XCTAssertEqual(glows[0].alpha(strength: 2), 1)
+        XCTAssertEqual(glows[0].alpha(strength: .nan), 0.80)
+    }
+
+    func testLuminousTokensReachTheApp() {
+        XCTAssertEqual(Tokens.TypeScale.textH1, 48, "page titles")
+        XCTAssertEqual(Tokens.TypeRoles.nowPlayingTitle.size, 32)
+        XCTAssertEqual(Tokens.Artwork.radiusGrid, 16)
+        XCTAssertEqual(Tokens.Lyrics.line.size, 40)
+        XCTAssertEqual(Tokens.Lyrics.line.lineHeight, 1.18, accuracy: 1e-9)
+    }
+
+    func testTheFloatingPlayerAndTheStage() {
+        XCTAssertEqual(LuminousGeometry.playerZone(hasPlayer: false, wide: true), 0, "nothing fades without a player")
+        XCTAssertEqual(LuminousGeometry.playerZone(hasPlayer: true, wide: true), Tokens.Player.barHeight + 16)
+        XCTAssertEqual(LuminousGeometry.playerZone(hasPlayer: true, wide: false), Tokens.Player.miniHeight + 16)
+        XCTAssertEqual(LuminousGeometry.stageArtworkSide(width: 1280, height: 800), 380)
+        XCTAssertEqual(LuminousGeometry.stageArtworkSide(width: 900, height: 800), 306)
+        XCTAssertEqual(LuminousGeometry.stageArtworkSide(width: 1180, height: 600), 230, "the smallest window")
+        XCTAssertEqual(LuminousGeometry.stageArtworkSide(width: 300, height: 300), 180, "never smaller than 180")
+        XCTAssertEqual(LuminousGeometry.dockHeight, 80)
+        XCTAssertEqual(LuminousGeometry.dockRadius, 40)
+        XCTAssertEqual(LuminousGeometry.coverLift, 4)
     }
 
     func testRemainingTimeHasATrueMinus() {

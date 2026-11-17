@@ -47,6 +47,8 @@
 	<string>Jellyfesh reads the music on drives you add to your library.</string>
 	<key>NSNetworkVolumesUsageDescription</key>
 	<string>Jellyfesh reads the music on network drives you add to your library.</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Jellyfesh plays songs from your Apple Music subscription when you turn Apple Music on in Sources.</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

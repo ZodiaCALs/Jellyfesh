@@ -1271,6 +1271,204 @@
         }
       }
     },
+    "Apple Music Is Off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music はオフです"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 已关闭"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 已關閉"
+          }
+        }
+      }
+    },
+    "Apple Music cannot play this.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music ではこれを再生できません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 无法播放此内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 無法播放此內容。"
+          }
+        }
+      }
+    },
+    "Apple Music could not do that.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music でその操作を完了できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 无法完成此操作。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 無法完成此操作。"
+          }
+        }
+      }
+    },
+    "Apple Music could not find this.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music で見つかりませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 找不到此内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 找不到此內容。"
+          }
+        }
+      }
+    },
+    "Apple Music did not answer.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music が応答しませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 没有响应。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 沒有回應。"
+          }
+        }
+      }
+    },
+    "Apple Music is not available in this copy of Jellyfesh.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Jellyfesh では Apple Music を利用できません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本的 Jellyfesh 无法使用 Apple Music。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本的 Jellyfesh 無法使用 Apple Music。"
+          }
+        }
+      }
+    },
+    "Apple Music needs a subscription that can play its catalogue.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music のカタログを再生できるサブスクリプションが必要です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 需要可以播放其曲库的订阅。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 需要可以播放其目錄的訂閱。"
+          }
+        }
+      }
+    },
+    "Apple Music plays only on this Mac.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music はこの Mac でのみ再生できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 只能在这台 Mac 上播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music 只能在這台 Mac 上播放。"
+          }
+        }
+      }
+    },
+    "Apple Music's volume cannot be changed from Jellyfesh.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh から Apple Music の音量は変更できません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法从 Jellyfesh 更改 Apple Music 的音量。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法從 Jellyfesh 更改 Apple Music 的音量。"
+          }
+        }
+      }
+    },
     "Artist": {
       "localizations": {
         "ja": {
@@ -1733,6 +1931,28 @@
         }
       }
     },
+    "Content from %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンテンツ提供：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内容来自 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "內容來自 %@"
+          }
+        }
+      }
+    },
     "Continue in your browser. Come back here when you are done.": {
       "localizations": {
         "ja": {
@@ -2037,6 +2257,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "採用 Misty 設計語言設計。"
+          }
+        }
+      }
+    },
+    "Device": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设备"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裝置"
+          }
+        }
+      }
+    },
+    "Devices": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设备"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裝置"
           }
         }
       }
@@ -2389,6 +2653,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法讀取的檔案：%lld 個"
+          }
+        }
+      }
+    },
+    "Find songs and albums in the Apple Music catalogue.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music のカタログから曲とアルバムを探せます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Apple Music 曲库中查找歌曲和专辑。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Apple Music 目錄中尋找歌曲和專輯。"
           }
         }
       }
@@ -3097,6 +3383,50 @@
         }
       }
     },
+    "Jellyfesh asks macOS for access to Apple Music, then plays its songs with Apple's own player on this Mac. Nothing from Apple Music is kept in your library.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh は macOS に Apple Music へのアクセスを求め、この Mac で Apple のプレーヤーを使って曲を再生します。Apple Music のコンテンツがライブラリに保存されることはありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh 会向 macOS 请求访问 Apple Music，然后在这台 Mac 上用 Apple 自己的播放器播放其中的歌曲。Apple Music 的任何内容都不会保存到你的资料库。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh 會向 macOS 要求取用 Apple Music，然後在這台 Mac 上以 Apple 自己的播放器播放其中的歌曲。Apple Music 的任何內容都不會儲存到你的資料庫。"
+          }
+        }
+      }
+    },
+    "Jellyfesh cannot use Apple Music without access. You can allow it in System Settings › Privacy & Security › Media & Apple Music.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセスが許可されていないため、Jellyfesh は Apple Music を使えません。「システム設定 › プライバシーとセキュリティ › メディアと Apple Music」で許可できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有访问权限，Jellyfesh 无法使用 Apple Music。你可以在“系统设置 › 隐私与安全性 › 媒体与 Apple Music”中允许访问。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有取用權限，Jellyfesh 無法使用 Apple Music。你可以在「系統設定 › 隱私權與安全性 › 媒體與 Apple Music」中允許取用。"
+          }
+        }
+      }
+    },
     "Jellyfesh reads every audio file in these folders.": {
       "localizations": {
         "ja": {
@@ -3339,6 +3669,28 @@
         }
       }
     },
+    "Looking for Devices…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイスを探しています…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在查找设备…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在尋找裝置…"
+          }
+        }
+      }
+    },
     "Lyrics": {
       "localizations": {
         "ja": {
@@ -3401,6 +3753,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "歌詞大小"
+          }
+        }
+      }
+    },
+    "Lyrics aren't shown while %@ plays.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の再生中は歌詞を表示しません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 播放时不显示歌词。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 播放時不顯示歌詞。"
           }
         }
       }
@@ -4307,6 +4681,28 @@
         }
       }
     },
+    "Open in %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ で開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 %@ 中打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 %@ 中開啟"
+          }
+        }
+      }
+    },
     "Opens Now Playing": {
       "localizations": {
         "ja": {
@@ -4681,6 +5077,28 @@
         }
       }
     },
+    "Playing on %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ で再生中"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在 %@ 上播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在 %@ 上播放"
+          }
+        }
+      }
+    },
     "Playlist": {
       "localizations": {
         "ja": {
@@ -4721,6 +5139,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放清單"
+          }
+        }
+      }
+    },
+    "Plays on this Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac で再生"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 Mac 上播放"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在這台 Mac 上播放"
+          }
+        }
+      }
+    },
+    "Plays the album": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルバムを再生します"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放这张专辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放這張專輯"
+          }
+        }
+      }
+    },
+    "Plays with your subscription on this Mac. Nothing from Apple Music is kept in your library.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのサブスクリプションでこの Mac で再生します。Apple Music のコンテンツがライブラリに保存されることはありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用你的订阅在这台 Mac 上播放。Apple Music 的任何内容都不会保存到你的资料库。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用你的訂閱在這台 Mac 上播放。Apple Music 的任何內容都不會儲存到你的資料庫。"
           }
         }
       }
@@ -5385,6 +5869,28 @@
         }
       }
     },
+    "Search Apple Music": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music を検索"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索 Apple Music"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋 Apple Music"
+          }
+        }
+      }
+    },
     "Search Your Music": {
       "localizations": {
         "ja": {
@@ -5869,6 +6375,28 @@
         }
       }
     },
+    "Songs and albums": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲とアルバム"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲和专辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲和專輯"
+          }
+        }
+      }
+    },
     "Songs of the same album join without a fade.": {
       "localizations": {
         "ja": {
@@ -6265,6 +6793,28 @@
         }
       }
     },
+    "Stop Controlling": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作を終了"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止控制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止控制"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "ja": {
@@ -6481,6 +7031,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "主題"
+          }
+        }
+      }
+    },
+    "This Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这台 Mac"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這台 Mac"
           }
         }
       }
@@ -6705,6 +7277,72 @@
         }
       }
     },
+    "Turn Off Apple Music": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music をオフにする"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭 Apple Music"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉 Apple Music"
+          }
+        }
+      }
+    },
+    "Turn On": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンにする"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟"
+          }
+        }
+      }
+    },
+    "Turn On Apple Music?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Music をオンにしますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 Apple Music？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟 Apple Music？"
+          }
+        }
+      }
+    },
     "Turn On “%@”?": {
       "localizations": {
         "ja": {
@@ -6723,6 +7361,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "啟用「%@」？"
+          }
+        }
+      }
+    },
+    "Turn it on in Sources › Add a Source.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ソース › ソースを追加」でオンにできます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可在“来源 › 添加来源”中打开。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可在「來源 › 新增來源」中開啟。"
           }
         }
       }
@@ -6899,6 +7559,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "接下來播放"
+          }
+        }
+      }
+    },
+    "Up Next is in %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次に再生する曲は %@ にあります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接下来播放的内容在 %@ 中。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接下來播放的內容在 %@ 中。"
           }
         }
       }
@@ -7141,6 +7823,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "年份"
+          }
+        }
+      }
+    },
+    "Your Apple Music subscription, on this Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac でお使いの Apple Music サブスクリプション"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你在这台 Mac 上的 Apple Music 订阅"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你在這台 Mac 上的 Apple Music 訂閱"
           }
         }
       }

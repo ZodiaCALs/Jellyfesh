@@ -79,6 +79,18 @@ final class FFICoreClient: CoreClient, @unchecked Sendable {
         listener = nil
     }
 
+    func registerExternalPlayer(id: String, name: String, player: AppPlayer) throws {
+        do {
+            try core.registerExternalPlayer(id: id, name: name, player: FFIExternalPlayer(player))
+        } catch {
+            throw CoreClientError(error)
+        }
+    }
+
+    func unregisterExternalPlayer(id: String) {
+        core.unregisterExternalPlayer(id: id)
+    }
+
     // MARK: Queries
 
     private func query<T>(_ run: @escaping (JellyfeshCore) throws -> T) async throws -> T {

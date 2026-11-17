@@ -1,6 +1,7 @@
 // Volume in the seek bar's style (v0.0.4): the same straight line between two speaker glyphs, ink-90
 // over ink-30, with the hover thumb; the quiet glyph mutes. Dragging sends at most one command per
-// 50 ms and the final value at the end (PlaybackStore).
+// 50 ms and the final value at the end (PlaybackStore). While a remote session runs it sets the
+// playing device's volume (it has no mute), and the player hides it for a device without one.
 
 import SwiftUI
 
@@ -15,20 +16,28 @@ struct VolumeSlider: View {
     private static let step: Float = 0.05
 
     var body: some View {
-        let volume = Double(playback.muted ? 0 : playback.displayVolume)
+        let mutes = playback.canMute
+        let volume = Double(mutes && playback.muted ? 0 : playback.displayVolume)
         let state: SeekBarState = dragging ? .drag : (hovering || focused ? .hover : .rest)
         let thickness = SeekGeometry.thickness(state)
         HStack(spacing: Tokens.Space.s3) {
-            Button {
-                playback.toggleMute()
-            } label: {
-                Image(systemName: playback.muted ? "speaker.slash.fill" : "speaker.fill")
+            if mutes {
+                Button {
+                    playback.toggleMute()
+                } label: {
+                    Image(systemName: playback.muted ? "speaker.slash.fill" : "speaker.fill")
+                        .frame(width: 18)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(palette[Tokens.Ink.ink50])
+                .accessibilityLabel(playback.muted ? Text("Unmute") : Text("Mute"))
+                .help(playback.muted ? Text("Unmute") : Text("Mute"))
+            } else {
+                Image(systemName: "speaker.fill")
                     .frame(width: 18)
+                    .foregroundStyle(palette[Tokens.Ink.ink50])
+                    .accessibilityHidden(true)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(palette[Tokens.Ink.ink50])
-            .accessibilityLabel(playback.muted ? Text("Unmute") : Text("Mute"))
-            .help(playback.muted ? Text("Unmute") : Text("Mute"))
 
             GeometryReader { geometry in
                 let width = geometry.size.width

@@ -303,6 +303,8 @@ struct NowPlayingInfo: Hashable, Sendable {
     var durationMs: UInt64?
     var artwork: ArtworkLocation?
     var format: StreamFormat?
+    /// Opens a source track in its service (Open in {Service}).
+    var link: String? = nil
 }
 
 /// A sound output (`DeviceInfo`).
@@ -496,6 +498,11 @@ struct SourcePlugin: Identifiable, Hashable, Sendable {
     var settingsSchemaJSON: String
     var settingsJSON: String
     var iconPath: String?
+    /// The service plays on the person's own devices; Jellyfesh is its remote control (ADR-0018).
+    /// Its songs never join the queue.
+    var remotePlayback = false
+    /// What its views must credit ("Content from {Service}"), when it asks for that.
+    var attribution: String? = nil
 
     var canBrowse: Bool { capabilities.contains("browse") }
     var canSearch: Bool { capabilities.contains("search") }
@@ -577,6 +584,9 @@ struct SourceResult: Identifiable, Hashable, Sendable {
     var unplayableReason: String?
     var track: TrackReference?
     var alsoIn: [String]
+    /// An `https` link that opens the item in its service (Open in {Service}); the main action
+    /// of an item that cannot play here.
+    var link: String? = nil
 
     var id: String { "\(source)\u{1F}\(kind)\u{1F}\(itemID)" }
 }
@@ -606,6 +616,123 @@ enum SearchArea: Hashable, Sendable {
     case plugin(String)
 }
 
+// MARK: - Remote sessions (ADR-0018)
+
+/// What a device of a remote source is (`RemoteDeviceKind`).
+enum ServiceDeviceKind: Hashable, Sendable, CaseIterable {
+    case computer, smartphone, speaker, tv, car, other
+}
+
+/// A device a remote source plays on (`RemoteDevice`).
+struct ServiceDevice: Identifiable, Hashable, Sendable {
+    var id: String
+    var name: String
+    var kind: ServiceDeviceKind
+    /// The device playing (or last playing) for the account.
+    var active: Bool
+    /// Its volume, 0–100, when Jellyfesh may change it.
+    var volumePercent: UInt32?
+}
+
+/// The `Remote` slice: while `source` is set, Jellyfesh controls a service's own player and
+/// shows its track instead of the engine's (`RemoteSnapshot`).
+struct RemoteSession: Equatable, Sendable {
+    var version: UInt64
+    /// The source in control; nil without a session.
+    var source: String?
+    /// That source's name: Open in {Service}, "Up Next is in {Service}."
+    var sourceName: String?
+    var status: PlaybackStatus
+    /// The track playing, as the service reports it.
+    var item: SourceResult?
+    /// The album or playlist it plays from, when the service says.
+    var context: SourceResult?
+    /// Time base for the progress bar, like the playback slice's.
+    var anchor: Anchor
+    var shuffle: Bool
+    var repeatMode: RepeatOption
+    /// The device playing.
+    var device: ServiceDevice?
+    /// Every device the service lists (the Devices picker).
+    var devices: [ServiceDevice]
+    /// What went wrong last talking to the service; on a slice without a source, why the session
+    /// ended.
+    var error: String?
+
+    static let idle = RemoteSession(version: 0, source: nil, sourceName: nil, status: .stopped, item: nil,
+                                    context: nil, anchor: .zero, shuffle: false, repeatMode: .off, device: nil,
+                                    devices: [], error: nil)
+}
+
+/// What `CoreCommand.remote` asks of the remote session (`RemoteAction`).
+enum RemoteRequest: Hashable, Sendable {
+    /// Asks the service for its devices and state now (the Devices picker opens).
+    case refresh
+    /// Moves playback to this device.
+    case transfer(device: String)
+    /// The playing device's volume, 0–100.
+    case setVolume(percent: UInt32)
+    /// Stops controlling the service; its player carries on.
+    case end
+}
+
+// MARK: - Players the app provides (ADR-0018 item 5)
+
+/// An item a player the app provides plays or reports (`ExternalItem`).
+struct ExternalMedia: Hashable, Sendable {
+    var kind: ResultKind
+    /// The player's own id for it.
+    var id: String
+    var title: String
+    var artist: String?
+    var album: String?
+    var durationMs: UInt64?
+    var artworkURL: String?
+}
+
+/// What a player the app provides is doing (`ExternalState`).
+struct ExternalPlayerReport: Hashable, Sendable {
+    var item: ExternalMedia?
+    /// The album or playlist it plays from, when it knows.
+    var context: ExternalMedia?
+    var playing: Bool
+    var positionMs: UInt64
+    var shuffle: Bool
+    var repeatMode: RepeatOption
+    var device: ServiceDevice?
+}
+
+/// Why a call to a player the app provides failed: `reason` is shown to the person
+/// (`ExternalPlayerError.Failed`).
+struct AppPlayerError: Error, Equatable, LocalizedError {
+    var reason: String
+
+    var errorDescription: String? { reason }
+}
+
+/// A player the app provides to the core (`ExternalPlayer`), registered under a source id without
+/// dots. The core calls it from a remote session's own thread, never the main thread, and each
+/// call may block until the player answers (a few seconds at most). Never call back into the core
+/// from inside a call. Throw `AppPlayerError` with a sentence the person can read.
+protocol AppPlayer: AnyObject, Sendable {
+    func devices() throws -> [ServiceDevice]
+    /// Nil when nothing plays.
+    func state() throws -> ExternalPlayerReport?
+    /// Plays `tracks` from `start`, or the album or playlist `context` from its track `start`
+    /// (then `tracks` is empty).
+    func play(context: ExternalMedia?, tracks: [ExternalMedia], start: Int) throws
+    func resume() throws
+    func pause() throws
+    func next() throws
+    func previous() throws
+    func seek(positionMs: UInt64) throws
+    /// 0–100; a player without a volume throws.
+    func setVolume(percent: UInt32) throws
+    func setShuffle(_ on: Bool) throws
+    func setRepeat(_ mode: RepeatOption) throws
+    func transfer(device: String) throws
+}
+
 // MARK: - Snapshot, events, commands
 
 /// Every slice at once (`Snapshot`).
@@ -621,6 +748,8 @@ struct CoreState: Equatable, Sendable {
     var devices: DevicesState
     var sources: SourcesState
     var muted: Bool
+    /// The remote session, if one runs.
+    var remote: RemoteSession = .idle
 }
 
 /// What the core reports (`Event`).
@@ -636,6 +765,8 @@ enum CoreEvent: Equatable, Sendable {
     case settings(AppSettings)
     case devices(DevicesState)
     case sources(SourcesState)
+    /// The remote session changed.
+    case remote(RemoteSession)
     case signIn(SignInUpdate)
     case searchResults(SearchBatch)
     case browsePage(BrowseBatch)
@@ -696,4 +827,6 @@ enum CoreCommand: Equatable, Sendable {
     case logout(plugin: String)
     case search(query: String, area: SearchArea)
     case browse(plugin: String, node: String?, page: UInt32)
+    /// What the transport commands cannot say to a remote session (they reach it by themselves).
+    case remote(RemoteRequest)
 }

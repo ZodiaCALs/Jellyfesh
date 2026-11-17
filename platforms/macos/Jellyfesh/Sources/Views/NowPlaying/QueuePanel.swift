@@ -1,10 +1,28 @@
 // The queue: what plays now and Up Next in playback order. Drag to reorder, Delete to remove,
 // double-click or Return to jump; Up Next pages past the slice's 50 entries as it scrolls, and
-// Clear Queue asks first. And Info: About This Song.
+// Clear Queue asks first. While a remote session runs, Up Next is the service's ("Up Next is in
+// {Service}."). And Info: About This Song, with Open in {Service} for a track that has a link.
 
 import SwiftUI
 
 struct QueuePanel: View {
+    @Environment(PlaybackStore.self) private var playback
+
+    var body: some View {
+        if playback.isRemote {
+            ContentUnavailableView {
+                Label("Up Next", systemImage: "list.bullet")
+            } description: {
+                Text(RemoteText.upNextElsewhere(service: playback.remoteService))
+            }
+        } else {
+            LocalQueuePanel()
+        }
+    }
+}
+
+/// The engine's queue.
+private struct LocalQueuePanel: View {
     @Environment(QueueStore.self) private var queue
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.palette) private var palette
@@ -137,8 +155,84 @@ private struct QueueRowView: View {
 }
 
 /// About This Song (docs/ui.md): title, artist, album, year, length, format, lyrics and the file
-/// (or the source it plays from).
+/// (or the source it plays from), then Open in {Service} when the track has a link. For a remote
+/// session: what the service reports, and where it plays.
 struct InfoPanel: View {
+    @Environment(PlaybackStore.self) private var playback
+
+    var body: some View {
+        if playback.isRemote {
+            RemoteInfoPanel()
+        } else {
+            LocalInfoPanel()
+        }
+    }
+}
+
+/// About This Song for a remote session's track.
+private struct RemoteInfoPanel: View {
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        let remote = playback.remote
+        if let item = remote.item {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                    Text("About This Song")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(palette[Tokens.Ink.ink50])
+                        .accessibilityAddTraits(.isHeader)
+                    VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                        InfoRow(label: "Title", value: item.title)
+                        InfoRow(label: "Artist", value: item.subtitle)
+                        InfoRow(label: "Album", value: item.album)
+                        InfoRow(label: "Length", value: playback.durationUs.map { TimeText.from(microseconds: $0) })
+                        InfoRow(label: "Source", value: playback.remoteService)
+                        InfoRow(label: "Device", value: remote.device?.name)
+                    }
+                    .padding(Tokens.Space.s4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                    OpenInServiceButton(link: item.link, source: remote.source)
+                        .buttonStyle(.link)
+                        .font(.system(size: 13))
+                        .padding(.top, Tokens.Space.s1)
+                }
+                .padding(.vertical, Tokens.Space.s4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollIndicators(.automatic)
+        } else {
+            EmptyState(title: "Nothing Is Playing", symbol: "info.circle")
+        }
+    }
+}
+
+/// One fact of About This Song; nothing when there is no value.
+private struct InfoRow: View {
+    var label: LocalizedStringKey
+    var value: String?
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        if let value, !value.isEmpty {
+            LabeledContent {
+                Text(value)
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                    .textSelection(.enabled)
+                    .multilineTextAlignment(.trailing)
+            } label: {
+                Text(label)
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
+            }
+            .font(.system(size: 13))
+        }
+    }
+}
+
+/// About This Song for the engine's track.
+private struct LocalInfoPanel: View {
     @Environment(PlaybackStore.self) private var playback
     @Environment(LyricsStore.self) private var lyrics
     @Environment(LibraryStore.self) private var library
@@ -167,7 +261,13 @@ struct InfoPanel: View {
                     }
                     .padding(Tokens.Space.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+                    .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                    if case .source(let song) = now.track {
+                        OpenInServiceButton(link: now.link, source: song.plugin)
+                            .buttonStyle(.link)
+                            .font(.system(size: 13))
+                            .padding(.top, Tokens.Space.s1)
+                    }
                 }
                 .padding(.vertical, Tokens.Space.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -254,9 +354,11 @@ struct InfoPanel: View {
     }
 }
 
-/// The Speakers chip: where the sound goes (`SetOutputDevice`; none follows the system default).
+/// The device button of the dock while the engine plays: where the sound goes
+/// (`SetOutputDevice`; none follows the system default).
 struct OutputDeviceMenu: View {
     @Environment(PlaybackStore.self) private var playback
+    @Environment(\.palette) private var palette
 
     var body: some View {
         Menu {
@@ -275,12 +377,11 @@ struct OutputDeviceMenu: View {
                 playback.refreshDevices()
             }
         } label: {
-            HStack(spacing: Tokens.Space.s2) {
-                Image(systemName: "hifispeaker")
-                Text(currentName)
-                    .lineLimit(1)
-            }
-            .chipLabel()
+            Image(systemName: "hifispeaker")
+                .font(.system(size: 17))
+                .foregroundStyle(palette[Tokens.Ink.ink90])
+                .frame(width: 40, height: 40)
+                .contentShape(Circle())
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -288,7 +389,7 @@ struct OutputDeviceMenu: View {
         .fixedSize()
         .accessibilityLabel(Text("Output device"))
         .accessibilityValue(Text(currentName))
-        .help(Text("Output device"))
+        .help(Text(currentName))
     }
 
     private var currentName: String {

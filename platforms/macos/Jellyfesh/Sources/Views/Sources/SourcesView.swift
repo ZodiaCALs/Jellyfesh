@@ -1,13 +1,15 @@
 // Sources (docs/ui.md): what sources are, Add a Source (the core's services, connected as in
-// Settings), Your Sources (the installed plugins with their badges and accounts; choosing one
-// browses its catalogue page by page) and Sources Settings…, where installing, enabling and each
-// source's settings live.
+// Settings, and Apple Music where this copy of the app can use it), Your Sources (the installed
+// plugins with their badges and accounts, and Apple Music once on; choosing one browses its
+// catalogue page by page) and Sources Settings…, where installing, enabling and each source's
+// settings live.
 
 import SwiftUI
 
 struct SourcesView: View {
     @Environment(AppModel.self) private var model
     @Environment(SourcesStore.self) private var sources
+    @Environment(AppleMusicStore.self) private var appleMusic
     @Environment(\.openSettings) private var openSettings
     @Environment(\.palette) private var palette
     /// The service whose Connect sheet is open.
@@ -29,7 +31,7 @@ struct SourcesView: View {
                     .padding(.bottom, Tokens.Space.s3)
                     .trackListRow()
             }
-            if !sources.presets.isEmpty {
+            if !sources.presets.isEmpty || offersAppleMusic {
                 SectionTitle("Add a Source")
                     .padding(.top, Tokens.Space.s3)
                     .trackListRow()
@@ -41,11 +43,21 @@ struct SourcesView: View {
                     .frame(minHeight: Tokens.Player.rowHeight)
                     .trackListRow()
                 }
+                if offersAppleMusic {
+                    AppleMusicOfferRow()
+                        .trackListRow()
+                }
             }
             SectionTitle("Your Sources")
                 .padding(.top, Tokens.Space.s5)
                 .trackListRow()
-            if sources.plugins.isEmpty {
+            if appleMusic.isAvailable {
+                NavigationLink(value: Route.appleMusic) {
+                    AppleMusicSourceRow()
+                }
+                .trackListRow()
+            }
+            if sources.plugins.isEmpty && !appleMusic.isAvailable {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("No Sources Installed")
                         .typography(Tokens.TypeRoles.listTitle)
@@ -82,6 +94,11 @@ struct SourcesView: View {
         .fieldList()
         .navigationTitle(Text("Sources"))
         .connectSourceFlow($connecting, in: .main)
+    }
+
+    /// Apple Music can be turned on here (or is being checked).
+    private var offersAppleMusic: Bool {
+        appleMusic.availability == .offered || appleMusic.availability == .checking
     }
 }
 
@@ -183,16 +200,18 @@ struct SourcesUnavailableNotice: View {
         }
         .padding(Tokens.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
 
-/// One container of a source's catalogue (`node` nil is its root), page by page.
+/// One container of a source's catalogue (`node` nil is its root), page by page. Its More menu
+/// opens it in its service when it has a link; a source whose terms ask for it is credited.
 struct BrowseView: View {
     var plugin: String
     var node: String?
     var title: String
+    var link: String?
 
     @Environment(SourcesStore.self) private var sources
     @Environment(PlaybackStore.self) private var playback
@@ -202,9 +221,22 @@ struct BrowseView: View {
     var body: some View {
         let items = model?.items ?? []
         List {
-            PageHeader(title: title, subtitle: sources.plugin(plugin)?.name)
-                .padding(.vertical, Tokens.Space.s4)
-                .trackListRow()
+            PageHeader(title: title, subtitle: sources.attribution(of: plugin) ?? sources.plugin(plugin)?.name) {
+                if ServiceLink.url(link) != nil {
+                    Menu {
+                        OpenInServiceButton(link: link, source: plugin)
+                    } label: {
+                        Label("More", systemImage: "ellipsis")
+                    }
+                    .menuStyle(.button)
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .fixedSize()
+                    .accessibilityLabel(Text("More Actions"))
+                }
+            }
+            .padding(.vertical, Tokens.Space.s4)
+            .trackListRow()
             ForEach(items) { item in
                 row(for: item)
                     .trackListRow()
@@ -254,23 +286,20 @@ struct BrowseView: View {
                 }
                 .accessibilityAction { play(from: item) }
         } else {
+            // ResultRow's own menu: Play, Shuffle, Play Next, Play Last (not for a remote source)
+            // and Open in {Service}.
             ResultRow(item: item, artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) })
-                .contextMenu {
-                    Button("Play") {
-                        playback.play(.source(plugin: item.source, id: item.itemID))
-                    }
-                    Button("Play Next") {
-                        playback.enqueue(.source(plugin: item.source, id: item.itemID), next: true)
-                    }
-                    Button("Play Last") {
-                        playback.enqueue(.source(plugin: item.source, id: item.itemID), next: false)
-                    }
-                }
         }
     }
 
+    /// Plays the page's tracks from `item`; an item that cannot play here opens its link instead.
     private func play(from item: SourceResult) {
-        guard let queue = model?.tracks(startingAt: item) else { return }
+        guard let queue = model?.tracks(startingAt: item) else {
+            if ServiceLink.isMainAction(canPlay: item.playable && item.track != nil, link: item.link) {
+                ServiceLink.open(item.link)
+            }
+            return
+        }
         playback.play(tracks: queue.tracks, from: queue.start)
     }
 }

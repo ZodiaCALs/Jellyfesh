@@ -22,7 +22,7 @@ enum EventBatch {
     }
 
     private enum SliceKind: Hashable {
-        case playback, queue, nowPlaying, lyrics, theme, settings, devices, sources, scanProgress, library
+        case playback, queue, nowPlaying, lyrics, theme, settings, devices, sources, remote, scanProgress, library
 
         init?(_ event: CoreEvent) {
             switch event {
@@ -34,6 +34,9 @@ enum EventBatch {
             case .settings: self = .settings
             case .devices: self = .devices
             case .sources: self = .sources
+            // A session that ended with an error says so in the slice that ends it, so the last
+            // remote slice of a batch is enough (PlaybackStore.apply(remote:)).
+            case .remote: self = .remote
             case .libraryChanged: self = .library
             case .scan(.progress): self = .scanProgress
             case .scan, .playlistCreated, .signIn, .searchResults, .browsePage, .buffering,

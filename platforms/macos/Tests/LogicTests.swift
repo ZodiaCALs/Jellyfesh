@@ -153,15 +153,18 @@ final class LyricsLayoutTests: XCTestCase {
     }
 
     func testLineSizeIsFluidWithinTheTokens() {
-        XCTAssertEqual(LyricsLayout.lineSize(forWidth: 300), 24)
-        XCTAssertEqual(LyricsLayout.lineSize(forWidth: 600), 30)
+        // Luminous: 40 pt from a 640 pt column, down to 28 in narrow windows.
+        XCTAssertEqual(LyricsLayout.lineSize(forWidth: 300), 28)
+        XCTAssertEqual(LyricsLayout.lineSize(forWidth: 560), 35)
+        XCTAssertEqual(LyricsLayout.lineSize(forWidth: 640), 40)
         XCTAssertEqual(LyricsLayout.lineSize(forWidth: 2000), 40)
+        XCTAssertEqual(LyricsLayout.lineSize(forWidth: .infinity), 40)
     }
 
     func testCJKGetsTheTallerLineHeight() {
         XCTAssertEqual(LyricsLayout.lineHeight(for: "清晨把港湾折进光里", language: nil), 1.6)
         XCTAssertEqual(LyricsLayout.lineHeight(for: "Morning", language: "ja"), 1.6)
-        XCTAssertEqual(LyricsLayout.lineHeight(for: "Morning folds the harbour", language: "en"), 1.3)
+        XCTAssertEqual(LyricsLayout.lineHeight(for: "Morning folds the harbour", language: "en"), 1.18)
     }
 
     func testWordFill() {
@@ -272,6 +275,13 @@ final class EventBatchTests: XCTestCase {
             .libraryChanged(revision: 2),
             .error("two"),
         ])
+    }
+
+    func testOnlyTheLastRemoteSliceIsKept() {
+        let started = Fixture.remote(version: 1)
+        let ended = Fixture.ended(version: 2, error: "Sign in to Spotify again.")
+        XCTAssertEqual(EventBatch.coalesced([.remote(started), .error("x"), .remote(ended)]),
+                       [.error("x"), .remote(ended)])
     }
 
     func testDiscreteEventsAreAllKept() {

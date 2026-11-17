@@ -56,7 +56,7 @@ struct HomeView: View {
                 TrackStack(items: items) { index in
                     playback.play(.tracks(items.compactMap(\.track)), from: playableIndex(index, in: items))
                 }
-                .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+                .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
             }
         }
     }
@@ -103,6 +103,6 @@ struct WelcomeCard: View {
         }
         .padding(Tokens.Space.s6)
         .frame(maxWidth: 560, alignment: .leading)
-        .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
     }
 }

@@ -114,7 +114,7 @@ struct ArtistDetailView: View {
                             // The rows as shown, so the queue matches the page.
                             playback.play(.tracks(items.compactMap(\.track)), from: index)
                         }
-                        .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+                        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
                     }
                 }
                 if let error {

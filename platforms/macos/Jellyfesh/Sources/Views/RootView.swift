@@ -117,8 +117,9 @@ struct LibraryWindow: View {
 }
 
 /// The selected section, its pushed pages, and the mini player (columns under 900 pt) or the
-/// player bar (900 pt and wider) floating over them. Under Now Playing the bar stays in place but
-/// stops redrawing its progress.
+/// player bar (900 pt and wider) floating over them as Veil capsules; the pages fade out just
+/// above the player (Luminous). Under Now Playing the bar stays in place but stops redrawing its
+/// progress.
 struct DetailColumn: View {
     @Environment(Router.self) private var router
     @Environment(PlaybackStore.self) private var playback
@@ -137,6 +138,9 @@ struct DetailColumn: View {
                         .pageEntrance()
                 }
         }
+        .mask {
+            PlayerFadeMask(playerZone: LuminousGeometry.playerZone(hasPlayer: playback.hasTrack, wide: wide))
+        }
         .background {
             MistyField()
         }
@@ -149,13 +153,6 @@ struct DetailColumn: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ZStack(alignment: .bottom) {
-                if playback.hasTrack {
-                    BottomEdgeBlur()
-                        .frame(height: Tokens.EdgeBlur.bottomHeight
-                            + (wide ? Tokens.Player.barHeight : Tokens.Player.miniHeight))
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
                 if wide {
                     PlayerBar()
                 } else {
@@ -205,7 +202,9 @@ struct RoutePage: View {
         case .album(let album): AlbumDetailView(album: album)
         case .artist(let artist): ArtistDetailView(artist: artist)
         case .playlist(let id): PlaylistDetailView(playlistID: id)
-        case .browse(let plugin, let node, let title): BrowseView(plugin: plugin, node: node, title: title)
+        case .browse(let plugin, let node, let title, let link):
+            BrowseView(plugin: plugin, node: node, title: title, link: link)
+        case .appleMusic: AppleMusicView()
         }
     }
 }

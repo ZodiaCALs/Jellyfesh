@@ -1,8 +1,9 @@
-// The player bar for content columns 900 pt and wider (docs/design-controls.md, "v0.0.4"), after
-// Media Player and Apple Music: a floating Veil bar 80 pt high with r-xl corners. Start: the
-// artwork and two lines (they open Now Playing). Middle: the transport capsule (shuffle, previous,
-// play, next, repeat; play is the only accent fill) above the seek bar with its times. End: Lyrics,
-// Queue and the volume. It bends CMP-02 (one control) on purpose, for desktop use. Liquid Glass on
+// The player bar for content columns 900 pt and wider (docs/design-controls.md, "v0.0.4"; Luminous,
+// docs/ui.md): a floating Veil capsule 80 pt high with r-2xl corners, the content fading out just
+// above it. Start: the artwork and two lines (they open Now Playing). Middle: shuffle, previous,
+// play, next and repeat (play is the only accent fill) above the seek bar with its times. End:
+// Lyrics, Queue, the Devices button while a remote session runs, and the volume. While a remote
+// session runs the bar shows its track with "Playing on {Device}" (ADR-0018). Liquid Glass on
 // macOS 26, like the mini player (FloatingGlass).
 
 import SwiftUI
@@ -14,35 +15,35 @@ struct PlayerBar: View {
     @Environment(\.effects) private var effects
 
     var body: some View {
-        if let now = playback.nowPlaying {
-            FloatingGlass(cornerRadius: Tokens.Radius.rXl) {
-                content(now)
+        if let item = playback.playing {
+            FloatingGlass(cornerRadius: LuminousGeometry.barRadius) {
+                content(item)
             }
             .elevation(Tokens.Elevation.shadow2)
-            .padding(.horizontal, Tokens.Space.s5)
-            .padding(.bottom, Tokens.Space.s4)
+            .padding(.horizontal, LuminousGeometry.playerMargin)
+            .padding(.bottom, LuminousGeometry.playerMargin)
             .transition(.move(edge: .bottom).combined(with: .opacity))
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text("Player"))
         }
     }
 
-    private func content(_ now: NowPlayingInfo) -> some View {
+    private func content(_ item: PlayingItem) -> some View {
         HStack(spacing: Tokens.Space.s4) {
             Button {
                 router.showNowPlaying(true, reduceMotion: !effects.animates)
             } label: {
                 HStack(spacing: Tokens.Space.s3) {
-                    ArtworkView(source: now.artwork.flatMap { ArtworkSource(hash: nil, location: $0) },
-                                size: 48, cornerRadius: Tokens.Radius.rMd)
-                    NowPlayingLines(now: now)
+                    ArtworkView(source: item.artwork, size: 56, cornerRadius: Tokens.Radius.rLg)
+                        .elevation(Tokens.Elevation.shadow1)
+                    NowPlayingLines(item: item)
                     Spacer(minLength: 0)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityLabel(Text(MiniPlayer.label(for: now)))
+            .accessibilityLabel(Text(MiniPlayer.label(for: item)))
             .accessibilityHint(Text("Opens Now Playing"))
             .help(Text("Show Now Playing"))
 
@@ -53,9 +54,9 @@ struct PlayerBar: View {
                     } label: {
                         Image(systemName: "shuffle")
                     }
-                    .buttonStyle(ToggleButtonStyle(isOn: playback.queue.shuffle, size: 40, glyph: 14))
+                    .buttonStyle(ToggleButtonStyle(isOn: playback.shuffle, size: 40, glyph: 14))
                     .accessibilityLabel(Text("Shuffle"))
-                    .accessibilityValue(playback.queue.shuffle ? Text("On") : Text("Off"))
+                    .accessibilityValue(playback.shuffle ? Text("On") : Text("Off"))
                     .help(Text("Shuffle"))
 
                     Button {
@@ -81,9 +82,9 @@ struct PlayerBar: View {
                     Button {
                         playback.cycleRepeat()
                     } label: {
-                        Image(systemName: playback.queue.repeatMode == .one ? "repeat.1" : "repeat")
+                        Image(systemName: playback.repeatMode == .one ? "repeat.1" : "repeat")
                     }
-                    .buttonStyle(ToggleButtonStyle(isOn: playback.queue.repeatMode != .off, size: 40, glyph: 14))
+                    .buttonStyle(ToggleButtonStyle(isOn: playback.repeatMode != .off, size: 40, glyph: 14))
                     .accessibilityLabel(Text("Repeat"))
                     .help(Text("Repeat"))
                 }
@@ -110,12 +111,19 @@ struct PlayerBar: View {
                 .accessibilityLabel(Text("Queue"))
                 .help(Text("Queue"))
 
-                VolumeSlider()
-                    .frame(maxWidth: 180)
+                if item.isRemote {
+                    RemoteDevicesButton(size: 40, glyph: 15)
+                }
+
+                if playback.showsVolume {
+                    VolumeSlider()
+                        .frame(maxWidth: 180)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, Tokens.Space.s3)
+        .padding(.leading, Tokens.Space.s3)
+        .padding(.trailing, Tokens.Space.s5)
         .frame(height: Tokens.Player.barHeight)
         .frame(maxWidth: 1240)
     }

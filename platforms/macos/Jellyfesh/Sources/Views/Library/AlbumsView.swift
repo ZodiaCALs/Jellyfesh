@@ -8,8 +8,9 @@ struct AlbumsView: View {
 
     private var albums: AlbumsModel { model.pages.albums }
 
+    /// Luminous: large covers, four to a row in a wide window.
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: 220), spacing: Tokens.Space.s5, alignment: .top),
+        GridItem(.adaptive(minimum: 190, maximum: 260), spacing: 28, alignment: .top),
     ]
 
     var body: some View {
@@ -17,7 +18,7 @@ struct AlbumsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.s5) {
                 PageHeader(title: String(localized: "Albums"), subtitle: subtitle)
-                LazyVGrid(columns: columns, alignment: .leading, spacing: Tokens.Space.s6) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: Tokens.Space.s7) {
                     ForEach(list.items) { album in
                         AlbumCard(album: album)
                             .onAppear { list.rowAppeared(album) }

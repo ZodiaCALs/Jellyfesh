@@ -1,6 +1,7 @@
 // The v0.0.4 design pass's numbers (docs/design-controls.md, "v0.0.4: the controls as built"):
 // the straight seek bar's geometry, the player bar's breakpoint, Now Playing's motion, the accent
-// swatches and how the transparency setting picks a material. Pure functions, so views only draw
+// swatches and how the transparency setting picks a material; and Luminous (v0.0.6, docs/ui.md):
+// the field's four glows and the floating player's geometry. Pure functions, so views only draw
 // them and Tests/DesignTests.swift checks them (the same rules as the Windows and Android apps).
 
 import Foundation
@@ -107,13 +108,13 @@ enum LyricLineRole: Equatable {
 
 /// Now Playing's motion after Apple Music, as numbers SwiftUI animates.
 enum NowPlayingMotion {
-    /// `player.artwork-paused-scale`, `lyrics.scale-inactive`, `-small`, `-large`.
+    /// `player.artwork-paused-scale`, `lyrics.scale-inactive` (Luminous: 92 %), `-small`, `-large`.
     static let artworkPausedScale: CGFloat = 0.88
-    static let inactiveLineScale: CGFloat = 0.96
+    static let inactiveLineScale: CGFloat = 0.92
     static let smallLyrics: CGFloat = 0.8
     static let largeLyrics: CGFloat = 1.2
-    /// `lyrics.stagger`: each following line starts this much after the one above.
-    static let staggerMs = 30
+    /// `lyrics.stagger` (Luminous: 40 ms): each following line starts this much after the one above.
+    static let staggerMs = 40
     /// Lines further below the active one start together, so the cascade never drags.
     static let maxStaggeredLines = 8
 
@@ -194,6 +195,73 @@ enum NowPlayingMotion {
             if sample(Double(c.x1), Double(c.x2), t) < x { lo = t } else { hi = t }
         }
         return sample(Double(c.y1), Double(c.y2), t)
+    }
+}
+
+/// Luminous's field (docs/ui.md, "Luminous"): four large aurora glows at the theme hue, as the
+/// owner's mock-up draws them at `field.aurora-strength` 0.75 (Misty's field is about 0.45).
+enum LuminousField {
+    /// One glow: an ellipse at (`x`, `y`) in the field's unit square, `radius` across in the same
+    /// units (so it stretches with the field), fading from its colour at `baseAlpha` to nothing
+    /// at `fadeEnd` of the radius.
+    struct Glow: Equatable {
+        var color: ThemeColorKey
+        var x: CGFloat
+        var y: CGFloat
+        var radius: CGFloat
+        var baseAlpha: Double
+        var fadeEnd: CGFloat
+
+        /// The glow's alpha at an aurora strength: `baseAlpha` at the reference strength, within 0...1.
+        func alpha(strength: Double) -> Double {
+            guard strength.isFinite else { return baseAlpha }
+            return min(max(baseAlpha * strength / LuminousField.referenceStrength, 0), 1)
+        }
+    }
+
+    /// The strength the base alphas are drawn at (the token's value when the owner chose it).
+    static let referenceStrength = 0.75
+
+    /// Top start, bottom end, bottom start and a smaller one top end.
+    static let glows: [Glow] = [
+        Glow(color: Tokens.Field.aurora1, x: 0.04, y: 0, radius: 0.60, baseAlpha: 0.80, fadeEnd: 0.72),
+        Glow(color: Tokens.Field.aurora2, x: 1, y: 0.96, radius: 0.61, baseAlpha: 0.72, fadeEnd: 0.72),
+        Glow(color: Tokens.Field.aurora3, x: 0, y: 1, radius: 0.48, baseAlpha: 0.66, fadeEnd: 0.70),
+        Glow(color: Tokens.Field.aurora1, x: 0.92, y: 0.04, radius: 0.39, baseAlpha: 0.46, fadeEnd: 0.70),
+    ]
+}
+
+/// Luminous's floating player and Now Playing stage (docs/ui.md, "Luminous").
+enum LuminousGeometry {
+    /// The player bar: a floating Veil capsule (`r-2xl` corners) `player.bar-height` high.
+    static let barRadius: CGFloat = 24
+    /// The gap between the floating player and the window's edges.
+    static let playerMargin: CGFloat = 16
+    /// Content fades out over this height just above the floating player.
+    static let fadeHeight: CGFloat = 48
+    /// Now Playing's dock: one floating Veil capsule with every control.
+    static let dockHeight: CGFloat = 80
+    static let dockRadius: CGFloat = 40
+    /// Now Playing's artwork, the stage's hero.
+    static let stageArtwork: CGFloat = 380
+    /// Grid covers lift this much on hover or focus.
+    static let coverLift: CGFloat = 4
+
+    /// The height the floating player takes at the bottom of the content, its margin included;
+    /// 0 without a player.
+    static func playerZone(hasPlayer: Bool, wide: Bool) -> CGFloat {
+        guard hasPlayer else { return 0 }
+        return (wide ? SeekGeometry.barHeight : Tokens.Player.miniHeight) + playerMargin
+    }
+
+    /// The artwork on the stage: 380 pt, smaller when the window leaves less room (the top bar, the
+    /// dock and the title under the artwork take about 370 pt of the height).
+    static func stageArtworkSide(width: CGFloat, height: CGFloat) -> CGFloat {
+        let byWidth = width * 0.34
+        let byHeight = height - 370
+        let side = min(stageArtwork, byWidth, byHeight)
+        guard side.isFinite else { return stageArtwork }
+        return max(side, 180).rounded()
     }
 }
 

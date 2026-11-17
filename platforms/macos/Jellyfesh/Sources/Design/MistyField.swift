@@ -1,5 +1,7 @@
-// Misty's lit field: the sky, three aurora glows and a fine grain (MAT-02), at the theme hue. It
-// sits behind every view; only Now Playing in the Artwork style replaces it (deviation D1).
+// The lit field behind every view: the sky, the aurora and a fine grain (Misty MAT-02), at the
+// theme hue. Luminous (v0.0.6, docs/ui.md) turns the aurora up to `field.aurora-strength` with four
+// larger glows (LuminousField), on every screen, light and dark; the colours crossfade with the
+// theme on every song change. Only Now Playing in the Artwork style draws the baked backdrop over it.
 
 import SwiftUI
 
@@ -9,21 +11,25 @@ struct MistyField: View {
     var body: some View {
         ZStack {
             palette[Tokens.Field.sky]
-            glow(Tokens.Field.aurora1, at: UnitPoint(x: 0.10, y: 0.08), size: 0.70)
-            glow(Tokens.Field.aurora2, at: UnitPoint(x: 0.92, y: 0.92), size: 0.65)
-            glow(Tokens.Field.aurora3, at: UnitPoint(x: 0.04, y: 0.98), size: 0.55)
+            ForEach(LuminousField.glows.indices, id: \.self) { index in
+                glow(LuminousField.glows[index])
+            }
             Grain(opacity: palette.alpha(Tokens.Field.grain))
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
     }
 
-    private func glow(_ key: ThemeColorKey, at center: UnitPoint, size: CGFloat) -> some View {
-        EllipticalGradient(
-            colors: [palette[key].opacity(0.85), palette[key].opacity(0)],
-            center: center,
+    private func glow(_ glow: LuminousField.Glow) -> some View {
+        let color = palette[glow.color]
+        return EllipticalGradient(
+            stops: [
+                .init(color: color.opacity(glow.alpha(strength: Tokens.Field.auroraStrength)), location: 0),
+                .init(color: color.opacity(0), location: glow.fadeEnd),
+            ],
+            center: UnitPoint(x: glow.x, y: glow.y),
             startRadiusFraction: 0,
-            endRadiusFraction: size
+            endRadiusFraction: glow.radius
         )
     }
 }

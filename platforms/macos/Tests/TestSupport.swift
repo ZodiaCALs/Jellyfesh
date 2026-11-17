@@ -30,6 +30,11 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     /// When set, every query throws it.
     var failure: CoreClientError?
 
+    /// Players registered with `registerExternalPlayer`, by source id: their names and players.
+    private(set) var externalPlayers: [String: (name: String, player: AppPlayer)] = [:]
+    /// When set, `registerExternalPlayer` throws it.
+    var registerFailure: CoreClientError?
+
     private(set) var songIDRequests: [[Int64]] = []
     private(set) var queueWindowRequests: [(offset: Int, limit: Int)] = []
     private(set) var librarySearches: [String] = []
@@ -52,6 +57,15 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     func monotonicNowNs() -> UInt64 { nowNs }
     func equalizerPresets() -> [EqualizerPreset] { equalizerPresetsResult }
     func shutdown() {}
+
+    func registerExternalPlayer(id: String, name: String, player: AppPlayer) throws {
+        if let registerFailure { throw registerFailure }
+        externalPlayers[id] = (name, player)
+    }
+
+    func unregisterExternalPlayer(id: String) {
+        externalPlayers[id] = nil
+    }
 
     private func check() throws {
         if let failure { throw failure }
@@ -216,5 +230,35 @@ enum Fixture {
                        track: TrackReference? = nil) -> SourceResult {
         SourceResult(source: source, kind: kind, itemID: id, title: "Item \(id)", subtitle: nil, album: nil,
                      durationMs: nil, artwork: nil, playable: true, unplayableReason: nil, track: track, alsoIn: [])
+    }
+
+    static func device(_ id: String, name: String? = nil, kind: ServiceDeviceKind = .speaker, active: Bool = false,
+                       volume: UInt32? = 40) -> ServiceDevice {
+        ServiceDevice(id: id, name: name ?? "Device \(id)", kind: kind, active: active, volumePercent: volume)
+    }
+
+    /// A remote session of Spotify's plugin playing on `device`.
+    static func remote(version: UInt64 = 1, status: PlaybackStatus = .playing, title: String = "Remote Song",
+                       positionUs: Int64 = 0, monoNs: UInt64 = 10_000_000_000, generation: UInt64 = 1,
+                       device: ServiceDevice? = Fixture.device("phone", active: true),
+                       devices: [ServiceDevice] = [], error: String? = nil) -> RemoteSession {
+        let item = SourceResult(source: "org.example.spotify", kind: .track, itemID: "t1", title: title,
+                                subtitle: "Remote Artist", album: "Remote Album", durationMs: 180_000,
+                                artwork: .url("https://img.example.com/t1.jpg"), playable: true,
+                                unplayableReason: nil, track: nil, alsoIn: [],
+                                link: "https://open.example.com/track/t1")
+        return RemoteSession(version: version, source: "org.example.spotify", sourceName: "Spotify",
+                             status: status, item: item, context: nil,
+                             anchor: Anchor(trackGeneration: generation, positionUs: positionUs, anchorMonoNs: monoNs,
+                                            rate: status == .playing ? 1 : 0, durationUs: 180_000_000),
+                             shuffle: true, repeatMode: .one, device: device, devices: devices, error: error)
+    }
+
+    /// The slice once a session has ended, with why.
+    static func ended(version: UInt64, error: String?) -> RemoteSession {
+        var session = RemoteSession.idle
+        session.version = version
+        session.error = error
+        return session
     }
 }

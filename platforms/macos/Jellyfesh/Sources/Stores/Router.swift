@@ -43,7 +43,10 @@ enum Route: Hashable {
     case album(AlbumSummary)
     case artist(ArtistSummary)
     case playlist(Int64)
-    case browse(plugin: String, node: String?, title: String)
+    /// A source's container (`node` nil is its root); `link` opens it in its service.
+    case browse(plugin: String, node: String?, title: String, link: String? = nil)
+    /// Apple Music's catalogue (a player the app provides, ADR-0018 item 5).
+    case appleMusic
 }
 
 enum NowPlayingPanel: Hashable, CaseIterable {

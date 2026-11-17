@@ -1,11 +1,13 @@
 // Lyrics (docs/lyrics-model.md, "Display behaviour"; docs/design-controls.md, "v0.0.4"): one size
 // for every line, scaled by the Lyrics size setting and aligned to the start or the centre. The
-// active line is ink-90 at full size; the others are ink-50 (sung ones ink-30) at 96 %, scaled from
-// their start edge. In word-timed lyrics the sung words fill linearly over their duration. The
+// active line is ink-90 at full size; the others are ink-50 (sung ones ink-30) at 92 % (Luminous),
+// scaled from their start edge; on a wide stage lines are 40 pt bold at line height 1.18
+// (`lyrics.line`). In word-timed lyrics the sung words fill linearly over their duration. The
 // view wakes only when a line or word changes (LyricsSchedule) and draws per frame only while a
 // word is being sung. The active line scrolls to 38 % of the panel in 380 ms and the lines below
-// follow 30 ms apart (the cascade); manual scrolling pauses that for 4 s. Under reduced motion
+// follow 40 ms apart (the cascade); manual scrolling pauses that for 4 s. Under reduced motion
 // there is no cascade and the view jumps; under the system's Reduce Motion there is no sweep.
+// While a remote session plays, no lyrics show: the service plays its own track.
 
 import AppKit
 import SwiftUI
@@ -20,7 +22,14 @@ struct LyricsPanel: View {
         let shown = settings.current
         let look = LyricsLook(scale: NowPlayingMotion.lyricsScale(shown.lyricsSize),
                               centred: shown.lyricsAlign == .center)
-        if let document = lyrics.document(for: uid), !document.lines.isEmpty {
+        if playback.isRemote {
+            // The service plays its own track: no lyrics are drawn against it (ADR-0010, ADR-0018).
+            ContentUnavailableView {
+                Label("No Lyrics", systemImage: "quote.bubble")
+            } description: {
+                Text(RemoteText.lyricsHidden(service: playback.remoteService))
+            }
+        } else if let document = lyrics.document(for: uid), !document.lines.isEmpty {
             if let timeline = lyrics.timeline(for: uid) {
                 SyncedLyrics(document: document, timeline: timeline, translation: shown.showTranslation,
                              romanization: shown.showRomanization, look: look)

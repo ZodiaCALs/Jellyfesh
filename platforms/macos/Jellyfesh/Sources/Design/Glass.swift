@@ -175,50 +175,63 @@ struct LiquidThumb: ViewModifier {
     #endif
 }
 
-/// Blur under the mini player where content scrolls beneath it: a Veil material fading in
-/// towards the bottom edge (`edge-blur` tokens). macOS 26 draws its own soft scroll edge instead.
-struct BottomEdgeBlur: View {
-    @Environment(\.palette) private var palette
-    @Environment(\.effects) private var effects
+/// Luminous: the content fades out just above the floating player, so the player's glass floats
+/// over the field alone (docs/ui.md, "Luminous"). Use it as a mask over the whole content area
+/// (it ignores the safe area); `playerZone` is the height the player and its margin take at the
+/// bottom, 0 without a player.
+struct PlayerFadeMask: View {
+    var playerZone: CGFloat
+    var fade: CGFloat = LuminousGeometry.fadeHeight
 
     var body: some View {
-        if effects.solidGlass {
-            LinearGradient(colors: [palette[Tokens.Field.sky].opacity(0), palette[Tokens.Field.sky]],
-                           startPoint: .top, endPoint: .bottom)
-        } else if usesSystemScrollEdge {
+        VStack(spacing: 0) {
+            Color.black
+            LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: playerZone > 0 ? fade : 0)
             Color.clear
-        } else {
-            Rectangle()
-                .fill(GlassLevel.veil.material(transparency: effects.transparency) ?? .regularMaterial)
-                .overlay(GlassLevel.veil.tintColor(palette, transparency: effects.transparency))
-                .mask {
-                    LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0),
-                            .init(color: .black.opacity(0.5), location: 0.5),
-                            .init(color: .black, location: 1),
-                        ],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                }
+                .frame(height: playerZone)
         }
-    }
-
-    private var usesSystemScrollEdge: Bool {
-        if #available(macOS 26.0, *) { return compiledWithLiquidGlass }
-        return false
+        .ignoresSafeArea()
     }
 }
 
-/// True when this build's SDK has the macOS 26 glass APIs.
-#if compiler(>=6.2)
-let compiledWithLiquidGlass = true
-#else
-let compiledWithLiquidGlass = false
-#endif
+/// Luminous's grouped surfaces (lists, cards, notices): the Mist tint without live blur, one edge
+/// and `shadow-1`, so a screen stays within the glass budget; solid Cloud when transparency is
+/// reduced.
+private struct SurfaceBackground<S: InsettableShape>: ViewModifier {
+    var shape: S
+    @Environment(\.palette) private var palette
+    @Environment(\.effects) private var effects
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                shape
+                    .fill(effects.solidGlass
+                        ? palette[Tokens.Glass.cloud]
+                        : GlassLevel.mist.tintColor(palette, transparency: effects.transparency))
+                    .elevation(Tokens.Elevation.shadow1)
+            }
+            .overlay {
+                shape.strokeBorder(palette[effects.solidGlass ? Tokens.Line.lineSoft : Tokens.Glass.glassEdge],
+                                   lineWidth: 1)
+            }
+    }
+}
 
 extension View {
-    /// The soft scroll edge under chrome on macOS 26 (ADR-0007); the masked material elsewhere.
+    /// A grouped surface in `shape` (Luminous): the Mist tint, no live blur, `shadow-1`.
+    func surface<S: InsettableShape>(in shape: S) -> some View {
+        modifier(SurfaceBackground(shape: shape))
+    }
+}
+
+/// The corner radius of Luminous's grouped surfaces (the owner's mock-up: 24).
+let surfaceRadius: CGFloat = Tokens.Radius.r2xl
+
+extension View {
+    /// The soft scroll edge under chrome on macOS 26 (ADR-0007); elsewhere the content fades out
+    /// above the floating player instead (PlayerFadeMask).
     @ViewBuilder func softScrollEdges() -> some View {
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {

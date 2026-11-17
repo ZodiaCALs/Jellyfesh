@@ -80,52 +80,59 @@ final class NowPlayingCenter {
         center.seekBackwardCommand.isEnabled = false
     }
 
-    /// Sends what is playing and where, after a playback, queue or now-playing change.
+    /// Sends what is playing and where, after a playback, queue, now-playing or remote change. A
+    /// remote session shows its track; the media keys reach it through the core.
     func update() {
         let info = MPNowPlayingInfoCenter.default()
-        guard let now = playback.nowPlaying else {
+        guard let now = playback.playing else {
             info.nowPlayingInfo = nil
             info.playbackState = .stopped
             artworkFor = nil
             artworkImage = nil
             return
         }
+        let remote = now.isRemote
         var values: [String: Any] = [
             MPMediaItemPropertyTitle: now.title,
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: Double(playback.positionUs()) / 1_000_000,
-            MPNowPlayingInfoPropertyPlaybackRate: playback.isPlaying && !playback.buffering ? 1.0 : 0.0,
+            MPNowPlayingInfoPropertyPlaybackRate: playback.isPlaying && (remote || !playback.buffering) ? 1.0 : 0.0,
             MPNowPlayingInfoPropertyDefaultPlaybackRate: 1.0,
-            MPNowPlayingInfoPropertyPlaybackQueueCount: Int(playback.queue.length),
         ]
+        if !remote {
+            values[MPNowPlayingInfoPropertyPlaybackQueueCount] = Int(playback.queue.length)
+            if let position = playback.queue.position {
+                values[MPNowPlayingInfoPropertyPlaybackQueueIndex] = Int(position)
+            }
+        }
         if let artist = now.artist { values[MPMediaItemPropertyArtist] = artist }
         if let album = now.album { values[MPMediaItemPropertyAlbumTitle] = album }
         if let duration = playback.durationUs {
             values[MPMediaItemPropertyPlaybackDuration] = Double(duration) / 1_000_000
         }
-        if let position = playback.queue.position {
-            values[MPNowPlayingInfoPropertyPlaybackQueueIndex] = Int(position)
-        }
-        if now.artwork == artworkFor, let image = artworkImage {
+        // Artwork files only (the engine's tracks): networking stays in the core.
+        let artwork = remote ? nil : playback.nowPlaying?.artwork
+        if artwork == artworkFor, let image = artworkImage {
             values[MPMediaItemPropertyArtwork] = Self.mediaArtwork(image)
         } else {
-            loadArtwork(now.artwork)
+            loadArtwork(artwork)
         }
         info.nowPlayingInfo = values
-        switch playback.status {
+        let status = remote ? playback.remote.status : playback.status
+        switch status {
         case .playing: info.playbackState = .playing
         case .paused: info.playbackState = .paused
         case .stopped, .ended: info.playbackState = .stopped
         }
         let repeatType: MPRepeatType
-        switch playback.queue.repeatMode {
+        switch playback.repeatMode {
         case .off: repeatType = .off
         case .one: repeatType = .one
         case .all: repeatType = .all
         }
         let commands = MPRemoteCommandCenter.shared()
         commands.changeRepeatModeCommand.currentRepeatType = repeatType
-        commands.changeShuffleModeCommand.currentShuffleType = playback.queue.shuffle ? .items : .off
+        commands.changeShuffleModeCommand.currentShuffleType = playback.shuffle ? .items : .off
     }
 
     private func loadArtwork(_ location: ArtworkLocation?) {

@@ -168,26 +168,30 @@ private struct ControlsMenuItems: View {
             playback.nudgeVolume(by: 0.05)
         }
         .keyboardShortcut(.upArrow)
+        .disabled(!playback.showsVolume)
 
         Button("Decrease Volume") {
             playback.nudgeVolume(by: -0.05)
         }
         .keyboardShortcut(.downArrow)
+        .disabled(!playback.showsVolume)
 
         Button(playback.muted ? LocalizedStringKey("Unmute") : LocalizedStringKey("Mute")) {
             playback.toggleMute()
         }
         .keyboardShortcut(.downArrow, modifiers: [.command, .option])
+        .disabled(!playback.canMute)
 
         Divider()
 
+        // The remote session's shuffle and repeat while one runs (the core routes the commands).
         Toggle("Shuffle", isOn: Binding(
-            get: { playback.queue.shuffle },
+            get: { playback.shuffle },
             set: { playback.setShuffle($0) }
         ))
 
         Picker("Repeat", selection: Binding(
-            get: { playback.queue.repeatMode },
+            get: { playback.repeatMode },
             set: { playback.setRepeat($0) }
         )) {
             Text("Off").tag(RepeatOption.off)

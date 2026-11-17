@@ -28,8 +28,16 @@ struct TrackItem: Identifiable, Hashable {
     var albumID: Int64?
     /// A library file, for Show in Finder.
     var path: String?
+    /// Opens the item in its service (Open in {Service}).
+    var link: String?
+    /// The source it comes from, whose name names the service.
+    var source: String?
 
     var canPlay: Bool { playable && !missing && track != nil }
+
+    /// Its main action (double-click, Return, VoiceOver's default action) opens its link: it
+    /// cannot play here and has one.
+    var opensLink: Bool { ServiceLink.isMainAction(canPlay: canPlay, link: link) }
 }
 
 extension TrackItem {
@@ -49,7 +57,17 @@ extension TrackItem {
     init(result: SourceResult, artwork: ArtworkSource?) {
         self.init(id: result.id, track: result.track, title: result.title, artist: result.subtitle,
                   album: result.album, durationMs: result.durationMs, artwork: artwork,
-                  playable: result.playable, unplayableReason: result.unplayableReason)
+                  playable: result.playable, unplayableReason: result.unplayableReason, link: result.link,
+                  source: result.source == SearchStore.library ? nil : result.source)
+    }
+
+    /// The song the engine plays (Now Playing's More).
+    init(nowPlaying now: NowPlayingInfo) {
+        var source: String?
+        if case .source(let song) = now.track { source = song.plugin }
+        self.init(id: "now\(now.uid)", track: now.track, title: now.title, artist: now.artist, album: now.album,
+                  durationMs: now.durationMs, artwork: now.artwork.flatMap { ArtworkSource(hash: nil, location: $0) },
+                  path: now.path, link: now.link, source: source)
     }
 }
 
@@ -107,6 +125,12 @@ struct TrackRowView: View {
                 Image(systemName: "exclamationmark.circle")
                     .foregroundStyle(palette[Tokens.Ink.ink50])
                     .help(reason)
+                if item.opensLink {
+                    // Its main action opens it in its service.
+                    Image(systemName: "arrow.up.right.square")
+                        .foregroundStyle(palette[Tokens.Ink.ink50])
+                        .accessibilityHidden(true)
+                }
             }
             Text(item.durationMs.map { TimeText.from(milliseconds: $0) } ?? "")
                 .typography(Tokens.TypeRoles.listSecondary)
@@ -235,44 +259,55 @@ private struct LevelBars: View {
 }
 
 /// A song's menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to or Remove from
-/// Favourites, Go to Album, Go to Artist and Show in Finder. Rows that do not carry a library
-/// song's album or file look them up when chosen.
+/// Favourites, Go to Album, Go to Artist, Open in {Service} and Show in Finder. A remote source's
+/// songs never join the queue, playlists or favourites (ADR-0018), so they offer only what opens
+/// elsewhere. Rows that do not carry a library song's album or file look them up when chosen.
 struct TrackActionsMenu: View {
     /// The rows the actions apply to (the selection, or the row clicked).
     var items: [TrackItem]
+    /// Play Next, Play Last and the favourites; off for the song playing now (Now Playing's More,
+    /// beside its heart).
+    var queueActions = true
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(LibraryStore.self) private var library
+    @Environment(SourcesStore.self) private var sources
     @Environment(Router.self) private var router
 
+    /// The rows' tracks that can join the queue and playlists: playable, not a remote source's.
     private var tracks: [TrackReference] {
-        items.filter(\.canPlay).compactMap(\.track)
+        items.filter { $0.canPlay && !sources.isRemote($0.track) }.compactMap(\.track)
     }
 
     var body: some View {
         if !tracks.isEmpty {
-            Button("Play Next") {
-                playback.enqueue(tracks, next: true)
-            }
-            Button("Play Last") {
-                playback.enqueue(tracks, next: false)
-            }
-            Divider()
-            AddToPlaylistMenu(collection: .tracks(tracks))
-            if items.count == 1, let item = items.first, let track = item.track {
-                if item.favorite == true {
-                    Button("Remove from Favourites") { library.setFavorite(track, false) }
-                } else {
-                    Button("Add to Favourites") { library.setFavorite(track, true) }
+            if queueActions {
+                Button("Play Next") {
+                    playback.enqueue(tracks, next: true)
                 }
-            } else {
-                Button("Add to Favourites") {
-                    for track in tracks { library.setFavorite(track, true) }
+                Button("Play Last") {
+                    playback.enqueue(tracks, next: false)
+                }
+                Divider()
+            }
+            AddToPlaylistMenu(collection: .tracks(tracks))
+            if queueActions {
+                if items.count == 1, let item = items.first, let track = item.track {
+                    if item.favorite == true {
+                        Button("Remove from Favourites") { library.setFavorite(track, false) }
+                    } else {
+                        Button("Add to Favourites") { library.setFavorite(track, true) }
+                    }
+                } else {
+                    Button("Add to Favourites") {
+                        for track in tracks { library.setFavorite(track, true) }
+                    }
                 }
             }
         }
         if items.count == 1, let item = items.first {
-            if !tracks.isEmpty && (Self.hasAlbum(item) || Self.hasArtist(item) || Self.hasFile(item)) {
+            let link = ServiceLink.url(item.link) != nil && item.source != nil
+            if !tracks.isEmpty && (Self.hasAlbum(item) || Self.hasArtist(item) || Self.hasFile(item) || link) {
                 Divider()
             }
             if Self.hasAlbum(item) {
@@ -281,6 +316,7 @@ struct TrackActionsMenu: View {
             if Self.hasArtist(item) {
                 Button("Go to Artist") { goToArtist(item) }
             }
+            OpenInServiceButton(link: item.link, source: item.source)
             if Self.hasFile(item) {
                 Button("Show in Finder") { showInFinder(item) }
             }
@@ -430,9 +466,10 @@ struct PageHeader<Actions: View>: View {
     var body: some View {
         HStack(alignment: .lastTextBaseline, spacing: Tokens.Space.s4) {
             VStack(alignment: .leading, spacing: Tokens.Space.s1) {
-                // A large title (`type.text-h2`, bold) that scrolls with the page (after Apple Music).
+                // A large title (Luminous: `type.text-h1`, 48 pt bold) that scrolls with the page.
                 Text(title)
-                    .font(.system(size: Tokens.TypeScale.textH2.rounded(), weight: .bold))
+                    .font(.system(size: Tokens.TypeScale.textH1.rounded(), weight: .bold))
+                    .lineLimit(2)
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                     .accessibilityAddTraits(.isHeader)
                 if let subtitle, !subtitle.isEmpty {
@@ -500,7 +537,7 @@ struct PlayShuffleButtons: View {
     }
 }
 
-/// A capsule button with a glyph and a label: accent-filled, or on Mist glass.
+/// A capsule button with a glyph and a label: accent-filled, or on a Mist surface.
 struct PillButtonStyle: ButtonStyle {
     var prominent: Bool
 
@@ -534,7 +571,7 @@ private struct PillButtonBody: View {
             } else {
                 label
                     .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .glass(.mist, in: shape)
+                    .surface(in: shape)
                     .overlay(shape.fill(palette[Tokens.Ink.ink06]).opacity(hovering ? 1 : 0))
             }
         }

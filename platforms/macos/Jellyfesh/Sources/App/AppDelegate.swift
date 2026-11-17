@@ -28,11 +28,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
         let menu = NSMenu()
         let playback = model.playback
-        if playback.hasTrack, let now = playback.nowPlaying {
+        if let now = playback.playing {
             let title = NSMenuItem(title: now.title, action: nil, keyEquivalent: "")
             title.isEnabled = false
             menu.addItem(title)
-            if let artist = now.artist {
+            if let artist = NowPlayingLines.secondLine(now) {
                 let line = NSMenuItem(title: artist, action: nil, keyEquivalent: "")
                 line.isEnabled = false
                 menu.addItem(line)

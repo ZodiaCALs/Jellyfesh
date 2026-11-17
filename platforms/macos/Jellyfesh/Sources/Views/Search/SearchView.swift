@@ -1,11 +1,14 @@
 // Unified search: the library's results first, then From Your Sources, one group per enabled
-// source, each appearing as it arrives, grouped by kind. Library albums, artists and playlists open
-// their pages; a source's containers open in Browse.
+// source, each appearing as it arrives, grouped by kind; Apple Music, when on, in its own group
+// after them (ADR-0010: never merged with other sources). Library albums, artists and playlists
+// open their pages; a source's containers open in Browse; an item that cannot play here but has a
+// link opens it in its service.
 
 import SwiftUI
 
 struct SearchView: View {
     @Environment(SearchStore.self) private var search
+    @Environment(AppleMusicStore.self) private var appleMusic
     @Environment(Router.self) private var router
     @Environment(\.palette) private var palette
     @FocusState private var fieldFocused: Bool
@@ -40,14 +43,14 @@ struct SearchView: View {
                 }
                 .padding(.horizontal, Tokens.Space.s4)
                 .frame(height: 44)
-                .glass(.mist, in: Capsule())
+                .surface(in: Capsule())
                 .frame(maxWidth: 640)
 
                 if search.query.isEmpty {
                     EmptyState(title: "Search Your Music", symbol: "magnifyingglass",
                                message: "Find songs, albums and artists in your library and in your sources.")
                         .frame(maxWidth: .infinity, minHeight: 320)
-                } else if search.foundNothing {
+                } else if search.foundNothing && !appleMusicFound {
                     EmptyState(title: "No Results", symbol: "magnifyingglass",
                                message: "Try other words, or check the spelling.")
                         .frame(maxWidth: .infinity, minHeight: 320)
@@ -67,6 +70,9 @@ struct SearchView: View {
                             }
                         }
                     }
+                    if appleMusic.isAvailable {
+                        AppleMusicResultsView(search: appleMusic.unifiedSearch, showsTitle: true)
+                    }
                 }
             }
             .padding(.horizontal, Tokens.Space.s7)
@@ -80,6 +86,19 @@ struct SearchView: View {
         .onChange(of: router.searchFocusRequest, initial: true) { _, _ in
             fieldFocused = true
         }
+        .task(id: AppleMusicQuery(words: search.query, on: appleMusic.isAvailable)) {
+            // Apple Music's own search, beside the core's (its results never merge with others).
+            await appleMusic.unifiedSearch.run(search.query, using: appleMusic.catalog)
+        }
+    }
+
+    private var appleMusicFound: Bool {
+        appleMusic.isAvailable && !appleMusic.unifiedSearch.results.isEmpty
+    }
+
+    private struct AppleMusicQuery: Equatable {
+        var words: String
+        var on: Bool
     }
 }
 
@@ -106,6 +125,11 @@ private struct SearchSectionView: View {
                         .typography(Tokens.TypeRoles.section)
                         .foregroundStyle(palette[Tokens.Ink.ink90])
                         .accessibilityAddTraits(.isHeader)
+                    if let credit = sources.attribution(of: section.source) {
+                        Text(credit)
+                            .typography(Tokens.TypeRoles.listSecondary)
+                            .foregroundStyle(palette[Tokens.Ink.ink70])
+                    }
                 }
                 if let error = section.error {
                     Text(error)
@@ -133,7 +157,7 @@ private struct SearchSectionView: View {
                     guard let start = playable.firstIndex(where: { $0.id == rows[index].id }) else { return }
                     playback.play(tracks: playable.compactMap(\.track), from: start)
                 }
-                .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+                .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
             case .album:
                 LazyVGrid(columns: columns, alignment: .leading, spacing: Tokens.Space.s5) {
                     ForEach(items) { item in
@@ -151,7 +175,8 @@ private struct SearchSectionView: View {
                         ResultRow(item: item, artwork: search.artwork(for: item))
                     }
                 }
-                .glass(.mist, in: RoundedRectangle(cornerRadius: Tokens.Radius.rLg, style: .continuous))
+                .padding(.horizontal, Tokens.Space.s2)
+                .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
             }
         }
     }
@@ -172,7 +197,8 @@ private struct SearchSectionView: View {
     }
 }
 
-/// A source's album or container as a card; opens it in Browse.
+/// A source's album or container as a card; opens it in Browse, or in its service when it cannot
+/// play here and has a link.
 struct SourceCard: View {
     var item: SourceResult
     var artwork: ArtworkSource?
@@ -182,7 +208,11 @@ struct SourceCard: View {
 
     var body: some View {
         Button {
-            router.open(.browse(plugin: item.source, node: item.itemID, title: item.title))
+            if ServiceLink.isMainAction(canPlay: item.playable, link: item.link) {
+                ServiceLink.open(item.link)
+            } else {
+                router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link))
+            }
         } label: {
             VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                 ArtworkView(source: artwork, size: nil, cornerRadius: Tokens.Artwork.radiusGrid,
@@ -200,7 +230,33 @@ struct SourceCard: View {
             }
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            SourceContainerActions(item: item)
+        }
         .accessibilityLabel(Text(item.subtitle.map { "\(item.title), \($0)" } ?? item.title))
+    }
+}
+
+/// A source container's menu: Play, Shuffle, Play Next and Play Last (not for a remote source,
+/// whose songs never join the queue), then Open in {Service}.
+struct SourceContainerActions: View {
+    var item: SourceResult
+
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(SourcesStore.self) private var sources
+
+    var body: some View {
+        if item.playable && item.kind != .track {
+            let collection = CollectionReference.source(plugin: item.source, id: item.itemID)
+            Button("Play") { playback.play(collection) }
+            Button("Shuffle") { playback.play(collection, shuffle: true) }
+            if !sources.isRemote(item.source) {
+                Divider()
+                Button("Play Next") { playback.enqueue(collection, next: true) }
+                Button("Play Last") { playback.enqueue(collection, next: false) }
+            }
+        }
+        OpenInServiceButton(link: item.link, source: item.source)
     }
 }
 
@@ -241,6 +297,11 @@ struct ResultRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if item.source != SearchStore.library {
+                SourceContainerActions(item: item)
+            }
+        }
         .accessibilityLabel(Text(CountText.joined([item.title, secondLine])))
     }
 
@@ -262,6 +323,10 @@ struct ResultRow: View {
     }
 
     private func open() {
+        if ServiceLink.isMainAction(canPlay: item.playable, link: item.link) {
+            ServiceLink.open(item.link)
+            return
+        }
         if item.source == SearchStore.library, let id = Int64(item.itemID) {
             switch item.kind {
             case .artist:
@@ -278,7 +343,7 @@ struct ResultRow: View {
                 break
             }
         }
-        router.open(.browse(plugin: item.source, node: item.itemID, title: item.title))
+        router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link))
     }
 }
 

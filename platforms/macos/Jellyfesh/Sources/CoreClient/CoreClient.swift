@@ -57,6 +57,14 @@ protocol CoreClient: AnyObject {
     /// Saves the session and stops the core. Afterwards queries throw `.shutDown`.
     func shutdown()
 
+    /// Registers a player the app provides under the source id `id` (no dots, such as
+    /// `apple-music`), shown as `name` (ADR-0018 item 5). Playing tracks whose source is `id`
+    /// then starts a remote session on it. Registering an id again replaces its player.
+    func registerExternalPlayer(id: String, name: String, player: AppPlayer) throws
+
+    /// Removes the player registered under `id`.
+    func unregisterExternalPlayer(id: String)
+
     // Queries: synchronous in the core, run off the main thread here.
     func albums(order: AlbumOrder, descending: Bool, offset: Int, limit: Int) async throws -> [AlbumSummary]
     func artists(offset: Int, limit: Int) async throws -> [ArtistSummary]

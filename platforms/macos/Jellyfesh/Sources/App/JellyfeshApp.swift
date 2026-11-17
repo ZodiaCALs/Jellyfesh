@@ -40,6 +40,7 @@ extension View {
             .environment(model.queue)
             .environment(model.search)
             .environment(model.sources)
+            .environment(model.appleMusic)
             .environment(model.toasts)
             .environment(model.system)
             .environment(\.artworkLoader, model.artwork)

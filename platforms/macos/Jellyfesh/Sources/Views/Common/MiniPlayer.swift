@@ -2,7 +2,8 @@
 // Veil capsule with `player.mini-radius` corners, the artwork, two lines of type and one control,
 // play and pause (Misty CMP-02: art, two lines, one progress indicator, one control; never
 // accent-filled, COL-04). Its progress is a straight 2 pt line along the bottom edge, inset by the
-// corners, redrawn only when it grows by a pixel. Clicking it opens Now Playing.
+// corners, redrawn only when it grows by a pixel. Clicking it opens Now Playing. While a remote
+// session runs it shows the session's track with "Playing on {Device}" (ADR-0018).
 
 import SwiftUI
 
@@ -13,22 +14,21 @@ struct MiniPlayer: View {
     @Environment(\.effects) private var effects
 
     var body: some View {
-        if let now = playback.nowPlaying {
+        if let item = playback.playing {
             FloatingGlass(cornerRadius: SeekGeometry.miniRadius) {
                 HStack(spacing: Tokens.Space.s3) {
                     Button {
                         router.showNowPlaying(true, reduceMotion: !effects.animates)
                     } label: {
                         HStack(spacing: Tokens.Space.s3) {
-                            ArtworkView(source: now.artwork.flatMap { ArtworkSource(hash: nil, location: $0) },
-                                        size: 44, cornerRadius: Tokens.Radius.rMd)
-                            NowPlayingLines(now: now)
+                            ArtworkView(source: item.artwork, size: 44, cornerRadius: Tokens.Radius.rMd)
+                            NowPlayingLines(item: item)
                             Spacer(minLength: 0)
                         }
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(Text(MiniPlayer.label(for: now)))
+                    .accessibilityLabel(Text(MiniPlayer.label(for: item)))
                     .accessibilityHint(Text("Opens Now Playing"))
                     .help(Text("Show Now Playing"))
 
@@ -44,38 +44,73 @@ struct MiniPlayer: View {
                 }
             }
             .elevation(Tokens.Elevation.shadow2)
-            .padding(.horizontal, Tokens.Space.s5)
-            .padding(.bottom, Tokens.Space.s4)
+            .padding(.horizontal, LuminousGeometry.playerMargin)
+            .padding(.bottom, LuminousGeometry.playerMargin)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
-    static func label(for now: NowPlayingInfo) -> String {
-        if let artist = now.artist {
-            return String(localized: "Now Playing: \(now.title), \(artist)")
+    static func label(for item: PlayingItem) -> String {
+        if let second = NowPlayingLines.secondLine(item) {
+            return String(localized: "Now Playing: \(item.title), \(second)")
         }
-        return String(localized: "Now Playing: \(now.title)")
+        return String(localized: "Now Playing: \(item.title)")
     }
 }
 
-/// The title and the artist under it (the mini player and the player bar).
+/// The title and the line under it (the mini player and the player bar): the artist, or for a
+/// remote session "Playing on {Device}", with its last error in a quieter line below.
 struct NowPlayingLines: View {
-    var now: NowPlayingInfo
+    var item: PlayingItem
     @Environment(\.palette) private var palette
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(now.title)
+            Text(item.title)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(palette[Tokens.Ink.ink90])
                 .lineLimit(1)
-            if let artist = now.artist {
-                Text(artist)
+            if let second = Self.secondLine(item) {
+                Text(second)
                     .font(.system(size: 12))
                     .foregroundStyle(palette[Tokens.Ink.ink70])
                     .lineLimit(1)
             }
+            if let error = item.remote?.error {
+                Text(error)
+                    .font(.system(size: 11))
+                    .foregroundStyle(palette[Tokens.Ink.ink50])
+                    .lineLimit(1)
+                    .help(error)
+            }
         }
+    }
+
+    /// The artist; "Playing on {Device}" (or the service) for a remote session.
+    static func secondLine(_ item: PlayingItem) -> String? {
+        if let remote = item.remote {
+            return RemoteText.playingOn(remote)
+        }
+        return item.artist?.nilIfEmpty
+    }
+}
+
+/// The words of a remote session (docs/ui.md, "Links and remote playback").
+enum RemoteText {
+    /// "Playing on {Device}"; the service's name while the device is not known yet.
+    static func playingOn(_ remote: PlayingItem.Remote) -> String {
+        if let device = remote.device {
+            return String(localized: "Playing on \(device)")
+        }
+        return remote.service
+    }
+
+    static func lyricsHidden(service: String) -> String {
+        String(localized: "Lyrics aren't shown while \(service) plays.")
+    }
+
+    static func upNextElsewhere(service: String) -> String {
+        String(localized: "Up Next is in \(service).")
     }
 }
 

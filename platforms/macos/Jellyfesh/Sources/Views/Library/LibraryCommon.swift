@@ -3,9 +3,9 @@
 
 import SwiftUI
 
-/// An album in a grid or shelf: artwork (`artwork.radius-grid`), title and artist. Opens the
-/// album. Hovering lifts the cover 2 pt onto `shadow-2` and shows a 36 pt glass play button in its
-/// bottom start corner; a press scales it to 97 % (after Apple Music).
+/// An album in a grid or shelf: artwork (`artwork.radius-grid`, Luminous 16 pt on `shadow-2`),
+/// title and artist. Opens the album. Hovering or focusing lifts the cover 4 pt onto `shadow-3`
+/// and shows a 40 pt play button in its bottom start corner; a press scales it to 97 %.
 struct AlbumCard: View {
     var album: AlbumSummary
     /// Artwork side in points; nil fills the grid cell.
@@ -16,27 +16,30 @@ struct AlbumCard: View {
     @Environment(\.palette) private var palette
     @Environment(\.effects) private var effects
     @State private var hovering = false
+    @FocusState private var focused: Bool
 
     var body: some View {
+        let lifted = hovering || focused
         VStack(alignment: .leading, spacing: Tokens.Space.s2) {
             Button {
                 router.open(.album(album))
             } label: {
                 ArtworkView(source: album.artworkHash.map(ArtworkSource.hash), size: size,
                             cornerRadius: Tokens.Artwork.radiusGrid, placeholder: "square.stack")
-                    .elevation(hovering ? Tokens.Elevation.shadow2 : Tokens.Elevation.shadow1)
+                    .elevation(lifted ? Tokens.Elevation.shadow3 : Tokens.Elevation.shadow2)
             }
             .buttonStyle(PressScaleStyle(scale: 0.97))
+            .focused($focused)
             .overlay(alignment: .bottomLeading) {
                 if hovering {
                     Button {
                         playback.play(.album(id: album.id))
                     } label: {
                         Image(systemName: "play.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(palette[Tokens.Ink.ink90])
-                            .frame(width: 36, height: 36)
-                            .glass(.mist, in: Circle())
+                            .frame(width: 40, height: 40)
+                            .surface(in: Circle())
                             .contentShape(Circle())
                     }
                     .buttonStyle(PressScaleStyle(scale: 0.92))
@@ -46,8 +49,8 @@ struct AlbumCard: View {
                     .transition(.opacity)
                 }
             }
-            .offset(y: hovering && effects.animates ? -2 : 0)
-            .animation(Motion.unless(!effects.animates, Motion.hover), value: hovering)
+            .offset(y: lifted && effects.animates ? -LuminousGeometry.coverLift : 0)
+            .animation(Motion.unless(!effects.animates, Motion.hover), value: lifted)
             VStack(alignment: .leading, spacing: 1) {
                 Text(album.title.isEmpty ? String(localized: "Unknown Album") : album.title)
                     .typography(Tokens.TypeRoles.listTitle)
@@ -90,10 +93,10 @@ struct TrackStack: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 TrackRowView(item: item, style: style, isCurrent: isCurrent(item), isPlaying: playback.isPlaying)
                     .padding(.horizontal, Tokens.Space.s2)
-                    .onTapGesture(count: 2) { if item.canPlay { play(index) } }
+                    .onTapGesture(count: 2) { mainAction(item, index) }
                     .contextMenu { TrackActionsMenu(items: [item]) }
                     .accessibilityAddTraits(.isButton)
-                    .accessibilityAction { if item.canPlay { play(index) } }
+                    .accessibilityAction { mainAction(item, index) }
                 if index < items.count - 1 {
                     Divider().opacity(0.5)
                 }
@@ -103,6 +106,15 @@ struct TrackStack: View {
 
     private func isCurrent(_ item: TrackItem) -> Bool {
         item.track != nil && item.track == playback.nowPlaying?.track
+    }
+
+    /// Plays from the row; an item that cannot play here opens its link instead.
+    private func mainAction(_ item: TrackItem, _ index: Int) {
+        if item.canPlay {
+            play(index)
+        } else if item.opensLink {
+            ServiceLink.open(item.link)
+        }
     }
 }
 
@@ -116,10 +128,13 @@ struct TrackListActions: ViewModifier {
         content.contextMenu(forSelectionType: TrackItem.ID.self) { ids in
             TrackActionsMenu(items: items.filter { ids.contains($0.id) })
         } primaryAction: { ids in
-            guard let id = ids.first, let index = items.firstIndex(where: { $0.id == id }), items[index].canPlay else {
-                return
+            guard let id = ids.first, let index = items.firstIndex(where: { $0.id == id }) else { return }
+            if items[index].canPlay {
+                play(index)
+            } else if items[index].opensLink {
+                // It cannot play here: its main action opens it in its service.
+                ServiceLink.open(items[index].link)
             }
-            play(index)
         }
     }
 }

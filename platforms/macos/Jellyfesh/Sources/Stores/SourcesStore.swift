@@ -51,6 +51,9 @@ final class SourcesStore {
     private(set) var unavailable = false
     /// The sign-in flow the sheet shows.
     var signIn: SignInFlow?
+    /// Players the app provides (Apple Music), by source id: their names. They play like remote
+    /// sources (ADR-0018 item 5).
+    private(set) var externalSources: [String: String] = [:]
 
     @ObservationIgnored private var browseHandlers: [CommandID: (BrowseBatch) -> Void] = [:]
     @ObservationIgnored private var browseOrder: [CommandID] = []
@@ -91,7 +94,32 @@ final class SourcesStore {
     /// The name to show for a source id (`library` is the local library).
     func name(of source: String) -> String {
         if source == SearchStore.library { return String(localized: "Library") }
+        if let name = externalSources[source] { return name }
         return plugin(source)?.name ?? source
+    }
+
+    /// Whether a source plays on the person's own devices (a remote plugin, or a player the app
+    /// provides): its songs start a remote session and never join the queue, so Play Next, Play
+    /// Last, Add to Playlist and the favourites are not offered for them.
+    func isRemote(_ source: String) -> Bool {
+        externalSources[source] != nil || plugin(source)?.remotePlayback == true
+    }
+
+    /// Whether a track is a remote source's.
+    func isRemote(_ track: TrackReference?) -> Bool {
+        if case .source(let song)? = track { return isRemote(song.plugin) }
+        return false
+    }
+
+    /// "Content from {Service}" for a source whose terms ask its views to credit it.
+    func attribution(of source: String) -> String? {
+        guard plugin(source)?.attribution != nil else { return nil }
+        return String(localized: "Content from \(name(of: source))")
+    }
+
+    /// A player the app provides was registered with the core (or removed, with nil).
+    func setExternalSource(_ id: String, name: String?) {
+        externalSources[id] = name
     }
 
     // MARK: Commands

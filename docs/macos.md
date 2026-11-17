@@ -1,4 +1,4 @@
-# The macOS app (v0.0.5)
+# The macOS app (v0.0.6)
 
 SwiftUI on macOS 14.2 and later, over the Rust core through the UniFFI bindings
 ([`ffi.md`](ffi.md)). The app holds no business logic (ADR-0001): it shows the
@@ -9,6 +9,55 @@ networking stay in the core.
 been compiled yet; the first CI build on a `macos-15` runner is its first
 compile. The names it assumes from the generated bindings are listed below so
 they can be checked quickly.
+
+## v0.0.6: links, remote playback, Luminous and Apple Music
+
+Written without a Swift toolchain, like everything here: the first CI build is
+its first compile.
+
+* **Links** (ADR-0018). `SourceResult.link` and `NowPlayingInfo.link` carry the
+  core's `link`; Open in {Service} (`OpenInServiceButton`, `NSWorkspace.open`,
+  `https` only) sits after Go to Artist in the song menu, in the browse page's
+  More menu, in source cards' and rows' menus, in Now Playing's More and under
+  About This Song. An item that cannot play here but has a link opens it as its
+  main action (double-click, Return, VoiceOver), next to its reason.
+* **Remote playback.** `RemoteSession` mirrors the `Remote` slice. While it has
+  a source, `PlaybackStore.playing` is the session's track: the player bar, the
+  mini player, Now Playing and the system's Now Playing show it with "Playing on
+  {Device}" (its error in a quieter line), progress comes from the session's
+  anchor (a second `PlaybackClock`), and shuffle, repeat, seek and the transport
+  stay the usual commands. The device button opens Devices (it sends
+  `Remote { Refresh }`; kinds as SF Symbols, the playing device checked;
+  choosing sends `Transfer`); the volume sets the device's (`SetVolume`) and
+  hides without one; More holds Open in {Service} and Stop Controlling (`End`).
+  Lyrics say "Lyrics aren't shown while {Service} plays.", the queue "Up Next is
+  in {Service}."; a session that ends with an error says so once (by slice
+  version, so batching cannot hide it). Remote sources' songs offer no Play
+  Next, Play Last, Add to Playlist or favourites.
+* **Luminous** (docs/ui.md). The field has four larger glows at
+  `field.aurora-strength` (`LuminousField`); grouped surfaces are the Mist tint
+  without live blur plus shadow-1 (`surface(in:)`); the player bar is a floating
+  Veil capsule (r-2xl) and the pages fade out just above the player
+  (`PlayerFadeMask`, replacing the edge blur); Now Playing is a stage: the
+  backdrop, the artwork up to 380 pt on shadow-3, lyrics up to 40 pt at line
+  height 1.18 with inactive lines at 92 % and a 40 ms cascade, and one floating
+  Veil dock with every control. Page titles are `text-h1` (48 pt); album covers
+  have radius 16 on shadow-2 and lift 4 pt onto shadow-3 on hover or focus. The
+  sidebar keeps the system sidebar material and Settings its native forms.
+* **Apple Music** (ADR-0010, ADR-0018 item 5). `AppleMusicPlayer` is the app's
+  `AppPlayer`, bridged to the core's `ExternalPlayer` by `FFIExternalPlayer` and
+  registered as `apple-music` ("Apple Music"): one device, This Mac, without a
+  volume; tracks, albums (numeric ids) and playlists (`pl.` ids) play through
+  `ApplicationMusicPlayer`. The core calls it on its session thread; each call
+  hops to the main actor and waits on a semaphore (never on the main thread,
+  8 s, 15 s to start playing). Apple Music is offered in Sources › Add a Source
+  only when the code signature has `com.apple.application-identifier` (read with
+  `SecTaskCopyValueForEntitlement`, without MusicKit), turned on only after the
+  person agrees, and shown only once MusicKit authorises the app, a developer
+  token can be fetched and the subscription can play the catalogue; otherwise it
+  is hidden (ad-hoc builds never offer it). Its page and its own group on the
+  Search page search the catalogue (songs, albums); results stay in memory.
+  `NSAppleMusicUsageDescription` is in `Info.plist`.
 
 ## v0.0.4 design pass
 
@@ -362,10 +411,27 @@ message instead; `import JellyfeshFFIFFI` is behind `#if canImport`, so a wrong
 include path shows up as missing `RustBuffer` declarations rather than a
 missing module.
 
+**v0.0.6 additions** (checked against `Generated/JellyfeshFFI.swift` from this revision):
+`SourceItem.link`, `NowPlaying.link`, `PluginSummary.remotePlayback`/`attribution`,
+`Snapshot.remote`, `Event.remote(snapshot:)`, `Command.remote(action:)` with
+`RemoteAction.refresh`, `.transfer(device:)`, `.setVolume(percent:)`, `.end`;
+`RemoteSnapshot` (`version`, `source`, `sourceName`, `status`, `item`, `context`, `anchor`,
+`shuffle`, `` `repeat` ``, `device`, `devices`, `error`), `RemoteDevice` (`volumePercent`),
+`RemoteDeviceKind` (`.computer` … `.other`); `protocol ExternalPlayer` (`devices()`,
+`state()`, `play(context:tracks:start:)`, `resume()`, `pause()`, `next()`, `previous()`,
+`seek(positionMs:)`, `setVolume(percent:)`, `setShuffle(on:)`, `setRepeat(mode:)`,
+`transfer(device:)`, all `throws`), `ExternalItem` (`artworkUrl`), `ExternalState`,
+`ExternalPlayerError.Failed(reason:)`, and `JellyfeshCore.registerExternalPlayer(id:name:player:)`
+(throws) / `unregisterExternalPlayer(id:)`.
+
 ## Known gaps
 
 * Artwork URLs from sources are not fetched (networking stays in the core);
-  those rows show a placeholder until the core hands out file paths.
+  those rows show a placeholder until the core hands out file paths. That
+  includes a remote session's track and Apple Music's results.
+* Apple Music needs a paid team, an App ID with the MusicKit App Service and a
+  provisioning profile; whether a Developer ID build can use MusicKit is open
+  (ADR-0010). Until then it stays hidden.
 * The macOS 26 layered icon (Icon Composer `.icon` with Ice and Steel) is not
   built: on every version the Dock switch happens at run time.
 * `Info.plist` usage strings are English only.

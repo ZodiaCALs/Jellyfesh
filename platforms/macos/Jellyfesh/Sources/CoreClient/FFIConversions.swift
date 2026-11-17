@@ -288,7 +288,8 @@ extension NowPlayingInfo {
     init(_ n: NowPlaying) {
         self.init(uid: n.uid, track: TrackReference(n.track), path: n.path, title: n.title,
                   artist: n.artist, album: n.album, durationMs: n.durationMs,
-                  artwork: n.artwork.map(ArtworkLocation.init), format: n.format.map(StreamFormat.init))
+                  artwork: n.artwork.map(ArtworkLocation.init), format: n.format.map(StreamFormat.init),
+                  link: n.link)
     }
 }
 
@@ -532,7 +533,8 @@ extension SourcePlugin {
                   badge: p.badge == .official ? .official : .community, vendorPlayback: p.vendorPlayback,
                   capabilities: p.capabilities, signInMethods: p.authMethods.map(SignInMethod.init),
                   enabled: p.enabled, account: p.account, needsDisclosure: p.needsDisclosure,
-                  settingsSchemaJSON: p.settingsSchemaJson, settingsJSON: p.settingsJson, iconPath: p.icon)
+                  settingsSchemaJSON: p.settingsSchemaJson, settingsJSON: p.settingsJson, iconPath: p.icon,
+                  remotePlayback: p.remotePlayback, attribution: p.attribution)
     }
 }
 
@@ -582,6 +584,16 @@ extension ResultKind {
         case .folder: self = .folder
         }
     }
+
+    var ffi: ItemKind {
+        switch self {
+        case .track: return .track
+        case .album: return .album
+        case .artist: return .artist
+        case .playlist: return .playlist
+        case .folder: return .folder
+        }
+    }
 }
 
 extension SourceResult {
@@ -590,7 +602,7 @@ extension SourceResult {
                   subtitle: i.subtitle, album: i.album, durationMs: i.durationMs,
                   artwork: i.artwork.map(ArtworkLocation.init), playable: i.playable,
                   unplayableReason: i.unplayableReason, track: i.track.map(TrackReference.init),
-                  alsoIn: i.alsoIn)
+                  alsoIn: i.alsoIn, link: i.link)
     }
 }
 
@@ -605,6 +617,83 @@ extension BrowseBatch {
     init(_ u: BrowseUpdate) {
         self.init(request: u.request, plugin: u.plugin, node: u.node, items: u.items.map(SourceResult.init),
                   nextPage: u.nextPage, error: u.error)
+    }
+}
+
+// MARK: - Remote sessions
+
+extension ServiceDeviceKind {
+    init(_ k: RemoteDeviceKind) {
+        switch k {
+        case .computer: self = .computer
+        case .smartphone: self = .smartphone
+        case .speaker: self = .speaker
+        case .tv: self = .tv
+        case .car: self = .car
+        case .other: self = .other
+        }
+    }
+
+    var ffi: RemoteDeviceKind {
+        switch self {
+        case .computer: return .computer
+        case .smartphone: return .smartphone
+        case .speaker: return .speaker
+        case .tv: return .tv
+        case .car: return .car
+        case .other: return .other
+        }
+    }
+}
+
+extension ServiceDevice {
+    init(_ d: RemoteDevice) {
+        self.init(id: d.id, name: d.name, kind: ServiceDeviceKind(d.kind), active: d.active,
+                  volumePercent: d.volumePercent)
+    }
+
+    var ffi: RemoteDevice {
+        RemoteDevice(id: id, name: name, kind: kind.ffi, active: active, volumePercent: volumePercent)
+    }
+}
+
+extension RemoteSession {
+    init(_ r: RemoteSnapshot) {
+        self.init(version: r.version, source: r.source, sourceName: r.sourceName, status: PlaybackStatus(r.status),
+                  item: r.item.map(SourceResult.init), context: r.context.map(SourceResult.init),
+                  anchor: Anchor(r.anchor), shuffle: r.shuffle, repeatMode: RepeatOption(r.`repeat`),
+                  device: r.device.map(ServiceDevice.init), devices: r.devices.map(ServiceDevice.init),
+                  error: r.error)
+    }
+}
+
+extension RemoteRequest {
+    var ffi: RemoteAction {
+        switch self {
+        case .refresh: return .refresh
+        case .transfer(let device): return .transfer(device: device)
+        case .setVolume(let percent): return .setVolume(percent: percent)
+        case .end: return .end
+        }
+    }
+}
+
+extension ExternalMedia {
+    init(_ i: ExternalItem) {
+        self.init(kind: ResultKind(i.kind), id: i.id, title: i.title, artist: i.artist, album: i.album,
+                  durationMs: i.durationMs, artworkURL: i.artworkUrl)
+    }
+
+    var ffi: ExternalItem {
+        ExternalItem(kind: kind.ffi, id: id, title: title, artist: artist, album: album, durationMs: durationMs,
+                     artworkUrl: artworkURL)
+    }
+}
+
+extension ExternalPlayerReport {
+    var ffi: ExternalState {
+        ExternalState(item: item?.ffi, context: context?.ffi, playing: playing, positionMs: positionMs,
+                      shuffle: shuffle, `repeat`: repeatMode.ffi, device: device?.ffi)
     }
 }
 
@@ -626,7 +715,7 @@ extension CoreState {
                   nowPlaying: s.nowPlaying.map(NowPlayingInfo.init), lyrics: s.lyrics.map(LyricsState.init),
                   theme: s.theme.map(ThemeState.init), libraryRevision: s.libraryRevision,
                   scanning: s.scanning, settings: AppSettings(s.settings), devices: DevicesState(s.devices),
-                  sources: SourcesState(s.sources), muted: s.muted)
+                  sources: SourcesState(s.sources), muted: s.muted, remote: RemoteSession(s.remote))
     }
 }
 
@@ -644,6 +733,7 @@ extension CoreEvent {
         case .settings(let snapshot): self = .settings(AppSettings(snapshot))
         case .devices(let snapshot): self = .devices(DevicesState(snapshot))
         case .sources(let snapshot): self = .sources(SourcesState(snapshot))
+        case .remote(let snapshot): self = .remote(RemoteSession(snapshot))
         case .auth(let update): self = .signIn(SignInUpdate(update))
         case .searchResults(let update): self = .searchResults(SearchBatch(update))
         case .browsePage(let update): self = .browsePage(BrowseBatch(update))
@@ -708,6 +798,7 @@ extension CoreCommand {
         case .logout(let plugin): return .logout(plugin: plugin)
         case .search(let query, let area): return .search(query: query, scope: area.ffi)
         case .browse(let plugin, let node, let page): return .browse(plugin: plugin, node: node, page: page)
+        case .remote(let request): return .remote(action: request.ffi)
         }
     }
 }

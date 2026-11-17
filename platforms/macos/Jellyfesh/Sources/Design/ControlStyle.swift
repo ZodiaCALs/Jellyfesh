@@ -211,20 +211,6 @@ struct SegmentedControl<Value: Hashable>: View {
     }
 }
 
-/// Previous, play and next grouped in one Veil capsule (D: Apple's glass grouping).
-struct TransportCapsule<Content: View>: View {
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        HStack(spacing: 6) {
-            content
-        }
-        .padding(6)
-        .glass(.veil, in: Capsule())
-        .elevation(Tokens.Elevation.shadow2)
-    }
-}
-
 /// A section heading on library pages (`type-roles.section`).
 struct SectionTitle: View {
     var title: LocalizedStringKey

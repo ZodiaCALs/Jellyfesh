@@ -33,6 +33,8 @@ final class AppModel {
     let queue: QueueStore
     let search: SearchStore
     let sources: SourcesStore
+    /// Apple Music through MusicKit, a player the app provides (ADR-0018 item 5).
+    let appleMusic: AppleMusicStore
     let pages: LibraryPages
     let artwork: ArtworkLoader
     /// The Settings tab to show when the window opens.
@@ -64,7 +66,9 @@ final class AppModel {
         lyrics = LyricsStore()
         queue = QueueStore(client: client)
         search = SearchStore(client: client, tracker: tracker)
-        sources = SourcesStore(client: client, tracker: tracker, toasts: toasts)
+        let sources = SourcesStore(client: client, tracker: tracker, toasts: toasts)
+        self.sources = sources
+        appleMusic = AppleMusicStore(client: client, sources: sources, toasts: toasts, service: { MusicKitService() })
         pages = LibraryPages(client: client)
         nowPlayingCenter = NowPlayingCenter(playback: playback, artwork: artwork)
         dockIcon = DockIcon()
@@ -104,6 +108,9 @@ final class AppModel {
         nowPlayingCenter.start()
         nowPlayingCenter.update()
         system.start()
+        Task { [appleMusic] in
+            await appleMusic.start()
+        }
         let watcher = DeviceWatcher { [weak self] in
             self?.playback.refreshDevices()
         }
@@ -154,6 +161,8 @@ final class AppModel {
         theme.apply(state.theme)
         settings.apply(state.settings)
         sources.apply(state.sources)
+        // Shown only as events: the state before this launch has no session that just ended.
+        playback.apply(remote: state.remote)
         library.apply(scanning: state.scanning)
         library.apply(revision: state.libraryRevision)
     }
@@ -189,6 +198,12 @@ final class AppModel {
                 playback.apply(devices: state)
             case .sources(let state):
                 sources.apply(state)
+            case .remote(let state):
+                // A session that ended with an error says so once.
+                if let message = playback.apply(remote: state) {
+                    toasts.show(message)
+                }
+                mediaChanged = true
             case .signIn(let update):
                 sources.apply(signIn: update)
             case .searchResults(let batch):

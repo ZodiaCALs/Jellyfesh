@@ -49,11 +49,13 @@ enum LyricsLayout {
         active ?? lastStarted
     }
 
-    /// The lyric line size for a lyrics column `width` points wide: 30 by default, fluid from 24
-    /// to 40 (`lyrics.line`), in whole points so text does not reflow on every resize step.
+    /// The lyric line size for a lyrics column `width` points wide (`lyrics.line`): Luminous's 40
+    /// once the column is 640 pt wide, fluid down to 28 in narrow windows, in whole points so text
+    /// does not reflow on every resize step.
     static func lineSize(forWidth width: CGFloat) -> CGFloat {
         let fluid = Tokens.Lyrics.lineFluid
-        return min(max(width * 0.05, fluid.min), fluid.max).rounded()
+        guard width.isFinite else { return fluid.max }
+        return min(max(width / 16, fluid.min), fluid.max).rounded()
     }
 
     /// The line height multiple for a line: generous for Han, Kana and Hangul (Misty TYP-08).
