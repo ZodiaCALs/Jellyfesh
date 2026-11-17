@@ -48,7 +48,7 @@ for arg in "$@"; do
   case "$arg" in
     --test) run_tests=1 ;;
     --skip-core) skip_core=1 ;;
-    -h | --help) sed -n '2,37p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,34p' "$0"; exit 0 ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
