@@ -1320,7 +1320,7 @@ mod tests {
         let stylesheet = css(&tokens).unwrap();
         assert!(stylesheet.contains("  --jf-space-s4: 16px;\n"));
         assert!(stylesheet.contains("  --jf-motion-ease-fluid: cubic-bezier(0.22, 1, 0.36, 1);\n"));
-        assert!(stylesheet.contains("  --jf-lyrics-line-size: 30px;\n"));
+        assert!(stylesheet.contains("  --jf-lyrics-line-size: 40px;\n"));
         assert!(stylesheet.contains("var(--jf-shadow-1-0)"));
         assert!(stylesheet.contains(":root[data-appearance=\"dark\"] {"));
         assert!(!stylesheet.contains('#'), "no baked colour");

@@ -254,9 +254,12 @@ final class AppleMusicStoreTests: XCTestCase {
         return UserDefaults(suiteName: name)!
     }
 
-    private func makeStore(_ service: FakeAppleMusicService?, client: FakeCoreClient = FakeCoreClient(),
-                       sources: SourcesStore? = nil, toasts: ToastCenter = ToastCenter(),
+    // Main-actor objects are made in the body: default arguments are evaluated outside the actor.
+    private func makeStore(_ service: FakeAppleMusicService?, client: FakeCoreClient? = nil,
+                       sources: SourcesStore? = nil, toasts: ToastCenter? = nil,
                        defaults: UserDefaults, build: String = "6") -> AppleMusicStore {
+        let client = client ?? FakeCoreClient()
+        let toasts = toasts ?? ToastCenter()
         let sources = sources ?? SourcesStore(client: client, tracker: CommandTracker(), toasts: toasts)
         return AppleMusicStore(client: client, sources: sources, toasts: toasts, defaults: defaults, build: build,
                                deviceName: "This Mac", service: { service })
