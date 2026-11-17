@@ -71,17 +71,24 @@ by the project; see the release notes' known limitations.
 | **Jellyfin** | Browse, search and stream your server | Your Jellyfin server |
 | **Navidrome, Subsonic, OpenSubsonic** | Browse, search and stream your server | Your server (Navidrome, Airsonic, Gonic, Ampache and others) |
 | **QQ Music** (official API, beta) | Search, charts, daily picks and playlists; songs open in QQ Music | Your own personal QQ Music API key |
-| **Spotify** (remote control, beta) | Search and browse your library, then play on your own Spotify devices with Jellyfesh as the remote | Spotify Premium and your own Spotify developer Client ID |
+| **Spotify** (remote control, beta) | Search and browse your library, then play on your own Spotify devices with Jellyfesh as the remote | Spotify Premium; sign in with your Spotify account (or use your own Spotify developer app) |
 | **NetEase Cloud Music** (official open platform, beta) | Your playlists, streamed in Jellyfesh | Your own NetEase open-platform App ID and key |
 | **Apple Music** (macOS, beta) | Search and play the Apple Music catalogue through MusicKit | An Apple Music subscription, and a build signed with Jellyfesh's MusicKit identity (not yet available) |
-| **Community plugins** | Sources made by others, off until you allow them | Your consent to the community-plugin disclosure |
+| **NetEase Cloud Music** (unofficial, community) | Search, your liked songs and playlists, streaming and synced lyrics | Sign in by QR code with your NetEase Cloud Music account; allow community plugins first |
+| **QQ Music** (unofficial, community) | Search, your liked songs and playlists, streaming and synced lyrics | Sign in by QR code with WeChat; allow community plugins first |
+| **Other community plugins** | Sources made by others, off until you allow them | Your consent to the community-plugin disclosure |
 
 Official plugins are bundled with the apps and signed with the Jellyfesh
-release key (see the release notes' "Signing and trust"). Each service is
-used through its own official interface, with your own account and keys;
-Jellyfesh never works around a paywall, region lock or other restriction.
-The service plugins have so far been tested against mock services only.
-Plugin pages: [`docs/plugins/`](docs/plugins/).
+release key (see the release notes' "Signing and trust"); each uses the
+service's own official interface. The two **unofficial community plugins**
+are bundled too, so you can sign in to NetEase Cloud Music or QQ Music with
+just your account and a QR code: they use the services' private web
+interfaces, are not signed by Jellyfesh, and stay off until you turn on
+**Allow Community Plugins** and accept their disclosure (they may break when
+a service changes, and may be against its terms). No plugin works around a
+paywall, region lock or other restriction. All service plugins have so far
+been tested against mock services only. Plugin pages:
+[`docs/plugins/`](docs/plugins/).
 
 ## Download
 

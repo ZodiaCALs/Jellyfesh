@@ -39,6 +39,11 @@ macOS, and item links and remote playback in the core
   key kept in the keystore, and a fixed OAuth redirect port; 1.0 plugins
   load unchanged.
 - `ExternalPlayer` in the core and the FFI, for players an app provides.
+- **Sign in with just your account:** the unofficial NetEase Cloud Music
+  and QQ Music community plugins (QR-code sign-in) are bundled with the
+  apps, installed when you allow community plugins; Spotify release builds
+  sign in through Jellyfesh's own Spotify app, with the setting Your Own
+  Client ID for everyone else.
 
 ### Changed
 
@@ -50,6 +55,8 @@ macOS, and item links and remote playback in the core
 - The bundled Subsonic and Jellyfin plugins are 0.0.6, built with plugin
   SDK 1.1 (still installable in v0.0.5).
 - `rsa` 0.10.0, which fixes RUSTSEC-2023-0071.
+- Bundled community packages wait, without an error, until community
+  plugins are allowed (ADR-0012 amended).
 - This changelog follows Keep a Changelog.
 
 ### Fixed
