@@ -6,11 +6,18 @@
 #      core-bindings/src/main/jniLibs;
 #   3. generates the UniFFI Kotlin bindings and the design tokens (cargo xtask);
 #   4. notes whether the official plugins (dist/plugins/*.jfpkg) are there to bundle;
-#   5. runs ./gradlew :app:assembleRelease and copies the APK to dist/android/.
+#   5. runs ./gradlew :app:assembleRelease and copies the APK to dist/android/;
+#   6. with --play-bundle, also ./gradlew :app:bundleRelease for Google Play (the distribution
+#      google-play), copied to dist/android/ as jellyfesh-<version>-google-play-unsigned.aab.
 #
-# Usage: platforms/android/scripts/build.sh [--skip-core] [--debug-core]
-#   --skip-core   reuse the libraries already in core-bindings/src/main/jniLibs
-#   --debug-core  build the core without --release (faster, larger, slower at run time)
+# Usage: platforms/android/scripts/build.sh [--skip-core] [--debug-core] [--play-bundle]
+#   --skip-core    reuse the libraries already in core-bindings/src/main/jniLibs
+#   --debug-core   build the core without --release (faster, larger, slower at run time)
+#   --play-bundle  also build the unsigned App Bundle for Google Play
+#
+# Edition and distribution (ADR-0021, docs/github.md; app/build.gradle.kts): JF_EDITION (community,
+# the default, or commercial: no unofficial community plugins bundled), JF_DISTRIBUTION of the APK
+# (source, the default, or direct) and PLAY_LICENSE_KEY, from the environment.
 #
 # Needs: ANDROID_HOME (or ANDROID_SDK_ROOT) with platform 37 and build tools, an NDK (ANDROID_NDK_HOME
 # or $ANDROID_HOME/ndk/<version>), JDK 17+, rustup, cmake (libopus), and on Linux the ALSA headers
@@ -23,11 +30,13 @@ root="$(cd "$android/../.." && pwd)"
 
 skip_core=false
 profile=release
+play_bundle=false
 for arg in "$@"; do
     case "$arg" in
         --skip-core) skip_core=true ;;
         --debug-core) profile=debug ;;
-        -h | --help) sed -n '2,20p' "$0"; exit 0 ;;
+        --play-bundle) play_bundle=true ;;
+        -h | --help) sed -n '2,24p' "$0"; exit 0 ;;
         *) echo "unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -84,9 +93,14 @@ cargo xtask tokens --target kotlin
 [ -f "$android/core-bindings/src/main/kotlin/org/jellyfesh/ffi/jellyfesh.kt" ] || fail "the bindings were not generated"
 
 # ---- 4. bundled plugins ------------------------------------------------------------------------
-note "Official plugins to bundle"
+note "Official plugins to bundle (edition ${JF_EDITION:-community})"
 if compgen -G "$root/dist/plugins/*.jfpkg" >/dev/null; then
-    ls -1 "$root"/dist/plugins/*.jfpkg
+    for package in "$root"/dist/plugins/*.jfpkg; do
+        case "${JF_EDITION:-community}:$(basename "$package")" in
+            commercial:community.unofficial.*) echo "not bundled (commercial edition): $package" ;;
+            *) echo "$package" ;;
+        esac
+    done
 else
     echo "note: dist/plugins has no .jfpkg files (the plugin packaging script makes them);"
     echo "      the APK is built without bundled plugins."
@@ -104,3 +118,15 @@ mkdir -p "$root/dist/android"
 out="$root/dist/android/jellyfesh-${version:-dev}-android-unsigned.apk"
 cp "$apk" "$out"
 note "Done: $out"
+
+# ---- 6. the App Bundle for Google Play ---------------------------------------------------------
+if $play_bundle; then
+    note "Assembling the App Bundle for Google Play (unsigned)"
+    ./gradlew --no-daemon --stacktrace -Pjellyfesh.skipCargo=true -Pjellyfesh.distribution=google-play \
+        :app:bundleRelease
+    aab="$android/app/build/outputs/bundle/release/app-release.aab"
+    [ -f "$aab" ] || fail "no App Bundle at $aab"
+    out="$root/dist/android/jellyfesh-${version:-dev}-google-play-unsigned.aab"
+    cp "$aab" "$out"
+    note "Done: $out"
+fi

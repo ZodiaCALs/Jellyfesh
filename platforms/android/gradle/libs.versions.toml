@@ -3,6 +3,8 @@
 # Compose BOM 2026.09.00 (Compose 1.12.1), Media3 1.11.1, Cloudy 0.7.1 (pinned by
 # ADR-0005; 1.0.0-alpha01 is the only newer release), JNA 5.19.1.
 # Shell dependencies are limited on purpose (repo-layout: a CI check allowlists them).
+# Google Play Billing 9.1.0 (2026-06-18, checked 2026-11-17 on developer.android.com: the newest
+# release; Play requires 8.0.0 or later for updates) is the store glue's vendor SDK (ADR-0021).
 
 [versions]
 agp = "9.5.0"
@@ -18,6 +20,7 @@ jna = "5.19.1"
 coroutines = "1.11.0"
 serialization = "1.12.0"
 qrcodegen = "1.8.0"
+billing = "9.1.0"
 
 [libraries]
 # Build logic: the root buildscript classpath (AGP only when an Android SDK is present). Modules
@@ -47,4 +50,6 @@ media3-common = { module = "androidx.media3:media3-common", version.ref = "media
 browser = { module = "androidx.browser:browser", version.ref = "browser" }
 cloudy = { module = "com.github.skydoves:cloudy", version.ref = "cloudy" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+# Jellyfesh Pro in Google Play builds (the store glue in :app).
+play-billing = { module = "com.android.billingclient:billing-ktx", version.ref = "billing" }
 
