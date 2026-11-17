@@ -174,6 +174,8 @@ enum SourceText {
         case "jellyfin": return String(localized: "Your Jellyfin server")
         case "navidrome": return String(localized: "Your Navidrome server")
         case "subsonic": return String(localized: "Airsonic, Gonic and other Subsonic servers")
+        case "qqmusic": return String(localized: "Your QQ Music account")
+        case "spotify": return String(localized: "Your Spotify devices")
         default: return nil
         }
     }

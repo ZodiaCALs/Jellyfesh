@@ -1127,6 +1127,12 @@
   <data name="SourcePreset_Subsonic" xml:space="preserve">
     <value>Airsonic、Gonic などの Subsonic サーバー</value>
   </data>
+  <data name="SourcePreset_QqMusic" xml:space="preserve">
+    <value>お使いの QQ Music アカウント</value>
+  </data>
+  <data name="SourcePreset_Spotify" xml:space="preserve">
+    <value>お使いの Spotify デバイス</value>
+  </data>
   <data name="Source_Community" xml:space="preserve">
     <value>コミュニティ · 非公式</value>
   </data>

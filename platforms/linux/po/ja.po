@@ -1498,6 +1498,16 @@ msgstr "お使いの Navidrome サーバー"
 msgid "Airsonic, Gonic and other Subsonic servers"
 msgstr "Airsonic、Gonic などの Subsonic サーバー"
 
+#: src/ui/sources_ui.rs:300
+#, no-c-format
+msgid "Your QQ Music account"
+msgstr "お使いの QQ Music アカウント"
+
+#: src/ui/sources_ui.rs:301
+#, no-c-format
+msgid "Your Spotify devices"
+msgstr "お使いの Spotify デバイス"
+
 #: src/ui/sources_ui.rs:333
 #, no-c-format
 msgid "Connect to {name}"

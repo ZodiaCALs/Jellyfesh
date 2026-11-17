@@ -7893,6 +7893,28 @@
         }
       }
     },
+    "Your QQ Music account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いの QQ Music アカウント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 QQ 音乐账号"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 QQ 音樂帳號"
+          }
+        }
+      }
+    },
     "Your Sources": {
       "localizations": {
         "ja": {
@@ -7911,6 +7933,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的來源"
+          }
+        }
+      }
+    },
+    "Your Spotify devices": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いの Spotify デバイス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 Spotify 设备"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 Spotify 裝置"
           }
         }
       }

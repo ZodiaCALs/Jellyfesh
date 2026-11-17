@@ -132,6 +132,8 @@
     <string name="sources_add_jellyfin">你的 Jellyfin 服务器</string>
     <string name="sources_add_navidrome">你的 Navidrome 服务器</string>
     <string name="sources_add_subsonic">Airsonic、Gonic 等 Subsonic 服务器</string>
+    <string name="sources_add_qqmusic">你的 QQ 音乐账号</string>
+    <string name="sources_add_spotify">你的 Spotify 设备</string>
     <string name="sources_connect_title">连接到 %1$s</string>
     <string name="sources_connect_address">服务器地址</string>
     <string name="badge_official">官方</string>

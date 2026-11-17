@@ -104,8 +104,9 @@ Nothing found: "No Results".
 
 **Sources.** "Sources bring music from servers and services into
 Jellyfesh." Then **Add a Source** (the services from the core's presets,
-each "Your Jellyfin server", "Your Navidrome server" or "Airsonic, Gonic and
-other Subsonic servers", or "Signed in as …"), then **Your Sources** (each
+each "Your Jellyfin server", "Your Navidrome server", "Airsonic, Gonic and
+other Subsonic servers", "Your QQ Music account" or "Your Spotify devices",
+or "Signed in as …"), then **Your Sources** (each
 installed source with its status; choosing one browses it), then
 **Sources Settings…**, which opens Settings › Sources.
 

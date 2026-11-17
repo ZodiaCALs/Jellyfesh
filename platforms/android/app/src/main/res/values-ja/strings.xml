@@ -132,6 +132,8 @@
     <string name="sources_add_jellyfin">お使いの Jellyfin サーバー</string>
     <string name="sources_add_navidrome">お使いの Navidrome サーバー</string>
     <string name="sources_add_subsonic">Airsonic、Gonic などの Subsonic サーバー</string>
+    <string name="sources_add_qqmusic">お使いの QQ Music アカウント</string>
+    <string name="sources_add_spotify">お使いの Spotify デバイス</string>
     <string name="sources_connect_title">%1$s に接続</string>
     <string name="sources_connect_address">サーバーのアドレス</string>
     <string name="badge_official">公式</string>

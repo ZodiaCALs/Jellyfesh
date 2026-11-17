@@ -1493,6 +1493,16 @@ msgstr ""
 msgid "Airsonic, Gonic and other Subsonic servers"
 msgstr ""
 
+#: src/ui/sources_ui.rs:300
+#, no-c-format
+msgid "Your QQ Music account"
+msgstr ""
+
+#: src/ui/sources_ui.rs:301
+#, no-c-format
+msgid "Your Spotify devices"
+msgstr ""
+
 #: src/ui/sources_ui.rs:333
 #, no-c-format
 msgid "Connect to {name}"

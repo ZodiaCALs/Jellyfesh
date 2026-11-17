@@ -1127,6 +1127,12 @@
   <data name="SourcePreset_Subsonic" xml:space="preserve">
     <value>Airsonic、Gonic 等 Subsonic 服务器</value>
   </data>
+  <data name="SourcePreset_QqMusic" xml:space="preserve">
+    <value>你的 QQ 音乐账号</value>
+  </data>
+  <data name="SourcePreset_Spotify" xml:space="preserve">
+    <value>你的 Spotify 设备</value>
+  </data>
   <data name="Source_Community" xml:space="preserve">
     <value>社区 · 非官方</value>
   </data>

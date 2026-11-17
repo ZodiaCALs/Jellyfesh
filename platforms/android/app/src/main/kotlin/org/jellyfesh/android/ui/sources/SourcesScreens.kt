@@ -178,6 +178,8 @@ private fun presetAbout(id: String): Int? = when (id) {
     "jellyfin" -> R.string.sources_add_jellyfin
     "navidrome" -> R.string.sources_add_navidrome
     "subsonic" -> R.string.sources_add_subsonic
+    "qqmusic" -> R.string.sources_add_qqmusic
+    "spotify" -> R.string.sources_add_spotify
     else -> null
 }
 

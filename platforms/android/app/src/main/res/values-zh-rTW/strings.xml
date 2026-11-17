@@ -132,6 +132,8 @@
     <string name="sources_add_jellyfin">你的 Jellyfin 伺服器</string>
     <string name="sources_add_navidrome">你的 Navidrome 伺服器</string>
     <string name="sources_add_subsonic">Airsonic、Gonic 等 Subsonic 伺服器</string>
+    <string name="sources_add_qqmusic">你的 QQ 音樂帳號</string>
+    <string name="sources_add_spotify">你的 Spotify 裝置</string>
     <string name="sources_connect_title">連線至 %1$s</string>
     <string name="sources_connect_address">伺服器位址</string>
     <string name="badge_official">官方</string>

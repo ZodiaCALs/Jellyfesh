@@ -297,6 +297,8 @@ fn preset_description(preset: &SourcePreset) -> String {
         "jellyfin" => tr("Your Jellyfin server"),
         "navidrome" => tr("Your Navidrome server"),
         "subsonic" => tr("Airsonic, Gonic and other Subsonic servers"),
+        "qqmusic" => tr("Your QQ Music account"),
+        "spotify" => tr("Your Spotify devices"),
         _ => String::new(),
     }
 }

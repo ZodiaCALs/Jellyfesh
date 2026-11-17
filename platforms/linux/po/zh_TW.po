@@ -1490,6 +1490,16 @@ msgstr "你的 Navidrome 伺服器"
 msgid "Airsonic, Gonic and other Subsonic servers"
 msgstr "Airsonic、Gonic 等 Subsonic 伺服器"
 
+#: src/ui/sources_ui.rs:300
+#, no-c-format
+msgid "Your QQ Music account"
+msgstr "你的 QQ 音樂帳號"
+
+#: src/ui/sources_ui.rs:301
+#, no-c-format
+msgid "Your Spotify devices"
+msgstr "你的 Spotify 裝置"
+
 #: src/ui/sources_ui.rs:333
 #, no-c-format
 msgid "Connect to {name}"

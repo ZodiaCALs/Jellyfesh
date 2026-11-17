@@ -166,6 +166,8 @@
     <string name="sources_add_jellyfin">Your Jellyfin server</string>
     <string name="sources_add_navidrome">Your Navidrome server</string>
     <string name="sources_add_subsonic">Airsonic, Gonic and other Subsonic servers</string>
+    <string name="sources_add_qqmusic">Your QQ Music account</string>
+    <string name="sources_add_spotify">Your Spotify devices</string>
     <string name="sources_connect_title">Connect to %1$s</string>
     <string name="sources_connect_address">Server Address</string>
     <string name="badge_official">Official</string>

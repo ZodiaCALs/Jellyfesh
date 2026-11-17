@@ -127,6 +127,8 @@ public sealed class SourcePresetViewModel
         "jellyfin" => "SourcePreset_Jellyfin",
         "navidrome" => "SourcePreset_Navidrome",
         "subsonic" => "SourcePreset_Subsonic",
+        "qqmusic" => "SourcePreset_QqMusic",
+        "spotify" => "SourcePreset_Spotify",
         _ => null,
     };
 }

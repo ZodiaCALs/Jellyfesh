@@ -21,6 +21,10 @@
         return t('Your Navidrome server');
       case 'subsonic':
         return t('Airsonic, Gonic and other Subsonic servers');
+      case 'qqmusic':
+        return t('Your QQ Music account');
+      case 'spotify':
+        return t('Your Spotify devices');
       default:
         return '';
     }
