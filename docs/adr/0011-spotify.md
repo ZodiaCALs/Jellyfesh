@@ -1,6 +1,6 @@
 # ADR-0011: Spotify in Remote mode, Web API only
 
-* Status: **Deferred to the commercial phase** (2026-11-05: developer accounts wait until then; ADR-0016)
+* Status: **Accepted in v0.0.6 (beta)**, amended by ADR-0018: remote control with each person's own Client ID (Spotify's 2026 Development Mode allows five users per app); the terms review below is still owed (2026-11-17).
 * Date: 2026-11-05
 * Findings: [`../sources-report.md`](../sources-report.md#spotify)
 

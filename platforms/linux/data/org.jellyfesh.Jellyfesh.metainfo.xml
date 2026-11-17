@@ -53,6 +53,15 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.0.6" date="2026-11-17">
+      <description>
+        <p>Public Beta. The Luminous design: the cover's colour fills the
+        window, glass panels float over it, and Now Playing becomes a stage
+        with large lyrics and every control in one dock. Songs from QQ Music
+        open in QQ Music, and Spotify plays on your own devices with
+        Jellyfesh as the remote control.</p>
+      </description>
+    </release>
     <release version="0.0.5" date="2026-11-15">
       <description>
         <p>The same places, words and steps as every Jellyfesh app: Settings

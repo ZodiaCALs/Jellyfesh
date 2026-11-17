@@ -1,5 +1,11 @@
 # Changelog: Subsonic plugin
 
+## 0.0.6 — 2026-11-17
+
+* With Jellyfesh v0.0.6: built with plugin SDK 1.1. The manifest still
+  declares API 1.0, so the package also installs in Jellyfesh v0.0.5. No
+  change in behaviour.
+
 ## 0.0.5 — 2026-11-15
 
 * With Jellyfesh v0.0.5: the settings and sign-in labels are in Title Case,

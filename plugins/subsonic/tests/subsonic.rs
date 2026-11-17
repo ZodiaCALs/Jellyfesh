@@ -91,7 +91,7 @@ fn installs_with_its_manifest() {
     let env = env_for(&server);
     let info = env.host.plugin(ID).unwrap();
     assert_eq!(info.name, "Subsonic");
-    assert_eq!(info.version, "0.0.5");
+    assert_eq!(info.version, "0.0.6");
     assert!(info.official, "signed with the test key, which this host trusts");
     assert_eq!(info.capabilities.len(), 7);
     assert_eq!(

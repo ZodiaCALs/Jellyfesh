@@ -1,6 +1,6 @@
 # ADR-0010: Apple Music vendor adapters
 
-* Status: **Deferred to the commercial phase** (2026-11-05: developer accounts wait until then; ADR-0016)
+* Status: **Accepted for macOS in v0.0.6 (beta)**, amended by ADR-0018: built on the core's `ExternalPlayer`; offered only in builds signed with Jellyfesh's MusicKit identity (2026-11-17). Android, Windows and Linux stay as decided below.
 * Date: 2026-11-05
 * Findings: [`../sources-report.md`](../sources-report.md#apple-music)
 

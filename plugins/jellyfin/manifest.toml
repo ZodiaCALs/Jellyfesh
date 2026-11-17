@@ -1,6 +1,6 @@
 id = "org.jellyfesh.jellyfin"
 name = "Jellyfin"
-version = "0.0.5"
+version = "0.0.6"
 api_version = "1.0"
 author = "Jellyfesh"
 description = "Music from your Jellyfin server"
