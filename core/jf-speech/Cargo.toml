@@ -1,0 +1,30 @@
+[package]
+name = "jf-speech"
+description = "On-device speech recognition for AI Lyrics: the Whisper model catalogue, verified resumable model downloads and word-timed transcripts (feature `whisper`)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tracing.workspace = true
+sha1.workspace = true
+sha2.workspace = true
+# Model downloads: ureq over rustls with ring and the operating system's roots, as in jf-engine.
+ureq.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true
+
+[features]
+default = []
+# Recognition through whisper.cpp (ADR-0019 §5). Off by default and for wasm32.
+# Reserved: whisper-rs and the recogniser come in the next change.
+whisper = []
+
+[dev-dependencies]
+tempfile.workspace = true
