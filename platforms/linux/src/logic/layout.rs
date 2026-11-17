@@ -1,7 +1,9 @@
 //! Where the player goes (design-controls.md, "Mini-player and the desktop
 //! player bar", "Library"): the floating mini-player capsule under 900 px,
 //! the player bar from 900 px, the room pages leave for it, the capsule's
-//! progress line, and how far a large page title has scrolled away.
+//! progress line, how far a large page title has scrolled away, and the
+//! bands where content fades out (Luminous: the pages fade out just above
+//! the floating player; the lyrics fade at their ends).
 
 use jf_tokens::{player, space};
 
@@ -72,6 +74,43 @@ pub fn mini_line(width: f64, height: f64, corner_radius: f64) -> Line {
     }
 }
 
+/// Album covers in the grid (Luminous): about this wide, four per row in
+/// the default window (the approved mock-up's 214 px).
+pub const GRID_COVER: f64 = 214.0;
+/// The narrowest a grid cover gets, so two columns fit a 360 px window.
+pub const GRID_COVER_MIN: i32 = 140;
+/// Room around each cover in the grid (`space.s2` each side).
+const GRID_CELL_PADDING: f64 = 2.0 * space::S2 as f64;
+
+/// How many columns of covers a grid `width` px wide shows: as many as
+/// keep them near `cover` px, at least two and at most twelve.
+pub fn grid_columns(width: f64, cover: f64) -> u32 {
+    if width <= 0.0 || cover <= 0.0 {
+        return 2;
+    }
+    (width / (cover + GRID_CELL_PADDING)).round().clamp(2.0, 12.0) as u32
+}
+
+/// How far above the floating player the pages fade out (Luminous): the
+/// player's margin (`space.s4`) and as much again, so the last visible row
+/// dissolves just before the capsule.
+pub const PLAYER_FADE: f64 = 2.0 * space::S4 as f64;
+
+/// The fade bands (top, bottom) for content `height` px high, each at most
+/// what was asked and together never more than the height, so short views
+/// keep their middle opaque. Negative requests count as none.
+pub fn fade_bands(height: f64, top: f64, bottom: f64) -> (f64, f64) {
+    let (top, bottom) = (top.max(0.0), bottom.max(0.0));
+    let height = height.max(0.0);
+    let total = top + bottom;
+    if total <= height || total == 0.0 {
+        (top, bottom)
+    } else {
+        let k = height / total;
+        (top * k, bottom * k)
+    }
+}
+
 /// How much of a large title (its height `title_height`, scrolled by
 /// `scrolled` px) has gone under the header bar, 0 to 1: the header bar's
 /// own small title fades in as the large one leaves.
@@ -115,6 +154,33 @@ mod tests {
         // A capsule narrower than its corners has a line of no length.
         let tiny = mini_line(40.0, 64.0, 999.0);
         assert_eq!(tiny.length(), 0.0);
+    }
+
+    #[test]
+    fn grids_show_about_four_large_covers_in_the_default_window() {
+        // The default 1200 px window less the sidebar and the grid's
+        // padding leaves about 880 px: four covers.
+        assert_eq!(grid_columns(880.0, GRID_COVER), 4);
+        // The mock-up's 1280 px window.
+        assert_eq!(grid_columns(984.0, GRID_COVER), 4);
+        assert_eq!(grid_columns(1_400.0, GRID_COVER), 6);
+        // Phones keep two columns, very wide windows at most twelve.
+        assert_eq!(grid_columns(312.0, GRID_COVER), 2);
+        assert_eq!(grid_columns(10_000.0, GRID_COVER), 12);
+        assert_eq!(grid_columns(0.0, GRID_COVER), 2);
+        // Two columns of the narrowest covers fit a 360 px window's grid.
+        assert!(2.0 * (f64::from(GRID_COVER_MIN) + GRID_CELL_PADDING) <= 360.0 - 48.0);
+    }
+
+    #[test]
+    fn fades_fit_in_their_view() {
+        assert_eq!(PLAYER_FADE, 32.0);
+        assert_eq!(fade_bands(600.0, 0.0, PLAYER_FADE), (0.0, 32.0));
+        assert_eq!(fade_bands(600.0, 80.0, 120.0), (80.0, 120.0));
+        // A view shorter than both bands shares its height between them.
+        assert_eq!(fade_bands(100.0, 80.0, 120.0), (40.0, 60.0));
+        assert_eq!(fade_bands(0.0, 10.0, 10.0), (0.0, 0.0));
+        assert_eq!(fade_bands(100.0, -5.0, 0.0), (0.0, 0.0));
     }
 
     #[test]

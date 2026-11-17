@@ -107,8 +107,9 @@ impl Scheduler {
             return;
         }
         let now = monotonic_now_ns();
+        // The remote session's clock while one runs (ADR-0018).
         let (pos, running) = {
-            let mut clock = app.clock.borrow_mut();
+            let mut clock = app.display_clock();
             (clock.position_us(now), clock.is_running())
         };
         let mut next: Option<i64> = None;
@@ -136,7 +137,7 @@ impl Scheduler {
                 .retain(|v| !matches!(v(Op::Live), Reply::Dead));
         }
         let Some(target) = next else { return };
-        let Some(wait) = app.clock.borrow().wait_until(target, now) else {
+        let Some(wait) = app.display_clock().wait_until(target, now) else {
             return;
         };
         let id = glib::timeout_add_local_once(wait.max(MIN_WAIT) + WAKE_LATE, || {

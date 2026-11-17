@@ -20,6 +20,7 @@ use gtk::subclass::prelude::*;
 use jf_core::TrackRef;
 
 use crate::logic::format;
+use crate::logic::links::{self, MainAction};
 use crate::ui::actions;
 use crate::ui::i18n::{tr, trf};
 use crate::ui::models::{Item, ItemData, Kind};
@@ -108,6 +109,9 @@ mod imp {
         pub title: gtk::Label,
         pub subtitle: gtk::Label,
         pub detail: gtk::Label,
+        /// Shown on rows that open in their service (they cannot play
+        /// here, but have a link).
+        pub link: RefCell<Option<Glyph>>,
         pub heart: RefCell<Option<gtk::Button>>,
         pub remove: RefCell<Option<gtk::Button>>,
         pub item: RefCell<Option<(Item, glib::SignalHandlerId)>>,
@@ -242,7 +246,15 @@ impl ListRow {
         imp.detail.add_css_class("row-detail");
         imp.detail.add_css_class("numeric");
         imp.detail.set_valign(gtk::Align::Center);
+        imp.detail.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        imp.detail.set_max_width_chars(28);
         row.append(&imp.detail);
+        let link = Glyph::new("link", 16);
+        link.add_css_class("row-link");
+        link.set_valign(gtk::Align::Center);
+        link.set_visible(false);
+        row.append(&link);
+        *imp.link.borrow_mut() = Some(link);
         if style.heart {
             let heart = glyph::button("heart", 18, &tr("Add to Favourites"));
             heart.add_css_class("row-button");
@@ -391,11 +403,32 @@ impl ListRow {
                 h.remove_css_class("on");
             }
         }
+        // Items that cannot play here but have a link open in their service
+        // (docs/ui.md, "Links and remote playback"); others are unavailable.
+        let opens_link = d.is_some_and(|d| {
+            d.source
+                .as_deref()
+                .is_some_and(|s| links::main_action(s) == MainAction::OpenLink)
+        });
         let playable = d.is_none_or(|d| d.playable);
-        self.set_sensitive(playable);
-        // One accessible name for the row: title and subtitle.
+        self.set_sensitive(playable || opens_link);
+        if playable {
+            self.remove_css_class("unplayable");
+        } else {
+            self.add_css_class("unplayable");
+        }
+        let service = opens_link
+            .then(|| d.and_then(actions::link_of).map(|(_, service)| service))
+            .flatten();
+        if let Some(l) = imp.link.borrow().as_ref() {
+            l.set_visible(service.is_some());
+        }
+        self.set_tooltip_text(service.map(|s| actions::open_in_label(&s)).as_deref());
+        // One accessible name for the row: title and subtitle (and why it
+        // cannot play).
         if let Some(d) = d {
-            let name = format::dot_join([Some(d.title.as_str()), Some(d.subtitle.as_str())]);
+            let reason = (!playable).then_some(d.detail.as_str());
+            let name = format::dot_join([Some(d.title.as_str()), Some(d.subtitle.as_str()), reason]);
             self.update_property(&[gtk::accessible::Property::Label(&name)]);
         }
         self.update_playing();
@@ -404,7 +437,7 @@ impl ListRow {
     /// Marks the row of the song that is playing (tint and level glyph).
     fn update_playing(&self) {
         let imp = self.imp();
-        let now = try_app().and_then(|a| a.now.borrow().as_ref().map(|n| n.track.clone()));
+        let now = try_app().and_then(|a| a.shown_track());
         let track = imp
             .item
             .borrow()
@@ -448,7 +481,7 @@ fn register(row: &ListRow) {
     });
     if !LISTENING.with(|l| l.replace(true)) {
         app().listen(|change| {
-            if matches!(change, Change::NowPlaying | Change::Playback) {
+            if matches!(change, Change::NowPlaying | Change::Playback | Change::Remote) {
                 let rows: Vec<ListRow> =
                     ROWS.with(|r| r.borrow().iter().filter_map(|w| w.upgrade()).collect());
                 for row in rows {
@@ -475,8 +508,9 @@ impl Card {
         card.add_css_class("card-tile");
         let imp = card.imp();
         let art = Art::new(size, jf_tokens::artwork::RADIUS_GRID);
-        // Grid views size columns by the narrowest child.
-        art.set_min_size(size * 7 / 8);
+        // Grid views size columns by the narrowest child: never so wide
+        // that two columns miss a 360 px window.
+        art.set_min_size((size * 7 / 8).min(crate::logic::layout::GRID_COVER_MIN));
         art.add_css_class("grid-art");
         // Hovering lifts the cover and shows a glass play button in its
         // bottom start corner that plays the album.

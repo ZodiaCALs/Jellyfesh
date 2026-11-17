@@ -4,7 +4,9 @@
 //! The server runs on GTK's main loop. Properties are read from the app's
 //! mirror of the core when asked; `Position` is computed from the display
 //! clock on demand, never pushed (MPRIS clients extrapolate with `Rate` and
-//! the `Seeked` signal), so MPRIS adds no timers.
+//! the `Seeked` signal), so MPRIS adds no timers. While a remote session
+//! runs (ADR-0018) MPRIS shows its track and state, as the player does; the
+//! commands go to the core, which routes them.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -36,6 +38,26 @@ fn metadata() -> Metadata {
     let Some(a) = try_app() else {
         return Metadata::new();
     };
+    if let Some(view) = a.remote_view() {
+        // Track ids are per session track: the anchor's generation.
+        let generation = a.remote.borrow().anchor.track_generation;
+        let mut b = Metadata::builder()
+            .trackid(
+                TrackId::try_from(format!("/org/jellyfesh/Jellyfesh/remote/{generation}"))
+                    .unwrap_or(TrackId::NO_TRACK),
+            )
+            .title(view.title.clone().unwrap_or_else(|| view.service.clone()));
+        if let Some(artist) = &view.artist {
+            b = b.artist([artist.clone()]);
+        }
+        if let Some(album) = &view.album {
+            b = b.album(album.clone());
+        }
+        if let Some(us) = a.duration_us() {
+            b = b.length(Time::from_micros(us));
+        }
+        return b.build();
+    }
     let now = a.now.borrow().clone();
     let Some(np) = now else { return Metadata::new() };
     let mut b = Metadata::builder()
@@ -68,7 +90,7 @@ fn status() -> PlaybackStatus {
 }
 
 fn loop_status() -> LoopStatus {
-    match try_app().map(|a| a.queue.borrow().repeat) {
+    match try_app().map(|a| a.shown_repeat()) {
         Some(RepeatMode::All) => LoopStatus::Playlist,
         Some(RepeatMode::One) => LoopStatus::Track,
         _ => LoopStatus::None,
@@ -76,7 +98,7 @@ fn loop_status() -> LoopStatus {
 }
 
 fn has_current() -> bool {
-    try_app().is_some_and(|a| a.queue.borrow().current.is_some())
+    try_app().is_some_and(|a| a.queue.borrow().current.is_some() || a.is_remote())
 }
 
 fn send(command: Command) {
@@ -244,7 +266,7 @@ impl LocalPlayerInterface for Mpris {
     }
 
     async fn shuffle(&self) -> fdo::Result<bool> {
-        Ok(try_app().is_some_and(|a| a.queue.borrow().shuffle))
+        Ok(try_app().is_some_and(|a| a.shown_shuffle()))
     }
 
     async fn set_shuffle(&self, shuffle: bool) -> zbus::Result<()> {
@@ -353,7 +375,18 @@ pub fn start() {
                 ],
                 Change::Queue => vec![
                     Property::LoopStatus(loop_status()),
-                    Property::Shuffle(app().queue.borrow().shuffle),
+                    Property::Shuffle(app().shown_shuffle()),
+                ],
+                Change::Remote => vec![
+                    Property::Metadata(metadata()),
+                    Property::PlaybackStatus(status()),
+                    Property::LoopStatus(loop_status()),
+                    Property::Shuffle(app().shown_shuffle()),
+                    Property::CanSeek(app().duration_us().is_some()),
+                    Property::CanGoNext(has_current()),
+                    Property::CanGoPrevious(has_current()),
+                    Property::CanPlay(has_current()),
+                    Property::CanPause(has_current()),
                 ],
                 _ => return,
             };

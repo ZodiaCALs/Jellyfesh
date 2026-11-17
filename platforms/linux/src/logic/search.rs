@@ -130,6 +130,7 @@ mod tests {
             unplayable_reason: None,
             track: None,
             also_in: Vec::new(),
+            link: None,
         }
     }
 

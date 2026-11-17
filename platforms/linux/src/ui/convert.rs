@@ -6,7 +6,7 @@ use jf_core::{
 };
 
 use crate::logic::format;
-use crate::ui::i18n::{tr, trn};
+use crate::ui::i18n::{tr, trf, trn};
 use crate::ui::models::{ItemData, Kind};
 use crate::ui::thumbs::ArtKey;
 
@@ -20,6 +20,14 @@ pub fn unknown_album() -> String {
 
 fn duration(ms: Option<u64>) -> String {
     ms.map(format::clock).unwrap_or_default()
+}
+
+/// The remote session's two lines: the track's title (the service's name
+/// when it reports none) and "Playing on {Device}" (docs/ui.md).
+pub fn remote_lines(view: &crate::logic::remote::RemoteView) -> (String, String) {
+    let title = view.title.clone().unwrap_or_else(|| view.service.clone());
+    let device = view.device.clone().unwrap_or_else(|| view.service.clone());
+    (title, trf("Playing on {device}", &[("device", &device)]))
 }
 
 pub fn art_of(artwork: Option<&ArtworkRef>) -> Option<ArtKey> {
@@ -152,12 +160,17 @@ pub fn source_item(s: &SourceItem) -> ItemData {
         ItemKind::Track => format::dot_join([s.subtitle.as_deref(), s.album.as_deref()]),
         _ => s.subtitle.clone().unwrap_or_default(),
     };
+    // An item that cannot play here shows why (the source's words).
+    let detail = match (&s.unplayable_reason, s.playable) {
+        (Some(reason), false) => reason.clone(),
+        _ => duration(s.duration_ms),
+    };
     ItemData {
         kind,
         id,
         title: s.title.clone(),
         subtitle,
-        detail: duration(s.duration_ms),
+        detail,
         art: art_of(s.artwork.as_ref()),
         track: s.track.clone(),
         album_id: (kind == Kind::Album).then_some(id),

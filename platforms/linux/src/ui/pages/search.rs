@@ -7,17 +7,17 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{Collection, Command, ItemKind, SearchScope};
+use jf_core::{Command, ItemKind, SearchScope};
 
 use crate::logic::search::{LIBRARY, SearchState, Section};
+use crate::ui::actions;
 use crate::ui::convert;
 use crate::ui::i18n::tr;
-use crate::ui::models::{Item, ItemData, Kind};
+use crate::ui::models::{Item, ItemData};
 use crate::ui::pages::detail::{fill_track_box, track_box};
 use crate::ui::pages::{frame, heading, keep_alive, scroller, status};
 use crate::ui::rows::{Card, RowStyle};
 use crate::ui::state::{Change, app};
-use crate::ui::{actions, window};
 
 thread_local! {
     static ENTRY: RefCell<Option<gtk::glib::WeakRef<gtk::SearchEntry>>> = const { RefCell::new(None) };
@@ -275,10 +275,10 @@ fn render_section(into: &gtk::Box, section: &Section, extra: Option<&Vec<(Option
             .collect();
         match kind {
             ItemKind::Track => {
-                let refs: Vec<_> = items.iter().filter_map(|d| d.track.clone()).collect();
-                let list = track_box(RowStyle::TRACK, move |i| {
-                    actions::play(Collection::Tracks { tracks: refs.clone() }, i, false);
-                });
+                // Plays from the row (with the section's playable songs), or
+                // opens a song that cannot play here in its service.
+                let rows = items.clone();
+                let list = track_box(RowStyle::TRACK, move |i| actions::activate_in_list(&rows, i));
                 fill_track_box(&list, RowStyle::TRACK, &items);
                 into.append(&list);
             }
@@ -294,7 +294,7 @@ fn render_section(into: &gtk::Box, section: &Section, extra: Option<&Vec<(Option
                 flow.add_css_class("album-flow");
                 flow.connect_child_activated(|_, child| {
                     if let Some(d) = child.child().and_downcast::<Card>().and_then(|c| c.data()) {
-                        open(&d);
+                        actions::open_page(&d);
                     }
                 });
                 for data in items {
@@ -313,25 +313,11 @@ fn render_section(into: &gtk::Box, section: &Section, extra: Option<&Vec<(Option
                 let opened = items.clone();
                 let list = track_box(style, move |i| {
                     if let Some(d) = opened.get(i) {
-                        open(d);
+                        actions::open_page(d);
                     }
                 });
                 fill_track_box(&list, style, &items);
                 into.append(&list);
-            }
-        }
-    }
-}
-
-/// Opens an album, artist, playlist or source container.
-fn open(data: &ItemData) {
-    match data.kind {
-        Kind::Album => window::show_album(data.id, Some(data.clone())),
-        Kind::Artist => window::show_artist(data.id, Some(data.clone())),
-        Kind::Playlist => window::show_playlist(data.id, Some(data.clone())),
-        _ => {
-            if let Some(s) = &data.source {
-                window::show_source(&s.source, Some(s.id.clone()), &s.title);
             }
         }
     }

@@ -15,7 +15,7 @@ use jf_core::{Command, QueueItem, TrackRef};
 use crate::logic::queue::{move_target, up_next_index};
 use crate::ui::convert;
 use crate::ui::dnd;
-use crate::ui::i18n::{tr, trn};
+use crate::ui::i18n::{tr, trf, trn};
 use crate::ui::models::{ItemData, PagedModel};
 use crate::ui::rows::{Handler, RowStyle, row_factory};
 use crate::ui::state::{Change, app, spawn};
@@ -25,7 +25,11 @@ pub struct Queue {
     pub root: gtk::Box,
     model: PagedModel,
     count: gtk::Label,
+    clear: gtk::Button,
     stack: gtk::Stack,
+    remote: adw::StatusPage,
+    /// The service whose remote session plays, if one does.
+    remote_service: RefCell<Option<String>>,
     cache: Rc<RefCell<HashMap<u64, ItemData>>>,
 }
 
@@ -174,6 +178,10 @@ impl Queue {
             .build();
         empty.add_css_class("compact");
         stack.add_named(&empty, Some("empty"));
+        // While a remote session plays, its queue is the service's.
+        let remote = adw::StatusPage::new();
+        remote.add_css_class("compact");
+        stack.add_named(&remote, Some("remote"));
 
         let root = gtk::Box::new(gtk::Orientation::Vertical, 8);
         root.add_css_class("queue-panel");
@@ -183,7 +191,10 @@ impl Queue {
             root,
             model,
             count,
+            clear,
             stack,
+            remote,
+            remote_service: RefCell::new(None),
             cache,
         });
         queue.refresh();
@@ -196,7 +207,29 @@ impl Queue {
         queue
     }
 
+    /// While a remote session plays (`service`), the pane says that Up
+    /// Next is in the service; afterwards the queue shows again.
+    pub fn set_remote(&self, service: Option<&str>) {
+        let service = service.map(str::to_owned);
+        if *self.remote_service.borrow() == service {
+            return;
+        }
+        *self.remote_service.borrow_mut() = service.clone();
+        if let Some(name) = &service {
+            self.remote
+                .set_description(Some(&trf("Up Next is in {service}.", &[("service", name)])));
+        }
+        self.refresh();
+    }
+
     fn refresh(&self) {
+        if self.remote_service.borrow().is_some() {
+            self.count.set_label("");
+            self.clear.set_visible(false);
+            self.stack.set_visible_child_name("remote");
+            return;
+        }
+        self.clear.set_visible(true);
         let (len, position) = {
             let a = app();
             let q = a.queue.borrow();

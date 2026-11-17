@@ -305,7 +305,13 @@ mod tests {
 
     #[test]
     fn lyrics_cascade_and_level_glyph() {
-        assert_eq!(lyrics_cascade(Allowed::Full), Some((380.0, 30.0)));
+        // Luminous: lines 40 ms apart (`lyrics.stagger`) over dur-3.
+        assert_eq!(lyrics_cascade(Allowed::Full), Some((380.0, 40.0)));
+        assert_eq!(
+            lyrics_cascade(Allowed::Full),
+            Some((f64::from(motion::DUR_3_MS), f64::from(lyrics::STAGGER_MS)))
+        );
+        assert_eq!(lyrics_cascade(Allowed::Nothing), None);
         assert_eq!(lyrics_cascade(Allowed::Reduced), None);
         assert!(level_moves(true, Allowed::Full));
         assert!(!level_moves(false, Allowed::Full));

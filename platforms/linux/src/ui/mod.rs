@@ -13,6 +13,7 @@ mod miniplayer;
 mod models;
 mod mpris;
 mod nowplaying;
+mod outputs;
 mod pages;
 mod playerbar;
 mod prefs;
@@ -217,8 +218,19 @@ fn install_actions(application: &adw::Application) {
     simple(application, "seek-back", &["<Shift>Left"], move || {
         seek_by(-(SEEK_STEP_MS as i64))
     });
+    // While a remote session plays, the keys set its device's volume.
     let volume_by = |delta: f32| {
         let a = app();
+        if a.is_remote() {
+            if let Some(percent) = a.remote_view().and_then(|v| v.volume) {
+                let step = (delta * 100.0).round() as i32;
+                let percent = crate::logic::remote::volume_step(percent, step);
+                a.send(Command::Remote {
+                    action: jf_core::RemoteAction::SetVolume { percent },
+                });
+            }
+            return;
+        }
         let v = (a.playback.borrow().volume + delta).clamp(0.0, 1.0);
         a.send(Command::SetVolume { volume: v });
     };
@@ -241,16 +253,12 @@ fn install_actions(application: &adw::Application) {
     });
     simple(application, "shuffle", &["<Primary>s"], || {
         let a = app();
-        let on = a.queue.borrow().shuffle;
+        let on = a.shown_shuffle();
         a.send(Command::SetShuffle { on: !on });
     });
     simple(application, "repeat", &["<Primary>r"], || {
         let a = app();
-        let mode = match a.queue.borrow().repeat {
-            jf_core::RepeatMode::Off => jf_core::RepeatMode::All,
-            jf_core::RepeatMode::All => jf_core::RepeatMode::One,
-            jf_core::RepeatMode::One => jf_core::RepeatMode::Off,
-        };
+        let mode = crate::logic::remote::next_repeat(a.shown_repeat());
         a.send(Command::SetRepeat { mode });
     });
     simple(application, "now-playing", &["<Primary>p"], || {

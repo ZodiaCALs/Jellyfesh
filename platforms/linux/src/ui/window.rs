@@ -1,7 +1,8 @@
 //! The main window: an adaptive split view with the library sections in the
 //! sidebar, their pages and detail pages in a navigation view, the floating
 //! mini-player (under 900 px) or player bar (from 900 px), and Now Playing
-//! over everything.
+//! over everything. The pages fade out just above the floating player
+//! (Luminous).
 //!
 //! Motion (design-controls.md, "Motion"): pages fade in and rise 8 px, going
 //! back fades, Now Playing slides up and fades in ("Deeper") and closes on
@@ -22,6 +23,7 @@ use crate::ui::models::ItemData;
 use crate::ui::nowplaying::{NowPlaying, Tab};
 use crate::ui::state::{App, Change, app, try_app};
 use crate::ui::style;
+use crate::ui::widgets::fade::FadeBin;
 use crate::ui::widgets::glyph::Glyph;
 use crate::ui::widgets::motion::MotionBin;
 use crate::ui::{actions, miniplayer, pages, playerbar, prefs};
@@ -100,6 +102,8 @@ pub struct Shell {
     pub split: adw::NavigationSplitView,
     pub content: adw::NavigationView,
     pub sidebar: gtk::ListBox,
+    /// The pages, fading out above the floating player.
+    fade: FadeBin,
     pub now_playing: NowPlaying,
     /// Now Playing over the library, in its motion bin.
     now_playing_bin: MotionBin,
@@ -188,8 +192,9 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
     let content = adw::NavigationView::new();
     content.add_css_class("content-pages");
     content.set_animate_transitions(false);
+    let fade = FadeBin::new(&content);
     let content_area = gtk::Overlay::new();
-    content_area.set_child(Some(&content));
+    content_area.set_child(Some(&fade));
     let mini = miniplayer::build();
     content_area.add_overlay(&mini);
     let bar = playerbar::build();
@@ -242,6 +247,7 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
         split: split.clone(),
         content: content.clone(),
         sidebar: sidebar.clone(),
+        fade,
         now_playing,
         now_playing_bin,
         now_playing_open: Cell::new(false),
@@ -454,8 +460,10 @@ pub fn show_playlist(id: i64, known: Option<ItemData>) {
     push(pages::playlists::playlist_page(id, known));
 }
 
-pub fn show_source(plugin: &str, node: Option<String>, title: &str) {
-    push(pages::sources::browse_page(plugin, node, title));
+/// Browses a source's catalogue: its root (`node` `None`), or a container
+/// it listed, with the container's link for Open in {Service}.
+pub fn show_source(plugin: &str, node: Option<String>, title: &str, link: Option<String>) {
+    push(pages::sources::browse_page(plugin, node, title, link));
 }
 
 /// The capsule under 900 px, the bar from 900 px, while something is queued;
@@ -476,13 +484,16 @@ fn update_chrome() {
     } else {
         s.window.remove_css_class("wide");
     }
-    let has_current =
-        try_app().is_some_and(|a| a.now.borrow().is_some() || a.queue.borrow().current.is_some());
+    let has_current = try_app()
+        .is_some_and(|a| a.now.borrow().is_some() || a.queue.borrow().current.is_some() || a.is_remote());
     s.mini.set_visible(has_current && chrome == Chrome::Mini);
     s.bar.root.set_visible(has_current && chrome == Chrome::Bar);
-    // Pages end above the floating player, so it never covers a last row.
-    s.content
+    // Pages end above the floating player, so it never covers a last row,
+    // and fade out just above it.
+    s.fade
         .set_margin_bottom(if has_current { chrome.bottom_room() } else { 0 });
+    s.fade
+        .set_fades(0.0, if has_current { layout::PLAYER_FADE } else { 0.0 });
 }
 
 /// Opens Now Playing on `tab` (or where it was): it slides up and fades in
@@ -544,7 +555,7 @@ pub fn show_settings(page: Option<&str>) {
 /// Reacts to app-wide changes the window owns.
 pub fn listen() {
     app().listen(|change| {
-        if matches!(change, Change::NowPlaying | Change::Queue) {
+        if matches!(change, Change::NowPlaying | Change::Queue | Change::Remote) {
             update_chrome();
         }
         if let Change::Settings = change {

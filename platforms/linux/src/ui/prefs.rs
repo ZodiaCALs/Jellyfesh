@@ -28,6 +28,8 @@ use crate::ui::window;
 /// `library`, `sources`; `lyrics` opens Appearance, which holds them now).
 pub fn present(parent: &adw::ApplicationWindow, page: Option<&str>) {
     let dialog = adw::PreferencesDialog::new();
+    // The Luminous field and Mist groups (style.css).
+    dialog.add_css_class("jf-settings");
     dialog.set_title(&tr("Settings"));
     dialog.set_search_enabled(true);
     dialog.add(&appearance_page());

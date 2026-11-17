@@ -118,6 +118,40 @@ fn data(name: &str) -> Option<(Mode, &'static str)> {
             "M14 5h5v5M19 5l-8 8 M10 6H6a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4",
         ),
         "refresh" => (Stroke, "M19 12a7 7 0 1 1-2.05-4.95 M19 4v4h-4"),
+        // Output and remote devices (ADR-0018), by kind.
+        "device-speaker" => (
+            Stroke,
+            "M7.5 3h9A1.5 1.5 0 0 1 18 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19.5v-15A1.5 1.5 0 0 1 7.5 3z \
+             M12 11a3.5 3.5 0 1 1 0 7a3.5 3.5 0 1 1 0-7z M12 6.5v.01",
+        ),
+        "device-computer" => (
+            Stroke,
+            "M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z M9 20h6M12 16v4",
+        ),
+        "device-phone" => (
+            Stroke,
+            "M8 3h8a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 16 21H8a1.5 1.5 0 0 1-1.5-1.5v-15A1.5 1.5 0 0 1 8 3z \
+             M11 18h2",
+        ),
+        "device-tv" => (
+            Stroke,
+            "M4 7h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z M8 3l4 4 4-4",
+        ),
+        "device-car" => (
+            Stroke,
+            "M5 16v2.5M19 16v2.5 M4 16h16v-3.5l-2-5.5H6l-2 5.5z M4 12.5h16 \
+             M7.5 14.2v.01M16.5 14.2v.01",
+        ),
+        "device-other" => (
+            Stroke,
+            "M12 4a8 8 0 1 1 0 16a8 8 0 1 1 0-16z M12 9a3 3 0 1 1 0 6a3 3 0 1 1 0-6z",
+        ),
+        "devices" => (
+            Stroke,
+            "M4 5h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z M6 18h7 \
+             M18.5 9h2a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5z",
+        ),
+        "stop" => (Stroke, "M7 7h10v10H7z"),
         _ => return None,
     })
 }
@@ -301,9 +335,25 @@ mod tests {
             "volume-high",
             "volume-muted",
             "forward",
+            "devices",
+            "stop",
         ] {
             assert!(data(name).is_some(), "{name}");
         }
         assert!(data("nope").is_none());
+    }
+
+    #[test]
+    fn every_remote_device_kind_has_a_glyph_that_parses() {
+        use jf_core::RemoteDeviceKind as K;
+        for kind in [K::Computer, K::Smartphone, K::Speaker, K::Tv, K::Car, K::Other] {
+            let name = crate::logic::remote::device_glyph(kind);
+            let (_, d) = data(name).unwrap_or_else(|| panic!("{name}"));
+            assert!(gsk::Path::parse(d).is_ok(), "{name}");
+        }
+        for name in ["devices", "stop", "link", "device-speaker"] {
+            let (_, d) = data(name).unwrap_or_else(|| panic!("{name}"));
+            assert!(gsk::Path::parse(d).is_ok(), "{name}");
+        }
     }
 }

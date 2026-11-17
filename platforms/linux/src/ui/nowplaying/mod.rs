@@ -1,10 +1,19 @@
-//! Now Playing (after Apple Music): the artwork, title, seek bar, transport
-//! and volume on the left; lyrics, the queue or track info on the right (one
-//! column when the window is narrow). The backdrop is the core's baked
-//! artwork backdrop, crossfaded on track change (style Artwork), or the
-//! Misty field at the artwork hue (style Misty). The artwork scales to 0.88
-//! while paused and springs back when playing; play and pause morph into
-//! each other (design-controls.md, "Now Playing").
+//! Now Playing as a stage (Luminous, docs/ui.md): the backdrop behind
+//! everything, the artwork (380 px, `shadow-3`) and titles on the left,
+//! lyrics, the queue or track info on the right (one column when the window
+//! is narrow), and every control in one floating Veil dock: shuffle,
+//! previous, play, next, repeat, the seek bar with its times, the volume,
+//! the device button and More (a rounded card in narrow windows). The
+//! backdrop is the core's baked artwork backdrop, crossfaded on track change
+//! (style Artwork), or the Misty field at the artwork hue (style Misty). The
+//! artwork scales to 0.88 while paused and springs back when playing; play
+//! and pause morph into each other.
+//!
+//! While a remote session runs (ADR-0018) the stage shows its track with
+//! "Playing on {Device}" (and its error in a quieter line); the dock's
+//! controls send the usual commands, the device button opens Devices, More
+//! holds Open in {Service} and Stop Controlling, and the Lyrics and Queue
+//! panes say that the service has them.
 
 mod info;
 mod lyrics;
@@ -19,15 +28,20 @@ use gtk::glib;
 use jf_core::{BackdropStyle, Command, ThemeSnapshot};
 
 use crate::logic::format;
+use crate::logic::lyrics as lyrics_logic;
 use crate::logic::motion::{self, artwork_plan, artwork_scale};
+use crate::logic::remote::{self, RemoteView};
 use crate::logic::seek::Times;
+use crate::ui::actions;
 use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
-use crate::ui::state::{Change, app, try_app};
+use crate::ui::outputs::DeviceButton;
+use crate::ui::state::{Change, app, spawn, try_app};
 use crate::ui::style::{self, FLUID};
 use crate::ui::thumbs::ArtKey;
 use crate::ui::transport::{self, Volume, set_on};
 use crate::ui::widgets::art::Art;
+use crate::ui::widgets::fade::FadeBin;
 use crate::ui::widgets::glyph::{self, Glyph};
 use crate::ui::widgets::motion::MotionBin;
 use crate::ui::widgets::playpause::PlayPause;
@@ -52,6 +66,9 @@ impl Tab {
     }
 }
 
+/// The queue entry (uid) whose album More knows, and that album.
+type AlbumOf = Option<(u64, Option<i64>)>;
+
 struct Inner {
     root: adw::BreakpointBin,
     backdrop: Backdrop,
@@ -60,6 +77,13 @@ struct Inner {
     art_bin: MotionBin,
     title: gtk::Label,
     subtitle: gtk::Label,
+    /// "Playing on {Device}" while a remote session runs, with the
+    /// device's glyph.
+    device_line: gtk::Box,
+    device_glyph: Glyph,
+    device_label: gtk::Label,
+    /// The remote session's last error, in a quieter line.
+    error_line: gtk::Label,
     heart: gtk::Button,
     favorite: Cell<bool>,
     seek: SeekBar,
@@ -68,6 +92,18 @@ struct Inner {
     shuffle: gtk::Button,
     repeat: gtk::Button,
     volume: Volume,
+    /// The dock and its parts, laid out in a row (wide) or a card (narrow).
+    dock: gtk::Box,
+    dock_transport: gtk::Box,
+    dock_extras: gtk::Box,
+    /// Kept for as long as the view, for its listener.
+    _devices: Rc<DeviceButton>,
+    more: gtk::MenuButton,
+    /// What More's menu was built for, so an open menu is not replaced by
+    /// an identical one (the remote session reports every second).
+    more_key: RefCell<Option<String>>,
+    /// The album of the library song playing, for Go to Album in More.
+    album_of: Rc<Cell<AlbumOf>>,
     tabs: Vec<(Tab, gtk::ToggleButton)>,
     tab_guard: Cell<bool>,
     panel: gtk::Stack,
@@ -77,10 +113,8 @@ struct Inner {
     view_size: Cell<(i32, i32)>,
     tab: Cell<Tab>,
     show_panel_narrow: Cell<bool>,
-    chip: gtk::MenuButton,
-    chip_label: gtk::Label,
     lyrics: Rc<lyrics::Lyrics>,
-    _queue: Rc<queue::Queue>,
+    queue: Rc<queue::Queue>,
     info: info::Info,
 }
 
@@ -98,7 +132,8 @@ impl NowPlaying {
     pub fn new() -> NowPlaying {
         let backdrop = Backdrop::new();
 
-        // Top bar: back, the panel switcher, the output device chip.
+        // Top: back to the Library and the panel switcher, each a glass
+        // capsule floating on the stage.
         let back = gtk::Button::builder().build();
         let back_box = gtk::Box::new(gtk::Orientation::Horizontal, 4);
         back_box.append(&Glyph::new("back", 20));
@@ -106,11 +141,13 @@ impl NowPlaying {
         back_box.append(&back_label);
         back.set_child(Some(&back_box));
         back.add_css_class("np-back");
+        back.add_css_class("np-capsule");
         back.set_tooltip_text(Some(&tr("Back to Library")));
         back.update_property(&[gtk::accessible::Property::Label(&tr("Back to Library"))]);
         back.connect_clicked(|_| window::close_now_playing());
         let segmented = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         segmented.add_css_class("segmented");
+        segmented.add_css_class("np-capsule");
         segmented.update_property(&[gtk::accessible::Property::Label(&tr("Now Playing views"))]);
         let mut tabs = Vec::new();
         for (tab, label) in [
@@ -123,27 +160,13 @@ impl NowPlaying {
             segmented.append(&b);
             tabs.push((tab, b));
         }
-        let chip_label = gtk::Label::new(Some(&tr("Speakers")));
-        chip_label.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        chip_label.set_max_width_chars(18);
-        let chip_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        chip_box.append(&Glyph::new("speaker", 18));
-        chip_box.append(&chip_label);
-        let chip = gtk::MenuButton::builder()
-            .child(&chip_box)
-            .tooltip_text(tr("Output Device"))
-            .build();
-        chip.add_css_class("device-chip");
-        chip.update_property(&[gtk::accessible::Property::Label(&tr("Output Device"))]);
         let topbar = gtk::CenterBox::new();
         topbar.add_css_class("np-topbar");
-        topbar.add_css_class("veil");
         topbar.set_start_widget(Some(&back));
         topbar.set_center_widget(Some(&segmented));
-        topbar.set_end_widget(Some(&chip));
 
-        // The player column.
-        let art = Art::new(400, jf_tokens::artwork::RADIUS_HERO);
+        // The player column: the artwork, then the titles.
+        let art = Art::new(ART_MAX, jf_tokens::artwork::RADIUS_HERO);
         art.add_css_class("np-art");
         art.set_halign(gtk::Align::Center);
         art.set_fixed(true);
@@ -169,25 +192,47 @@ impl NowPlaying {
             .ellipsize(gtk::pango::EllipsizeMode::End)
             .build();
         subtitle.add_css_class("np-subtitle");
+        let device_glyph = Glyph::new("speaker", 16);
+        let device_label = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .build();
+        let device_line = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        device_line.add_css_class("np-device-line");
+        device_line.append(&device_glyph);
+        device_line.append(&device_label);
+        device_line.set_visible(false);
+        let error_line = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .lines(2)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .visible(false)
+            .build();
+        error_line.add_css_class("np-error-line");
         let titles = gtk::Box::new(gtk::Orientation::Vertical, 4);
         titles.set_hexpand(true);
         titles.append(&title);
         titles.append(&subtitle);
+        titles.append(&device_line);
+        titles.append(&error_line);
         let heart = glyph::button("heart", 22, &tr("Add to Favourites"));
         heart.add_css_class("np-toggle");
-        heart.set_valign(gtk::Align::Center);
+        heart.set_valign(gtk::Align::Start);
         let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        title_row.add_css_class("np-titles");
         title_row.append(&titles);
         title_row.append(&heart);
 
-        // The straight seek bar, its times under its ends.
-        let seek = SeekBar::new(Times::Below);
-        seek.add_css_class("np-seek");
-        seek.update_property(&[gtk::accessible::Property::Label(&tr("Position"))]);
-        seek.connect_seek(|ms| {
-            app().send(Command::Seek { position_ms: ms });
-        });
+        let player = gtk::Box::new(gtk::Orientation::Vertical, 28);
+        player.add_css_class("np-player");
+        player.set_valign(gtk::Align::Center);
+        player.append(&art_bin);
+        player.append(&title_row);
+        let player_clamp = adw::Clamp::builder().child(&player).maximum_size(ART_MAX).build();
+        player_clamp.set_hexpand(false);
 
+        // The dock: every control in one floating Veil capsule (Luminous).
         let shuffle = transport::shuffle_button(20);
         shuffle.add_css_class("np-toggle");
         let previous = transport::skip_button(false, 24);
@@ -196,37 +241,56 @@ impl NowPlaying {
         play.add_css_class("np-play");
         let next = transport::skip_button(true, 24);
         next.add_css_class("np-skip");
-        let capsule = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-        capsule.add_css_class("transport");
-        capsule.add_css_class("veil");
-        capsule.append(&previous);
-        capsule.append(&play);
-        capsule.append(&next);
         let repeat = transport::repeat_button(20);
         repeat.add_css_class("np-toggle");
-        let transport_row = gtk::Box::new(gtk::Orientation::Horizontal, 16);
-        transport_row.set_halign(gtk::Align::Center);
-        transport_row.add_css_class("np-transport");
-        transport_row.append(&shuffle);
-        transport_row.append(&capsule);
-        transport_row.append(&repeat);
-
-        // The volume: the same line between two speaker glyphs.
+        let dock_transport = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        dock_transport.add_css_class("np-dock-transport");
+        for b in [&shuffle, &previous, &play, &next, &repeat] {
+            b.set_valign(gtk::Align::Center);
+            dock_transport.append(b);
+        }
+        let seek = SeekBar::new(Times::Beside);
+        seek.add_css_class("np-seek");
+        seek.set_valign(gtk::Align::Center);
+        seek.update_property(&[gtk::accessible::Property::Label(&tr("Position"))]);
+        seek.connect_seek(|ms| {
+            app().send(Command::Seek { position_ms: ms });
+        });
         let volume = Volume::new(18, true);
         volume.row.add_css_class("np-volume");
+        volume.row.set_valign(gtk::Align::Center);
+        volume.bar.set_natural_width(VOLUME_WIDTH);
+        volume.bar.set_hexpand(false);
+        let devices = DeviceButton::new(false);
+        devices.button.add_css_class("np-dock-button");
+        devices.button.set_valign(gtk::Align::Center);
+        let more = gtk::MenuButton::builder()
+            .child(&Glyph::new("more", 20))
+            .tooltip_text(tr("More"))
+            .valign(gtk::Align::Center)
+            .build();
+        more.add_css_class("np-dock-button");
+        more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
+        let dock_extras = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        dock_extras.add_css_class("np-dock-extras");
+        dock_extras.append(&volume.row);
+        dock_extras.append(&devices.button);
+        dock_extras.append(&more);
+        let dock = gtk::Box::new(gtk::Orientation::Horizontal, 20);
+        dock.add_css_class("np-dock");
+        dock.add_css_class("veil");
+        dock.update_property(&[gtk::accessible::Property::Label(&tr("Player"))]);
+        dock.append(&dock_transport);
+        dock.append(&seek);
+        dock.append(&dock_extras);
+        let dock_clamp = adw::Clamp::builder()
+            .child(&dock)
+            .maximum_size(DOCK_MAX)
+            .tightening_threshold(DOCK_MAX)
+            .build();
+        dock_clamp.add_css_class("np-dock-holder");
 
-        let player = gtk::Box::new(gtk::Orientation::Vertical, 20);
-        player.add_css_class("np-player");
-        player.set_valign(gtk::Align::Center);
-        player.append(&art_bin);
-        player.append(&title_row);
-        player.append(&seek);
-        player.append(&transport_row);
-        player.append(&volume.row);
-        let player_clamp = adw::Clamp::builder().child(&player).maximum_size(400).build();
-        player_clamp.set_hexpand(false);
-
-        // The panels.
+        // The panels, fading out at their ends.
         let lyrics = lyrics::Lyrics::new();
         let queue_panel = queue::Queue::new();
         let info = info::Info::new();
@@ -235,14 +299,29 @@ impl NowPlaying {
             .transition_duration(style::duration(jf_tokens::motion::DUR_2_MS))
             .vexpand(true)
             .build();
-        panel.add_named(&lyrics.root, Some(Tab::Lyrics.name()));
-        panel.add_named(&queue_panel.root, Some(Tab::Queue.name()));
-        panel.add_named(&info.root, Some(Tab::Info.name()));
+        // The lyrics fade out at both ends; the queue and info, whose
+        // headings stay at the top, at the bottom only.
+        for (pane, tab, top) in [
+            (
+                lyrics.root.clone().upcast::<gtk::Widget>(),
+                Tab::Lyrics,
+                PANEL_FADE_TOP,
+            ),
+            (queue_panel.root.clone().upcast(), Tab::Queue, 0.0),
+            (info.root.clone().upcast(), Tab::Info, 0.0),
+        ] {
+            let faded = FadeBin::new(&pane);
+            faded.set_fades(top, PANEL_FADE_BOTTOM);
+            panel.add_named(&faded, Some(tab.name()));
+        }
         panel.add_css_class("np-panel");
-        let panel_clamp = adw::Clamp::builder().child(&panel).maximum_size(640).build();
+        let panel_clamp = adw::Clamp::builder()
+            .child(&panel)
+            .maximum_size(lyrics_logic::FULL_SIZE_WIDTH as i32)
+            .build();
         panel_clamp.set_hexpand(true);
 
-        let main = gtk::Box::new(gtk::Orientation::Horizontal, 56);
+        let main = gtk::Box::new(gtk::Orientation::Horizontal, 64);
         main.add_css_class("np-main");
         main.set_vexpand(true);
         main.append(&player_clamp);
@@ -251,6 +330,7 @@ impl NowPlaying {
         let column = gtk::Box::new(gtk::Orientation::Vertical, 0);
         column.append(&topbar);
         column.append(&main);
+        column.append(&dock_clamp);
         // An empty drawing area reports the view's size, so the artwork can
         // shrink to keep the whole player visible in short windows.
         let sizer = gtk::DrawingArea::new();
@@ -268,11 +348,11 @@ impl NowPlaying {
         let narrow =
             adw::Breakpoint::new(adw::BreakpointCondition::parse("max-width: 880sp").expect("condition"));
         root.add_breakpoint(narrow);
-        // Phone widths (also narrow): the top bar keeps its glyphs and drops
-        // the words, which the tooltips and accessible names still say.
+        // Phone widths (also narrow): the back button keeps its glyph and
+        // drops the word, which the tooltip and accessible name still say.
         let compact =
             adw::Breakpoint::new(adw::BreakpointCondition::parse("max-width: 540sp").expect("condition"));
-        compact.add_setters(&[(&back_label, "visible", false), (&chip_label, "visible", false)]);
+        compact.add_setters(&[(&back_label, "visible", false)]);
         root.add_breakpoint(compact);
 
         let inner = Rc::new(Inner {
@@ -282,6 +362,10 @@ impl NowPlaying {
             art_bin,
             title,
             subtitle,
+            device_line,
+            device_glyph,
+            device_label,
+            error_line,
             heart,
             favorite: Cell::new(false),
             seek,
@@ -290,6 +374,13 @@ impl NowPlaying {
             shuffle,
             repeat,
             volume,
+            dock,
+            dock_transport,
+            dock_extras,
+            _devices: devices,
+            more,
+            more_key: RefCell::new(None),
+            album_of: Rc::new(Cell::new(None)),
             tabs,
             tab_guard: Cell::new(false),
             panel,
@@ -298,10 +389,8 @@ impl NowPlaying {
             view_size: Cell::new((0, 0)),
             tab: Cell::new(Tab::Lyrics),
             show_panel_narrow: Cell::new(false),
-            chip,
-            chip_label,
             lyrics,
-            _queue: queue_panel,
+            queue: queue_panel,
             info,
         });
         let weak = Rc::downgrade(&inner);
@@ -362,7 +451,8 @@ impl NowPlaying {
                 }
             });
         }
-        // Narrow windows show the player or one panel.
+        // Narrow windows show the player or one panel, and the dock as a
+        // card.
         let weak = Rc::downgrade(&self.0);
         let (pc, nc) = (player_clamp.clone(), panel_clamp.clone());
         inner.root.connect_current_breakpoint_notify(move |bin| {
@@ -377,6 +467,7 @@ impl NowPlaying {
                     } else {
                         inner.root.remove_css_class("narrow");
                     }
+                    lay_out_dock(&inner, narrow);
                     fit_art(&inner);
                     NowPlaying(inner).layout(&pc, &nc);
                 }
@@ -389,29 +480,26 @@ impl NowPlaying {
                 NowPlaying(inner).layout(&pc, &nc);
             }
         });
-        // The device chip lists outputs when opened (the core never polls).
-        let popover = gtk::Popover::new();
-        popover.add_css_class("menu");
-        style::animate_popup(&popover);
-        let list = gtk::ListBox::new();
-        list.set_selection_mode(gtk::SelectionMode::None);
-        list.add_css_class("device-list");
-        popover.set_child(Some(&list));
-        inner.chip.set_popover(Some(&popover));
-        popover.connect_show(|_| {
-            app().send(Command::RefreshDevices);
+        // The backdrop's light or dark bake follows the colour scheme, which
+        // changes after the settings slice is announced (the window applies
+        // it), or with the system's.
+        let weak = Rc::downgrade(&self.0);
+        let manager = adw::StyleManager::default();
+        let id = manager.connect_dark_notify(move |_| {
+            if let Some(inner) = weak.upgrade() {
+                update_backdrop(&inner);
+            }
         });
-        let weak_list = list.downgrade();
-        let weak_pop = popover.downgrade();
-        let fill = move || {
-            let (Some(list), Some(pop)) = (weak_list.upgrade(), weak_pop.upgrade()) else {
-                return;
-            };
-            fill_devices(&list, &pop);
-        };
-        fill();
+        let manager = manager.downgrade();
+        let id = RefCell::new(Some(id));
+        inner.root.connect_destroy(move |_| {
+            if let (Some(m), Some(id)) = (manager.upgrade(), id.borrow_mut().take()) {
+                m.disconnect(id);
+            }
+        });
 
-        // Time-driven parts: the seek bar and its times, and the lyrics.
+        // Time-driven parts: the seek bar and its times, and the lyrics
+        // (which a remote session does not show).
         let a = app();
         a.scheduler.add(
             &inner.seek,
@@ -423,11 +511,18 @@ impl NowPlaying {
         a.scheduler.add(
             &inner.lyrics.root,
             move |_, pos, running| {
-                if let Some(l) = lyrics.upgrade() {
+                if let Some(l) = lyrics.upgrade()
+                    && !app().is_remote()
+                {
                     l.update(pos, running);
                 }
             },
-            move |_, pos| lyrics_next.upgrade().and_then(|l| l.next_change(pos)),
+            move |_, pos| {
+                if app().is_remote() {
+                    return None;
+                }
+                lyrics_next.upgrade().and_then(|l| l.next_change(pos))
+            },
         );
         // Follow the core.
         let weak = Rc::downgrade(&self.0);
@@ -435,10 +530,16 @@ impl NowPlaying {
             let Some(inner) = weak.upgrade() else { return };
             match change {
                 Change::NowPlaying => update_track(&inner),
+                Change::Remote => {
+                    update_track(&inner);
+                    update_transport(&inner);
+                    transport::update_toggles(&inner.shuffle, &inner.repeat);
+                }
                 Change::Library => update_favorite(&inner),
                 Change::Playback | Change::Muted => update_transport(&inner),
                 Change::Queue => transport::update_toggles(&inner.shuffle, &inner.repeat),
                 Change::Lyrics => inner.lyrics.set_lyrics(app().lyrics.borrow().clone()),
+                Change::Sources => update_more(&inner),
                 Change::Theme | Change::Settings => {
                     update_backdrop(&inner);
                     if matches!(change, Change::Settings) {
@@ -448,7 +549,6 @@ impl NowPlaying {
                         update_art_scale(&inner);
                     }
                 }
-                Change::Devices => fill(),
                 _ => {}
             }
         });
@@ -457,6 +557,7 @@ impl NowPlaying {
         transport::update_toggles(&inner.shuffle, &inner.repeat);
         update_backdrop(&self.0);
         inner.lyrics.set_lyrics(a.lyrics.borrow().clone());
+        lay_out_dock(&self.0, false);
         self.select(Some(Tab::Lyrics));
     }
 
@@ -488,7 +589,7 @@ impl NowPlaying {
         inner.show_panel_narrow.set(tab.is_some());
         if let (Some(pc), Some(nc)) = (
             inner.player.parent().and_downcast::<adw::Clamp>(),
-            inner.panel.parent().and_downcast::<adw::Clamp>(),
+            panel_clamp_of(&inner.panel),
         ) {
             self.layout(&pc, &nc);
         }
@@ -525,22 +626,87 @@ impl NowPlaying {
     }
 }
 
-/// What the player column needs besides the artwork: top bar, padding,
-/// titles, seek bar, transport, volume and gaps.
-const PLAYER_CHROME: i32 = 430;
+/// The clamp around the panels.
+fn panel_clamp_of(panel: &gtk::Stack) -> Option<adw::Clamp> {
+    panel.parent().and_downcast::<adw::Clamp>()
+}
+
+/// Gives More the menu `build` makes, unless it shows the menu for `key`
+/// already (replacing the model would close it while open).
+fn set_more(inner: &Inner, key: String, build: impl FnOnce() -> Option<gtk::gio::Menu>) {
+    if inner.more_key.borrow().as_deref() == Some(key.as_str()) {
+        return;
+    }
+    let menu = build();
+    inner.more.set_sensitive(menu.is_some());
+    inner.more.set_menu_model(menu.as_ref());
+    if let Some(p) = inner.more.popover() {
+        style::animate_popup(&p);
+    }
+    *inner.more_key.borrow_mut() = Some(key);
+}
+
+/// The dock in a row (wide windows: transport, seek bar with its times
+/// beside it, then volume, device and More) or as a card (narrow: the seek
+/// bar with its times under it, the transport, then the rest).
+fn lay_out_dock(inner: &Inner, narrow: bool) {
+    let dock = &inner.dock;
+    if narrow {
+        dock.set_orientation(gtk::Orientation::Vertical);
+        dock.set_spacing(10);
+        dock.reorder_child_after(&inner.seek, None::<&gtk::Widget>);
+        dock.reorder_child_after(&inner.dock_transport, Some(&inner.seek));
+        inner.seek.set_times(Times::Below);
+        inner.dock_transport.set_halign(gtk::Align::Center);
+        inner.dock_extras.set_halign(gtk::Align::Center);
+        inner.volume.bar.set_hexpand(true);
+        dock.add_css_class("dock-card");
+    } else {
+        dock.set_orientation(gtk::Orientation::Horizontal);
+        dock.set_spacing(20);
+        dock.reorder_child_after(&inner.dock_transport, None::<&gtk::Widget>);
+        dock.reorder_child_after(&inner.seek, Some(&inner.dock_transport));
+        inner.seek.set_times(Times::Beside);
+        inner.dock_transport.set_halign(gtk::Align::Fill);
+        inner.dock_extras.set_halign(gtk::Align::Fill);
+        inner.volume.bar.set_hexpand(false);
+        dock.remove_css_class("dock-card");
+    }
+}
+
+/// The widest the dock gets (the stage's width less its side margins).
+const DOCK_MAX: i32 = 1088;
+/// The volume line's natural width in the dock.
+const VOLUME_WIDTH: i32 = 112;
+/// The panels fade out over these bands at their top and bottom.
+const PANEL_FADE_TOP: f64 = 40.0;
+const PANEL_FADE_BOTTOM: f64 = 56.0;
+
+/// What the stage needs besides the artwork: the top bar, the titles, the
+/// dock and the gaps between them (the approved mock-up: 380 px artwork in
+/// an 800 px view).
+const PLAYER_CHROME: i32 = 420;
+/// The same in narrow windows, where the dock is a taller card.
+const PLAYER_CHROME_NARROW: i32 = 440;
 /// The player's side gutters in narrow windows (`space.s4` each, in CSS).
 const NARROW_GUTTERS: i32 = 2 * 16;
 /// The Misty glass frame around the artwork (12 px each side, in CSS).
 const MISTY_FRAME: i32 = 2 * 12;
 const ART_MIN: i32 = 160;
-const ART_MAX: i32 = 400;
+/// Luminous: the artwork at 380 px.
+const ART_MAX: i32 = 380;
 
 /// The artwork's side in a view of `width` × `height`: as large as the
-/// rest of the player leaves room for, between 160 and 400 px with its
+/// rest of the stage leaves room for, between 160 and 380 px with its
 /// frame, and never wider than a narrow window's gutters allow.
 fn art_side(width: i32, height: i32, narrow: bool, misty: bool) -> i32 {
     let frame = if misty { MISTY_FRAME } else { 0 };
-    let by_height = height - PLAYER_CHROME - frame;
+    let chrome = if narrow {
+        PLAYER_CHROME_NARROW
+    } else {
+        PLAYER_CHROME
+    };
+    let by_height = height - chrome - frame;
     let by_width = if narrow { width - NARROW_GUTTERS } else { ART_MAX };
     by_height.min(by_width - frame).clamp(ART_MIN, ART_MAX)
 }
@@ -559,6 +725,14 @@ fn fit_art(inner: &Inner) {
 
 fn update_track(inner: &Inner) {
     let a = app();
+    if let Some(view) = a.remote_view() {
+        show_remote(inner, &view);
+        return;
+    }
+    inner.device_line.set_visible(false);
+    inner.error_line.set_visible(false);
+    inner.lyrics.set_remote(None);
+    inner.queue.set_remote(None);
     let now = a.now.borrow().clone();
     match &now {
         Some(np) => {
@@ -567,6 +741,7 @@ fn update_track(inner: &Inner) {
             inner
                 .subtitle
                 .set_label(&format::dot_join([Some(artist.as_str()), np.album.as_deref()]));
+            inner.subtitle.set_visible(true);
             let key = convert::art_of(np.artwork.as_ref());
             inner.art.set_art(key);
             inner.art.update_property(&[gtk::accessible::Property::Label(&trf(
@@ -579,16 +754,105 @@ fn update_track(inner: &Inner) {
             inner
                 .subtitle
                 .set_label(&tr("Pick a song, an album or a playlist."));
+            inner.subtitle.set_visible(true);
             inner.art.set_art(None);
         }
     }
     inner.info.update(now.as_deref(), a.lyrics.borrow().as_deref());
     update_favorite(inner);
+    update_more(inner);
+}
+
+/// The remote session's track on the stage, with "Playing on {Device}"
+/// and its error; the panels say that the service has the lyrics and the
+/// queue.
+fn show_remote(inner: &Inner, view: &RemoteView) {
+    let title = view.title.clone().unwrap_or_else(|| view.service.clone());
+    inner.title.set_label(&title);
+    inner
+        .subtitle
+        .set_label(&format::dot_join([view.artist.as_deref(), view.album.as_deref()]));
+    inner
+        .subtitle
+        .set_visible(view.artist.is_some() || view.album.is_some());
+    // Artwork URLs are not fetched by the app (networking stays in the
+    // core): the placeholder shows.
+    inner.art.set_art(convert::art_of(view.artwork.as_ref()));
+    inner.art.update_property(&[gtk::accessible::Property::Label(&trf(
+        "Artwork of {title}",
+        &[("title", &title)],
+    ))]);
+    let (_, playing_on) = convert::remote_lines(view);
+    inner.device_label.set_label(&playing_on);
+    inner
+        .device_glyph
+        .set_name_glyph(view.device_kind.map_or("devices", remote::device_glyph));
+    inner.device_line.set_visible(true);
+    inner
+        .error_line
+        .set_label(view.error.as_deref().unwrap_or_default());
+    inner.error_line.set_visible(view.error.is_some());
+    inner.heart.set_visible(false);
+    inner.info.update_remote(view);
+    inner.lyrics.set_remote(Some(&view.service));
+    inner.queue.set_remote(Some(&view.service));
+    let key = format!("remote {} {:?}", view.service, view.link);
+    set_more(inner, key, || Some(actions::remote_menu(view)));
+}
+
+/// More for the engine's track: what the song menu offers for it, with
+/// Go to Album once the core has said which album a library song is on.
+fn update_more(inner: &Inner) {
+    let a = app();
+    if let Some(view) = a.remote_view() {
+        let key = format!("remote {} {:?}", view.service, view.link);
+        set_more(inner, key, || Some(actions::remote_menu(&view)));
+        return;
+    }
+    let now = a.now.borrow().clone();
+    let Some(np) = now else {
+        set_more(inner, "none".into(), || None);
+        return;
+    };
+    let known = inner.album_of.get().filter(|(uid, _)| *uid == np.uid);
+    let album = known.and_then(|(_, a)| a);
+    // The sources' names can change (Change::Sources): part of the key.
+    let service = match &np.track {
+        jf_core::TrackRef::Source(s) => a.source_name(&s.plugin),
+        _ => String::new(),
+    };
+    let key = format!("local {} {album:?} {service} {:?}", np.uid, np.link);
+    set_more(inner, key, || Some(actions::now_playing_menu(&np, album)));
+    let jf_core::TrackRef::Library(id) = np.track else {
+        return;
+    };
+    if known.is_some() {
+        return;
+    }
+    let (album_of, uid) = (inner.album_of.clone(), np.uid);
+    let weak = window::shell().map(|s| Rc::downgrade(&s.now_playing.0));
+    spawn(async move {
+        let album = app()
+            .query(move |core| core.track(id).ok().flatten().and_then(|t| t.album_id))
+            .await
+            .flatten();
+        album_of.set(Some((uid, album)));
+        if let Some(inner) = weak.and_then(|w| w.upgrade())
+            && app().now.borrow().as_ref().map(|n| n.uid) == Some(uid)
+            && !app().is_remote()
+        {
+            update_more(&inner);
+        }
+    });
 }
 
 /// Asks the core whether the current track is a favourite.
 fn update_favorite(inner: &Inner) {
     let a = app();
+    if a.is_remote() {
+        inner.heart.set_visible(false);
+        return;
+    }
     let track = a.now.borrow().as_ref().map(|n| n.track.clone());
     inner.heart.set_visible(track.is_some());
     let Some(track) = track else { return };
@@ -645,48 +909,6 @@ fn update_art_scale(inner: &Inner) {
         move |b, e| b.set_transform(0.0, from + (target - from) * e),
         move |b| b.set_transform(0.0, target),
     );
-}
-
-fn fill_devices(list: &gtk::ListBox, popover: &gtk::Popover) {
-    while let Some(c) = list.first_child() {
-        list.remove(&c);
-    }
-    let a = app();
-    let devices = a.devices.borrow().clone();
-    let selected = devices.selected.clone();
-    let mut entries: Vec<(Option<String>, String)> = vec![(None, tr("System Default"))];
-    entries.extend(
-        devices
-            .devices
-            .iter()
-            .map(|d| (Some(d.name.clone()), d.name.clone())),
-    );
-    for (name, label) in entries {
-        let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-        let check = Glyph::new("check", 16);
-        check.set_opacity(if name == selected { 1.0 } else { 0.0 });
-        row.append(&check);
-        let l = gtk::Label::new(Some(&label));
-        l.set_xalign(0.0);
-        l.set_ellipsize(gtk::pango::EllipsizeMode::End);
-        l.set_max_width_chars(32);
-        row.append(&l);
-        let button = gtk::Button::builder().child(&row).build();
-        button.add_css_class("flat");
-        button.update_property(&[gtk::accessible::Property::Label(&label)]);
-        let pop = popover.downgrade();
-        button.connect_clicked(move |_| {
-            app().send(Command::SetOutputDevice { name: name.clone() });
-            if let Some(p) = pop.upgrade() {
-                p.popdown();
-            }
-        });
-        list.append(&button);
-    }
-    if let Some(shell) = window::shell() {
-        let label = selected.unwrap_or_else(|| tr("Speakers"));
-        shell.now_playing.0.chip_label.set_label(&label);
-    }
 }
 
 /// The backdrop for the current style and theme.
@@ -819,6 +1041,9 @@ mod tests {
 
     #[test]
     fn artwork_fills_wide_views_up_to_its_limit() {
+        // Luminous: 380 px artwork on the stage.
+        assert_eq!(ART_MAX, 380);
+        assert_eq!(art_side(1280, 800, false, false), ART_MAX);
         assert_eq!(art_side(1400, 1000, false, false), ART_MAX);
         // The Misty frame stays within the same 400 px.
         assert_eq!(art_side(1400, 1000, false, true), ART_MAX - MISTY_FRAME);
@@ -832,8 +1057,9 @@ mod tests {
 
     #[test]
     fn artwork_keeps_narrow_gutters() {
-        // A phone: 360 × 800.
+        // A phone: 360 × 800, the dock a card under the titles.
         assert_eq!(art_side(360, 800, true, false), 360 - NARROW_GUTTERS);
+        assert_eq!(art_side(360, 640, true, false), 640 - PLAYER_CHROME_NARROW);
         assert_eq!(art_side(360, 800, true, true) + MISTY_FRAME, 360 - NARROW_GUTTERS);
     }
 }

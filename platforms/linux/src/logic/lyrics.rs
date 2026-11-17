@@ -83,13 +83,18 @@ pub fn size_scale(size: LyricsSize) -> f64 {
     }
 }
 
-/// The lyric line size for a lyrics column `width` px wide: 30 px by default,
-/// fluid from 24 to 40 px (token `lyrics.line`, "fluid 24 to 40 by window
-/// width"), times the Lyrics size, in whole pixels so text does not reflow
-/// on every resize step.
+/// The lyrics column width (px) from which lines take the full
+/// `lyrics.line` size: Now Playing's lyrics panel at its widest.
+pub const FULL_SIZE_WIDTH: f64 = 640.0;
+
+/// The lyric line size for a lyrics column `width` px wide: `lyrics.line`
+/// (40 px in Luminous) from [`FULL_SIZE_WIDTH`], smaller in narrower
+/// columns within `lyrics.line` fluid range (28 to 40 px), times the Lyrics
+/// size, in whole pixels so text does not reflow on every resize step.
 pub fn line_size(width: f64, size: LyricsSize) -> f64 {
     let fluid = tokens::LINE_FLUID;
-    let base = (width * 0.05).clamp(f64::from(fluid.min), f64::from(fluid.max));
+    let full = f64::from(tokens::LINE.size);
+    let base = (width * full / FULL_SIZE_WIDTH).clamp(f64::from(fluid.min), f64::from(fluid.max));
     (base * size_scale(size)).round()
 }
 
@@ -213,19 +218,31 @@ mod tests {
 
     #[test]
     fn line_size_is_fluid_within_the_tokens() {
-        assert_eq!(line_size(300.0, LyricsSize::Medium), 24.0);
-        assert_eq!(line_size(600.0, LyricsSize::Medium), 30.0);
-        assert_eq!(line_size(2_000.0, LyricsSize::Medium), 40.0);
+        let (min, max) = (
+            f64::from(tokens::LINE_FLUID.min),
+            f64::from(tokens::LINE_FLUID.max),
+        );
+        // Luminous: 40 px lines from the panel's full width, never under
+        // the fluid minimum (28 px) on phones.
+        assert_eq!(
+            line_size(FULL_SIZE_WIDTH, LyricsSize::Medium),
+            f64::from(tokens::LINE.size)
+        );
+        assert_eq!(line_size(FULL_SIZE_WIDTH, LyricsSize::Medium), 40.0);
+        assert_eq!(line_size(2_000.0, LyricsSize::Medium), max);
+        assert_eq!(line_size(300.0, LyricsSize::Medium), min);
+        assert_eq!(min, 28.0);
+        assert_eq!(line_size(560.0, LyricsSize::Medium), 35.0);
     }
 
     #[test]
     fn lyrics_size_scales_every_size() {
         assert_eq!(size_scale(LyricsSize::Small), f64::from(0.8f32));
         assert_eq!(size_scale(LyricsSize::Large), f64::from(1.2f32));
-        assert_eq!(line_size(600.0, LyricsSize::Small), 24.0);
-        assert_eq!(line_size(600.0, LyricsSize::Large), 36.0);
+        assert_eq!(line_size(FULL_SIZE_WIDTH, LyricsSize::Small), 32.0);
+        assert_eq!(line_size(560.0, LyricsSize::Large), 42.0);
         assert_eq!(line_size(2_000.0, LyricsSize::Large), 48.0);
-        assert_eq!(line_size(300.0, LyricsSize::Small), 19.0);
+        assert_eq!(line_size(300.0, LyricsSize::Small), 22.0);
         assert_eq!(aux_sizes(LyricsSize::Medium), (18.0, 15.0));
         assert_eq!(aux_sizes(LyricsSize::Small), (14.0, 12.0));
         assert_eq!(aux_sizes(LyricsSize::Large), (22.0, 18.0));
@@ -233,9 +250,12 @@ mod tests {
 
     #[test]
     fn inactive_lines_are_smaller_and_scale_from_their_start() {
+        // Luminous: inactive lines at 92 % (`lyrics.scale-inactive`).
+        let inactive = f64::from(tokens::SCALE_INACTIVE);
+        assert_eq!(inactive, f64::from(0.92f32));
         assert_eq!(line_scale(LineState::Active), 1.0);
-        assert_eq!(line_scale(LineState::Past), f64::from(0.96f32));
-        assert_eq!(line_scale(LineState::Future), f64::from(0.96f32));
+        assert_eq!(line_scale(LineState::Past), inactive);
+        assert_eq!(line_scale(LineState::Future), inactive);
         assert_eq!(scale_origin(LyricsAlign::Start, false, 500.0), 0.0);
         assert_eq!(scale_origin(LyricsAlign::Start, true, 500.0), 500.0);
         assert_eq!(scale_origin(LyricsAlign::Center, false, 500.0), 250.0);

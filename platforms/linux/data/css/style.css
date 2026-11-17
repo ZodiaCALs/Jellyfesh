@@ -10,20 +10,56 @@
  * replace it. Live glass (backdrop-filter, GTK 4.22+) is in glass-live.css;
  * this sheet draws glass grades as their tinted or solid fallback. */
 
-/* ---- The Misty field ------------------------------------------------- */
+/* ---- The field (Luminous: the cover's colour fills the room) --------- */
 
-window.jf-window.background {
+/* The aurora at field.aurora-strength (about 75 %) with four larger glows
+ * at the artwork's hue, on every page and in Settings; the colours
+ * crossfade with the theme on every song change. */
+window.jf-window.background,
+dialog.jf-settings sheet {
   background-color: {{field.sky}};
   background-image:
-    radial-gradient(ellipse 60% 55% at 10% 8%, alpha({{field.aurora-1}}, 0.45), alpha({{field.aurora-1}}, 0) 70%),
-    radial-gradient(ellipse 55% 55% at 92% 92%, alpha({{field.aurora-2}}, 0.40), alpha({{field.aurora-2}}, 0) 70%),
-    radial-gradient(ellipse 45% 50% at 4% 98%, alpha({{field.aurora-3}}, 0.40), alpha({{field.aurora-3}}, 0) 70%);
+    radial-gradient(ellipse 62% 58% at 4% 0%, alpha({{field.aurora-1}}, {{field.aurora-strength * 1.07}}), alpha({{field.aurora-1}}, 0) 72%),
+    radial-gradient(ellipse 58% 64% at 100% 96%, alpha({{field.aurora-2}}, {{field.aurora-strength * 0.96}}), alpha({{field.aurora-2}}, 0) 72%),
+    radial-gradient(ellipse 44% 52% at 0% 100%, alpha({{field.aurora-3}}, {{field.aurora-strength * 0.88}}), alpha({{field.aurora-3}}, 0) 70%),
+    radial-gradient(ellipse 38% 40% at 92% 4%, alpha({{field.aurora-1}}, {{field.aurora-strength * 0.61}}), alpha({{field.aurora-1}}, 0) 70%);
   color: {{ink.ink-90}};
 }
 
+/* The sidebar: a Clear glass panel floating on the field. Without live
+ * glass (GTK before 4.22, Reduce Motion and Transparency, high contrast)
+ * it is solid Cloud; glass-live.css gives it the Clear tint and blur. */
 window.jf-window .sidebar-pane {
-  background-color: alpha({{glass.cloud-soft}}, 0.78);
-  box-shadow: inset -1px 0 {{line.line-soft}};
+  margin: {{space.s3}} 0 {{space.s3}} {{space.s3}};
+  border-radius: {{radius.r-2xl}};
+  background-color: {{glass.cloud}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
+}
+
+window.jf-window .sidebar-pane headerbar {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Grouped surfaces (lists, groups, cards) take the Mist tint without live
+ * blur, plus shadow-1, so a screen stays within the glass budget. */
+window.jf-window list.boxed-list,
+dialog.jf-settings list.boxed-list,
+window.jf-window list.np-info {
+  border-radius: {{radius.r-xl}};
+  background-color: @jf_tint_mist;
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
+}
+
+window.jf-window list.boxed-list > row,
+dialog.jf-settings list.boxed-list > row {
+  background-color: transparent;
+}
+
+/* Content fades out just above the floating player (the fade bin); the
+ * page under it is transparent. */
+window.jf-window fadebin {
+  background: transparent;
 }
 
 window.jf-window .content-pages,
@@ -68,8 +104,11 @@ window.jf-window .navigation-sidebar label {
   letter-spacing: -0.01em;
 }
 
+/* Luminous page titles: text-h1 (48 px) on wide windows. */
 window.jf-window.wide .large-title {
   font-size: {{type.text-h1}};
+  line-height: 1.04;
+  letter-spacing: -0.024em;
 }
 
 /* Over the album grid: in line with its covers. */
@@ -118,8 +157,14 @@ window.jf-window.wide .large-title {
 .detail-kind {
   font-size: 12px;
   font-weight: 700;
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
   margin-top: {{space.s2}};
+}
+
+/* A source whose terms ask its views to name it: "Content from …". */
+.attribution {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-70}};
 }
 
 .source-heading {
@@ -154,8 +199,8 @@ window.jf-window.wide .large-title {
 
 .welcome {
   padding: {{space.s6}};
-  border-radius: {{radius.r-xl}};
-  background-color: {{glass.cloud}};
+  border-radius: {{radius.r-2xl}};
+  background-color: @jf_tint_mist;
   box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
 }
 
@@ -178,7 +223,7 @@ window.jf-window.wide .large-title {
 
 .album-grid > child {
   padding: 0;
-  border-radius: {{radius.r-lg}};
+  border-radius: {{artwork.radius-grid}};
 }
 
 /* The cover itself shows hover (it lifts), not a tile behind the card. */
@@ -195,16 +240,20 @@ window.jf-window.wide .large-title {
   outline-offset: -2px;
 }
 
-/* Album covers lift by 2 px on hover with shadow-2 and show a glass play
- * button; presses scale to 97 %. */
+/* Luminous covers: radius 16 and shadow-2 at rest; hovered or focused
+ * they lift 4 px with shadow-3 and show a glass play button; presses
+ * scale to 97 %. */
 .card-cover {
   transition: transform {{motion.dur-1}} {{motion.ease-fluid}};
 }
 
 .album-grid > child:hover .card-cover,
+.album-grid > child:focus-visible .card-cover,
 .album-flow > flowboxchild:hover .card-cover,
-.card-button:hover .card-cover {
-  transform: translateY(-2px);
+.album-flow > flowboxchild:focus-visible .card-cover,
+.card-button:hover .card-cover,
+.card-button:focus-visible .card-cover {
+  transform: translateY(-4px);
 }
 
 .album-grid > child:active .card-cover,
@@ -214,9 +263,12 @@ window.jf-window.wide .large-title {
 }
 
 .album-grid > child:hover .grid-art,
+.album-grid > child:focus-visible .grid-art,
 .album-flow > flowboxchild:hover .grid-art,
-.card-button:hover .grid-art {
-  box-shadow: {{elevation.shadow-2}};
+.album-flow > flowboxchild:focus-visible .grid-art,
+.card-button:hover .grid-art,
+.card-button:focus-visible .grid-art {
+  box-shadow: {{elevation.shadow-3}};
 }
 
 button.card-play {
@@ -245,11 +297,11 @@ button.card-play:active {
 
 .album-flow > flowboxchild {
   padding: 0;
-  border-radius: {{radius.r-lg}};
+  border-radius: {{artwork.radius-grid}};
 }
 
 .card-button {
-  border-radius: {{radius.r-lg}};
+  border-radius: {{artwork.radius-grid}};
 }
 
 .card-button:focus-visible {
@@ -283,12 +335,23 @@ statuspage.compact {
 
 .row-detail {
   {{type-roles.list-secondary}};
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
+}
+
+/* A row that cannot play here: quieter, its reason in the detail; one
+ * with a link opens in its service (the link glyph). */
+.list-row.unplayable .row-title,
+.list-row.unplayable .row-subtitle {
+  opacity: 0.72;
+}
+
+glyph.row-link {
+  color: {{ink.ink-70}};
 }
 
 .row-number {
   {{type-roles.list-secondary}};
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
   min-width: 24px;
   transition: opacity {{motion.dur-1}} {{motion.ease-fluid}};
 }
@@ -421,7 +484,7 @@ art {
 
 art.grid-art {
   border-radius: {{artwork.radius-grid}};
-  box-shadow: {{elevation.shadow-1}};
+  box-shadow: {{elevation.shadow-2}};
   transition: box-shadow {{motion.dur-1}} {{motion.ease-fluid}};
 }
 
@@ -465,7 +528,7 @@ art.hero-art {
 
 .detail-footer {
   {{type-roles.list-secondary}};
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
   margin: {{space.s1}} {{space.s3}} 0;
 }
 
@@ -530,53 +593,57 @@ button.action-pill.glass-pill:hover {
 .np-field {
   background-color: {{field.sky}};
   background-image:
-    radial-gradient(ellipse 60% 55% at 10% 8%, alpha({{field.aurora-1}}, 0.95), alpha({{field.aurora-1}}, 0) 70%),
-    radial-gradient(ellipse 55% 55% at 92% 92%, alpha({{field.aurora-2}}, 0.90), alpha({{field.aurora-2}}, 0) 70%),
-    radial-gradient(ellipse 45% 50% at 4% 98%, alpha({{field.aurora-3}}, 0.90), alpha({{field.aurora-3}}, 0) 70%),
-    radial-gradient(ellipse 40% 40% at 94% 6%, alpha({{field.aurora-1}}, 0.55), alpha({{field.aurora-1}}, 0) 70%);
+    radial-gradient(ellipse 62% 58% at 4% 0%, alpha({{field.aurora-1}}, 0.95), alpha({{field.aurora-1}}, 0) 72%),
+    radial-gradient(ellipse 58% 64% at 100% 96%, alpha({{field.aurora-2}}, 0.90), alpha({{field.aurora-2}}, 0) 72%),
+    radial-gradient(ellipse 44% 52% at 0% 100%, alpha({{field.aurora-3}}, 0.90), alpha({{field.aurora-3}}, 0) 70%),
+    radial-gradient(ellipse 38% 40% at 92% 4%, alpha({{field.aurora-1}}, 0.55), alpha({{field.aurora-1}}, 0) 70%);
 }
 
+/* The stage's top: back and the panel switcher, each a glass capsule
+ * floating on the backdrop (the Veil tint without blur before GTK 4.22). */
 .np-topbar {
   min-height: 56px;
-  padding: 6px {{space.s5}};
+  padding: {{space.s4}} {{space.s6}} 0;
+}
+
+.np-capsule {
+  border-radius: {{radius.r-full}};
   background-color: @jf_tint_veil;
-  box-shadow: inset 0 -1px {{glass.glass-edge}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
 }
 
 button.np-back {
-  min-height: 40px;
-  padding: 0 12px 0 8px;
-  border-radius: {{radius.r-md}};
-  background: transparent;
-  color: {{ink.ink-70}};
+  min-height: 44px;
+  padding: 0 16px 0 10px;
+  color: {{ink.ink-90}};
   font-weight: 600;
   font-size: 13px;
 }
 
 button.np-back:hover {
-  background-color: {{line.fill-hover}};
-  color: {{ink.ink-90}};
+  background-color: mix(@jf_tint_veil, {{ink.ink-90}}, 0.08);
 }
 
 .np-main {
-  padding: {{space.s7}} {{space.s9}} {{space.s7}};
+  padding: {{space.s6}} {{space.s9}} {{space.s4}};
 }
 
 /* Narrow windows: phone gutters (the artwork's fit counts on s4). */
 .now-playing.narrow .np-main {
-  padding: {{space.s5}} {{space.s4}};
+  padding: {{space.s5}} {{space.s4}} {{space.s3}};
 }
 
 .now-playing.narrow .np-topbar {
-  padding: 6px {{space.s3}};
+  padding: {{space.s3}} {{space.s3}} 0;
 }
 
 .np-art-frame {
   border-radius: {{artwork.radius-hero}};
 }
 
+/* Luminous: the hero artwork with shadow-3. */
 .style-artwork art.np-art {
-  box-shadow: 0 2px 6px alpha(black, 0.25), 0 30px 60px -24px alpha(black, 0.6);
+  box-shadow: {{elevation.shadow-3}};
 }
 
 /* Misty: the artwork is hero media on a Clear glass frame. */
@@ -589,11 +656,39 @@ button.np-back:hover {
 
 .np-title {
   {{type-roles.now-playing-title}};
+  letter-spacing: -0.018em;
 }
 
 .np-subtitle {
   {{type-roles.now-playing-artist}};
   color: {{ink.ink-70}};
+}
+
+/* "Playing on {Device}" while a remote session runs, and its error in a
+ * quieter line (still ink-70: secondary text never drops below it). */
+.np-device-line {
+  margin-top: {{space.s1}};
+  color: {{accent.accent-text}};
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.np-error-line,
+.bar-error {
+  {{type-roles.list-secondary}};
+  font-size: 12px;
+  color: {{ink.ink-70}};
+}
+
+.bar-artist.playing-on,
+.mini-artist.playing-on {
+  color: {{accent.accent-text}};
+  font-weight: 600;
+}
+
+/* Open in {Service}, under About This Song. */
+button.np-open-link {
+  margin-top: {{space.s2}};
 }
 
 /* The seek bar's times are drawn by the widget: 12 px tabular figures. */
@@ -608,7 +703,7 @@ seekbar {
 
 .panel-count {
   {{type-roles.list-secondary}};
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
 }
 
 .panel-head {
@@ -618,11 +713,6 @@ seekbar {
 .queue-panel,
 .info-panel {
   padding-top: {{space.s3}};
-}
-
-list.np-info {
-  background-color: @jf_tint_mist;
-  box-shadow: inset 0 0 0 1px {{glass.glass-edge-soft}};
 }
 
 list.np-info row {
@@ -802,7 +892,7 @@ button.swatch:checked {
 
 .scale-end {
   font-size: 12px;
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
 }
 
 .pref-segmented > button.segment {
@@ -819,7 +909,7 @@ button.swatch:checked {
 
 .eq-label {
   font-size: 11px;
-  color: {{ink.ink-50}};
+  color: {{ink.ink-70}};
 }
 
 .scan-progress {

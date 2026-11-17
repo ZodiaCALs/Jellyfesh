@@ -1,7 +1,8 @@
 //! What rows, cards and menus do: play, queue, add to a playlist,
-//! favourite, go to an album or artist, and show a file in Files. Each is a
-//! command to the core (or the file manager); nothing here changes state on
-//! its own.
+//! favourite, go to an album or artist, show a file in Files, and open an
+//! item in its service (Open in {Service}, ADR-0018). Each is a command to
+//! the core (or the file manager, or the system's handler for links);
+//! nothing here changes state on its own.
 
 use std::path::Path;
 
@@ -10,6 +11,7 @@ use gtk::{gio, glib};
 use jf_core::{Collection, Command, TrackQuery, TrackRef, TrackSort};
 use serde::{Deserialize, Serialize};
 
+use crate::logic::links::{self, MainAction};
 use crate::ui::i18n::{tr, trf};
 use crate::ui::models::{ItemData, Kind};
 use crate::ui::state::{app, spawn};
@@ -59,7 +61,9 @@ pub fn collection_of(data: &ItemData) -> Option<Collection> {
             (Some(t), _) => Some(Collection::Tracks {
                 tracks: vec![t.clone()],
             }),
-            (None, Some(s)) => Some(Collection::Source {
+            // Albums, artists and playlists of a source; a song without a
+            // track cannot play here.
+            (None, Some(s)) if s.kind != jf_core::ItemKind::Track && s.playable => Some(Collection::Source {
                 plugin: s.source.clone(),
                 id: s.id.clone(),
             }),
@@ -104,10 +108,36 @@ pub fn more_menu_for(data: &ItemData) -> gio::Menu {
     build_menu(data, true)
 }
 
+/// The item's link and the name of the service it opens in, for Open in
+/// {Service}.
+pub fn link_of(data: &ItemData) -> Option<(String, String)> {
+    let s = data.source.as_ref()?;
+    let link = s.link.clone().filter(|l| links::openable(l))?;
+    Some((link, app().source_name(&s.source)))
+}
+
+/// "Open in {Service}".
+pub fn open_in_label(service: &str) -> String {
+    trf("Open in {service}", &[("service", service)])
+}
+
+/// Whether Play Next, Play Last and Add to Playlist are offered: not for a
+/// remote source's items (they never join the queue, ADR-0018) nor for
+/// items that cannot play here.
+fn offers_queueing(data: &ItemData) -> bool {
+    match &data.source {
+        Some(s) if s.source != crate::logic::search::LIBRARY => {
+            links::offers_queueing(s, app().is_remote_source(&s.source))
+        }
+        _ => data.playable,
+    }
+}
+
 /// The menu for `data`; `own_page` for the More menu on the item's own page.
 fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
     let menu = gio::Menu::new();
     let playing = gio::Menu::new();
+    let queueing = offers_queueing(data);
     if let Some(c) = collection_of(data) {
         if !own_page && matches!(data.kind, Kind::Album | Kind::Artist | Kind::Playlist) {
             let args = PlayArgs {
@@ -122,11 +152,11 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             };
             entry(&playing, &tr("Shuffle"), "win.play", json_target(&args));
         }
-        if data.kind != Kind::QueueEntry {
+        if data.kind != Kind::QueueEntry && queueing {
             entry(&playing, &tr("Play Next"), "win.play-next", json_target(&c));
             entry(&playing, &tr("Play Last"), "win.play-last", json_target(&c));
         }
-        if data.kind != Kind::Source || data.track.is_some() {
+        if (data.kind != Kind::Source || data.track.is_some()) && queueing {
             entry(
                 &playing,
                 &tr("Add to Playlist…"),
@@ -169,6 +199,15 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             );
         }
     }
+    // Open in {Service}, after Go to Artist (docs/ui.md).
+    if let Some((link, service)) = link_of(data) {
+        entry(
+            &more,
+            &open_in_label(&service),
+            "win.open-link",
+            link.to_variant(),
+        );
+    }
     if data.kind == Kind::Playlist {
         entry(&more, &tr("Rename…"), "win.rename-playlist", data.id.to_variant());
         entry(
@@ -191,6 +230,86 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             &tr("Show in Files"),
             "win.show-in-files",
             json_target(track),
+        );
+        menu.append_section(None, &files);
+    }
+    menu
+}
+
+/// Now Playing's More while a remote session runs: Open in {Service} and
+/// Stop Controlling (docs/ui.md, "Links and remote playback").
+pub fn remote_menu(view: &crate::logic::remote::RemoteView) -> gio::Menu {
+    let menu = gio::Menu::new();
+    if let Some(link) = view.link.as_ref().filter(|l| links::openable(l)) {
+        let section = gio::Menu::new();
+        entry(
+            &section,
+            &open_in_label(&view.service),
+            "win.open-link",
+            link.to_variant(),
+        );
+        menu.append_section(None, &section);
+    }
+    let section = gio::Menu::new();
+    section.append(Some(&tr("Stop Controlling")), Some("win.stop-controlling"));
+    menu.append_section(None, &section);
+    menu
+}
+
+/// Now Playing's More for the engine's track: what the song menu offers
+/// for the song playing (Add to Playlist…, Go to Album, Go to Artist, Open
+/// in {Service}, Show in Files); its heart is beside the title.
+pub fn now_playing_menu(np: &jf_core::NowPlaying, album_id: Option<i64>) -> gio::Menu {
+    let menu = gio::Menu::new();
+    let playing = gio::Menu::new();
+    let collection = Collection::Tracks {
+        tracks: vec![np.track.clone()],
+    };
+    let remote_source = matches!(&np.track, TrackRef::Source(s) if app().is_remote_source(&s.plugin));
+    if !remote_source {
+        entry(
+            &playing,
+            &tr("Add to Playlist…"),
+            "win.add-to-playlist",
+            json_target(&collection),
+        );
+    }
+    if playing.n_items() > 0 {
+        menu.append_section(None, &playing);
+    }
+    let more = gio::Menu::new();
+    if let Some(album) = album_id {
+        entry(&more, &tr("Go to Album"), "win.show-album", album.to_variant());
+    }
+    if let (TrackRef::Library(_), Some(name)) =
+        (&np.track, np.artist.as_deref().filter(|n| !n.trim().is_empty()))
+    {
+        entry(
+            &more,
+            &tr("Go to Artist"),
+            "win.show-artist-named",
+            name.to_variant(),
+        );
+    }
+    if let (TrackRef::Source(s), Some(link)) = (&np.track, np.link.as_ref().filter(|l| links::openable(l))) {
+        let service = app().source_name(&s.plugin);
+        entry(
+            &more,
+            &open_in_label(&service),
+            "win.open-link",
+            link.to_variant(),
+        );
+    }
+    if more.n_items() > 0 {
+        menu.append_section(None, &more);
+    }
+    if matches!(np.track, TrackRef::Library(_) | TrackRef::File(_)) {
+        let files = gio::Menu::new();
+        entry(
+            &files,
+            &tr("Show in Files"),
+            "win.show-in-files",
+            json_target(&np.track),
         );
         menu.append_section(None, &files);
     }
@@ -286,6 +405,90 @@ pub fn install(window: &adw::ApplicationWindow) {
     window.add_action(&id_action("show-playlist", |id| window::show_playlist(id, None)));
     window.add_action(&id_action("rename-playlist", rename_playlist));
     window.add_action(&id_action("delete-playlist", delete_playlist));
+    window.add_action(&string_action("open-link", open_link));
+    // Stop Controlling: the service carries on playing on its own.
+    let stop = gio::SimpleAction::new("stop-controlling", None);
+    stop.connect_activate(|_, _| {
+        app().send(Command::Remote {
+            action: jf_core::RemoteAction::End,
+        });
+    });
+    window.add_action(&stop);
+}
+
+/// Opens an item's `https` link with the system's handler (the browser, or
+/// the service's own app when it claims its links).
+pub fn open_link(link: &str) {
+    if !links::openable(link) {
+        tracing::warn!("not opening {link:?}: only https links open");
+        return;
+    }
+    let launcher = gtk::UriLauncher::new(link);
+    let parent = app().window.borrow().upgrade();
+    launcher.launch(parent.as_ref(), gio::Cancellable::NONE, |result| {
+        if let Err(e) = result
+            && !e.matches(gtk::DialogError::Dismissed)
+        {
+            app().toast(e.message());
+        }
+    });
+}
+
+/// Does what activating a search or browse row does (docs/ui.md, "Links
+/// and remote playback"): plays it with the playable rows of its list
+/// (`rows`), opens its page, or opens it in its service when it cannot
+/// play here.
+pub fn activate_in_list(rows: &[ItemData], index: usize) {
+    let Some(data) = rows.get(index) else { return };
+    let Some(item) = data.source.as_deref() else {
+        // Library rows of other lists.
+        if let Some(c) = collection_of(data) {
+            play(c, 0, false);
+        }
+        return;
+    };
+    match links::main_action(item) {
+        MainAction::Play => {
+            let playable: Vec<bool> = rows.iter().map(|r| r.track.is_some() && r.playable).collect();
+            let tracks: Vec<TrackRef> = rows
+                .iter()
+                .filter(|r| r.track.is_some() && r.playable)
+                .filter_map(|r| r.track.clone())
+                .collect();
+            let start = links::start_index(&playable, index);
+            play(Collection::Tracks { tracks }, start, false);
+        }
+        MainAction::Browse => open_page(data),
+        MainAction::OpenLink => {
+            if let Some((link, _)) = link_of(data) {
+                open_link(&link);
+            }
+        }
+        MainAction::Nothing => {}
+    }
+}
+
+/// Opens the page of an album, artist, playlist or source container; a
+/// source item that cannot play here opens in its service instead.
+pub fn open_page(data: &ItemData) {
+    if let Some(item) = data.source.as_deref()
+        && links::main_action(item) == MainAction::OpenLink
+    {
+        if let Some((link, _)) = link_of(data) {
+            open_link(&link);
+        }
+        return;
+    }
+    match data.kind {
+        Kind::Album => window::show_album(data.id, Some(data.clone())),
+        Kind::Artist => window::show_artist(data.id, Some(data.clone())),
+        Kind::Playlist => window::show_playlist(data.id, Some(data.clone())),
+        _ => {
+            if let Some(s) = &data.source {
+                window::show_source(&s.source, Some(s.id.clone()), &s.title, s.link.clone());
+            }
+        }
+    }
 }
 
 /// Opens Files (the file manager) on the folder that holds `path`, with it

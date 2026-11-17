@@ -29,7 +29,7 @@ use crate::logic::motion::{self, FLUID};
 use crate::logic::schedule::{self, cursor_ms};
 use crate::logic::sweep::{self, line_text};
 use crate::ui::clock::frame_time_to_core_ns;
-use crate::ui::i18n::tr;
+use crate::ui::i18n::{tr, trf};
 use crate::ui::state::{app, try_app};
 use crate::ui::style;
 use crate::ui::widgets::lyricline::LyricLine;
@@ -91,6 +91,9 @@ pub struct Lyrics {
     /// This panel, for callbacks that outlive a borrow of it.
     weak_self: RefCell<std::rc::Weak<Lyrics>>,
     empty: adw::StatusPage,
+    remote: adw::StatusPage,
+    /// The service whose remote session plays, if one does.
+    remote_service: RefCell<Option<String>>,
 }
 
 impl std::fmt::Debug for Lyrics {
@@ -133,6 +136,11 @@ impl Lyrics {
         empty.add_css_class("compact");
         empty.add_css_class("lyrics-empty");
         stack.add_named(&empty, Some("empty"));
+        // While a remote session plays, the service has the lyrics.
+        let remote = adw::StatusPage::new();
+        remote.add_css_class("compact");
+        remote.add_css_class("lyrics-empty");
+        stack.add_named(&remote, Some("remote"));
         // An empty drawing area over the panel reports its size, for the
         // anchor padding and the fluid type size.
         let sizer = gtk::DrawingArea::new();
@@ -163,6 +171,8 @@ impl Lyrics {
             shown_size: Cell::new(None),
             weak_self: RefCell::new(std::rc::Weak::new()),
             empty,
+            remote,
+            remote_service: RefCell::new(None),
         });
         *lyrics.weak_self.borrow_mut() = Rc::downgrade(&lyrics);
         // Scrolling by hand (wheel, touchpad, scrollbar) pauses following for
@@ -297,6 +307,27 @@ impl Lyrics {
         }
     }
 
+    /// While a remote session plays (`service`), the pane says that the
+    /// service has the lyrics; afterwards the engine's lyrics show again.
+    pub fn set_remote(self: &Rc<Self>, service: Option<&str>) {
+        let service = service.map(str::to_owned);
+        if *self.remote_service.borrow() == service {
+            return;
+        }
+        *self.remote_service.borrow_mut() = service.clone();
+        match service {
+            Some(name) => {
+                self.stop_tick();
+                self.remote.set_description(Some(&trf(
+                    "Lyrics aren't shown while {service} plays.",
+                    &[("service", &name)],
+                )));
+                self.stack.set_visible_child_name("remote");
+            }
+            None => self.rebuild(),
+        }
+    }
+
     /// Shows the lyrics of the current song.
     pub fn set_lyrics(self: &Rc<Self>, lyrics: Option<Arc<LyricsSnapshot>>) {
         let same = match (&*self.lyrics.borrow(), &lyrics) {
@@ -314,6 +345,9 @@ impl Lyrics {
     /// Rebuilds the lines (new song or changed Lyrics settings).
     pub fn rebuild(self: &Rc<Self>) {
         self.stop_tick();
+        if self.remote_service.borrow().is_some() {
+            return;
+        }
         if let Some(a) = self.animation.borrow_mut().take() {
             a.pause();
         }

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: jellyfesh\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 17:52+0000\n"
+"POT-Creation-Date: 2026-11-17 13:47+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,7 +18,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/ui/about.rs:11 src/ui/window.rs:303
+#: src/ui/about.rs:11 src/ui/window.rs:309
 #, no-c-format
 msgid "About Jellyfesh"
 msgstr ""
@@ -70,111 +70,122 @@ msgstr ""
 msgid "No licence has been chosen yet: all rights reserved."
 msgstr ""
 
-#: src/ui/actions.rs:46
+#: src/ui/actions.rs:48
 #, no-c-format
 msgid "Plays next"
 msgstr ""
 
-#: src/ui/actions.rs:48
+#: src/ui/actions.rs:50
 #, no-c-format
 msgid "Added to the queue"
 msgstr ""
 
-#: src/ui/actions.rs:118 src/ui/miniplayer.rs:121 src/ui/miniplayer.rs:123
+#: src/ui/actions.rs:121
+#, no-c-format
+msgid "Open in {service}"
+msgstr ""
+
+#: src/ui/actions.rs:148 src/ui/miniplayer.rs:152 src/ui/miniplayer.rs:154
 #: src/ui/pages/detail.rs:82 src/ui/pages/favourites.rs:52
-#: src/ui/pages/mod.rs:237 src/ui/transport.rs:28 src/ui/transport.rs:29
-#: src/ui/transport.rs:40
+#: src/ui/pages/mod.rs:237 src/ui/transport.rs:31 src/ui/transport.rs:32
+#: src/ui/transport.rs:43
 #, no-c-format
 msgid "Play"
 msgstr ""
 
-#: src/ui/actions.rs:123 src/ui/keys.rs:59 src/ui/pages/detail.rs:83
-#: src/ui/pages/favourites.rs:49 src/ui/pages/mod.rs:238 src/ui/transport.rs:46
+#: src/ui/actions.rs:153 src/ui/keys.rs:59 src/ui/pages/detail.rs:83
+#: src/ui/pages/favourites.rs:49 src/ui/pages/mod.rs:238 src/ui/transport.rs:51
 #, no-c-format
 msgid "Shuffle"
 msgstr ""
 
-#: src/ui/actions.rs:126
+#: src/ui/actions.rs:156
 #, no-c-format
 msgid "Play Next"
 msgstr ""
 
-#: src/ui/actions.rs:127
+#: src/ui/actions.rs:157
 #, no-c-format
 msgid "Play Last"
 msgstr ""
 
-#: src/ui/actions.rs:132
+#: src/ui/actions.rs:162 src/ui/actions.rs:272
 #, no-c-format
 msgid "Add to Playlist…"
 msgstr ""
 
-#: src/ui/actions.rs:148 src/ui/nowplaying/mod.rs:620 src/ui/rows.rs:381
+#: src/ui/actions.rs:178 src/ui/nowplaying/mod.rs:884 src/ui/rows.rs:393
 #, no-c-format
 msgid "Remove from Favourites"
 msgstr ""
 
-#: src/ui/actions.rs:150 src/ui/nowplaying/mod.rs:176
-#: src/ui/nowplaying/mod.rs:622 src/ui/rows.rs:247 src/ui/rows.rs:383
+#: src/ui/actions.rs:180 src/ui/nowplaying/mod.rs:219
+#: src/ui/nowplaying/mod.rs:886 src/ui/rows.rs:259 src/ui/rows.rs:395
 #, no-c-format
 msgid "Add to Favourites"
 msgstr ""
 
-#: src/ui/actions.rs:158
+#: src/ui/actions.rs:188 src/ui/actions.rs:282
 #, no-c-format
 msgid "Go to Album"
 msgstr ""
 
-#: src/ui/actions.rs:162 src/ui/actions.rs:166
+#: src/ui/actions.rs:192 src/ui/actions.rs:196 src/ui/actions.rs:289
 #, no-c-format
 msgid "Go to Artist"
 msgstr ""
 
-#: src/ui/actions.rs:173
+#: src/ui/actions.rs:212
 #, no-c-format
 msgid "Rename…"
 msgstr ""
 
-#: src/ui/actions.rs:176
+#: src/ui/actions.rs:215
 #, no-c-format
 msgid "Delete Playlist…"
 msgstr ""
 
-#: src/ui/actions.rs:191 src/ui/prefs.rs:1159 src/ui/prefs.rs:1160
+#: src/ui/actions.rs:230 src/ui/actions.rs:310 src/ui/prefs.rs:1161
+#: src/ui/prefs.rs:1162
 #, no-c-format
 msgid "Show in Files"
 msgstr ""
 
-#: src/ui/actions.rs:349
+#: src/ui/actions.rs:254
+#, no-c-format
+msgid "Stop Controlling"
+msgstr ""
+
+#: src/ui/actions.rs:552
 #, no-c-format
 msgid "Add the songs from the source's own page."
 msgstr ""
 
-#: src/ui/actions.rs:369
+#: src/ui/actions.rs:572
 #, no-c-format
 msgid "Add to Playlist"
 msgstr ""
 
-#: src/ui/actions.rs:370 src/ui/actions.rs:439 src/ui/actions.rs:470
-#: src/ui/nowplaying/queue.rs:229 src/ui/pages/playlists.rs:117
-#: src/ui/prefs.rs:1175 src/ui/sources_ui.rs:272 src/ui/sources_ui.rs:537
+#: src/ui/actions.rs:573 src/ui/actions.rs:642 src/ui/actions.rs:673
+#: src/ui/nowplaying/queue.rs:262 src/ui/pages/playlists.rs:117
+#: src/ui/prefs.rs:1177 src/ui/sources_ui.rs:272 src/ui/sources_ui.rs:537
 #, no-c-format
 msgid "Cancel"
 msgstr ""
 
-#: src/ui/actions.rs:371 src/ui/window.rs:343
+#: src/ui/actions.rs:574 src/ui/window.rs:349
 #, no-c-format
 msgid "Add"
 msgstr ""
 
-#: src/ui/actions.rs:378 src/ui/actions.rs:424 src/ui/pages/playlists.rs:116
+#: src/ui/actions.rs:581 src/ui/actions.rs:627 src/ui/pages/playlists.rs:116
 #: src/ui/pages/playlists.rs:130
 #, no-c-format
 msgid "New Playlist"
 msgstr ""
 
-#: src/ui/actions.rs:384 src/ui/convert.rs:51 src/ui/convert.rs:129
-#: src/ui/nowplaying/queue.rs:209 src/ui/pages/detail.rs:198
+#: src/ui/actions.rs:587 src/ui/convert.rs:59 src/ui/convert.rs:137
+#: src/ui/nowplaying/queue.rs:242 src/ui/pages/detail.rs:198
 #: src/ui/pages/detail.rs:208 src/ui/pages/detail.rs:455
 #: src/ui/pages/home.rs:244
 msgid "{n} song"
@@ -182,27 +193,27 @@ msgid_plural "{n} songs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/actions.rs:438
+#: src/ui/actions.rs:641
 #, no-c-format
 msgid "Rename Playlist"
 msgstr ""
 
-#: src/ui/actions.rs:440
+#: src/ui/actions.rs:643
 #, no-c-format
 msgid "Rename"
 msgstr ""
 
-#: src/ui/actions.rs:467
+#: src/ui/actions.rs:670
 #, no-c-format
 msgid "Delete “{name}”?"
 msgstr ""
 
-#: src/ui/actions.rs:468
+#: src/ui/actions.rs:671
 #, no-c-format
 msgid "The songs stay in your library."
 msgstr ""
 
-#: src/ui/actions.rs:471
+#: src/ui/actions.rs:674
 #, no-c-format
 msgid "Delete Playlist"
 msgstr ""
@@ -217,13 +228,18 @@ msgstr ""
 msgid "Unknown Album"
 msgstr ""
 
-#: src/ui/convert.rs:131
+#: src/ui/convert.rs:30 src/ui/outputs.rs:122
+#, no-c-format
+msgid "Playing on {device}"
+msgstr ""
+
+#: src/ui/convert.rs:139
 msgid "{n} min"
 msgid_plural "{n} min"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/keys.rs:49 src/ui/prefs.rs:647
+#: src/ui/keys.rs:49 src/ui/prefs.rs:649
 #, no-c-format
 msgid "Playback"
 msgstr ""
@@ -263,12 +279,12 @@ msgstr ""
 msgid "Volume Down"
 msgstr ""
 
-#: src/ui/keys.rs:58 src/ui/transport.rs:140 src/ui/transport.rs:200
+#: src/ui/keys.rs:58 src/ui/transport.rs:142 src/ui/transport.rs:223
 #, no-c-format
 msgid "Mute"
 msgstr ""
 
-#: src/ui/keys.rs:60 src/ui/transport.rs:56
+#: src/ui/keys.rs:60 src/ui/transport.rs:62
 #, no-c-format
 msgid "Repeat"
 msgstr ""
@@ -283,14 +299,14 @@ msgstr ""
 msgid "Now Playing"
 msgstr ""
 
-#: src/ui/keys.rs:67 src/ui/nowplaying/info.rs:46
-#: src/ui/nowplaying/lyrics.rs:118 src/ui/nowplaying/mod.rs:117
-#: src/ui/playerbar.rs:100 src/ui/prefs.rs:345
+#: src/ui/keys.rs:67 src/ui/nowplaying/info.rs:51
+#: src/ui/nowplaying/lyrics.rs:121 src/ui/nowplaying/mod.rs:154
+#: src/ui/playerbar.rs:113 src/ui/prefs.rs:347
 #, no-c-format
 msgid "Lyrics"
 msgstr ""
 
-#: src/ui/keys.rs:68 src/ui/nowplaying/mod.rs:118 src/ui/playerbar.rs:104
+#: src/ui/keys.rs:68 src/ui/nowplaying/mod.rs:155 src/ui/playerbar.rs:117
 #, no-c-format
 msgid "Queue"
 msgstr ""
@@ -310,13 +326,13 @@ msgstr ""
 msgid "General"
 msgstr ""
 
-#: src/ui/keys.rs:76 src/ui/prefs.rs:31 src/ui/sources_ui.rs:229
-#: src/ui/window.rs:301
+#: src/ui/keys.rs:76 src/ui/prefs.rs:33 src/ui/sources_ui.rs:229
+#: src/ui/window.rs:307
 #, no-c-format
 msgid "Settings"
 msgstr ""
 
-#: src/ui/keys.rs:77 src/ui/keys.rs:87 src/ui/window.rs:302
+#: src/ui/keys.rs:77 src/ui/keys.rs:87 src/ui/window.rs:308
 #, no-c-format
 msgid "Keyboard Shortcuts"
 msgstr ""
@@ -331,210 +347,236 @@ msgstr ""
 msgid "Quit"
 msgstr ""
 
-#: src/ui/miniplayer.rs:51 src/ui/playerbar.rs:66 src/ui/playerbar.rs:167
+#: src/ui/miniplayer.rs:61 src/ui/playerbar.rs:79 src/ui/playerbar.rs:208
 #, no-c-format
 msgid "Open Now Playing"
 msgstr ""
 
-#: src/ui/miniplayer.rs:110 src/ui/playerbar.rs:164
+#: src/ui/miniplayer.rs:141 src/ui/playerbar.rs:205
 #, no-c-format
 msgid "Ready to play"
 msgstr ""
 
-#: src/ui/miniplayer.rs:111 src/ui/playerbar.rs:165
+#: src/ui/miniplayer.rs:142 src/ui/playerbar.rs:206
 #, no-c-format
 msgid "Press play to resume"
 msgstr ""
 
-#: src/ui/miniplayer.rs:119
+#: src/ui/miniplayer.rs:150
 #, no-c-format
 msgid "Pause, {percent} % played"
 msgstr ""
 
-#: src/ui/miniplayer.rs:123 src/ui/transport.rs:40
+#: src/ui/miniplayer.rs:154 src/ui/transport.rs:43
 #, no-c-format
 msgid "Pause"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:40 src/ui/pages/library.rs:103
+#: src/ui/nowplaying/info.rs:45 src/ui/pages/library.rs:103
 #, no-c-format
 msgid "Title"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:41 src/ui/pages/detail.rs:364
+#: src/ui/nowplaying/info.rs:46 src/ui/pages/detail.rs:364
 #: src/ui/pages/detail.rs:413 src/ui/pages/library.rs:104
 #, no-c-format
 msgid "Artist"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:42 src/ui/pages/detail.rs:223
-#: src/ui/pages/detail.rs:255 src/ui/pages/library.rs:105 src/ui/prefs.rs:683
+#: src/ui/nowplaying/info.rs:47 src/ui/pages/detail.rs:223
+#: src/ui/pages/detail.rs:255 src/ui/pages/library.rs:105 src/ui/prefs.rs:685
 #, no-c-format
 msgid "Album"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:43 src/ui/pages/library.rs:106
+#: src/ui/nowplaying/info.rs:48 src/ui/pages/library.rs:106
 #, no-c-format
 msgid "Year"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:44 src/ui/prefs.rs:667
+#: src/ui/nowplaying/info.rs:49 src/ui/prefs.rs:669
 #, no-c-format
 msgid "Length"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:45
+#: src/ui/nowplaying/info.rs:50
 #, no-c-format
 msgid "Format"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:47
+#: src/ui/nowplaying/info.rs:52
 #, no-c-format
 msgid "File"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:58
+#: src/ui/nowplaying/info.rs:63
 #, no-c-format
 msgid "About This Song"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:103
+#: src/ui/nowplaying/info.rs:170
 msgid "{n} channel"
 msgid_plural "{n} channels"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/nowplaying/info.rs:106
+#: src/ui/nowplaying/info.rs:173
 #, no-c-format
 msgid "gapless"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:120
+#: src/ui/nowplaying/info.rs:187
 #, no-c-format
 msgid "in the file's tags"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:121
+#: src/ui/nowplaying/info.rs:188
 #, no-c-format
 msgid "None found"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:174
+#: src/ui/nowplaying/info.rs:241
 #, no-c-format
 msgid "Unsynced"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:176
+#: src/ui/nowplaying/info.rs:243
 #, no-c-format
 msgid "Word by word"
 msgstr ""
 
-#: src/ui/nowplaying/info.rs:178
+#: src/ui/nowplaying/info.rs:245
 #, no-c-format
 msgid "Line by line"
 msgstr ""
 
-#: src/ui/nowplaying/lyrics.rs:128 src/ui/nowplaying/lyrics.rs:340
+#: src/ui/nowplaying/lyrics.rs:131 src/ui/nowplaying/lyrics.rs:374
 #, no-c-format
 msgid "No Lyrics"
 msgstr ""
 
-#: src/ui/nowplaying/lyrics.rs:130 src/ui/nowplaying/lyrics.rs:337
+#: src/ui/nowplaying/lyrics.rs:133 src/ui/nowplaying/lyrics.rs:371
 #, no-c-format
 msgid ""
 "Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or "
 "from its tags."
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:105 src/ui/prefs.rs:990 src/ui/window.rs:198
+#: src/ui/nowplaying/lyrics.rs:322
+#, no-c-format
+msgid "Lyrics aren't shown while {service} plays."
+msgstr ""
+
+#: src/ui/nowplaying/mod.rs:140 src/ui/prefs.rs:992 src/ui/window.rs:203
 #, no-c-format
 msgid "Library"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:109 src/ui/nowplaying/mod.rs:110
+#: src/ui/nowplaying/mod.rs:145 src/ui/nowplaying/mod.rs:146
 #, no-c-format
 msgid "Back to Library"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:114
+#: src/ui/nowplaying/mod.rs:151
 #, no-c-format
 msgid "Now Playing views"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:119
+#: src/ui/nowplaying/mod.rs:156
 #, no-c-format
 msgid "Info"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:126 src/ui/nowplaying/mod.rs:687
-#, no-c-format
-msgid "Speakers"
-msgstr ""
-
-#: src/ui/nowplaying/mod.rs:134 src/ui/nowplaying/mod.rs:137
-#: src/ui/prefs.rs:653
-#, no-c-format
-msgid "Output Device"
-msgstr ""
-
-#: src/ui/nowplaying/mod.rs:186 src/ui/playerbar.rs:88
+#: src/ui/nowplaying/mod.rs:255 src/ui/playerbar.rs:101
 #, no-c-format
 msgid "Position"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:573
+#: src/ui/nowplaying/mod.rs:269 src/ui/nowplaying/mod.rs:273
+#: src/ui/pages/detail.rs:87 src/ui/pages/detail.rs:91
+#: src/ui/pages/sources.rs:239 src/ui/pages/sources.rs:242 src/ui/rows.rs:275
+#, no-c-format
+msgid "More"
+msgstr ""
+
+#: src/ui/nowplaying/mod.rs:282 src/ui/playerbar.rs:149
+#, no-c-format
+msgid "Player"
+msgstr ""
+
+#: src/ui/nowplaying/mod.rs:748 src/ui/nowplaying/mod.rs:782
 #, no-c-format
 msgid "Artwork of {title}"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:578
+#: src/ui/nowplaying/mod.rs:753
 #, no-c-format
 msgid "Nothing Playing"
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:581
+#: src/ui/nowplaying/mod.rs:756
 #, no-c-format
 msgid "Pick a song, an album or a playlist."
 msgstr ""
 
-#: src/ui/nowplaying/mod.rs:657 src/ui/prefs.rs:952
-#, no-c-format
-msgid "System Default"
-msgstr ""
-
-#: src/ui/nowplaying/queue.rs:137 src/ui/nowplaying/queue.rs:146
+#: src/ui/nowplaying/queue.rs:141 src/ui/nowplaying/queue.rs:150
 #, no-c-format
 msgid "Up Next"
 msgstr ""
 
-#: src/ui/nowplaying/queue.rs:155 src/ui/nowplaying/queue.rs:230
+#: src/ui/nowplaying/queue.rs:159 src/ui/nowplaying/queue.rs:263
 #, no-c-format
 msgid "Clear Queue"
 msgstr ""
 
-#: src/ui/nowplaying/queue.rs:172
+#: src/ui/nowplaying/queue.rs:176
 #, no-c-format
 msgid "Nothing Up Next"
 msgstr ""
 
-#: src/ui/nowplaying/queue.rs:173
+#: src/ui/nowplaying/queue.rs:177
 #, no-c-format
 msgid "Use Play Next or Play Last on any song, album or playlist."
 msgstr ""
 
-#: src/ui/nowplaying/queue.rs:226
+#: src/ui/nowplaying/queue.rs:220
+#, no-c-format
+msgid "Up Next is in {service}."
+msgstr ""
+
+#: src/ui/nowplaying/queue.rs:259
 #, no-c-format
 msgid "Clear the Queue?"
 msgstr ""
 
-#: src/ui/nowplaying/queue.rs:227
+#: src/ui/nowplaying/queue.rs:260
 #, no-c-format
 msgid "Playback stops and every song is removed from the queue."
 msgstr ""
 
-#: src/ui/pages/detail.rs:87 src/ui/pages/detail.rs:91 src/ui/rows.rs:263
+#: src/ui/outputs.rs:117
 #, no-c-format
-msgid "More"
+msgid "Devices"
+msgstr ""
+
+#: src/ui/outputs.rs:136 src/ui/prefs.rs:655
+#, no-c-format
+msgid "Output Device"
+msgstr ""
+
+#: src/ui/outputs.rs:141
+#, no-c-format
+msgid "Speakers"
+msgstr ""
+
+#: src/ui/outputs.rs:142
+#, no-c-format
+msgid "Output Device: {device}"
+msgstr ""
+
+#: src/ui/outputs.rs:145 src/ui/prefs.rs:954
+#, no-c-format
+msgid "System Default"
 msgstr ""
 
 #: src/ui/pages/detail.rs:209
@@ -553,15 +595,15 @@ msgstr ""
 msgid "This album has no songs left in your library."
 msgstr ""
 
-#: src/ui/pages/detail.rs:389 src/ui/pages/library.rs:216
-#: src/ui/pages/library.rs:222 src/ui/pages/library.rs:233
+#: src/ui/pages/detail.rs:389 src/ui/pages/library.rs:217
+#: src/ui/pages/library.rs:223 src/ui/pages/library.rs:234
 #: src/ui/pages/search.rs:195
 #, no-c-format
 msgid "Albums"
 msgstr ""
 
-#: src/ui/pages/detail.rs:404 src/ui/pages/library.rs:331
-#: src/ui/pages/library.rs:340 src/ui/pages/library.rs:355
+#: src/ui/pages/detail.rs:404 src/ui/pages/library.rs:332
+#: src/ui/pages/library.rs:341 src/ui/pages/library.rs:356
 #: src/ui/pages/search.rs:194
 #, no-c-format
 msgid "Songs"
@@ -618,7 +660,7 @@ msgstr ""
 msgid "Add your music folders, or connect a server in Sources."
 msgstr ""
 
-#: src/ui/pages/home.rs:155 src/ui/pages/library.rs:84 src/ui/window.rs:297
+#: src/ui/pages/home.rs:155 src/ui/pages/library.rs:84 src/ui/window.rs:303
 #, no-c-format
 msgid "Add Music Folder…"
 msgstr ""
@@ -646,48 +688,48 @@ msgstr[1] ""
 msgid "Descending"
 msgstr ""
 
-#: src/ui/pages/library.rs:227
+#: src/ui/pages/library.rs:228
 #, no-c-format
 msgid "No Albums Yet"
 msgstr ""
 
-#: src/ui/pages/library.rs:228
+#: src/ui/pages/library.rs:229
 #, no-c-format
 msgid "Add a music folder to see your albums here."
 msgstr ""
 
-#: src/ui/pages/library.rs:242
+#: src/ui/pages/library.rs:243
 #, no-c-format
 msgid "Sort Albums"
 msgstr ""
 
-#: src/ui/pages/library.rs:262 src/ui/pages/library.rs:268
-#: src/ui/pages/library.rs:279 src/ui/pages/search.rs:196
+#: src/ui/pages/library.rs:263 src/ui/pages/library.rs:269
+#: src/ui/pages/library.rs:280 src/ui/pages/search.rs:196
 #, no-c-format
 msgid "Artists"
 msgstr ""
 
-#: src/ui/pages/library.rs:273
+#: src/ui/pages/library.rs:274
 #, no-c-format
 msgid "No Artists Yet"
 msgstr ""
 
-#: src/ui/pages/library.rs:274
+#: src/ui/pages/library.rs:275
 #, no-c-format
 msgid "Add a music folder to see your artists here."
 msgstr ""
 
-#: src/ui/pages/library.rs:349
+#: src/ui/pages/library.rs:350
 #, no-c-format
 msgid "No Songs Yet"
 msgstr ""
 
-#: src/ui/pages/library.rs:350
+#: src/ui/pages/library.rs:351
 #, no-c-format
 msgid "Add a music folder to see your songs here."
 msgstr ""
 
-#: src/ui/pages/library.rs:364
+#: src/ui/pages/library.rs:365
 #, no-c-format
 msgid "Sort Songs"
 msgstr ""
@@ -857,479 +899,479 @@ msgstr ""
 msgid "Install a source plugin from a .jfpkg file."
 msgstr ""
 
-#: src/ui/pages/sources.rs:154 src/ui/prefs.rs:683
+#: src/ui/pages/sources.rs:154 src/ui/prefs.rs:685
 #, no-c-format
 msgid "Off"
 msgstr ""
 
-#: src/ui/pages/sources.rs:193
+#: src/ui/pages/sources.rs:180
+#, no-c-format
+msgid "Content from {service}"
+msgstr ""
+
+#: src/ui/pages/sources.rs:199
 #, no-c-format
 msgid "Load More"
 msgstr ""
 
-#: src/ui/pages/sources.rs:212
+#: src/ui/pages/sources.rs:223
 #, no-c-format
 msgid "This Source Did Not Answer"
 msgstr ""
 
-#: src/ui/playerbar.rs:130
-#, no-c-format
-msgid "Player"
-msgstr ""
-
-#: src/ui/playerbar.rs:159
+#: src/ui/playerbar.rs:185 src/ui/playerbar.rs:200
 #, no-c-format
 msgid "Open Now Playing: {title}"
 msgstr ""
 
-#: src/ui/prefs.rs:226
+#: src/ui/prefs.rs:228
 #, no-c-format
 msgid "Blue"
 msgstr ""
 
-#: src/ui/prefs.rs:227
+#: src/ui/prefs.rs:229
 #, no-c-format
 msgid "Cyan"
 msgstr ""
 
-#: src/ui/prefs.rs:228
+#: src/ui/prefs.rs:230
 #, no-c-format
 msgid "Teal"
 msgstr ""
 
-#: src/ui/prefs.rs:229
+#: src/ui/prefs.rs:231
 #, no-c-format
 msgid "Green"
 msgstr ""
 
-#: src/ui/prefs.rs:230
+#: src/ui/prefs.rs:232
 #, no-c-format
 msgid "Olive"
 msgstr ""
 
-#: src/ui/prefs.rs:231
+#: src/ui/prefs.rs:233
 #, no-c-format
 msgid "Orange"
 msgstr ""
 
-#: src/ui/prefs.rs:232
+#: src/ui/prefs.rs:234
 #, no-c-format
 msgid "Red"
 msgstr ""
 
-#: src/ui/prefs.rs:233
+#: src/ui/prefs.rs:235
 #, no-c-format
 msgid "Rose"
 msgstr ""
 
-#: src/ui/prefs.rs:234
+#: src/ui/prefs.rs:236
 #, no-c-format
 msgid "Magenta"
 msgstr ""
 
-#: src/ui/prefs.rs:235
+#: src/ui/prefs.rs:237
 #, no-c-format
 msgid "Violet"
 msgstr ""
 
-#: src/ui/prefs.rs:242
+#: src/ui/prefs.rs:244
 #, no-c-format
 msgid "Appearance"
 msgstr ""
 
-#: src/ui/prefs.rs:246 src/ui/prefs.rs:253 src/ui/prefs.rs:255
+#: src/ui/prefs.rs:248 src/ui/prefs.rs:255 src/ui/prefs.rs:257
 #, no-c-format
 msgid "Theme"
 msgstr ""
 
-#: src/ui/prefs.rs:246
+#: src/ui/prefs.rs:248
 #, no-c-format
 msgid "Light, dark, or the same as the system."
 msgstr ""
 
-#: src/ui/prefs.rs:249
+#: src/ui/prefs.rs:251
 #, no-c-format
 msgid "System"
 msgstr ""
 
-#: src/ui/prefs.rs:250
+#: src/ui/prefs.rs:252
 #, no-c-format
 msgid "Light"
 msgstr ""
 
-#: src/ui/prefs.rs:251
+#: src/ui/prefs.rs:253
 #, no-c-format
 msgid "Dark"
 msgstr ""
 
-#: src/ui/prefs.rs:259 src/ui/prefs.rs:275
+#: src/ui/prefs.rs:261 src/ui/prefs.rs:277
 #, no-c-format
 msgid "Accent Colour"
 msgstr ""
 
-#: src/ui/prefs.rs:261
+#: src/ui/prefs.rs:263
 #, no-c-format
 msgid "Follow the Artwork"
 msgstr ""
 
-#: src/ui/prefs.rs:263
+#: src/ui/prefs.rs:265
 #, no-c-format
 msgid "The accent and the Misty field take the hue of the album cover."
 msgstr ""
 
-#: src/ui/prefs.rs:287
+#: src/ui/prefs.rs:289
 #, no-c-format
 msgid "Colour"
 msgstr ""
 
-#: src/ui/prefs.rs:289
+#: src/ui/prefs.rs:291
 #, no-c-format
 msgid "Custom Hue"
 msgstr ""
 
-#: src/ui/prefs.rs:294 src/ui/prefs.rs:909
+#: src/ui/prefs.rs:296 src/ui/prefs.rs:911
 #, no-c-format
 msgid "Custom"
 msgstr ""
 
-#: src/ui/prefs.rs:301 src/ui/prefs.rs:308 src/ui/prefs.rs:323
+#: src/ui/prefs.rs:303 src/ui/prefs.rs:310 src/ui/prefs.rs:325
 #, no-c-format
 msgid "Transparency"
 msgstr ""
 
-#: src/ui/prefs.rs:309
+#: src/ui/prefs.rs:311
 msgctxt "transparency"
 msgid "Solid"
 msgstr ""
 
-#: src/ui/prefs.rs:311
+#: src/ui/prefs.rs:313
 msgctxt "transparency"
 msgid "Clear"
 msgstr ""
 
-#: src/ui/prefs.rs:325
+#: src/ui/prefs.rs:327
 #, no-c-format
 msgid "Reduce Motion and Transparency"
 msgstr ""
 
-#: src/ui/prefs.rs:327
+#: src/ui/prefs.rs:329
 #, no-c-format
 msgid "Solid surfaces instead of glass, and short fades instead of motion."
 msgstr ""
 
-#: src/ui/prefs.rs:335 src/ui/prefs.rs:338 src/ui/prefs.rs:340
+#: src/ui/prefs.rs:337 src/ui/prefs.rs:340 src/ui/prefs.rs:342
 #, no-c-format
 msgid "Now Playing Backdrop"
 msgstr ""
 
-#: src/ui/prefs.rs:337
+#: src/ui/prefs.rs:339
 #, no-c-format
 msgid "Artwork"
 msgstr ""
 
-#: src/ui/prefs.rs:337
+#: src/ui/prefs.rs:339
 #, no-c-format
 msgid "Misty"
 msgstr ""
 
-#: src/ui/prefs.rs:347
+#: src/ui/prefs.rs:349
 #, no-c-format
 msgid ""
 "Lyrics come from a .ttml, .lrc or .vtt file with the same name as the song, "
 "or from its tags. Word-timed lyrics light up word by word."
 msgstr ""
 
-#: src/ui/prefs.rs:350
+#: src/ui/prefs.rs:352
 #, no-c-format
 msgid "Lyrics Size"
 msgstr ""
 
-#: src/ui/prefs.rs:350
+#: src/ui/prefs.rs:352
 #, no-c-format
 msgid "Small"
 msgstr ""
 
-#: src/ui/prefs.rs:350
+#: src/ui/prefs.rs:352
 #, no-c-format
 msgid "Medium"
 msgstr ""
 
-#: src/ui/prefs.rs:350
+#: src/ui/prefs.rs:352
 #, no-c-format
 msgid "Large"
 msgstr ""
 
-#: src/ui/prefs.rs:352
+#: src/ui/prefs.rs:354
 #, no-c-format
 msgid "Lyrics Alignment"
 msgstr ""
 
-#: src/ui/prefs.rs:353
+#: src/ui/prefs.rs:355
 msgctxt "alignment"
 msgid "Start"
 msgstr ""
 
-#: src/ui/prefs.rs:353
+#: src/ui/prefs.rs:355
 msgctxt "alignment"
 msgid "Centre"
 msgstr ""
 
-#: src/ui/prefs.rs:356
+#: src/ui/prefs.rs:358
 #, no-c-format
 msgid "Show Translations"
 msgstr ""
 
-#: src/ui/prefs.rs:358
+#: src/ui/prefs.rs:360
 #, no-c-format
 msgid ""
 "A line in another language under each lyric line, when the lyrics have one."
 msgstr ""
 
-#: src/ui/prefs.rs:362
+#: src/ui/prefs.rs:364
 #, no-c-format
 msgid "Show Romanization"
 msgstr ""
 
-#: src/ui/prefs.rs:364
+#: src/ui/prefs.rs:366
 #, no-c-format
 msgid "How each line reads in Latin letters, when the lyrics have it."
 msgstr ""
 
-#: src/ui/prefs.rs:374
+#: src/ui/prefs.rs:376
 #, no-c-format
 msgid "App Icon"
 msgstr ""
 
-#: src/ui/prefs.rs:376
+#: src/ui/prefs.rs:378
 #, no-c-format
 msgid ""
 "Linux shows the Ice icon everywhere: GNOME takes one icon from the app’s "
 "metadata."
 msgstr ""
 
-#: src/ui/prefs.rs:437 src/ui/widgets/seekbar.rs:783
+#: src/ui/prefs.rs:439 src/ui/widgets/seekbar.rs:791
 #, no-c-format
 msgid "{percent} %"
 msgstr ""
 
-#: src/ui/prefs.rs:623
+#: src/ui/prefs.rs:625
 #, no-c-format
 msgid "Flat"
 msgstr ""
 
-#: src/ui/prefs.rs:624
+#: src/ui/prefs.rs:626
 #, no-c-format
 msgid "Bass Boost"
 msgstr ""
 
-#: src/ui/prefs.rs:625
+#: src/ui/prefs.rs:627
 #, no-c-format
 msgid "Vocal"
 msgstr ""
 
-#: src/ui/prefs.rs:626
+#: src/ui/prefs.rs:628
 #, no-c-format
 msgid "Treble"
 msgstr ""
 
-#: src/ui/prefs.rs:639
+#: src/ui/prefs.rs:641
 #, no-c-format
 msgid "{n} s"
 msgstr ""
 
-#: src/ui/prefs.rs:651
+#: src/ui/prefs.rs:653
 #, no-c-format
 msgid "Output"
 msgstr ""
 
-#: src/ui/prefs.rs:654
+#: src/ui/prefs.rs:656
 #, no-c-format
 msgid "Where the sound goes."
 msgstr ""
 
-#: src/ui/prefs.rs:660 src/ui/prefs.rs:662
+#: src/ui/prefs.rs:662 src/ui/prefs.rs:664
 #, no-c-format
 msgid "Crossfade"
 msgstr ""
 
-#: src/ui/prefs.rs:663
+#: src/ui/prefs.rs:665
 #, no-c-format
 msgid "Blend the end of a song into the next."
 msgstr ""
 
-#: src/ui/prefs.rs:670
+#: src/ui/prefs.rs:672
 #, no-c-format
 msgid "Album Continuity"
 msgstr ""
 
-#: src/ui/prefs.rs:671
+#: src/ui/prefs.rs:673
 #, no-c-format
 msgid "Songs of the same album join without a fade."
 msgstr ""
 
-#: src/ui/prefs.rs:680
+#: src/ui/prefs.rs:682
 #, no-c-format
 msgid "Volume Levelling"
 msgstr ""
 
-#: src/ui/prefs.rs:681
+#: src/ui/prefs.rs:683
 #, no-c-format
 msgid "Evens out loudness using the ReplayGain tags in your files."
 msgstr ""
 
-#: src/ui/prefs.rs:683
+#: src/ui/prefs.rs:685
 #, no-c-format
 msgid "ReplayGain"
 msgstr ""
 
-#: src/ui/prefs.rs:683
+#: src/ui/prefs.rs:685
 #, no-c-format
 msgid "Track"
 msgstr ""
 
-#: src/ui/prefs.rs:685 src/ui/prefs.rs:701
+#: src/ui/prefs.rs:687 src/ui/prefs.rs:703
 #, no-c-format
 msgid "Preamp"
 msgstr ""
 
-#: src/ui/prefs.rs:686
+#: src/ui/prefs.rs:688
 #, no-c-format
 msgid "Decibels added to every song"
 msgstr ""
 
-#: src/ui/prefs.rs:694 src/ui/prefs.rs:695
+#: src/ui/prefs.rs:696 src/ui/prefs.rs:697
 #, no-c-format
 msgid "Equalizer"
 msgstr ""
 
-#: src/ui/prefs.rs:698
+#: src/ui/prefs.rs:700
 #, no-c-format
 msgid "Preset"
 msgstr ""
 
-#: src/ui/prefs.rs:702
+#: src/ui/prefs.rs:704
 #, no-c-format
 msgid "Decibels added before the bands"
 msgstr ""
 
-#: src/ui/prefs.rs:715
+#: src/ui/prefs.rs:717
 #, no-c-format
 msgid "{freq} Hz"
 msgstr ""
 
-#: src/ui/prefs.rs:727
+#: src/ui/prefs.rs:729
 #, no-c-format
 msgid "Reset to Flat"
 msgstr ""
 
-#: src/ui/prefs.rs:748
+#: src/ui/prefs.rs:750
 #, no-c-format
 msgid "Startup"
 msgstr ""
 
-#: src/ui/prefs.rs:750
+#: src/ui/prefs.rs:752
 #, no-c-format
 msgid "Resume Playback"
 msgstr ""
 
-#: src/ui/prefs.rs:751
+#: src/ui/prefs.rs:753
 #, no-c-format
 msgid "Start playing where you left off when Jellyfesh opens."
 msgstr ""
 
-#: src/ui/prefs.rs:993
+#: src/ui/prefs.rs:995
 #, no-c-format
 msgid "Music Folders"
 msgstr ""
 
-#: src/ui/prefs.rs:994
+#: src/ui/prefs.rs:996
 #, no-c-format
 msgid "Jellyfesh reads every audio file in these folders."
 msgstr ""
 
-#: src/ui/prefs.rs:1004
+#: src/ui/prefs.rs:1006
 #, no-c-format
 msgid "Watch Folders"
 msgstr ""
 
-#: src/ui/prefs.rs:1005
+#: src/ui/prefs.rs:1007
 #, no-c-format
 msgid "Update the library when files change."
 msgstr ""
 
-#: src/ui/prefs.rs:1012 src/ui/window.rs:298
+#: src/ui/prefs.rs:1014 src/ui/window.rs:304
 #, no-c-format
 msgid "Rescan Library"
 msgstr ""
 
-#: src/ui/prefs.rs:1013
+#: src/ui/prefs.rs:1015
 #, no-c-format
 msgid "Look for new, changed and removed files."
 msgstr ""
 
-#: src/ui/prefs.rs:1015
+#: src/ui/prefs.rs:1017
 #, no-c-format
 msgid "Rescan"
 msgstr ""
 
-#: src/ui/prefs.rs:1030
+#: src/ui/prefs.rs:1032
 #, no-c-format
 msgid "Last Scan"
 msgstr ""
 
-#: src/ui/prefs.rs:1070
+#: src/ui/prefs.rs:1072
 #, no-c-format
 msgid "No Folders Yet"
 msgstr ""
 
-#: src/ui/prefs.rs:1071
+#: src/ui/prefs.rs:1073
 #, no-c-format
 msgid "Add a folder with music."
 msgstr ""
 
-#: src/ui/prefs.rs:1079
+#: src/ui/prefs.rs:1081
 #, no-c-format
 msgid "Add Folder…"
 msgstr ""
 
-#: src/ui/prefs.rs:1111
+#: src/ui/prefs.rs:1113
 msgid "{n} file checked"
 msgid_plural "{n} files checked"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/prefs.rs:1120
+#: src/ui/prefs.rs:1122
 #, no-c-format
 msgid "{added} added, {updated} updated, {removed} removed"
 msgstr ""
 
-#: src/ui/prefs.rs:1164
+#: src/ui/prefs.rs:1166
 #, no-c-format
 msgid "Remove Folder…"
 msgstr ""
 
-#: src/ui/prefs.rs:1170
+#: src/ui/prefs.rs:1172
 #, no-c-format
 msgid "Remove “{name}” from the library?"
 msgstr ""
 
-#: src/ui/prefs.rs:1172
+#: src/ui/prefs.rs:1174
 #, no-c-format
 msgid ""
 "Its songs leave the library and its playlists. The files stay where they are."
 msgstr ""
 
-#: src/ui/prefs.rs:1176
+#: src/ui/prefs.rs:1178
 #, no-c-format
 msgid "Remove Folder"
 msgstr ""
 
-#: src/ui/rows.rs:278
+#: src/ui/rows.rs:290
 #, no-c-format
 msgid "Remove"
 msgstr ""
 
-#: src/ui/rows.rs:603
+#: src/ui/rows.rs:637
 #, no-c-format
 msgid "Play {title}"
 msgstr ""
@@ -1546,17 +1588,17 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: src/ui/transport.rs:71
+#: src/ui/transport.rs:73
 #, no-c-format
 msgid "Next"
 msgstr ""
 
-#: src/ui/transport.rs:73
+#: src/ui/transport.rs:75
 #, no-c-format
 msgid "Previous"
 msgstr ""
 
-#: src/ui/transport.rs:106
+#: src/ui/transport.rs:108
 #, no-c-format
 msgid "Shuffle, on"
 msgstr ""
@@ -1566,27 +1608,27 @@ msgstr ""
 msgid "Shuffle, off"
 msgstr ""
 
-#: src/ui/transport.rs:112
+#: src/ui/transport.rs:111
 #, no-c-format
 msgid "Repeat, off"
 msgstr ""
 
-#: src/ui/transport.rs:113
+#: src/ui/transport.rs:112
 #, no-c-format
 msgid "Repeat all"
 msgstr ""
 
-#: src/ui/transport.rs:114
+#: src/ui/transport.rs:113
 #, no-c-format
 msgid "Repeat one"
 msgstr ""
 
-#: src/ui/transport.rs:149
+#: src/ui/transport.rs:155
 #, no-c-format
 msgid "Volume"
 msgstr ""
 
-#: src/ui/transport.rs:200
+#: src/ui/transport.rs:223
 #, no-c-format
 msgid "Unmute"
 msgstr ""
@@ -1596,67 +1638,67 @@ msgstr ""
 msgid "{degrees}°"
 msgstr ""
 
-#: src/ui/widgets/seekbar.rs:487
+#: src/ui/widgets/seekbar.rs:495
 #, no-c-format
 msgid "{position} of {duration}"
 msgstr ""
 
-#: src/ui/window.rs:56
+#: src/ui/window.rs:58
 msgctxt "sidebar"
 msgid "Home"
 msgstr ""
 
-#: src/ui/window.rs:57
+#: src/ui/window.rs:59
 msgctxt "sidebar"
 msgid "Albums"
 msgstr ""
 
-#: src/ui/window.rs:58
+#: src/ui/window.rs:60
 msgctxt "sidebar"
 msgid "Artists"
 msgstr ""
 
-#: src/ui/window.rs:59
+#: src/ui/window.rs:61
 msgctxt "sidebar"
 msgid "Songs"
 msgstr ""
 
-#: src/ui/window.rs:60
+#: src/ui/window.rs:62
 msgctxt "sidebar"
 msgid "Playlists"
 msgstr ""
 
-#: src/ui/window.rs:61
+#: src/ui/window.rs:63
 msgctxt "sidebar"
 msgid "Favourites"
 msgstr ""
 
-#: src/ui/window.rs:62
+#: src/ui/window.rs:64
 msgctxt "sidebar"
 msgid "Search"
 msgstr ""
 
-#: src/ui/window.rs:63
+#: src/ui/window.rs:65
 msgctxt "sidebar"
 msgid "Sources"
 msgstr ""
 
-#: src/ui/window.rs:146
+#: src/ui/window.rs:150
 #, no-c-format
 msgid "Library sections"
 msgstr ""
 
-#: src/ui/window.rs:309 src/ui/window.rs:314
+#: src/ui/window.rs:315 src/ui/window.rs:320
 #, no-c-format
 msgid "Main Menu"
 msgstr ""
 
-#: src/ui/window.rs:342
+#: src/ui/window.rs:348
 #, no-c-format
 msgid "Add Music Folder"
 msgstr ""
 
-#: src/ui/window.rs:354
+#: src/ui/window.rs:360
 #, no-c-format
 msgid "Adding the folder to your library…"
 msgstr ""

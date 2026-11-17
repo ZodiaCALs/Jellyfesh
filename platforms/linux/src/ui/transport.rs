@@ -1,7 +1,9 @@
 //! What Now Playing and the player bar share: the transport buttons'
 //! states, the shuffle and repeat toggles, the mute button, and volume
 //! changes sent at most every 60 ms while a slider moves. Each control
-//! sends a command; its state always comes back from the core.
+//! sends a command; its state always comes back from the core. While a
+//! remote session runs (ADR-0018) the same controls show its state, and the
+//! volume line sets the playing device's volume (hidden when it has none).
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -9,8 +11,9 @@ use std::time::Duration;
 
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{Command, RepeatMode};
+use jf_core::{Command, RemoteAction, RepeatMode};
 
+use crate::logic::remote::next_repeat;
 use crate::ui::i18n::tr;
 use crate::ui::state::app;
 use crate::ui::widgets::glyph::{self, Glyph};
@@ -42,25 +45,24 @@ pub fn update_play(button: &gtk::Button, glyph: &PlayPause) {
     button.update_property(&[gtk::accessible::Property::Label(&label)]);
 }
 
+/// The shuffle toggle: it sends the opposite of the state shown (the
+/// queue's, or the remote session's while one runs).
 pub fn shuffle_button(size: i32) -> gtk::Button {
     let b = glyph::button("shuffle", size, &tr("Shuffle"));
     b.connect_clicked(|_| {
         let a = app();
-        let on = a.queue.borrow().shuffle;
+        let on = a.shown_shuffle();
         a.send(Command::SetShuffle { on: !on });
     });
     b
 }
 
+/// The repeat toggle: off, all, one, from the mode shown.
 pub fn repeat_button(size: i32) -> gtk::Button {
     let b = glyph::button("repeat", size, &tr("Repeat"));
     b.connect_clicked(|_| {
         let a = app();
-        let mode = match a.queue.borrow().repeat {
-            RepeatMode::Off => RepeatMode::All,
-            RepeatMode::All => RepeatMode::One,
-            RepeatMode::One => RepeatMode::Off,
-        };
+        let mode = next_repeat(a.shown_repeat());
         a.send(Command::SetRepeat { mode });
     });
     b
@@ -95,20 +97,17 @@ pub fn set_on(button: &gtk::Button, on: bool, label: &str) {
     })]);
 }
 
-/// Shows the queue's shuffle and repeat states.
+/// Shows the shuffle and repeat states (the queue's, or the remote
+/// session's while one runs).
 pub fn update_toggles(shuffle: &gtk::Button, repeat: &gtk::Button) {
     let a = app();
-    let q = a.queue.borrow();
+    let (on, mode) = (a.shown_shuffle(), a.shown_repeat());
     set_on(
         shuffle,
-        q.shuffle,
-        &if q.shuffle {
-            tr("Shuffle, on")
-        } else {
-            tr("Shuffle, off")
-        },
+        on,
+        &if on { tr("Shuffle, on") } else { tr("Shuffle, off") },
     );
-    let (glyph_name, label) = match q.repeat {
+    let (glyph_name, label) = match mode {
         RepeatMode::Off => ("repeat", tr("Repeat, off")),
         RepeatMode::All => ("repeat", tr("Repeat all")),
         RepeatMode::One => ("repeat-one", tr("Repeat one")),
@@ -116,13 +115,16 @@ pub fn update_toggles(shuffle: &gtk::Button, repeat: &gtk::Button) {
     if let Some(g) = glyph::of(repeat) {
         g.set_name_glyph(glyph_name);
     }
-    set_on(repeat, q.repeat != RepeatMode::Off, &label);
+    set_on(repeat, mode != RepeatMode::Off, &label);
 }
 
 /// The mute button and volume slider between two speaker glyphs.
 pub struct Volume {
     pub row: gtk::Box,
     pub mute: gtk::Button,
+    /// The quiet speaker in place of the mute button while a remote session
+    /// runs (the service has no mute).
+    quiet: Glyph,
     pub bar: VolumeBar,
     pending: Rc<Cell<Option<f64>>>,
     timer: Rc<RefCell<Option<glib::SourceId>>>,
@@ -144,12 +146,17 @@ impl Volume {
             let muted = a.muted.get();
             a.send(Command::SetMuted { muted: !muted });
         });
+        let quiet = Glyph::new("volume-low", glyph_size);
+        quiet.add_css_class("np-volume-glyph");
+        quiet.add_css_class("quiet-glyph");
+        quiet.set_visible(false);
         let bar = VolumeBar::new();
         bar.add_css_class("volume");
         bar.update_property(&[gtk::accessible::Property::Label(&tr("Volume"))]);
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         row.add_css_class("volume-row");
         row.append(&mute);
+        row.append(&quiet);
         row.append(&bar);
         if loud_glyph {
             let loud = Glyph::new("volume-high", glyph_size);
@@ -180,17 +187,33 @@ impl Volume {
         Volume {
             row,
             mute,
+            quiet,
             bar,
             pending,
             timer,
         }
     }
 
-    /// Shows the core's volume and mute state.
+    /// Shows the core's volume and mute state, or the remote device's
+    /// volume while a session runs (hidden when the device has none).
     pub fn update(&self) {
         let a = app();
+        let idle = self.timer.borrow().is_none() && self.pending.get().is_none();
+        if let Some(view) = a.remote_view() {
+            self.row.set_visible(view.volume.is_some());
+            self.mute.set_visible(false);
+            self.quiet.set_visible(true);
+            self.bar.set_sensitive(true);
+            if let (Some(percent), true) = (view.volume, idle) {
+                self.bar.set_value(f64::from(percent) / 100.0);
+            }
+            return;
+        }
+        self.row.set_visible(true);
+        self.mute.set_visible(true);
+        self.quiet.set_visible(false);
         let volume = f64::from(a.playback.borrow().volume);
-        if self.timer.borrow().is_none() && self.pending.get().is_none() {
+        if idle {
             self.bar.set_value(volume);
         }
         let muted = a.muted.get();
@@ -206,7 +229,15 @@ impl Volume {
 }
 
 fn send(pending: &Cell<Option<f64>>) {
-    if let Some(v) = pending.take() {
-        app().send(Command::SetVolume { volume: v as f32 });
+    let Some(v) = pending.take() else { return };
+    let a = app();
+    if a.is_remote() {
+        a.send(Command::Remote {
+            action: RemoteAction::SetVolume {
+                percent: crate::logic::remote::volume_percent(v),
+            },
+        });
+    } else {
+        a.send(Command::SetVolume { volume: v as f32 });
     }
 }

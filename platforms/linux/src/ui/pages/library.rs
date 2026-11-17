@@ -8,7 +8,7 @@ use adw::prelude::*;
 use gtk::glib;
 use jf_core::{Command, LibraryStats, TrackQuery, TrackRef};
 
-use crate::logic::library;
+use crate::logic::{layout, library};
 use crate::ui::convert;
 use crate::ui::i18n::tr;
 use crate::ui::models::{Item, ItemData, PagedModel};
@@ -207,12 +207,13 @@ pub fn albums() -> adw::NavigationPage {
     });
     let grid = gtk::GridView::builder()
         .model(&gtk::NoSelection::new(Some(model.clone())))
-        .factory(&card_factory(176))
+        .factory(&card_factory(layout::GRID_COVER as i32))
         .min_columns(2)
         .max_columns(12)
         .single_click_activate(true)
         .build();
     grid.add_css_class("album-grid");
+    follow_grid_width(&grid);
     grid.update_property(&[gtk::accessible::Property::Label(&tr("Albums"))]);
     grid.connect_activate(|grid, position| {
         if let Some(data) = item_at(grid.model().and_upcast(), position) {
@@ -409,4 +410,34 @@ pub fn clamped(child: &impl IsA<gtk::Widget>) -> adw::ClampScrollable {
         .build();
     clamp.add_css_class("list-clamp");
     clamp
+}
+
+/// Keeps the grid's covers near their Luminous size: the column count
+/// follows the grid's width (its horizontal adjustment's page), after the
+/// layout that changed it.
+fn follow_grid_width(grid: &gtk::GridView) {
+    let fit = |grid: &gtk::GridView| {
+        let Some(adj) = grid.hadjustment() else { return };
+        let columns = layout::grid_columns(adj.page_size(), layout::GRID_COVER);
+        if grid.max_columns() != columns {
+            let weak = grid.downgrade();
+            glib::idle_add_local_once(move || {
+                if let Some(grid) = weak.upgrade() {
+                    grid.set_max_columns(columns);
+                }
+            });
+        }
+    };
+    let watch = move |grid: &gtk::GridView| {
+        if let Some(adj) = grid.hadjustment() {
+            let weak = grid.downgrade();
+            adj.connect_page_size_notify(move |_| {
+                if let Some(grid) = weak.upgrade() {
+                    fit(&grid);
+                }
+            });
+        }
+    };
+    watch(grid);
+    grid.connect_hadjustment_notify(move |grid| watch(grid));
 }

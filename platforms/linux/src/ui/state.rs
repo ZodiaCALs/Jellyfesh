@@ -4,8 +4,13 @@
 //! an event brings a new version (a UI never edits a mirror on its own,
 //! ADR-0001). Views register listeners; bursts of events are applied
 //! together and each changed slice is announced once.
+//!
+//! While the `Remote` slice has a source (ADR-0018), the player shows the
+//! remote session instead of the engine: [`App::is_playing`], the drawn
+//! position and the shuffle and repeat states follow the session, and the
+//! transport commands go to the core as usual (it routes them).
 
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell, RefCell, RefMut};
 use std::rc::Rc;
 use std::sync::Arc;
 
@@ -13,10 +18,11 @@ use adw::prelude::*;
 use gtk::glib;
 use jf_core::{
     AuthUpdate, BrowseUpdate, Command, CommandId, DevicesSnapshot, DisplayClock, Event, LyricsSnapshot,
-    NowPlaying, PlaybackSnapshot, QueueSnapshot, ScanStatus, SearchUpdate, Settings, Snapshot,
-    SourcesSnapshot, Status, ThemeSnapshot, monotonic_now_ns,
+    NowPlaying, PlaybackSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate,
+    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, monotonic_now_ns,
 };
 
+use crate::logic::remote::{self, RemoteView};
 use crate::ui::bridge::Bridge;
 use crate::ui::clock::Scheduler;
 use crate::ui::thumbs::Thumbs;
@@ -32,6 +38,8 @@ pub enum Change<'a> {
     Settings,
     Devices,
     Sources,
+    /// The remote session changed (its track, state, device or devices).
+    Remote,
     Library,
     Muted,
     Scan(&'a ScanStatus),
@@ -52,7 +60,10 @@ pub struct App {
     bridge: RefCell<Option<Bridge>>,
     pub thumbs: Thumbs,
     pub scheduler: Scheduler,
+    /// The engine's clock, fed with the playback slice's anchors.
     pub clock: RefCell<DisplayClock>,
+    /// The remote session's clock, fed with the `Remote` slice's anchors.
+    pub remote_clock: RefCell<DisplayClock>,
     pub playback: RefCell<PlaybackSnapshot>,
     pub queue: RefCell<QueueSnapshot>,
     pub now: RefCell<Option<Arc<NowPlaying>>>,
@@ -61,6 +72,7 @@ pub struct App {
     pub settings: RefCell<Arc<Settings>>,
     pub devices: RefCell<Arc<DevicesSnapshot>>,
     pub sources: RefCell<Arc<SourcesSnapshot>>,
+    pub remote: RefCell<Arc<RemoteSnapshot>>,
     pub muted: Cell<bool>,
     pub library_revision: Cell<u64>,
     pub scanning: Cell<bool>,
@@ -108,6 +120,7 @@ struct Dirty {
     settings: bool,
     devices: bool,
     sources: bool,
+    remote: bool,
     library: bool,
     muted: bool,
 }
@@ -117,11 +130,14 @@ impl App {
     pub fn install(bridge: Bridge, thumbs: Thumbs, snapshot: Snapshot) -> Rc<App> {
         let mut clock = DisplayClock::new();
         clock.update(snapshot.playback.anchor, monotonic_now_ns());
+        let mut remote_clock = DisplayClock::new();
+        remote_clock.update(snapshot.remote.anchor, monotonic_now_ns());
         let app = Rc::new(App {
             bridge: RefCell::new(Some(bridge)),
             thumbs,
             scheduler: Scheduler::default(),
             clock: RefCell::new(clock),
+            remote_clock: RefCell::new(remote_clock),
             playback: RefCell::new(snapshot.playback),
             queue: RefCell::new(snapshot.queue),
             now: RefCell::new(snapshot.now_playing),
@@ -130,6 +146,7 @@ impl App {
             settings: RefCell::new(snapshot.settings),
             devices: RefCell::new(snapshot.devices),
             sources: RefCell::new(snapshot.sources),
+            remote: RefCell::new(snapshot.remote),
             muted: Cell::new(snapshot.muted),
             library_revision: Cell::new(snapshot.library_revision),
             scanning: Cell::new(snapshot.scanning),
@@ -227,6 +244,7 @@ impl App {
             settings,
             devices,
             sources,
+            remote,
             library,
             muted,
         } = dirty;
@@ -257,10 +275,13 @@ impl App {
         if sources {
             self.emit(&Change::Sources);
         }
+        if remote {
+            self.emit(&Change::Remote);
+        }
         if library {
             self.emit(&Change::Library);
         }
-        if playback || now || lyrics {
+        if playback || now || lyrics || remote {
             self.scheduler.refresh();
         }
     }
@@ -299,6 +320,17 @@ impl App {
             Event::Sources(s) => {
                 *self.sources.borrow_mut() = s;
                 dirty.sources = true;
+            }
+            Event::Remote(r) => {
+                self.remote_clock
+                    .borrow_mut()
+                    .update(r.anchor, monotonic_now_ns());
+                let before = self.remote.replace(r.clone());
+                // A session that ends with an error says so once.
+                if let Some(message) = remote::ended_error(&before, &r) {
+                    self.toast(&message);
+                }
+                dirty.remote = true;
             }
             Event::LibraryChanged { revision } => {
                 self.library_revision.set(revision);
@@ -359,29 +391,107 @@ impl App {
         }
     }
 
+    /// The transport state shown: the remote session's while one runs,
+    /// otherwise the engine's.
     pub fn status(&self) -> Status {
-        self.playback.borrow().status
+        let remote = self.remote.borrow();
+        if remote.source.is_some() {
+            remote.status
+        } else {
+            self.playback.borrow().status
+        }
     }
 
     pub fn is_playing(&self) -> bool {
         self.status() == Status::Playing
     }
 
-    /// Duration of the current track in µs, from the anchor or the metadata.
+    /// Whether a remote session runs (the `Remote` slice has a source).
+    pub fn is_remote(&self) -> bool {
+        self.remote.borrow().source.is_some()
+    }
+
+    /// The remote session as the player shows it, while one runs.
+    pub fn remote_view(&self) -> Option<RemoteView> {
+        remote::view(&self.remote.borrow())
+    }
+
+    /// The clock the player draws from: the remote session's while one
+    /// runs, otherwise the engine's.
+    pub fn display_clock(&self) -> RefMut<'_, DisplayClock> {
+        if self.is_remote() {
+            self.remote_clock.borrow_mut()
+        } else {
+            self.clock.borrow_mut()
+        }
+    }
+
+    /// The track shown as playing: the remote session's while one runs,
+    /// otherwise the engine's (rows mark it).
+    pub fn shown_track(&self) -> Option<jf_core::TrackRef> {
+        let remote = self.remote.borrow();
+        if remote.source.is_some() {
+            remote.item.as_ref().and_then(|i| i.track.clone())
+        } else {
+            self.now.borrow().as_ref().map(|n| n.track.clone())
+        }
+    }
+
+    /// The shuffle state shown (the remote session's while one runs).
+    pub fn shown_shuffle(&self) -> bool {
+        let remote = self.remote.borrow();
+        if remote.source.is_some() {
+            remote.shuffle
+        } else {
+            self.queue.borrow().shuffle
+        }
+    }
+
+    /// The repeat mode shown (the remote session's while one runs).
+    pub fn shown_repeat(&self) -> RepeatMode {
+        let remote = self.remote.borrow();
+        if remote.source.is_some() {
+            remote.repeat
+        } else {
+            self.queue.borrow().repeat
+        }
+    }
+
+    /// The name of a source (its plugin's name), for "Open in {Service}".
+    pub fn source_name(&self, id: &str) -> String {
+        self.sources
+            .borrow()
+            .plugins
+            .iter()
+            .find(|p| p.id == id)
+            .map_or_else(|| id.to_owned(), |p| p.name.clone())
+    }
+
+    /// Whether a source plays on the person's own devices (ADR-0018).
+    pub fn is_remote_source(&self, id: &str) -> bool {
+        self.sources
+            .borrow()
+            .plugins
+            .iter()
+            .any(|p| p.id == id && p.remote_playback)
+    }
+
+    /// Duration of the shown track in µs, from the anchor or the metadata.
     pub fn duration_us(&self) -> Option<i64> {
-        let from_anchor = self.clock.borrow().anchor().and_then(|a| a.duration_us);
-        from_anchor.filter(|d| *d > 0).or_else(|| {
-            self.now
-                .borrow()
-                .as_ref()?
-                .duration_ms
-                .map(|d| i64::try_from(d).unwrap_or(0) * 1_000)
-        })
+        let from_anchor = self.display_clock().anchor().and_then(|a| a.duration_us);
+        let from_metadata = || {
+            let ms = match self.remote_view() {
+                Some(view) => view.duration_ms,
+                None => self.now.borrow().as_ref()?.duration_ms,
+            };
+            ms.map(|d| i64::try_from(d).unwrap_or(0) * 1_000)
+        };
+        from_anchor.filter(|d| *d > 0).or_else(from_metadata)
     }
 
     /// The drawn playback position now, in µs.
     pub fn position_us(&self) -> i64 {
-        self.clock.borrow_mut().position_us(monotonic_now_ns())
+        self.display_clock().position_us(monotonic_now_ns())
     }
 
     /// Changes one setting: sends back a modified copy of the slice.

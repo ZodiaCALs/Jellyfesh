@@ -10,7 +10,7 @@
 //! | `dimension` | `12px` (rem tokens are converted at 16 px) |
 //! | `duration` | `380ms` |
 //! | `cubicBezier` | `cubic-bezier(0.22, 1, 0.36, 1)` |
-//! | `number` | the number |
+//! | `number` | the number (`{{group.token * 0.9}}`: times a factor) |
 //! | `color` | `@jf_<name>`: a named colour the run-time theme defines |
 //! | `typography` | `font-size: 14px; line-height: 1.3; font-weight: 500` |
 //! | `shadow` | a `box-shadow` list whose colours are run-time theme colours |
@@ -47,6 +47,21 @@ pub fn expand(template: &str, tokens: &Value) -> Result<String, String> {
 
 /// The CSS for one token, by its `group.token` path.
 pub fn token_css(path: &str, tokens: &Value) -> Result<String, String> {
+    // A number token may be scaled: `field.aurora-strength * 0.9`.
+    if let Some((name, factor)) = path.split_once('*') {
+        let name = name.trim();
+        let factor: f64 = factor
+            .trim()
+            .parse()
+            .map_err(|_| format!("`{path}`: the factor must be a number"))?;
+        let token = lookup(tokens, name).ok_or_else(|| format!("unknown token `{name}`"))?;
+        let value = token
+            .get("$value")
+            .and_then(Value::as_f64)
+            .filter(|_| token.get("$type").and_then(Value::as_str) == Some("number"))
+            .ok_or_else(|| format!("`{path}`: only number tokens can be scaled"))?;
+        return Ok(num(value * factor));
+    }
     let token = lookup(tokens, path).ok_or_else(|| format!("unknown token `{path}`"))?;
     let kind = token.get("$type").and_then(Value::as_str).unwrap_or_default();
     let value = token
@@ -201,6 +216,19 @@ mod tests {
             },
             "brand": { "mood": { "$type": "string", "$value": "calm" } }
         })
+    }
+
+    #[test]
+    fn scales_number_tokens() {
+        let t = tokens();
+        assert_eq!(expand("{{glass.glass-sat * 2}}", &t).unwrap(), "3.5");
+        assert_eq!(expand("{{ glass.glass-sat*0.5 }}", &t).unwrap(), "0.875");
+        assert!(
+            expand("{{radius.r-lg * 2}}", &t).is_err(),
+            "dimensions are not scaled"
+        );
+        assert!(expand("{{glass.glass-sat * x}}", &t).is_err());
+        assert!(expand("{{glass.nope * 2}}", &t).is_err());
     }
 
     #[test]

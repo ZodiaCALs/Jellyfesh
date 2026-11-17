@@ -6,12 +6,17 @@
 //! the only accent fill) sits above the seek bar and its times; on the end
 //! side Lyrics, Queue and the volume. This bends CMP-02 (one control) on
 //! purpose, for desktop use; narrow windows keep the mini-player.
+//!
+//! While a remote session runs (ADR-0018) the bar shows its track with
+//! "Playing on {Device}" under the title (its error in a quieter line), the
+//! volume sets the device's volume, and the device button opens Devices.
 
 use adw::prelude::*;
 
 use crate::logic::seek::Times;
 use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
+use crate::ui::outputs::DeviceButton;
 use crate::ui::state::{Change, app};
 use crate::ui::transport::{self, Volume};
 use crate::ui::widgets::art::Art;
@@ -53,10 +58,18 @@ pub fn build() -> PlayerBar {
         .single_line_mode(true)
         .build();
     artist.add_css_class("bar-artist");
+    let error = gtk::Label::builder()
+        .xalign(0.0)
+        .ellipsize(gtk::pango::EllipsizeMode::End)
+        .single_line_mode(true)
+        .visible(false)
+        .build();
+    error.add_css_class("bar-error");
     let texts = gtk::Box::new(gtk::Orientation::Vertical, 2);
     texts.set_valign(gtk::Align::Center);
     texts.append(&title);
     texts.append(&artist);
+    texts.append(&error);
     let open_box = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     open_box.append(&art);
     open_box.append(&texts);
@@ -109,11 +122,17 @@ pub fn build() -> PlayerBar {
     volume.row.set_valign(gtk::Align::Center);
     volume.bar.set_natural_width(VOLUME_WIDTH);
     volume.bar.set_hexpand(false);
+    // Devices, while a remote session runs.
+    let devices = DeviceButton::new(false);
+    devices.button.add_css_class("bar-icon");
+    devices.button.set_valign(gtk::Align::Center);
+    devices.button.set_visible(false);
     let end = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     end.add_css_class("bar-end");
     end.set_halign(gtk::Align::End);
     end.append(&lyrics);
     end.append(&queue);
+    end.append(&devices.button);
     end.append(&volume.row);
 
     // The middle stays centred; the start and end share the rest.
@@ -138,16 +157,38 @@ pub fn build() -> PlayerBar {
         artist.downgrade(),
         art.downgrade(),
         open.downgrade(),
+        error.downgrade(),
+        devices.button.downgrade(),
     );
     let update_track = move || {
-        let (Some(title), Some(artist), Some(art), Some(open)) = (
+        let (Some(title), Some(artist), Some(art), Some(open), Some(error), Some(devices)) = (
             weak.0.upgrade(),
             weak.1.upgrade(),
             weak.2.upgrade(),
             weak.3.upgrade(),
+            weak.4.upgrade(),
+            weak.5.upgrade(),
         ) else {
             return;
         };
+        let remote = app().remote_view();
+        devices.set_visible(remote.is_some());
+        if let Some(view) = remote {
+            let (name, playing_on) = convert::remote_lines(&view);
+            title.set_label(&name);
+            artist.set_label(&playing_on);
+            artist.add_css_class("playing-on");
+            error.set_label(view.error.as_deref().unwrap_or_default());
+            error.set_visible(view.error.is_some());
+            art.set_art(convert::art_of(view.artwork.as_ref()));
+            open.update_property(&[gtk::accessible::Property::Label(&trf(
+                "Open Now Playing: {title}",
+                &[("title", &name)],
+            ))]);
+            return;
+        }
+        artist.remove_css_class("playing-on");
+        error.set_visible(false);
         let now = app().now.borrow().clone();
         match &now {
             Some(np) => {
@@ -181,6 +222,26 @@ pub fn build() -> PlayerBar {
     );
     let volume = std::rc::Rc::new(volume);
     let vol = volume.clone();
+    let track = update_track.clone();
+    let (r_play, r_glyph, r_shuffle, r_repeat) = (
+        play.downgrade(),
+        glyph.downgrade(),
+        shuffle.downgrade(),
+        repeat.downgrade(),
+    );
+    let vol_remote = volume.clone();
+    a.listen_for(&holder, move |change| {
+        if let Change::Remote = change {
+            track();
+            if let (Some(p), Some(g)) = (r_play.upgrade(), r_glyph.upgrade()) {
+                transport::update_play(&p, &g);
+            }
+            if let (Some(s), Some(r)) = (r_shuffle.upgrade(), r_repeat.upgrade()) {
+                transport::update_toggles(&s, &r);
+            }
+            vol_remote.update();
+        }
+    });
     a.listen_for(&holder, move |change| match change {
         Change::NowPlaying => update_track(),
         Change::Playback | Change::Muted => {
@@ -198,6 +259,7 @@ pub fn build() -> PlayerBar {
     });
     let line = volume.bar.clone();
     crate::ui::pages::keep_alive(&holder, volume);
+    crate::ui::pages::keep_alive(&holder, devices);
     a.scheduler.add(
         &seek,
         |bar, pos, running| bar.set_position(pos, app().duration_us(), running),

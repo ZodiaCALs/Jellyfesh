@@ -42,19 +42,58 @@
   box-shadow: 0 1px 2px alpha(black, 0.25), inset 0 0 0 1px {{glass.glass-edge}};
 }
 
-menubutton.device-chip > button {
-  min-height: 36px;
-  padding: 0 14px 0 10px;
+/* On the Now Playing stage the switcher is a glass capsule; the chosen
+ * panel is solid ink, as in the approved mock-up. */
+.segmented.np-capsule {
+  padding: 4px;
   border-radius: {{radius.r-full}};
-  background-color: alpha({{ink.ink-90}}, 0.06);
-  box-shadow: inset 0 0 0 1px alpha({{ink.ink-90}}, 0.12);
-  color: {{ink.ink-90}};
-  font-weight: 600;
-  font-size: 13px;
+  background-color: @jf_tint_veil;
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
 }
 
-menubutton.device-chip > button:hover {
-  background-color: alpha({{ink.ink-90}}, 0.10);
+.segmented.np-capsule > button.segment {
+  min-height: 34px;
+  padding: 0 {{space.s4}};
+  border-radius: {{radius.r-full}};
+}
+
+.segmented.np-capsule > button.segment:checked {
+  background-color: {{ink.ink-90}};
+  color: {{field.sky}};
+  box-shadow: none;
+}
+
+/* The device button and More (the dock's end, the player bar): quiet
+ * glyphs; during a remote session the device glyph takes the accent. */
+menubutton.np-dock-button > button,
+menubutton.bar-icon > button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  color: {{ink.ink-70}};
+}
+
+menubutton.np-dock-button > button:hover,
+menubutton.bar-icon > button:hover,
+menubutton.np-dock-button > button:checked,
+menubutton.bar-icon > button:checked {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+menubutton.device-button.remote > button {
+  color: {{accent.accent-text}};
+}
+
+.device-popover-title {
+  font-weight: 700;
+  padding: 6px 10px 2px;
+}
+
+glyph.device-kind {
+  color: {{ink.ink-70}};
 }
 
 /* The line sliders: the played part in the CSS colour (ink-90), the rest,
@@ -71,16 +110,37 @@ volumebar:focus-visible {
   border-radius: {{radius.r-md}};
 }
 
-/* Transport: previous, play and next grouped in one glass capsule. */
-.transport {
-  padding: 6px;
+/* Luminous: every Now Playing control in one floating Veil dock, 80 px
+ * high with fully rounded ends (radius 40); in narrow windows a rounded
+ * card with the seek bar on top. Without live glass the dock keeps the
+ * Veil tint, unblurred, over the backdrop. */
+.np-dock-holder {
+  margin: 0 {{space.s6}} {{space.s5}};
+}
+
+.now-playing.narrow .np-dock-holder {
+  margin: 0 {{space.s4}} {{space.s4}};
+}
+
+.np-dock {
+  min-height: {{player.bar-height}};
+  padding: 0 {{space.s5}} 0 {{space.s4}};
   border-radius: {{radius.r-full}};
   box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-2}};
 }
 
+.np-dock.dock-card {
+  padding: {{space.s4}} {{space.s5}} {{space.s3}};
+  border-radius: {{radius.r-2xl}};
+}
+
+.np-dock .np-volume {
+  margin-left: {{space.s2}};
+}
+
 button.np-skip {
-  min-width: 52px;
-  min-height: 52px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   border-radius: {{radius.r-full}};
   background: transparent;
@@ -97,8 +157,8 @@ button.np-skip:active {
 }
 
 button.np-play {
-  min-width: 60px;
-  min-height: 60px;
+  min-width: 54px;
+  min-height: 54px;
   padding: 0;
   border-radius: {{radius.r-full}};
   background-color: {{accent.accent}};
@@ -227,9 +287,10 @@ button.mini-play:active {
   transform: scale(0.92);
 }
 
-/* The player bar (900 px and wider): a floating Veil bar, 80 px high, r-xl
- * corners; art and titles, the transport capsule above the seek bar, then
- * Lyrics, Queue and the volume. Solid Cloud without live glass. */
+/* The player bar (900 px and wider): a floating Veil capsule, 80 px high,
+ * r-2xl corners (Luminous); art and titles, the transport capsule above
+ * the seek bar, then Lyrics, Queue, Devices (remote sessions) and the
+ * volume. Solid Cloud without live glass. */
 .bar-holder {
   margin: 0 {{space.s4}} {{space.s4}};
 }
@@ -237,7 +298,7 @@ button.mini-play:active {
 .player-bar {
   min-height: {{player.bar-height}};
   padding: 0 {{space.s3}};
-  border-radius: {{radius.r-xl}};
+  border-radius: {{radius.r-2xl}};
   background-color: {{glass.cloud}};
   box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, 0 2px 6px alpha(black, 0.12), {{elevation.shadow-2}};
 }

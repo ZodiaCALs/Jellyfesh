@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{Collection, Command, CommandId, ItemKind, PluginBadge, PluginSummary};
+use jf_core::{Command, CommandId, PluginBadge, PluginSummary};
 
 use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
@@ -149,7 +149,7 @@ fn source_row(p: &PluginSummary) -> adw::ActionRow {
     if p.enabled {
         row.add_suffix(&glyph::Glyph::new("forward", 18));
         let (id, name) = (p.id.clone(), p.name.clone());
-        row.connect_activated(move |_| window::show_source(&id, None, &name));
+        row.connect_activated(move |_| window::show_source(&id, None, &name, None));
     } else {
         let off = gtk::Label::new(Some(&tr("Off")));
         off.add_css_class("dim-label");
@@ -170,31 +170,42 @@ struct Browse {
     error: adw::StatusPage,
 }
 
-/// One container of a source's catalogue (`node` `None` is its root).
-pub fn browse_page(plugin: &str, node: Option<String>, title: &str) -> adw::NavigationPage {
+/// "Content from {Service}" for a source whose terms ask its views to name
+/// it (`attribution`, docs/ui.md); no logos until they are approved.
+pub fn attribution_text(plugin: &str) -> Option<String> {
+    let sources = app().sources.borrow().clone();
+    let p = sources.plugins.iter().find(|p| p.id == plugin)?;
+    p.attribution
+        .as_ref()
+        .map(|_| trf("Content from {service}", &[("service", &p.name)]))
+}
+
+/// One container of a source's catalogue (`node` `None` is its root), with
+/// the container's `link` for Open in {Service} in its More menu.
+pub fn browse_page(
+    plugin: &str,
+    node: Option<String>,
+    title: &str,
+    link: Option<String>,
+) -> adw::NavigationPage {
     let browse_items: Rc<RefCell<Vec<ItemData>>> = Rc::new(RefCell::new(Vec::new()));
     let opened = browse_items.clone();
+    // Songs play with the playable songs listed; containers open; items
+    // that cannot play here open in their service.
     let list = track_box(RowStyle::TRACK, move |i| {
-        let items = opened.borrow();
-        let Some(d) = items.get(i) else { return };
-        match d.source.as_ref().map(|s| s.kind) {
-            Some(ItemKind::Track) => {
-                let refs: Vec<_> = items.iter().filter_map(|x| x.track.clone()).collect();
-                let start = items[..i].iter().filter(|x| x.track.is_some()).count();
-                actions::play(Collection::Tracks { tracks: refs }, start, false);
-            }
-            _ => {
-                if let Some(s) = &d.source {
-                    window::show_source(&s.source, Some(s.id.clone()), &s.title);
-                }
-            }
-        }
+        let items = opened.borrow().clone();
+        actions::activate_in_list(&items, i);
     });
     let more = gtk::Button::with_label(&tr("Load More"));
     more.add_css_class("pill");
     more.set_halign(gtk::Align::Center);
     more.set_visible(false);
     let body = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    if let Some(text) = attribution_text(plugin) {
+        let note = gtk::Label::builder().label(text).xalign(0.0).wrap(true).build();
+        note.add_css_class("attribution");
+        body.append(&note);
+    }
     body.append(&list);
     body.append(&more);
     let clamp = adw::Clamp::builder().child(&body).maximum_size(1000).build();
@@ -211,11 +222,29 @@ pub fn browse_page(plugin: &str, node: Option<String>, title: &str) -> adw::Navi
     stack.add_named(&scroller(&clamp), Some("list"));
     let error = status("dialog-warning-symbolic", &tr("This Source Did Not Answer"), "");
     stack.add_named(&error, Some("error"));
-    let (page, _) = frame(
+    let (page, header) = frame(
         title,
         &format!("source-{plugin}-{}", node.as_deref().unwrap_or("root")),
         &stack,
     );
+    // More: Open in {Service}, for a container with a link.
+    if let Some(link) = link.filter(|l| crate::logic::links::openable(l)) {
+        let menu = gtk::gio::Menu::new();
+        let item = gtk::gio::MenuItem::new(Some(&actions::open_in_label(&app().source_name(plugin))), None);
+        item.set_action_and_target_value(Some("win.open-link"), Some(&link.to_variant()));
+        menu.append_item(&item);
+        let button = gtk::MenuButton::builder()
+            .child(&glyph::Glyph::new("more", 20))
+            .menu_model(&menu)
+            .tooltip_text(tr("More"))
+            .build();
+        button.add_css_class("flat");
+        button.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
+        if let Some(p) = button.popover() {
+            crate::ui::style::animate_popup(&p);
+        }
+        header.pack_end(&button);
+    }
 
     let browse = Rc::new(Browse {
         plugin: plugin.to_owned(),

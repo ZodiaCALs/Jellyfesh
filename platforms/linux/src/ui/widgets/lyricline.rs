@@ -10,9 +10,10 @@ use gtk::{gdk, glib, graphene, pango, prelude::*};
 
 use crate::logic::sweep::{LineText, Span, sung_spans};
 
-/// Line heights from the lyrics tokens: 1.3, and 1.6 for CJK (TYP-08).
-const LINE_HEIGHT: f32 = 1.3;
-const LINE_HEIGHT_CJK: f32 = 1.6;
+/// Line heights from the lyrics tokens: `lyrics.line` (1.18 in Luminous),
+/// and `lyrics.line-cjk-line-height` for Han, Kana and Hangul (TYP-08).
+const LINE_HEIGHT: f32 = jf_tokens::lyrics::LINE.line_height;
+const LINE_HEIGHT_CJK: f32 = jf_tokens::lyrics::LINE_CJK_LINE_HEIGHT;
 
 mod imp {
     use super::*;

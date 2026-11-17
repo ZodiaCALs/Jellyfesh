@@ -1,5 +1,7 @@
 //! The Info panel, "About This Song" (docs/ui.md, "Now Playing"): Title,
-//! Artist, Album, Year, Length, Format, Lyrics and File.
+//! Artist, Album, Year, Length, Format, Lyrics and File, then Open in
+//! {Service} for a song with a link (ADR-0018). While a remote session
+//! runs it shows the service's track.
 
 use std::cell::Cell;
 use std::rc::Rc;
@@ -14,6 +16,9 @@ use crate::ui::state::{app, spawn};
 pub struct Info {
     pub root: gtk::ScrolledWindow,
     rows: Vec<(String, adw::ActionRow)>,
+    /// Open in {Service}, under the facts.
+    open_link: gtk::Button,
+    link: Rc<std::cell::RefCell<Option<String>>>,
     /// The queue entry whose year the Year row shows (or is looking up).
     year_of: Rc<Cell<Option<u64>>>,
 }
@@ -60,9 +65,29 @@ impl Info {
             .accessible_role(gtk::AccessibleRole::Heading)
             .build();
         heading.add_css_class("panel-title");
+        let open_link = gtk::Button::builder()
+            .halign(gtk::Align::Start)
+            .visible(false)
+            .build();
+        let link_face = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        link_face.append(&crate::ui::widgets::glyph::Glyph::new("link", 18));
+        link_face.append(&gtk::Label::new(None));
+        open_link.set_child(Some(&link_face));
+        open_link.add_css_class("pill");
+        open_link.add_css_class("action-pill");
+        open_link.add_css_class("glass-pill");
+        open_link.add_css_class("np-open-link");
+        let link: Rc<std::cell::RefCell<Option<String>>> = Rc::new(std::cell::RefCell::new(None));
+        let target = link.clone();
+        open_link.connect_clicked(move |_| {
+            if let Some(l) = target.borrow().clone() {
+                crate::ui::actions::open_link(&l);
+            }
+        });
         let body = gtk::Box::new(gtk::Orientation::Vertical, 12);
         body.append(&heading);
         body.append(&list);
+        body.append(&open_link);
         let root = gtk::ScrolledWindow::builder()
             .child(&body)
             .hscrollbar_policy(gtk::PolicyType::Never)
@@ -72,8 +97,45 @@ impl Info {
         Info {
             root,
             rows,
+            open_link,
+            link,
             year_of: Rc::new(Cell::new(None)),
         }
+    }
+
+    /// Shows Open in {Service} for `link` (hidden without one).
+    fn show_link(&self, link: Option<&str>, service: &str) {
+        let link = link.filter(|l| crate::logic::links::openable(l));
+        *self.link.borrow_mut() = link.map(str::to_owned);
+        let label = crate::ui::actions::open_in_label(service);
+        if let Some(l) = self
+            .open_link
+            .child()
+            .and_then(|c| c.last_child())
+            .and_downcast::<gtk::Label>()
+        {
+            l.set_label(&label);
+        }
+        self.open_link
+            .update_property(&[gtk::accessible::Property::Label(&label)]);
+        self.open_link.set_visible(link.is_some());
+    }
+
+    /// The remote session's track: what the service reports about it.
+    pub fn update_remote(&self, view: &crate::logic::remote::RemoteView) {
+        self.year_of.set(None);
+        self.set("title", view.title.as_deref().unwrap_or_default());
+        self.set("artist", view.artist.as_deref().unwrap_or_default());
+        self.set("album", view.album.as_deref().unwrap_or_default());
+        self.set("year", "");
+        self.set(
+            "duration",
+            &view.duration_ms.map(format::clock).unwrap_or_default(),
+        );
+        for key in ["format", "lyrics", "file"] {
+            self.set(key, "");
+        }
+        self.show_link(view.link.as_deref(), &view.service);
     }
 
     fn set(&self, key: &str, value: &str) {
@@ -89,8 +151,13 @@ impl Info {
                 self.set(key, "");
             }
             self.year_of.set(None);
+            self.show_link(None, "");
             return;
         };
+        match &np.track {
+            TrackRef::Source(s) => self.show_link(np.link.as_deref(), &app().source_name(&s.plugin)),
+            _ => self.show_link(None, ""),
+        }
         self.set("title", &np.title);
         self.show_year(np);
         self.set("artist", np.artist.as_deref().unwrap_or_default());

@@ -361,6 +361,14 @@ impl SeekBar {
         self.imp().times.get().unwrap_or(Times::Below)
     }
 
+    /// Moves the times under the line or beside it (Now Playing's dock in
+    /// narrow and wide windows).
+    pub fn set_times(&self, times: Times) {
+        if self.imp().times.replace(Some(times)) != Some(times) {
+            self.queue_resize();
+        }
+    }
+
     /// Called with the new position in ms when the person seeks.
     pub fn connect_seek(&self, f: impl Fn(u64) + 'static) {
         *self.imp().on_seek.borrow_mut() = Some(Box::new(f));
