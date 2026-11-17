@@ -24,4 +24,16 @@
     <!-- The C# ports of the drawing-time helpers (DisplayClock, the lyrics cursor). -->
     <JfSharedCsharpDir>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\shared\csharp'))\</JfSharedCsharpDir>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Edition and distribution (ADR-0021, docs/github.md): -p:JfEdition and -p:JfDistribution,
+         else the JF_EDITION and JF_DISTRIBUTION environment variables (the release workflow), else
+         a community build from source. Editions: community, commercial (no unofficial community
+         plugins bundled). Distributions: source, direct, microsoft-store (scripts/build.ps1
+         -StorePackage). Directory.Build.targets turns them into constants and assembly metadata. -->
+    <JfEdition Condition="'$(JfEdition)' == ''">$(JF_EDITION)</JfEdition>
+    <JfEdition Condition="'$(JfEdition)' == ''">community</JfEdition>
+    <JfDistribution Condition="'$(JfDistribution)' == ''">$(JF_DISTRIBUTION)</JfDistribution>
+    <JfDistribution Condition="'$(JfDistribution)' == ''">source</JfDistribution>
+  </PropertyGroup>
 </Project>

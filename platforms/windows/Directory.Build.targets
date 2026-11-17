@@ -1,0 +1,21 @@
+<Project>
+  <!-- Shared by every project under platforms/windows, after each project's own settings. -->
+
+  <!-- The edition and distribution from Directory.Build.props, for the app to read: the constants
+       JF_EDITION_<EDITION> and JF_DISTRIBUTION_<DISTRIBUTION> (upper case, "-" as "_", for example
+       JF_EDITION_COMMERCIAL, JF_DISTRIBUTION_MICROSOFT_STORE), and the assembly metadata JfEdition
+       and JfDistribution (AssemblyMetadataAttribute). -->
+  <PropertyGroup>
+    <DefineConstants>$(DefineConstants);JF_EDITION_$(JfEdition.ToUpperInvariant().Replace('-', '_'));JF_DISTRIBUTION_$(JfDistribution.ToUpperInvariant().Replace('-', '_'))</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="JfEdition" Value="$(JfEdition)" />
+    <AssemblyMetadata Include="JfDistribution" Value="$(JfDistribution)" />
+  </ItemGroup>
+  <Target Name="JfCheckEdition" BeforeTargets="BeforeBuild">
+    <Error Condition="'$(JfEdition)' != 'community' and '$(JfEdition)' != 'commercial'"
+           Text="JfEdition (JF_EDITION) must be community or commercial, not '$(JfEdition)'." />
+    <Error Condition="'$(JfDistribution)' != 'source' and '$(JfDistribution)' != 'direct' and '$(JfDistribution)' != 'microsoft-store'"
+           Text="JfDistribution (JF_DISTRIBUTION) must be source, direct or microsoft-store, not '$(JfDistribution)'." />
+  </Target>
+</Project>

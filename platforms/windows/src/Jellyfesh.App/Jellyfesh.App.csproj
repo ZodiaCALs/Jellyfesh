@@ -71,14 +71,23 @@
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
-  <!-- Bundled plugins: installed by the core on first start, updated with the app (BundledPlugins). -->
+  <!-- Bundled plugins: installed by the core on first start, updated with the app (BundledPlugins).
+       The commercial edition leaves out the unofficial community plugins, which stay separate
+       downloads (ADR-0021 §4). -->
+  <PropertyGroup>
+    <JfBundledPluginsExclude Condition="'$(JfEdition)' == 'commercial'">$(JfBundledPluginsDir)community.unofficial.*.jfpkg</JfBundledPluginsExclude>
+  </PropertyGroup>
   <ItemGroup>
-    <Content Include="$(JfBundledPluginsDir)*.jfpkg" Link="Plugins\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(JfBundledPluginsDir)*.jfpkg" Exclude="$(JfBundledPluginsExclude)" Link="Plugins\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <!-- MSIX packaging (later, ADR-0016): the manifest and Visual Studio's package profile. -->
+  <!-- MSIX packaging: the manifest and Visual Studio's package profile. The Microsoft Store package
+       (scripts/build.ps1 -StorePackage) uses a copy with the Partner Center identity, JfAppxManifest. -->
+  <PropertyGroup>
+    <JfAppxManifest Condition="'$(JfAppxManifest)' == ''">Package.appxmanifest</JfAppxManifest>
+  </PropertyGroup>
   <ItemGroup Condition="'$(WindowsPackageType)' == 'MSIX'">
-    <AppxManifest Include="Package.appxmanifest" SubType="Designer" />
+    <AppxManifest Include="$(JfAppxManifest)" SubType="Designer" />
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup Condition="'$(WindowsPackageType)' != 'MSIX'">
