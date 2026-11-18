@@ -132,6 +132,7 @@ pub fn mock_files(dir: &Path) -> PluginFiles {
         manifest: manifest + "\n",
         schema: Some((name, serde_json::to_string_pretty(&schema).expect("JSON"))),
         icon: files.icon,
+        translations: files.translations,
     }
 }
 
