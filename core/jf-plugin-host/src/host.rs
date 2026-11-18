@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use parking_lot::RwLock;
 
@@ -11,20 +11,41 @@ use crate::bindings::exports::jellyfesh::plugin::{catalog, playback};
 use crate::bindings::jellyfesh::plugin::types as wit;
 use crate::error::{CallError, HostError};
 use crate::install::{self, MAX_PACKAGE_FILE};
+use crate::maker::MakeJob;
 use crate::net::{Resolve, SystemResolver};
 use crate::package::{self, Package};
 use crate::plugin::{Job, JobContext, Plugin};
 use crate::pool::{Scheduler, WORKERS};
 use crate::runtime::{Budget, Limits, Protected, Runtime};
+use crate::runtime::{Instance, MakerCall};
 use crate::sanitize::{self, Checker};
 use crate::secrets::SecretStore;
 use crate::services::{Services, effective_settings};
 use crate::storage::{PluginPaths, PluginState, read_json, write_atomic, write_json};
 use crate::trust::TrustList;
 use crate::types::{
-    Capability, ImageRef, Item, ItemPage, LyricPayload, PageRequest, PluginInfo, Quality, RemoteDevice,
-    RemoteRepeat, RemoteState, Reply, SearchFilters, SignatureStatus, StreamInfo,
+    Capability, CommentPage, ImageRef, Item, ItemDetails, ItemPage, Look, LyricPayload, Made, MakerPlan,
+    PageRequest, PluginInfo, Quality, RemoteDevice, RemoteRepeat, RemoteState, Reply, SearchFilters, Shelf,
+    SignatureStatus, SpeechModel, StreamInfo,
 };
+
+/// What every plugin's imports share across the host: whether Jellyfesh Pro
+/// is active (ADR-0021) and the speech models the app offers (ADR-0019).
+#[derive(Debug, Default)]
+pub(crate) struct Global {
+    pro: AtomicBool,
+    speech_models: RwLock<Vec<SpeechModel>>,
+}
+
+impl Global {
+    /// The models `speech.models` lists.
+    pub(crate) fn speech_models(&self) -> Vec<SpeechModel> {
+        self.speech_models.read().clone()
+    }
+}
+
+/// Track handles of `maker.make` calls: each call gets a new one.
+static NEXT_TRACK: AtomicU64 = AtomicU64::new(1);
 
 /// Where the host keeps its files and secrets.
 #[derive(Debug, Clone)]
@@ -81,6 +102,7 @@ pub(crate) struct Inner {
     pub scheduler: Scheduler,
     pub plugins: RwLock<BTreeMap<String, Arc<Plugin>>>,
     allow_community: AtomicBool,
+    pub global: Arc<Global>,
 }
 
 impl Drop for Inner {
@@ -113,6 +135,7 @@ impl PluginHost {
                 runtime,
                 scheduler,
                 plugins: RwLock::new(BTreeMap::new()),
+                global: Arc::new(Global::default()),
             }),
         };
         host.load_installed();
@@ -180,10 +203,13 @@ impl PluginHost {
             state,
             self.inner.config.secrets.clone(),
             self.inner.options.resolver.clone(),
+            package.manifest.permissions.clone(),
+            self.inner.global.clone(),
         ));
         Plugin::new(
             package.manifest,
             package.settings_schema,
+            package.translations,
             package.signature,
             package.icon,
             package.wasm,
@@ -224,8 +250,10 @@ impl PluginHost {
             ..PluginState::default()
         });
 
-        let remote = package.manifest.capabilities.contains(&Capability::Remote);
-        let prepared = self.inner.runtime.prepare(&package.wasm, remote)?;
+        let prepared = self
+            .inner
+            .runtime
+            .prepare(&package.wasm, &package.manifest.capabilities)?;
         let plugin = Arc::new(self.make_plugin(package, state, Some(prepared.clone())));
 
         // Start it once: instantiation, settings, and its capabilities.
@@ -321,7 +349,39 @@ impl PluginHost {
             content_policy: manifest.content_policy.clone(),
             links: manifest.links.clone(),
             has_icon: plugin.icon.is_some(),
+            permissions: manifest.permissions.clone(),
+            languages: plugin.translations.iter().map(|t| t.language.clone()).collect(),
         }
+    }
+
+    /// The plugin's settings schema in `language` (a BCP 47 tag such as
+    /// `zh-Hans` or `ja-JP`; English when the package has no translation for
+    /// it), with the properties in the package's order (API 1.2). `None`
+    /// when no such plugin is installed.
+    pub fn localized_settings_schema(&self, id: &str, language: &str) -> Option<String> {
+        let plugin = self.inner.plugins.read().get(id).cloned()?;
+        let languages: Vec<String> = plugin.translations.iter().map(|t| t.language.clone()).collect();
+        let translation = crate::l10n::best_language(&languages, language)
+            .and_then(|tag| plugin.translations.iter().find(|t| t.language == tag));
+        Some(crate::l10n::localize(&plugin.schema, translation))
+    }
+
+    /// Turns Jellyfesh Pro on or off for the whole host (ADR-0021): while it
+    /// is off, calls to Pro capabilities (`make_lyrics`, `appearance`)
+    /// answer [`CallError::ProRequired`].
+    pub fn set_pro(&self, active: bool) {
+        self.inner.global.pro.store(active, Ordering::SeqCst);
+    }
+
+    /// Whether Jellyfesh Pro is active.
+    pub fn pro(&self) -> bool {
+        self.inner.global.pro.load(Ordering::SeqCst)
+    }
+
+    /// The speech models the app offers, as `speech.models` lists them to
+    /// plugins with the `speech` permission (ADR-0019).
+    pub fn set_speech_models(&self, models: Vec<SpeechModel>) {
+        *self.inner.global.speech_models.write() = models;
     }
 
     /// Turns a plugin on or off. Turning it on clears the strikes and the
@@ -411,10 +471,13 @@ impl PluginHost {
             return Err(CallError::CommunityDisabled);
         }
         check_enabled(&plugin)?;
-        if let Some(capability) = capability
-            && !plugin.manifest.capabilities.contains(&capability)
-        {
-            return Err(CallError::NotDeclared(capability.to_string()));
+        if let Some(capability) = capability {
+            if !plugin.manifest.capabilities.contains(&capability) {
+                return Err(CallError::NotDeclared(capability.to_string()));
+            }
+            if capability.requires_pro() && !self.pro() {
+                return Err(CallError::ProRequired);
+            }
         }
         Ok(plugin)
     }
@@ -448,8 +511,9 @@ impl PluginHost {
     }
 
     /// What the plugin says it can do right now (`meta.capabilities`),
-    /// limited to what its manifest declares. `remote` is a manifest-only
-    /// capability (ADR-0018): it is listed whenever the manifest declares it.
+    /// limited to what its manifest declares. The capabilities added after
+    /// 1.0 (`remote`, ADR-0018; the 1.2 ones) are manifest-only: they are
+    /// listed whenever the manifest declares them.
     pub fn capabilities(&self, id: &str) -> Reply<Vec<Capability>> {
         self.call(id, None, |ctx| {
             let budget = Budget::call(&ctx.runtime.limits);
@@ -464,7 +528,7 @@ impl PluginHost {
             Ok(declared
                 .iter()
                 .copied()
-                .filter(|c| *c == Capability::Remote || reported.contains(c))
+                .filter(|c| c.manifest_only() || reported.contains(c))
                 .collect())
         })
     }
@@ -739,6 +803,146 @@ impl PluginHost {
         })
     }
 
+    // ---- API 1.2 ----------------------------------------------------------------------------
+
+    /// `maker.plan`: what making lyrics would do now and needs first
+    /// (ADR-0019). `upload_to` is checked to be an origin on the plugin's
+    /// allowlist. A Pro capability.
+    pub fn maker_plan(&self, id: &str) -> Reply<MakerPlan> {
+        self.call(id, Some(Capability::MakeLyrics), |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let result = ctx.call_part(
+                budget,
+                "make_lyrics",
+                |exports| exports.maker.as_ref(),
+                |maker, store| maker.jellyfesh_plugin_maker().call_plan(store),
+            )?;
+            let plan = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            sanitize::plan(plan.into(), &Checker::new(&services.id, &allows))
+        })
+    }
+
+    /// `maker.make`: makes synced lyrics for `job.song`, whose audio and
+    /// recognition `job.access` serves (ADR-0019). Runs in an instance of
+    /// its own on a thread of its own, under `maker.make`'s limits (30
+    /// minutes, 10 s of plugin CPU, 128 MiB), so the plugin's other calls go
+    /// on meanwhile; `job.cancel` stops it. A Pro capability.
+    pub fn make_lyrics(&self, id: &str, job: MakeJob) -> Reply<Made> {
+        let (tx, rx) = crossbeam_channel::bounded(1);
+        let plugin = match self.callable(id, Some(Capability::MakeLyrics)) {
+            Ok(plugin) => plugin,
+            Err(error) => {
+                let _ = tx.send(Err(error));
+                return rx;
+            }
+        };
+        let runtime = self.inner.runtime.clone();
+        let spawned = std::thread::Builder::new()
+            .name("jf-plugin-make".into())
+            .spawn(move || {
+                let _ = tx.send(make(&runtime, &plugin, job));
+            });
+        if spawned.is_err() {
+            let (tx, rx) = crossbeam_channel::bounded(1);
+            let _ = tx.send(Err(CallError::Load("could not start a thread".into())));
+            return rx;
+        }
+        rx
+    }
+
+    /// `appearance.look`, checked (ADR-0020 §1): numbers clamped, NaN
+    /// dropped, duplicates removed, a library place kept. A Pro capability.
+    pub fn appearance_look(&self, id: &str) -> Reply<Look> {
+        self.call(id, Some(Capability::Appearance), |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let result = ctx.call_part(
+                budget,
+                "appearance",
+                |exports| exports.appearance.as_ref(),
+                |appearance, store| appearance.jellyfesh_plugin_appearance().call_look(store),
+            )?;
+            let look = result.map_err(|e| CallError::Plugin(e.into()))?;
+            Ok(sanitize::look(look.into()))
+        })
+    }
+
+    /// `discover.discover`: the source's Discover page, checked (at most 12
+    /// shelves of 50 items, images from the allowlist).
+    pub fn discover(&self, id: &str) -> Reply<Vec<Shelf>> {
+        self.call(id, Some(Capability::Discover), |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let result = ctx.call_part(
+                budget,
+                "discover",
+                |exports| exports.discover.as_ref(),
+                |discover, store| discover.jellyfesh_plugin_discover().call_discover(store),
+            )?;
+            let shelves: Vec<Shelf> = result
+                .map_err(|e| CallError::Plugin(e.into()))?
+                .into_iter()
+                .map(Into::into)
+                .collect();
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            Ok(sanitize::shelves(shelves, &Checker::new(&services.id, &allows)))
+        })
+    }
+
+    /// `details.details`: notes, biography, a large picture and facts for
+    /// `item`, checked (at most 32 facts, texts cut, the image from the
+    /// allowlist).
+    pub fn details(&self, id: &str, item: Item) -> Reply<ItemDetails> {
+        self.call(id, Some(Capability::Details), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let item = wit::Item::from(item);
+            let result = ctx.call_part(
+                budget,
+                "details",
+                |exports| exports.details.as_ref(),
+                |details, store| details.jellyfesh_plugin_details().call_details(store, &item),
+            )?;
+            let details = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            Ok(sanitize::details(
+                details.into(),
+                &Checker::new(&services.id, &allows),
+            ))
+        })
+    }
+
+    /// `comments.comments`: a page of comments on `item`, checked (at most
+    /// 50 of each kind, 2 000 characters each, avatars from the allowlist).
+    pub fn comments(&self, id: &str, item: Item, page: PageRequest) -> Reply<CommentPage> {
+        let page = clamp_page(PageRequest {
+            limit: page.limit.min(sanitize::MAX_COMMENTS as u32),
+            ..page
+        });
+        self.call(id, Some(Capability::Comments), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let (item, request) = (wit::Item::from(item), wit::PageRequest::from(page));
+            let result = ctx.call_part(
+                budget,
+                "comments",
+                |exports| exports.comments.as_ref(),
+                |comments, store| {
+                    comments
+                        .jellyfesh_plugin_comments()
+                        .call_comments(store, &item, &request)
+                },
+            )?;
+            let page = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            Ok(sanitize::comments(
+                page.into(),
+                &Checker::new(&services.id, &allows),
+            ))
+        })
+    }
+
     /// Logs out: calls the plugin's `auth.logout` (so it can revoke tokens),
     /// then deletes its secrets, cookie jar and account name whatever the
     /// plugin answered (ADR-0015). The reply carries the plugin's own error,
@@ -767,6 +971,53 @@ impl PluginHost {
             result?.map_err(|e| CallError::Plugin(e.into()))
         })
     }
+}
+
+/// Runs one `maker.make` call in an instance of its own.
+fn make(runtime: &Runtime, plugin: &Arc<Plugin>, job: MakeJob) -> Result<Made, CallError> {
+    let prepared = plugin
+        .prepared(runtime)
+        .map_err(|e| CallError::Load(e.to_string()))?;
+    let mut instance: Instance = runtime
+        .instantiate_with(&prepared, &plugin.services, runtime.limits.make_memory)
+        .inspect_err(|error| plugin.record_violation(error, runtime))?;
+    let track = NEXT_TRACK.fetch_add(1, Ordering::Relaxed);
+    let allowed: Vec<String> = job
+        .allowed_origins
+        .iter()
+        .filter_map(|o| sanitize::origin(o))
+        .collect();
+    let maker = MakerCall {
+        track,
+        access: job.access.clone(),
+        allowed,
+        upload_to: job.upload_to.clone(),
+        read_audio: false,
+        stage: None,
+    };
+    let song = crate::convert::song(job.song, track);
+    let started = std::time::Instant::now();
+    let call = Instance::make_call(Budget::make(&runtime.limits), maker, job.cancel.clone());
+    let result = instance.call_with(call, |exports, store| match &exports.maker {
+        Some(maker) => maker.jellyfesh_plugin_maker().call_make(store, &song).map(Some),
+        None => Ok(None),
+    });
+    match &result {
+        Ok(_) => plugin.services.reset_strikes(),
+        Err(error) => plugin.record_violation(error, runtime),
+    }
+    let answer = result?.ok_or_else(|| CallError::NotDeclared("make_lyrics".into()))?;
+    if job.cancel.load(Ordering::Relaxed) {
+        return Err(CallError::Cancelled);
+    }
+    // Recognition in the host may outlast the deadline without the plugin's
+    // code running into it; the answer is late all the same (no strike: the
+    // time was the host's).
+    if started.elapsed() > runtime.limits.make_wall {
+        return Err(CallError::Timeout);
+    }
+    let made = answer.map_err(|e| CallError::Plugin(e.into()))?;
+    sanitize::made(made.into())
 }
 
 /// Waits for a reply; a disconnected channel means the host shut down.

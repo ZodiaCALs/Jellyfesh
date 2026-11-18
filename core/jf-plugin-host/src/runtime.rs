@@ -18,9 +18,13 @@
 //!   deadline; host imports bound their own waits by it.
 //! * Memory: `StoreLimits` (64 MiB, one table of at most 10 000 elements)
 //!   wrapped so a refused growth traps with a recognisable error.
+//! * `maker.make` (API 1.2) runs in an instance of its own with its own
+//!   limits (30 minutes, 10 s of CPU, 128 MiB), on a thread of its own, so
+//!   the plugin's other calls go on meanwhile; a cancelled call traps at the
+//!   next epoch tick.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -28,11 +32,18 @@ use wasmtime::component::{Component, HasSelf, InstancePre, Linker};
 use wasmtime::{Config, Engine, ResourceLimiter, Store, StoreLimits, StoreLimitsBuilder, UpdateDeadline};
 use zeroize::Zeroizing;
 
+use crate::bindings::appearance::{AppearancePart, AppearancePartIndices};
+use crate::bindings::comments::{CommentsPart, CommentsPartIndices};
+use crate::bindings::details::{DetailsPart, DetailsPartIndices};
+use crate::bindings::discover::{DiscoverPart, DiscoverPartIndices};
+use crate::bindings::maker::{MakerPart, MakerPartIndices};
 use crate::bindings::remote::{RemoteControl, RemoteControlIndices};
 use crate::bindings::{Source, SourceIndices};
 use crate::error::{CallError, HostError};
 use crate::http::NetBudget;
+use crate::maker::{MakeStage, MakerAccess};
 use crate::services::Services;
+use crate::types::Capability;
 
 /// How often the epoch advances.
 pub const EPOCH_TICK: Duration = Duration::from_millis(5);
@@ -54,6 +65,12 @@ pub struct Limits {
     pub table_elements: usize,
     /// Consecutive violations that turn a plugin off.
     pub strikes: u32,
+    /// CPU per `maker.make` call (time inside imports does not count).
+    pub make_cpu: Duration,
+    /// Wall-clock time per `maker.make` call.
+    pub make_wall: Duration,
+    /// Linear memory of a `maker.make` instance, in bytes.
+    pub make_memory: usize,
 }
 
 impl Default for Limits {
@@ -66,6 +83,9 @@ impl Default for Limits {
             memory: 64 * 1024 * 1024,
             table_elements: 10_000,
             strikes: 3,
+            make_cpu: Duration::from_secs(10),
+            make_wall: Duration::from_secs(30 * 60),
+            make_memory: 128 * 1024 * 1024,
         }
     }
 }
@@ -102,6 +122,12 @@ impl Budget {
             wall: limits.wall_login,
         }
     }
+    pub(crate) fn make(limits: &Limits) -> Budget {
+        Budget {
+            cpu: limits.make_cpu,
+            wall: limits.make_wall,
+        }
+    }
 }
 
 /// A limit the guest ran into; carried by the trap that stops it.
@@ -113,6 +139,45 @@ pub(crate) enum Violation {
     Wall,
     #[error("the memory limit is reached")]
     Memory,
+    #[error("the call was cancelled")]
+    Cancelled,
+}
+
+/// The song a `maker.make` call is about, and what the call has done with
+/// it (ADR-0019 §4).
+pub(crate) struct MakerCall {
+    /// The handle this call's song has; any other is refused.
+    pub track: u64,
+    pub access: Arc<dyn MakerAccess>,
+    /// Where audio may go (consent), as `sanitize::origin` writes them.
+    pub allowed: Vec<String>,
+    /// The plan's `upload-to`, named when consent is missing.
+    pub upload_to: Option<String>,
+    /// Set once the call has read audio: from then on HTTP goes only to
+    /// `allowed` and `kv` takes no writes.
+    pub read_audio: bool,
+    /// The stage last reported, so each is reported once.
+    pub stage: Option<MakeStage>,
+}
+
+impl std::fmt::Debug for MakerCall {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MakerCall")
+            .field("track", &self.track)
+            .field("allowed", &self.allowed)
+            .field("read_audio", &self.read_audio)
+            .finish_non_exhaustive()
+    }
+}
+
+impl MakerCall {
+    /// Reports `stage` to the embedder unless it is the current one.
+    pub(crate) fn report(&mut self, stage: MakeStage) {
+        if self.stage.as_ref() != Some(&stage) {
+            self.stage = Some(stage.clone());
+            self.access.stage(stage);
+        }
+    }
 }
 
 /// Values a login submit protects from storage and logs.
@@ -136,6 +201,10 @@ pub(crate) struct CallState {
     /// The last `panic: …` line the plugin logged.
     pub panic_message: Option<String>,
     pub violation: Option<Violation>,
+    /// The song of a `maker.make` call (API 1.2).
+    pub maker: Option<MakerCall>,
+    /// Set by the caller to stop the call (`maker.make`).
+    pub cancel: Option<Arc<AtomicBool>>,
 }
 
 impl CallState {
@@ -148,16 +217,28 @@ impl CallState {
             net: NetBudget {
                 deadline: started + budget.wall,
                 received: 0,
+                only: None,
             },
             protected: Protected::default(),
             panic_message: None,
             violation: None,
+            maker: None,
+            cancel: None,
         }
+    }
+
+    /// Whether the caller cancelled the call.
+    pub(crate) fn cancelled(&self) -> bool {
+        self.cancel
+            .as_ref()
+            .is_some_and(|cancel| cancel.load(Ordering::Relaxed))
     }
 
     fn check(&self, now: Instant) -> Option<Violation> {
         let elapsed = now.saturating_duration_since(self.started);
-        if elapsed > self.budget.wall {
+        if self.cancelled() {
+            Some(Violation::Cancelled)
+        } else if elapsed > self.budget.wall {
             Some(Violation::Wall)
         } else if elapsed.saturating_sub(self.host_time) > self.budget.cpu {
             Some(Violation::Cpu)
@@ -220,6 +301,8 @@ pub(crate) struct HostState {
     pub limiter: Limiter,
     pub call: CallState,
     pub clock_base: Instant,
+    /// Host-wide state: Jellyfesh Pro and the speech models.
+    pub global: Arc<crate::host::Global>,
 }
 
 impl HostState {
@@ -261,6 +344,21 @@ impl Runtime {
         let mut linker = Linker::<HostState>::new(&engine);
         Source::add_to_linker::<HostState, HasSelf<HostState>>(&mut linker, |state| state)
             .map_err(|e| HostError::Other(format!("linking host imports: {e}")))?;
+        // API 1.2's imports (`audio`, `speech`) for every plugin: undeclared,
+        // they answer `not-declared`. (Not `MakerPart::add_to_linker`: the
+        // maker world also imports `lyrics` for its types, which plugins
+        // export rather than import.)
+        crate::bindings::maker::jellyfesh::plugin::audio::add_to_linker::<HostState, HasSelf<HostState>>(
+            &mut linker,
+            |state| state,
+        )
+        .and_then(|()| {
+            crate::bindings::maker::jellyfesh::plugin::speech::add_to_linker::<HostState, HasSelf<HostState>>(
+                &mut linker,
+                |state| state,
+            )
+        })
+        .map_err(|e| HostError::Other(format!("linking the 1.2 host imports: {e}")))?;
         let ticker = EpochTicker::start(engine.clone())?;
         Ok(Runtime {
             engine,
@@ -274,9 +372,10 @@ impl Runtime {
     /// Compiles a component and links it against the host's imports. Fails
     /// for invalid components and for components that import anything the
     /// host does not provide (WASI, another WIT version) or lack an export.
-    /// `remote` asks for the `remote` export too (manifests that declare the
-    /// `remote` capability, API 1.1); others never have it looked up.
-    pub(crate) fn prepare(&self, wasm: &[u8], remote: bool) -> Result<Prepared, HostError> {
+    /// The exports added after 1.0 are looked up only for the capabilities
+    /// the manifest declares (`remote`, API 1.1; `make_lyrics`, `appearance`,
+    /// `discover`, `details` and `comments`, API 1.2); others never are.
+    pub(crate) fn prepare(&self, wasm: &[u8], capabilities: &[Capability]) -> Result<Prepared, HostError> {
         let component =
             Component::new(&self.engine, wasm).map_err(|e| HostError::InvalidComponent(format!("{e:#}")))?;
         let pre = self
@@ -284,14 +383,32 @@ impl Runtime {
             .instantiate_pre(&component)
             .map_err(|e| HostError::Incompatible(format!("{e:#}")))?;
         let source = SourceIndices::new(&pre).map_err(|e| HostError::Incompatible(format!("{e:#}")))?;
-        let remote = if remote {
-            Some(RemoteControlIndices::new(&pre).map_err(|e| {
-                HostError::Incompatible(format!("the manifest declares remote, but the component: {e:#}"))
-            })?)
-        } else {
-            None
+        let declares = |capability: Capability| capabilities.contains(&capability);
+        let missing = |name: &str, e: wasmtime::Error| {
+            HostError::Incompatible(format!("the manifest declares {name}, but the component: {e:#}"))
         };
-        Ok(Prepared { pre, source, remote })
+        Ok(Prepared {
+            source,
+            remote: declares(Capability::Remote)
+                .then(|| RemoteControlIndices::new(&pre).map_err(|e| missing("remote", e)))
+                .transpose()?,
+            maker: declares(Capability::MakeLyrics)
+                .then(|| MakerPartIndices::new(&pre).map_err(|e| missing("make_lyrics", e)))
+                .transpose()?,
+            appearance: declares(Capability::Appearance)
+                .then(|| AppearancePartIndices::new(&pre).map_err(|e| missing("appearance", e)))
+                .transpose()?,
+            discover: declares(Capability::Discover)
+                .then(|| DiscoverPartIndices::new(&pre).map_err(|e| missing("discover", e)))
+                .transpose()?,
+            details: declares(Capability::Details)
+                .then(|| DetailsPartIndices::new(&pre).map_err(|e| missing("details", e)))
+                .transpose()?,
+            comments: declares(Capability::Comments)
+                .then(|| CommentsPartIndices::new(&pre).map_err(|e| missing("comments", e)))
+                .transpose()?,
+            pre,
+        })
     }
 
     /// Instantiates a plugin and delivers its settings.
@@ -300,13 +417,25 @@ impl Runtime {
         prepared: &Prepared,
         services: &Arc<Services>,
     ) -> Result<Instance, CallError> {
+        self.instantiate_with(prepared, services, self.limits.memory)
+    }
+
+    /// Instantiates a plugin with `memory` bytes of linear memory at most
+    /// (a `maker.make` instance has more) and delivers its settings.
+    pub(crate) fn instantiate_with(
+        &self,
+        prepared: &Prepared,
+        services: &Arc<Services>,
+        memory: usize,
+    ) -> Result<Instance, CallError> {
         let mut store = Store::new(
             &self.engine,
             HostState {
                 services: services.clone(),
+                global: services.global.clone(),
                 limiter: Limiter {
                     inner: StoreLimitsBuilder::new()
-                        .memory_size(self.limits.memory)
+                        .memory_size(memory)
                         .table_elements(self.limits.table_elements)
                         .instances(32)
                         .tables(16)
@@ -335,7 +464,7 @@ impl Runtime {
         };
         // Start functions and `settings-changed` are guest code too.
         let _ticking = instance.ticker.ticking();
-        instance.begin(Budget::start(&self.limits), Protected::default());
+        instance.begin(CallState::new(Budget::start(&self.limits)));
         let exports = prepared
             .instantiate(&mut instance.store)
             .map_err(|e| instance.classify(e))?;
@@ -365,17 +494,34 @@ pub(crate) struct Prepared {
     pre: InstancePre<HostState>,
     source: SourceIndices,
     remote: Option<RemoteControlIndices>,
+    maker: Option<MakerPartIndices>,
+    appearance: Option<AppearancePartIndices>,
+    discover: Option<DiscoverPartIndices>,
+    details: Option<DetailsPartIndices>,
+    comments: Option<CommentsPartIndices>,
 }
 
 impl Prepared {
     fn instantiate(&self, store: &mut Store<HostState>) -> wasmtime::Result<Exports> {
         let instance = self.pre.instantiate(&mut *store)?;
         let source = self.source.load(&mut *store, &instance)?;
-        let remote = match &self.remote {
-            Some(remote) => Some(remote.load(&mut *store, &instance)?),
-            None => None,
-        };
-        Ok(Exports { source, remote })
+        macro_rules! part {
+            ($field:ident) => {
+                match &self.$field {
+                    Some(indices) => Some(indices.load(&mut *store, &instance)?),
+                    None => None,
+                }
+            };
+        }
+        Ok(Exports {
+            source,
+            remote: part!(remote),
+            maker: part!(maker),
+            appearance: part!(appearance),
+            discover: part!(discover),
+            details: part!(details),
+            comments: part!(comments),
+        })
     }
 }
 
@@ -384,6 +530,12 @@ pub(crate) struct Exports {
     pub source: Source,
     /// The `remote` interface, for plugins that declare `remote`.
     pub remote: Option<RemoteControl>,
+    /// API 1.2's exports, for plugins that declare their capability.
+    pub maker: Option<MakerPart>,
+    pub appearance: Option<AppearancePart>,
+    pub discover: Option<DiscoverPart>,
+    pub details: Option<DetailsPart>,
+    pub comments: Option<CommentsPart>,
 }
 
 /// A live plugin instance.
@@ -402,17 +554,14 @@ impl std::fmt::Debug for Instance {
 }
 
 impl Instance {
-    fn begin(&mut self, budget: Budget, protected: Protected) {
-        self.store.data_mut().call = CallState::new(budget);
-        self.store.data_mut().call.protected = protected;
+    fn begin(&mut self, call: CallState) {
+        self.store.data_mut().call = call;
         self.store.set_epoch_deadline(1);
     }
 
-    /// Whether the instance has the `remote` export.
-    pub(crate) fn has_remote(&self) -> bool {
-        self.exports
-            .as_ref()
-            .is_some_and(|exports| exports.remote.is_some())
+    /// The instance's exports.
+    pub(crate) fn exports(&self) -> Option<&Exports> {
+        self.exports.as_ref()
     }
 
     /// Runs one export under `budget`. On a trap the caller must drop the
@@ -423,13 +572,34 @@ impl Instance {
         protected: Protected,
         f: impl FnOnce(&Exports, &mut Store<HostState>) -> wasmtime::Result<R>,
     ) -> Result<R, CallError> {
-        self.begin(budget, protected);
+        let mut call = CallState::new(budget);
+        call.protected = protected;
+        self.call_with(call, f)
+    }
+
+    /// Runs one export with the call state prepared by the caller (a
+    /// `maker.make` call's song and cancellation).
+    pub(crate) fn call_with<R>(
+        &mut self,
+        call: CallState,
+        f: impl FnOnce(&Exports, &mut Store<HostState>) -> wasmtime::Result<R>,
+    ) -> Result<R, CallError> {
+        self.begin(call);
         let _ticking = self.ticker.ticking();
         let Instance { store, exports, .. } = self;
         let result = f(exports.as_ref().expect("instantiated"), store);
         // Wipe protected values now, not when the next call begins.
         self.store.data_mut().call.protected = Protected::default();
+        self.store.data_mut().call.maker = None;
         result.map_err(|e| self.classify(e))
+    }
+
+    /// A call for `maker.make`: its song and cancellation.
+    pub(crate) fn make_call(budget: Budget, maker: MakerCall, cancel: Arc<AtomicBool>) -> CallState {
+        let mut call = CallState::new(budget);
+        call.maker = Some(maker);
+        call.cancel = Some(cancel);
+        call
     }
 
     /// Turns a trap into the error the caller sees.
@@ -440,6 +610,7 @@ impl Instance {
             Some(Violation::Cpu) => CallError::CpuLimit,
             Some(Violation::Wall) => CallError::Timeout,
             Some(Violation::Memory) => CallError::MemoryLimit,
+            Some(Violation::Cancelled) => CallError::Cancelled,
             None => {
                 let what = match error.downcast_ref::<wasmtime::Trap>() {
                     Some(trap) => trap.to_string(),

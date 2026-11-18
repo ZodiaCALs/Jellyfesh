@@ -10,11 +10,12 @@ use wasmtime::Store;
 use crate::bindings::Source;
 use crate::bindings::remote::RemoteControl;
 use crate::error::{CallError, HostError};
+use crate::l10n::Translation;
 use crate::manifest::Manifest;
 use crate::runtime::{Budget, Exports, HostState, Instance, Prepared, Protected, Runtime};
 use crate::schema::SettingsSchema;
 use crate::services::Services;
-use crate::types::{Capability, SignatureStatus};
+use crate::types::SignatureStatus;
 
 /// Work for a plugin, run on a pool worker with exclusive access to the
 /// plugin's instance.
@@ -47,6 +48,8 @@ impl std::fmt::Debug for Slot {
 pub(crate) struct Plugin {
     pub manifest: Manifest,
     pub schema: SettingsSchema,
+    /// Translations of the settings schema (API 1.2).
+    pub translations: Vec<Translation>,
     pub signature: SignatureStatus,
     pub icon: Option<Vec<u8>>,
     pub services: Arc<Services>,
@@ -67,9 +70,11 @@ impl std::fmt::Debug for Plugin {
 }
 
 impl Plugin {
+    #[allow(clippy::too_many_arguments, reason = "constructed in one place")]
     pub(crate) fn new(
         manifest: Manifest,
         schema: SettingsSchema,
+        translations: Vec<Translation>,
         signature: SignatureStatus,
         icon: Option<Vec<u8>>,
         wasm: Vec<u8>,
@@ -79,6 +84,7 @@ impl Plugin {
         Plugin {
             manifest,
             schema,
+            translations,
             signature,
             icon,
             services,
@@ -93,23 +99,20 @@ impl Plugin {
     }
 
     /// The compiled, linked component (compiled on first use).
-    fn prepared(&self, runtime: &Runtime) -> Result<Prepared, HostError> {
+    pub(crate) fn prepared(&self, runtime: &Runtime) -> Result<Prepared, HostError> {
         let mut prepared = self.prepared.lock();
         if let Some(pre) = prepared.as_ref() {
             return Ok(pre.clone());
         }
         let started = std::time::Instant::now();
-        let pre = runtime.prepare(
-            &self.wasm,
-            self.manifest.capabilities.contains(&Capability::Remote),
-        )?;
+        let pre = runtime.prepare(&self.wasm, &self.manifest.capabilities)?;
         tracing::debug!(plugin = %self.id(), elapsed = ?started.elapsed(), "compiled plugin");
         *prepared = Some(pre.clone());
         Ok(pre)
     }
 
     /// Counts a limit violation; turns the plugin off after too many in a row.
-    fn record_violation(&self, error: &CallError, runtime: &Runtime) {
+    pub(crate) fn record_violation(&self, error: &CallError, runtime: &Runtime) {
         if !error.is_violation() {
             return;
         }
@@ -161,12 +164,30 @@ impl JobContext<'_> {
         budget: Budget,
         f: impl FnOnce(&RemoteControl, &mut Store<HostState>) -> wasmtime::Result<R>,
     ) -> Result<R, CallError> {
+        self.call_part(budget, "remote", |exports| exports.remote.as_ref(), f)
+    }
+
+    /// Calls an export added after 1.0 (`pick` finds it among the
+    /// instance's exports) like [`JobContext::call`]. Plugins whose manifest
+    /// does not declare its capability (`name`) have none.
+    pub(crate) fn call_part<P, R>(
+        &mut self,
+        budget: Budget,
+        name: &str,
+        pick: fn(&Exports) -> Option<&P>,
+        f: impl FnOnce(&P, &mut Store<HostState>) -> wasmtime::Result<R>,
+    ) -> Result<R, CallError> {
         self.ensure_instance()?;
-        if !self.instance.as_ref().is_some_and(Instance::has_remote) {
-            return Err(CallError::NotDeclared("remote".into()));
+        let present = self
+            .instance
+            .as_ref()
+            .and_then(Instance::exports)
+            .is_some_and(|exports| pick(exports).is_some());
+        if !present {
+            return Err(CallError::NotDeclared(name.into()));
         }
         self.run(budget, Protected::default(), |exports, store| {
-            f(exports.remote.as_ref().expect("checked above"), store)
+            f(pick(exports).expect("checked above"), store)
         })
     }
 

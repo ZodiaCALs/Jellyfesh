@@ -1,4 +1,4 @@
-package jellyfesh:plugin@1.1.0;
+package jellyfesh:plugin@1.2.0;
 
 /// Plugin metadata and settings.
 ///
@@ -425,4 +425,281 @@ interface remote {
     set-repeat: func(mode: repeat) -> result<_, plugin-error>;
     /// Moves playback to `device`, playing if `play` (else as it was).
     transfer: func(device: string, play: bool) -> result<_, plugin-error>;
+}
+
+/// Making synced lyrics (capability `make_lyrics`, API 1.2, a Jellyfesh Pro
+/// capability; ADR-0019).
+///
+/// The host calls `plan` whenever the app shows what making lyrics needs
+/// (cheap: no network), and `make` for one song the person chose (or, with
+/// `automatic`, each song that starts playing without synced lyrics). Pro
+/// capabilities answer `pro-required` in the host while Jellyfesh Pro is
+/// inactive; the plugin never sees those calls.
+///
+/// `make` runs under its own limits: 30 minutes of wall-clock time, 10 s of
+/// plugin CPU (time inside `audio`, `speech` and `http` does not count) and
+/// 128 MiB of memory, in an instance of its own, so the plugin's other calls
+/// go on meanwhile. It may be cancelled at any time.
+interface maker {
+    use types.{plugin-error};
+    use lyrics.{lyric-payload};
+
+    /// Where recognition happens.
+    enum mode {
+        /// The `speech` import, in the app.
+        on-device,
+        /// The person's own provider, through `http`, after consent.
+        online,
+    }
+
+    /// What `make` needs first, with the current settings.
+    variant need {
+        /// Nothing: `make` can run.
+        nothing,
+        /// The online mode needs the person's API key (Sign In).
+        sign-in,
+        /// The on-device mode needs this model (an id from `speech.models`)
+        /// downloaded.
+        model(string),
+        /// Making lyrics cannot work at all as set up; the text says why.
+        unavailable(string),
+    }
+
+    /// What `make` would do now.
+    record maker-plan {
+        mode: mode,
+        /// The engine, for people: "Whisper Base on this device",
+        /// "whisper-1 at api.openai.com".
+        engine: string,
+        /// The origin audio goes to in the online mode
+        /// (`https://api.openai.com`); none on the device. The app asks the
+        /// person before the first job that sends audio there.
+        upload-to: option<string>,
+        need: need,
+        /// Make lyrics for each song that starts playing without synced lyrics.
+        automatic: bool,
+    }
+
+    /// The song to make lyrics for.
+    record song {
+        /// Its `audio.track-handle` for `audio` and `speech`, valid in this
+        /// call only. (A plain `u64` here, so that plugins which never touch
+        /// `audio` do not import it and still load in older hosts.)
+        track: u64,
+        title: string,
+        artist: option<string>,
+        album: option<string>,
+        duration-ms: u64,
+        /// Plain lyrics to time, when the song has them.
+        text: option<string>,
+        /// Their language (BCP 47), when known.
+        language: option<string>,
+    }
+
+    /// Lyrics a plugin made.
+    record made {
+        /// Enhanced LRC with word timing (`elrc`) is best; `lrc` and `ttml`
+        /// are accepted. At most 1 MiB.
+        lyrics: lyric-payload,
+        /// The engine that recognised the words, as `plan.engine` says it.
+        engine: string,
+    }
+
+    /// What `make` would do with the current settings. Cheap; no network.
+    plan: func() -> result<maker-plan, plugin-error>;
+    /// Makes synced lyrics for `song`.
+    make: func(song: song) -> result<made, plugin-error>;
+}
+
+/// The app's look and layout (capability `appearance`, API 1.2, a Jellyfesh
+/// Pro capability; ADR-0020).
+///
+/// The host calls `look` when the plugin loads and after its settings
+/// change, checks the answer (numbers clamped to their ranges, NaN ignored,
+/// duplicates dropped, at least one library place kept) and fills in the
+/// defaults for what it leaves out. One appearance plugin is active: the
+/// first enabled one in install order.
+interface appearance {
+    use types.{plugin-error};
+
+    /// The face text uses: the platform's own fonts, none bundled.
+    enum typeface { system, rounded, serif, mono }
+    /// Spacing: × 0.8, 1.0 or 1.2.
+    enum density { compact, standard, roomy }
+    /// The weight of lyric lines.
+    enum lyrics-weight { regular, medium, semibold, bold, heavy }
+    /// The colour of the sung part of lyrics.
+    variant highlight {
+        /// The artwork's colour (the theme's accent from the cover).
+        artwork,
+        /// The accent colour the person chose in Appearance.
+        accent,
+        /// This colour, 0xRRGGBB.
+        custom(u32),
+    }
+    /// A place in the sidebar (navigation pane, Library switcher). Settings
+    /// is never listed and always shown.
+    enum place { home, albums, artists, songs, playlists, favourites, search, sources }
+    /// A section of Home.
+    enum home-section { summary, recently-added, recently-played, most-played, favourites }
+    /// How Now Playing is laid out.
+    enum now-playing-layout {
+        /// The v0.0.6 stage.
+        stage,
+        /// A large cover with the current line below.
+        artwork,
+        /// Lyrics full width with a small cover in the corner.
+        lyrics,
+    }
+    /// The mini-player.
+    enum mini-player-style {
+        /// The v0.0.6 bar.
+        bar,
+        /// A compact bar: cover, title, play.
+        compact,
+        /// A floating capsule.
+        floating,
+    }
+
+    /// The look; none leaves the Luminous default.
+    record appearance-look {
+        /// Corner radii × this, 0–2; 1 is Luminous.
+        corner-scale: option<f32>,
+        /// Glass alpha and blur × this, 0–1; 0 is solid panels.
+        glass: option<f32>,
+        /// The aurora field's strength, 0–1 (token `field.aurora-strength`).
+        aurora: option<f32>,
+        typeface: option<typeface>,
+        /// Every type size × this, 0.85–1.30.
+        text-scale: option<f32>,
+        density: option<density>,
+        lyrics-weight: option<lyrics-weight>,
+        /// The glow around the sung line, 0–1.
+        lyrics-glow: option<f32>,
+        lyrics-highlight: option<highlight>,
+        /// The places shown, in order.
+        sidebar: option<list<place>>,
+        /// Home's sections, in order.
+        home: option<list<home-section>>,
+        now-playing: option<now-playing-layout>,
+        mini-player: option<mini-player-style>,
+    }
+
+    /// The look for the current settings. Cheap; no network.
+    look: func() -> result<appearance-look, plugin-error>;
+}
+
+/// A source's Discover page (capability `discover`, API 1.2): shelves of
+/// items the service recommends, in its own words. Without it the app makes
+/// the page from `recommendations.for-user` and the top level of `browse`.
+interface discover {
+    use types.{item, plugin-error};
+
+    /// How a shelf is shown.
+    enum shelf-style {
+        /// One scrolling row of covers.
+        row,
+        /// A grid of covers.
+        grid,
+        /// A numbered list (a chart).
+        chart,
+    }
+
+    /// One shelf of the page.
+    record shelf {
+        /// Stable within the plugin.
+        id: string,
+        /// Its heading, in the service's words ("New Releases").
+        title: string,
+        style: shelf-style,
+        /// At most 50 are shown.
+        items: list<item>,
+        /// The id of a node `catalog.browse` lists in full ("See All").
+        more: option<string>,
+    }
+
+    /// The page: at most 12 shelves are shown.
+    discover: func() -> result<list<shelf>, plugin-error>;
+}
+
+/// More about an item (capability `details`, API 1.2): an album's notes, an
+/// artist's biography and photo, and facts the apps word in their own
+/// languages.
+interface details {
+    use types.{image-ref, item, plugin-error};
+
+    /// What a fact is. The apps word the known keys; `other` carries the
+    /// service's own label.
+    variant fact-key {
+        version,
+        genre,
+        language,
+        released,
+        label,
+        composer,
+        lyricist,
+        arranger,
+        producer,
+        popularity,
+        quality,
+        other(string),
+    }
+
+    /// One fact: "Released" "2021-03-05".
+    record fact {
+        key: fact-key,
+        value: string,
+    }
+
+    /// What the service says about an item.
+    record item-details {
+        /// Album notes, an artist's biography; plain text.
+        description: option<string>,
+        /// A large cover or an artist photo.
+        image: option<image-ref>,
+        /// At most 32 are shown.
+        facts: list<fact>,
+        /// How many comments the item has (capability `comments`).
+        comment-count: option<u64>,
+    }
+
+    /// Details for `item` (a track, album, artist or playlist of this plugin).
+    details: func(item: item) -> result<item-details, plugin-error>;
+}
+
+/// What people say about an item on the service (capability `comments`,
+/// API 1.2). Read-only; the content policy's attribution applies.
+interface comments {
+    use types.{image-ref, item, page-request, plugin-error};
+
+    /// One comment.
+    record comment {
+        /// Stable within the plugin.
+        id: string,
+        /// The commenter's name on the service.
+        author: string,
+        avatar: option<image-ref>,
+        /// Plain text, at most 2 000 characters shown.
+        text: string,
+        likes: option<u64>,
+        /// When it was written, milliseconds since the Unix epoch.
+        time-ms: option<u64>,
+        /// How many replies it has.
+        replies: option<u64>,
+    }
+
+    /// One page of comments.
+    record comment-page {
+        /// The service's highlighted comments, on the first page only.
+        hot: list<comment>,
+        /// The comments, newest first or in the service's order; at most 50.
+        comments: list<comment>,
+        /// How many there are in all, if the service says.
+        total: option<u64>,
+        /// The cursor of the next page; none on the last.
+        next: option<string>,
+    }
+
+    /// A page of comments on `item`.
+    comments: func(item: item, page: page-request) -> result<comment-page, plugin-error>;
 }

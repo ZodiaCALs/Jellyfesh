@@ -15,7 +15,9 @@
 //!   a loopback address only because it is the server the person configured,
 //!   as it would a home server on the local network;
 //! * [`fetch`] requests the URLs a plugin hands out (streams, artwork) the way
-//!   the engine and the host would.
+//!   the engine and the host would;
+//! * [`TestAccess`] and [`make_job`] serve a lyrics maker's `audio` and
+//!   `speech` imports the way the app does (API 1.2).
 //!
 //! ```no_run
 //! use jf_plugin_testkit::*;
@@ -32,10 +34,12 @@
 //! ```
 
 mod host;
+mod maker;
 mod server;
 
 pub use host::{
     Env, PluginFiles, component, component_in, fields, final_step, item, kinds, login, next_page, next_step,
     page, recv, target_dir, workspace_root,
 };
+pub use maker::{TestAccess, make_job, silent_wav, speech_models, transcript};
 pub use server::{Fetched, Request, Response, TestServer, closed_port_url, fetch, url_query};

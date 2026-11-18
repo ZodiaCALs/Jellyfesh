@@ -16,6 +16,7 @@ use crate::plugin_log::LogLimiter;
 use crate::schema::SettingsSchema;
 use crate::secrets::{COOKIE_KEY_NAME, SecretStore, secret_key};
 use crate::storage::{KvStore, PluginPaths, PluginState, write_json};
+use crate::types::Permission;
 
 /// Per-plugin services.
 #[derive(Debug)]
@@ -32,6 +33,10 @@ pub(crate) struct Services {
     pub cookie_import: Option<CookieImport>,
     state: Mutex<PluginState>,
     settings: RwLock<Value>,
+    /// The host imports the manifest declares (API 1.2).
+    pub permissions: Vec<Permission>,
+    /// Host-wide state: Jellyfesh Pro, the speech models.
+    pub global: Arc<crate::host::Global>,
 }
 
 impl Services {
@@ -46,6 +51,8 @@ impl Services {
         state: PluginState,
         secrets: Arc<dyn SecretStore>,
         resolve: Arc<dyn Resolve>,
+        permissions: Vec<Permission>,
+        global: Arc<crate::host::Global>,
     ) -> Services {
         let allowlist = Arc::new(RwLock::new(Allowlist::new(&rules, &settings)));
         let cookies = Arc::new(CookieJar::new(id, paths.cookies(), secrets.clone()));
@@ -62,7 +69,14 @@ impl Services {
             state: Mutex::new(state),
             settings: RwLock::new(settings),
             paths,
+            permissions,
+            global,
         }
+    }
+
+    /// Whether the manifest declares `permission`.
+    pub(crate) fn permits(&self, permission: Permission) -> bool {
+        self.permissions.contains(&permission)
     }
 
     /// The settings as JSON text, for `meta.settings-changed`.

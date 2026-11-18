@@ -67,11 +67,14 @@ pub struct PluginFiles {
     pub schema: Option<(String, String)>,
     /// `icon.png`, if the crate has one.
     pub icon: Option<Vec<u8>>,
+    /// Translations of the settings schema (API 1.2): `l10n/<language>.json`
+    /// entry names and texts, from the crate's `l10n/` folder.
+    pub translations: Vec<(String, String)>,
 }
 
 impl PluginFiles {
-    /// Reads `manifest.toml`, the schema it names and `icon.png` from a
-    /// plugin crate's folder.
+    /// Reads `manifest.toml`, the schema it names, `icon.png` and the
+    /// translations in `l10n/` from a plugin crate's folder.
     pub fn read(crate_dir: &Path) -> PluginFiles {
         let manifest = std::fs::read_to_string(crate_dir.join("manifest.toml")).expect("manifest.toml");
         let parsed = jf_plugin_host::manifest::parse(&manifest).expect("a valid manifest.toml");
@@ -80,10 +83,21 @@ impl PluginFiles {
             (name, text)
         });
         let icon = std::fs::read(crate_dir.join(ICON)).ok();
+        let mut translations = Vec::new();
+        if let Ok(entries) = std::fs::read_dir(crate_dir.join("l10n")) {
+            for entry in entries.flatten() {
+                let file = entry.file_name().to_string_lossy().into_owned();
+                let name = format!("{}{file}", jf_plugin_host::l10n::FOLDER);
+                let text = std::fs::read_to_string(entry.path()).expect("a translation");
+                translations.push((name, text));
+            }
+            translations.sort();
+        }
         PluginFiles {
             manifest,
             schema,
             icon,
+            translations,
         }
     }
 
@@ -151,6 +165,9 @@ impl PluginFiles {
         }
         if let Some(icon) = &self.icon {
             builder = builder.icon(icon.clone());
+        }
+        for (name, text) in &self.translations {
+            builder = builder.file(name, text.as_bytes().to_vec());
         }
         if signed {
             builder = builder.sign(test_key_seed());

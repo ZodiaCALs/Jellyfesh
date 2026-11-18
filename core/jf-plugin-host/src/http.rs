@@ -37,12 +37,15 @@ pub use jf_plugin_model::http::{
 const RESOLVE_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// What one plugin call may still spend on HTTP.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub(crate) struct NetBudget {
     /// The call's wall-clock deadline.
     pub deadline: Instant,
     /// Response bytes received so far in this call.
     pub received: u64,
+    /// After a `maker.make` call read the song's audio: the only origins its
+    /// requests may go to (ADR-0019 §4).
+    pub only: Option<Vec<String>>,
 }
 
 /// Why the sandbox refused a connection; travels through ureq as
@@ -140,6 +143,14 @@ impl HttpClient {
         url.set_fragment(None);
 
         for hop in 0..=MAX_REDIRECTS {
+            if let Some(only) = &budget.only {
+                let origin = url.origin().ascii_serialization();
+                if !only.contains(&origin) {
+                    return Err(HttpError::NotAllowed(format!(
+                        "{origin}: this call read the song's audio, which may only go where the person allowed"
+                    )));
+                }
+            }
             self.allowlist.read().check(&url).map_err(HttpError::NotAllowed)?;
             self.wait_for_token(deadline)?;
             let remaining = deadline.saturating_duration_since(Instant::now());

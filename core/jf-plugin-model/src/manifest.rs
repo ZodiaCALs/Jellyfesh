@@ -37,7 +37,15 @@
 //! [oauth]                            # API 1.1, with auth = ["oauth"]
 //! redirect_port = 29817              # 1024–65535: the browser comes back to
 //!                                    # http://127.0.0.1:29817/callback
+//!
+//! permissions = ["audio", "speech"]  # API 1.2: host imports the plugin uses
 //! ```
+//!
+//! API 1.2 adds the capabilities `make_lyrics` and `appearance` (Jellyfesh
+//! Pro, ADR-0019, ADR-0020), `discover`, `details` and `comments`, and the
+//! top-level `permissions` (`audio`, `speech`): an import the manifest does
+//! not declare answers `not-declared`. (`permissions` is a top-level key, so
+//! it goes before the first table.)
 //!
 //! API 1.1 also adds the `remote` capability, which goes with
 //! `playback_mode = "remote"` (ADR-0018). Without `redirect_port` an oauth
@@ -55,7 +63,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::HostError;
 use crate::links::Links;
-use crate::types::{AuthKind, Capability, ContentPolicy, LibraryStorage, PlaybackMode};
+use crate::types::{AuthKind, Capability, ContentPolicy, LibraryStorage, Permission, PlaybackMode};
 use crate::{API_MAJOR, API_MINOR};
 
 /// Most entries allowed in `network.allow`.
@@ -104,6 +112,8 @@ pub struct Manifest {
     /// listens on, so the redirect URI is `http://127.0.0.1:<port>/callback`;
     /// `None` picks a random free port.
     pub oauth_redirect_port: Option<u16>,
+    /// Host imports the plugin may use (API 1.2), without duplicates.
+    pub permissions: Vec<Permission>,
 }
 
 /// The lowest `[oauth] redirect_port`: no privileged ports.
@@ -187,6 +197,15 @@ struct RawManifest {
     links: Option<RawLinks>,
     #[serde(default)]
     oauth: Option<RawOauth>,
+    #[serde(default)]
+    permissions: Vec<RawPermission>,
+}
+
+#[derive(Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum RawPermission {
+    Audio,
+    Speech,
 }
 
 #[derive(Deserialize)]
@@ -207,6 +226,11 @@ enum RawCapability {
     Artwork,
     Recommendations,
     Remote,
+    MakeLyrics,
+    Appearance,
+    Discover,
+    Details,
+    Comments,
 }
 
 #[derive(Deserialize)]
@@ -323,6 +347,11 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
             RawCapability::Artwork => Capability::Artwork,
             RawCapability::Recommendations => Capability::Recommendations,
             RawCapability::Remote => Capability::Remote,
+            RawCapability::MakeLyrics => Capability::MakeLyrics,
+            RawCapability::Appearance => Capability::Appearance,
+            RawCapability::Discover => Capability::Discover,
+            RawCapability::Details => Capability::Details,
+            RawCapability::Comments => Capability::Comments,
         };
         if capabilities.contains(&cap) {
             return Err(bad(format!("capability {cap} is listed twice")));
@@ -344,6 +373,36 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         }
         Ok(())
     };
+    let needs_1_2 = |what: &str| -> Result<(), HostError> {
+        if api_version.major == 1 && api_version.minor < 2 {
+            return Err(bad(format!("{what} needs api_version 1.2")));
+        }
+        Ok(())
+    };
+    for capability in &capabilities {
+        if matches!(
+            capability,
+            Capability::MakeLyrics
+                | Capability::Appearance
+                | Capability::Discover
+                | Capability::Details
+                | Capability::Comments
+        ) {
+            needs_1_2(&format!("capability {capability}"))?;
+        }
+    }
+    let mut permissions = Vec::new();
+    for raw_permission in &raw.permissions {
+        let permission = match raw_permission {
+            RawPermission::Audio => Permission::Audio,
+            RawPermission::Speech => Permission::Speech,
+        };
+        needs_1_2(&format!("permission {permission}"))?;
+        if permissions.contains(&permission) {
+            return Err(bad(format!("permission {permission} is listed twice")));
+        }
+        permissions.push(permission);
+    }
     let remote = capabilities.contains(&Capability::Remote);
     if remote {
         needs_1_1("capability remote")?;
@@ -550,6 +609,7 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         cookie_import,
         links,
         oauth_redirect_port,
+        permissions,
     })
 }
 
@@ -953,7 +1013,8 @@ attribution = "spotify"
         for (version, ok) in [
             ("1.0", true),
             ("1.1", true),
-            ("1.2", false),
+            ("1.2", true),
+            ("1.3", false),
             ("2.0", false),
             ("0.9", false),
         ] {
@@ -1029,6 +1090,42 @@ attribution = "spotify"
             .unwrap_err()
             .to_string();
         assert!(err.contains("1024–65535"), "{err}");
+    }
+
+    #[test]
+    fn api_1_2_capabilities_and_permissions_need_api_1_2() {
+        for capability in ["make_lyrics", "appearance", "discover", "details", "comments"] {
+            let text = MINIMAL.replace("[\"search\"]", &format!("[\"search\", \"{capability}\"]"));
+            let err = parse(&text).unwrap_err().to_string();
+            assert!(err.contains("needs api_version 1.2"), "{capability}: {err}");
+            let m = parse(&text.replace("api_version = \"1.0\"", "api_version = \"1.2\"")).unwrap();
+            assert_eq!(m.capabilities.len(), 2);
+            assert_eq!(m.capabilities[1].to_string(), capability);
+        }
+        let with_permissions = MINIMAL.replace(
+            "playback_mode = \"stream\"",
+            "playback_mode = \"stream\"\npermissions = [\"audio\", \"speech\"]",
+        );
+        assert!(
+            parse(&with_permissions)
+                .unwrap_err()
+                .to_string()
+                .contains("permission audio needs api_version 1.2")
+        );
+        let v12 = with_permissions.replace("api_version = \"1.0\"", "api_version = \"1.2\"");
+        assert_eq!(
+            parse(&v12).unwrap().permissions,
+            vec![Permission::Audio, Permission::Speech]
+        );
+        assert!(
+            parse(&v12.replace("\"speech\"]", "\"audio\"]")).is_err(),
+            "listed twice"
+        );
+        assert!(
+            parse(&v12.replace("\"speech\"]", "\"camera\"]")).is_err(),
+            "unknown"
+        );
+        assert!(parse(MINIMAL).unwrap().permissions.is_empty());
     }
 
     #[test]

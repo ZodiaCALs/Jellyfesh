@@ -8,10 +8,11 @@
 //! | `plugin.wasm` | yes | 32 MiB, a component for `jellyfesh:plugin/source@1` |
 //! | the settings schema named by `[settings] schema` | if named | 64 KiB, see [`crate::schema`] |
 //! | `icon.png` | no | 64 KiB, PNG |
+//! | `l10n/<language>.json` | no (API 1.2, with a settings schema) | 64 KiB each, see [`crate::l10n`] |
 //! | `SIGNATURE` | no | 4 KiB, see below |
 //!
-//! Anything else is an error, including `icon.svg`: SVG icons need a
-//! sanitiser and are not supported in v1.
+//! At most 16 entries. Anything else is an error, including other folders
+//! and `icon.svg`: SVG icons need a sanitiser and are not supported in v1.
 //!
 //! # Signatures
 //!
@@ -45,8 +46,9 @@ use ed25519_dalek::{Signature, Signer, SigningKey, Verifier};
 use sha2::{Digest, Sha256};
 
 use crate::error::HostError;
+use crate::l10n::{self, Translation};
 use crate::manifest::{self, Manifest};
-use crate::schema::{Format, PropertyKind, SettingsSchema};
+use crate::schema::{Format, Profile, PropertyKind, SettingsSchema};
 use crate::trust::{self, TrustList, hex, key_id, unhex};
 use crate::types::SignatureStatus;
 
@@ -60,7 +62,9 @@ pub const ICON: &str = "icon.png";
 pub const SIGNATURE: &str = "SIGNATURE";
 
 const MAX_ARCHIVE: u64 = 40 * 1024 * 1024;
-const MAX_ENTRIES: usize = 8;
+/// The most entries a package may have (API 1.2 raised it from 8 for
+/// translations).
+pub const MAX_ENTRIES: usize = 16;
 const MAX_MANIFEST: u64 = 64 * 1024;
 const MAX_WASM: u64 = 32 * 1024 * 1024;
 const MAX_SCHEMA: u64 = 64 * 1024;
@@ -79,6 +83,8 @@ pub struct Package {
     pub icon: Option<Vec<u8>>,
     /// The settings schema (empty when the package has none).
     pub settings_schema: SettingsSchema,
+    /// Translations of the settings schema (API 1.2), by language.
+    pub translations: Vec<Translation>,
     /// Who signed it.
     pub signature: SignatureStatus,
 }
@@ -113,18 +119,33 @@ pub fn read(bytes: &[u8], trust: &TrustList) -> Result<Package, HostError> {
                 .get(name.as_str())
                 .ok_or_else(|| bad(format!("the settings schema {name} is missing")))?;
             let text = std::str::from_utf8(text).map_err(|_| bad(format!("{name} is not UTF-8")))?;
-            SettingsSchema::parse(text).map_err(|e| HostError::Manifest(format!("{name}: {e}")))?
+            SettingsSchema::parse_with(text, Profile::for_api(manifest.api_version))
+                .map_err(|e| HostError::Manifest(format!("{name}: {e}")))?
         }
         None => SettingsSchema::empty(),
     };
     check_settings_references(&manifest, &settings_schema)?;
 
-    for name in files.keys() {
+    let mut translations = Vec::new();
+    for (name, contents) in &files {
         let known = matches!(name.as_str(), MANIFEST | WASM | ICON | SIGNATURE)
             || manifest.settings_schema.as_deref() == Some(name.as_str());
-        if !known {
-            return Err(bad(format!("unexpected entry {name:?}")));
+        if known {
+            continue;
         }
+        let Some(language) = l10n::entry_language(name) else {
+            return Err(bad(format!("unexpected entry {name:?}")));
+        };
+        if Profile::for_api(manifest.api_version) < Profile::V1_2 {
+            return Err(bad(format!("{name}: translations need api_version 1.2")));
+        }
+        if manifest.settings_schema.is_none() {
+            return Err(bad(format!("{name}: there is no settings schema to translate")));
+        }
+        let text = std::str::from_utf8(contents).map_err(|_| bad(format!("{name} is not UTF-8")))?;
+        let translation = Translation::parse(language, text, &settings_schema)
+            .map_err(|e| HostError::Manifest(format!("{name}: {e}")))?;
+        translations.push(translation);
     }
 
     let icon = match files.get(ICON) {
@@ -143,6 +164,7 @@ pub fn read(bytes: &[u8], trust: &TrustList) -> Result<Package, HostError> {
         wasm,
         icon,
         settings_schema,
+        translations,
         signature,
     })
 }
@@ -179,8 +201,13 @@ fn unzip(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>, HostError> {
             .name()
             .map_err(|e| bad(format!("entry {index}: {e}")))?
             .into_owned();
-        if entry.is_dir() || name.contains('/') || name.contains('\\') {
-            return Err(bad(format!("folders are not allowed ({name:?})")));
+        let in_l10n = name
+            .strip_prefix(l10n::FOLDER)
+            .is_some_and(|rest| !rest.is_empty() && !rest.contains('/') && !rest.contains('\\'));
+        if entry.is_dir() || ((name.contains('/') || name.contains('\\')) && !in_l10n) {
+            return Err(bad(format!(
+                "folders are not allowed ({name:?}); only l10n/<language>.json"
+            )));
         }
         if name == "icon.svg" {
             return Err(bad(
@@ -192,6 +219,7 @@ fn unzip(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>, HostError> {
             WASM => MAX_WASM,
             ICON => MAX_ICON,
             SIGNATURE => MAX_SIGNATURE,
+            _ if in_l10n => l10n::MAX_TRANSLATION,
             _ => MAX_SCHEMA,
         };
         // The declared size can lie; read at most one byte past the limit.
@@ -457,6 +485,96 @@ schema = "settings.schema.json"
             assert!(read(&bytes, &TrustList::builtin()).is_err(), "accepted {what}");
         }
         assert!(read(b"not a zip", &TrustList::builtin()).is_err());
+    }
+
+    const MANIFEST_1_2: &str = r#"
+id = "org.example.look"
+name = "Look"
+version = "0.1.0"
+api_version = "1.2"
+author = "Tests"
+capabilities = ["appearance"]
+playback_mode = "stream"
+
+[settings]
+schema = "settings.schema.json"
+"#;
+    const SCHEMA_1_2: &str = r##"{"type": "object", "properties": {
+        "glow": {"type": "number", "minimum": 0, "maximum": 1, "multipleOf": 0.1, "title": "Glow"},
+        "tint": {"type": "string", "format": "color", "title": "Tint"}}}"##;
+
+    fn builder_1_2() -> PackageBuilder {
+        PackageBuilder::new()
+            .manifest(MANIFEST_1_2)
+            .wasm(b"\0asm-not-really".to_vec())
+            .file("settings.schema.json", SCHEMA_1_2.as_bytes().to_vec())
+    }
+
+    #[test]
+    fn reads_translations_and_profile_1_2() {
+        let bytes = builder_1_2()
+            .file(
+                "l10n/ja.json",
+                "{\"properties.glow.title\": \"光彩\"}".as_bytes().to_vec(),
+            )
+            .file(
+                "l10n/zh-Hans.json",
+                "{\"properties.tint.title\": \"色调\"}".as_bytes().to_vec(),
+            )
+            .sign(test_key_seed())
+            .build()
+            .unwrap();
+        let package = read(&bytes, &TrustList::builtin().with_test_key()).unwrap();
+        let languages: Vec<&str> = package.translations.iter().map(|t| t.language.as_str()).collect();
+        assert_eq!(languages, ["ja", "zh-Hans"]);
+        assert_eq!(package.translations[0].get("properties.glow.title"), Some("光彩"));
+        assert_eq!(package.settings_schema.property("glow").unwrap().step, Some(0.1));
+    }
+
+    #[test]
+    fn refuses_bad_translations_and_old_packages_using_1_2() {
+        let cases: Vec<(&str, PackageBuilder)> = vec![
+            (
+                "unknown key",
+                builder_1_2().file("l10n/ja.json", br#"{"properties.nope.title": "x"}"#.to_vec()),
+            ),
+            (
+                "bad tag",
+                builder_1_2().file("l10n/japanese.json", b"{}".to_vec()),
+            ),
+            ("other folder", builder_1_2().file("lang/ja.json", b"{}".to_vec())),
+            ("nested", builder_1_2().file("l10n/x/ja.json", b"{}".to_vec())),
+            ("not json", builder_1_2().file("l10n/ja.json", b"nope".to_vec())),
+            (
+                "1.1 with translations",
+                builder()
+                    .manifest(&MANIFEST_TEXT.replace("api_version = \"1.0\"", "api_version = \"1.1\""))
+                    .file("l10n/ja.json", b"{}".to_vec()),
+            ),
+            (
+                "1.1 with a 1.2 schema",
+                builder_1_2().manifest(
+                    &MANIFEST_1_2
+                        .replace("api_version = \"1.2\"", "api_version = \"1.1\"")
+                        .replace("[\"appearance\"]", "[\"search\"]"),
+                ),
+            ),
+        ];
+        for (what, case) in cases {
+            let bytes = case.build().unwrap();
+            assert!(read(&bytes, &TrustList::builtin()).is_err(), "accepted {what}");
+        }
+        // 16 entries at most.
+        let mut many = builder_1_2();
+        for tag in [
+            "aa", "ab", "ac", "ad", "ae", "af", "ag", "ah", "ai", "aj", "ak", "al", "am", "an",
+        ] {
+            many = many.file(&format!("l10n/{tag}.json"), b"{}".to_vec());
+        }
+        let err = read(&many.build().unwrap(), &TrustList::builtin())
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("more than 16 entries"), "{err}");
     }
 
     #[test]

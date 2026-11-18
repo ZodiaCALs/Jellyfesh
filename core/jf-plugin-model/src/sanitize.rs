@@ -12,8 +12,9 @@ use url::Url;
 
 use crate::error::CallError;
 use crate::types::{
-    Header, ImageRef, Item, ItemPage, LyricPayload, RemoteDevice, RemoteState, StreamInfo, Unplayable,
-    UnplayableReason,
+    Comment, CommentPage, Fact, FactKey, Header, HomeSection, ImageRef, Item, ItemDetails, ItemPage, Look,
+    LyricFormat, LyricPayload, Made, MakerNeed, MakerPlan, Place, RemoteDevice, RemoteState, Shelf,
+    SpeechSegment, SpeechWord, StreamInfo, Transcript, Unplayable, UnplayableReason,
 };
 
 const MAX_ID: usize = 1024;
@@ -29,6 +30,21 @@ pub const MAX_PAGE: u32 = 200;
 pub const MAX_DEVICES: usize = 64;
 /// Most tracks the host hands `remote.play` at once.
 pub const MAX_REMOTE_TRACKS: usize = 200;
+/// Most shelves of a Discover page, and items per shelf.
+pub const MAX_SHELVES: usize = 12;
+pub const MAX_SHELF_ITEMS: usize = 50;
+/// Most facts in an item's details.
+pub const MAX_FACTS: usize = 32;
+/// Longest description in an item's details (characters).
+pub const MAX_DESCRIPTION: usize = 20_000;
+/// Most comments per page (and hot comments), and characters per comment.
+pub const MAX_COMMENTS: usize = 50;
+pub const MAX_COMMENT_CHARS: usize = 2000;
+/// Most segments and words in a transcript.
+pub const MAX_SEGMENTS: usize = 10_000;
+pub const MAX_WORDS: usize = 100_000;
+/// Longest text of a transcript segment (bytes).
+const MAX_SEGMENT_TEXT: usize = 4096;
 
 /// What the checks need to know about the plugin that answered.
 pub struct Checker<'a> {
@@ -311,10 +327,316 @@ pub fn remote_state(state: RemoteState, checker: &Checker<'_>) -> RemoteState {
     }
 }
 
+/// Cuts text to `max` characters (not bytes), without control characters
+/// other than line breaks, trimmed.
+pub fn long_text(value: &str, max: usize) -> String {
+    let cleaned: String = value
+        .chars()
+        .filter(|c| !c.is_control() || *c == '\n')
+        .take(max)
+        .collect();
+    cleaned.trim().to_string()
+}
+
+fn unit(value: f32, low: f32, high: f32) -> Option<f32> {
+    value.is_finite().then(|| value.clamp(low, high))
+}
+
+/// What an appearance plugin's `look` may say (ADR-0020 §1): numbers clamped
+/// to their ranges (NaN and infinities dropped), duplicate places and
+/// sections dropped, and at least one library place in the sidebar (the
+/// first of the default order is added when none is left). A custom
+/// highlight must be `0xRRGGBB`.
+pub fn look(look: Look) -> Look {
+    let mut sidebar = look.sidebar.map(|places| {
+        let mut out: Vec<Place> = Vec::new();
+        for place in places {
+            if !out.contains(&place) {
+                out.push(place);
+            }
+        }
+        out
+    });
+    if let Some(places) = &mut sidebar
+        && !places.iter().any(|p| p.is_library())
+    {
+        places.push(Place::Albums);
+    }
+    let home = look.home.map(|sections| {
+        let mut out: Vec<HomeSection> = Vec::new();
+        for section in sections {
+            if !out.contains(&section) {
+                out.push(section);
+            }
+        }
+        out
+    });
+    Look {
+        corner_scale: look.corner_scale.and_then(|v| unit(v, 0.0, 2.0)),
+        glass: look.glass.and_then(|v| unit(v, 0.0, 1.0)),
+        aurora: look.aurora.and_then(|v| unit(v, 0.0, 1.0)),
+        typeface: look.typeface,
+        text_scale: look.text_scale.and_then(|v| unit(v, 0.85, 1.30)),
+        density: look.density,
+        lyrics_weight: look.lyrics_weight,
+        lyrics_glow: look.lyrics_glow.and_then(|v| unit(v, 0.0, 1.0)),
+        lyrics_highlight: look.lyrics_highlight.filter(|h| match h {
+            crate::types::Highlight::Custom(rgb) => *rgb <= 0xFF_FFFF,
+            _ => true,
+        }),
+        sidebar,
+        home,
+        now_playing: look.now_playing,
+        mini_player: look.mini_player,
+    }
+}
+
+/// The origin form the host and the core use for consent:
+/// `scheme://host[:port]` of an http(s) URL (or of `host` alone, taken as
+/// https), lowercase, the port only when it is not the scheme's default.
+pub fn origin(text: &str) -> Option<String> {
+    let text = text.trim();
+    let with_scheme = if text.contains("://") {
+        text.to_string()
+    } else {
+        format!("https://{text}")
+    };
+    let url = Url::parse(&with_scheme).ok()?;
+    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none_or(str::is_empty) {
+        return None;
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return None;
+    }
+    Some(url.origin().ascii_serialization())
+}
+
+/// A maker's plan: the engine named (at most 128 bytes), `upload_to` an
+/// origin on the plugin's allowlist, texts cut.
+pub fn plan(plan: MakerPlan, checker: &Checker<'_>) -> Result<MakerPlan, CallError> {
+    let upload_to = match plan.upload_to.filter(|u| !u.trim().is_empty()) {
+        Some(text) => {
+            let origin = origin(&text)
+                .ok_or_else(|| CallError::InvalidResponse(format!("upload-to {text:?} is not an origin")))?;
+            let url = Url::parse(&origin).map_err(|e| CallError::InvalidResponse(e.to_string()))?;
+            if !checker.allows(&url) {
+                return Err(CallError::InvalidResponse(format!(
+                    "upload-to {origin} is not on the plugin's allowlist"
+                )));
+            }
+            Some(origin)
+        }
+        None => None,
+    };
+    let engine = text(&plan.engine, 128);
+    Ok(MakerPlan {
+        mode: plan.mode,
+        engine: if engine.is_empty() {
+            "AI Lyrics".into()
+        } else {
+            engine
+        },
+        upload_to,
+        need: match plan.need {
+            MakerNeed::Model(id) => MakerNeed::Model(text(&id, 64)),
+            MakerNeed::Unavailable(why) => MakerNeed::Unavailable(text(&why, MAX_TEXT)),
+            other => other,
+        },
+        automatic: plan.automatic,
+    })
+}
+
+/// Lyrics a maker made: synced text in a format the core reads (`elrc`,
+/// `lrc`, `ttml` or `vtt`), at most 1 MiB, the engine named.
+pub fn made(made: Made) -> Result<Made, CallError> {
+    if !matches!(
+        made.lyrics.format,
+        LyricFormat::Elrc | LyricFormat::Lrc | LyricFormat::Ttml | LyricFormat::Vtt
+    ) {
+        return Err(CallError::InvalidResponse(
+            "made lyrics must be synced (elrc, lrc, ttml or vtt)".into(),
+        ));
+    }
+    if made.lyrics.text.trim().is_empty() {
+        return Err(CallError::InvalidResponse("the made lyrics are empty".into()));
+    }
+    let lyrics = lyrics(made.lyrics)?;
+    let engine = text(&made.engine, 128);
+    Ok(Made {
+        lyrics,
+        engine: if engine.is_empty() {
+            "AI Lyrics".into()
+        } else {
+            engine
+        },
+    })
+}
+
+/// A transcript for a plugin (from the app's recogniser): texts cut, times
+/// within `[0, duration_ms]` (when known) with each end at or after its
+/// start, confidence within 0–1 (NaN as 0), at most [`MAX_SEGMENTS`]
+/// segments and [`MAX_WORDS`] words.
+pub fn transcript(transcript: Transcript, duration_ms: Option<u32>) -> Transcript {
+    let limit = duration_ms.unwrap_or(u32::MAX);
+    let span = |start: u32, end: u32| {
+        let start = start.min(limit);
+        (start, end.clamp(start, limit))
+    };
+    let mut words_left = MAX_WORDS;
+    let segments = transcript
+        .segments
+        .into_iter()
+        .take(MAX_SEGMENTS)
+        .map(|segment| {
+            let (start_ms, end_ms) = span(segment.start_ms, segment.end_ms);
+            let words: Vec<SpeechWord> = segment
+                .words
+                .into_iter()
+                .take(words_left)
+                .filter_map(|word| {
+                    let text = text(&word.text, 256);
+                    if text.is_empty() {
+                        return None;
+                    }
+                    let (start_ms, end_ms) = span(word.start_ms, word.end_ms);
+                    Some(SpeechWord {
+                        text,
+                        start_ms,
+                        end_ms,
+                        confidence: if word.confidence.is_finite() {
+                            word.confidence.clamp(0.0, 1.0)
+                        } else {
+                            0.0
+                        },
+                    })
+                })
+                .collect();
+            words_left -= words.len();
+            SpeechSegment {
+                text: text(&segment.text, MAX_SEGMENT_TEXT),
+                start_ms,
+                end_ms,
+                words,
+            }
+        })
+        .collect();
+    Transcript {
+        language: opt_text(transcript.language, 35),
+        segments,
+    }
+}
+
+/// A Discover page: at most [`MAX_SHELVES`] shelves with an id and a title,
+/// each with at most [`MAX_SHELF_ITEMS`] usable items; empty shelves dropped.
+pub fn shelves(shelves: Vec<Shelf>, checker: &Checker<'_>) -> Vec<Shelf> {
+    let mut out: Vec<Shelf> = Vec::new();
+    for shelf in shelves {
+        if out.len() == MAX_SHELVES {
+            break;
+        }
+        let title = text(&shelf.title, MAX_TEXT);
+        if shelf.id.is_empty() || shelf.id.len() > MAX_ID || title.is_empty() {
+            continue;
+        }
+        if out.iter().any(|s| s.id == shelf.id) {
+            continue;
+        }
+        let items: Vec<Item> = shelf
+            .items
+            .into_iter()
+            .filter_map(|i| item(i, checker))
+            .take(MAX_SHELF_ITEMS)
+            .collect();
+        if items.is_empty() {
+            continue;
+        }
+        out.push(Shelf {
+            id: shelf.id,
+            title,
+            style: shelf.style,
+            items,
+            more: shelf.more.filter(|m| !m.is_empty() && m.len() <= MAX_ID),
+        });
+    }
+    out
+}
+
+/// An item's details: the description cut, the image only from the
+/// allowlist, at most [`MAX_FACTS`] facts with a value.
+pub fn details(details: ItemDetails, checker: &Checker<'_>) -> ItemDetails {
+    let facts = details
+        .facts
+        .into_iter()
+        .filter_map(|fact| {
+            let value = text(&fact.value, MAX_TEXT);
+            let key = match fact.key {
+                FactKey::Other(label) => {
+                    let label = text(&label, 64);
+                    if label.is_empty() {
+                        return None;
+                    }
+                    FactKey::Other(label)
+                }
+                key => key,
+            };
+            (!value.is_empty()).then_some(Fact { key, value })
+        })
+        .take(MAX_FACTS)
+        .collect();
+    ItemDetails {
+        description: details
+            .description
+            .map(|d| long_text(&d, MAX_DESCRIPTION))
+            .filter(|d| !d.is_empty()),
+        image: details.image.and_then(|i| image(i, checker)),
+        facts,
+        comment_count: details.comment_count,
+    }
+}
+
+fn comment(comment: Comment, checker: &Checker<'_>) -> Option<Comment> {
+    if comment.id.is_empty() || comment.id.len() > MAX_ID {
+        return None;
+    }
+    let text = long_text(&comment.text, MAX_COMMENT_CHARS);
+    if text.is_empty() {
+        return None;
+    }
+    Some(Comment {
+        id: comment.id,
+        author: self::text(&comment.author, 128),
+        avatar: comment.avatar.and_then(|a| image(a, checker)),
+        text,
+        likes: comment.likes,
+        time_ms: comment.time_ms,
+        replies: comment.replies,
+    })
+}
+
+/// A page of comments: at most [`MAX_COMMENTS`] of each kind, texts at most
+/// [`MAX_COMMENT_CHARS`] characters, avatars only from the allowlist.
+pub fn comments(page: CommentPage, checker: &Checker<'_>) -> CommentPage {
+    let list = |comments: Vec<Comment>| -> Vec<Comment> {
+        comments
+            .into_iter()
+            .filter_map(|c| comment(c, checker))
+            .take(MAX_COMMENTS)
+            .collect()
+    };
+    CommentPage {
+        hot: list(page.hot),
+        comments: list(page.comments),
+        total: page.total,
+        next: page.next.filter(|c| !c.is_empty() && c.len() <= MAX_CURSOR),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{ItemKind, RemoteDeviceKind, RemoteRepeat};
+    use crate::types::{
+        Density, Highlight, ItemKind, MakerMode, NowPlayingLayout, RemoteDeviceKind, RemoteRepeat, ShelfStyle,
+    };
 
     fn device(id: &str, name: &str, active: bool) -> RemoteDevice {
         RemoteDevice {
@@ -400,6 +722,287 @@ mod tests {
         assert_eq!(state.context, None);
         assert_eq!(state.position_ms, 1000, "the position stays within the song");
         assert_eq!(state.repeat, RemoteRepeat::All);
+    }
+
+    fn a_track(id: &str) -> Item {
+        Item {
+            id: id.into(),
+            kind: ItemKind::Track,
+            title: "A Song".into(),
+            artist: None,
+            album: None,
+            album_id: None,
+            artist_id: None,
+            duration_ms: Some(1000),
+            track_number: None,
+            disc_number: None,
+            year: None,
+            child_count: None,
+            isrc: None,
+            artwork: None,
+            explicit: false,
+            playable: true,
+            unplayable: None,
+        }
+    }
+
+    #[test]
+    fn checks_looks() {
+        let checked = look(Look {
+            corner_scale: Some(3.0),
+            glass: Some(f32::NAN),
+            aurora: Some(-1.0),
+            text_scale: Some(2.0),
+            lyrics_glow: Some(f32::INFINITY),
+            lyrics_highlight: Some(Highlight::Custom(0x1FF_FFFF)),
+            sidebar: Some(vec![Place::Search, Place::Home, Place::Search, Place::Sources]),
+            home: Some(vec![
+                HomeSection::MostPlayed,
+                HomeSection::MostPlayed,
+                HomeSection::Summary,
+            ]),
+            density: Some(Density::Roomy),
+            now_playing: Some(NowPlayingLayout::Lyrics),
+            ..Look::default()
+        });
+        assert_eq!(checked.corner_scale, Some(2.0));
+        assert_eq!(checked.glass, None, "NaN is ignored");
+        assert_eq!(checked.aurora, Some(0.0));
+        assert_eq!(checked.text_scale, Some(1.30));
+        assert_eq!(checked.lyrics_glow, None);
+        assert_eq!(checked.lyrics_highlight, None, "not a colour");
+        assert_eq!(
+            checked.sidebar,
+            Some(vec![Place::Search, Place::Home, Place::Sources, Place::Albums]),
+            "duplicates dropped, a library place added"
+        );
+        assert_eq!(
+            checked.home,
+            Some(vec![HomeSection::MostPlayed, HomeSection::Summary])
+        );
+        assert_eq!(checked.density, Some(Density::Roomy));
+        let fine = look(Look {
+            sidebar: Some(vec![Place::Songs]),
+            lyrics_highlight: Some(Highlight::Custom(0xFF8800)),
+            ..Look::default()
+        });
+        assert_eq!(fine.sidebar, Some(vec![Place::Songs]));
+        assert_eq!(fine.lyrics_highlight, Some(Highlight::Custom(0xFF8800)));
+        assert_eq!(look(Look::default()), Look::default());
+    }
+
+    #[test]
+    fn checks_plans_and_made_lyrics() {
+        let allow_openai = |url: &Url| url.host_str() == Some("api.openai.com");
+        let checker = Checker::new("test", &allow_openai);
+        let online = MakerPlan {
+            mode: MakerMode::Online,
+            engine: " whisper-1 at api.openai.com\u{7} ".into(),
+            upload_to: Some("https://API.openai.com/v1/audio".into()),
+            need: MakerNeed::Nothing,
+            automatic: false,
+        };
+        let checked = plan(online.clone(), &checker).unwrap();
+        assert_eq!(checked.upload_to.as_deref(), Some("https://api.openai.com"));
+        assert_eq!(checked.engine, "whisper-1 at api.openai.com");
+        let elsewhere = MakerPlan {
+            upload_to: Some("https://evil.example".into()),
+            ..online.clone()
+        };
+        assert!(plan(elsewhere, &checker).is_err());
+        assert!(
+            plan(
+                MakerPlan {
+                    upload_to: Some("not a url at all".into()),
+                    ..online
+                },
+                &checker
+            )
+            .is_err()
+        );
+
+        let payload = |format, text: &str| LyricPayload {
+            format,
+            text: text.into(),
+            language: None,
+            attribution: None,
+        };
+        let good = made(Made {
+            lyrics: payload(LyricFormat::Elrc, "[00:01.00]<00:01.00>Hi"),
+            engine: String::new(),
+        })
+        .unwrap();
+        assert_eq!(good.engine, "AI Lyrics");
+        assert!(
+            made(Made {
+                lyrics: payload(LyricFormat::Plain, "Hi"),
+                engine: "x".into()
+            })
+            .is_err()
+        );
+        assert!(
+            made(Made {
+                lyrics: payload(LyricFormat::Lrc, "  "),
+                engine: "x".into()
+            })
+            .is_err()
+        );
+        assert!(
+            made(Made {
+                lyrics: payload(LyricFormat::Lrc, &"a".repeat(MAX_LYRICS + 1)),
+                engine: "x".into()
+            })
+            .is_err()
+        );
+        assert_eq!(origin("api.groq.com"), Some("https://api.groq.com".into()));
+        assert_eq!(
+            origin("http://192.168.1.5:8000/v1"),
+            Some("http://192.168.1.5:8000".into())
+        );
+        assert_eq!(
+            origin("https://api.openai.com:443"),
+            Some("https://api.openai.com".into())
+        );
+        assert_eq!(origin("ftp://x.example"), None);
+        assert_eq!(origin("https://user:pw@x.example"), None);
+    }
+
+    #[test]
+    fn checks_transcripts() {
+        let word = |text: &str, start, end, confidence| SpeechWord {
+            text: text.into(),
+            start_ms: start,
+            end_ms: end,
+            confidence,
+        };
+        let checked = transcript(
+            Transcript {
+                language: Some("en".into()),
+                segments: vec![SpeechSegment {
+                    text: "hello\u{0} world".into(),
+                    start_ms: 500,
+                    end_ms: 100,
+                    words: vec![
+                        word("hello", 500, 900, f32::NAN),
+                        word(" ", 900, 950, 1.0),
+                        word("world", 9_000, 99_000, 7.0),
+                    ],
+                }],
+            },
+            Some(10_000),
+        );
+        let segment = &checked.segments[0];
+        assert_eq!(segment.text, "hello world");
+        assert_eq!(
+            (segment.start_ms, segment.end_ms),
+            (500, 500),
+            "the end is not before the start"
+        );
+        assert_eq!(segment.words.len(), 2, "empty words are dropped");
+        assert_eq!(segment.words[0].confidence, 0.0);
+        assert_eq!(
+            (segment.words[1].start_ms, segment.words[1].end_ms),
+            (9_000, 10_000)
+        );
+        assert_eq!(segment.words[1].confidence, 1.0);
+    }
+
+    #[test]
+    fn checks_shelves_details_and_comments() {
+        let allow_cdn = |url: &Url| url.host_str() == Some("cdn.example.com");
+        let checker = Checker::new("test", &allow_cdn);
+        let shelf = |id: &str, title: &str, items: usize| Shelf {
+            id: id.into(),
+            title: title.into(),
+            style: ShelfStyle::Row,
+            items: (0..items).map(|i| a_track(&format!("t{i}"))).collect(),
+            more: Some(String::new()),
+        };
+        let mut many = vec![
+            shelf("", "No id", 1),
+            shelf("a", "  ", 1),
+            shelf("e", "Empty", 0),
+            shelf("big", "Big", 80),
+            shelf("big", "Again", 1),
+        ];
+        many.extend((0..20).map(|i| shelf(&format!("s{i}"), "Shelf", 1)));
+        let checked = shelves(many, &checker);
+        assert_eq!(checked.len(), MAX_SHELVES);
+        assert_eq!(checked[0].id, "big");
+        assert_eq!(checked[0].items.len(), MAX_SHELF_ITEMS);
+        assert_eq!(checked[0].more, None);
+        assert_eq!(checked[1].id, "s0");
+
+        let image = |url: &str| ImageRef {
+            url: url.into(),
+            headers: Vec::new(),
+            width: None,
+            height: None,
+        };
+        let facts: Vec<Fact> = (0..40)
+            .map(|i| Fact {
+                key: if i == 0 {
+                    FactKey::Other("  ".into())
+                } else {
+                    FactKey::Genre
+                },
+                value: if i == 1 {
+                    String::new()
+                } else {
+                    format!("Fact {i}")
+                },
+            })
+            .collect();
+        let checked = details(
+            ItemDetails {
+                description: Some(format!("Line one\nline two\u{7}{}", "x".repeat(30_000))),
+                image: Some(image("https://elsewhere.example/a.jpg")),
+                facts,
+                comment_count: Some(12),
+            },
+            &checker,
+        );
+        assert!(
+            checked
+                .description
+                .as_deref()
+                .unwrap()
+                .starts_with("Line one\nline two")
+        );
+        assert_eq!(
+            checked.description.as_deref().unwrap().chars().count(),
+            MAX_DESCRIPTION
+        );
+        assert_eq!(checked.image, None, "not on the allowlist");
+        assert_eq!(checked.facts.len(), MAX_FACTS);
+        assert_eq!(checked.facts[0].value, "Fact 2");
+
+        let comment = |id: &str, text: &str| Comment {
+            id: id.into(),
+            author: "Someone".into(),
+            avatar: Some(image("https://cdn.example.com/face.png")),
+            text: text.into(),
+            likes: Some(3),
+            time_ms: None,
+            replies: None,
+        };
+        let page = comments(
+            CommentPage {
+                hot: vec![comment("h", "Hot")],
+                comments: (0..70)
+                    .map(|i| comment(&i.to_string(), &"é".repeat(3000)))
+                    .chain([comment("", "x"), comment("e", " ")])
+                    .collect(),
+                total: Some(70),
+                next: Some("2".into()),
+            },
+            &checker,
+        );
+        assert_eq!(page.hot.len(), 1);
+        assert!(page.hot[0].avatar.is_some());
+        assert_eq!(page.comments.len(), MAX_COMMENTS);
+        assert_eq!(page.comments[0].text.chars().count(), MAX_COMMENT_CHARS);
+        assert_eq!(page.next.as_deref(), Some("2"));
     }
 
     #[test]

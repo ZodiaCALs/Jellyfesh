@@ -9,11 +9,12 @@ use std::io::{Cursor, Read};
 use std::path::Path;
 
 use anyhow::{Context, Result, anyhow, bail, ensure};
+use jf_plugin_host::l10n;
 use jf_plugin_host::manifest::{self, AllowRule, Manifest};
 use jf_plugin_host::package::{self, ICON, MANIFEST, Package, PackageBuilder, SIGNATURE, WASM};
-use jf_plugin_host::schema::{Format, PropertyKind, SettingsSchema};
+use jf_plugin_host::schema::{Format, Profile, PropertyKind, SettingsSchema};
 use jf_plugin_host::trust::TrustList;
-use jf_plugin_host::{Capability, HostError, LibraryStorage, SignatureStatus};
+use jf_plugin_host::{Capability, HostError, LibraryStorage, Permission, SignatureStatus};
 use serde_json::{Value, json};
 
 use crate::key::SigningKey;
@@ -23,7 +24,7 @@ const MAX_PACKAGE: u64 = 40 * 1024 * 1024;
 /// The most any entry may weigh here; the host checks the exact limits.
 const MAX_ENTRY: u64 = 32 * 1024 * 1024;
 /// The most entries a package may have (the host's limit).
-const MAX_ENTRIES: usize = 8;
+const MAX_ENTRIES: usize = package::MAX_ENTRIES;
 
 /// What goes into a package, read from a plugin crate's folder.
 #[derive(Debug, Clone)]
@@ -34,11 +35,14 @@ pub struct PluginFiles {
     pub schema: Option<(String, Vec<u8>)>,
     /// `icon.png`, if the crate has one.
     pub icon: Option<Vec<u8>>,
+    /// Translations of the settings schema (API 1.2): `l10n/<language>.json`
+    /// entry names and contents.
+    pub translations: Vec<(String, Vec<u8>)>,
 }
 
 impl PluginFiles {
-    /// Reads `manifest.toml`, the settings schema it names and `icon.png`
-    /// from a plugin crate's folder.
+    /// Reads `manifest.toml`, the settings schema it names, `icon.png` and
+    /// the translations in `l10n/` from a plugin crate's folder.
     pub fn read(dir: &Path) -> Result<PluginFiles> {
         let path = dir.join(MANIFEST);
         let manifest =
@@ -58,10 +62,30 @@ impl PluginFiles {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
             Err(e) => return Err(anyhow!("reading {}: {e}", icon_path.display())),
         };
+        let mut translations = Vec::new();
+        let l10n_dir = dir.join("l10n");
+        if l10n_dir.is_dir() {
+            for entry in
+                std::fs::read_dir(&l10n_dir).with_context(|| format!("reading {}", l10n_dir.display()))?
+            {
+                let path = entry?.path();
+                let file = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+                let name = format!("{}{file}", l10n::FOLDER);
+                ensure!(
+                    l10n::entry_language(&name).is_some(),
+                    "{} is not a translation: name them l10n/<language>.json, like l10n/zh-Hans.json",
+                    path.display()
+                );
+                let text = std::fs::read(&path).with_context(|| format!("reading {}", path.display()))?;
+                translations.push((name, text));
+            }
+            translations.sort();
+        }
         Ok(PluginFiles {
             manifest,
             schema,
             icon,
+            translations,
         })
     }
 
@@ -76,9 +100,12 @@ impl PluginFiles {
 /// the result must pass the host's checks.
 pub fn pack(files: &PluginFiles, wasm: Vec<u8>, key: Option<&SigningKey>) -> Result<Vec<u8>> {
     let found = jf_plugin_build::check_component(&wasm).context("checking the component")?;
-    check_remote(&files.manifest()?, &found)?;
+    check_parts(&files.manifest()?, &found)?;
     let mut builder = PackageBuilder::new().manifest(&files.manifest).wasm(wasm);
     if let Some((name, text)) = &files.schema {
+        builder = builder.file(name, text.clone());
+    }
+    for (name, text) in &files.translations {
         builder = builder.file(name, text.clone());
     }
     if let Some(icon) = &files.icon {
@@ -114,9 +141,10 @@ pub fn read_entries(bytes: &[u8]) -> Result<BTreeMap<String, Vec<u8>>> {
             .name()
             .map_err(|e| anyhow!("entry {index}: {e}"))?
             .into_owned();
+        let translation = l10n::entry_language(&name).is_some();
         ensure!(
-            !entry.is_dir() && !name.contains('/') && !name.contains('\\'),
-            "folders are not allowed in a package ({name:?})"
+            !entry.is_dir() && (translation || (!name.contains('/') && !name.contains('\\'))),
+            "folders are not allowed in a package ({name:?}); only l10n/<language>.json"
         );
         let mut contents = Vec::new();
         (&mut entry)
@@ -165,21 +193,48 @@ pub struct Verified {
 pub fn verify(bytes: &[u8], trust: &TrustList) -> Result<Verified> {
     let package = package::read(bytes, trust).map_err(explain)?;
     let found = jf_plugin_build::check_component(&package.wasm).context("checking plugin.wasm")?;
-    check_remote(&package.manifest, &found)?;
+    check_parts(&package.manifest, &found)?;
     Ok(Verified {
         package,
         imports: found.imports,
     })
 }
 
-/// A manifest that declares `remote` needs a component that exports it.
-fn check_remote(manifest: &Manifest, found: &jf_plugin_build::Interfaces) -> Result<()> {
+/// A manifest that declares a capability added after 1.0 needs a component
+/// that exports its interface, and a component that imports `audio` or
+/// `speech` needs the manifest's permission (the app answers
+/// `not-declared` otherwise).
+fn check_parts(manifest: &Manifest, found: &jf_plugin_build::Interfaces) -> Result<()> {
     if manifest.capabilities.contains(&Capability::Remote) {
         ensure!(
             jf_plugin_build::exports_remote(found),
             "the manifest declares remote, but plugin.wasm does not export jellyfesh:plugin/remote@1.1 \
              (build it with SDK 1.1 or later)"
         );
+    }
+    for (capability, interface) in [
+        (Capability::MakeLyrics, "maker"),
+        (Capability::Appearance, "appearance"),
+        (Capability::Discover, "discover"),
+        (Capability::Details, "details"),
+        (Capability::Comments, "comments"),
+    ] {
+        if manifest.capabilities.contains(&capability) {
+            ensure!(
+                jf_plugin_build::exports_since(found, interface, 2),
+                "the manifest declares {capability}, but plugin.wasm does not export \
+                 jellyfesh:plugin/{interface}@1.2 (build it with SDK 1.2 or later)"
+            );
+        }
+    }
+    for (permission, interface) in [(Permission::Audio, "audio"), (Permission::Speech, "speech")] {
+        if jf_plugin_build::imports_interface(found, interface) {
+            ensure!(
+                manifest.permissions.contains(&permission),
+                "plugin.wasm imports jellyfesh:plugin/{interface}, but the manifest does not declare it: \
+                 add permissions = [\"{interface}\"] (and api_version = \"1.2\")"
+            );
+        }
     }
     Ok(())
 }
@@ -264,11 +319,12 @@ pub fn inspect(bytes: &[u8], trust: &TrustList) -> Result<Report> {
     let schema = match &manifest {
         Ok(Manifest {
             settings_schema: Some(name),
+            api_version,
             ..
         }) => Some(match entries.get(name.as_str()) {
             Some(text) => std::str::from_utf8(text)
                 .map_err(|_| format!("{name} is not UTF-8"))
-                .and_then(SettingsSchema::parse),
+                .and_then(|text| SettingsSchema::parse_with(text, Profile::for_api(*api_version))),
             None => Err(format!("{name} is missing")),
         }),
         _ => None,
@@ -340,12 +396,20 @@ fn property(schema: &SettingsSchema, name: &str) -> String {
             PropertyKind::Integer => "whole number",
             PropertyKind::Number => "number",
             PropertyKind::Boolean => "yes/no",
+            PropertyKind::Array => "ordered list",
         }
     );
     match p.format {
         Some(Format::Uri) => text += ", URL",
         Some(Format::Email) => text += ", e-mail",
+        Some(Format::Color) => text += ", colour",
         None => {}
+    }
+    if let Some(step) = p.step {
+        let _ = write!(text, ", step {step}");
+    }
+    if let Some(group) = &p.group {
+        let _ = write!(text, ", in {group}");
     }
     if let Some(choices) = &p.choices {
         let _ = write!(text, ": {}", choices.join(" | "));
@@ -370,6 +434,9 @@ impl std::fmt::Display for Report {
                 writeln!(f, "  capabilities   {}", list(&m.capabilities))?;
                 writeln!(f, "  playback       {:?}", m.playback_mode)?;
                 writeln!(f, "  sign-in        {}", list(&m.auth))?;
+                if !m.permissions.is_empty() {
+                    writeln!(f, "  permissions    {}", list(&m.permissions))?;
+                }
                 let rules: Vec<String> = m.allow.iter().map(allow_rule).collect();
                 writeln!(f, "  network        {}", list(&rules))?;
                 writeln!(f, "  requests       at most {} per second", m.max_rps)?;
@@ -411,6 +478,14 @@ impl std::fmt::Display for Report {
             }
             Some(Err(why)) => writeln!(f, "  settings       INVALID: {why}")?,
             None => writeln!(f, "  settings       none")?,
+        }
+        let languages: Vec<&str> = self
+            .entries
+            .iter()
+            .filter_map(|(name, _)| l10n::entry_language(name))
+            .collect();
+        if !languages.is_empty() {
+            writeln!(f, "  translations   {}", languages.join(", "))?;
         }
         match &self.signature {
             Ok(status) => writeln!(f, "  signature      {}", describe_signature(status))?,
@@ -465,6 +540,7 @@ impl Report {
                 "capabilities": m.capabilities.iter().map(ToString::to_string).collect::<Vec<_>>(),
                 "playback_mode": format!("{:?}", m.playback_mode).to_lowercase(),
                 "auth": m.auth.iter().map(ToString::to_string).collect::<Vec<_>>(),
+                "permissions": m.permissions.iter().map(ToString::to_string).collect::<Vec<_>>(),
                 "network": m.allow.iter().map(allow_rule).collect::<Vec<_>>(),
                 "max_rps": m.max_rps,
             }),

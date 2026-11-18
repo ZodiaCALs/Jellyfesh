@@ -1,0 +1,20 @@
+[package]
+name = "jf-test-appearance"
+description = "Test plugin: answers appearance.look (API 1.2) from its settings, hostile values included."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-sdk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+getrandom.workspace = true

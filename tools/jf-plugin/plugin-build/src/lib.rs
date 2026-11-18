@@ -212,12 +212,26 @@ pub fn import_allowed(name: &str) -> bool {
 /// Whether the component exports the `remote` interface of API 1.1 or
 /// later, which a manifest that declares `remote` needs (ADR-0018).
 pub fn exports_remote(found: &Interfaces) -> bool {
+    exports_since(found, "remote", 1)
+}
+
+/// Whether the component exports `jellyfesh:plugin/<interface>` of API
+/// `1.<minor>` or later (`maker`, `appearance`, `discover`, `details` and
+/// `comments` came with 1.2).
+pub fn exports_since(found: &Interfaces, interface: &str, minor: u32) -> bool {
+    let prefix = format!("jellyfesh:plugin/{interface}@1.");
     found.exports.iter().any(|name| {
-        name.strip_prefix("jellyfesh:plugin/remote@1.")
+        name.strip_prefix(&prefix)
             .and_then(|rest| rest.split('.').next())
-            .and_then(|minor| minor.parse::<u32>().ok())
-            .is_some_and(|minor| minor >= 1)
+            .and_then(|m| m.parse::<u32>().ok())
+            .is_some_and(|m| m >= minor)
     })
+}
+
+/// Whether the component imports `jellyfesh:plugin/<interface>` (any 1.x).
+pub fn imports_interface(found: &Interfaces, interface: &str) -> bool {
+    let prefix = format!("jellyfesh:plugin/{interface}@1.");
+    found.imports.iter().any(|name| name.starts_with(&prefix))
 }
 
 /// Lists a component's imports and fails unless they are all
@@ -333,6 +347,21 @@ mod tests {
             exports: exports.iter().map(|e| (*e).to_string()).collect(),
         };
         assert!(exports_remote(&with(&["jellyfesh:plugin/remote@1.1.0"])));
+        assert!(exports_since(
+            &with(&["jellyfesh:plugin/maker@1.2.0"]),
+            "maker",
+            2
+        ));
+        assert!(!exports_since(
+            &with(&["jellyfesh:plugin/maker@1.1.0"]),
+            "maker",
+            2
+        ));
+        assert!(!exports_since(
+            &with(&["jellyfesh:plugin/makers@1.2.0"]),
+            "maker",
+            2
+        ));
         assert!(exports_remote(&with(&["jellyfesh:plugin/remote@1.2.3"])));
         assert!(!exports_remote(&with(&["jellyfesh:plugin/remote@1.0.0"])));
         assert!(!exports_remote(&with(&["jellyfesh:plugin/meta@1.1.0"])));

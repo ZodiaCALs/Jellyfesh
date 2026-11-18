@@ -1,8 +1,9 @@
 //! The [`Plugin`] trait.
 
 use crate::{
-    Capability, FieldValue, Flow, FlowStep, ImageRef, Item, ItemPage, LyricPayload, PageRequest, PluginError,
-    Quality, RemoteDevice, RemoteRepeat, RemoteState, Result, SearchFilters, StreamInfo,
+    Capability, CommentPage, FieldValue, Flow, FlowStep, ImageRef, Item, ItemDetails, ItemPage, Look,
+    LyricPayload, Made, MakerPlan, PageRequest, PluginError, Quality, RemoteDevice, RemoteRepeat,
+    RemoteState, Result, SearchFilters, Shelf, Song, StreamInfo,
 };
 
 /// A plugin: implement what the manifest declares, leave the rest.
@@ -164,6 +165,49 @@ pub trait Plugin {
     /// Moves playback to `device`, playing there if `play`.
     fn remote_transfer(device: String, play: bool) -> Result<()> {
         let _ = (device, play);
+        Err(PluginError::Unsupported)
+    }
+
+    /// Making lyrics (API 1.2, capability `make_lyrics`): what
+    /// [`Plugin::make_lyrics`] would do with the current settings and what
+    /// it needs first. Cheap; no network ([`crate::speech::models`] is fine).
+    fn maker_plan() -> Result<MakerPlan> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// Makes synced lyrics for `song`: read its audio with [`crate::audio`]
+    /// (online, after consent) or recognise it with [`crate::speech`] (on the
+    /// device), then time the words. Runs under its own limits (30 minutes,
+    /// 10 s of plugin CPU, 128 MiB) and may be cancelled: return when an
+    /// import answers `cancelled`.
+    fn make_lyrics(song: Song) -> Result<Made> {
+        let _ = song;
+        Err(PluginError::Unsupported)
+    }
+
+    /// The app's look and layout for the current settings (API 1.2,
+    /// capability `appearance`). Leave out what is at its default.
+    fn look() -> Result<Look> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// The source's Discover page (API 1.2, capability `discover`): shelves
+    /// of items, at most 12 with 50 items each.
+    fn discover() -> Result<Vec<Shelf>> {
+        Err(PluginError::Unsupported)
+    }
+
+    /// More about an item (API 1.2, capability `details`): notes or a
+    /// biography, a large picture, facts and the number of comments.
+    fn details(item: Item) -> Result<ItemDetails> {
+        let _ = item;
+        Err(PluginError::Unsupported)
+    }
+
+    /// A page of what people say about an item (API 1.2, capability
+    /// `comments`); `hot` only on the first page.
+    fn comments(item: Item, page: PageRequest) -> Result<CommentPage> {
+        let _ = (item, page);
         Err(PluginError::Unsupported)
     }
 }

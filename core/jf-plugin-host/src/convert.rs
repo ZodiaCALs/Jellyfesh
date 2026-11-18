@@ -9,8 +9,14 @@
 
 use jf_plugin_model::types as model;
 
+use crate::bindings::appearance::exports::jellyfesh::plugin::appearance;
+use crate::bindings::comments::exports::jellyfesh::plugin::comments;
+use crate::bindings::details::exports::jellyfesh::plugin::details;
+use crate::bindings::discover::exports::jellyfesh::plugin::discover;
 use crate::bindings::exports::jellyfesh::plugin::{auth, catalog, lyrics, meta, playback};
 use crate::bindings::jellyfesh::plugin::{crypto, types};
+use crate::bindings::maker::exports::jellyfesh::plugin::maker;
+use crate::bindings::maker::jellyfesh::plugin::{audio, lyrics as maker_lyrics, speech};
 use crate::bindings::remote::exports::jellyfesh::plugin::remote;
 
 /// `From` both ways between two enums whose variants carry no data.
@@ -420,6 +426,273 @@ impl From<remote::PlaybackState> for model::RemoteState {
             position_ms: s.position_ms,
             shuffle: s.shuffle,
             repeat: s.repeat.into(),
+        }
+    }
+}
+
+// ---- API 1.2: audio and speech (the imports' answers go out generated) -------------------------
+
+impl From<model::AudioError> for audio::AudioError {
+    fn from(e: model::AudioError) -> Self {
+        match e {
+            model::AudioError::NotDeclared => Self::NotDeclared,
+            model::AudioError::NoConsent(origins) => Self::NoConsent(origins),
+            model::AudioError::Unavailable(text) => Self::Unavailable(text),
+            model::AudioError::Cancelled => Self::Cancelled,
+        }
+    }
+}
+
+impl From<model::SpeechError> for speech::SpeechError {
+    fn from(e: model::SpeechError) -> Self {
+        match e {
+            model::SpeechError::NotDeclared => Self::NotDeclared,
+            model::SpeechError::ModelMissing(id) => Self::ModelMissing(id),
+            model::SpeechError::Unavailable(text) => Self::Unavailable(text),
+            model::SpeechError::Cancelled => Self::Cancelled,
+            model::SpeechError::Failed(text) => Self::Failed(text),
+        }
+    }
+}
+
+impl From<model::SpeechModel> for speech::Model {
+    fn from(m: model::SpeechModel) -> Self {
+        speech::Model {
+            id: m.id,
+            name: m.name,
+            bytes: m.bytes,
+            ready: m.ready,
+        }
+    }
+}
+
+impl From<model::Transcript> for speech::Transcript {
+    fn from(t: model::Transcript) -> Self {
+        speech::Transcript {
+            language: t.language,
+            segments: t
+                .segments
+                .into_iter()
+                .map(|s| speech::Segment {
+                    text: s.text,
+                    start_ms: s.start_ms,
+                    end_ms: s.end_ms,
+                    words: s
+                        .words
+                        .into_iter()
+                        .map(|w| speech::Word {
+                            text: w.text,
+                            start_ms: w.start_ms,
+                            end_ms: w.end_ms,
+                            confidence: w.confidence,
+                        })
+                        .collect(),
+                })
+                .collect(),
+        }
+    }
+}
+
+// ---- API 1.2: maker ----------------------------------------------------------------------------
+
+same_enum!(maker::Mode, model::MakerMode, [OnDevice, Online]);
+same_enum!(
+    maker_lyrics::LyricFormat,
+    model::LyricFormat,
+    [Plain, Lrc, Elrc, Ttml, Vtt, JsonSyllables]
+);
+
+impl From<maker::Need> for model::MakerNeed {
+    fn from(n: maker::Need) -> Self {
+        match n {
+            maker::Need::Nothing => Self::Nothing,
+            maker::Need::SignIn => Self::SignIn,
+            maker::Need::Model(id) => Self::Model(id),
+            maker::Need::Unavailable(text) => Self::Unavailable(text),
+        }
+    }
+}
+
+impl From<maker::MakerPlan> for model::MakerPlan {
+    fn from(p: maker::MakerPlan) -> Self {
+        model::MakerPlan {
+            mode: p.mode.into(),
+            engine: p.engine,
+            upload_to: p.upload_to,
+            need: p.need.into(),
+            automatic: p.automatic,
+        }
+    }
+}
+
+impl From<maker::Made> for model::Made {
+    fn from(m: maker::Made) -> Self {
+        model::Made {
+            lyrics: model::LyricPayload {
+                format: m.lyrics.format.into(),
+                text: m.lyrics.text,
+                language: m.lyrics.language,
+                attribution: m.lyrics.attribution,
+            },
+            engine: m.engine,
+        }
+    }
+}
+
+/// The song of a `maker.make` call, with the handle the host gave it.
+pub(crate) fn song(song: model::MakeSong, track: u64) -> maker::Song {
+    maker::Song {
+        track,
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        duration_ms: song.duration_ms,
+        text: song.text,
+        language: song.language,
+    }
+}
+
+// ---- API 1.2: appearance -------------------------------------------------------------------------
+
+same_enum!(
+    appearance::Typeface,
+    model::Typeface,
+    [System, Rounded, Serif, Mono]
+);
+same_enum!(appearance::Density, model::Density, [Compact, Standard, Roomy]);
+same_enum!(
+    appearance::LyricsWeight,
+    model::LyricsWeight,
+    [Regular, Medium, Semibold, Bold, Heavy]
+);
+same_enum!(
+    appearance::Place,
+    model::Place,
+    [
+        Home, Albums, Artists, Songs, Playlists, Favourites, Search, Sources
+    ]
+);
+same_enum!(
+    appearance::HomeSection,
+    model::HomeSection,
+    [Summary, RecentlyAdded, RecentlyPlayed, MostPlayed, Favourites]
+);
+same_enum!(
+    appearance::NowPlayingLayout,
+    model::NowPlayingLayout,
+    [Stage, Artwork, Lyrics]
+);
+same_enum!(
+    appearance::MiniPlayerStyle,
+    model::MiniPlayerStyle,
+    [Bar, Compact, Floating]
+);
+
+impl From<appearance::Highlight> for model::Highlight {
+    fn from(h: appearance::Highlight) -> Self {
+        match h {
+            appearance::Highlight::Artwork => Self::Artwork,
+            appearance::Highlight::Accent => Self::Accent,
+            appearance::Highlight::Custom(rgb) => Self::Custom(rgb),
+        }
+    }
+}
+
+impl From<appearance::AppearanceLook> for model::Look {
+    fn from(l: appearance::AppearanceLook) -> Self {
+        model::Look {
+            corner_scale: l.corner_scale,
+            glass: l.glass,
+            aurora: l.aurora,
+            typeface: l.typeface.map(Into::into),
+            text_scale: l.text_scale,
+            density: l.density.map(Into::into),
+            lyrics_weight: l.lyrics_weight.map(Into::into),
+            lyrics_glow: l.lyrics_glow,
+            lyrics_highlight: l.lyrics_highlight.map(Into::into),
+            sidebar: l.sidebar.map(list),
+            home: l.home.map(list),
+            now_playing: l.now_playing.map(Into::into),
+            mini_player: l.mini_player.map(Into::into),
+        }
+    }
+}
+
+// ---- API 1.2: discover, details, comments --------------------------------------------------------
+
+same_enum!(discover::ShelfStyle, model::ShelfStyle, [Row, Grid, Chart]);
+
+impl From<discover::Shelf> for model::Shelf {
+    fn from(s: discover::Shelf) -> Self {
+        model::Shelf {
+            id: s.id,
+            title: s.title,
+            style: s.style.into(),
+            items: list(s.items),
+            more: s.more,
+        }
+    }
+}
+
+impl From<details::FactKey> for model::FactKey {
+    fn from(k: details::FactKey) -> Self {
+        use details::FactKey as W;
+        match k {
+            W::Version => Self::Version,
+            W::Genre => Self::Genre,
+            W::Language => Self::Language,
+            W::Released => Self::Released,
+            W::Label => Self::Label,
+            W::Composer => Self::Composer,
+            W::Lyricist => Self::Lyricist,
+            W::Arranger => Self::Arranger,
+            W::Producer => Self::Producer,
+            W::Popularity => Self::Popularity,
+            W::Quality => Self::Quality,
+            W::Other(label) => Self::Other(label),
+        }
+    }
+}
+
+impl From<details::ItemDetails> for model::ItemDetails {
+    fn from(d: details::ItemDetails) -> Self {
+        model::ItemDetails {
+            description: d.description,
+            image: d.image.map(Into::into),
+            facts: d
+                .facts
+                .into_iter()
+                .map(|f| model::Fact {
+                    key: f.key.into(),
+                    value: f.value,
+                })
+                .collect(),
+            comment_count: d.comment_count,
+        }
+    }
+}
+
+impl From<comments::Comment> for model::Comment {
+    fn from(c: comments::Comment) -> Self {
+        model::Comment {
+            id: c.id,
+            author: c.author,
+            avatar: c.avatar.map(Into::into),
+            text: c.text,
+            likes: c.likes,
+            time_ms: c.time_ms,
+            replies: c.replies,
+        }
+    }
+}
+
+impl From<comments::CommentPage> for model::CommentPage {
+    fn from(p: comments::CommentPage) -> Self {
+        model::CommentPage {
+            hot: list(p.hot),
+            comments: list(p.comments),
+            total: p.total,
+            next: p.next,
         }
     }
 }

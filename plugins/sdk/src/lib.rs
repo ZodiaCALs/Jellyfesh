@@ -1,16 +1,22 @@
 //! Write Jellyfesh plugins in Rust.
 //!
-//! A plugin is a WebAssembly component for the `jellyfesh:plugin@1.1`
-//! world `remote-source` (`plugins/wit`): the `source` world plus the
-//! `remote` interface. This crate generates the bindings, turns a [`Plugin`]
-//! implementation into the world's exports, and wraps the host imports in
-//! small helpers. Plugins build for `wasm32-unknown-unknown` and end up with
-//! **no WASI imports at all**.
+//! A plugin is a WebAssembly component for the `jellyfesh:plugin@1.2`
+//! world `plugin` (`plugins/wit`): the `source` world of API 1.0, the
+//! `remote` interface of 1.1, and the 1.2 imports (`audio`, `speech`) and
+//! exports (`maker`, `appearance`, `discover`, `details`, `comments`). This
+//! crate generates the bindings, turns a [`Plugin`] implementation into the
+//! world's exports, and wraps the host imports in small helpers. Plugins
+//! build for `wasm32-unknown-unknown` and end up with **no WASI imports at
+//! all**.
 //!
-//! Hosts that implement API 1.0 load SDK 1.1 plugins as long as their
-//! manifest says `api_version = "1.0"`: the extra `remote` export is never
-//! looked up there. Declare `api_version = "1.1"` only for what needs it,
-//! the `remote` capability and `[links]` (ADR-0018).
+//! Older hosts load SDK 1.2 plugins as long as the manifest names their
+//! `api_version` and the plugin uses nothing newer: exports the manifest
+//! does not declare are never looked up, and imports a plugin never calls
+//! are not in its component. Declare `api_version = "1.1"` for the `remote`
+//! capability and `[links]` (ADR-0018), and `"1.2"` for the capabilities
+//! `make_lyrics`, `appearance`, `discover`, `details` and `comments`, the
+//! permissions `audio` and `speech`, and settings schema profile 1.2
+//! (ADR-0019, ADR-0020).
 //!
 //! # A plugin
 //!
@@ -76,6 +82,8 @@
 //!   from the keystore (API 1.1) and random bytes, done by the host;
 //! * [`clock`]: wall and monotonic time (`std::time::SystemTime::now()`
 //!   panics on this target);
+//! * [`audio`] and [`speech`] (API 1.2, inside [`Plugin::make_lyrics`]): the
+//!   song's audio as WAV, and recognition on the device;
 //! * a `getrandom` backend over `crypto.random-bytes`, so crates such as
 //!   `rand` or `uuid` work (getrandom 0.3 and 0.4 share the hook);
 //! * logging macros ([`info!`], [`warn!`], …) and a panic hook that logs the
@@ -84,6 +92,7 @@
 
 extern crate self as jf_plugin_sdk;
 
+pub mod audio;
 pub mod clock;
 pub mod crypto;
 mod error;
@@ -93,6 +102,7 @@ pub mod kv;
 pub mod log;
 mod plugin;
 mod rt;
+pub mod speech;
 mod types;
 
 pub use plugin::Plugin;
@@ -103,7 +113,7 @@ pub use plugin::Plugin;
 #[allow(missing_debug_implementations, reason = "generated code")]
 pub mod bindings {
     wit_bindgen::generate!({
-        world: "remote-source",
+        world: "plugin",
         path: "../wit",
         pub_export_macro: true,
         export_macro_name: "__export_source_world",
@@ -113,18 +123,29 @@ pub mod bindings {
     });
 }
 
+pub use bindings::exports::jellyfesh::plugin::appearance::{
+    AppearanceLook as Look, Density, Highlight, HomeSection, LyricsWeight, MiniPlayerStyle, NowPlayingLayout,
+    Place, Typeface,
+};
 pub use bindings::exports::jellyfesh::plugin::auth::{
     AuthKind, CodeDisplay, FieldKind, FieldSpec, FieldValue, Flow, FlowStep, OauthRequest, OpenUrl, QrCode,
     RedirectCapture, Step,
 };
 pub use bindings::exports::jellyfesh::plugin::catalog::SearchFilters;
+pub use bindings::exports::jellyfesh::plugin::comments::{Comment, CommentPage};
+pub use bindings::exports::jellyfesh::plugin::details::{Fact, FactKey, ItemDetails};
+pub use bindings::exports::jellyfesh::plugin::discover::{Shelf, ShelfStyle};
 pub use bindings::exports::jellyfesh::plugin::lyrics::{LyricFormat, LyricPayload};
+pub use bindings::exports::jellyfesh::plugin::maker::{
+    Made, MakerPlan, Mode as MakerMode, Need as MakerNeed, Song,
+};
 pub use bindings::exports::jellyfesh::plugin::meta::Capability;
 pub use bindings::exports::jellyfesh::plugin::playback::{Quality, StreamInfo};
 pub use bindings::exports::jellyfesh::plugin::remote::{
     Device as RemoteDevice, DeviceKind as RemoteDeviceKind, PlaybackState as RemoteState,
     Repeat as RemoteRepeat,
 };
+pub use bindings::jellyfesh::plugin::audio::TrackHandle;
 pub use bindings::jellyfesh::plugin::types::{
     Header, ImageRef, Item, ItemKind, ItemPage, PageRequest, PluginError, Unplayable, UnplayableReason,
 };
@@ -135,11 +156,13 @@ pub type Result<T, E = PluginError> = core::result::Result<T, E>;
 /// Everything a plugin usually needs.
 pub mod prelude {
     pub use crate::{
-        AuthKind, Capability, CodeDisplay, FieldKind, FieldSpec, FieldValue, Flow, FlowStep, Header,
-        ImageRef, Item, ItemKind, ItemPage, LyricFormat, LyricPayload, OauthRequest, OpenUrl, PageRequest,
-        Plugin, PluginError, QrCode, Quality, RedirectCapture, RemoteDevice, RemoteDeviceKind, RemoteRepeat,
-        RemoteState, Result, SearchFilters, Step, StreamInfo, Unplayable, UnplayableReason, clock, crypto,
-        http, kv,
+        AuthKind, Capability, CodeDisplay, Comment, CommentPage, Density, Fact, FactKey, FieldKind,
+        FieldSpec, FieldValue, Flow, FlowStep, Header, Highlight, HomeSection, ImageRef, Item, ItemDetails,
+        ItemKind, ItemPage, Look, LyricFormat, LyricPayload, LyricsWeight, Made, MakerMode, MakerNeed,
+        MakerPlan, MiniPlayerStyle, NowPlayingLayout, OauthRequest, OpenUrl, PageRequest, Place, Plugin,
+        PluginError, QrCode, Quality, RedirectCapture, RemoteDevice, RemoteDeviceKind, RemoteRepeat,
+        RemoteState, Result, SearchFilters, Shelf, ShelfStyle, Song, Step, StreamInfo, TrackHandle, Typeface,
+        Unplayable, UnplayableReason, audio, clock, crypto, http, kv, speech,
     };
 }
 
@@ -308,6 +331,48 @@ macro_rules! export_plugin {
                 fn transfer(device: String, play: bool) -> Result<(), PluginError> {
                     $crate::__private::enter();
                     <$plugin as $crate::Plugin>::remote_transfer(device, play)
+                }
+            }
+
+            impl jf::maker::Guest for $plugin {
+                fn plan() -> Result<$crate::MakerPlan, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::maker_plan()
+                }
+                fn make(song: $crate::Song) -> Result<$crate::Made, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::make_lyrics(song)
+                }
+            }
+
+            impl jf::appearance::Guest for $plugin {
+                fn look() -> Result<$crate::Look, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::look()
+                }
+            }
+
+            impl jf::discover::Guest for $plugin {
+                fn discover() -> Result<Vec<$crate::Shelf>, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::discover()
+                }
+            }
+
+            impl jf::details::Guest for $plugin {
+                fn details(item: $crate::Item) -> Result<$crate::ItemDetails, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::details(item)
+                }
+            }
+
+            impl jf::comments::Guest for $plugin {
+                fn comments(
+                    item: $crate::Item,
+                    page: $crate::PageRequest,
+                ) -> Result<$crate::CommentPage, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::comments(item, page)
                 }
             }
         };

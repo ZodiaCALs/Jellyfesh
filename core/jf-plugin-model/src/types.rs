@@ -122,6 +122,88 @@ pub enum Capability {
     /// Remote control of the service's own player (API 1.1, `remote`). A
     /// manifest capability only: the WIT `capability` enum of 1.0 is unchanged.
     Remote,
+    /// Making synced lyrics (API 1.2, the `maker` export). A Pro capability.
+    MakeLyrics,
+    /// The app's look and layout (API 1.2, the `appearance` export). A Pro
+    /// capability.
+    Appearance,
+    /// A Discover page of shelves (API 1.2, the `discover` export).
+    Discover,
+    /// More about an item: notes, biography, facts (API 1.2, `details`).
+    Details,
+    /// What people say about an item (API 1.2, `comments`).
+    Comments,
+}
+
+impl Capability {
+    /// Whether the capability is part of Jellyfesh Pro (ADR-0021): the host
+    /// refuses its calls (`CallError::ProRequired`) while Pro is inactive.
+    pub fn requires_pro(self) -> bool {
+        matches!(self, Capability::MakeLyrics | Capability::Appearance)
+    }
+
+    /// Whether the capability exists only in the manifest: the 1.0 `meta`
+    /// enum cannot report it, so the host lists it whenever it is declared.
+    pub fn manifest_only(self) -> bool {
+        matches!(
+            self,
+            Capability::Remote
+                | Capability::MakeLyrics
+                | Capability::Appearance
+                | Capability::Discover
+                | Capability::Details
+                | Capability::Comments
+        )
+    }
+
+    /// Whether the capability makes a plugin a source of music (as opposed
+    /// to an extension such as AI Lyrics or Customize, ADR-0020).
+    pub fn is_source(self) -> bool {
+        !matches!(
+            self,
+            Capability::Auth | Capability::MakeLyrics | Capability::Appearance
+        )
+    }
+}
+
+/// Whether a plugin with these capabilities needs Jellyfesh Pro for any of
+/// them.
+pub fn requires_pro(capabilities: &[Capability]) -> bool {
+    capabilities.iter().any(|c| c.requires_pro())
+}
+
+/// Whether a plugin with these capabilities is an extension (ADR-0020): it
+/// makes lyrics or changes the look, and offers no music (Settings lists it
+/// under Extensions, not Sources).
+pub fn is_extension(capabilities: &[Capability]) -> bool {
+    capabilities
+        .iter()
+        .any(|c| matches!(c, Capability::MakeLyrics | Capability::Appearance))
+        && !capabilities.iter().any(|c| c.is_source())
+}
+
+/// A host import a plugin must declare in its manifest's `permissions`
+/// (API 1.2); undeclared, the import answers `not-declared`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Permission {
+    /// The song's audio during `maker.make` (`audio`).
+    Audio,
+    /// Speech recognition in the app (`speech`).
+    Speech,
+}
+
+/// The manifest name of a permission.
+pub fn permission_name(permission: Permission) -> &'static str {
+    match permission {
+        Permission::Audio => "audio",
+        Permission::Speech => "speech",
+    }
+}
+
+impl std::fmt::Display for Permission {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(permission_name(*self))
+    }
 }
 
 // ---- auth ------------------------------------------------------------------------------------
@@ -342,6 +424,320 @@ pub enum CryptoError {
     TooLarge,
 }
 
+// ---- audio and speech (API 1.2) --------------------------------------------------------------
+
+/// Why a plugin gets no audio (`audio.audio-error`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AudioError {
+    NotDeclared,
+    NoConsent(Vec<String>),
+    Unavailable(String),
+    Cancelled,
+}
+
+/// A recognition model the app offers (`speech.model`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SpeechModel {
+    pub id: String,
+    pub name: String,
+    pub bytes: u64,
+    pub ready: bool,
+}
+
+/// How to recognise (`speech.options`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct SpeechOptions {
+    pub model: String,
+    pub language: Option<String>,
+    pub prompt: Option<String>,
+}
+
+/// A recognised word (`speech.word`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpeechWord {
+    pub text: String,
+    pub start_ms: u32,
+    pub end_ms: u32,
+    pub confidence: f32,
+}
+
+/// A recognised stretch of speech (`speech.segment`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SpeechSegment {
+    pub text: String,
+    pub start_ms: u32,
+    pub end_ms: u32,
+    pub words: Vec<SpeechWord>,
+}
+
+/// Everything recognised in a song (`speech.transcript`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Transcript {
+    pub language: Option<String>,
+    pub segments: Vec<SpeechSegment>,
+}
+
+/// Why there is no transcript (`speech.speech-error`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpeechError {
+    NotDeclared,
+    ModelMissing(String),
+    Unavailable(String),
+    Cancelled,
+    Failed(String),
+}
+
+// ---- maker (API 1.2) -------------------------------------------------------------------------
+
+/// Where recognition happens (`maker.mode`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MakerMode {
+    OnDevice,
+    Online,
+}
+
+/// What making lyrics needs first (`maker.need`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MakerNeed {
+    Nothing,
+    SignIn,
+    Model(String),
+    Unavailable(String),
+}
+
+/// What `maker.make` would do now (`maker.plan`), checked: `upload_to` is
+/// an origin (`https://host[:port]`) on the plugin's allowlist.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MakerPlan {
+    pub mode: MakerMode,
+    pub engine: String,
+    pub upload_to: Option<String>,
+    pub need: MakerNeed,
+    pub automatic: bool,
+}
+
+/// The song the host asks a maker about (`maker.song` without its track
+/// handle, which the host assigns per call).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct MakeSong {
+    pub title: String,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub duration_ms: u64,
+    /// Plain lyrics to time.
+    pub text: Option<String>,
+    pub language: Option<String>,
+}
+
+/// Lyrics a plugin made (`maker.made`), checked.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Made {
+    pub lyrics: LyricPayload,
+    pub engine: String,
+}
+
+// ---- appearance (API 1.2) ----------------------------------------------------------------------
+
+/// `appearance.typeface`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Typeface {
+    System,
+    Rounded,
+    Serif,
+    Mono,
+}
+
+/// `appearance.density`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Density {
+    Compact,
+    Standard,
+    Roomy,
+}
+
+/// `appearance.lyrics-weight`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum LyricsWeight {
+    Regular,
+    Medium,
+    Semibold,
+    Bold,
+    Heavy,
+}
+
+/// `appearance.highlight`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Highlight {
+    Artwork,
+    Accent,
+    /// 0xRRGGBB.
+    Custom(u32),
+}
+
+/// `appearance.place`: a place in the sidebar.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Place {
+    Home,
+    Albums,
+    Artists,
+    Songs,
+    Playlists,
+    Favourites,
+    Search,
+    Sources,
+}
+
+impl Place {
+    /// Every place, in the docs/ui.md order (the default sidebar).
+    pub const ALL: [Place; 8] = [
+        Place::Home,
+        Place::Albums,
+        Place::Artists,
+        Place::Songs,
+        Place::Playlists,
+        Place::Favourites,
+        Place::Search,
+        Place::Sources,
+    ];
+
+    /// Whether the place shows the person's library.
+    pub fn is_library(self) -> bool {
+        matches!(
+            self,
+            Place::Albums | Place::Artists | Place::Songs | Place::Playlists | Place::Favourites
+        )
+    }
+}
+
+/// `appearance.home-section`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum HomeSection {
+    Summary,
+    RecentlyAdded,
+    RecentlyPlayed,
+    MostPlayed,
+    Favourites,
+}
+
+impl HomeSection {
+    /// Home's sections by default, in order.
+    pub const DEFAULT: [HomeSection; 4] = [
+        HomeSection::Summary,
+        HomeSection::RecentlyAdded,
+        HomeSection::RecentlyPlayed,
+        HomeSection::MostPlayed,
+    ];
+}
+
+/// `appearance.now-playing-layout`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum NowPlayingLayout {
+    Stage,
+    Artwork,
+    Lyrics,
+}
+
+/// `appearance.mini-player-style`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum MiniPlayerStyle {
+    Bar,
+    Compact,
+    Floating,
+}
+
+/// `appearance.look`: what an appearance plugin sets; `None` keeps the
+/// default.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Look {
+    pub corner_scale: Option<f32>,
+    pub glass: Option<f32>,
+    pub aurora: Option<f32>,
+    pub typeface: Option<Typeface>,
+    pub text_scale: Option<f32>,
+    pub density: Option<Density>,
+    pub lyrics_weight: Option<LyricsWeight>,
+    pub lyrics_glow: Option<f32>,
+    pub lyrics_highlight: Option<Highlight>,
+    pub sidebar: Option<Vec<Place>>,
+    pub home: Option<Vec<HomeSection>>,
+    pub now_playing: Option<NowPlayingLayout>,
+    pub mini_player: Option<MiniPlayerStyle>,
+}
+
+// ---- discover, details, comments (API 1.2) -------------------------------------------------------
+
+/// `discover.shelf-style`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum ShelfStyle {
+    Row,
+    Grid,
+    Chart,
+}
+
+/// `discover.shelf`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Shelf {
+    pub id: String,
+    pub title: String,
+    pub style: ShelfStyle,
+    pub items: Vec<Item>,
+    pub more: Option<String>,
+}
+
+/// `details.fact-key`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum FactKey {
+    Version,
+    Genre,
+    Language,
+    Released,
+    Label,
+    Composer,
+    Lyricist,
+    Arranger,
+    Producer,
+    Popularity,
+    Quality,
+    Other(String),
+}
+
+/// `details.fact`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Fact {
+    pub key: FactKey,
+    pub value: String,
+}
+
+/// `details.item-details`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ItemDetails {
+    pub description: Option<String>,
+    pub image: Option<ImageRef>,
+    pub facts: Vec<Fact>,
+    pub comment_count: Option<u64>,
+}
+
+/// `comments.comment`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Comment {
+    pub id: String,
+    pub author: String,
+    pub avatar: Option<ImageRef>,
+    pub text: String,
+    pub likes: Option<u64>,
+    pub time_ms: Option<u64>,
+    pub replies: Option<u64>,
+}
+
+/// `comments.comment-page`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct CommentPage {
+    pub hot: Vec<Comment>,
+    pub comments: Vec<Comment>,
+    pub total: Option<u64>,
+    pub next: Option<String>,
+}
+
 // ---- the host's side -------------------------------------------------------------------------
 
 // ---- remote control (API 1.1) -------------------------------------------------------------------
@@ -513,6 +909,13 @@ pub struct PluginInfo {
     pub links: crate::links::Links,
     /// Whether the package has an icon.
     pub has_icon: bool,
+    /// The host imports the manifest declares (API 1.2): `audio`, `speech`.
+    #[serde(default)]
+    pub permissions: Vec<Permission>,
+    /// Languages the package translates its settings into (`l10n/<tag>.json`,
+    /// API 1.2), such as `zh-Hans`.
+    #[serde(default)]
+    pub languages: Vec<String>,
 }
 
 /// One step of a login flow, for the UI to render natively.
@@ -582,6 +985,11 @@ pub fn capability_name(capability: Capability) -> &'static str {
         Capability::Artwork => "artwork",
         Capability::Recommendations => "recommendations",
         Capability::Remote => "remote",
+        Capability::MakeLyrics => "make_lyrics",
+        Capability::Appearance => "appearance",
+        Capability::Discover => "discover",
+        Capability::Details => "details",
+        Capability::Comments => "comments",
     }
 }
 

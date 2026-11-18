@@ -2,9 +2,11 @@
 //! so `?` works everywhere in a plugin.
 
 use crate::PluginError;
+use crate::bindings::jellyfesh::plugin::audio::AudioError;
 use crate::bindings::jellyfesh::plugin::crypto::CryptoError;
 use crate::bindings::jellyfesh::plugin::http::HttpError;
 use crate::bindings::jellyfesh::plugin::kv::KvError;
+use crate::bindings::jellyfesh::plugin::speech::SpeechError;
 
 impl PluginError {
     /// The service answered with an error; `message` is shown to the person.
@@ -53,6 +55,41 @@ impl From<KvError> for PluginError {
 impl From<CryptoError> for PluginError {
     fn from(error: CryptoError) -> PluginError {
         PluginError::Internal(format!("crypto: {error:?}"))
+    }
+}
+
+/// The song's audio could not be read (API 1.2). A cancelled job reports
+/// itself as `service("cancelled")`; the host ends the call anyway.
+impl From<AudioError> for PluginError {
+    fn from(error: AudioError) -> PluginError {
+        match error {
+            AudioError::NotDeclared => {
+                PluginError::Internal("the manifest does not declare the audio permission".into())
+            }
+            AudioError::NoConsent(origins) => PluginError::Service(if origins.is_empty() {
+                "sending audio has not been allowed".into()
+            } else {
+                format!("sending audio to {} has not been allowed", origins.join(", "))
+            }),
+            AudioError::Unavailable(m) => PluginError::Service(m),
+            AudioError::Cancelled => PluginError::Service("cancelled".into()),
+        }
+    }
+}
+
+/// Recognition failed (API 1.2).
+impl From<SpeechError> for PluginError {
+    fn from(error: SpeechError) -> PluginError {
+        match error {
+            SpeechError::NotDeclared => {
+                PluginError::Internal("the manifest does not declare the speech permission".into())
+            }
+            SpeechError::ModelMissing(id) => {
+                PluginError::Service(format!("the {id} model is not downloaded"))
+            }
+            SpeechError::Unavailable(m) | SpeechError::Failed(m) => PluginError::Service(m),
+            SpeechError::Cancelled => PluginError::Service("cancelled".into()),
+        }
     }
 }
 

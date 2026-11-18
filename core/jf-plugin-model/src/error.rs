@@ -104,6 +104,13 @@ pub enum CallError {
     /// The host was dropped before the call ran.
     #[error("the plugin host has shut down")]
     Shutdown,
+    /// The capability is part of Jellyfesh Pro, which is not active
+    /// (ADR-0021). The app shows the Pro sheet instead of an error.
+    #[error("this needs Jellyfesh Pro")]
+    ProRequired,
+    /// The caller cancelled the call (a lyrics job).
+    #[error("cancelled")]
+    Cancelled,
 }
 
 impl CallError {

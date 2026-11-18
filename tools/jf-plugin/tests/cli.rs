@@ -81,7 +81,7 @@ fn template_plugin() -> &'static (PathBuf, PathBuf) {
             .arg(target_dir())
             .arg("--out")
             .arg(&wasm));
-        assert!(out.contains("jellyfesh:plugin/http@1.1.0"), "{out}");
+        assert!(out.contains("jellyfesh:plugin/http@1.2.0"), "{out}");
         (dir, wasm)
     })
 }
@@ -161,8 +161,8 @@ fn pack_sign_verify_round_trip() {
         &format!("key id {}", key.key_id()),
         "plugin.wasm",
         "SIGNATURE",
-        "jellyfesh:plugin/http@1.1.0",
-        "jellyfesh:plugin/catalog@1.1.0",
+        "jellyfesh:plugin/http@1.2.0",
+        "jellyfesh:plugin/catalog@1.2.0",
     ] {
         assert!(out.contains(expected), "{expected:?} missing from\n{out}");
     }

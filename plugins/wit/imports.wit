@@ -1,4 +1,4 @@
-package jellyfesh:plugin@1.1.0;
+package jellyfesh:plugin@1.2.0;
 
 /// Outgoing HTTP, limited to the plugin's network allowlist.
 ///
@@ -272,4 +272,135 @@ interface log {
 
     /// Writes one line.
     log: func(level: level, message: string);
+}
+
+/// The audio of the song a `maker.make` call is about (permission `audio`,
+/// API 1.2, ADR-0019).
+///
+/// Only inside `maker.make`, and only for the track handle that call
+/// received: a handle means nothing outside its call. The host decodes the
+/// song itself (a library file, or the source's stream) and hands out
+/// 16 kHz mono 16-bit PCM WAV, so a plugin never sees the file or its URL.
+///
+/// Consent: `wav` answers `no-consent` unless the person has allowed
+/// sending this song's audio to at least one origin for this plugin (the
+/// app asks once per plugin and origin, from the plan's `upload-to`). Once a
+/// call has read audio, the rest of that call may send HTTP requests only to
+/// the allowed origins (`http-error.not-allowed` otherwise) and may not
+/// write to `kv` (`kv-error.forbidden`). The on-device mode needs no audio
+/// here: `speech.transcribe` reads the song in the host.
+interface audio {
+    /// A song in one `maker.make` call; meaningless outside that call.
+    type track-handle = u64;
+
+    /// What the host knows about the song.
+    record clip-info {
+        /// Its length in milliseconds.
+        duration-ms: u64,
+    }
+
+    /// Why there is no audio.
+    variant audio-error {
+        /// The manifest does not declare the `audio` permission.
+        not-declared,
+        /// The person has not allowed sending audio to these origins (the
+        /// plan's `upload-to`, when the host knows it).
+        no-consent(list<string>),
+        /// The song cannot be read: another device plays it, its source gives
+        /// no audio, the request is out of range, or the handle is not this
+        /// call's. The text says which.
+        unavailable(string),
+        /// The person cancelled the job: return quickly.
+        cancelled,
+    }
+
+    /// The song's length.
+    info: func(track: track-handle) -> result<clip-info, audio-error>;
+
+    /// The song as 16 kHz mono 16-bit PCM WAV, from `start-ms` for
+    /// `length-ms` (cut at the song's end). At most 8 minutes (480 000 ms)
+    /// per call: read longer songs in parts. The first call shows the person
+    /// "Reading Audio".
+    wav: func(track: track-handle, start-ms: u64, length-ms: u64) -> result<list<u8>, audio-error>;
+}
+
+/// Speech recognition in the app (permission `speech`, API 1.2): Whisper,
+/// running natively on the device with a model the person downloads in the
+/// app (ADR-0019). Nothing leaves the device. Jellyfesh Web has no on-device
+/// recognition and answers `unavailable`.
+interface speech {
+    use audio.{track-handle};
+
+    /// A recognition model the app offers.
+    record model {
+        /// Stable id: `tiny`, `base`, `small` or `large-v3-turbo-q5_0`.
+        id: string,
+        /// The name people see ("Base").
+        name: string,
+        /// Its download size in bytes.
+        bytes: u64,
+        /// Downloaded, verified and ready to use.
+        ready: bool,
+    }
+
+    /// How to recognise.
+    record options {
+        /// A model id from `models`.
+        model: string,
+        /// A BCP 47 language hint; none detects the language.
+        language: option<string>,
+        /// Text that steers recognition, such as the lyrics being timed
+        /// (the host uses at most its first 4 KiB).
+        prompt: option<string>,
+    }
+
+    /// A recognised word and when it is sung.
+    record word {
+        text: string,
+        start-ms: u32,
+        end-ms: u32,
+        /// 0–1.
+        confidence: f32,
+    }
+
+    /// A stretch of recognised speech (about a line).
+    record segment {
+        text: string,
+        start-ms: u32,
+        end-ms: u32,
+        /// Its words in order; may be empty when the engine gave no word times.
+        words: list<word>,
+    }
+
+    /// Everything recognised in a song.
+    record transcript {
+        /// The detected (or given) language, BCP 47.
+        language: option<string>,
+        segments: list<segment>,
+    }
+
+    /// Why there is no transcript.
+    variant speech-error {
+        /// The manifest does not declare the `speech` permission.
+        not-declared,
+        /// This model is not downloaded (the id); the plan should say `need.model`.
+        model-missing(string),
+        /// Recognition is not available here (Jellyfesh Web, a build without
+        /// it), or the song cannot be read; the text says why.
+        unavailable(string),
+        /// The person cancelled the job: return quickly.
+        cancelled,
+        /// Recognition failed; the text says why.
+        failed(string),
+    }
+
+    /// The models the app offers and whether each is ready. Empty without
+    /// the `speech` permission. Cheap: plans call it.
+    models: func() -> list<model>;
+
+    /// Recognises the song of this `maker.make` call. Takes as long as it
+    /// takes (minutes for a long song with a large model); the time spent
+    /// here never counts against the plugin's CPU budget, and the person sees
+    /// "Recognising…" with the engine's progress.
+    transcribe: func(track: track-handle, opts: options) -> result<transcript, speech-error>;
 }

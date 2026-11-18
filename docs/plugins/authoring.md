@@ -1,9 +1,10 @@
 # Writing a Jellyfesh plugin
 
-A Jellyfesh source plugin is a WebAssembly component for the
-`jellyfesh:plugin@1.1` world `remote-source` (`plugins/wit`): the `source`
-world of API 1.0 plus the `remote` interface. It has no WASI at all: no
-files, sockets, environment or clock of its own. Everything goes through the
+A Jellyfesh plugin is a WebAssembly component for the
+`jellyfesh:plugin@1.2` world `plugin` (`plugins/wit`): the `source` world of
+API 1.0, the `remote` interface of 1.1, and the imports and exports of 1.2
+(making lyrics, the app's look, Discover pages, details and comments). It
+has no WASI at all: no files, sockets, environment or clock of its own. Everything goes through the
 host's imports (HTTP limited to the manifest's allowlist, small private
 storage, the system keystore, crypto, time, logging), and the host calls its
 exports (sign-in, search, browse, streams, lyrics, artwork,
@@ -17,7 +18,7 @@ You need Rust (the version in `rust-toolchain.toml`) with the
 | --- | --- |
 | `plugins/sdk` (`jf-plugin-sdk`) | the guest crate: bindings, the `Plugin` trait, `export_plugin!`, HTTP, kv and secrets, crypto, clock, logging |
 | `tools/jf-plugin` (`jf-plugin`) | the tool: `new`, `build`, `pack`, `keygen`, `sign`, `verify`, `inspect` |
-| `plugins/testkit` (`jf-plugin-testkit`) | runs your component in the real host against a mock of your service, for `cargo test` |
+| `plugins/testkit` (`jf-plugin-testkit`) | runs your component in the real host against a mock of your service, for `cargo test`; serves a lyrics maker's audio and speech (`TestAccess`) |
 
 The official plugins are complete examples of everything below:
 `plugins/subsonic` and `plugins/jellyfin` (servers the person runs),
@@ -182,6 +183,101 @@ Plugins built with this SDK always export `remote` (answering `unsupported`
 unless implemented); a 1.1 host looks it up only when the manifest declares
 `remote`. Packages built for 1.0 keep working in 1.1 hosts unchanged.
 
+### API 1.2: lyrics, the look, Discover, details and comments
+
+These need `api_version = "1.2"` (ADR-0019, ADR-0020, ADR-0022). The SDK
+always exports the new interfaces (answering `unsupported`), and a host
+looks each one up only when the manifest declares its capability; a plugin
+that uses none of it may keep an older `api_version` and still loads in
+older hosts (imports a plugin never calls are not in its component).
+
+| Capability | Implement | The host |
+| --- | --- | --- |
+| `make_lyrics` (Pro) | `maker_plan`, `make_lyrics` | calls `plan` whenever the app shows what making lyrics needs, `make` for one song |
+| `appearance` (Pro) | `look` | calls it when the plugin loads and after its settings change |
+| `discover` | `discover` | at most 12 shelves of 50 items; `more` names a browse node ("See All") |
+| `details` | `details` | at most 32 facts; the apps word the known fact keys |
+| `comments` | `comments` | at most 50 comments per page (and hot ones on the first), 2 000 characters each, read-only, with the content policy's attribution |
+
+`make_lyrics` and `appearance` are **Jellyfesh Pro** capabilities (ADR-0021):
+the plugin installs and its other calls work, but the host answers their
+calls itself with `pro-required` while Pro is inactive. Settings forms and
+sign-in still work.
+
+**Permissions.** A plugin that uses the new imports declares them, at the
+top level of the manifest (before the first table):
+
+```toml
+api_version = "1.2"
+capabilities = ["auth", "make_lyrics"]
+permissions = ["audio", "speech"]
+```
+
+An import the manifest does not declare answers `not-declared` (`speech.models`
+answers an empty list), and `jf-plugin pack` refuses a component that
+imports one without the permission. The install screen lists them.
+
+**Making lyrics** (`plugins/test-plugins/maker` is a small complete
+example). `maker_plan` says what `make_lyrics` would do with the current
+settings: the mode (`on-device` or `online`), the engine in words ("Whisper
+Base on this device"), `upload_to` (the origin audio goes to online, which
+must be on your allowlist), what is needed first (`sign-in`, `model(id)`,
+`unavailable(why)` or `nothing`) and whether to make lyrics automatically. It
+must be cheap: no network; `speech::models()` is fine.
+
+`make_lyrics(song)` gets the song's title, artist, album, length, plain
+lyrics to time (when it has them) and a **track handle** for this call only:
+
+* **On the device:** `speech::transcribe(song.track, &Options { model, language, prompt })`
+  runs Whisper in the app and returns segments with word times. The time it
+  takes never counts against your CPU budget, and the person sees
+  "Recognising… 42%".
+* **Online:** `audio::wav(song.track, start_ms, length_ms)` returns 16 kHz
+  mono 16-bit WAV, at most 8 minutes per call (`audio::parts` reads a long
+  song in parts). It answers `no-consent` until the person has allowed
+  sending audio to your plan's `upload_to` (the app asks once per plugin and
+  origin). **Once a call has read audio, the rest of that call may send
+  HTTP requests only to the allowed origins and may not write to `kv`**, so
+  put whatever you need (the API key) in `kv` or the keystore before, or
+  read it only.
+* Return enhanced LRC (`elrc`, word times) or LRC; `plain` is refused.
+  `engine` names the engine as the plan does.
+
+`make_lyrics` runs in an instance of its own, so your other calls go on
+meanwhile, under its own limits: 30 minutes of wall-clock time, 10 s of
+plugin CPU (time inside `audio`, `speech` and `http` does not count) and
+128 MiB of memory. The person may cancel it: imports then answer
+`cancelled` and your code is stopped at the next tick. Track handles mean
+nothing outside their call.
+
+**The look** (`appearance`): return an `appearance-look` (SDK `Look`) with
+`None` for everything at its default; the host clamps numbers to their
+ranges (corner scale 0–2, glass, aurora and glow 0–1, text scale
+0.85–1.30), drops NaN and duplicates, and keeps at least one library place
+in the sidebar.
+
+**Settings schema profile 1.2.** Packages for 1.2 may also use, in
+`settings.schema.json`:
+
+* `"format": "color"`: a string `#RRGGBB`, shown as a colour well;
+* `minimum` and `maximum` on a number make a slider, `multipleOf` its step;
+* `"type": "array"`, `"items": { "type": "string", "enum": [...] }` (or
+  `oneOf`) and `"uniqueItems": true`: an ordered checklist whose value lists
+  the shown items in order;
+* `"oneOf": [{ "const": "stage", "title": "Stage" }, ...]`: choices with
+  titles;
+* `"x-jf-group": "Lyrics"`: consecutive properties with the same group are
+  shown under that heading.
+
+**Translations.** Put `l10n/<language>.json` files next to the manifest
+(`l10n/zh-Hans.json`, `l10n/zh-Hant.json`, `l10n/ja.json`); `jf-plugin pack`
+adds them. Each is a flat JSON object from `title`, `description`,
+`properties.<name>.title`, `properties.<name>.description`,
+`properties.<name>.x-jf-group` and `choices.<value>` (the title of the
+`oneOf` choice with that `const`) to the language's words; a key that names
+nothing in the schema is an error. The app shows the schema in its language,
+English where a word is missing. A package holds at most 16 files.
+
 ## 3. Build
 
 ```sh
@@ -194,8 +290,10 @@ jf-plugin build --path plugins/subsonic --out /tmp/subsonic.wasm
 `--cfg getrandom_backend="custom"` (the SDK provides randomness from the
 host), wraps the module into a component with `wit-component`, and refuses it
 unless it imports only `jellyfesh:plugin/*@1` and exports the whole `source`
-world (and `remote` when the manifest declares it, checked by `pack` and
-`verify`). `cargo xtask plugin build <package>` and the plugin tests use the same
+world. `pack` and `verify` also check the exports the manifest's
+capabilities need (`remote`; `maker`, `appearance`, `discover`, `details`,
+`comments` at 1.2) and that `audio` and `speech` are imported only with the
+manifest's permission. `cargo xtask plugin build <package>` and the plugin tests use the same
 code (`tools/jf-plugin/plugin-build`). `opt-level = "s"` in the release
 profile gives noticeably smaller components (the official plugins: about
 440 KiB).
@@ -256,8 +354,9 @@ jf-plugin pack --wasm my.wasm --out my.jfpkg     # an already built component
 ```
 
 A `.jfpkg` is a zip with `manifest.toml`, `plugin.wasm`, the settings schema
-the manifest names, an optional `icon.png` (at most 64 KiB) and an optional
-`SIGNATURE` (`core/jf-plugin-host/src/package.rs`). `pack` checks the result
+the manifest names, an optional `icon.png` (at most 64 KiB), optional
+translations `l10n/<language>.json` (API 1.2) and an optional `SIGNATURE`
+(`core/jf-plugin-model/src/package.rs`), at most 16 files. `pack` checks the result
 with the host's own package reader, so a package it writes installs: unknown
 manifest keys, a schema the allowlist cannot use or a component with WASI
 imports are errors here, not in the app.

@@ -32,6 +32,10 @@ pub const PLUGINS: &[&str] = &[
     "api-mismatch",
     "remote",
     "compat-1-0",
+    "compat-1-1",
+    "maker",
+    "appearance",
+    "discover",
 ];
 
 /// The cargo target directory this test binary was built in.
@@ -192,6 +196,28 @@ pub fn package(dir: &Path, file: &str, manifest: &str, wasm: Vec<u8>, signed: bo
     path
 }
 
+/// Writes a `.jfpkg` with its own settings schema and extra entries
+/// (translations), signed with the test key.
+pub fn package_with(
+    dir: &Path,
+    file: &str,
+    manifest: &str,
+    wasm: Vec<u8>,
+    schema: &str,
+    extra: &[(&str, &str)],
+) -> PathBuf {
+    let mut builder = PackageBuilder::new()
+        .manifest(manifest)
+        .wasm(wasm)
+        .file("settings.schema.json", schema.as_bytes().to_vec());
+    for (name, text) in extra {
+        builder = builder.file(name, text.as_bytes().to_vec());
+    }
+    let path = dir.join(file);
+    std::fs::write(&path, builder.sign(test_key_seed()).build().unwrap()).unwrap();
+    path
+}
+
 /// A host in a temporary directory, trusting the test key.
 pub struct Env {
     pub dir: tempfile::TempDir,
@@ -258,6 +284,22 @@ impl Env {
         let dir = self.dir.path().join("incoming");
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    /// Installs a signed test plugin with its own settings schema and extra
+    /// entries.
+    pub fn install_with(&self, plugin: &str, manifest: &str, id: &str, schema: &str, extra: &[(&str, &str)]) {
+        let path = package_with(
+            &self.incoming(),
+            &format!("{id}.jfpkg"),
+            manifest,
+            component(plugin),
+            schema,
+            extra,
+        );
+        self.host
+            .install(&path)
+            .unwrap_or_else(|e| panic!("installing {id}: {e}"));
     }
 
     /// Installs a signed test plugin and points it at `server`.

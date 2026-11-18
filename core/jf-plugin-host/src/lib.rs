@@ -65,6 +65,16 @@
 //! [`AuthFlow`] (steps on a channel, [`AuthFlow::submit`],
 //! [`AuthFlow::cancel`]).
 //!
+//! API 1.2 (ADR-0019, ADR-0020): [`PluginHost::maker_plan`],
+//! [`PluginHost::make_lyrics`] (with a [`MakeJob`]: the song, the
+//! embedder's [`MakerAccess`] that serves `audio` and `speech`, the consent
+//! and a cancel flag), [`PluginHost::appearance_look`],
+//! [`PluginHost::discover`], [`PluginHost::details`],
+//! [`PluginHost::comments`]; [`PluginHost::set_pro`] (Pro capabilities
+//! answer [`CallError::ProRequired`] while it is off),
+//! [`PluginHost::set_speech_models`] and
+//! [`PluginHost::localized_settings_schema`].
+//!
 //! Unified search: [`merge::merge`] merges per-source result lists (ISRC,
 //! then normalised title + primary artist + duration within 2 s), keeping
 //! each source's order. Fanning out and deadlines are the caller's.
@@ -91,6 +101,10 @@
 //! | HTTP | `max_rps` (≤ 20) per plugin, 16 MiB per response, 64 MiB per call, 30 s per request | token bucket, body limits |
 //! | Storage | kv 1 MiB per plugin; secrets only in `jellyfesh/<id>/…`; cookie jar per plugin, AES-256-GCM on disk | `kv` import, [`SecretStore`] |
 //! | Strikes | 3 violations in a row turn a plugin off with a reason | host |
+//! | `maker.make` (1.2) | 30 min wall, 10 s CPU (imports excluded), 128 MiB, own instance and thread; cancellable | `make_lyrics` |
+//! | `audio` (1.2) | `audio` permission, this call's handle, consent, 8 min per `wav`; afterwards HTTP only to allowed origins, no `kv` writes | imports |
+//! | `speech` (1.2) | `speech` permission, this call's handle; transcripts checked | imports |
+//! | Pro (1.2) | `make_lyrics` and `appearance` calls refused while Pro is off | host |
 //!
 //! A trap or violation drops the plugin's instance; the next call starts a
 //! fresh one. There are no WASI imports at all: a component that imports
@@ -123,6 +137,7 @@ mod cookies;
 mod host;
 mod http;
 mod imports;
+pub mod maker;
 pub mod net;
 mod plugin;
 mod plugin_log;
@@ -139,7 +154,7 @@ pub mod types;
 pub(crate) use jf_plugin_model::allow;
 /// The checks on what plugins return, for hosts of other answers (the core's external players).
 pub use jf_plugin_model::sanitize;
-pub use jf_plugin_model::{install, links, manifest, merge, package, presets, schema, trust};
+pub use jf_plugin_model::{install, l10n, links, manifest, merge, package, presets, schema, trust};
 
 /// The host API's errors (defined in `jf-plugin-model`).
 pub(crate) mod error {
@@ -149,6 +164,8 @@ pub(crate) mod error {
 pub use auth::AuthFlow;
 pub use error::{CallError, HostError, plugin_error_text};
 pub use host::{HostConfig, HostOptions, PluginHost, wait};
+pub use imports::MAX_WAV_MS;
+pub use maker::{MakeJob, MakeStage, MakerAccess};
 pub use net::{Resolve, SystemResolver};
 pub use pool::WORKERS;
 pub use runtime::Limits;

@@ -1,0 +1,428 @@
+package jellyfesh:plugin@1.1.0;
+
+/// Plugin metadata and settings.
+///
+/// Every export of a plugin runs under the sandbox limits: about 200 ms of CPU
+/// (2 s for `auth.begin`), 10 s of wall-clock time (30 s for login steps)
+/// and 64 MiB of memory. A plugin that traps or exceeds a limit is restarted
+/// on its next call; three violations in a row disable it with a visible
+/// reason. The host only calls capabilities the manifest declares.
+interface meta {
+    use types.{plugin-error};
+
+    /// Something a plugin can do. Mirrors `capabilities` in the manifest
+    /// (`resolve-stream` is `resolve_stream` there).
+    enum capability {
+        /// Log in and out (`auth`).
+        auth,
+        /// `catalog.search`.
+        search,
+        /// `catalog.browse`.
+        browse,
+        /// `playback.resolve-stream`.
+        resolve-stream,
+        /// `lyrics.lyrics`.
+        lyrics,
+        /// `artwork.artwork`.
+        artwork,
+        /// `recommendations`.
+        recommendations,
+    }
+
+    /// What the plugin can do right now, for example after it has asked the
+    /// configured server which features it supports. Must be a subset of the
+    /// manifest's capabilities; the host ignores anything else.
+    capabilities: func() -> list<capability>;
+
+    /// The person's settings: a JSON object that matches the package's
+    /// settings schema (`{}` when there is none). The host calls this once
+    /// after every instantiation, before any other export except
+    /// `capabilities`, and again whenever the settings change. Return an
+    /// error to report settings the plugin cannot use; the host shows it.
+    settings-changed: func(settings: string) -> result<_, plugin-error>;
+}
+
+/// Logging in and out.
+///
+/// The host owns the state machine and the UI renders each step natively; the
+/// plugin only answers `begin`, `poll` and `submit`:
+///
+/// * `begin` starts a flow of one of the kinds the manifest lists;
+/// * `poll` is called while a step is `show-qr`, `show-code`, `waiting` or
+///   `open-url` without capture, after `flow-step.poll-after-ms`;
+/// * `submit` delivers what the person typed for `ask-fields`, or the
+///   authorisation code the host caught for `open-url` with loopback capture;
+/// * a flow ends with `done` (logged in) or `failed`.
+///
+/// Per kind:
+///
+/// * `qr`: return `show-qr` (or `show-code` for a code to type elsewhere, as
+///   with Jellyfin Quick Connect), then answer `poll` until `done`.
+/// * `oauth`: authorisation code with PKCE in the system browser. `begin`
+///   receives `flow.oauth` (redirect URI, S256 challenge, state) and returns
+///   `open-url` with `loopback` capture; the host catches the redirect on
+///   127.0.0.1, checks `state`, and calls `submit` with the fields `code`,
+///   `code-verifier` and `redirect-uri`. Exchange the code and store the
+///   tokens with `kv.set-secret`.
+/// * `cookie-import`: return `ask-fields` with one `cookie-header` field. The
+///   host keeps only the cookies the manifest's `[cookie_import]` names,
+///   stores them in the plugin's jar for that URL, and calls `submit` with
+///   the field's value replaced by the imported cookie names.
+/// * `password-exchange`: return `ask-fields` (user name, password with
+///   `secret` set). `submit` gets the password once; exchange it for a token
+///   in that call and store only the token. The host never stores the
+///   password, refuses any attempt by the plugin to store it, and restarts
+///   the plugin's instance afterwards so it does not linger in memory.
+/// * `api-key`: return `ask-fields` with a `secret` field; validate the key
+///   in `submit` and keep it with `kv.set-secret`.
+interface auth {
+    use types.{plugin-error};
+
+    /// The ways to log in. A manifest lists the kinds a plugin supports.
+    enum auth-kind {
+        qr,
+        oauth,
+        cookie-import,
+        password-exchange,
+        api-key,
+    }
+
+    /// What the host prepared for an `oauth` flow.
+    record oauth-request {
+        /// Where the browser must be sent back to, for example
+        /// `http://127.0.0.1:49152/callback`. Use it verbatim as the
+        /// `redirect_uri` of the authorisation and token requests.
+        redirect-uri: string,
+        /// The PKCE code challenge (base64url of the SHA-256 of the verifier).
+        code-challenge: string,
+        /// Always `S256`.
+        code-challenge-method: string,
+        /// The `state` parameter to put in the authorisation URL; the host
+        /// checks it on the redirect.
+        state: string,
+    }
+
+    /// A login flow in progress, as the host passes it to every call.
+    record flow {
+        /// Host-assigned identifier, unique per flow.
+        id: string,
+        /// The kind the flow was started with.
+        kind: auth-kind,
+        /// Whatever the plugin returned in `flow-step.state` last time: empty
+        /// at `begin`. Keeping progress here instead of in memory lets a flow
+        /// survive an instance restart.
+        state: string,
+        /// Set for `oauth` flows.
+        oauth: option<oauth-request>,
+    }
+
+    /// How a field should be entered and shown.
+    enum field-kind {
+        /// Plain text.
+        text,
+        /// An e-mail address.
+        email,
+        /// A URL.
+        url,
+        /// Digits only, such as a one-time code.
+        number,
+        /// A `Cookie:` header copied from a browser (`cookie-import` flows).
+        cookie-header,
+    }
+
+    /// One input the person fills in.
+    record field-spec {
+        /// Key in the submitted fields: 1–64 characters from `a-z 0-9 _ -`.
+        name: string,
+        /// Label shown next to the input.
+        label: string,
+        kind: field-kind,
+        /// Masked while typing, never logged, never stored by the host; for
+        /// `password-exchange` the plugin may not store it either.
+        secret: bool,
+        /// The person must fill it in.
+        required: bool,
+        /// Example shown inside the empty input.
+        placeholder: option<string>,
+        /// A sentence of help under the input.
+        help: option<string>,
+    }
+
+    /// A submitted value.
+    record field-value {
+        name: string,
+        value: string,
+    }
+
+    /// A QR code for the person to scan with the service's app.
+    record qr-code {
+        /// The payload to encode, usually a URL.
+        data: string,
+        /// One sentence for the person ("Scan with the Example app").
+        hint: option<string>,
+        /// When the code stops working; the host ends the flow then.
+        expires-at-ms: option<u64>,
+    }
+
+    /// A short code for the person to enter on another device.
+    record code-display {
+        /// The code, shown large ("482 913").
+        code: string,
+        /// Where to enter it ("In Jellyfin, open Quick Connect").
+        hint: string,
+        /// When the code stops working; the host ends the flow then.
+        expires-at-ms: option<u64>,
+    }
+
+    /// How the host learns that the browser part of a flow is finished.
+    enum redirect-capture {
+        /// It does not: the host keeps calling `poll`.
+        none,
+        /// The host catches the redirect to `oauth-request.redirect-uri` and
+        /// calls `submit` with the code.
+        loopback,
+    }
+
+    /// A web page to open in the system browser (never an embedded view).
+    record open-url {
+        /// The `https` URL to open. It must be covered by the network allowlist.
+        url: string,
+        capture: redirect-capture,
+    }
+
+    /// What the UI shows next.
+    variant step {
+        show-qr(qr-code),
+        show-code(code-display),
+        open-url(open-url),
+        /// A form. Every `field-spec.name` must be unique.
+        ask-fields(list<field-spec>),
+        /// Progress text while the host polls ("Waiting for confirmation").
+        waiting(string),
+        /// Logged in: the account's display name.
+        done(string),
+        /// The flow ended without a login; the text says why.
+        failed(string),
+    }
+
+    /// A step plus the plugin's bookkeeping for it.
+    record flow-step {
+        step: step,
+        /// Opaque state the host keeps and passes back in `flow.state`;
+        /// at most 16 KiB. Not for secrets.
+        state: string,
+        /// For steps the host polls: how long to wait before the next `poll`.
+        /// Clamped to 0.2–30 s; none means 2 s.
+        poll-after-ms: option<u32>,
+    }
+
+    /// Starts a flow.
+    begin: func(flow: flow) -> result<flow-step, plugin-error>;
+    /// Asks how a polled flow is going.
+    poll: func(flow: flow) -> result<flow-step, plugin-error>;
+    /// Delivers form fields or the caught authorisation code.
+    submit: func(flow: flow, fields: list<field-value>) -> result<flow-step, plugin-error>;
+    /// Ends the session: revoke tokens on the service where it allows, then
+    /// forget them. The host deletes the plugin's secrets and cookie jar
+    /// afterwards, whatever this returns.
+    logout: func() -> result<_, plugin-error>;
+}
+
+/// Searching and browsing the service's catalogue.
+interface catalog {
+    use types.{item, item-kind, item-page, page-request, plugin-error};
+
+    /// Narrows a search.
+    record search-filters {
+        /// Kinds wanted; empty means all kinds.
+        kinds: list<item-kind>,
+    }
+
+    /// Full-text search, results in the service's relevance order.
+    search: func(query: string, filters: search-filters, page: page-request) -> result<item-page, plugin-error>;
+
+    /// Lists the children of `node`: an album's tracks, an artist's albums, a
+    /// playlist's or folder's entries. None lists the root: the plugin's
+    /// top-level sections as `folder` items.
+    browse: func(node: option<item>, page: page-request) -> result<item-page, plugin-error>;
+}
+
+/// Turning a track into something the engine can play.
+interface playback {
+    use types.{header, item, plugin-error};
+
+    /// The quality the person chose for this network.
+    enum quality {
+        /// Data saver, about 96 kbit/s.
+        low,
+        /// About 160–192 kbit/s.
+        normal,
+        /// About 320 kbit/s.
+        high,
+        /// The original file or lossless.
+        lossless,
+    }
+
+    /// Where and how the engine fetches the audio.
+    record stream-info {
+        /// The `http` or `https` URL of the audio; it must be covered by the
+        /// network allowlist. The engine fetches it with range requests.
+        url: string,
+        /// Headers for every request to `url` (for example authorisation).
+        headers: list<header>,
+        /// When `url` stops working; the host resolves again after that.
+        expires-at-ms: option<u64>,
+        /// Codec or container hint ("flac", "mp3", "aac", "opus", "vorbis").
+        codec: option<string>,
+        /// Nominal bitrate in kbit/s, if known.
+        bitrate-kbps: option<u32>,
+        /// Whether the host may keep the audio in its cache (subject to the
+        /// manifest's content policy).
+        cacheable: bool,
+    }
+
+    /// Resolves a playable track. Fails with `service` (or returns an item
+    /// that is not playable from search) rather than working around a
+    /// paywall or region lock.
+    resolve-stream: func(item: item, quality: quality) -> result<stream-info, plugin-error>;
+}
+
+/// Lyrics for a track.
+interface lyrics {
+    use types.{item, plugin-error};
+
+    /// Format of `lyric-payload.text`; the host converts each into its own
+    /// lyric model.
+    enum lyric-format {
+        /// Unsynchronised plain text.
+        plain,
+        /// LRC with line timestamps.
+        lrc,
+        /// Enhanced LRC with word timestamps.
+        elrc,
+        /// TTML (Apple-style, line or word timing).
+        ttml,
+        /// WebVTT.
+        vtt,
+        /// JSON with syllable timing.
+        json-syllables,
+    }
+
+    /// Lyrics as the service provides them.
+    record lyric-payload {
+        format: lyric-format,
+        /// The lyrics document itself, at most 1 MiB.
+        text: string,
+        /// BCP 47 language tag of the lyrics, if known.
+        language: option<string>,
+        /// Attribution to show with the lyrics ("Lyrics provided by …").
+        attribution: option<string>,
+    }
+
+    /// Lyrics for `item`, or none when the service has none.
+    lyrics: func(item: item) -> result<option<lyric-payload>, plugin-error>;
+}
+
+/// Cover art and photos.
+interface artwork {
+    use types.{image-ref, item, plugin-error};
+
+    /// A picture for `item` about `size` pixels on its longer edge (the host
+    /// asks for 64–3000), or none.
+    artwork: func(item: item, size: u32) -> result<option<image-ref>, plugin-error>;
+}
+
+/// Suggestions from the service.
+interface recommendations {
+    use types.{item, item-page, page-request, plugin-error};
+
+    /// Items like `item` ("radio", similar artists).
+    for-item: func(item: item, page: page-request) -> result<item-page, plugin-error>;
+    /// Personal suggestions for the logged-in account.
+    for-user: func(page: page-request) -> result<item-page, plugin-error>;
+}
+
+/// Remote control of the service's own player (API 1.1): the person's
+/// devices, what plays on them, and the transport. For plugins whose manifest
+/// declares the `remote` capability with `playback_mode = "remote"`; their
+/// items play on the service's devices, never through Jellyfesh's engine, and
+/// never join its queue (ADR-0011, ADR-0018).
+///
+/// The host polls `state` (about every second while something plays, less
+/// often while paused) and calls the commands when the person uses the
+/// transport. Commands may take effect a moment later; the next `state` shows
+/// the result.
+interface remote {
+    use types.{item, plugin-error};
+
+    /// What kind of device something plays on.
+    enum device-kind {
+        computer,
+        smartphone,
+        speaker,
+        tv,
+        car,
+        other,
+    }
+
+    /// A device the service can play on.
+    record device {
+        /// The service's identifier, passed back in `play` and `transfer`.
+        id: string,
+        /// The name the person gave the device.
+        name: string,
+        kind: device-kind,
+        /// The device the service plays on now (at most one).
+        active: bool,
+        /// Whether `set-volume` works on this device.
+        supports-volume: bool,
+        /// Volume in percent (0–100), if known.
+        volume-percent: option<u32>,
+    }
+
+    /// The repeat mode of the service's player.
+    enum repeat {
+        off,
+        /// The whole context (album, playlist).
+        all,
+        /// The current track.
+        one,
+    }
+
+    /// What the service's player is doing.
+    record playback-state {
+        /// The device it plays on.
+        device: option<device>,
+        /// The current track, in the plugin's item shape (so it can be played,
+        /// browsed or shown like any item).
+        item: option<item>,
+        /// The album, playlist or artist it plays from, if any.
+        context: option<item>,
+        playing: bool,
+        /// Position in the track when the state was read, in milliseconds.
+        position-ms: u32,
+        shuffle: bool,
+        repeat: repeat,
+    }
+
+    /// The person's devices, the active one first.
+    devices: func() -> result<list<device>, plugin-error>;
+    /// What plays now; none when nothing plays on any device.
+    state: func() -> result<option<playback-state>, plugin-error>;
+    /// Plays on `device` (none: the active device, or the service's choice):
+    /// `context` (an album, playlist or artist) from track `start`, or the
+    /// `tracks` given, from `start`. One of them is set.
+    play: func(device: option<string>, context: option<item>, tracks: list<item>, start: u32) -> result<_, plugin-error>;
+    /// Resumes on the active device.
+    resume: func() -> result<_, plugin-error>;
+    pause: func() -> result<_, plugin-error>;
+    next: func() -> result<_, plugin-error>;
+    previous: func() -> result<_, plugin-error>;
+    seek: func(position-ms: u32) -> result<_, plugin-error>;
+    /// 0–100, on the active device.
+    set-volume: func(percent: u32) -> result<_, plugin-error>;
+    set-shuffle: func(on: bool) -> result<_, plugin-error>;
+    set-repeat: func(mode: repeat) -> result<_, plugin-error>;
+    /// Moves playback to `device`, playing if `play` (else as it was).
+    transfer: func(device: string, play: bool) -> result<_, plugin-error>;
+}
