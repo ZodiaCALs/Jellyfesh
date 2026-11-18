@@ -38,11 +38,38 @@
   <data name="About_Website.Content" xml:space="preserve">
     <value>Website</value>
   </data>
+  <data name="Accent_Blue" xml:space="preserve">
+    <value>Blue</value>
+  </data>
+  <data name="Accent_Cyan" xml:space="preserve">
+    <value>Cyan</value>
+  </data>
+  <data name="Accent_Green" xml:space="preserve">
+    <value>Green</value>
+  </data>
+  <data name="Accent_Magenta" xml:space="preserve">
+    <value>Magenta</value>
+  </data>
+  <data name="Accent_Olive" xml:space="preserve">
+    <value>Olive</value>
+  </data>
+  <data name="Accent_Orange" xml:space="preserve">
+    <value>Orange</value>
+  </data>
+  <data name="Accent_Red" xml:space="preserve">
+    <value>Red</value>
+  </data>
+  <data name="Accent_Rose" xml:space="preserve">
+    <value>Rose</value>
+  </data>
+  <data name="Accent_Teal" xml:space="preserve">
+    <value>Teal</value>
+  </data>
+  <data name="Accent_Violet" xml:space="preserve">
+    <value>Violet</value>
+  </data>
   <data name="Action_Cancel" xml:space="preserve">
     <value>Cancel</value>
-  </data>
-  <data name="Action_Clear" xml:space="preserve">
-    <value>Clear</value>
   </data>
   <data name="Action_Close" xml:space="preserve">
     <value>Close</value>
@@ -189,7 +216,7 @@
     <value>Reduce Motion and Transparency</value>
   </data>
   <data name="Appearance_ReduceEffectsHint.Text" xml:space="preserve">
-    <value>Solid surfaces instead of glass, short fades instead of movement, no word sweep and no animated scrolling. Windows' own animation and transparency settings are followed as well.</value>
+    <value>Solid surfaces instead of glass, and short fades instead of movement.</value>
   </data>
   <data name="Appearance_Romanization.Header" xml:space="preserve">
     <value>Show Romanization</value>
@@ -303,7 +330,7 @@
     <value>Community plugins are not made or checked by Jellyfesh. They may break the terms of the service they connect to and may stop working at any time. Use them for personal use only.</value>
   </data>
   <data name="Community_PluginTitle" xml:space="preserve">
-    <value>Turn on “{0}”?</value>
+    <value>Turn On “{0}”?</value>
   </data>
   <data name="Community_Title" xml:space="preserve">
     <value>Allow Community Plugins?</value>
@@ -491,6 +518,9 @@
   <data name="Library_MissingTrack" xml:space="preserve">
     <value>Missing Song</value>
   </data>
+  <data name="Library_NoFolders.Text" xml:space="preserve">
+    <value>No Folders Yet</value>
+  </data>
   <data name="Library_RemoveFolder.Content" xml:space="preserve">
     <value>Remove Folder…</value>
   </data>
@@ -555,7 +585,10 @@
     <value>Lyrics</value>
   </data>
   <data name="Lyrics_None.Text" xml:space="preserve">
-    <value>No Lyrics for This Song</value>
+    <value>No Lyrics</value>
+  </data>
+  <data name="Lyrics_NoneBody.Text" xml:space="preserve">
+    <value>Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.</value>
   </data>
   <data name="Menu_AddToPlaylist" xml:space="preserve">
     <value>Add to Playlist…</value>
@@ -767,6 +800,9 @@
   <data name="Playback_OutputChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Output Device</value>
   </data>
+  <data name="Playback_OutputHint.Text" xml:space="preserve">
+    <value>Where the sound goes.</value>
+  </data>
   <data name="Playback_Preamp.Header" xml:space="preserve">
     <value>Preamp</value>
   </data>
@@ -879,7 +915,10 @@
     <value>Delete “{0}”?</value>
   </data>
   <data name="Playlist_Empty.Text" xml:space="preserve">
-    <value>This playlist is empty. Add songs from any list with a right-click.</value>
+    <value>Add songs from their menu with Add to Playlist.</value>
+  </data>
+  <data name="Playlist_EmptyTitle.Text" xml:space="preserve">
+    <value>This Playlist Is Empty</value>
   </data>
   <data name="Playlist_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Songs in this playlist</value>
@@ -931,6 +970,9 @@
   </data>
   <data name="Queue_Empty.Text" xml:space="preserve">
     <value>Nothing Up Next</value>
+  </data>
+  <data name="Queue_EmptyBody.Text" xml:space="preserve">
+    <value>Use Play Next or Play Last on any song, album or playlist.</value>
   </data>
   <data name="Queue_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Up Next</value>

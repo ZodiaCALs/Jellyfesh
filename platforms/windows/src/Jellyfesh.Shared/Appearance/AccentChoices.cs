@@ -70,6 +70,13 @@ public static class AccentChoices
     /// <summary>The swatches' hues in the order shown: Misty blue first, then round the wheel.</summary>
     public static IReadOnlyList<float> SwatchHues { get; } = [250, 210, 180, 150, 120, 60, 30, 0, 330, 290];
 
+    /// <summary>
+    /// The swatches' names in <see cref="SwatchHues"/> order, as the string keys the app translates
+    /// (the names the other apps show; docs/ui.md: the last is Violet, not Purple).
+    /// </summary>
+    public static IReadOnlyList<string> SwatchNameKeys { get; } =
+        ["Accent_Blue", "Accent_Cyan", "Accent_Teal", "Accent_Green", "Accent_Olive", "Accent_Orange", "Accent_Red", "Accent_Rose", "Accent_Magenta", "Accent_Violet"];
+
     /// <summary>A hue in degrees, normalised to 0 ≤ h &lt; 360 (NaN counts as Misty's 250).</summary>
     public static float Normalize(float hue)
     {

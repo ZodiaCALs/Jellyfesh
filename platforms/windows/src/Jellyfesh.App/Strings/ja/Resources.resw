@@ -38,11 +38,38 @@
   <data name="About_Website.Content" xml:space="preserve">
     <value>ウェブサイト</value>
   </data>
+  <data name="Accent_Blue" xml:space="preserve">
+    <value>ブルー</value>
+  </data>
+  <data name="Accent_Cyan" xml:space="preserve">
+    <value>シアン</value>
+  </data>
+  <data name="Accent_Green" xml:space="preserve">
+    <value>グリーン</value>
+  </data>
+  <data name="Accent_Magenta" xml:space="preserve">
+    <value>マゼンタ</value>
+  </data>
+  <data name="Accent_Olive" xml:space="preserve">
+    <value>オリーブ</value>
+  </data>
+  <data name="Accent_Orange" xml:space="preserve">
+    <value>オレンジ</value>
+  </data>
+  <data name="Accent_Red" xml:space="preserve">
+    <value>レッド</value>
+  </data>
+  <data name="Accent_Rose" xml:space="preserve">
+    <value>ローズ</value>
+  </data>
+  <data name="Accent_Teal" xml:space="preserve">
+    <value>ティール</value>
+  </data>
+  <data name="Accent_Violet" xml:space="preserve">
+    <value>バイオレット</value>
+  </data>
   <data name="Action_Cancel" xml:space="preserve">
     <value>キャンセル</value>
-  </data>
-  <data name="Action_Clear" xml:space="preserve">
-    <value>消去</value>
   </data>
   <data name="Action_Close" xml:space="preserve">
     <value>閉じる</value>
@@ -189,7 +216,7 @@
     <value>動きと透明度を減らす</value>
   </data>
   <data name="Appearance_ReduceEffectsHint.Text" xml:space="preserve">
-    <value>ガラスの代わりに不透明な面を使い、動きの代わりに短いフェードにし、歌詞の単語ごとのハイライトとスクロールのアニメーションをなくします。Windows 自体のアニメーションと透明効果の設定にも従います。</value>
+    <value>ガラスの代わりに不透明な面を使い、動きの代わりに短いフェードにします。</value>
   </data>
   <data name="Appearance_Romanization.Header" xml:space="preserve">
     <value>ローマ字を表示</value>
@@ -491,6 +518,9 @@
   <data name="Library_MissingTrack" xml:space="preserve">
     <value>見つからない曲</value>
   </data>
+  <data name="Library_NoFolders.Text" xml:space="preserve">
+    <value>フォルダはまだありません</value>
+  </data>
   <data name="Library_RemoveFolder.Content" xml:space="preserve">
     <value>フォルダを外す…</value>
   </data>
@@ -555,7 +585,10 @@
     <value>歌詞</value>
   </data>
   <data name="Lyrics_None.Text" xml:space="preserve">
-    <value>この曲には歌詞がありません</value>
+    <value>歌詞がありません</value>
+  </data>
+  <data name="Lyrics_NoneBody.Text" xml:space="preserve">
+    <value>Jellyfesh は、曲と同じ場所にある .lrc・.ttml・.vtt ファイルや、曲のタグから歌詞を表示します。</value>
   </data>
   <data name="Menu_AddToPlaylist" xml:space="preserve">
     <value>プレイリストに追加…</value>
@@ -767,6 +800,9 @@
   <data name="Playback_OutputChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>出力デバイス</value>
   </data>
+  <data name="Playback_OutputHint.Text" xml:space="preserve">
+    <value>音を出す場所です。</value>
+  </data>
   <data name="Playback_Preamp.Header" xml:space="preserve">
     <value>プリアンプ</value>
   </data>
@@ -879,7 +915,10 @@
     <value>「{0}」を削除しますか？</value>
   </data>
   <data name="Playlist_Empty.Text" xml:space="preserve">
-    <value>このプレイリストは空です。どのリストでも曲を右クリックして追加できます。</value>
+    <value>曲のメニューから「プレイリストに追加」を選んでください。</value>
+  </data>
+  <data name="Playlist_EmptyTitle.Text" xml:space="preserve">
+    <value>このプレイリストは空です</value>
   </data>
   <data name="Playlist_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>このプレイリストの曲</value>
@@ -931,6 +970,9 @@
   </data>
   <data name="Queue_Empty.Text" xml:space="preserve">
     <value>次に再生する曲はありません</value>
+  </data>
+  <data name="Queue_EmptyBody.Text" xml:space="preserve">
+    <value>曲、アルバム、プレイリストで「次に再生」か「最後に再生」を使ってください。</value>
   </data>
   <data name="Queue_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>次に再生</value>

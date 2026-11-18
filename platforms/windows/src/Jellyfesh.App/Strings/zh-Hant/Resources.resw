@@ -38,11 +38,38 @@
   <data name="About_Website.Content" xml:space="preserve">
     <value>網站</value>
   </data>
+  <data name="Accent_Blue" xml:space="preserve">
+    <value>藍色</value>
+  </data>
+  <data name="Accent_Cyan" xml:space="preserve">
+    <value>青色</value>
+  </data>
+  <data name="Accent_Green" xml:space="preserve">
+    <value>綠色</value>
+  </data>
+  <data name="Accent_Magenta" xml:space="preserve">
+    <value>洋紅</value>
+  </data>
+  <data name="Accent_Olive" xml:space="preserve">
+    <value>橄欖綠</value>
+  </data>
+  <data name="Accent_Orange" xml:space="preserve">
+    <value>橙色</value>
+  </data>
+  <data name="Accent_Red" xml:space="preserve">
+    <value>紅色</value>
+  </data>
+  <data name="Accent_Rose" xml:space="preserve">
+    <value>玫瑰紅</value>
+  </data>
+  <data name="Accent_Teal" xml:space="preserve">
+    <value>藍綠色</value>
+  </data>
+  <data name="Accent_Violet" xml:space="preserve">
+    <value>紫羅蘭色</value>
+  </data>
   <data name="Action_Cancel" xml:space="preserve">
     <value>取消</value>
-  </data>
-  <data name="Action_Clear" xml:space="preserve">
-    <value>清除</value>
   </data>
   <data name="Action_Close" xml:space="preserve">
     <value>關閉</value>
@@ -189,7 +216,7 @@
     <value>減少動態效果和透明度</value>
   </data>
   <data name="Appearance_ReduceEffectsHint.Text" xml:space="preserve">
-    <value>以純色表面取代玻璃效果，以短暫的淡入淡出取代移動，不逐字標示歌詞，也不使用捲動動畫。也會同時遵循 Windows 本身的動畫和透明效果設定。</value>
+    <value>以純色表面取代玻璃效果，以短暫的淡入淡出取代移動。</value>
   </data>
   <data name="Appearance_Romanization.Header" xml:space="preserve">
     <value>顯示羅馬拼音</value>
@@ -491,6 +518,9 @@
   <data name="Library_MissingTrack" xml:space="preserve">
     <value>找不到的歌曲</value>
   </data>
+  <data name="Library_NoFolders.Text" xml:space="preserve">
+    <value>還沒有資料夾</value>
+  </data>
   <data name="Library_RemoveFolder.Content" xml:space="preserve">
     <value>移除資料夾…</value>
   </data>
@@ -555,7 +585,10 @@
     <value>歌詞</value>
   </data>
   <data name="Lyrics_None.Text" xml:space="preserve">
-    <value>這首歌沒有歌詞</value>
+    <value>沒有歌詞</value>
+  </data>
+  <data name="Lyrics_NoneBody.Text" xml:space="preserve">
+    <value>Jellyfesh 會顯示歌曲旁的 .lrc、.ttml 或 .vtt 檔案中的歌詞，或檔案標籤中的歌詞。</value>
   </data>
   <data name="Menu_AddToPlaylist" xml:space="preserve">
     <value>加入播放清單…</value>
@@ -767,6 +800,9 @@
   <data name="Playback_OutputChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>輸出裝置</value>
   </data>
+  <data name="Playback_OutputHint.Text" xml:space="preserve">
+    <value>聲音從哪裡播放。</value>
+  </data>
   <data name="Playback_Preamp.Header" xml:space="preserve">
     <value>前級增益</value>
   </data>
@@ -879,7 +915,10 @@
     <value>刪除「{0}」？</value>
   </data>
   <data name="Playlist_Empty.Text" xml:space="preserve">
-    <value>這個播放清單是空的。在任何清單中以滑鼠右鍵按一下歌曲即可加入。</value>
+    <value>在歌曲的選單中選擇「加入播放清單」即可加入。</value>
+  </data>
+  <data name="Playlist_EmptyTitle.Text" xml:space="preserve">
+    <value>這個播放清單是空的</value>
   </data>
   <data name="Playlist_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>此播放清單中的歌曲</value>
@@ -931,6 +970,9 @@
   </data>
   <data name="Queue_Empty.Text" xml:space="preserve">
     <value>接下來沒有歌曲</value>
+  </data>
+  <data name="Queue_EmptyBody.Text" xml:space="preserve">
+    <value>在任何歌曲、專輯或播放清單上使用「接著播放」或「最後播放」。</value>
   </data>
   <data name="Queue_List.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>接下來播放</value>

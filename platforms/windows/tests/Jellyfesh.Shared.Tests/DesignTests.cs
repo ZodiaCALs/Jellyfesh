@@ -191,6 +191,11 @@ public class DesignTests
     public void Swatches_match_fixed_hues_and_nothing_else()
     {
         Assert.Equal([250f, 210, 180, 150, 120, 60, 30, 0, 330, 290], AccentChoices.SwatchHues);
+
+        // Named as in every app (docs/parity.md, "The words"): Blue first, Violet last, never "Hue 250".
+        Assert.Equal(AccentChoices.SwatchHues.Count, AccentChoices.SwatchNameKeys.Count);
+        Assert.Equal(("Accent_Blue", "Accent_Violet"), (AccentChoices.SwatchNameKeys[0], AccentChoices.SwatchNameKeys[^1]));
+        Assert.Equal(AccentChoices.SwatchNameKeys.Count, AccentChoices.SwatchNameKeys.Distinct().Count());
         Assert.Equal(0, AccentChoices.SwatchIndex(new HueSource.Fixed(250)));
         Assert.Equal(7, AccentChoices.SwatchIndex(new HueSource.Fixed(359.8f))); // 0° round the wheel
         Assert.Equal(8, AccentChoices.SwatchIndex(new HueSource.Fixed(-30)));

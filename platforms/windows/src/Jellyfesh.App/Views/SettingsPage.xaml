@@ -237,7 +237,7 @@
                                 <TextBlock Grid.Column="3" MinWidth="40" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Text="{x:Bind ViewModel.TransparencyText, Mode=OneWay}" TextAlignment="Right" />
                             </Grid>
                             <ToggleSwitch x:Uid="Appearance_ReduceEffects" Header="Reduce Motion and Transparency" IsOn="{x:Bind ViewModel.ReduceEffects, Mode=TwoWay}" />
-                            <TextBlock x:Uid="Appearance_ReduceEffectsHint" Style="{StaticResource JfSecondaryBodyText}" Text="Solid surfaces instead of glass, short fades instead of movement, no word sweep and no animated scrolling. Windows' own animation and transparency settings are followed as well." />
+                            <TextBlock x:Uid="Appearance_ReduceEffectsHint" Style="{StaticResource JfSecondaryBodyText}" Text="Solid surfaces instead of glass, and short fades instead of movement." />
                         </StackPanel>
                     </Border>
 
@@ -349,6 +349,7 @@
                         <StackPanel Spacing="12">
                             <TextBlock x:Uid="Playback_Output" Style="{StaticResource CardHeading}" Text="Output" />
                             <ComboBox x:Name="DeviceBox" x:Uid="Playback_OutputChoice" MinWidth="280" AutomationProperties.Name="Output Device" Header="Output Device" ItemsSource="{x:Bind ViewModel.Player.Devices}" SelectionChanged="OnDeviceChanged" />
+                            <TextBlock x:Uid="Playback_OutputHint" Style="{StaticResource JfSecondaryBodyText}" Text="Where the sound goes." />
                         </StackPanel>
                     </Border>
 
@@ -516,6 +517,7 @@
                                     </DataTemplate>
                                 </ItemsRepeater.ItemTemplate>
                             </ItemsRepeater>
+                            <TextBlock x:Uid="Library_NoFolders" Style="{StaticResource JfSecondaryBodyText}" Text="No Folders Yet" Visibility="{x:Bind shell:Bind.VisibleIfNone(ViewModel.Folders.Count), Mode=OneWay}" />
                             <Button x:Uid="Library_AddFolder" Command="{x:Bind ViewModel.AddFolderCommand}" Content="Add Folder…" Style="{StaticResource JfAccentPillStyle}" />
                         </StackPanel>
                     </Border>

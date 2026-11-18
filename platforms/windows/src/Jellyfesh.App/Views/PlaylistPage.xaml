@@ -59,6 +59,10 @@
                 <KeyboardAccelerator Key="Delete" Invoked="OnRemoveKey" />
             </ListView.KeyboardAccelerators>
         </ListView>
-        <TextBlock x:Uid="Playlist_Empty" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="This playlist is empty. Add songs from any list with a right-click." Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}" />
+        <!-- An empty playlist (docs/parity.md V5: macOS's words, now every app's). -->
+        <StackPanel Grid.Row="1" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}">
+            <TextBlock x:Uid="Playlist_EmptyTitle" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="This Playlist Is Empty" />
+            <TextBlock x:Uid="Playlist_Empty" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Add songs from their menu with Add to Playlist." TextAlignment="Center" />
+        </StackPanel>
     </Grid>
 </shell:JfPage>

@@ -57,14 +57,17 @@
                     <KeyboardAccelerator Key="Delete" Invoked="OnRemoveKey" />
                 </ListView.KeyboardAccelerators>
             </ListView>
-            <TextBlock
-                x:Uid="Queue_Empty"
+            <!-- "Nothing Up Next" and the sentence the other apps show (docs/parity.md V19). -->
+            <StackPanel
                 Grid.Row="1"
+                MaxWidth="360"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Style="{StaticResource JfSecondaryBodyText}"
-                Text="Nothing Up Next"
-                Visibility="{x:Bind shell:Bind.Visible(Queue.IsEmpty), Mode=OneWay}" />
+                Spacing="8"
+                Visibility="{x:Bind shell:Bind.Visible(Queue.IsEmpty), Mode=OneWay}">
+                <TextBlock x:Uid="Queue_Empty" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Nothing Up Next" />
+                <TextBlock x:Uid="Queue_EmptyBody" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Use Play Next or Play Last on any song, album or playlist." TextAlignment="Center" />
+            </StackPanel>
         </Grid>
     </Grid>
 </UserControl>

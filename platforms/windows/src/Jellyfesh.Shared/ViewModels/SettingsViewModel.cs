@@ -250,7 +250,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         for (var i = 0; i < AccentChoices.SwatchHues.Count; i++)
         {
             var hue = AccentChoices.SwatchHues[i];
-            Swatches.Add(new AccentSwatch(i, hue, services.L.Format("Appearance_SwatchName", hue)));
+            Swatches.Add(new AccentSwatch(i, hue, services.L.Get(AccentChoices.SwatchNameKeys[i])));
         }
 
         Apply(services.Hub.State);
