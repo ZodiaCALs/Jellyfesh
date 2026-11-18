@@ -11,6 +11,8 @@
 import type { Jf } from '../core/wasm';
 import type { ImageRef, Theme as CoreTheme, Themes, WebSettings } from '../core/types';
 import { analyseArtwork } from '../media/client';
+import type { RelayConfig } from '../plugins/relay';
+import { fetchDirect, fetchRelayed } from './artwork';
 import { cssColour as rgba, inkOpacity, withTransparency } from './glass';
 
 export type Appearance = 'light' | 'dark';
@@ -20,7 +22,8 @@ const BURST_MS = 150;
 
 /** Artwork to show and take colours from. */
 export type ArtworkSource =
-  | { kind: 'remote'; key: string; image: ImageRef }
+  /** A picture of a source; `relay` when the source goes through one (its service refuses browsers). */
+  | { kind: 'remote'; key: string; image: ImageRef; relay?: RelayConfig | null }
   | { kind: 'bytes'; key: string; bytes: Uint8Array; mime: string | null };
 
 interface Analysed {
@@ -131,7 +134,8 @@ export class Theme {
       return;
     }
     // Until the new artwork is read, keep the old colours (no flash of the default hue).
-    this.artwork = source.kind === 'remote' && source.image.headers.length === 0 ? source.image.url : this.artwork;
+    this.artwork =
+      source.kind === 'remote' && source.image.headers.length === 0 && !source.relay ? source.image.url : this.artwork;
     if (this.loading === source.key) return;
     this.loading = source.key;
     const analysed = await this.analyse(source);
@@ -146,17 +150,11 @@ export class Theme {
     if (source.kind === 'bytes') {
       blob = new Blob([source.bytes as BlobPart], source.mime ? { type: source.mime } : {});
     } else {
-      try {
-        const response = await fetch(source.image.url, {
-          headers: source.image.headers.map((h) => [h.name, h.value] as [string, string]),
-          mode: 'cors',
-          credentials: 'omit',
-        });
-        if (response.ok) blob = await response.blob();
-      } catch {
-        // No CORS for images on this server: show it, without its colours.
-      }
-      if (!blob && source.image.headers.length === 0) result.display = source.image.url;
+      const headers = source.image.headers.map((h) => [h.name, h.value] as [string, string]);
+      // The colours need the pixels: through the relay, or with CORS from the image's server.
+      blob = source.relay ? await fetchRelayed(source.relay, source.image.url, headers) : await fetchDirect(source.image.url, headers);
+      // No CORS for images on this server: show it, without its colours.
+      if (!blob && source.image.headers.length === 0 && !source.relay) result.display = source.image.url;
     }
     if (!blob) return result;
     const display = URL.createObjectURL(blob);

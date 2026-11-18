@@ -84,7 +84,8 @@ secret).
   computer or phone, or set up a relay in Settings › Sources › Relay." With a
   relay you run yourself ([web-relay.md](web-relay.md); Settings › Sources ›
   Relay: Relay Address and Relay Token, checked when saved), that source's
-  requests and streams go through it. Jellyfesh doesn't run one for you.
+  requests, streams and covers go through it. Jellyfesh doesn't run one for
+  you.
 * **Play files**: drop audio files anywhere on the page, or use Open Files….
   A lyrics file with the same name (`.ttml`, `.lrc`, `.vtt`) dropped with
   them is used, else lyrics in the tags. They play for this visit only and
@@ -394,6 +395,20 @@ service's status and headers from inside the relay's answer (`Content-Range`
 included, so seeking works), and without it the page downloads the song
 through the relay first.
 
+### How covers load
+
+A source's picture (the item's own, or the plugin's `artwork` answer for the
+rows on screen, asked once per source, account, item and size, and again
+after a failed answer) loads straight into an `<img>`, which needs no CORS,
+and without a `Referer` (`referrerpolicy="no-referrer"`): the native apps send
+none unless the plugin asks for one, and image hosts that refuse other sites'
+pages usually accept requests without one. A picture whose `ImageRef` has
+headers is fetched with them (CORS) and shown from memory. The theme colours
+need the pixels, so the page fetches the picture too: with CORS from the
+server (without it, the cover shows without its colours). For a source that
+goes through the relay, both go through the relay, with the plugin's
+headers. An https page loads no `http://` pictures (browsers upgrade them to
+https or block them); put the server behind https ("Mixed content").
 
 ### How plugins run
 
@@ -558,7 +573,7 @@ Tests:
 * **Unit** (`tests/unit`): the drawing-time ports against the contract
   files, the plugin host imports with the real Rust rules and a fake
   network, and through a fake relay (wrapped headers, cookies, redirects,
-  refusals), the transition scheduler on a fake clock, the translations, and
+  refusals), the cover loader, the transition scheduler on a fake clock, the translations, and
   the design's presentation math: device-pixel redraw steps, the glass tints
   for each transparency (with the core's real `glass_alpha`), the lyric inks
   as opacities, the cascade's order, the motion curves read from the tokens
@@ -588,7 +603,7 @@ Tests:
   then signs in with WeChat's QR flow through `jf-relay` (built and started
   by the test) against `tests/mock/qqmusic.mjs`, a mock without CORS headers
   that wants the web player's `Referer`, a browser's `User-Agent` and the
-  session in `Cookie`. `JF_APP_URL`
+  session in `Cookie`, and shows its covers through the relay. `JF_APP_URL`
   points them at a copy served elsewhere (for example the website build at
   `/app/`).
 * **Screenshots**: `JF_SCREENSHOTS=1 npx playwright test screenshots

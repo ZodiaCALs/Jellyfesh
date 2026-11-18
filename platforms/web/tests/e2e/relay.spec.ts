@@ -3,14 +3,14 @@
 // mock of WeChat's QR sign-in and QQ Music's web API that sends no CORS headers and wants the
 // headers a page cannot set (tests/mock/qqmusic.mjs). Before sign-in Jellyfesh Web says the
 // service refuses browsers; with the relay (tools/jf-relay, started here) set up in Settings ›
-// Sources › Relay, the QR sign-in goes through end to end and the session cookie reaches the
-// service.
+// Sources › Relay, the QR sign-in goes through end to end, the session cookie reaches the service,
+// and covers load through the relay.
 
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
-import { openApp, openSourcesSettings, sourceCard } from './helpers';
+import { nav, openApp, openSourcesSettings, sourceCard } from './helpers';
 import { mockQqMusicPackage, type Relay, relayBinary, startRelay } from './relay-fixtures';
 
 const QQ_MOCK = 'http://127.0.0.1:4640';
@@ -64,7 +64,7 @@ async function install(page: Page) {
   await expect(sourceCard(page, SOURCE).getByRole('switch', { name: 'Enabled' })).toBeChecked();
 }
 
-test('says before sign-in that the service refuses browsers, then signs in through the relay', async ({ page }) => {
+test('says before sign-in that the service refuses browsers, then signs in and shows covers through the relay', async ({ page }) => {
   await openApp(page);
   await install(page);
   const before = (await seen(page)).length;
@@ -122,4 +122,16 @@ test('says before sign-in that the service refuses browsers, then signs in throu
   expect(log).not.toContain(relay.token);
   expect(log).not.toContain('musics.fcg');
   expect(log).not.toContain('qm_keyst');
+
+  // Search, signed in, and its covers through the relay.
+  await nav(page, 'Search').click();
+  await page.getByRole('searchbox', { name: 'Search' }).fill('mock song');
+  const results = page.getByRole('region', { name: SOURCE });
+  await expect(results.getByRole('button', { name: 'Play Mock Song One' })).toBeVisible({ timeout: 30_000 });
+  // The cover came through the relay into memory, and it decodes.
+  const cover = results.locator('img').first();
+  await expect(cover).toHaveAttribute('src', /^blob:/, { timeout: 30_000 });
+  await expect.poll(() => cover.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+  const pictures = (await seen(page)).filter((r) => r.host === 'y.gtimg.cn');
+  expect(pictures.length).toBeGreaterThan(0);
 });

@@ -115,7 +115,7 @@
     <section class="player" aria-label={t('Player')}>
       <div class="hero" class:paused={!player.playing}>
         {#if theme.artwork}
-          <img class="cover" src={theme.artwork} alt={t('Artwork of {title}', { title: row?.title ?? '' })} />
+          <img class="cover" src={theme.artwork} alt={t('Artwork of {title}', { title: row?.title ?? '' })} referrerpolicy="no-referrer" />
         {:else}
           <Art kind="Album" size={380} radius="hero" />
         {/if}

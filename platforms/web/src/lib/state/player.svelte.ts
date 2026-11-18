@@ -817,7 +817,7 @@ export class Player {
       const found = this.sourceItem(row);
       if (found) {
         const image = await this.artworks.ref(found.plugin, found.item, NOW_PLAYING_ART);
-        if (image) source = { kind: 'remote', key: `${found.plugin.id}:${image.url}`, image };
+        if (image) source = { kind: 'remote', key: `${found.plugin.id}:${image.url}`, image, relay: found.plugin.relay };
       }
     }
     if (this.current?.uid !== row.uid) return;

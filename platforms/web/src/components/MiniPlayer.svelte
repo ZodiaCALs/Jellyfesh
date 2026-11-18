@@ -67,7 +67,7 @@
   <div class="mini glass-veil" role="region" aria-label={t('Now Playing')}>
     <button class="open" onclick={() => nav.openNowPlaying()} aria-label={t('Open Now Playing')}>
       <span class="art">
-        {#if theme.artwork}<img src={theme.artwork} alt="" />{/if}
+        {#if theme.artwork}<img src={theme.artwork} alt="" referrerpolicy="no-referrer" />{/if}
       </span>
       <span class="text">
         <span class="title">{row.title}</span>

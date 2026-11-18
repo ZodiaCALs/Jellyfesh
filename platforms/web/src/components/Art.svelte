@@ -74,7 +74,7 @@
       const owner = from ? sources.get(from) : undefined;
       void artworks
         .ref(owner, current, Math.min(1024, Math.round(size * devicePixelRatio)))
-        .then((image) => (image ? artworks.url(image) : null))
+        .then((image) => (image ? artworks.url(image, owner?.relay ?? null) : null))
         .then((url) => {
           if (live) resolved = url;
         });
@@ -92,7 +92,7 @@
 
 <span class="art {radius}" class:round={(item?.kind ?? kind) === 'Artist'} style:--size="{size}px" bind:this={element}>
   {#if shown && !failed}
-    <img src={shown} {alt} loading="lazy" decoding="async" draggable="false" onerror={() => (failed = true)} />
+    <img src={shown} {alt} loading="lazy" decoding="async" draggable="false" referrerpolicy="no-referrer" onerror={() => (failed = true)} />
   {:else}
     <span class="placeholder" aria-hidden="true"><Icon name={glyph} size={Math.max(16, Math.round(size * 0.42))} /></span>
   {/if}
