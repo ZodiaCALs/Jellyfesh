@@ -78,7 +78,6 @@ fun InfoView(track: PlayerTrack, lyrics: LyricsSnapshot?, durationUs: Long?, mod
             val text = Labels.format(f) + if (f.gapless) " · " + stringResource(R.string.info_gapless) else ""
             InfoLine(stringResource(R.string.info_format), text)
         }
-        now.path?.let { InfoLine(stringResource(R.string.info_file), it) }
         val lyricsSource = when (val s = lyrics?.source) {
             is LyricsSource.Sidecar -> stringResource(R.string.lyrics_source_sidecar, s.path.substringAfterLast('/'))
             LyricsSource.Embedded -> stringResource(R.string.lyrics_source_embedded)
@@ -91,6 +90,7 @@ fun InfoView(track: PlayerTrack, lyrics: LyricsSnapshot?, durationUs: Long?, mod
             null -> null
         }
         InfoLine(stringResource(R.string.info_lyrics), listOfNotNull(lyricsSource, timing).joinToString(" · "))
+        now.path?.let { InfoLine(stringResource(R.string.info_file), it) }
     }
 }
 
