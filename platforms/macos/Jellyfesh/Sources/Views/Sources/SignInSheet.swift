@@ -205,7 +205,7 @@ private struct SignInFieldRow: View {
                         .foregroundStyle(.secondary)
                 }
                 TextEditor(text: $text)
-                    .font(.system(size: 12, design: .monospaced))
+                    .font(.system(size: 12).monospaced())
                     .autocorrectionDisabled()
                     .frame(minHeight: 72, maxHeight: 120)
                     .accessibilityLabel(Text(field.label))
