@@ -38,8 +38,13 @@ androidComponents {
 
 /**
  * Builds the core's shared library for each ABI with cargo-ndk (`cargo install cargo-ndk`; the
- * NDK through ANDROID_NDK_HOME or the SDK's ndk/ folder; CMake for libopus). Cargo is
- * incremental, so the task always runs and finishes at once when nothing changed.
+ * NDK through ANDROID_NDK_HOME or the SDK's ndk/ folder; CMake for libopus and whisper.cpp). Cargo
+ * is incremental, so the task always runs and finishes at once when nothing changed.
+ *
+ * whisper.cpp (on-device AI Lyrics, built by whisper-rs-sys) links the C++ runtime as c++_shared:
+ * `--link-libcxx-shared` links it and copies the NDK's libc++_shared.so next to libjf_ffi.so in
+ * each ABI's folder, so the APK ships both. GGML_NATIVE=OFF builds ggml for each ABI's baseline
+ * CPU rather than the build machine's.
  */
 abstract class CargoNdkBuild @Inject constructor(private val exec: ExecOperations) : DefaultTask() {
     @get:Input abstract val crate: Property<String>
@@ -57,12 +62,19 @@ abstract class CargoNdkBuild @Inject constructor(private val exec: ExecOperation
     fun build() {
         val args = mutableListOf("ndk")
         abis.get().forEach { args += listOf("-t", it) }
-        args += listOf("--platform", platform.get().toString(), "-o", outputDir.get().asFile.path, "build", "-p", crate.get())
+        args += listOf("--platform", platform.get().toString(), "--link-libcxx-shared", "-o", outputDir.get().asFile.path, "build", "-p", crate.get())
         if (release.get()) args += "--release"
         exec.exec {
             workingDir = workspace.get().asFile
+            environment("GGML_NATIVE", "OFF")
             commandLine(listOf("cargo") + args)
         }
+        // Both libraries in every ABI's folder, or the app could not load the core.
+        val core = "lib${crate.get().replace('-', '_')}.so"
+        val missing = abis.get().flatMap { abi ->
+            listOf(core, "libc++_shared.so").filterNot { outputDir.get().asFile.resolve(abi).resolve(it).isFile }.map { "$abi/$it" }
+        }
+        if (missing.isNotEmpty()) throw GradleException("cargo-ndk left out ${missing.joinToString()} in ${outputDir.get().asFile}")
     }
 }
 

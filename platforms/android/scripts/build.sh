@@ -2,13 +2,15 @@
 # Builds the unsigned release APK of Jellyfesh for Android, as CI does:
 #
 #   1. checks the Android SDK and NDK, adds the Rust Android targets, installs cargo-ndk;
-#   2. builds the core (jf-ffi) for arm64-v8a and x86_64 with cargo-ndk into
-#      core-bindings/src/main/jniLibs;
+#   2. builds the core (jf-ffi, with whisper.cpp for on-device AI Lyrics) for arm64-v8a and x86_64
+#      with cargo-ndk into core-bindings/src/main/jniLibs, with the NDK's libc++_shared.so beside it;
 #   3. generates the UniFFI Kotlin bindings and the design tokens (cargo xtask);
 #   4. notes whether the official plugins (dist/plugins/*.jfpkg) are there to bundle;
-#   5. runs ./gradlew :app:assembleRelease and copies the APK to dist/android/;
+#   5. runs ./gradlew :app:assembleRelease, checks that the APK holds libjf_ffi.so and
+#      libc++_shared.so for both ABIs, and copies it to dist/android/;
 #   6. with --play-bundle, also ./gradlew :app:bundleRelease for Google Play (the distribution
-#      google-play), copied to dist/android/ as jellyfesh-<version>-google-play-unsigned.aab.
+#      google-play), checked the same way, copied to dist/android/ as
+#      jellyfesh-<version>-google-play-unsigned.aab.
 #
 # Usage: platforms/android/scripts/build.sh [--skip-core] [--debug-core] [--play-bundle]
 #   --skip-core    reuse the libraries already in core-bindings/src/main/jniLibs
@@ -36,7 +38,7 @@ for arg in "$@"; do
         --skip-core) skip_core=true ;;
         --debug-core) profile=debug ;;
         --play-bundle) play_bundle=true ;;
-        -h | --help) sed -n '2,24p' "$0"; exit 0 ;;
+        -h | --help) sed -n '2,26p' "$0"; exit 0 ;;
         *) echo "unknown option: $arg" >&2; exit 2 ;;
     esac
 done
@@ -44,7 +46,24 @@ done
 note() { printf '\n==> %s\n' "$*"; }
 fail() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
+# The core's native libraries for each ABI inside a package: the APK keeps them under lib/<abi>/,
+# the App Bundle under base/lib/<abi>/. libjf_ffi.so needs libc++_shared.so beside it (whisper.cpp
+# links the C++ runtime dynamically), or it fails to load in the app.
+check_native_libs() {
+    local package="$1" prefix="$2" names
+    names="$(unzip -Z1 "$package")" || fail "cannot list $package"
+    for abi in arm64-v8a x86_64; do
+        for lib in libjf_ffi.so libc++_shared.so; do
+            grep -qxF "${prefix}lib/$abi/$lib" <<< "$names" || fail "$package has no ${prefix}lib/$abi/$lib"
+        done
+    done
+    echo "native libraries present for arm64-v8a and x86_64: libjf_ffi.so, libc++_shared.so"
+}
+
 export CARGO_INCREMENTAL=0
+# whisper.cpp (ggml, built by whisper-rs-sys with CMake, which reads GGML_* variables) targets each
+# ABI's baseline CPU, never the build machine's own instruction set.
+export GGML_NATIVE=OFF
 cd "$root"
 
 # ---- 1. toolchains ---------------------------------------------------------------------------
@@ -79,10 +98,13 @@ if ! $skip_core; then
     rm -rf "$jni"
     release_flag=()
     [ "$profile" = release ] && release_flag=(--release)
-    # API 26 is the app's minimum (cpal's AAudio backend, ADR-0009).
-    cargo ndk -t arm64-v8a -t x86_64 --platform 26 -o "$jni" build -p jf-ffi ${release_flag[@]+"${release_flag[@]}"}
+    # API 26 is the app's minimum (cpal's AAudio backend, ADR-0009). whisper-rs-sys links the C++
+    # runtime as c++_shared: --link-libcxx-shared links it and copies the NDK's libc++_shared.so
+    # next to libjf_ffi.so in each ABI's folder, so the APK ships it.
+    cargo ndk -t arm64-v8a -t x86_64 --platform 26 --link-libcxx-shared -o "$jni" build -p jf-ffi ${release_flag[@]+"${release_flag[@]}"}
     for abi in arm64-v8a x86_64; do
         [ -f "$jni/$abi/libjf_ffi.so" ] || fail "cargo-ndk did not produce $abi/libjf_ffi.so"
+        [ -f "$jni/$abi/libc++_shared.so" ] || fail "cargo-ndk did not copy $abi/libc++_shared.so"
     done
 fi
 
@@ -113,6 +135,7 @@ cd "$android"
 
 apk="$android/app/build/outputs/apk/release/app-release-unsigned.apk"
 [ -f "$apk" ] || fail "no APK at $apk"
+check_native_libs "$apk" ""
 version="$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' "$android/app/build.gradle.kts" | head -1)"
 mkdir -p "$root/dist/android"
 out="$root/dist/android/jellyfesh-${version:-dev}-android-unsigned.apk"
@@ -126,6 +149,7 @@ if $play_bundle; then
         :app:bundleRelease
     aab="$android/app/build/outputs/bundle/release/app-release.aab"
     [ -f "$aab" ] || fail "no App Bundle at $aab"
+    check_native_libs "$aab" "base/"
     out="$root/dist/android/jellyfesh-${version:-dev}-google-play-unsigned.aab"
     cp "$aab" "$out"
     note "Done: $out"
