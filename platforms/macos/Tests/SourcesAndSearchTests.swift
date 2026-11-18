@@ -499,6 +499,18 @@ final class SourcePageTests: XCTestCase {
         XCTAssertFalse(SourcePage.canPlay(item: locked, songs: [song("a")], complete: false))
     }
 
+    func testOnlyASourceThatAsksIsCredited() {
+        let sources = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        var asks = Fixture.plugin("org.example.spotify")
+        asks.attribution = "Spotify"
+        var blank = Fixture.plugin("org.example.blank")
+        blank.attribution = " "
+        sources.apply(SourcesState(version: 1, plugins: [asks, blank, Fixture.plugin()], allowCommunity: false))
+        XCTAssertEqual(sources.attribution(of: "org.example.spotify"), String(localized: "Content from \("Example")"))
+        XCTAssertNil(sources.attribution(of: "org.example.blank"), "a blank attribution asks nothing")
+        XCTAssertNil(sources.attribution(of: "org.example.subsonic"))
+    }
+
     func testOtherSourcesAreNamed() {
         let sources = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
         sources.apply(SourcesState(version: 1, plugins: [Fixture.plugin()], allowCommunity: false))

@@ -111,9 +111,12 @@ final class SourcesStore {
         return false
     }
 
-    /// "Content from {Service}" for a source whose terms ask its views to credit it.
+    /// "Content from {Service}" for a source whose terms ask its views to credit it (a blank
+    /// attribution asks nothing, as in the other apps).
     func attribution(of source: String) -> String? {
-        guard plugin(source)?.attribution != nil else { return nil }
+        guard let asked = plugin(source)?.attribution,
+              !asked.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return nil }
         return String(localized: "Content from \(name(of: source))")
     }
 
