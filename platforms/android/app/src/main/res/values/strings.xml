@@ -29,7 +29,6 @@
     <string name="action_save">Save</string>
     <string name="action_create">Create</string>
     <string name="action_rename">Rename</string>
-    <string name="action_remove">Remove</string>
     <string name="action_retry">Try Again</string>
     <string name="action_settings">Settings</string>
     <string name="action_play">Play</string>
@@ -270,14 +269,11 @@
     <!-- Queue -->
     <string name="queue_up_next">Up Next</string>
     <string name="queue_clear">Clear Queue</string>
+    <string name="queue_remove">Remove from Queue</string>
     <string name="queue_clear_title">Clear the Queue?</string>
     <string name="queue_clear_body">Playback stops and every song is removed from the queue.</string>
     <string name="queue_empty_title">Nothing Up Next</string>
     <string name="queue_empty_body">Use Play Next or Play Last on any song, album or playlist.</string>
-    <plurals name="queue_more">
-        <item quantity="one">%d more song in the queue</item>
-        <item quantity="other">%d more songs in the queue</item>
-    </plurals>
     <string name="a11y_drag">Drag to reorder</string>
     <string name="a11y_move_up">Move up</string>
     <string name="a11y_move_down">Move down</string>

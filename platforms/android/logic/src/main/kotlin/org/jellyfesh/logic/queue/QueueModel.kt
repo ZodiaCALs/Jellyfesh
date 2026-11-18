@@ -57,15 +57,36 @@ object QueueModel {
     fun playbackIndex(queuePosition: Int?, index: Int): Int = (queuePosition?.plus(1) ?: 0) + index
 
     /**
-     * Ends a drag: the new local list and the command that makes the move real, or null when the
-     * row did not move.
+     * Ends a drag over Up Next's [count] rows (the slice's entries, then the rows read past them):
+     * the new local list and the command that makes the move real, or null when the row did not
+     * move. A move within the slice's entries shows at once; one that reaches past them shows when
+     * the core's next Queue slice arrives.
      */
-    fun drop(state: UpNextState, queuePosition: Int?, rowPx: Float): Pair<UpNextState, Command?> {
+    fun drop(state: UpNextState, queuePosition: Int?, rowPx: Float, count: Int = state.items.size): Pair<UpNextState, Command?> {
         val drag = state.drag ?: return state to null
-        val to = target(drag.from, drag.offsetPx, rowPx, state.items.size)
+        val to = target(drag.from, drag.offsetPx, rowPx, maxOf(count, state.items.size))
         val settled = state.copy(drag = null)
         if (to == drag.from) return settled to null
-        val items = moved(state.items, drag.from, to)
-        return settled.copy(items = items) to Command.MoveInQueue(drag.uid, playbackIndex(queuePosition, to))
+        val command = Command.MoveInQueue(drag.uid, playbackIndex(queuePosition, to))
+        val local = drag.from < state.items.size && to < state.items.size
+        return (if (local) settled.copy(items = moved(state.items, drag.from, to)) else settled) to command
     }
+}
+
+/**
+ * Up Next past the Queue slice's entries: the slice holds the next 50 and `queue_window` pages the
+ * rest (docs/core-api.md), so every entry after the current one is listed, as in the other apps.
+ */
+object UpNextTail {
+    /** Entries the core reads per page past the slice. */
+    const val PAGE = 100
+
+    /** How many entries follow the current one (every entry while none is current): Up Next's rows. */
+    fun total(queue: QueueSnapshot): Int = (queue.len - (queue.position?.plus(1) ?: 0)).coerceAtLeast(0)
+
+    /** How many of those rows lie past the slice's entries. */
+    fun count(queue: QueueSnapshot): Int = (total(queue) - queue.upNext.size).coerceAtLeast(0)
+
+    /** The `queue_window` offset (playback order from the queue's start) of row [index] past the slice. */
+    fun windowOffset(queue: QueueSnapshot, index: Int): Int = QueueModel.playbackIndex(queue.position, queue.upNext.size + index)
 }

@@ -21,7 +21,6 @@
     <string name="action_save">保存</string>
     <string name="action_create">作成</string>
     <string name="action_rename">名前を変更</string>
-    <string name="action_remove">削除</string>
     <string name="action_retry">もう一度試す</string>
     <string name="action_settings">設定</string>
     <string name="action_play">再生</string>
@@ -226,6 +225,7 @@
     <string name="lyrics_unsynced">この歌詞にはタイミングがありません。</string>
     <string name="queue_up_next">次に再生</string>
     <string name="queue_clear">キューを消去</string>
+    <string name="queue_remove">キューから削除</string>
     <string name="queue_clear_title">キューを消去しますか？</string>
     <string name="queue_clear_body">再生が止まり、キューのすべての曲が取り除かれます。</string>
     <string name="queue_empty_title">次に再生する曲はありません</string>
@@ -358,9 +358,6 @@
     </plurals>
     <plurals name="count_artists">
         <item quantity="other">%,d 人のアーティスト</item>
-    </plurals>
-    <plurals name="queue_more">
-        <item quantity="other">キューにはあと %d 曲あります</item>
     </plurals>
 
     <!-- v0.0.4: the player bar, the album page, Appearance (docs/design-controls.md). -->

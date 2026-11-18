@@ -59,4 +59,38 @@ class QueueModelTest {
         assertEquals(items, QueueModel.moved(items, 9, 1))
         assertEquals(items, QueueModel.moved(items, 1, 1))
     }
+
+    @Test
+    fun upNextListsEveryEntryAfterTheCurrentOnePastTheSlice() {
+        // 120 entries, the 4th playing: 116 follow it; the slice carries the next 50.
+        val slice = (1L..50L).map { QueueItem(it, TrackRef.Library(it)) }
+        val q = QueueSnapshot.Empty.copy(version = 9, len = 120, position = 3, upNext = slice)
+        assertEquals(116, UpNextTail.total(q))
+        assertEquals(66, UpNextTail.count(q))
+        // The first row past the slice is entry 4 + 50 in playback order.
+        assertEquals(54, UpNextTail.windowOffset(q, 0))
+        assertEquals(54 + 65, UpNextTail.windowOffset(q, 65))
+        // Nothing current: Up Next is the whole queue.
+        val idle = q.copy(position = null)
+        assertEquals(120, UpNextTail.total(idle))
+        assertEquals(50, UpNextTail.windowOffset(idle, 0))
+        // A short queue has nothing past the slice.
+        assertEquals(0, UpNextTail.count(queue(1)))
+        assertEquals(0, UpNextTail.count(QueueSnapshot.Empty))
+    }
+
+    @Test
+    fun aDropPastTheSliceSendsTheMoveAndWaitsForTheCore() {
+        // Five slice rows and 20 rows past them: row 1 dragged down to row 9.
+        val state = UpNextState(items, baseVersion = 4, drag = QueueDrag(uid = 20, from = 1, offsetPx = 8 * 52f))
+        val (dropped, command) = QueueModel.drop(state, queuePosition = 2, rowPx = 52f, count = 25)
+        assertEquals(Command.MoveInQueue(20, 12), command)
+        assertEquals(items, dropped.items, "the slice's rows stay until the core's next slice")
+        assertNull(dropped.drag)
+        // A row past the slice dragged up into it.
+        val up = UpNextState(items, 4, QueueDrag(uid = 900, from = 12, offsetPx = -10 * 52f))
+        assertEquals(Command.MoveInQueue(900, 5), QueueModel.drop(up, 2, 52f, count = 25).second)
+        // Without the rows past the slice, a drop stays within it, as before.
+        assertEquals(Command.MoveInQueue(20, 7), QueueModel.drop(state, 2, 52f).second)
+    }
 }

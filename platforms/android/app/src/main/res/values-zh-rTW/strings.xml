@@ -21,7 +21,6 @@
     <string name="action_save">儲存</string>
     <string name="action_create">建立</string>
     <string name="action_rename">重新命名</string>
-    <string name="action_remove">移除</string>
     <string name="action_retry">再試一次</string>
     <string name="action_settings">設定</string>
     <string name="action_play">播放</string>
@@ -226,6 +225,7 @@
     <string name="lyrics_unsynced">這些歌詞沒有時間軸。</string>
     <string name="queue_up_next">接下來播放</string>
     <string name="queue_clear">清除播放佇列</string>
+    <string name="queue_remove">從播放佇列中移除</string>
     <string name="queue_clear_title">清除播放佇列？</string>
     <string name="queue_clear_body">播放將停止，所有歌曲都會從佇列中移除。</string>
     <string name="queue_empty_title">接下來沒有歌曲</string>
@@ -358,9 +358,6 @@
     </plurals>
     <plurals name="count_artists">
         <item quantity="other">%,d 位藝人</item>
-    </plurals>
-    <plurals name="queue_more">
-        <item quantity="other">播放佇列中還有 %d 首歌曲</item>
     </plurals>
 
     <!-- v0.0.4: the player bar, the album page, Appearance (docs/design-controls.md). -->

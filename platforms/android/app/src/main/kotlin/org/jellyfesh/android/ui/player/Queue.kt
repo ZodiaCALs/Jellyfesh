@@ -14,19 +14,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
@@ -45,6 +46,7 @@ import org.jellyfesh.android.ui.components.LocalOverlays
 import org.jellyfesh.android.ui.components.SectionHeader
 import org.jellyfesh.android.ui.components.SheetAction
 import org.jellyfesh.android.ui.data.LocalGraph
+import org.jellyfesh.android.ui.data.rememberPagedSource
 import org.jellyfesh.android.ui.data.rememberQuery
 import org.jellyfesh.android.ui.theme.ButtonStyle
 import org.jellyfesh.android.ui.theme.Jf
@@ -58,15 +60,18 @@ import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.queue.QueueDrag
 import org.jellyfesh.logic.queue.QueueModel
+import org.jellyfesh.logic.queue.UpNextTail
 import org.jellyfesh.logic.queue.UpNextState
 import org.jellyfesh.tokens.Tokens
 
 private val ROW_HEIGHT = 64.dp
 
 /**
- * Up Next: the next entries in playback order (the slice's window of 50). Drag a row by its handle
- * to move it; the drop shows at once and becomes `MoveInQueue`, and the next Queue slice confirms
- * it (QueueModel). TalkBack gets "Move up" and "Move down" actions on each row instead.
+ * Up Next: every entry after the current one, in playback order. The Queue slice carries the next
+ * 50; the rest is read from the core in pages as it scrolls into view (`queue_window`, read again
+ * when the queue changes), as in the other apps ([UpNextTail]). Drag a row by its handle to move
+ * it: a drop within the slice's rows shows at once, and every drop becomes `MoveInQueue`, which
+ * the next Queue slice confirms (QueueModel). TalkBack gets "Move up" and "Move down" on each row.
  */
 @Composable
 fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
@@ -80,12 +85,19 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
     val clearBody = stringResource(R.string.queue_clear_body)
     // Clear Queue asks first; its confirming button says the same (docs/ui.md).
     val clearLabel = stringResource(R.string.queue_clear)
-    val removeLabel = stringResource(R.string.action_remove)
+    val removeLabel = stringResource(R.string.queue_remove)
     val moveUp = stringResource(R.string.a11y_move_up)
     val moveDown = stringResource(R.string.a11y_move_down)
-    val remaining = (queue.len - ((queue.position ?: -1) + 1) - state.items.size).coerceAtLeast(0)
+    val listState = rememberLazyListState()
+    // The rows past the slice's entries, read with the queue as it is when each page loads.
+    val latest by rememberUpdatedState(queue)
+    val tailCount = UpNextTail.count(queue)
+    val tail = rememberPagedSource(listState, queue.version, pageSize = UpNextTail.PAGE, rowOffset = 1 + state.items.size) { core, offset, limit ->
+        core.queueWindow(UpNextTail.windowOffset(latest, offset), limit)
+    }
+    val count = state.items.size + tailCount
 
-    LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    LazyColumn(modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(bottom = 24.dp)) {
         item(key = "header") {
             SectionHeader(stringResource(R.string.queue_up_next)) {
                 if (queue.len > 0) {
@@ -95,12 +107,13 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
                 }
             }
         }
-        if (state.items.isEmpty()) {
+        if (count == 0) {
             item(key = "empty") { EmptyState(R.drawable.ic_queue, stringResource(R.string.queue_empty_title), stringResource(R.string.queue_empty_body)) }
         }
         val drag = state.drag
-        val target = drag?.let { QueueModel.target(it.from, it.offsetPx, rowPx, state.items.size) }
-        itemsIndexed(state.items, key = { _, item -> item.uid }) { index, item ->
+        val target = drag?.let { QueueModel.target(it.from, it.offsetPx, rowPx, count) }
+        // One row of Up Next at [index] (the slice's rows first, then those past them).
+        val row: @Composable (Int, QueueItem) -> Unit = { index, item ->
             val shift = when {
                 drag == null || target == null -> 0f
                 index == drag.from -> drag.offsetPx
@@ -122,7 +135,7 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
                                     true
                                 })
                             }
-                            if (index < state.items.size - 1) {
+                            if (index < count - 1) {
                                 add(CustomAccessibilityAction(moveDown) {
                                     graph.send(Command.MoveInQueue(item.uid, QueueModel.playbackIndex(queue.position, index + 1)))
                                     true
@@ -138,21 +151,17 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
                 onDrag = { dy -> upNext = upNext?.let { s -> s.drag?.let { d -> s.copy(drag = d.copy(offsetPx = d.offsetPx + dy)) } ?: s } },
                 onDragEnd = {
                     val current = upNext ?: return@QueueRow
-                    val (settled, command) = QueueModel.drop(current, queue.position, rowPx)
+                    val (settled, command) = QueueModel.drop(current, queue.position, rowPx, count)
                     upNext = settled
                     command?.let(graph::send)
                 },
             )
         }
-        if (remaining > 0) {
-            item(key = "more") {
-                JfText(
-                    pluralStringResource(R.plurals.queue_more, remaining, remaining),
-                    style = JfType.caption,
-                    color = Jf.colors.ink50,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                )
-            }
+        itemsIndexed(state.items, key = { _, item -> item.uid }) { index, item -> row(index, item) }
+        // Keys of their own: an entry can show in both lists for a moment while a page is read again.
+        items(tailCount, key = { i -> tail[i]?.let { "tail:${it.uid}" } ?: "tail-pending-$i" }) { i ->
+            val item = tail[i]
+            if (item != null) row(state.items.size + i, item) else Box(Modifier.fillMaxWidth().height(ROW_HEIGHT))
         }
     }
 }
