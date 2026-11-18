@@ -11,6 +11,8 @@ members = [
     "xtask",
     "tools/jf-plugin",
     "tools/jf-plugin/plugin-build",
+    # Jellyfesh Web's relay for services that refuse browsers (ADR-0022, docs/web-relay.md).
+    "tools/jf-relay",
     "plugins/sdk",
     "plugins/testkit",
     "plugins/subsonic",
@@ -29,7 +31,7 @@ members = [
 # Guest crates (the plugin SDK and test plugins) target wasm32-unknown-unknown; they also
 # compile for the host, but a plain `cargo build` skips them, and the bindings generator
 # (built by `cargo xtask bindings`).
-default-members = ["core/*", "apps/cli", "xtask", "tools/jf-plugin", "tools/jf-plugin/plugin-build"]
+default-members = ["core/*", "apps/cli", "xtask", "tools/jf-plugin", "tools/jf-plugin/plugin-build", "tools/jf-relay"]
 
 [workspace.package]
 version = "0.0.6"
@@ -135,6 +137,10 @@ wasm-bindgen = "=0.2.130"
 # The default `v1` feature picks Keychain on macOS, Credential Manager on Windows and the
 # Secret Service (zbus, pure Rust) on Linux and the BSDs. MIT OR Apache-2.0.
 keyring = "4.2.0"
+# On-device speech recognition (core/jf-speech, ADR-0019 §5); checked against crates.io on
+# 2026-11-17. Binds whisper.cpp 1.8.3 (MIT), which whisper-rs-sys 0.15 builds from source with
+# CMake and binds with bindgen (libclang). Unlicense.
+whisper-rs = "0.16.0"
 
 # Linux desktop app (platforms/linux), checked against crates.io on 2026-11-07.
 # Features select the oldest GNOME stack the app supports (Ubuntu 24.04, GNOME 46:
