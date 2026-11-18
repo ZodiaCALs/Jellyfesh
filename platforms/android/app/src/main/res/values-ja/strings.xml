@@ -121,6 +121,9 @@
     <string name="kind_artists">アーティスト</string>
     <string name="kind_playlists">プレイリスト</string>
     <string name="kind_folders">フォルダ</string>
+    <string name="kind_album">アルバム</string>
+    <string name="kind_playlist">プレイリスト</string>
+    <string name="browse_failed_title">ソースから応答がありません</string>
     <string name="sources_subtitle">ソースは、サーバーやサービスの音楽を Jellyfesh に届けます。</string>
     <string name="sources_empty_title">インストールされたソースはありません</string>
     <string name="sources_empty_body">.jfpkg ファイルからソースのプラグインをインストールします。</string>
@@ -154,7 +157,7 @@
     <string name="source_attribution">%1$s 提供のコンテンツ</string>
     <string name="source_installing">プラグインをインストールしています…</string>
     <string name="source_install_failed">ファイルを読み取れませんでした。</string>
-    <string name="browse_empty">何もありません。</string>
+    <string name="browse_empty">何もありません</string>
     <string name="settings_saved">保存しました</string>
     <string name="field_required">必須</string>
     <string name="field_too_short">短すぎます</string>

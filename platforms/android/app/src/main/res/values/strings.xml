@@ -153,6 +153,9 @@
     <string name="kind_artists">Artists</string>
     <string name="kind_playlists">Playlists</string>
     <string name="kind_folders">Folders</string>
+    <string name="kind_album">Album</string>
+    <string name="kind_playlist">Playlist</string>
+    <string name="browse_failed_title">This Source Did Not Answer</string>
 
     <!-- Sources -->
     <string name="sources_subtitle">Sources bring music from servers and services into Jellyfesh.</string>
@@ -188,7 +191,7 @@
     <string name="source_attribution">Content from %1$s</string>
     <string name="source_installing">Installing the plugin…</string>
     <string name="source_install_failed">The file could not be read.</string>
-    <string name="browse_empty">Nothing here.</string>
+    <string name="browse_empty">Nothing Here</string>
     <string name="settings_saved">Saved</string>
     <string name="field_required">Required</string>
     <string name="field_too_short">Too short</string>

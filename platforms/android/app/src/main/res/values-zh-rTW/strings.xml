@@ -121,6 +121,9 @@
     <string name="kind_artists">藝人</string>
     <string name="kind_playlists">播放清單</string>
     <string name="kind_folders">資料夾</string>
+    <string name="kind_album">專輯</string>
+    <string name="kind_playlist">播放清單</string>
+    <string name="browse_failed_title">這個來源沒有回應</string>
     <string name="sources_subtitle">來源把伺服器與服務上的音樂帶進 Jellyfesh。</string>
     <string name="sources_empty_title">沒有已安裝的來源</string>
     <string name="sources_empty_body">從 .jfpkg 檔案安裝來源外掛。</string>
@@ -154,7 +157,7 @@
     <string name="source_attribution">內容來自 %1$s</string>
     <string name="source_installing">正在安裝外掛…</string>
     <string name="source_install_failed">無法讀取這個檔案。</string>
-    <string name="browse_empty">這裡什麼都沒有。</string>
+    <string name="browse_empty">這裡什麼都沒有</string>
     <string name="settings_saved">已儲存</string>
     <string name="field_required">必填</string>
     <string name="field_too_short">太短</string>

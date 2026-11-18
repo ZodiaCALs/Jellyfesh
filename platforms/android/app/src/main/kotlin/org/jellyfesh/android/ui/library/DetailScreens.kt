@@ -106,11 +106,20 @@ fun barFade(): androidx.compose.ui.unit.Dp = WindowInsets.statusBars.asPaddingVa
 
 /**
  * An album's header after Apple Music (v0.0.4): large artwork (full width on phones, 240 dp from
- * 600 dp), the title, the artist in accent text (it opens the artist), then genre, year and the
- * song count.
+ * 600 dp), what it is ([kind], on a source's album or playlist page), the title, the artist in
+ * accent text (it opens the artist when [onArtist] is given), then genre, year and the song count,
+ * and a [note] under them (a source's "Content from {Service}").
  */
 @Composable
-private fun AlbumHeader(art: ArtKey?, title: String, artist: String?, details: String?, onArtist: (() -> Unit)?) {
+fun AlbumHeader(
+    art: ArtKey?,
+    title: String,
+    artist: String?,
+    details: String?,
+    onArtist: (() -> Unit)?,
+    kind: String? = null,
+    note: String? = null,
+) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val wide = maxWidth >= 600.dp
         val px = with(LocalDensity.current) { (if (wide) 240.dp else maxWidth).roundToPx() }
@@ -125,6 +134,7 @@ private fun AlbumHeader(art: ArtKey?, title: String, artist: String?, details: S
                 ArtworkFill(art, title, RoundedCornerShape(Tokens.Artwork.radiusGrid.dp), px, Modifier.padding(bottom = 12.dp))
             }
             val align = if (wide) TextAlign.Start else TextAlign.Center
+            if (kind != null) JfText(kind, style = JfType.caption, color = Jf.colors.ink70, textAlign = align)
             JfText(title, style = JfType.title, textAlign = align, modifier = Modifier.semantics { heading() })
             if (artist != null) {
                 JfText(
@@ -136,8 +146,23 @@ private fun AlbumHeader(art: ArtKey?, title: String, artist: String?, details: S
                 )
             }
             if (details != null) JfText(details, style = JfType.caption, color = Jf.colors.ink50, textAlign = align)
+            if (note != null) JfText(note, style = JfType.caption, color = Jf.colors.ink70, textAlign = align)
         }
     }
+}
+
+/** The line under a list of songs: "12 songs, 48 minutes" (an album's, a source's album or playlist). */
+@Composable
+fun SongsFooter(count: Int, totalMs: Long) {
+    val (h, m) = TimeFormat.hoursMinutes(totalMs)
+    val minutes = pluralStringResource(R.plurals.count_minutes, m.toInt(), m.toInt())
+    val length = if (h > 0) stringResource(R.string.length_hours_minutes, pluralStringResource(R.plurals.count_hours, h.toInt(), h.toInt()), minutes) else minutes
+    JfText(
+        stringResource(R.string.album_footer, pluralStringResource(R.plurals.count_songs, count, count), length),
+        style = JfType.caption,
+        color = Jf.colors.ink50,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+    )
 }
 
 /** "1 h 12 min" or "48 min" for a total length. */
@@ -223,17 +248,7 @@ fun AlbumScreen(id: Long, title: String, state: CoreState) {
                     }
                     if (list.isNotEmpty()) {
                         // "12 songs, 48 minutes".
-                        item(key = "footer") {
-                            val (h, m) = TimeFormat.hoursMinutes(list.sumOf { it.durationMs ?: 0L })
-                            val minutes = pluralStringResource(R.plurals.count_minutes, m.toInt(), m.toInt())
-                            val length = if (h > 0) stringResource(R.string.length_hours_minutes, pluralStringResource(R.plurals.count_hours, h.toInt(), h.toInt()), minutes) else minutes
-                            JfText(
-                                stringResource(R.string.album_footer, pluralStringResource(R.plurals.count_songs, list.size, list.size), length),
-                                style = JfType.caption,
-                                color = Jf.colors.ink50,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                            )
-                        }
+                        item(key = "footer") { SongsFooter(list.size, list.sumOf { it.durationMs ?: 0L }) }
                     }
                 }
             }

@@ -1,5 +1,8 @@
 package org.jellyfesh.logic.nav
 
+import org.jellyfesh.logic.core.ArtworkRef
+import org.jellyfesh.logic.core.ItemKind
+
 /** The four tabs of the bottom bar. */
 enum class Tab { Home, Library, Search, Sources }
 
@@ -22,8 +25,21 @@ sealed interface Screen {
     data class Artist(val id: Long, val name: String) : Screen
     data class Playlist(val id: Long, val name: String) : Screen
     data class Source(val pluginId: String) : Screen
-    /** A source's catalogue: its root ([node] null) or an album, artist, playlist or folder with its Open in {Service} [link]. */
-    data class SourceBrowse(val pluginId: String, val node: String?, val title: String, val link: String? = null) : Screen
+
+    /**
+     * A source's catalogue: its root ([node] null) or an album, artist, playlist or folder, with
+     * what its row showed: its Open in {Service} [link], its [kind] (an album or playlist gets the
+     * full page), its [subtitle] (an album's artist) and its [artwork].
+     */
+    data class SourceBrowse(
+        val pluginId: String,
+        val node: String?,
+        val title: String,
+        val link: String? = null,
+        val kind: ItemKind? = null,
+        val subtitle: String? = null,
+        val artwork: ArtworkRef? = null,
+    ) : Screen
     data class Settings(val section: SettingsSection? = null) : Screen
 }
 

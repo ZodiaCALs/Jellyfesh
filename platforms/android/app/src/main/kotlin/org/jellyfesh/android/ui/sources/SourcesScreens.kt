@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,9 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import org.jellyfesh.android.R
 import org.jellyfesh.android.images.ArtKey
@@ -51,6 +55,9 @@ import org.jellyfesh.android.ui.components.ScreenTitle
 import org.jellyfesh.android.ui.components.SectionHeader
 import org.jellyfesh.android.ui.components.SettingRow
 import org.jellyfesh.android.ui.data.LocalGraph
+import org.jellyfesh.android.ui.library.AlbumHeader
+import org.jellyfesh.android.ui.library.PlayButtons
+import org.jellyfesh.android.ui.library.SongsFooter
 import org.jellyfesh.android.ui.library.barFade
 import org.jellyfesh.android.ui.library.listPadding
 import org.jellyfesh.android.ui.nav.LocalNav
@@ -70,17 +77,18 @@ import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.android.ui.theme.topEdgeFade
 import org.jellyfesh.logic.core.AuthMethod
-import org.jellyfesh.logic.core.BrowseUpdate
 import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
+import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
-import org.jellyfesh.logic.core.SourceItem
 import org.jellyfesh.logic.core.SourcePreset
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.sources.AuthFlow
+import org.jellyfesh.logic.sources.BrowseModel
+import org.jellyfesh.logic.sources.BrowseState
 import org.jellyfesh.logic.sources.Disclosure
 import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.sources.SourceItems
@@ -442,76 +450,114 @@ private fun signInIcon(method: AuthMethod): Int = when (method) {
 }
 
 /**
- * A source's own folders and lists (`Command.Browse`), page by page: the core answers with a
- * BrowsePage event for the request id `send` returned. An album, artist or playlist has a More
- * menu (Play, Shuffle, Play Next and Play Last, and Open in {Service} with its [link]).
+ * A level of a source's catalogue (`Command.Browse`, page by page; [BrowseModel]): its root, or an
+ * album, artist, playlist or folder. An album or playlist gets the full page, as Jellyfesh Web and
+ * the library's album page show it: the artwork, what it is, the title, the artist in accent text,
+ * the song count, Play, Shuffle and More (Play Next, Play Last, Open in {Service}), the songs
+ * (numbered on an album) and "12 songs, 48 minutes"; when none of its songs plays here, Open in
+ * {Service} is its main action. Other levels show their title and rows, with the More menu (Play,
+ * Shuffle, Play Next, Play Last, Open in {Service}) in the top bar. A source that asks for
+ * attribution says "Content from {Service}" under the title. A page the source did not answer
+ * says so with its error; an empty one says "Nothing Here".
  */
 @Composable
-fun SourceBrowseScreen(pluginId: String, node: String?, title: String, link: String?, state: CoreState) {
+fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
     val graph = LocalGraph.current
     val nav = LocalNav.current
     val actions = rememberTrackActions()
     val context = LocalContext.current
-    var items by remember(pluginId, node) { mutableStateOf<List<SourceItem>>(emptyList()) }
-    var nextPage by remember(pluginId, node) { mutableStateOf<Int?>(0) }
-    var request by remember(pluginId, node) { mutableStateOf(0L) }
-    var error by remember(pluginId, node) { mutableStateOf<String?>(null) }
-    var loading by remember(pluginId, node) { mutableStateOf(false) }
-    fun load(page: Int) {
-        loading = true
-        request = graph.send(Command.Browse(pluginId, node, page))
-        if (request == 0L) {
-            loading = false
-            error = context.getString(R.string.not_available_yet)
-        }
-    }
+    val pluginId = screen.pluginId
+    val node = screen.node
+    var browse by remember(pluginId, node) { mutableStateOf(BrowseState()) }
     LaunchedEffect(pluginId, node) {
-        graph.store.signals.collect { event ->
-            when {
-                event is CoreEvent.BrowsePage && event.update.request == request -> {
-                    val update: BrowseUpdate = event.update
-                    items = items + update.items
-                    nextPage = update.nextPage
-                    error = update.error
-                    loading = false
-                }
-                event is CoreEvent.CommandFailed && event.id == request -> {
-                    error = describeFailure(context, event.error)
-                    loading = false
+        // Listening first, so the answer to the first page cannot slip past.
+        launch(start = CoroutineStart.UNDISPATCHED) {
+            graph.store.signals.collect { event ->
+                browse = when (event) {
+                    is CoreEvent.BrowsePage -> BrowseModel.onPage(browse, event.update)
+                    is CoreEvent.CommandFailed -> BrowseModel.onFailed(browse, event.id, describeFailure(context, event.error))
+                    else -> browse
                 }
             }
         }
+        if (browse.items.isEmpty() && !browse.loading) browse = BrowseModel.loadMore(browse, pluginId, node, graph::send)
     }
-    LaunchedEffect(pluginId, node) { if (items.isEmpty()) load(0) }
+    val collection = BrowseModel.isCollection(screen.kind) && node != null
+    val container = node?.let { CollectionRef.Source(pluginId, it) }
+    val link = Links.openable(screen.link)
+    val credit = Links.attributedService(state.sources, pluginId)?.let { stringResource(R.string.source_attribution, it) }
+    val numbers = remember(browse.items, screen.kind) { BrowseModel.numbers(browse, screen.kind) }
+    val listState = rememberLazyListState()
+    val headerGone by remember { derivedStateOf { listState.firstVisibleItemIndex > 1 } }
     val playing = state.nowPlaying?.track
+    val moreLabel = stringResource(R.string.action_more)
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
             item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
-            item(key = "title") {
+            if (collection && container != null) {
+                item(key = "header") {
+                    val songs = browse.tracks.size.takeIf { browse.complete && it > 0 }
+                    AlbumHeader(
+                        art = ArtKey.of(screen.artwork),
+                        title = screen.title,
+                        artist = screen.subtitle?.takeIf { it.isNotBlank() },
+                        details = songs?.let { pluralStringResource(R.plurals.count_songs, it, it) },
+                        onArtist = null,
+                        kind = stringResource(if (screen.kind == ItemKind.Album) R.string.kind_album else R.string.kind_playlist),
+                        note = credit,
+                    )
+                }
+                item(key = "actions") {
+                    when {
+                        browse.playable -> PlayButtons(
+                            onPlay = { graph.send(Command.PlayCollection(container, 0, false)) },
+                            onShuffle = { graph.send(Command.PlayCollection(container, 0, true)) },
+                        ) {
+                            JfIconButton(R.drawable.ic_more, moreLabel, {
+                                actions.showForCollection(screen.title, screen.subtitle, container, withPlay = false, link = screen.link)
+                            })
+                        }
+                        // None of its songs plays here: its service is where they play.
+                        BrowseModel.opensLink(browse, screen.link) && link != null -> Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                            JfButton(actions.openInLabel(pluginId), { actions.openLink(link) }, style = ButtonStyle.Accent, icon = R.drawable.ic_external)
+                        }
+                        link != null -> Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                            JfIconButton(R.drawable.ic_more, moreLabel, {
+                                actions.openLinkAction(screen.link, pluginId)?.let { open -> actions.showSheetActions(screen.title, screen.subtitle, listOf(open)) }
+                            })
+                        }
+                    }
+                }
+            } else {
                 // "Content from {Service}" for a source whose terms ask for the credit.
-                val credit = Links.attributedService(state.sources, pluginId)?.let { stringResource(R.string.source_attribution, it) }
-                ScreenTitle(title, subtitle = credit)
+                item(key = "title") { ScreenTitle(screen.title, subtitle = credit) }
             }
-            itemsIndexed(items, key = { i, it -> "$i-${it.id}" }) { _, item ->
-                val action = SourceItems.mainAction(item, items)
-                SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
+            itemsIndexed(browse.items, key = { i, it -> "$i-${it.id}" }) { i, item ->
+                val action = SourceItems.mainAction(item, browse.items)
+                SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions), number = numbers.getOrNull(i)) {
                     runItemAction(action, graph::send, nav::push, actions::openLink)
                 }
             }
-            val e = error
-            if (e != null) item(key = "error") { Notice(e, warning = true) }
+            val error = browse.error
             when {
-                loading -> item(key = "loading") { LoadingRow() }
-                nextPage != null && items.isNotEmpty() -> item(key = "more") {
-                    Row(Modifier.padding(16.dp)) { JfButton(stringResource(R.string.action_load_more), { nextPage?.let(::load) }) }
+                browse.unavailable -> item(key = "state") { Notice(stringResource(R.string.not_available_yet)) }
+                error != null -> item(key = "state") { Notice(error, warning = true, title = stringResource(R.string.browse_failed_title)) }
+                // Asking, or about to ask, for the first page.
+                browse.loading || (browse.items.isEmpty() && browse.nextPage == 0) -> item(key = "state") { LoadingRow() }
+                browse.nextPage != null && browse.items.isNotEmpty() -> item(key = "state") {
+                    Row(Modifier.padding(16.dp)) { JfButton(stringResource(R.string.action_load_more), { browse = BrowseModel.loadMore(browse, pluginId, node, graph::send) }) }
                 }
-                items.isEmpty() && e == null -> item(key = "empty") { EmptyState(R.drawable.ic_folder, stringResource(R.string.browse_empty), null) }
+                browse.items.isEmpty() -> item(key = "state") { EmptyState(R.drawable.ic_folder, stringResource(R.string.browse_empty), null) }
+            }
+            // "12 songs, 48 minutes" once every page has arrived.
+            if (collection && browse.complete && error == null && browse.tracks.isNotEmpty()) {
+                item(key = "footer") { SongsFooter(browse.tracks.size, browse.totalMs) }
             }
         }
-        BackBar(onBack = nav::back, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
-            if (node != null) {
-                JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
-                    actions.showForCollection(title, null, CollectionRef.Source(pluginId, node), link = link)
+        BackBar(onBack = nav::back, title = screen.title.takeIf { collection && headerGone }, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+            if (!collection && container != null) {
+                JfIconButton(R.drawable.ic_more, moreLabel, {
+                    actions.showForCollection(screen.title, null, container, link = screen.link)
                 }, tint = Jf.colors.ink90)
             }
         }

@@ -358,9 +358,9 @@ fun EmptyState(icon: Int, title: String, body: String?, modifier: Modifier = Mod
     }
 }
 
-/** A notice in a list: a feature not in this build yet, or a failure. */
+/** A notice in a list: a feature not in this build yet, or a failure ([title] above the text, when it has one). */
 @Composable
-fun Notice(text: String, modifier: Modifier = Modifier, warning: Boolean = false, action: Pair<String, () -> Unit>? = null) {
+fun Notice(text: String, modifier: Modifier = Modifier, warning: Boolean = false, action: Pair<String, () -> Unit>? = null, title: String? = null) {
     val colors = Jf.colors
     Row(
         modifier
@@ -374,7 +374,10 @@ fun Notice(text: String, modifier: Modifier = Modifier, warning: Boolean = false
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         JfIcon(if (warning) R.drawable.ic_warning else R.drawable.ic_info, if (warning) colors.warning else colors.accentText, size = 20.dp)
-        JfText(text, style = JfType.small, color = colors.ink70, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (title != null) JfText(title, style = JfType.label, color = colors.ink90)
+            JfText(text, style = JfType.small, color = colors.ink70)
+        }
         if (action != null) JfButton(action.first, action.second, style = ButtonStyle.Quiet)
     }
 }

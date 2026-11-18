@@ -75,10 +75,14 @@ class LinksTest {
     @Test
     fun containersOpenInTheBrowserUnlessOnlyTheirLinkCanPlayThem() {
         val album = item("al", kind = ItemKind.Album, link = "https://y.qq.example/album/al")
-        assertEquals(ItemAction.Browse("qq", "al", "Title al", "https://y.qq.example/album/al"), SourceItems.mainAction(album, listOf(album)))
+        // The page's header gets what the row shows: its kind, its artist and its artwork.
+        assertEquals(
+            ItemAction.Browse("qq", "al", "Title al", "https://y.qq.example/album/al", ItemKind.Album, "Artist", null),
+            SourceItems.mainAction(album, listOf(album)),
+        )
         val locked = item("pl", kind = ItemKind.Playlist, playable = false, link = "https://y.qq.example/pl")
         assertEquals(ItemAction.OpenLink("https://y.qq.example/pl"), SourceItems.mainAction(locked, listOf(locked)))
         val lockedNoLink = item("ar", kind = ItemKind.Artist, playable = false)
-        assertEquals(ItemAction.Browse("qq", "ar", "Title ar", null), SourceItems.mainAction(lockedNoLink, listOf(lockedNoLink)))
+        assertEquals(ItemAction.Browse("qq", "ar", "Title ar", null, ItemKind.Artist, "Artist"), SourceItems.mainAction(lockedNoLink, listOf(lockedNoLink)))
     }
 }

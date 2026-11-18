@@ -121,6 +121,9 @@
     <string name="kind_artists">艺人</string>
     <string name="kind_playlists">歌单</string>
     <string name="kind_folders">文件夹</string>
+    <string name="kind_album">专辑</string>
+    <string name="kind_playlist">歌单</string>
+    <string name="browse_failed_title">该来源没有响应</string>
     <string name="sources_subtitle">来源把服务器和服务上的音乐带进 Jellyfesh。</string>
     <string name="sources_empty_title">没有已安装的来源</string>
     <string name="sources_empty_body">从 .jfpkg 文件安装来源插件。</string>
@@ -154,7 +157,7 @@
     <string name="source_attribution">内容来自 %1$s</string>
     <string name="source_installing">正在安装插件…</string>
     <string name="source_install_failed">无法读取这个文件。</string>
-    <string name="browse_empty">这里什么也没有。</string>
+    <string name="browse_empty">这里什么也没有</string>
     <string name="settings_saved">已保存</string>
     <string name="field_required">必填</string>
     <string name="field_too_short">太短</string>

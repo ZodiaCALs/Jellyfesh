@@ -243,7 +243,7 @@ private fun ScreenContent(screen: Screen, state: CoreState) {
         is Screen.Artist -> ArtistScreen(screen.id, screen.name, state)
         is Screen.Playlist -> PlaylistScreen(screen.id, screen.name, state)
         is Screen.Source -> SourceScreen(screen.pluginId, state)
-        is Screen.SourceBrowse -> SourceBrowseScreen(screen.pluginId, screen.node, screen.title, screen.link, state)
+        is Screen.SourceBrowse -> SourceBrowseScreen(screen, state)
         is Screen.Settings -> SettingsScreen(screen.section, state)
     }
 }

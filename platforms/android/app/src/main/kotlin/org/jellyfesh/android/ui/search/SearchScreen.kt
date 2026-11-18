@@ -246,7 +246,7 @@ fun SearchScreen(state: CoreState) {
 fun runItemAction(action: ItemAction, send: (Command) -> Long, push: (Screen) -> Unit, openLink: (String) -> Unit) {
     when (action) {
         is ItemAction.Play -> send(Command.PlayTracks(action.tracks, action.start))
-        is ItemAction.Browse -> push(Screen.SourceBrowse(action.plugin, action.node, action.title, action.link))
+        is ItemAction.Browse -> push(Screen.SourceBrowse(action.plugin, action.node, action.title, action.link, action.kind, action.subtitle, action.artwork))
         is ItemAction.OpenLink -> openLink(action.url)
         ItemAction.None -> Unit
     }
@@ -282,10 +282,11 @@ fun kindLabel(kind: ItemKind): Int = when (kind) {
 /**
  * A result from an online source: playable rows play and containers open ([action]); a row that
  * cannot play here says why, dimmed, and opens its link in its service when it has one (with the
- * external glyph at its end).
+ * external glyph at its end). A song with a [number] (on an album's page) shows it in place of
+ * its artwork.
  */
 @Composable
-fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMore: (() -> Unit)?, onClick: () -> Unit) {
+fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMore: (() -> Unit)?, number: Int? = null, onClick: () -> Unit) {
     val subtitle = when {
         !item.playable && item.unplayableReason != null -> item.unplayableReason
         item.alsoIn.isNotEmpty() -> listOfNotNull(item.subtitle, stringResource(R.string.search_also_in, item.alsoIn.joinToString())).joinToString(" · ")
@@ -298,6 +299,8 @@ fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMo
             title = item.title,
             subtitle = subtitle,
             art = ArtKey.of(item.artwork),
+            showArt = number == null,
+            number = number,
             durationMs = item.durationMs,
             playing = item.track != null && item.track == playing,
             dimmed = !item.playable,

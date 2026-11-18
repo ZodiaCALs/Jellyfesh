@@ -1,6 +1,7 @@
 package org.jellyfesh.logic.sources
 
 import java.net.URI
+import org.jellyfesh.logic.core.ArtworkRef
 import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.SourceItem
 import org.jellyfesh.logic.core.SourcesSnapshot
@@ -41,8 +42,19 @@ sealed interface ItemAction {
     /** Plays the row's track with the other playable tracks of its list, from it (`PlayTracks`). */
     data class Play(val tracks: List<TrackRef>, val start: Int) : ItemAction
 
-    /** Opens an album, artist, playlist or folder in the source's browser ([link]: its Open in {Service}). */
-    data class Browse(val plugin: String, val node: String, val title: String, val link: String?) : ItemAction
+    /**
+     * Opens an album, artist, playlist or folder in the source's browser, with what its row shows
+     * for the page's header ([link]: its Open in {Service}).
+     */
+    data class Browse(
+        val plugin: String,
+        val node: String,
+        val title: String,
+        val link: String?,
+        val kind: ItemKind = ItemKind.Folder,
+        val subtitle: String? = null,
+        val artwork: ArtworkRef? = null,
+    ) : ItemAction
 
     /** Opens the item in its service: it cannot play here but has a link. */
     data class OpenLink(val url: String) : ItemAction
@@ -66,7 +78,7 @@ object SourceItems {
                 ItemAction.Play(tracks, tracks.indexOf(track).coerceAtLeast(0))
             }
             !item.playable && link != null -> ItemAction.OpenLink(link)
-            item.kind != ItemKind.Track -> ItemAction.Browse(item.source, item.id, item.title, link)
+            item.kind != ItemKind.Track -> ItemAction.Browse(item.source, item.id, item.title, link, item.kind, item.subtitle, item.artwork)
             else -> ItemAction.None
         }
     }
