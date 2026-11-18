@@ -145,12 +145,30 @@ fn fetchable(url: &str, checker: &Checker<'_>) -> Result<Url, String> {
         return Err(format!("{url} is not an http(s) URL"));
     }
     if !checker.allows(&parsed) {
+        // Fixed hosts are allowed over https only; many services still hand
+        // out http links to the same pictures and streams.
+        if let Some(upgraded) = https(&parsed)
+            && checker.allows(&upgraded)
+        {
+            return Ok(upgraded);
+        }
         return Err(format!(
             "{} is not on the plugin's allowlist",
             parsed.origin().ascii_serialization()
         ));
     }
     Ok(parsed)
+}
+
+/// The https form of an http URL on the default port.
+fn https(url: &Url) -> Option<Url> {
+    if url.scheme() != "http" || url.port().is_some_and(|p| p != 80) {
+        return None;
+    }
+    let mut upgraded = url.clone();
+    upgraded.set_scheme("https").ok()?;
+    upgraded.set_port(None).ok()?;
+    Some(upgraded)
 }
 
 /// An image reference, or `None` if it may not be fetched.
@@ -1003,6 +1021,34 @@ mod tests {
         assert_eq!(page.comments.len(), MAX_COMMENTS);
         assert_eq!(page.comments[0].text.chars().count(), MAX_COMMENT_CHARS);
         assert_eq!(page.next.as_deref(), Some("2"));
+    }
+
+    #[test]
+    fn http_urls_move_to_https_where_only_that_is_allowed() {
+        let https_only = |url: &Url| url.scheme() == "https" && url.host_str() == Some("img.example.com");
+        let checker = Checker::new("test", &https_only);
+        let picture = |url: &str| ImageRef {
+            url: url.into(),
+            headers: Vec::new(),
+            width: None,
+            height: None,
+        };
+        assert_eq!(
+            image(picture("http://img.example.com/a.jpg?x=1"), &checker).map(|i| i.url),
+            Some("https://img.example.com/a.jpg?x=1".into())
+        );
+        assert_eq!(
+            image(picture("http://img.example.com:8080/a.jpg"), &checker),
+            None
+        );
+        assert_eq!(image(picture("http://elsewhere.example/a.jpg"), &checker), None);
+        let anything = |_: &Url| true;
+        let lenient = Checker::new("test", &anything);
+        assert_eq!(
+            image(picture("http://192.168.1.2/a.jpg"), &lenient).map(|i| i.url),
+            Some("http://192.168.1.2/a.jpg".into()),
+            "allowed as it is (a home server): unchanged"
+        );
     }
 
     #[test]
