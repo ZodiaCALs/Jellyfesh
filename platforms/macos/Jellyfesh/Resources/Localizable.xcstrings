@@ -1667,50 +1667,6 @@
         }
       }
     },
-    "By line": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "行ごと"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逐行同步"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逐行同步"
-          }
-        }
-      }
-    },
-    "By word": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "単語ごと"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逐字同步"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逐字同步"
-          }
-        }
-      }
-    },
     "Cancel": {
       "localizations": {
         "ja": {
@@ -3229,50 +3185,6 @@
         }
       }
     },
-    "Install Plugin": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プラグインをインストール"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安装插件"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安裝外掛"
-          }
-        }
-      }
-    },
-    "Install Plugin…": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プラグインをインストール…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安装插件…"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安裝外掛…"
-          }
-        }
-      }
-    },
     "Install a source plugin from a .jfpkg file.": {
       "localizations": {
         "ja": {
@@ -3291,6 +3203,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "從 .jfpkg 檔案安裝來源外掛。"
+          }
+        }
+      }
+    },
+    "Install from File": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルからインストール"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从文件安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從檔案安裝"
           }
         }
       }
@@ -3643,6 +3577,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "淺色、深色，或與 macOS 相同。"
+          }
+        }
+      }
+    },
+    "Line by line": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行ごと"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐行同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐行同步"
           }
         }
       }
@@ -4241,6 +4197,28 @@
         }
       }
     },
+    "No Folders Yet": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダはまだありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有文件夹"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有資料夾"
+          }
+        }
+      }
+    },
     "No Lyrics": {
       "localizations": {
         "ja": {
@@ -4351,28 +4329,6 @@
         }
       }
     },
-    "No folders yet": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "フォルダはまだありません"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还没有文件夹"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "還沒有資料夾"
-          }
-        }
-      }
-    },
     "No sign-in needed": {
       "localizations": {
         "ja": {
@@ -4413,28 +4369,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "未登入"
-          }
-        }
-      }
-    },
-    "Not timed": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同期なし"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未同步"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未同步"
           }
         }
       }
@@ -4880,28 +4814,6 @@
       }
     },
     "Output Device": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "出力デバイス"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "输出设备"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "輸出裝置"
-          }
-        }
-      }
-    },
-    "Output device": {
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6639,6 +6551,28 @@
         }
       }
     },
+    "Sort Albums": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルバムを並べ替え"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专辑排序"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "專輯排序"
+          }
+        }
+      }
+    },
     "Sort By": {
       "localizations": {
         "ja": {
@@ -6661,29 +6595,7 @@
         }
       }
     },
-    "Sort albums": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アルバムを並べ替え"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "专辑排序"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "專輯排序"
-          }
-        }
-      }
-    },
-    "Sort songs": {
+    "Sort Songs": {
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6811,28 +6723,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "來源可以把伺服器和服務上的音樂帶進 Jellyfesh。"
-          }
-        }
-      }
-    },
-    "Speakers": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スピーカー"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "扬声器"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "喇叭"
           }
         }
       }
@@ -7717,6 +7607,28 @@
         }
       }
     },
+    "Unsynced": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期なし"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未同步"
+          }
+        }
+      }
+    },
     "Up Next": {
       "localizations": {
         "ja": {
@@ -7999,6 +7911,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "聲音從哪裡播放。"
+          }
+        }
+      }
+    },
+    "Word by word": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語ごと"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐字同步"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逐字同步"
           }
         }
       }

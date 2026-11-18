@@ -13,7 +13,7 @@ struct LibrarySettings: View {
         Form {
             Section {
                 if library.roots.isEmpty {
-                    Text("No folders yet")
+                    Text("No Folders Yet")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(library.roots, id: \.self) { root in

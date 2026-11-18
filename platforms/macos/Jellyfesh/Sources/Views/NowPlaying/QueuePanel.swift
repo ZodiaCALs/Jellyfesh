@@ -334,7 +334,7 @@ private struct LocalInfoPanel: View {
         ])
     }
 
-    /// "LRC · By line · en": where the lyrics are and how they are timed; "No Lyrics" without.
+    /// "LRC · Line by line · en": where the lyrics are and how they are timed; "No Lyrics" without.
     private func lyricsText(_ now: NowPlayingInfo) -> String {
         guard let document = lyrics.document(for: now.uid) else { return String(localized: "No Lyrics") }
         return CountText.joined([document.format, timingText(document.timing), document.language])
@@ -347,9 +347,9 @@ private struct LocalInfoPanel: View {
 
     private func timingText(_ timing: LyricsTiming) -> String {
         switch timing {
-        case .unsynced: return String(localized: "Not timed")
-        case .line: return String(localized: "By line")
-        case .word: return String(localized: "By word")
+        case .unsynced: return String(localized: "Unsynced")
+        case .line: return String(localized: "Line by line")
+        case .word: return String(localized: "Word by word")
         }
     }
 }
@@ -387,7 +387,7 @@ struct OutputDeviceMenu: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .accessibilityLabel(Text("Output device"))
+        .accessibilityLabel(Text("Output Device"))
         .accessibilityValue(Text(currentName))
         .help(Text(currentName))
     }
@@ -397,6 +397,6 @@ struct OutputDeviceMenu: View {
            let device = playback.devices.devices.first(where: { $0.id == id }) {
             return device.name
         }
-        return String(localized: "Speakers")
+        return String(localized: "System Default")
     }
 }

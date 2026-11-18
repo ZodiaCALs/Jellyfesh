@@ -45,7 +45,7 @@ enum FilePanels {
     /// A plugin package to install.
     static func choosePlugin(_ done: @escaping (URL) -> Void) {
         let panel = NSOpenPanel()
-        panel.title = String(localized: "Install Plugin")
+        panel.title = String(localized: "Install from File")
         panel.prompt = String(localized: "Install")
         panel.allowedContentTypes = [pluginType]
         panel.allowsMultipleSelection = false

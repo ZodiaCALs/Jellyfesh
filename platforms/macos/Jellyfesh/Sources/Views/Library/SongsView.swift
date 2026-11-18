@@ -69,7 +69,7 @@ struct SongsView: View {
                 } label: {
                     Label("Sort", systemImage: "arrow.up.arrow.down")
                 }
-                .help(Text("Sort songs"))
+                .help(Text("Sort Songs"))
             }
         }
         .task(id: library.revision) {

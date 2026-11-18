@@ -57,7 +57,7 @@ struct AlbumsView: View {
                 } label: {
                     Label("Sort", systemImage: "arrow.up.arrow.down")
                 }
-                .help(Text("Sort albums"))
+                .help(Text("Sort Albums"))
             }
         }
         .task(id: library.revision) {

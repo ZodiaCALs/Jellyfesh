@@ -59,7 +59,7 @@ private struct FileMenuItems: View {
         }
         .disabled(model.startupError != nil)
 
-        Button("Install Plugin…") {
+        Button("Install from File…") {
             FilePanels.choosePlugin { url in
                 model.sources.install(path: url.path)
             }
