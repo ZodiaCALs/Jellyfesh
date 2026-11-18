@@ -11,6 +11,12 @@
 //   limited to 16 MiB and 64 MiB per call. The browser sends the request itself (a synchronous
 //   XMLHttpRequest in the worker): it follows redirects itself, keeps no per-plugin cookie jar,
 //   refuses headers it forbids to pages, resolves names itself, and needs CORS from the server.
+// * http through a relay (./relay.ts, docs/web-relay.md), for sources whose services refuse
+//   browsers once one is set up: the request is wrapped, so every header the plugin set reaches
+//   the service (Cookie, Referer, User-Agent, Origin too); redirects come back to the worker, which
+//   follows them as the native host does (jf_web_sandbox::redirect: each hop checked against the
+//   allowlist, credentials kept to their origin); and the plugin has a cookie jar, kept from the
+//   services' Set-Cookie headers (jf_web_sandbox::CookieJar, as the native jar).
 // * kv: plain values (keys of 1-128 printable ASCII bytes, 1 MiB per plugin) and secrets (names of
 //   a-z 0-9 . _ -), handed to the page to persist; a value containing a password typed for the
 //   login in progress is refused, as natively.
@@ -19,6 +25,8 @@
 //   it answers invalid-input, "not supported in the browser".
 // * clock, log: Date.now and performance.now; log lines rate-limited (bursts of 100, then 20 a
 //   second), cut at 2 KiB, control characters escaped, typed passwords masked.
+
+import { type RelayConfig, RelayError, type RelayErrorCode, unwrap, wrap } from './relay';
 
 export const KV_QUOTA = 1024 * 1024;
 export const KV_MAX_KEY = 128;
@@ -38,6 +46,18 @@ export interface SandboxRules {
   access(url: string): string | undefined;
   /** Undefined when a request token is free at `nowMs`, else the wait in ms. */
   take_token(nowMs: number): number | undefined;
+  /**
+   * The next hop of a redirect (jf_web_sandbox::redirect): `{url, method, drop_body,
+   * cross_origin}` as JSON, or `null`; throws `{"InvalidRequest":…}` for a bad Location.
+   */
+  redirect(method: string, url: string, status: number, location: string | undefined): string;
+}
+
+/** A plugin's cookies, for its requests through a relay (jf_web_sandbox.CookieJar). */
+export interface CookieStore {
+  header(url: string, nowMs: number): string | undefined;
+  /** Keeps the Set-Cookie headers (a JSON list) of an answer from `url`; true when the jar changed. */
+  store(url: string, setCookies: string, nowMs: number): boolean;
 }
 
 /** The crypto import's primitives (jf_web_sandbox's functions). */
@@ -105,8 +125,17 @@ export interface HostDeps {
   /** A secret changed (null: deleted); the page encrypts and persists it. */
   onSecret(name: string, value: string | null): void;
   log(level: string, message: string): void;
-  /** A request found no server (origin and path only: queries can hold credentials). */
-  onNetworkError(url: string, kind: 'mixed-content' | 'network'): void;
+  /**
+   * A request found no server (origin and path only: queries can hold credentials), or the relay
+   * refused it (`relay`, with the relay's reason).
+   */
+  onNetworkError(url: string, kind: 'mixed-content' | 'network' | 'relay', reason?: RelayErrorCode): void;
+  /** The relay this plugin's requests go through now, or null to send them directly. */
+  relay?(): RelayConfig | null;
+  /** The plugin's cookie jar, used for requests through the relay. */
+  cookies?: CookieStore | null;
+  /** The jar changed: the worker hands it to the page to keep. */
+  onCookies?(): void;
   /** Monotonic ms (performance.now()). */
   now(): number;
   /** Wall-clock ms since the epoch. */
@@ -249,7 +278,122 @@ function isLoopback(url: URL): boolean {
 /** The import object for jco's `instantiate`. */
 export function createImports(deps: HostDeps): Record<string, Record<string, unknown>> {
   const limiter = new LogLimiter();
-  const limits = { maxResponse: 16 * 1024 * 1024, maxPerCall: 64 * 1024 * 1024, maxTimeout: 30_000 };
+  const limits = { maxResponse: 16 * 1024 * 1024, maxPerCall: 64 * 1024 * 1024, maxTimeout: 30_000, maxRedirects: 5 };
+
+  type PluginRequest = {
+    method: string;
+    url: string;
+    headers: { name: string; value: string }[];
+    body: Uint8Array;
+    timeoutMs?: number;
+    followRedirects: boolean;
+  };
+
+  /** What the relay said, as the import's error. */
+  function relayFailure(error: RelayError): never {
+    deps.onNetworkError(deps.relay?.()?.address ?? '', 'relay', error.code);
+    switch (error.code) {
+      case 'host':
+        fail({ tag: 'not-allowed', val: `the relay does not forward there: ${error.message}` });
+      case 'address':
+        fail({ tag: 'blocked-address', val: error.message });
+      case 'dns':
+        fail({ tag: 'dns', val: error.message });
+      case 'timeout':
+        fail({ tag: 'timeout' });
+      case 'request':
+        fail({ tag: 'invalid-request', val: error.message });
+      case 'token':
+        fail({ tag: 'connection', val: 'the relay refused the token (Settings › Sources › Relay)' });
+      case 'origin':
+        fail({ tag: 'connection', val: 'the relay does not accept this page (start it with --origin)' });
+      default:
+        fail({ tag: 'connection', val: error.message || 'the relay could not reach the service' });
+    }
+  }
+
+  /**
+   * The request through the relay: every header the plugin set, the jar's cookies first (as the
+   * native host sends them), and redirects followed here, each hop checked like the first.
+   */
+  function relayed(req: PluginRequest, first: string, relay: RelayConfig) {
+    const call = deps.call;
+    let method = req.method.toUpperCase();
+    let target = first;
+    let body: Uint8Array | null = req.body.length > 0 ? req.body : null;
+    let headers: [string, string][] = req.headers.map((h) => [h.name, h.value]);
+    for (let hop = 0; ; hop++) {
+      for (;;) {
+        const wait = deps.rules.take_token(deps.now());
+        if (wait === undefined) break;
+        if (deps.now() + wait > call.deadline) fail({ tag: 'rate-limited' });
+        deps.sleepSync(wait);
+      }
+      const left = call.deadline - deps.now();
+      if (left <= 0) fail({ tag: 'timeout' });
+      const timeoutMs = Math.max(1, Math.min(req.timeoutMs ?? limits.maxTimeout, limits.maxTimeout, left));
+      let sent = headers;
+      const jar = deps.cookies?.header(target, deps.wallNow());
+      if (jar) {
+        const own = headers.find(([name]) => name.toLowerCase() === 'cookie');
+        sent = [...headers.filter(([name]) => name.toLowerCase() !== 'cookie'), ['cookie', own ? `${jar}; ${own[1]}` : jar]];
+      }
+      const wrapped = wrap(relay, method, target, sent);
+      let response: TransportResponse;
+      try {
+        response = deps.http.send({ method: wrapped.method, url: wrapped.url, headers: wrapped.headers, body, timeoutMs });
+      } catch (error) {
+        if (error instanceof TransportError && error.kind === 'timeout') fail({ tag: 'timeout' });
+        relayFailure(new RelayError('unreachable', `cannot reach the relay at ${relay.address}`));
+      }
+      const lower = new Map(response.headers.map(([name, value]) => [name.toLowerCase(), value]));
+      const answer = unwrap(response.status, (name) => lower.get(name) ?? null, response.body);
+      if (answer instanceof RelayError) relayFailure(answer);
+      const setCookies = answer.headers.filter(([name]) => name === 'set-cookie').map(([, value]) => value);
+      if (setCookies.length > 0 && deps.cookies?.store(target, JSON.stringify(setCookies), deps.wallNow())) deps.onCookies?.();
+      const location = answer.headers.find(([name]) => name === 'location')?.[1];
+      if (req.followRedirects && location !== undefined && [301, 302, 303, 307, 308].includes(answer.status)) {
+        if (hop >= limits.maxRedirects) fail({ tag: 'too-many-redirects' });
+        let next: { url: string; method: string; drop_body: boolean; cross_origin: boolean } | null;
+        try {
+          next = JSON.parse(deps.rules.redirect(method, target, answer.status, location));
+        } catch (error) {
+          fail(variant((error as Error).message));
+        }
+        if (next) {
+          if (next.drop_body) {
+            body = null;
+            headers = headers.filter(([name]) => !['content-type', 'content-encoding'].includes(name.toLowerCase()));
+          }
+          // Credentials the plugin set for one origin never travel to another.
+          if (next.cross_origin) headers = headers.filter(([name]) => !['authorization', 'cookie'].includes(name.toLowerCase()));
+          method = next.method;
+          try {
+            target = deps.rules.check_request(
+              JSON.stringify({
+                method,
+                url: next.url,
+                headers: headers.map(([name, value]) => ({ name, value })),
+                body_len: body?.length ?? 0,
+              }),
+            );
+          } catch (error) {
+            fail(variant((error as Error).message));
+          }
+          continue;
+        }
+      }
+      const room = Math.min(limits.maxResponse, limits.maxPerCall - call.received);
+      if (response.body.length > room) fail({ tag: 'too-large' });
+      call.received += response.body.length;
+      return {
+        status: answer.status,
+        headers: answer.headers.slice(0, 256).map(([name, value]) => ({ name, value })),
+        body: response.body,
+        url: target,
+      };
+    }
+  }
 
   const http = {
     send(req: {
@@ -273,6 +417,8 @@ export function createImports(deps: HostDeps): Record<string, Record<string, unk
       } catch (error) {
         fail(variant((error as Error).message));
       }
+      const relay = deps.relay?.() ?? null;
+      if (relay) return relayed(req, url, relay);
       const parsed = new URL(url);
       if (deps.pageIsHttps && parsed.protocol === 'http:' && !isLoopback(parsed)) {
         deps.onNetworkError(`${parsed.origin}${parsed.pathname}`, 'mixed-content');

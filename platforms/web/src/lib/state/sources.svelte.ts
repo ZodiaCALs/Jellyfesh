@@ -1,5 +1,6 @@
 // The sources (bundled plugins and those installed from files) as the views see them, sign-in flows, and errors in words a person
-// can act on, including the browser-only ones: CORS and mixed content (docs/web.md).
+// can act on, including the browser-only ones: CORS and mixed content (docs/web.md), services that refuse browsers and the relay
+// that reaches them (docs/web-relay.md, ADR-0022 §7).
 
 import type { Jf } from '../core/wasm';
 import type { AuthKind, AuthStep, Capability, FieldValue, FlowAction, SignatureStatus } from '../core/types';
@@ -7,6 +8,7 @@ import { t } from '../i18n/index.svelte';
 import { CallError, LOGIN_MS, type Plugin, type PluginHost } from '../plugins/host';
 import { fieldsToJco, flowStepFromJco, flowToJco } from '../plugins/convert';
 import { diagnose, isMixedContent } from '../plugins/diagnose';
+import { pingRelay, type RelayConfig, type RelayErrorCode } from '../plugins/relay';
 
 export interface SourceView {
   id: string;
@@ -28,6 +30,10 @@ export interface SourceView {
   author: string | null;
   /** Installed from a file rather than bundled with the app. */
   fromFile: boolean;
+  /** The service, when it does not let browsers connect to it directly. */
+  refusing: string | null;
+  /** Its requests go through the relay. */
+  relayed: boolean;
 }
 
 /** The server address in a plugin's settings, if it has one. */
@@ -60,9 +66,74 @@ export async function reachability(server: string): Promise<string | null> {
   }
 }
 
+/** "{Service} doesn't let browsers connect to it directly …" (docs/ui.md), before signing in. */
+export function refusal(service: string): string {
+  return t(
+    '{service} doesn’t let browsers connect to it directly. Use the Jellyfesh app on your computer or phone, or set up a relay in Settings › Sources › Relay.',
+    { service },
+  );
+}
+
+/** The service of a source that refuses browsers, by the core's name for it or the source's own. */
+export function serviceOf(plugin: Plugin): string {
+  return plugin.refusingService ?? plugin.name;
+}
+
+/** Why the relay did not pass a request on, in words a person can act on. */
+export function relayProblem(code: RelayErrorCode, address: string | null, detail = ''): string {
+  switch (code) {
+    case 'origin':
+      return t('The relay doesn’t accept this page. Start it with --origin {origin}.', { origin: location.origin });
+    case 'token':
+      return t('The relay refused the token. Enter the token the relay was started with.');
+    case 'unreachable':
+      return t('Could not reach the relay at {address}. Check that it is running.', { address: address ?? '' });
+    case 'host':
+      return t('The relay doesn’t forward to this service. Start it with --allow for it, or update it.');
+    case 'timeout':
+      return t('The service did not answer the relay in time.');
+    default:
+      return t('The relay could not reach the service: {reason}', { reason: detail || code });
+  }
+}
+
+/**
+ * What a request that found no server says about the source, or null when it says nothing: the
+ * relay's refusal; mixed content or CORS for the person's own server; and for a service's fixed
+ * host that answers without letting this page read it, that the service refuses browsers (kept,
+ * so its requests go through the relay from now on, when there is one).
+ */
+export async function networkProblem(plugin: Plugin): Promise<string | null> {
+  const failure = plugin.networkError;
+  if (!failure) return null;
+  if (failure.kind === 'relay') return relayProblem(failure.reason ?? 'unreachable', plugin.relay?.address ?? null);
+  const server = serverOf(plugin);
+  if (failure.kind === 'mixed-content' || (server && isMixedContent(new URL(server)))) {
+    return reachability(server ?? failure.url);
+  }
+  let origin: string | null = null;
+  try {
+    origin = new URL(failure.url).origin;
+  } catch {
+    return null;
+  }
+  if (server && new URL(server).origin === origin) return reachability(server);
+  if ((await diagnose(failure.url)) !== 'cors') return null;
+  await plugin.learnRefusesBrowsers();
+  return plugin.relay
+    ? t('{service} doesn’t let browsers connect to it directly, so Jellyfesh Web now goes through your relay for it. Try again.', {
+        service: serviceOf(plugin),
+      })
+    : refusal(serviceOf(plugin));
+}
+
 /** Why a call failed, for people: browser-level network problems are diagnosed. */
 export async function explain(error: unknown, plugin?: Plugin): Promise<string> {
   if (error instanceof CallError) {
+    if (plugin?.networkError?.kind === 'relay' || (plugin?.networkError && !serverOf(plugin))) {
+      const problem = await networkProblem(plugin);
+      if (problem) return problem;
+    }
     const network = error.plugin !== null && typeof error.plugin === 'object' && 'Network' in error.plugin;
     if (plugin && (network || plugin.networkError)) {
       const server = serverOf(plugin);
@@ -119,6 +190,10 @@ export class Sources {
   revision = $state(0);
   /** Community plugins may run (after the disclosure). */
   allowCommunity = $state(false);
+  /** The relay set up in Settings › Sources › Relay (its address; the token stays with the host). */
+  relay = $state.raw<{ address: string } | null>(null);
+  /** How the last check of the relay went: checking, connected, or why not. */
+  relayStatus = $state.raw<{ state: 'checking' } | { state: 'connected' } | { state: 'problem'; message: string } | null>(null);
 
   constructor(
     readonly jf: Jf,
@@ -153,8 +228,11 @@ export class Sources {
         ready: p.info !== null,
         author: p.info?.author ?? p.entry.installed?.info.author ?? null,
         fromFile: p.entry.installed !== null,
+        refusing: p.needsRelay ? serviceOf(p) : null,
+        relayed: p.relay !== null,
       };
     });
+    this.relay = this.host.relay ? { address: this.host.relay.address } : null;
     this.presetDefs ??= JSON.parse(this.jf.source_presets()) as PresetDef[];
     this.presets = this.presetDefs.flatMap((def) => {
       const plugin = this.host.plugins.find((p) => p.id === def.plugin && p.official);
@@ -193,6 +271,56 @@ export class Sources {
     await this.host.uninstall(plugin);
   }
 
+  /**
+   * Settings › Sources › Relay: keeps the relay (an empty address removes it) and checks that it
+   * answers this page with this token. Returns why the address cannot be used, or null; how the
+   * check went is in `relayStatus`.
+   */
+  async saveRelay(address: string, token: string): Promise<string | null> {
+    if (address.trim() === '') {
+      await this.host.setRelay(null);
+      this.relayStatus = null;
+      return null;
+    }
+    let normal: string;
+    try {
+      normal = this.jf.relay_address(address, location.protocol === 'https:');
+    } catch (error) {
+      switch ((error as Error).message) {
+        case 'credentials':
+          return t('Leave the user name and password out of the address; the relay uses its token.');
+        case 'query':
+          return t('Enter the relay’s address without ? or #.');
+        case 'mixed-content':
+          return t('This page is on https, so the browser only lets it reach a relay on https, or one on this computer (http://127.0.0.1).');
+        default:
+          return t('Enter the relay’s full address, starting with http:// or https://.');
+      }
+    }
+    // An empty token keeps the saved one (the field never shows it).
+    const kept = token.trim() || this.host.relay?.token || '';
+    if (kept === '') return t('Enter the token the relay was started with.');
+    const relay: RelayConfig = { address: normal, token: kept };
+    await this.host.setRelay(relay);
+    await this.checkRelay();
+    return null;
+  }
+
+  /** Checks the relay that is set up (Settings shows how it went). */
+  async checkRelay() {
+    const relay = this.host.relay;
+    if (!relay) {
+      this.relayStatus = null;
+      return;
+    }
+    this.relayStatus = { state: 'checking' };
+    const problem = await pingRelay(relay);
+    if (this.host.relay !== relay) return;
+    this.relayStatus = problem
+      ? { state: 'problem', message: relayProblem(problem.code, relay.address, problem.message) }
+      : { state: 'connected' };
+  }
+
   /** Reads every package not read yet (for versions and authors), without running the plugins. */
   async verifyAll() {
     await Promise.all(this.host.plugins.map((p) => p.verify().catch(() => undefined)));
@@ -200,6 +328,8 @@ export class Sources {
 }
 
 export type SignInStage =
+  /** The service does not let browsers connect, and no relay is set up: say so before trying. */
+  | { stage: 'refused'; service: string }
   | { stage: 'settings'; error: string | null; busy: boolean }
   | { stage: 'choose' }
   | { stage: 'step'; step: AuthStep; busy: boolean; error: string | null }
@@ -220,7 +350,8 @@ export class SignInFlow {
     readonly plugin: Plugin,
     private readonly sources: Sources,
   ) {
-    if (serverOf(plugin)) this.view = { stage: 'choose' };
+    if (plugin.needsRelay && !plugin.relay) this.view = { stage: 'refused', service: serviceOf(plugin) };
+    else if (serverOf(plugin)) this.view = { stage: 'choose' };
   }
 
   get kinds(): AuthKind[] {
@@ -256,6 +387,11 @@ export class SignInFlow {
     this.stop();
     this.over = false;
     this.kind = kind;
+    if (this.plugin.needsRelay && !this.plugin.relay) {
+      this.view = { stage: 'refused', service: serviceOf(this.plugin) };
+      return;
+    }
+    this.plugin.networkError = null;
     if (!this.plugin.info) {
       this.view = { stage: 'step', step: { Waiting: { message: '' } }, busy: true, error: null };
       try {
@@ -336,7 +472,16 @@ export class SignInFlow {
             this.sources.refresh();
             this.view = { stage: 'done', account: step.Done.account };
           } else if ('Failed' in step) {
-            this.view = { stage: 'failed', message: step.Failed.message };
+            // A plugin that could not reach its service says so in its own words; the page
+            // knows why a browser could not (CORS, the relay) and says that instead.
+            const problem = await networkProblem(this.plugin);
+            if (this.over || machine !== this.machine) return;
+            this.view =
+              problem === null
+                ? { stage: 'failed', message: step.Failed.message }
+                : this.plugin.needsRelay && !this.plugin.relay
+                  ? { stage: 'refused', service: serviceOf(this.plugin) }
+                  : { stage: 'failed', message: problem };
           } else {
             this.view = { stage: 'failed', message: t('The sign-in failed.') };
           }

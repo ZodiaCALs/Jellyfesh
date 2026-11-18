@@ -603,7 +603,7 @@ export class Player {
           continue;
         }
       }
-      const prepared = await prepareStream(info);
+      const prepared = await prepareStream(info, source.plugin.relay);
       const format = [info.codec?.toUpperCase(), info.bitrate_kbps ? `${info.bitrate_kbps} kbps` : null]
         .filter(Boolean)
         .join(' · ');

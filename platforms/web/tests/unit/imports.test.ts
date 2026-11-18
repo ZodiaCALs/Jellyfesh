@@ -55,6 +55,7 @@ function fake(options: { https?: boolean; maxRps?: number; protect?: string[]; k
       check_request: (head) => rules.check_request(head),
       access: (url) => rules.access(url),
       take_token: (now) => rules.take_token(now),
+      redirect: (method, url, status, location) => sandbox.redirect(method, url, status, location),
     },
     crypto: sandbox,
     http: {

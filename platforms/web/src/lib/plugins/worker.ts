@@ -8,6 +8,7 @@ import initSandbox, * as sandbox from '../../../generated/wasm/jf_web_sandbox.js
 import sandboxUrl from '../../../generated/wasm/jf_web_sandbox_bg.wasm?url';
 import { type CallContext, createImports, type HttpTransport, TransportError, type TransportResponse } from './imports';
 import type { FromWorker, ToWorker } from './protocol';
+import type { RelayConfig } from './relay';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const scope = self as unknown as {
@@ -18,6 +19,9 @@ const scope = self as unknown as {
 
 let instance: any = null;
 let rules: sandbox.Sandbox | null = null;
+/** The relay the plugin's requests go through, if any, and its cookies for them. */
+let relay: RelayConfig | null = null;
+let jar: sandbox.CookieJar | null = null;
 const memories: WebAssembly.Memory[] = [];
 const call: CallContext = { deadline: Number.POSITIVE_INFINITY, protect: [], keystore: false, received: 0 };
 const kv = new Map<string, Uint8Array>();
@@ -93,11 +97,22 @@ async function init(message: Extract<ToWorker, { type: 'init' }>) {
   for (const [key, value] of message.kv) kv.set(key, value);
   for (const [name, value] of message.secrets) secrets.set(name, value);
   rules = new sandbox.Sandbox(JSON.stringify(info.allow), message.settings, info.max_rps);
+  relay = message.relay;
+  jar = new sandbox.CookieJar(message.cookies ?? undefined);
   const imports = createImports({
     rules: {
       check_request: (head) => rules!.check_request(head),
       access: (url) => rules!.access(url),
       take_token: (now) => rules!.take_token(now),
+      redirect: (method, url, status, location) => sandbox.redirect(method, url, status, location),
+    },
+    relay: () => relay,
+    cookies: {
+      header: (url, now) => jar?.header(url, now),
+      store: (url, setCookies, now) => jar?.store(url, setCookies, now) ?? false,
+    },
+    onCookies: () => {
+      if (jar) post({ type: 'cookies', all: jar.to_json(), persistent: jar.persistent_json(Date.now()) });
     },
     crypto: sandbox,
     http: transport,
@@ -107,7 +122,7 @@ async function init(message: Extract<ToWorker, { type: 'init' }>) {
     onKv: (key, value) => post({ type: 'kv', key, value }),
     onSecret: (name, value) => post({ type: 'secret', name, value }),
     log: (level, text) => post({ type: 'log', level, message: text }),
-    onNetworkError: (url, kind) => post({ type: 'network-error', url, kind }),
+    onNetworkError: (url, kind, reason) => post({ type: 'network-error', url, kind, reason }),
     now: () => performance.now(),
     wallNow: () => Date.now(),
     random,
@@ -184,6 +199,9 @@ scope.onmessage = (event) => {
       } else {
         run(message);
       }
+      break;
+    case 'relay':
+      relay = message.relay;
       break;
     case 'settings':
       if (instance && rules) {

@@ -7,13 +7,22 @@
 // a cache. Without the service worker (the first visit, before it takes over, or a browser that
 // blocks it) the page fetches the whole file first. Streams without headers load directly, with
 // CORS, since Web Audio needs the samples.
+//
+// A stream of a source that goes through the relay (its service refuses browsers; ../plugins/
+// relay.ts) is fetched through the relay the same two ways: the service worker unwraps the
+// relay's answer (the service's status and headers, Content-Range included), and without it the
+// page downloads the song through the relay first.
 
 import type { StreamInfo } from '../core/types';
+import { headerOf, type RelayConfig, relayFetch, wrap } from '../plugins/relay';
 import type { MediaSource } from './engine';
 
 interface Target {
   url: string;
+  method?: 'POST';
   headers: [string, string][];
+  /** The answer is the relay's: the service worker unwraps it. */
+  relayed?: boolean;
 }
 
 const targets = new Map<string, Target>();
@@ -40,23 +49,40 @@ export interface Prepared {
   release(): void;
 }
 
-/** The media for `info`. */
-export async function prepareStream(info: StreamInfo): Promise<Prepared> {
-  if (info.headers.length === 0) {
+/** Registers `target` with the service worker: the element loads `__stream/<key>`. */
+function throughWorker(target: Target): Prepared {
+  listen();
+  const key = randomKey();
+  targets.set(key, target);
+  return {
+    media: { url: new URL(`__stream/${key}`, document.baseURI).href, crossOrigin: false },
+    release: () => targets.delete(key),
+  };
+}
+
+function fromMemory(blob: Blob): Prepared {
+  const url = URL.createObjectURL(blob);
+  return { media: { url, crossOrigin: false }, release: () => URL.revokeObjectURL(url) };
+}
+
+/** The media for `info`; `relay` when its source goes through one. */
+export async function prepareStream(info: StreamInfo, relay: RelayConfig | null = null): Promise<Prepared> {
+  const headers = info.headers.map((h) => [h.name, h.value] as [string, string]);
+  const worker = typeof navigator !== 'undefined' && navigator.serviceWorker?.controller;
+  if (relay) {
+    if (worker) {
+      const wrapped = wrap(relay, 'GET', info.url, headers);
+      return throughWorker({ url: wrapped.url, method: 'POST', headers: wrapped.headers, relayed: true });
+    }
+    const { answer, response } = await relayFetch(relay, info.url, headers);
+    if (answer.status !== 200) throw new Error(`the server answered ${answer.status}`);
+    return fromMemory(new Blob([await response.arrayBuffer()], { type: headerOf(answer, 'content-type') ?? '' }));
+  }
+  if (headers.length === 0) {
     return { media: { url: info.url, crossOrigin: true }, release() {} };
   }
-  const headers = info.headers.map((h) => [h.name, h.value] as [string, string]);
-  if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) {
-    listen();
-    const key = randomKey();
-    targets.set(key, { url: info.url, headers });
-    return {
-      media: { url: new URL(`__stream/${key}`, document.baseURI).href, crossOrigin: false },
-      release: () => targets.delete(key),
-    };
-  }
+  if (worker) return throughWorker({ url: info.url, headers });
   const response = await fetch(info.url, { headers, mode: 'cors', credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error(`the server answered ${response.status}`);
-  const url = URL.createObjectURL(await response.blob());
-  return { media: { url, crossOrigin: false }, release: () => URL.revokeObjectURL(url) };
+  return fromMemory(await response.blob());
 }

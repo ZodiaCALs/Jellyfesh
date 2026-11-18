@@ -25,6 +25,11 @@ export interface PluginState {
   settings: Record<string, unknown> | null;
   /** The community disclosure was accepted for this plugin. */
   acknowledged: boolean;
+  /**
+   * A request to its service failed the way a service that refuses browsers fails (it answers,
+   * but without CORS): its requests go through the relay when one is set up.
+   */
+  refusesBrowsers?: boolean;
 }
 
 /** A plugin installed from a file (Sources → Install from File…). */

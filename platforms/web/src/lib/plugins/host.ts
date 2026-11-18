@@ -13,7 +13,12 @@
 //   from the allowlist;
 // * packages not signed with the Jellyfesh release key are Community plugins: off until community
 //   plugins are allowed and the person accepts the disclosure (ADR-0012);
-// * sign-out deletes the plugin's secrets and account whatever the plugin answers (ADR-0015).
+// * sign-out deletes the plugin's secrets, cookies and account whatever the plugin answers
+//   (ADR-0015);
+// * a source whose service refuses browsers (the core's jf_web::refusing_service, or learned from a
+//   failed request) sends its requests through the relay the person set up in Settings › Sources ›
+//   Relay, when there is one (./relay.ts, docs/web-relay.md); its cookies from those requests are
+//   kept with its secrets, encrypted.
 
 import type { Jf } from '../core/wasm';
 import type {
@@ -43,6 +48,7 @@ import {
 } from './convert';
 import { preparePackage } from './install';
 import type { CallFailure, FromWorker, ToWorker } from './protocol';
+import type { RelayConfig, RelayErrorCode } from './relay';
 import { defaultState, type InstalledPlugin, type PluginState, type Store } from './storage';
 
 /** Wall-clock budgets (ADR-0004). */
@@ -54,6 +60,10 @@ const START_MS = 30_000;
 const GRACE_MS = 1_000;
 const MEMORY_LIMIT = 64 * 1024 * 1024;
 const STRIKES = 3;
+/** The secret that keeps a plugin's cookies (no plugin secret name starts with `~`). */
+const COOKIES = '~cookies';
+/** Where the relay's token is kept, as a secret of this reserved id. */
+const RELAY_STORE = '~relay';
 
 /** One bundled plugin as plugins/index.json lists it. */
 export interface BundledPlugin {
@@ -144,8 +154,8 @@ export class Plugin {
   state: PluginState;
   /** Why the worker could not start, if it could not. */
   loadError: string | null = null;
-  /** The last request that found no server: origin and path, and why. */
-  networkError: { url: string; kind: 'mixed-content' | 'network' } | null = null;
+  /** The last request that found no server (origin and path), or that the relay refused, and why. */
+  networkError: { url: string; kind: 'mixed-content' | 'network' | 'relay'; reason?: RelayErrorCode } | null = null;
   private worker: Worker | null = null;
   /** The worker runs the plugin (not only verified its package). */
   private running = false;
@@ -155,6 +165,8 @@ export class Plugin {
   private queue: Promise<unknown> = Promise.resolve();
   private kv: [string, Uint8Array][] = [];
   private secrets: [string, string][] = [];
+  /** The cookie jar of this visit (jf_web_sandbox.CookieJar JSON), for requests through the relay. */
+  private cookies: string | null = null;
   private source: InstanceType<Jf['Source']> | null = null;
   /** Capabilities the plugin reported but its manifest does not declare (an install refuses it). */
   undeclared: string[] = [];
@@ -168,7 +180,41 @@ export class Plugin {
   ) {
     this.state = loaded.state ?? defaultState(entry.official);
     this.kv = loaded.kv;
-    this.secrets = loaded.secrets;
+    this.secrets = loaded.secrets.filter(([name]) => name !== COOKIES);
+    this.cookies = loaded.secrets.find(([name]) => name === COOKIES)?.[1] ?? null;
+  }
+
+  /**
+   * The service this plugin reaches if it does not let browsers connect to it directly (the
+   * core's list, by id and allowlist), else null.
+   */
+  get refusingService(): string | null {
+    return this.host.jf.refusing_service(this.id, JSON.stringify(this.info?.allow ?? [])) ?? null;
+  }
+
+  /** Its requests need a relay: the core knows its service refuses browsers, or a probe found so. */
+  get needsRelay(): boolean {
+    return this.refusingService !== null || this.state.refusesBrowsers === true;
+  }
+
+  /** The relay its requests go through now, or null (none needed, or none set up). */
+  get relay(): RelayConfig | null {
+    return this.needsRelay ? this.host.relay : null;
+  }
+
+  /** A probe found that the service refuses browsers: remember it, and use the relay from now on. */
+  async learnRefusesBrowsers() {
+    if (this.state.refusesBrowsers) return;
+    this.state.refusesBrowsers = true;
+    await this.save();
+    this.relayChanged();
+    this.host.changed();
+  }
+
+  /** Tells a running worker which relay to use now. */
+  relayChanged() {
+    const message: ToWorker = { type: 'relay', relay: this.relay };
+    this.worker?.postMessage(message);
   }
 
   get id(): string {
@@ -273,6 +319,8 @@ export class Plugin {
         secrets: this.secrets,
         startMs: START_MS,
         instantiate,
+        relay: this.relay,
+        cookies: this.cookies,
       };
       worker.postMessage(init);
     }).finally(() => {
@@ -340,8 +388,14 @@ export class Plugin {
         this.host.log(this.id, message.level, message.message);
         break;
       case 'network-error':
-        this.networkError = { url: message.url, kind: message.kind };
+        this.networkError = { url: message.url, kind: message.kind, reason: message.reason };
         break;
+      case 'cookies': {
+        this.cookies = message.all;
+        const lasting = (JSON.parse(message.persistent) as { cookies?: unknown[] }).cookies?.length ?? 0;
+        void this.host.store.setSecret(this.id, COOKIES, lasting > 0 ? message.persistent : null);
+        break;
+      }
     }
   }
 
@@ -390,7 +444,7 @@ export class Plugin {
 
   /** What an update keeps: the stored state, kv values and secrets. */
   get kept(): { state: PluginState; kv: [string, Uint8Array][]; secrets: [string, string][] } {
-    return { state: this.state, kv: this.kv, secrets: this.secrets };
+    return { state: this.state, kv: this.kv, secrets: this.cookies ? [...this.secrets, [COOKIES, this.cookies]] : this.secrets };
   }
 
   /** Stops the plugin for good (uninstalled or replaced) and frees its files' URLs. */
@@ -512,6 +566,7 @@ export class Plugin {
       // The credentials go either way.
     }
     this.secrets = [];
+    this.cookies = null;
     await this.host.store.forgetSecrets(this.id);
     this.state.account = null;
     await this.save();
@@ -610,6 +665,8 @@ function capabilityOf(method: string): string | null {
 export class PluginHost {
   plugins: Plugin[] = [];
   allowCommunity = false;
+  /** The relay the person set up in Settings › Sources › Relay, or null. */
+  relay: RelayConfig | null = null;
   private remembered = new Set<string>();
   private listeners = new Set<() => void>();
   /** The ids the app bundles. */
@@ -630,6 +687,9 @@ export class PluginHost {
   async load(): Promise<void> {
     this.allowCommunity = (await this.store.getGlobal<boolean>('allowCommunity')) ?? false;
     this.declined = new Set((await this.store.getGlobal<string[]>('declined')) ?? []);
+    const relay = await this.store.getGlobal<{ address: string }>('relay');
+    const token = relay ? (await this.store.load(RELAY_STORE)).secrets.find(([name]) => name === 'token')?.[1] : undefined;
+    this.relay = relay && token ? { address: relay.address, token } : null;
     let list: BundledPlugin[] = [];
     try {
       const response = await fetch(new URL('plugins/index.json', document.baseURI), { cache: 'no-cache' });
@@ -750,6 +810,18 @@ export class PluginHost {
   /** `plugin` has stored state: its defaults no longer apply. */
   remember(plugin: string) {
     this.remembered.add(plugin);
+  }
+
+  /**
+   * Keeps the relay (its address normalised by the core; null removes it), the token with the
+   * secrets, and has every plugin that needs it use it from its next request on.
+   */
+  async setRelay(relay: RelayConfig | null) {
+    this.relay = relay;
+    await this.store.setGlobal('relay', relay ? { address: relay.address } : null);
+    await this.store.setSecret(RELAY_STORE, 'token', relay ? relay.token : null);
+    for (const plugin of this.plugins) plugin.relayChanged();
+    this.changed();
   }
 
   async setAllowCommunity(allow: boolean) {

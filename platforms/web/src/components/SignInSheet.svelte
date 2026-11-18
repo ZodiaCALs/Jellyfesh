@@ -7,7 +7,7 @@
   import type { AuthKind, AuthStep, FieldSpec } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
   import type { Plugin } from '../lib/plugins/host';
-  import { explain, type PresetView, SignInFlow } from '../lib/state/sources.svelte';
+  import { explain, type PresetView, refusal, SignInFlow } from '../lib/state/sources.svelte';
   import Icon from './Icon.svelte';
   import SettingsForm from './SettingsForm.svelte';
   import Sheet from './Sheet.svelte';
@@ -88,7 +88,12 @@
     <p class="muted">{t('Loading…')}</p>
   {:else}
     {@const view = flow.view}
-    {#if view.stage === 'settings'}
+    {#if view.stage === 'refused'}
+      <div class="step">
+        <p class="refused" role="alert"><Icon name="alert" size={20} /><span>{refusal(view.service)}</span></p>
+        <button class="primary" onclick={onclose}>{t('Close')}</button>
+      </div>
+    {:else if view.stage === 'settings'}
       <SettingsForm
         schema={plugin.info?.settings_schema ?? {}}
         values={plugin.state.settings ?? {}}
@@ -281,6 +286,22 @@
     background: var(--jf-fill);
     color: var(--jf-danger);
     line-height: 1.45;
+  }
+  .refused {
+    display: flex;
+    gap: var(--jf-space-s3);
+    align-items: flex-start;
+    margin: 0;
+    padding: var(--jf-space-s4);
+    border-radius: var(--jf-radius-r-lg);
+    background: var(--jf-fill);
+    color: var(--jf-ink-90);
+    line-height: 1.5;
+  }
+  .refused :global(svg) {
+    flex: none;
+    margin-top: 2px;
+    color: var(--jf-warning);
   }
   .done {
     display: flex;

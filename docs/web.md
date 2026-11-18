@@ -76,6 +76,15 @@ secret).
   stored), an API key (Subsonic servers that support them), or Jellyfin's
   Quick Connect (a code you approve in another Jellyfin app). Sign Out
   deletes the plugin's tokens whatever the server answers.
+* **Services that refuse browsers**: some services cannot be reached from a
+  web page at all (no CORS headers, and they need headers a page may not
+  set), such as those of the unofficial QQ Music and NetEase Cloud Music
+  plugins. Before you sign in to one, Jellyfesh Web says so: "{Service}
+  doesn't let browsers connect to it directly. Use the Jellyfesh app on your
+  computer or phone, or set up a relay in Settings › Sources › Relay." With a
+  relay you run yourself ([web-relay.md](web-relay.md); Settings › Sources ›
+  Relay: Relay Address and Relay Token, checked when saved), that source's
+  requests and streams go through it. Jellyfesh doesn't run one for you.
 * **Play files**: drop audio files anywhere on the page, or use Open Files….
   A lyrics file with the same name (`.ttml`, `.lrc`, `.vtt`) dropped with
   them is used, else lyrics in the tags. They play for this visit only and
@@ -331,6 +340,7 @@ URL in it is relative. Notes:
 | ReplayGain | From tags, any source | From the tags of library songs and dropped files; server streams carry no gain values through the plugins, so they play at their own level |
 | Plugins | Installable `.jfpkg` files, wasmtime sandbox | The bundled plugins and `.jfpkg` files installed in the browser, in Web Workers (below) |
 | Sign-in | Every kind the plugin offers | Not "Sign In in Browser" (OAuth needs a loopback redirect a page cannot catch) or "Paste Cookies" |
+| Services that refuse browsers | Reached directly | Through a relay you run yourself ([web-relay.md](web-relay.md)), or not at all |
 | Secrets | System keystore | IndexedDB, encrypted with a non-extractable WebCrypto key |
 | Resume Playback | Starts playing | Brings back the queue and position, ready to play: browsers do not start sound before a click |
 
@@ -378,6 +388,12 @@ by asking the page for the stream's URL and headers (kept only in the
 page's memory) and fetching it with them, passing `Range` requests through.
 Without the service worker (the first seconds of the first visit, or an
 http page) the page downloads the song whole and plays it from memory.
+Streams of a source that goes through the relay load the same two ways, as
+POSTs to the relay: the service worker answers the element with the
+service's status and headers from inside the relay's answer (`Content-Range`
+included, so seeking works), and without it the page downloads the song
+through the relay first.
+
 
 ### How plugins run
 
@@ -411,6 +427,22 @@ allows them:
   names itself (so the native host's checks on the addresses a name
   resolves to cannot be made), and needs CORS from the server. Mixed-content requests are
   refused before they are sent, with the reason.
+* **http through a relay**, for a source whose service refuses browsers once
+  a relay is set up ([web-relay.md](web-relay.md)): the request, checked as
+  above, is wrapped in a POST to the relay, so every header the plugin set
+  reaches the service, `Cookie`, `Referer`, `User-Agent` and `Origin`
+  included; the relay checks the addresses names resolve to. Redirects come
+  back to the worker, which follows them as the native host does
+  (`jf_web_sandbox::redirect`: each hop checked against the allowlist, a 303
+  turns into a GET, credentials stay with their origin), and the plugin has a
+  cookie jar again (`jf_web_sandbox::CookieJar`, RFC 6265's rules as the
+  native jar applies them), filled from the services' `Set-Cookie` headers:
+  cookies with an expiry are kept encrypted with the plugin's secrets, the
+  others for the visit; Sign Out deletes them. Which sources need a relay is
+  the core's (`jf_web::refusing_service`: the services known to refuse
+  browsers, by plugin id or allowlist host); a source whose request fails
+  against a fixed host that answers without CORS is found out by the page's
+  probe and remembered.
 * **kv and secrets**: kept per plugin in IndexedDB (1 MiB of values per
   plugin, as natively); secrets encrypted with AES-GCM under a key WebCrypto
   generated as non-extractable, so no script can read its bytes. A value
@@ -436,7 +468,9 @@ served from gets the static files and nothing else (no analytics, no
 cookies). In the browser it keeps your settings, volume and queue
 (`localStorage`; dropped files are never stored); per plugin, its state,
 settings, plain values and encrypted secrets, and the packages you installed
-(IndexedDB `jellyfesh`); and your library: the folders' names, what the songs' tags say and their
+(IndexedDB `jellyfesh`), with the cookies of sources that go through a relay
+encrypted like the secrets, and the relay's address and token (the token
+encrypted); and your library: the folders' names, what the songs' tags say and their
 covers (IndexedDB `jellyfesh-library`). The music files themselves are never
 copied. Clearing the site's data in the browser removes all of it.
 
@@ -518,10 +552,13 @@ Tests:
 * **Rust**: `cargo test -p jf-web -p jf-web-media -p jf-web-sandbox
   -p jf-plugin-model` (rules mirrored from `jf-core` and `jf-engine` are
   compared with the originals; backdrops baked from RGBA pixels are compared
-  byte for byte with the native bake).
+  byte for byte with the native bake; the cookie jar and redirects of relayed
+  requests; which services refuse browsers), and `cargo test -p jf-relay`
+  (the relay: [web-relay.md](web-relay.md)).
 * **Unit** (`tests/unit`): the drawing-time ports against the contract
   files, the plugin host imports with the real Rust rules and a fake
-  network, the transition scheduler on a fake clock, the translations, and
+  network, and through a fake relay (wrapped headers, cookies, redirects,
+  refusals), the transition scheduler on a fake clock, the translations, and
   the design's presentation math: device-pixel redraw steps, the glass tints
   for each transparency (with the core's real `glass_alpha`), the lyric inks
   as opacities, the cascade's order, the motion curves read from the tokens
@@ -545,7 +582,13 @@ Tests:
   Reduce Motion and Transparency); and API 1.1 (`links.spec.ts`): a plugin
   made from the Subsonic package with `[links]` offers Open in {Service} in
   search results and on its album page, and one with
-  `playback_mode = "remote"` is refused at install. `JF_APP_URL`
+  `playback_mode = "remote"` is refused at install; and services that refuse
+  browsers (`relay.spec.ts`): the unofficial QQ Music plugin, built with its
+  `mock-service` feature, says before sign-in that QQ Music refuses browsers,
+  then signs in with WeChat's QR flow through `jf-relay` (built and started
+  by the test) against `tests/mock/qqmusic.mjs`, a mock without CORS headers
+  that wants the web player's `Referer`, a browser's `User-Agent` and the
+  session in `Cookie`. `JF_APP_URL`
   points them at a copy served elsewhere (for example the website build at
   `/app/`).
 * **Screenshots**: `JF_SCREENSHOTS=1 npx playwright test screenshots

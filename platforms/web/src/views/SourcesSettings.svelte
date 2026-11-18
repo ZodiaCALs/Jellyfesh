@@ -1,7 +1,9 @@
 <script lang="ts">
   // Settings › Sources (docs/ui.md): Add a Source; Installed, with Install from File… and, for each
   // plugin, on or off, sign-in, sign-out, its settings, version and author, and Uninstall…; then
-  // Community Plugins with the disclosure (ADR-0012).
+  // Community Plugins with the disclosure (ADR-0012); then Relay, the web's own: the address and
+  // token of a relay the person runs, for services that refuse browsers (ADR-0022 §7,
+  // docs/web-relay.md), checked when saved.
   import AddSource from '../components/AddSource.svelte';
   import ConfirmSheet from '../components/ConfirmSheet.svelte';
   import Icon from '../components/Icon.svelte';
@@ -28,6 +30,27 @@
   $effect(() => {
     void app.sources.verifyAll();
   });
+
+  let relayError = $state<string | null>(null);
+  let savingRelay = $state(false);
+  // Whether the relay answers, once each time Settings › Sources opens.
+  $effect(() => {
+    void app.sources.checkRelay();
+  });
+
+  async function saveRelay(event: SubmitEvent) {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    const data = new FormData(form);
+    savingRelay = true;
+    relayError = await app.sources.saveRelay(String(data.get('address') ?? ''), String(data.get('token') ?? ''));
+    savingRelay = false;
+    if (!relayError) (form.elements.namedItem('token') as HTMLInputElement).value = '';
+  }
+
+  async function removeRelay() {
+    relayError = await app.sources.saveRelay('', '');
+  }
 
   async function install(file: File) {
     installing = true;
@@ -189,6 +212,57 @@
           <span aria-hidden="true"></span>
         </span>
       </label>
+    </section>
+
+    <section class="relay" id="relay" aria-labelledby="relay-title">
+      <h2 id="relay-title" class="section">{t('Relay')}</h2>
+      <p class="description">
+        {t('A relay you run yourself lets Jellyfesh Web reach services that browsers can’t. Jellyfesh doesn’t run one for you.')}
+      </p>
+      <form class="relay-form" onsubmit={saveRelay}>
+        <div class="field">
+          <label for="relay-address">{t('Relay Address')}</label>
+          <input
+            id="relay-address"
+            name="address"
+            type="url"
+            inputmode="url"
+            placeholder="http://127.0.0.1:8790"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            value={app.sources.relay?.address ?? ''}
+          />
+        </div>
+        <div class="field">
+          <label for="relay-token">{t('Relay Token')}</label>
+          <input
+            id="relay-token"
+            name="token"
+            type="password"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-describedby={app.sources.relay ? 'relay-token-help' : undefined}
+          />
+          {#if app.sources.relay}<p class="help" id="relay-token-help">{t('Leave it empty to keep the saved token.')}</p>{/if}
+        </div>
+        {#if relayError}
+          <p class="problem" role="alert"><Icon name="alert" size={16} />{relayError}</p>
+        {:else if app.sources.relayStatus?.state === 'checking'}
+          <p class="relay-status" aria-live="polite">{t('Checking…')}</p>
+        {:else if app.sources.relayStatus?.state === 'connected'}
+          <p class="relay-status ok" aria-live="polite"><Icon name="check" size={16} />{t('Connected to the relay.')}</p>
+        {:else if app.sources.relayStatus?.state === 'problem'}
+          <p class="problem" role="alert"><Icon name="alert" size={16} />{app.sources.relayStatus.message}</p>
+        {/if}
+        <div class="actions">
+          <button class="primary" type="submit" disabled={savingRelay}>{t('Save')}</button>
+          {#if app.sources.relay}
+            <button class="secondary" type="button" onclick={removeRelay}>{t('Remove')}</button>
+          {/if}
+        </div>
+      </form>
     </section>
 </section>
 
@@ -404,9 +478,54 @@
   .secondary:hover {
     background: var(--jf-fill-hover);
   }
-  .community {
+  .community,
+  .relay {
     margin-top: var(--jf-space-s8);
     max-width: var(--jf-layout-reading);
+  }
+  .relay-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--jf-space-s4);
+    margin-top: var(--jf-space-s4);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .field input {
+    min-height: 44px;
+    padding: 0 var(--jf-space-s3);
+    border: 0;
+    border-radius: var(--jf-radius-r-md);
+    background: var(--jf-fill);
+    color: var(--jf-ink-90);
+    font: inherit;
+    box-shadow: inset 0 0 0 1px var(--jf-line);
+  }
+  .field input:focus-visible {
+    outline: none;
+    box-shadow: var(--jf-elevation-focus);
+  }
+  .help {
+    margin: 0;
+    font-size: 13px;
+    color: var(--jf-ink-70);
+  }
+  .relay-status {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 0;
+    color: var(--jf-ink-70);
+  }
+  .relay-status.ok :global(svg) {
+    color: var(--jf-success);
   }
   .row-switch {
     display: flex;
