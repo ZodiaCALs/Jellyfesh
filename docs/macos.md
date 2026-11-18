@@ -10,6 +10,58 @@ been compiled yet; the first CI build on a `macos-15` runner is its first
 compile. The names it assumes from the generated bindings are listed below so
 they can be checked quickly.
 
+## The parity pass (v0.0.7, on the v0.0.6 core API)
+
+What [`parity.md`](parity.md) listed for macOS that needed no new core API.
+Written without a Swift toolchain, like everything here.
+
+* **Sign-in steps** (N9, N11). `SignInStep.showCode` is a step of its own
+  (Jellyfin's Quick Connect): the code large and selectable (VoiceOver spells
+  it out), the plugin's words for where to enter it and "Waiting for
+  approval…". A QR code keeps the plugin's own sentence (`showQR`'s `hint`),
+  else "Scan the code with the {name} app on your phone.". `SignInField`
+  carries `kind`, `required` and `help`: the help and "Optional" show under
+  the label, Sign In waits for the required fields, a number field keeps its
+  digits (full-width ones as ASCII), a pasted Cookie header gets a field of
+  several lines, and each field names what the system may fill in (user names,
+  passwords but not keys or tokens, email and web addresses, one-time codes).
+  The rules are `Support/SignInForm.swift`.
+* **About Jellyfesh** (N28) is a window of its own (`Views/AboutView.swift`, a
+  `Window` scene without a Window menu item), opened from the app menu: the
+  icon and name, "Version {version}" from `CFBundleShortVersionString` (the
+  core's version after it only when it differs, as on Android), what Jellyfesh is,
+  **Website** and **Third-Party Licences** when the build knows the website, and
+  the design credits. The address is the build setting `JF_WEBSITE` (Info.plist
+  key `JFWebsite`); `build.sh` takes `JF_WEBSITE`, else in GitHub Actions
+  `https://OWNER.github.io/NAME/` from `GITHUB_REPOSITORY` (where web.yml
+  publishes the website), and the licences link is its
+  `THIRD_PARTY_NOTICES.html`. Without an address About shows the version only.
+  The rules are `Support/AboutInfo.swift`.
+* **A source's albums, playlists and artists** (N18) open a page like the
+  web's and the library's: `BrowseView` draws the shared `CollectionHeader`
+  (artwork, kind, title, artist, the song count once every page is in, a
+  "Content from {Service}" credit), **Play** and **Shuffle** (the core plays
+  the whole container, `Collection::Source`), and More (Play Next, Play Last
+  and Add to Playlist… unless the source plays remotely, then Open in
+  {Service}); a container nothing of which plays here offers Open in {Service}
+  as its main button. An album's songs are numbered, the songs end with "12
+  songs, 48 minutes", and loading, a failed page and an empty one show under
+  the header. `Route.browse` carries the item it was opened from; a source's
+  top level says its badge and account under its name. The library's album,
+  playlist and artist pages use the same header (240 pt artwork; a round place
+  for an artist's picture, which the library does not have).
+* **Search** names the other sources that have a merged item ("Also in …") on
+  song rows and album cards too, not only on artist and playlist rows. A blank
+  `attribution` credits nothing.
+* **Words** (parity.md section 3 and V6, V10, V18, V21): the accent swatches
+  are Blue … Violet; the device button at the system default says System
+  Default; File › Install from File…; Info's Lyrics row says Word by word, Line
+  by line or Unsynced; No Folders Yet, Sort Albums, Sort Songs and Output
+  Device in Title Case; "Try other words."; Info with nothing playing says
+  Nothing Playing, "Pick a song, an album or a playlist."; the Lyrics pane
+  without lyrics, Now Playing Backdrop and Show Translations use the words most
+  apps use; choosing Year or Recently Added turns Descending on.
+
 ## v0.0.6: links, remote playback, Luminous and Apple Music
 
 Written without a Swift toolchain, like everything here: the first CI build is
@@ -154,7 +206,11 @@ platforms/macos/scripts/build.sh --skip-core   # reuse Generated/ when only Swif
    joined with `lipo` into `Generated/JellyfeshCore.xcframework`; the C half of the
    bindings goes to `Generated/include/` as a Clang module (`JellyfeshFFIFFI`);
    the system libraries `rustc --print native-static-libs` reports are passed to the
-   linker (`JF_RUST_LDFLAGS`);
+   linker (`JF_RUST_LDFLAGS`; the default in `project.yml`, for builds made in Xcode,
+   includes Accelerate for whisper.cpp). whisper.cpp, which jf-ffi builds through
+   whisper-rs-sys and CMake, is built with `GGML_NATIVE=OFF`, and the x86_64 slice with
+   `GGML_AVX`, `GGML_AVX2`, `GGML_FMA` and `GGML_F16C` (every Intel Mac that runs macOS
+   14.2 has them);
 3. the official plugins `dist/plugins/*.jfpkg` (or `$JF_PLUGINS_DIR`) copied to
    `Generated/Plugins/`, which the app carries as `Resources/Plugins/`; without
    them it says so and builds without bundled plugins;
@@ -163,7 +219,8 @@ platforms/macos/scripts/build.sh --skip-core   # reuse Generated/ when only Swif
 6. `build/Jellyfesh-<version>.dmg` with a link to `/Applications`, and its SHA-256.
 
 Output goes to `platforms/macos/build/` (`JF_MACOS_OUT` to change it).
-`CARGO_TARGET_DIR` is honoured.
+`CARGO_TARGET_DIR` is honoured. `JF_WEBSITE` names the website About links to
+(in GitHub Actions it defaults to the repository's GitHub Pages address).
 
 ### In CI
 
@@ -204,7 +261,7 @@ platforms/macos/
 │   ├── Resources/Localizable.xcstrings   English, Simplified and Traditional Chinese, Japanese
 │   └── Sources/
 │       ├── App/            JellyfeshApp (scenes), AppModel (wiring, event dispatch),
-│       │                   AppDelegate (launch, quit, open files, Dock menu, About), AppCommands (menus)
+│       │                   AppDelegate (launch, quit, open files, Dock menu), AppCommands (menus)
 │       ├── CoreClient/     the only code that imports JellyfeshFFI: CoreClient protocol, the app's
 │       │                   own models, FFI conversions, FFICoreClient, OfflineCoreClient, PlaybackClock
 │       ├── Stores/         @Observable stores per slice: playback, queue, library, settings, theme,
@@ -213,9 +270,11 @@ platforms/macos/
 │       │                   transparency setting, Misty field, controls, TimelineView schedules
 │       ├── Platform/       media session, Dock icon, device watcher, Low Power Mode and window
 │       │                   visibility, the shared keys (Space, Shift-arrows, Esc)
-│       ├── Support/        artwork loader, JSON with ordered keys, schema forms, lyric layout,
-│       │                   QR codes, file panels, design math (seek bar, motion, swatches)
-│       └── Views/          root, sidebar, library pages, Now Playing, search, sources, settings
+│       ├── Support/        artwork loader, JSON with ordered keys, schema forms, sign-in forms,
+│       │                   About's links, lyric layout, QR codes, file panels, design math
+│       │                   (seek bar, motion, swatches)
+│       └── Views/          root, sidebar, library pages, Now Playing, search, sources, settings,
+│                           About
 ├── Tests/                  XCTest on a fake CoreClient (+ ../shared/swift/Tests in the same target)
 └── Generated/              git-ignored, made by build.sh
 ```
@@ -254,11 +313,14 @@ platforms/macos/
   * Songs has Play and Shuffle: the core has no collection for the whole
     library, so `SongsModel.playAll` reads every song in the page's order (a
     thousand at a time) and plays them as a track list (the core shuffles).
-  * Album, artist and playlist pages have a More menu (Play Next, Play Last,
-    Add to Playlist…; a playlist adds Rename…, Export Playlist… and Delete
-    Playlist…). Add to Playlist… is a submenu (New Playlist… and the
-    playlists); for a page the store reads the collection's tracks first
-    (`LibraryStore.tracks(of:)`), as the core adds tracks, not collections.
+  * Album, artist and playlist pages, the library's and a source's, share one
+    header (`CollectionHeader`: artwork, kind, title, artist, facts, Play,
+    Shuffle) and have a More menu (Play Next, Play Last, Add to Playlist…; a
+    playlist adds Rename…, Export Playlist… and Delete Playlist…). Add to
+    Playlist… is a submenu (New Playlist… and the playlists); for a page the
+    store reads the collection's tracks first (`LibraryStore.tracks(of:)`), as
+    the core adds tracks, not collections; a source's page adds the songs it
+    has loaded, once every page is in.
   * New Playlist… (⌘N, the sidebar's +, Playlists, Add to Playlist…) asks for
     the name in an alert before anything is created (`LibraryStore.newPlaylist`).
   * The song menu is Play Next, Play Last, Add to Playlist…, Add to or Remove
@@ -268,11 +330,14 @@ platforms/macos/
   * The Sources page: what sources are, Add a Source (the core's services, the
     same rows and Connect sheet as Settings), Your Sources (status; choosing one
     browses it) and Sources Settings…. A sign-in sheet opens in the window its
-    flow started in (`SignInWindow`).
+    flow started in (`SignInWindow`) and draws each step as the core and the
+    plugin describe it (`SignInForm`).
+  * About Jellyfesh (the app menu, ui.md's allowed difference) is the About
+    window: the version, the website and the third-party licences.
 * **Now Playing.** Artwork style (the core's baked backdrop, crossfading on
   dur-4, the scrubber thumb in Liquid Glass on macOS 26) or Misty style (the
   field at the artwork hue, the artwork on a Clear frame). Seek bar, transport,
-  shuffle and repeat, volume, favourite, output device (Speakers chip), lyrics
+  shuffle and repeat, volume, favourite, output device (System Default or the device), lyrics
   (word sweep, translation and romanization lines, 38 % anchor, manual scroll
   pauses follow mode for 4 s, tap a line to seek), queue (Up Next: drag to
   reorder, Delete to remove, double-click to jump, pages past 50 entries;
@@ -305,8 +370,8 @@ platforms/macos/
 * **Menus.** Controls (Space plays and pauses outside text fields; ⌘→ ⌘← next
   and previous; ⇧→ ⇧← skip 5 s outside text fields, and ⌥⌘→ ⌥⌘← from the menu;
   ⌘↑ ⌘↓ volume; ⌥⌘↓ mute; ⌘J current song), View (⌘1–⌘7 sections, ⌘F search,
-  ⌘L Now Playing, ⌥⌘L lyrics, ⌥⌘U queue), File (⌘N New Playlist…, ⇧⌘O add
-  folder, import playlist, install plugin). These carry the shared keys of
+  ⌘L Now Playing, ⌥⌘L lyrics, ⌥⌘U queue), File (⌘N New Playlist…, ⇧⌘O Add Music
+  Folder…, Import Playlist…, Install from File…). These carry the shared keys of
   `ui.md`; Space, ⇧→ ⇧← and Esc (back) go through `SharedKeyMonitor` rather
   than key equivalents, which would take them from text fields.
 * **Glass (ADR-0007).** Clear, Mist and Veil on the ultra-thin, thin and
@@ -331,9 +396,12 @@ platforms/macos/
 `build.sh --test` (or the scheme's Test action) runs the XCTest target:
 playback, settings (with the equalizer presets), library (New Playlist… naming,
 collections into playlists), the Songs page's Play and Shuffle, the router (Esc),
-paging, search (From Your Sources), sources (which window shows a sign-in),
-browse and queue stores on `FakeCoreClient`; JSON, schema forms, lyric layout,
-schedules, event batching, the Dock icon and formatting; the v0.0.4 design math
+paging, search (From Your Sources), sources (which window shows a sign-in, the
+code and QR steps, credits and "Also in …"), browse (song numbers, when every
+page is in, when a container plays) and queue stores on `FakeCoreClient`; the
+sort menus' starting direction; JSON, schema forms, sign-in forms, About's links
+and version, lyric layout, schedules, event batching, the Dock icon and
+formatting; the swatch names; the v0.0.4 design math
 (`DesignTests.swift`: seek geometry, Now Playing motion and the cascade, swatches
 and the OKLCH port against `design/tokens.json`, the transparency look, the new
 settings); and the shared contract tests (`platforms/shared/swift/Tests`, which replay
@@ -364,8 +432,10 @@ this revision (UniFFI 0.32.2) except `CoreConfig.bundledPlugins`.
   `.source(track:)`; `ArtworkRef.file(path:)`, `.url(url:)`; `Collection.album(id:)` …
   `.tracks(tracks:)`, `.source(plugin:id:)`, `.favorites`; `ScanStatus.progress(progress:)`,
   `.finished(report:)`, `.failed(message:)`; `LyricsSource.sidecar(path:)`, `.embedded`;
-  `HueSource.fixed(hue:)`; `SearchScope.plugin(id:)`; `AuthStep.showQr(data:expiresAtMs:)`,
-  `.openUrl(url:)`, `.askFields(fields:)`, `.waiting(message:)`, `.done(account:)`, `.failed(message:)`;
+  `HueSource.fixed(hue:)`; `SearchScope.plugin(id:)`; `AuthStep.showQr(data:hint:expiresAtMs:)`,
+  `.showCode(code:hint:expiresAtMs:)`, `.openUrl(url:)`, `.askFields(fields:)`, `.waiting(message:)`,
+  `.done(account:)`, `.failed(message:)`; `AuthField` (`name`, `label`, `kind`, `secret`, `required`,
+  `placeholder`, `help`) and `AuthFieldKind` (`.text`, `.email`, `.url`, `.number`, `.cookieHeader`);
   `Event.playback(snapshot:)` (and the other slices), `.scan(status:)`, `.auth(update:)`,
   `.searchResults(update:)`, `.browsePage(update:)`, `.buffering(uid:buffering:)`,
   `.commandFailed(id:error:)`, `.error(message:)`, `.libraryChanged(revision:)`,

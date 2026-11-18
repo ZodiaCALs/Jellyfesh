@@ -64,10 +64,10 @@ A changed English string needs its three translations in every app.
 **macOS**
 1. Source covers never load: `mac/Support/ArtworkLoader.swift:67` returns no path for `.url` [N29].
 2. Resume Playback is ignored at launch: nothing in `mac/App/AppModel.swift` `start()` sends `Play` [N26].
-3. Jellyfin's Quick Connect code shows as a small "hint: code" waiting line; field help, required and kind are dropped [N9, N11].
-4. Source album, artist and playlist pages have no artwork header, Play or Shuffle [N18].
-5. About has no website and no third-party licences [N28].
-6. Words: swatches are "Hue 250" … instead of Blue … Violet; "Speakers"; File › "Install Plugin…"; Info's "By word / By line / Not timed" ([3](#3-the-words)).
+3. Fixed: Jellyfin's Quick Connect code is a step of its own, and fields keep their help, required and kind [N9, N11].
+4. Fixed: source album, artist and playlist pages have the library's header with artwork, Play, Shuffle and More [N18].
+5. Fixed: About has the website and the third-party licences when the build knows the website [N28].
+6. Fixed: the words of [3](#3-the-words) (swatches Blue … Violet, System Default, Install from File…, Word by word / Line by line / Unsynced).
 
 **Windows**
 1. `ShowCode` is not mapped, so Jellyfin's "Sign In with QR Code" (Quick Connect) ends in "unknown sign-in step" [N10].
@@ -184,10 +184,10 @@ under the table: where the code is, or where the missing part belongs.
 | Connect: Server Address (the core's example as placeholder), one button per method | ✓ | ✓ | partial: example as a note [N7] | ✓ | partial: the whole settings form [N8] |
 | Sign in with user name and password | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sign in with an API key | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Sign in with a QR code (`ShowQr`) | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ |
-| Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | partial: a small waiting line [N9] | ✗ fails [N10] | ✓ | partial: a small waiting line [N9] | ✓ |
+| Sign in with a QR code (`ShowQr`) | ✓ | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ |
+| Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | ✓ | ✗ fails [N10] | ✓ | partial: a small waiting line [N9] | ✓ |
 | Sign in in the browser (OAuth, `OpenUrl`) | ✓ | ✓ | ✓ | ✓ | ✗ [N13] |
-| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | partial [N11] | partial [N11] | partial [N11] | partial [N12] | ✓ |
+| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | partial [N11] | partial [N11] | partial [N12] | ✓ |
 | Paste Cookies (cookie import) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✗ [N13] |
 | Sign Out | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Your Sources: each with its badge and sign-in state, or Off | ✓ | ✓ | ✓ | ✓ | partial: no badge [N15] |
@@ -195,7 +195,7 @@ under the table: where the code is, or where the missing part belongs.
 | Settings › Sources › Installed: a button per sign-in method, or Sign Out | ✓ | ✓ | ✓ | ✓ | partial: one Sign In [N16] |
 | Browse: pages, Load More, folders and artists drill in | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Browse: an album or playlist opens its songs | ✓ | ✗ plays at once [N17] | ✓ | ✓ | ✓ |
-| Source album, artist, playlist page: artwork, Play, Shuffle, More | partial [N18] | ✗ [N17] | partial [N18] | partial [N18] | ✓ |
+| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✗ [N17] | partial [N18] | partial [N18] | ✓ |
 | Open in {Service}: song menu, More menus, Now Playing More and Info | ✓ | ✓ | ✓ | ✓ | ✓ |
 | An unplayable item with a link opens it as its main action | ✓ | ✓ | ✓ | ✓ | ✓ |
 | "Content from {Service}" for sources with `attribution` | ✓ | ✗ [N19] | ✓ | ✗ [N19] | ✗ [N19] |
@@ -304,7 +304,7 @@ under the table: where the code is, or where the missing part belongs.
 | Function | macOS | Windows | Linux | Android | Web |
 |---|---|---|---|---|---|
 | Theme: System, Light, Dark with pictures | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Accent Colour: Follow the Artwork, ten swatches, Custom hue | ✓ (unnamed swatches, [3](#3-the-words)) | ✓ (unnamed swatches) | ✓ | ✓ | ✓ |
+| Accent Colour: Follow the Artwork, ten swatches, Custom hue | ✓ | ✓ (unnamed swatches) | ✓ | ✓ | ✓ |
 | Transparency (Solid … Clear) and Reduce Motion and Transparency | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Now Playing Backdrop: Artwork, Misty | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Lyrics in Appearance: Size, Alignment, Show Translations, Show Romanization | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -317,8 +317,8 @@ under the table: where the code is, or where the missing part belongs.
 |---|---|---|---|---|---|
 | Where About lives (app menu; Settings; main menu; Settings; Settings) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | The version, from the build | ✓ | ✓ | ✓ | ✓ | ✓ |
-| The website, where the build knows it | ✗ [N28] | ✗ [N28] | ✗ [N28] | ✓ | ✗ [N28] |
-| Third-party licences | ✗ [N28] | ✓ | ✗ [N28] | ✓ | ✓ |
+| The website, where the build knows it | ✓ | ✗ [N28] | ✗ [N28] | ✓ | ✗ [N28] |
+| Third-party licences | ✓ | ✓ | ✗ [N28] | ✓ | ✓ |
 
 * **N28** macOS `mac/App/AppDelegate.swift` `showAbout()`: the standard panel with the tagline, the Misty credit and the core version. Windows `win/Jellyfesh.App/Views/SettingsPage.xaml` About: version, Third-Party Licences (the notices file next to the app), Open Log Folder. Linux `linux/ui/about.rs`: version, Design, Design Tokens and "Licence: No licence has been chosen yet: all rights reserved." (check against the licence work under way). Android `and/ui/settings/SettingsScreen.kt` `about()`: version, Website and Third-Party Licences when the build knows the website (`jellyfesh.website` or `GITHUB_REPOSITORY`). Web `web/views/Settings.svelte:548`: "Third-party notices" (`THIRD_PARTY_NOTICES.txt`), no website. Give macOS, Windows, Linux and the web the website and licences the way Android derives them.
 
@@ -445,7 +445,8 @@ ReplayGain, Open in {Service}, Playing on {Device}, Devices and Stop
 Controlling; none of them says Preferences, Follow System, Background, Purple,
 Scan again, Nothing found or Manage sources.
 
-**macOS** (`platforms/macos/Jellyfesh/Resources/Localizable.xcstrings`)
+**macOS** (`platforms/macos/Jellyfesh/Resources/Localizable.xcstrings`): all fixed in the
+parity pass (docs/macos.md), as listed here.
 * Swatches are named "Hue 250" … "Hue 290" (`mac/Views/Settings/AppearanceSettings.swift:270`); ui.md's last accent is **Violet** and Linux, Android and the web name all ten (Blue, Cyan, Teal, Green, Olive, Orange, Red, Rose, Magenta, Violet).
 * "Speakers" is the dock's output button value at System Default (`mac/Views/NowPlaying/QueuePanel.swift:400`); ui.md rules out "Speakers": say **System Default**.
 * File › "Install Plugin…" (`mac/App/AppCommands.swift:62`; panel title "Install Plugin"): ui.md's word is **Install from File…**.
