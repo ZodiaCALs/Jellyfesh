@@ -3,15 +3,21 @@
 
     python3 tools/release/build_site.py VERSION [--base-url URL] [--app PATH]
                                         [--releases FILE]
+                                        [--release-assets FILE --sums FILE]
 
 * copies website/ and, from dist/, every release file of VERSION into
   site/downloads/ (or links to --base-url, e.g. the GitHub release page's
-  download URL, instead of copying);
+  download URL, instead of copying). A release has one file per platform:
+  Jellyfesh-<version>-macOS.dmg, -Windows-Setup.exe, -Linux.flatpak,
+  -Android.apk, -Web.zip and -Community-Plugins.zip;
 * with --app, puts Jellyfesh Web at site/app/: PATH is its built folder
-  (platforms/web/dist) or the jellyfesh-web-v<version>.zip of a release;
+  (platforms/web/dist) or the Jellyfesh-<version>-Web.zip of a release;
+* with --release-assets and --sums, takes the download list from a published
+  release instead of dist/: FILE is `gh release view TAG --json assets`
+  (names and sizes), the sums its SHA256SUMS.txt, and --base-url the
+  release's download URL (web.yml, when the site is deployed from main);
 * with --releases, takes the download list from a releases.json an earlier
-  build wrote (for example the latest release's, when the site is deployed
-  from main) instead of looking in dist/;
+  build wrote (the jellyfesh-site zip that releases before 0.0.7 carried);
 * writes releases.json (version, the files with platform, label, size,
   SHA-256 and URL, and web_app when the site has Jellyfesh Web) for the
   download page, shots.json from docs/screenshots/linux/, the release notes
@@ -35,25 +41,15 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# (pattern, platform, label) in display order; {v} is the version.
+# (pattern, platform, label) in display order; {v} is the version. One file per platform
+# (docs/github.md, "What a release holds").
 FILES = [
-    (r"Jellyfesh-v{v}-macos-universal\.dmg", "macos", "Jellyfesh {v} (.dmg)"),
-    (r"Jellyfesh-v{v}-windows-x64\.zip", "windows", "Jellyfesh {v} for x64 (.zip)"),
-    (r"Jellyfesh-v{v}-windows-arm64\.zip", "windows", "Jellyfesh {v} for Arm64 (.zip)"),
-    (r"jellyfesh-v{v}-linux-x86_64\.tar\.gz", "linux", "Jellyfesh {v} for x86_64 (.tar.gz)"),
-    (r"org\.jellyfesh\.Jellyfesh-v{v}\.flatpak", "linux", "Jellyfesh {v} (Flatpak bundle)"),
-    (r"Jellyfesh-v{v}\.apk", "android", "Jellyfesh {v} (.apk)"),
-    (r"jellyfesh-web-v{v}\.zip", "web", "Jellyfesh Web {v} to host yourself (.zip)"),
-    (r"org\.jellyfesh\.subsonic-v{v}\.jfpkg", "plugins", "Subsonic and OpenSubsonic {v} (.jfpkg)"),
-    (r"org\.jellyfesh\.jellyfin-v{v}\.jfpkg", "plugins", "Jellyfin {v} (.jfpkg)"),
-    (r"org\.jellyfesh\.qqmusic-v{v}\.jfpkg", "plugins", "QQ Music {v} (.jfpkg)"),
-    (r"org\.jellyfesh\.spotify-v{v}\.jfpkg", "plugins", "Spotify {v}, beta (.jfpkg)"),
-    (r"org\.jellyfesh\.netease-v{v}\.jfpkg", "plugins", "NetEase Cloud Music {v} (.jfpkg)"),
-    (r"jf-v{v}-x86_64-unknown-linux-gnu\.tar\.gz", "cli", "jf {v} for Linux x86_64"),
-    (r"jf-v{v}-aarch64-apple-darwin\.tar\.gz", "cli", "jf {v} for macOS (Apple silicon)"),
-    (r"jf-v{v}-x86_64-apple-darwin\.tar\.gz", "cli", "jf {v} for macOS (Intel)"),
-    (r"jf-v{v}-x86_64-pc-windows-msvc\.zip", "cli", "jf {v} for Windows x64"),
-    (r"jf-v{v}-aarch64-pc-windows-msvc\.zip", "cli", "jf {v} for Windows Arm64"),
+    (r"Jellyfesh-{v}-macOS\.dmg", "macos", "Jellyfesh {v} for macOS (.dmg)"),
+    (r"Jellyfesh-{v}-Windows-Setup\.exe", "windows", "Jellyfesh {v} Setup for Windows (.exe)"),
+    (r"Jellyfesh-{v}-Linux\.flatpak", "linux", "Jellyfesh {v} for Linux (Flatpak)"),
+    (r"Jellyfesh-{v}-Android\.apk", "android", "Jellyfesh {v} for Android (.apk)"),
+    (r"Jellyfesh-{v}-Web\.zip", "web", "Jellyfesh Web {v} to host yourself (.zip)"),
+    (r"Jellyfesh-{v}-Community-Plugins\.zip", "community", "Community plugins {v} (.zip)"),
 ]
 
 
@@ -79,6 +75,27 @@ def add_app(source, site):
             archive.extractall(target)
     if not os.path.exists(os.path.join(target, "index.html")):
         sys.exit(f"{source}: no index.html, not a Jellyfesh Web build")
+
+
+def release_files(version, assets_path, sums_path, base_url):
+    """The download list of a published release, from its assets and SHA256SUMS.txt."""
+    with open(assets_path, encoding="utf-8") as fh:
+        assets = {a["name"]: a for a in json.load(fh).get("assets", [])}
+    sums = {}
+    with open(sums_path, encoding="utf-8") as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) == 2:
+                sums[parts[1].lstrip("*")] = parts[0].lower()
+    files = []
+    for pattern, platform, label in FILES:
+        rx = re.compile("^" + pattern.replace("{v}", re.escape(version)) + "$")
+        for name in sorted(assets):
+            if rx.match(name):
+                files.append({"platform": platform, "label": label.replace("{v}", version), "name": name,
+                              "url": f"{base_url}/{name}", "size": assets[name].get("size", 0),
+                              "sha256": sums.get(name, "")})
+    return files
 
 
 def sha256(path):
@@ -185,13 +202,19 @@ def main():
         base_url = base_url.rstrip("/")
     app = option("--app")
     releases = option("--releases")
+    release_assets = option("--release-assets")
+    sums = option("--sums")
+    if release_assets and not (sums and base_url):
+        sys.exit("--release-assets needs --sums and --base-url")
     dist = os.path.join(ROOT, "dist")
     site = os.path.join(dist, "site")
     shutil.rmtree(site, ignore_errors=True)
     shutil.copytree(os.path.join(ROOT, "website"), site)
 
     files = []
-    present = sorted(os.listdir(dist)) if os.path.isdir(dist) and not releases else []
+    present = sorted(os.listdir(dist)) if os.path.isdir(dist) and not (releases or release_assets) else []
+    if release_assets:
+        files = release_files(version, release_assets, sums, base_url)
     if releases:
         with open(releases, encoding="utf-8") as fh:
             earlier = json.load(fh)
