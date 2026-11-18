@@ -42,7 +42,7 @@ struct AlbumsView: View {
                 Menu {
                     Picker("Sort By", selection: Binding(
                         get: { albums.order },
-                        set: { order in Task { @MainActor in await albums.setOrder(order, descending: albums.descending, revision: library.revision) } }
+                        set: { order in Task { @MainActor in await albums.choose(order, revision: library.revision) } }
                     )) {
                         Text("Title").tag(AlbumOrder.title)
                         Text("Artist").tag(AlbumOrder.artist)

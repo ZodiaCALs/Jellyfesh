@@ -365,6 +365,30 @@ final class SongsPageTests: XCTestCase {
         await model.playAll(shuffle: false, on: PlaybackStore(client: client, tracker: CommandTracker()))
         XCTAssertTrue(client.sent.isEmpty)
     }
+
+    func testYearsAndRecentlyAddedStartNewestFirst() async {
+        let client = FakeCoreClient()
+        let songs = SongsModel(client: client)
+        await songs.choose(.added, revision: 1)
+        XCTAssertEqual(songs.sort, .added)
+        XCTAssertTrue(songs.descending)
+        await songs.choose(.title, revision: 1)
+        XCTAssertEqual(songs.sort, .title)
+        XCTAssertFalse(songs.descending)
+
+        let albums = AlbumsModel(client: client)
+        await albums.choose(.year, revision: 1)
+        XCTAssertTrue(albums.descending)
+        await albums.setOrder(.year, descending: false, revision: 1)
+        XCTAssertFalse(albums.descending, "Descending still flips it")
+        await albums.choose(.artist, revision: 1)
+        XCTAssertFalse(albums.descending)
+
+        XCTAssertTrue(SortDirection.startsDescending(AlbumOrder.added))
+        XCTAssertFalse(SortDirection.startsDescending(AlbumOrder.title))
+        XCTAssertTrue(SortDirection.startsDescending(SongSort.year))
+        XCTAssertFalse(SortDirection.startsDescending(SongSort.album))
+    }
 }
 
 @MainActor

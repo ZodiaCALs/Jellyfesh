@@ -40,6 +40,19 @@ final class HomeModel {
     }
 }
 
+/// The direction a sort starts in when the person chooses it: newest first for years and Recently
+/// Added, A to Z for the others, as on Windows, Linux and Android (docs/parity.md V6). Descending
+/// then flips it.
+enum SortDirection {
+    static func startsDescending(_ order: AlbumOrder) -> Bool {
+        order == .year || order == .added
+    }
+
+    static func startsDescending(_ sort: SongSort) -> Bool {
+        sort == .year || sort == .added
+    }
+}
+
 /// Albums: a grid in the order the person picks, sorted by the core.
 @MainActor
 @Observable
@@ -60,6 +73,11 @@ final class AlbumsModel {
         self.descending = descending
         list = Self.makeList(client: client, order: order, descending: descending)
         await list.load(revision: revision)
+    }
+
+    /// The sort menu's choice: the order in the direction it starts in (`SortDirection`).
+    func choose(_ order: AlbumOrder, revision: UInt64) async {
+        await setOrder(order, descending: SortDirection.startsDescending(order), revision: revision)
     }
 
     private static func makeList(client: CoreClient, order: AlbumOrder, descending: Bool) -> PagedList<AlbumSummary> {
@@ -92,6 +110,11 @@ final class SongsModel {
         self.descending = descending
         list = Self.makeList(client: client, sort: sort, descending: descending)
         await list.load(revision: revision)
+    }
+
+    /// The sort menu's choice: the order in the direction it starts in (`SortDirection`).
+    func choose(_ sort: SongSort, revision: UInt64) async {
+        await setSort(sort, descending: SortDirection.startsDescending(sort), revision: revision)
     }
 
     /// The query of the loaded order, to play the list from a row.

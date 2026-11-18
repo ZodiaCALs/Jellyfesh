@@ -53,7 +53,7 @@ struct SongsView: View {
                 Menu {
                     Picker("Sort By", selection: Binding(
                         get: { songs.sort },
-                        set: { sort in Task { @MainActor in await songs.setSort(sort, descending: songs.descending, revision: library.revision) } }
+                        set: { sort in Task { @MainActor in await songs.choose(sort, revision: library.revision) } }
                     )) {
                         Text("Title").tag(SongSort.title)
                         Text("Artist").tag(SongSort.artist)
