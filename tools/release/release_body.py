@@ -94,10 +94,12 @@ def main():
     ]
     if args.pro_preview:
         lines.append("**Jellyfesh Pro** (AI Lyrics and Customize) is free in these builds during the public"
-                     " beta (Pro Preview).")
+                     " beta (Pro Preview). After the beta it is a one-time purchase: in the app stores, or with"
+                     " a licence key, which is the only way on Linux and in Jellyfesh Web.")
     else:
-        lines.append("**Jellyfesh Pro** (AI Lyrics and Customize) is unlocked with a licence key in these apps;"
-                     " on Linux and in Jellyfesh Web a licence key is the only way.")
+        lines.append("**Jellyfesh Pro** (AI Lyrics and Customize) is a one-time purchase, unlocked in these apps"
+                     " with a licence key (Settings › Extensions › Enter Licence Key…); on Linux and in"
+                     " Jellyfesh Web a licence key is the only way.")
     notes = f"https://github.com/{args.repository}/blob/{args.tag}/docs/releases/{args.tag}.md"
     lines += ["", f"[What's new in Jellyfesh {args.version}: the release notes]({notes})", ""]
     text = "\n".join(lines)
