@@ -70,6 +70,56 @@ jobs:
       - uses: actions/checkout@v7
       - uses: EmbarkStudios/cargo-deny-action@v2
 
+  # The release's packaging scripts, with no secret (docs/store-release.md): shellcheck, the
+  # PowerShell parser, the dry runs that work on Linux (each signing script skips with a notice),
+  # and the website's legal pages against legal/.
+  packaging:
+    name: Packaging scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: shellcheck
+        run: >-
+          shellcheck --severity=warning plugins/release.sh platforms/macos/scripts/*.sh
+          platforms/android/scripts/build.sh platforms/linux/packaging/*.sh
+      - name: The PowerShell scripts parse
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($script in Get-ChildItem platforms/windows/scripts/*.ps1) {
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$null, [ref]$errors) | Out-Null
+            foreach ($e in $errors) {
+              "::error file=$($script.Name),line=$($e.Extent.StartLineNumber)::$($e.Message)"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+      - name: Signing and store scripts without their secrets
+        run: |
+          platforms/macos/scripts/keychain.sh "$RUNNER_TEMP/signing.env"
+          platforms/macos/scripts/notarize.sh Jellyfesh.dmg
+          platforms/macos/scripts/package-mas.sh Jellyfesh.app Jellyfesh.pkg
+      - name: Editions in install.sh (the commercial one leaves the community plugins out)
+        run: |
+          mkdir -p dist/plugins
+          touch dist/plugins/org.jellyfesh.subsonic.jfpkg dist/plugins/community.unofficial.netease.jfpkg
+          for edition in commercial community; do
+            JF_EDITION=$edition platforms/linux/packaging/install.sh --binary /bin/true \
+              --prefix /app --destdir "$RUNNER_TEMP/$edition"
+          done
+          test -f "$RUNNER_TEMP/commercial/app/share/jellyfesh/plugins/org.jellyfesh.subsonic.jfpkg"
+          test ! -e "$RUNNER_TEMP/commercial/app/share/jellyfesh/plugins/community.unofficial.netease.jfpkg"
+          test -f "$RUNNER_TEMP/community/app/share/jellyfesh/plugins/community.unofficial.netease.jfpkg"
+      - name: The release's text
+        run: |
+          mkdir -p "$RUNNER_TEMP/files"
+          touch "$RUNNER_TEMP/files/Jellyfesh-0.0.0-macOS.dmg"
+          python3 tools/release/release_body.py --version 0.0.0 --tag v0.0.0 \
+            --repository "$GITHUB_REPOSITORY" --files "$RUNNER_TEMP/files" --pro-preview
+      - name: The website's legal pages match legal/
+        run: python3 tools/release/legal_pages.py --check
+
   # Plays generated albums through jf's real audio-device path on a runner
   # without a sound card (PulseAudio virtual speaker), records it and checks
   # gapless joins, dropouts and pitch. See tools/cloud-audio-check/run.sh.
