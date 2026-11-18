@@ -11,6 +11,47 @@ and tested here (`:logic`), the FFI adapter is compiled and run against the real
 JVM (`:ffi-check`), and the whole app except the Media3 session is compiled on the JVM against
 stand-ins (`:ui-check`). The first CI build is the first real compile; see "Risks" below.
 
+## v0.0.7: the parity pass
+
+What docs/parity.md listed for Android and needed no new core API, with the rules in `:logic` and
+tested (`sources/AuthFlow.kt`, `sources/YourSources.kt`, `sources/Browse.kt`, `sources/Links.kt`,
+`player/PlayerModel.kt`, `queue/QueueModel.kt`).
+
+* **Sign-in steps as the plugin describes them.** Jellyfin's Quick Connect code (`ShowCode`) is a
+  step of its own: the code large and selectable, spelled out for TalkBack, the plugin's sentence
+  and "Waiting for approval…". A QR code shows the plugin's own sentence when it gives one (no
+  countdown, as in the other apps). Fields keep the core's kind, required and help: only required
+  fields hold Sign In back, an optional one says "Optional" beside its label, the help shows under
+  the input, the keyboard follows the kind and a pasted cookie header gets several lines. A failed
+  sign-in shows the plugin's message alone.
+* **Your Sources.** Choosing a source opens its catalogue when it is on and can browse
+  (`YourSources.opens`), else its page in Settings › Sources. Its line is the badge, then "Off",
+  "Signed in as …" or "Not signed in" (the badge alone for a source that needs no sign-in), and
+  every list of sources shows the plugin's own icon. A source that asks for attribution says
+  "Content from {Service}" under its pages' titles and its Search section.
+* **A source's album or playlist** gets the full page, after Jellyfesh Web's: the artwork, what it
+  is, the title, the artist in accent text, the song count, Play and Shuffle (the whole collection,
+  through the core) with More, the songs (numbered on an album) and "12 songs, 48 minutes"; when
+  none of its songs plays here, Open in {Service} is its main action. A page the source did not
+  answer says "This Source Did Not Answer" with the error; an empty one "Nothing Here". Other
+  levels (the root, artists, folders) keep their title, rows and the top bar's More.
+* **The media session follows a remote session** (`SessionModels`): the notification, lock screen
+  and headset keys show the service's song with its artwork, length, position, play state,
+  shuffle and repeat. The song stands alone (the service keeps its Up Next); Next and Previous
+  still reach the service, because `SimpleBasePlayer` hands a skip it would ignore to
+  `handleSeek` with its command.
+* **Up Next lists every entry** after the current one: the slice's 50, then pages read with
+  `queue_window` as they scroll into view (read again when the queue changes), with the same tap,
+  drag, Remove from Queue and Move up and Move down on every row.
+* **Words:** System Default (never "Speakers"), No Folders Yet, Unknown Title, Also in …, Remove
+  from Queue, "This Playlist Is Empty" with "Add songs from their menu with Add to Playlist.", the
+  no-lyrics and Show Translations sentences of the Linux app and the web, and Rescan Library as a
+  button beside its sentence. The Sources tab no longer has Install from File… (it is in Settings
+  › Sources › Installed, as in every app), and About This Song lists Lyrics before File.
+
+Checked for this pass: `:logic` 181 tests pass, `:ffi-check` 5 pass against the core, and
+`:ui-check` compiles with no new warnings. The app itself was not built here (no Android SDK).
+
 ## v0.0.6: links, remote playback and Luminous
 
 What docs/ui.md's "Links and remote playback" and "Luminous" ask of phones, with the rules in
@@ -37,7 +78,8 @@ What docs/ui.md's "Links and remote playback" and "Luminous" ask of phones, with
   (the core bakes none for the service's song). The store forwards the slice that ends a session
   on its signal stream, so an ending error shows once as a message, even when the session ends
   right after it starts. A remote source's songs and lists never offer Play Next, Play Last or Add
-  to Playlist. The system media session still shows the engine (`SessionModels` is unchanged).
+  to Playlist. Since the v0.0.7 parity pass the system media session follows the remote session
+  too (below).
 * **Luminous.** The field draws four larger glows at `field.aurora-strength` (75 %) on every
   screen. The tab bar and the mini-player are floating Veil capsules (68 dp, and a 64 dp pill with
   round artwork) and the screens fade out just above them (`fadeOutAbove`, an offscreen layer
@@ -146,8 +188,9 @@ structure live in `:logic` and are tested; the Compose code draws them.
   website: the Gradle property `jellyfesh.website`, else in GitHub Actions
   `https://OWNER.github.io/NAME/` from `GITHUB_REPOSITORY` (docs/github.md). Other builds show the
   version only; the APK carries no licence texts of its own.
-* **Sources tab:** the intro line, Add a Source, Your Sources (each with its status; choosing one
-  opens it), then Sources Settings… and Install from File….
+* **Sources tab:** the intro line, Add a Source, Your Sources (each with its icon and status;
+  choosing one browses it, or opens its page while it is off or has nothing to browse), then
+  Sources Settings…. Install from File… is in Settings › Sources › Installed, as in every app.
 * **Home:** "1,204 songs · 96 albums · 41 artists" (counts with the language's thousands
   separator), Recently Added (albums), Recently Played and Most Played. With nothing in the
   library and no source signed in (`HomeModel`), the welcome instead: "Add your music folders, or
@@ -229,12 +272,20 @@ platforms/android/scripts/build.sh --skip-core   # reuse core-bindings/src/main/
 ```
 
 It needs `ANDROID_HOME` with platform 37 and the build tools, an NDK (`ANDROID_NDK_HOME`, or
-the newest under `$ANDROID_HOME/ndk/`), JDK 17 or later, rustup, cmake (the core builds libopus)
-and, on Linux, the ALSA headers (`libasound2-dev`) for the host build behind
+the newest under `$ANDROID_HOME/ndk/`), JDK 17 or later, rustup, cmake (the core builds libopus
+and whisper.cpp) and, on Linux, the ALSA headers (`libasound2-dev`) for the host build behind
 `cargo xtask bindings`. The script adds the `aarch64-linux-android` and
 `x86_64-linux-android` targets, installs cargo-ndk 4.1, builds `jf-ffi` for arm64-v8a and
 x86_64 (`--release`), generates the bindings and tokens, and runs
-`./gradlew -Pjellyfesh.skipCargo=true :app:assembleRelease`. The unsigned APK is copied to
+`./gradlew -Pjellyfesh.skipCargo=true :app:assembleRelease`.
+
+whisper.cpp (on-device AI Lyrics, built by whisper-rs-sys) links the C++ runtime as
+`c++_shared`, so cargo-ndk runs with `--link-libcxx-shared`: it links it and copies the NDK's
+`libc++_shared.so` next to `libjf_ffi.so` in each ABI's `jniLibs` folder, and Gradle packages
+both (without it `libjf_ffi.so` fails to load in the app). `GGML_NATIVE=OFF` builds ggml for each
+ABI's baseline CPU, never the build machine's. The script and `:core-bindings:cargoNdkBuild` both
+check that every ABI's folder holds the two libraries, and the script checks the APK
+(`lib/<abi>/`) and the App Bundle (`base/lib/<abi>/`) for them. The unsigned APK is copied to
 `dist/android/jellyfesh-<version>-android-unsigned.apk`. The release workflow signs it with the
 Jellyfesh release keystore from the repository secrets `ANDROID_KEYSTORE_BASE64`,
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (certificate SHA-256
@@ -306,7 +357,8 @@ Steel, vectors for the other eight. The results are committed.
   drives) are refused with a message; a SAF-backed `FileSystem` in the core is the follow-up.
 * **Media session.** `PlaybackService` (Media3 `MediaSessionService`) hosts `CorePlayer`, a
   `SimpleBasePlayer` facade: notification, lock screen, headset and Bluetooth buttons become core
-  commands, and the session state is the core's slices. `AudioFocusController` requests focus
+  commands, and the session state is the core's slices (the engine's song and Up Next, or a
+  remote session's song while one runs). `AudioFocusController` requests focus
   while playing, pauses on loss (resumes after a transient one) and when audio becomes noisy.
   `DeviceWatcher` sends `RefreshDevices` on Android's device callbacks.
 * **App icon.** One `activity-alias` per icon (ADR-0017), Ice enabled by default; Automatic is

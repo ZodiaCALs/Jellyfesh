@@ -91,10 +91,10 @@ A changed English string needs its three translations in every app.
 1. Source covers never load: `and/images/ArtworkLoader.kt:35` maps URLs to nothing [N29].
 2. Resume Playback is ignored at launch (`and/AppGraph.kt` `start()`) [N26].
 3. Songs › Play, Shuffle and a row play only the pages loaded so far [N2].
-4. Sign-in: the Quick Connect code is a small waiting line, every field is required, no help or kind [N9, N12].
-5. Choosing a source in Your Sources opens its settings page, not its catalogue [N15].
-6. No attribution; the media session ignores remote sessions; Up Next shows only 50 entries [N19, N21, N25].
-7. Words: "Speakers", "No folders yet.", "Remove" ([3](#3-the-words)).
+4. Fixed: Jellyfin's Quick Connect code is a step of its own, and fields keep their help, required and kind [N9, N12].
+5. Fixed: choosing a source in Your Sources browses it (its settings page while it is off or cannot browse) [N15].
+6. Fixed: "Content from {Service}"; the media session follows remote sessions; Up Next lists every entry; plugin icons in every list; a source's album and playlist pages [N19, N21, N25, N31, N18].
+7. Fixed: the words of [3](#3-the-words) (System Default, No Folders Yet, Remove from Queue, Unknown Title, Also in …).
 
 **Web**
 1. No remote playback (remote plugins are refused at install) and no Sign In in Browser or Paste Cookies. docs/web.md explains both, but ui.md does not list them as allowed differences: list them there, or build them (ADR-0022's relay covers part of it) [N13, N20].
@@ -128,7 +128,7 @@ under the table: where the code is, or where the missing part belongs.
 | Artist page: picture, albums, songs, Play, Shuffle, More | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Playlists page: New Playlist…, Import Playlist…, empty state | ✓ | ✓ | ✓ | ✓ | n/a (allowed: no playlists) |
 | Favourites page: Play, Shuffle, empty state | ✓ | ✓ | ✓ | ✓ | n/a (allowed: no favourites) |
-| Sources page (see 1.4) | ✓ | ✓ | ✓ | partial: a source opens its settings [N15] | ✓ |
+| Sources page (see 1.4) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Settings: Appearance, Playback, Library, Sources (+ About where kept) | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 * **N1** Web Artists: `web/views/Artists.svelte` renders through `web/components/ItemList.svelte`, which puts every container (artist, album, playlist) in a `.grid` of `ItemCard`s. ui.md: "Artists. A list." Give `ItemList` a row style for artists (as `ItemRow`) or a `layout="list"` prop for this page.
@@ -179,33 +179,33 @@ under the table: where the code is, or where the missing part belongs.
 
 | Function | macOS | Windows | Linux | Android | Web |
 |---|---|---|---|---|---|
-| Sources page: intro, Add a Source, Your Sources, Sources Settings… | ✓ | ✓ | ✓ | ✓ (+ Install from File…, V12) | ✓ |
+| Sources page: intro, Add a Source, Your Sources, Sources Settings… | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Add a Source from the core's presets, with the five descriptions | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Connect: Server Address (the core's example as placeholder), one button per method | ✓ | ✓ | partial: example as a note [N7] | ✓ | partial: the whole settings form [N8] |
 | Sign in with user name and password | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sign in with an API key | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Sign in with a QR code (`ShowQr`) | ✓ | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ |
-| Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | ✓ | ✗ fails [N10] | ✓ | partial: a small waiting line [N9] | ✓ |
+| Sign in with a QR code (`ShowQr`) | ✓ | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ | ✓ |
+| Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | ✓ | ✗ fails [N10] | ✓ | ✓ | ✓ |
 | Sign in in the browser (OAuth, `OpenUrl`) | ✓ | ✓ | ✓ | ✓ | ✗ [N13] |
-| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | partial [N11] | partial [N11] | partial [N12] | ✓ |
+| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | partial [N11] | partial [N11] | ✓ | ✓ |
 | Paste Cookies (cookie import) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✗ [N13] |
 | Sign Out | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Your Sources: each with its badge and sign-in state, or Off | ✓ | ✓ | ✓ | ✓ | partial: no badge [N15] |
-| Your Sources: choosing one browses it | ✓ | ✓ | ✓ | partial [N15] | ✓ |
+| Your Sources: choosing one browses it | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Settings › Sources › Installed: a button per sign-in method, or Sign Out | ✓ | ✓ | ✓ | ✓ | partial: one Sign In [N16] |
 | Browse: pages, Load More, folders and artists drill in | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Browse: an album or playlist opens its songs | ✓ | ✗ plays at once [N17] | ✓ | ✓ | ✓ |
-| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✗ [N17] | partial [N18] | partial [N18] | ✓ |
+| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✗ [N17] | partial [N18] | partial: albums and playlists ✓; an artist has no header yet (Play and Shuffle in More) [N18] | ✓ |
 | Open in {Service}: song menu, More menus, Now Playing More and Info | ✓ | ✓ | ✓ | ✓ | ✓ |
 | An unplayable item with a link opens it as its main action | ✓ | ✓ | ✓ | ✓ | ✓ |
-| "Content from {Service}" for sources with `attribution` | ✓ | ✗ [N19] | ✓ | ✗ [N19] | ✗ [N19] |
+| "Content from {Service}" for sources with `attribution` | ✓ | ✗ [N19] | ✓ | ✓ | ✗ [N19] |
 | Remote: "Playing on {Device}" and the error line in the player bar, mini-player, Now Playing | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: Devices (sends `Refresh` on open; kinds; playing one checked; `Transfer`) | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: the device's volume, hidden without one | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: More holds Open in {Service} and Stop Controlling | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: "Lyrics aren't shown while …", "Up Next is in …" | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: an ending error shows once | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
-| Remote: the system's media controls follow the session | ✓ | ✓ | ✓ | ✗ [N21] | ✗ [N20] |
+| Remote: the system's media controls follow the session | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 
 * **N7** Linux `linux/ui/sources_ui.rs:352` `connect_dialog` shows the example as the group's description ("For example …") because `AdwEntryRow` has no placeholder. Acceptable for GTK; keep the words "For example …" in mind if the others ever show a note.
 * **N8** Web `web/components/SignInSheet.svelte:91`: stage `settings` renders `SettingsForm` with the plugin's whole schema (Server Address, Streaming Quality, Format When the Server Converts, …) and **Continue**, then a list of methods. Show only the address field (with the preset's example) and the method buttons, as the apps do.
@@ -254,7 +254,7 @@ under the table: where the code is, or where the missing part belongs.
 | Up Next; choosing an entry jumps to it | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Reorder Up Next | ✓ | ✓ | ✓ | ✓ | partial: Move Up and Move Down only [N24] |
 | Remove an entry | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Entries past the slice's first 50 | ✓ | ✓ | ✓ | partial: a count only [N25] | ✓ |
+| Entries past the slice's first 50 | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Clear Queue asks first ("Clear the Queue?") | ✓ | ✓ | ✓ | ✓ | ✓ |
 | "Nothing Up Next" | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Mini-player (narrow windows, phones) | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -355,7 +355,7 @@ Where: macOS `mac/App/AppCommands.swift` and `mac/Platform/SystemState.swift` (`
 | A source item's cover (search, browse, Home shelves) | ✗ [N29] | ✓ (N30) | ✗ [N29] | ✗ [N29] | ✓ |
 | Now Playing artwork of a source song | ✗ [N29] | ✓ | ✗ [N29] | ✗ [N29] | ✓ |
 | A remote session's track artwork | ✗ [N29] | ✓ | ✗ [N29] | ✗ [N29] | n/a (no remote sessions) |
-| Plugin icons (Add a Source, Your Sources, Installed) | ✓ | ✓ | ✓ | partial: Add a Source only [N31] | ✗ generic glyph [N31] |
+| Plugin icons (Add a Source, Your Sources, Installed) | ✓ | ✓ | ✓ | ✓ | ✗ generic glyph [N31] |
 
 The Now Playing backdrop of a source song works everywhere: the core fetches
 the artwork through the plugin and bakes it, so only the artwork tile is
@@ -469,7 +469,8 @@ parity pass (docs/macos.md), as listed here.
 * About's "Licence" row: "No licence has been chosen yet: all rights reserved." (`linux/ui/about.rs`).
 * The import filter is "Playlists (M3U)" (`linux/ui/pages/playlists.rs:163`; it accepts .m3u and .m3u8); ui.md speaks of M3U8.
 
-**Android** (`platforms/android/app/src/main/res/values/strings.xml`)
+**Android** (`platforms/android/app/src/main/res/values/strings.xml`): all fixed in the parity
+pass (docs/android.md), as listed here.
 * `np_speakers` "Speakers" (the output chip at System Default, `and/ui/player/InfoAndDevices.kt:230`): **System Default** (`np_system_default` exists).
 * `folders_empty` "No folders yet.": Title Case, no full stop.
 * `action_remove` "Remove" for an Up Next entry: **Remove from Queue**.
