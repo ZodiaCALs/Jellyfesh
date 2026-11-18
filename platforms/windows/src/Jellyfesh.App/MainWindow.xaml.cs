@@ -765,11 +765,12 @@ public sealed partial class MainWindow : Window
         AppLog.Write("the window closed; shutting down");
 
         // A new start now opens a new window rather than handing itself to this process; and should
-        // shutting down hang, the process still ends, so it never lingers without a window.
+        // shutting down hang, the process still ends, so it never lingers without a window. The core
+        // may wait up to a minute for plugin installs already under way.
         Program.ReleaseInstanceKey();
         if (Startup.WindowOpen)
         {
-            Startup.ArmWatchdog(Startup.SmokeTest ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(90), ExitCodes.ShutdownHung, "shutting down");
+            Startup.ArmWatchdog(TimeSpan.FromMinutes(2), ExitCodes.ShutdownHung, "shutting down");
         }
 
         Optional("closing the media controls", () => _media?.Dispose());

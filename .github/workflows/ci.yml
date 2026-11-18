@@ -280,7 +280,7 @@ jobs:
         run: platforms/windows/scripts/build.ps1 -Architectures x64
       - name: Start it (platforms/windows/scripts/smoke-test.ps1)
         shell: pwsh
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: platforms/windows/scripts/smoke-test.ps1 -DefaultFolders -WorkDir "$env:RUNNER_TEMP\jellyfesh-smoke"
       - name: Keep the logs
         if: always()

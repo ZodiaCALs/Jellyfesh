@@ -349,6 +349,12 @@ jobs:
             '::notice title=No Microsoft Store package::MS_STORE_IDENTITY_NAME, MS_STORE_PUBLISHER or MS_STORE_PUBLISHER_NAME is not set (docs/store-release.md)'
           }
           platforms/windows/scripts/build.ps1 @options
+      # The x64 build starts and opens every page, from its folder and from a non-ASCII path
+      # (docs/windows.md, "When Jellyfesh does not start"); a failure stops the release.
+      - name: Start the x64 build (platforms/windows/scripts/smoke-test.ps1)
+        shell: pwsh
+        timeout-minutes: 20
+        run: platforms/windows/scripts/smoke-test.ps1 -DefaultFolders -WorkDir "$env:RUNNER_TEMP\smoke-build"
       - name: Installer (platforms/windows/scripts/installer.ps1)
         id: installer
         shell: pwsh
@@ -364,6 +370,18 @@ jobs:
           $named = "upload/Jellyfesh-$env:LABEL-Windows-Setup.exe"
           if ($built -ne $named) { Move-Item $built $named }
           if ($env:JF_WINDOWS_PFX) { 'signed=true' >> $env:GITHUB_OUTPUT }
+      # Setup installs silently for this user, and the installed app starts and opens every page.
+      - name: Install with Setup and start the installed app
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          $setup = Get-ChildItem upload -Filter '*-Windows-Setup.exe' | Select-Object -First 1
+          $log = Join-Path $env:RUNNER_TEMP 'setup.log'
+          $process = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { Get-Content $log; throw "Setup exited with $($process.ExitCode)" }
+          $app = Join-Path $env:LOCALAPPDATA 'Programs\Jellyfesh'
+          if (-not (Test-Path (Join-Path $app 'Jellyfesh.exe'))) { Get-Content $log; throw "Setup did not install Jellyfesh in $app" }
+          platforms/windows/scripts/smoke-test.ps1 -App $app -DefaultFolders -InPlaceOnly -WorkDir "$env:RUNNER_TEMP\smoke-installed"
       - name: Name the Microsoft Store package
         shell: pwsh
         run: |

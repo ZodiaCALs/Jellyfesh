@@ -26,10 +26,14 @@ The published app folder, the one with Jellyfesh.exe. Default: platforms/windows
 Where the copies, folders and logs go. Default: jellyfesh-smoke in RUNNER_TEMP or the temporary folder.
 
 .PARAMETER TimeoutSeconds
-How long one run may take before it is ended and counted as failed. Default: 300.
+How long one run may take before it is ended and counted as failed. Default: 420 (the app's own
+limits are 3 minutes to open every page and 2 to shut down, which waits for plugin installs).
 
 .PARAMETER DefaultFolders
 Run 1 uses the user's own data, cache and log folders, as an installed app does.
+
+.PARAMETER InPlaceOnly
+Only run 1, from -App as it is (for an app Setup has installed).
 #>
 [CmdletBinding()]
 param(
@@ -37,9 +41,11 @@ param(
 
     [string] $WorkDir,
 
-    [int] $TimeoutSeconds = 300,
+    [int] $TimeoutSeconds = 420,
 
-    [switch] $DefaultFolders
+    [switch] $DefaultFolders,
+
+    [switch] $InPlaceOnly
 )
 
 Set-StrictMode -Version Latest
@@ -146,13 +152,15 @@ else {
 }
 
 # 2. From a path with spaces and non-ASCII characters, with its folders on such paths too.
-$copy = Join-Path $WorkDir $unicodeApp
-Copy-Item -LiteralPath $App -Destination $copy -Recurse
-$folders = Join-Path $WorkDir $unicodeData
-$results += Invoke-SmokeRun -Name 'non-ASCII path' -Folder $copy -Log (Join-Path $folders 'logs\app.log') -Environment @{
-    JF_DATA_DIR  = Join-Path $folders 'data'
-    JF_CACHE_DIR = Join-Path $folders 'cache'
-    JF_LOG_DIR   = Join-Path $folders 'logs'
+if (-not $InPlaceOnly) {
+    $copy = Join-Path $WorkDir $unicodeApp
+    Copy-Item -LiteralPath $App -Destination $copy -Recurse
+    $folders = Join-Path $WorkDir $unicodeData
+    $results += Invoke-SmokeRun -Name 'non-ASCII path' -Folder $copy -Log (Join-Path $folders 'logs\app.log') -Environment @{
+        JF_DATA_DIR  = Join-Path $folders 'data'
+        JF_CACHE_DIR = Join-Path $folders 'cache'
+        JF_LOG_DIR   = Join-Path $folders 'logs'
+    }
 }
 
 $failed = @($results | Where-Object { -not $_ }).Count

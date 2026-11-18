@@ -318,7 +318,8 @@ later start through the single-instance redirect. Other safety nets:
   says that Jellyfesh is running but not answering. Closing the window releases
   the single-instance key first (as the Windows App SDK recommends), so a new
   start opens a new window instead of handing itself to a process that is
-  shutting down; and a shutdown that takes longer than 90 s ends the process.
+  shutting down; and a shutdown that takes longer than 2 minutes (the core waits
+  up to one for plugin installs under way) ends the process.
 * Exceptions on other threads and unobserved task exceptions are logged.
   Native crashes (outside .NET) appear in Windows' Event Viewer, Windows Logs ›
   Application, as Application Error and .NET Runtime entries.
@@ -333,16 +334,17 @@ single-instance key, so a running Jellyfesh never takes it, and shows nothing:
 | --- | --- |
 | 0 | Every page opened |
 | 1 | Start-up failed, or anything failed on the way (the log says where) |
-| 2 | It timed out (3 minutes) |
+| 2 | It timed out (3 minutes to open every page) |
 | 3 | Another Jellyfesh took the start, or did not answer |
-| 4 | Shutting down did not end in time |
+| 4 | Shutting down did not end in 2 minutes |
 
 `scripts/smoke-test.ps1` runs it twice: from the publish folder (its own data,
 cache and log folders, or with `-DefaultFolders` the user's, as in CI), and from
 a copy in a folder whose path has spaces and non-ASCII characters, with its
 folders on such paths too, as for a Windows user name that is not ASCII. It
 prints the log after each run and the event log's entries about Jellyfesh after
-a failed one, and keeps the logs in `<WorkDir>\logs`:
+a failed one, and keeps the logs in `<WorkDir>\logs`; `-InPlaceOnly` runs only
+the first (the release workflow uses it for the app Setup installed):
 
 ```powershell
 pwsh platforms/windows/scripts/build.ps1 -Architectures x64
