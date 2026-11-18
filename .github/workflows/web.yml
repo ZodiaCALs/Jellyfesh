@@ -7,7 +7,8 @@ name: Web
 # of the latest release. It deploys only while Pages is on with "GitHub Actions" as the source;
 # otherwise the deploy is skipped with a warning that says how to turn it on (on GitHub Free,
 # Pages needs a public repository). Secret: JF_PLUGIN_SIGNING_KEY (as in release.yml); without it
-# the plugins in the deployed app are unsigned and show as Community.
+# the plugins in the deployed app are unsigned and show as Community. Variables for the deployed
+# app (docs/github.md): JF_LICENCE_PUBLIC_KEYS, and JF_PRO_PREVIEW (0 ends Pro Preview there).
 
 on:
   push:
@@ -123,6 +124,15 @@ jobs:
     concurrency:
       group: pages
       cancel-in-progress: false
+    env:
+      # The Jellyfesh Web the website serves is a commercial build, like the releases' (docs/github.md):
+      # Pro Preview unless the repository variable JF_PRO_PREVIEW is 0, and the licence keys'
+      # public keys from the variable JF_LICENCE_PUBLIC_KEYS.
+      JF_EDITION: commercial
+      VITE_JF_EDITION: commercial
+      VITE_JF_DISTRIBUTION: web
+      JF_PRO_PREVIEW: ${{ vars.JF_PRO_PREVIEW || '1' }}
+      JF_LICENCE_PUBLIC_KEYS: ${{ vars.JF_LICENCE_PUBLIC_KEYS }}
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.97.0
@@ -152,25 +162,48 @@ jobs:
         shell: bash
         run: |
           version=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml', 'rb'))['workspace']['package']['version'])")
-          releases=""
+          list=none
           tag=$(gh release list --limit 1 --exclude-drafts --json tagName --jq '.[0].tagName // empty' || true)
-          if [ -n "$tag" ] && gh release download "$tag" --pattern "jellyfesh-site-$tag.zip" --dir release; then
-            unzip -q "release/jellyfesh-site-$tag.zip" site/releases.json -d release
-            version="${tag#v}"
-            releases=release/site/releases.json
+          mkdir -p release
+          if [ -n "$tag" ]; then
+            if gh release download "$tag" --pattern SHA256SUMS.txt --dir release; then
+              # From 0.0.7: one file per platform and SHA256SUMS.txt (release.yml).
+              gh release view "$tag" --json assets > release/assets.json
+              list=assets
+              version="${tag#v}"
+            elif gh release download "$tag" --pattern "jellyfesh-site-$tag.zip" --dir release; then
+              # Earlier releases carried the website with its download list.
+              unzip -q "release/jellyfesh-site-$tag.zip" site/releases.json -d release
+              list=site
+              version="${tag#v}"
+            fi
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "releases=$releases" >> "$GITHUB_OUTPUT"
+          {
+            echo "version=$version"
+            echo "tag=$tag"
+            echo "list=$list"
+          } >> "$GITHUB_OUTPUT"
       - name: Third-party notices for the website
         run: python3 tools/licenses/generate.py
       - name: Website with Jellyfesh Web at /app/
         env:
           VERSION: ${{ steps.release.outputs.version }}
-          RELEASES: ${{ steps.release.outputs.releases }}
+          TAG: ${{ steps.release.outputs.tag }}
+          LIST: ${{ steps.release.outputs.list }}
         shell: bash
         run: |
-          python3 tools/release/build_site.py "$VERSION" --app platforms/web/dist \
-            ${RELEASES:+--releases "$RELEASES"}
+          case "$LIST" in
+            assets)
+              python3 tools/release/build_site.py "$VERSION" --app platforms/web/dist \
+                --base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/" \
+                --release-assets release/assets.json --sums release/SHA256SUMS.txt
+              ;;
+            site)
+              python3 tools/release/build_site.py "$VERSION" --app platforms/web/dist \
+                --releases release/site/releases.json
+              ;;
+            *) python3 tools/release/build_site.py "$VERSION" --app platforms/web/dist ;;
+          esac
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
