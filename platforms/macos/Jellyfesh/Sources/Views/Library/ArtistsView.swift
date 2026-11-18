@@ -86,16 +86,21 @@ struct ArtistDetailView: View {
         let items = songs.map { TrackItem(song: $0, favorite: favorites.contains($0.reference)) }
         ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.s7) {
-                PageHeader(title: artist.name.isEmpty ? String(localized: "Unknown Artist") : artist.name,
-                           subtitle: CountText.joined([
-                               albums.isEmpty ? nil : CountText.albums(albums.count),
-                               songs.isEmpty ? nil : CountText.songs(songs.count),
-                           ])) {
-                    HStack(spacing: Tokens.Space.s2) {
-                        PlayShuffleButtons(collection: .artist(id: artist.id), disabled: songs.isEmpty)
-                        CollectionMoreMenu(collection: .artist(id: artist.id))
-                            .disabled(songs.isEmpty)
-                    }
+                // The library has no pictures of artists: the circle keeps their place.
+                CollectionHeader(
+                    artwork: nil,
+                    placeholder: "music.mic",
+                    round: true,
+                    kind: String(localized: "Artist"),
+                    title: artist.name.isEmpty ? String(localized: "Unknown Artist") : artist.name,
+                    facts: CountText.joined([
+                        albums.isEmpty ? nil : CountText.albums(albums.count),
+                        songs.isEmpty ? nil : CountText.songs(songs.count),
+                    ])
+                ) {
+                    PlayShuffleButtons(collection: .artist(id: artist.id), disabled: songs.isEmpty)
+                    CollectionMoreMenu(collection: .artist(id: artist.id))
+                        .disabled(songs.isEmpty)
                 }
                 if !albums.isEmpty {
                     VStack(alignment: .leading, spacing: Tokens.Space.s3) {

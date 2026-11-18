@@ -151,7 +151,11 @@ private struct SearchSectionView: View {
                 .foregroundStyle(palette[Tokens.Ink.ink70])
             switch kind {
             case .track:
-                let rows = items.map { TrackItem(result: $0, artwork: search.artwork(for: $0)) }
+                let rows = items.map { result -> TrackItem in
+                    var row = TrackItem(result: result, artwork: search.artwork(for: result))
+                    row.alsoIn = sources.alsoIn(result.alsoIn)
+                    return row
+                }
                 TrackStack(items: rows) { index in
                     let playable = rows.filter(\.canPlay)
                     guard let start = playable.firstIndex(where: { $0.id == rows[index].id }) else { return }
@@ -163,7 +167,8 @@ private struct SearchSectionView: View {
                     ForEach(items) { item in
                         if item.source == SearchStore.library, let id = Int64(item.itemID) {
                             AlbumCard(album: AlbumSummary(id: id, title: item.title, albumArtist: item.subtitle, year: nil,
-                                                          trackCount: 0, artworkHash: hash(of: search.artwork(for: item))))
+                                                          trackCount: 0, artworkHash: hash(of: search.artwork(for: item))),
+                                      alsoIn: sources.alsoIn(item.alsoIn))
                         } else {
                             SourceCard(item: item, artwork: search.artwork(for: item))
                         }
@@ -197,13 +202,14 @@ private struct SearchSectionView: View {
     }
 }
 
-/// A source's album or container as a card; opens it in Browse, or in its service when it cannot
-/// play here and has a link.
+/// A source's album or container as a card; opens its page, or its service when it cannot play
+/// here and has a link. The second line names the other sources that have it ("Also in …").
 struct SourceCard: View {
     var item: SourceResult
     var artwork: ArtworkSource?
 
     @Environment(Router.self) private var router
+    @Environment(SourcesStore.self) private var sources
     @Environment(\.palette) private var palette
 
     var body: some View {
@@ -211,7 +217,8 @@ struct SourceCard: View {
             if ServiceLink.isMainAction(canPlay: item.playable, link: item.link) {
                 ServiceLink.open(item.link)
             } else {
-                router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link))
+                router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link,
+                                    item: item))
             }
         } label: {
             VStack(alignment: .leading, spacing: Tokens.Space.s2) {
@@ -221,8 +228,8 @@ struct SourceCard: View {
                     .typography(Tokens.TypeRoles.listTitle)
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                     .lineLimit(1)
-                if let subtitle = item.subtitle {
-                    Text(subtitle)
+                if let line = secondLine {
+                    Text(line)
                         .typography(Tokens.TypeRoles.listSecondary)
                         .foregroundStyle(palette[Tokens.Ink.ink70])
                         .lineLimit(1)
@@ -233,7 +240,12 @@ struct SourceCard: View {
         .contextMenu {
             SourceContainerActions(item: item)
         }
-        .accessibilityLabel(Text(item.subtitle.map { "\(item.title), \($0)" } ?? item.title))
+        .accessibilityLabel(Text([item.title, secondLine].compactMap { $0 }.joined(separator: ", ")))
+    }
+
+    /// The artist, and the other sources that have it.
+    private var secondLine: String? {
+        CountText.joined([item.subtitle, sources.alsoIn(item.alsoIn)]).nilIfEmpty
     }
 }
 
@@ -302,7 +314,7 @@ struct ResultRow: View {
                 SourceContainerActions(item: item)
             }
         }
-        .accessibilityLabel(Text(CountText.joined([item.title, secondLine])))
+        .accessibilityLabel(Text([item.title, secondLine].compactMap { $0 }.joined(separator: ", ")))
     }
 
     private var symbol: String {
@@ -317,9 +329,7 @@ struct ResultRow: View {
 
     /// The subtitle, and the other sources that have the same item (the core merges them).
     private var secondLine: String? {
-        let also = item.alsoIn.map { sources.name(of: $0) }
-        let alsoText = also.isEmpty ? nil : String(localized: "Also in \(also.joined(separator: ", "))")
-        return CountText.joined([item.subtitle, alsoText]).nilIfEmpty
+        CountText.joined([item.subtitle, sources.alsoIn(item.alsoIn)]).nilIfEmpty
     }
 
     private func open() {
@@ -343,7 +353,7 @@ struct ResultRow: View {
                 break
             }
         }
-        router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link))
+        router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link, item: item))
     }
 }
 

@@ -89,7 +89,6 @@ struct PlaylistDetailView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlaybackStore.self) private var playback
     @Environment(Router.self) private var router
-    @Environment(\.palette) private var palette
     @State private var entries: PagedList<PlaylistRow>?
     @State private var selection = Set<TrackItem.ID>()
     @State private var renaming = false
@@ -105,7 +104,7 @@ struct PlaylistDetailView: View {
         let items = rows.map { TrackItem(row: $0.row, id: "e\($0.entryID)") }
         List(selection: $selection) {
             header(count: rows.count)
-                .padding(.vertical, Tokens.Space.s4)
+                .padding(.vertical, Tokens.Space.s5)
                 .trackListRow()
                 .selectionDisabled()
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -163,42 +162,31 @@ struct PlaylistDetailView: View {
     }
 
     private func header(count: Int) -> some View {
-        HStack(alignment: .bottom, spacing: Tokens.Space.s6) {
-            ArtworkView(source: info?.artworkHash.map(ArtworkSource.hash), size: 160,
-                        cornerRadius: Tokens.Artwork.radiusGrid, placeholder: "music.note.list")
-                .elevation(Tokens.Elevation.shadow2)
-            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                Text(info?.name ?? "")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .lineLimit(2)
-                    .accessibilityAddTraits(.isHeader)
-                Text(CountText.joined([
-                    info.map { CountText.songs(Int($0.entryCount)) },
-                    info.flatMap { $0.durationMs > 0 ? CountText.minutes(milliseconds: $0.durationMs) : nil },
-                ]))
-                .typography(Tokens.TypeRoles.listSecondary)
-                .foregroundStyle(palette[Tokens.Ink.ink70])
-                HStack(spacing: Tokens.Space.s2) {
-                    PlayShuffleButtons(collection: .playlist(id: playlistID), disabled: count == 0)
-                    CollectionMoreMenu(collection: .playlist(id: playlistID), playlistID: playlistID) {
-                        Divider()
-                        Button("Rename…") {
-                            newName = info?.name ?? ""
-                            renaming = true
-                        }
-                        Button("Export Playlist…") {
-                            FilePanels.savePlaylist(named: info?.name ?? String(localized: "Playlist")) { url in
-                                Task { @MainActor in await library.exportPlaylist(playlistID, to: url.path) }
-                            }
-                        }
-                        Divider()
-                        Button("Delete Playlist…", role: .destructive) { confirmDelete = true }
+        CollectionHeader(
+            artwork: info?.artworkHash.map(ArtworkSource.hash),
+            placeholder: "music.note.list",
+            kind: String(localized: "Playlist"),
+            title: info?.name ?? "",
+            facts: CountText.joined([
+                info.map { CountText.songs(Int($0.entryCount)) },
+                info.flatMap { $0.durationMs > 0 ? CountText.minutes(milliseconds: $0.durationMs) : nil },
+            ])
+        ) {
+            PlayShuffleButtons(collection: .playlist(id: playlistID), disabled: count == 0)
+            CollectionMoreMenu(collection: .playlist(id: playlistID), playlistID: playlistID) {
+                Divider()
+                Button("Rename…") {
+                    newName = info?.name ?? ""
+                    renaming = true
+                }
+                Button("Export Playlist…") {
+                    FilePanels.savePlaylist(named: info?.name ?? String(localized: "Playlist")) { url in
+                        Task { @MainActor in await library.exportPlaylist(playlistID, to: url.path) }
                     }
                 }
-                .padding(.top, Tokens.Space.s2)
+                Divider()
+                Button("Delete Playlist…", role: .destructive) { confirmDelete = true }
             }
-            Spacer(minLength: 0)
         }
     }
 }

@@ -32,6 +32,8 @@ struct TrackItem: Identifiable, Hashable {
     var link: String?
     /// The source it comes from, whose name names the service.
     var source: String?
+    /// "Also in …": the other sources that have it, in unified search.
+    var alsoIn: String? = nil
 
     var canPlay: Bool { playable && !missing && track != nil }
 
@@ -100,8 +102,8 @@ struct TrackRowView: View {
                     .typography(Tokens.TypeRoles.listTitle)
                     .foregroundStyle(palette[isCurrent ? Tokens.Accent.accentText : Tokens.Ink.ink90])
                     .lineLimit(1)
-                if let artist = item.artist, !artist.isEmpty {
-                    Text(artist)
+                if let second = secondLine {
+                    Text(second)
                         .typography(Tokens.TypeRoles.listSecondary)
                         .foregroundStyle(palette[Tokens.Ink.ink70])
                         .lineLimit(1)
@@ -151,6 +153,11 @@ struct TrackRowView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilityText))
         .accessibilityAddTraits(isCurrent ? .isSelected : [])
+    }
+
+    /// The artist, and the other sources that have the song ("Also in …").
+    private var secondLine: String? {
+        CountText.joined([item.artist, item.alsoIn]).nilIfEmpty
     }
 
     /// Hover `fill`; the playing row `accent-soft`.
@@ -204,6 +211,7 @@ struct TrackRowView: View {
         var parts = [item.title]
         if let artist = item.artist, !artist.isEmpty { parts.append(artist) }
         if let album = item.album, !album.isEmpty, style == .full { parts.append(album) }
+        if let alsoIn = item.alsoIn { parts.append(alsoIn) }
         if let duration = item.durationMs { parts.append(TimeText.spoken(microseconds: Int64(clamping: duration) * 1_000)) }
         if isCurrent { parts.append(isPlaying ? String(localized: "Playing") : String(localized: "Paused")) }
         if item.favorite == true { parts.append(String(localized: "Favourite")) }

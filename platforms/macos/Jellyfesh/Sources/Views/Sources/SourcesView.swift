@@ -207,40 +207,61 @@ struct SourcesUnavailableNotice: View {
     }
 }
 
-/// One container of a source's catalogue (`node` nil is its root), page by page. Its More menu
-/// opens it in its service when it has a link; a source whose terms ask for it is credited.
+/// One container of a source's catalogue (`node` nil is its root), page by page, as the web's
+/// source pages show it (docs/parity.md N18). An album, playlist or artist has the header of the
+/// library's pages (CollectionHeader): its artwork, kind, title and artist, the song count once
+/// every page is in, Play and Shuffle (the core plays the whole container), and More (Play Next,
+/// Play Last and Add to Playlist… where its songs may join the queue, then Open in {Service}). An
+/// album's songs are numbered, and the songs end with "12 songs, 48 minutes". The source's top
+/// level and its folders have their title and the source's line. A source whose terms ask for it is
+/// credited ("Content from {Service}").
 struct BrowseView: View {
     var plugin: String
     var node: String?
     var title: String
     var link: String?
+    /// The container as the list it was chosen from showed it, when known.
+    var item: SourceResult?
 
     @Environment(SourcesStore.self) private var sources
     @Environment(PlaybackStore.self) private var playback
-    @Environment(Router.self) private var router
+    @Environment(\.palette) private var palette
     @State private var model: BrowseModel?
 
     var body: some View {
         let items = model?.items ?? []
+        let songs = model?.songs ?? []
+        let numbers: [String: UInt32] = item?.kind == .album ? (model?.songNumbers() ?? [:]) : [:]
         List {
-            PageHeader(title: title, subtitle: sources.attribution(of: plugin) ?? sources.plugin(plugin)?.name) {
-                if ServiceLink.url(link) != nil {
-                    Menu {
-                        OpenInServiceButton(link: link, source: plugin)
-                    } label: {
-                        Label("More", systemImage: "ellipsis")
+            header(songs: songs)
+                .padding(.vertical, collectionKind == nil ? Tokens.Space.s4 : Tokens.Space.s5)
+                .trackListRow()
+            if let model {
+                if model.unavailable {
+                    SourcesUnavailableNotice()
+                        .frame(maxWidth: 520)
+                        .padding(.vertical, Tokens.Space.s4)
+                        .trackListRow()
+                } else if let error = model.error, items.isEmpty {
+                    EmptyState(title: "This Source Did Not Answer", symbol: "exclamationmark.triangle", error: error)
+                        .frame(minHeight: 240)
+                        .trackListRow()
+                } else if model.isLoading && items.isEmpty {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
                     }
-                    .menuStyle(.button)
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .fixedSize()
-                    .accessibilityLabel(Text("More Actions"))
+                    .padding(.vertical, Tokens.Space.s6)
+                    .trackListRow()
+                } else if model.loaded && items.isEmpty {
+                    EmptyState(title: "Nothing Here", symbol: "tray")
+                        .frame(minHeight: 240)
+                        .trackListRow()
                 }
             }
-            .padding(.vertical, Tokens.Space.s4)
-            .trackListRow()
-            ForEach(items) { item in
-                row(for: item)
+            ForEach(items) { entry in
+                row(for: entry, number: numbers[entry.id])
                     .trackListRow()
             }
             if let model, model.nextPage != nil {
@@ -252,23 +273,17 @@ struct BrowseView: View {
                 }
                 .trackListRow()
             }
-        }
-        .fieldList()
-        .overlay {
-            if let model {
-                if model.unavailable {
-                    SourcesUnavailableNotice()
-                        .frame(maxWidth: 520)
-                        .padding()
-                } else if let error = model.error, items.isEmpty {
-                    EmptyState(title: "This Source Did Not Answer", symbol: "exclamationmark.triangle", error: error)
-                } else if model.isLoading && items.isEmpty {
-                    ProgressView()
-                } else if items.isEmpty {
-                    EmptyState(title: "Nothing Here", symbol: "tray")
-                }
+            if let model, model.isComplete, !songs.isEmpty {
+                Text(CountText.songsAndLength(count: songs.count,
+                                              milliseconds: songs.reduce(0) { $0 + ($1.durationMs ?? 0) }))
+                    .typography(Tokens.TypeRoles.listSecondary)
+                    .foregroundStyle(palette[Tokens.Ink.ink50])
+                    .padding(.top, Tokens.Space.s4)
+                    .padding(.bottom, Tokens.Space.s6)
+                    .trackListRow()
             }
         }
+        .fieldList()
         .navigationTitle(Text(title))
         .task(id: "\(plugin)\u{1F}\(node ?? "")") {
             let browse = BrowseModel(plugin: plugin, node: node)
@@ -277,31 +292,184 @@ struct BrowseView: View {
         }
     }
 
-    @ViewBuilder private func row(for item: SourceResult) -> some View {
-        if item.kind == .track {
-            TrackRowView(item: TrackItem(result: item, artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) }),
-                         isCurrent: item.track != nil && item.track == playback.nowPlaying?.track,
-                         isPlaying: playback.isPlaying)
-                .onTapGesture(count: 2) { play(from: item) }
-                .contextMenu {
-                    TrackActionsMenu(items: [TrackItem(result: item, artwork: nil)])
-                }
-                .accessibilityAction { play(from: item) }
+    /// An album, playlist or artist (they get the collection header); nil for a folder or the
+    /// source's top level.
+    private var collectionKind: ResultKind? {
+        guard let kind = item?.kind, kind == .album || kind == .playlist || kind == .artist else { return nil }
+        return kind
+    }
+
+    @ViewBuilder private func header(songs: [SourceResult]) -> some View {
+        if let item, let kind = collectionKind {
+            CollectionHeader(
+                artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) },
+                placeholder: SourcePage.placeholder(kind),
+                round: kind == .artist,
+                kind: SourcePage.kindName(kind),
+                title: title,
+                artist: kind == .artist ? nil : item.subtitle,
+                facts: facts(songs: songs),
+                credit: sources.attribution(of: plugin)
+            ) {
+                actions(for: item, songs: songs)
+            }
         } else {
-            // ResultRow's own menu: Play, Shuffle, Play Next, Play Last (not for a remote source)
-            // and Open in {Service}.
-            ResultRow(item: item, artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) })
+            PageHeader(title: title, subtitle: sourceLine) {
+                if ServiceLink.url(link) != nil {
+                    SourcePageMoreMenu(plugin: plugin, collection: nil, tracks: [], link: link)
+                }
+            }
         }
     }
 
-    /// Plays the page's tracks from `item`; an item that cannot play here opens its link instead.
-    private func play(from item: SourceResult) {
-        guard let queue = model?.tracks(startingAt: item) else {
-            if ServiceLink.isMainAction(canPlay: item.playable && item.track != nil, link: item.link) {
-                ServiceLink.open(item.link)
+    /// Play and Shuffle while the container plays here, else Open in {Service} as its main action;
+    /// then More.
+    @ViewBuilder private func actions(for item: SourceResult, songs: [SourceResult]) -> some View {
+        let collection = CollectionReference.source(plugin: plugin, id: item.itemID)
+        let playable = SourcePage.canPlay(item: item, songs: songs, complete: model?.isComplete ?? false)
+        let tracks = model?.isComplete == true ? (model?.playableTracks ?? []) : []
+        if playable {
+            PlayShuffleButtons(collection: collection)
+        } else if ServiceLink.url(link) != nil {
+            Button {
+                ServiceLink.open(link)
+            } label: {
+                Label(String(localized: "Open in \(sources.name(of: plugin))"), systemImage: "arrow.up.right.square")
+            }
+            .buttonStyle(PillButtonStyle(prominent: true))
+        }
+        if SourcePageMoreMenu.hasItems(remote: sources.isRemote(plugin), playable: playable, link: link) {
+            SourcePageMoreMenu(plugin: plugin, collection: playable ? collection : nil, tracks: tracks, link: link)
+        }
+    }
+
+    /// The source's name (unless the credit names it) and, once every page is in, the songs.
+    private func facts(songs: [SourceResult]) -> String {
+        CountText.joined([
+            sources.attribution(of: plugin) == nil ? sources.name(of: plugin) : nil,
+            model?.isComplete == true && !songs.isEmpty ? CountText.songs(songs.count) : nil,
+        ])
+    }
+
+    /// Under a folder's or the top level's title: the credit, else the source's badge and account at
+    /// its top level, its name in a folder.
+    private var sourceLine: String? {
+        if let credit = sources.attribution(of: plugin) { return credit }
+        if node == nil, let source = sources.plugin(plugin) {
+            return CountText.joined([SourceText.badge(source), SourceText.account(source)])
+        }
+        return sources.name(of: plugin)
+    }
+
+    @ViewBuilder private func row(for entry: SourceResult, number: UInt32?) -> some View {
+        let artwork = entry.artwork.flatMap { ArtworkSource(hash: nil, location: $0) }
+        if entry.kind == .track {
+            let shown = SourcePage.trackItem(entry, artwork: artwork, number: number)
+            let playFromRow: (() -> Void)? = number == nil ? nil : { play(from: entry) }
+            TrackRowView(item: shown, style: number == nil ? .full : .album,
+                         isCurrent: entry.track != nil && entry.track == playback.nowPlaying?.track,
+                         isPlaying: playback.isPlaying, play: playFromRow)
+                .onTapGesture(count: 2) { play(from: entry) }
+                .contextMenu {
+                    TrackActionsMenu(items: [TrackItem(result: entry, artwork: nil)])
+                }
+                .accessibilityAction { play(from: entry) }
+        } else {
+            // ResultRow's own menu: Play, Shuffle, Play Next, Play Last (not for a remote source)
+            // and Open in {Service}.
+            ResultRow(item: entry, artwork: artwork)
+        }
+    }
+
+    /// Plays the page's tracks from `entry`; one that cannot play here opens its link instead.
+    private func play(from entry: SourceResult) {
+        guard let queue = model?.tracks(startingAt: entry) else {
+            if ServiceLink.isMainAction(canPlay: entry.playable && entry.track != nil, link: entry.link) {
+                ServiceLink.open(entry.link)
             }
             return
         }
         playback.play(tracks: queue.tracks, from: queue.start)
+    }
+}
+
+/// What a source's page shows (BrowseView), as rules apart from the view.
+enum SourcePage {
+    /// Whether the container plays here: the list it came from said so, and once its songs are in,
+    /// at least one of them can.
+    static func canPlay(item: SourceResult, songs: [SourceResult], complete: Bool) -> Bool {
+        guard item.playable else { return false }
+        guard complete, !songs.isEmpty else { return true }
+        return songs.contains { $0.playable && $0.track != nil }
+    }
+
+    static func kindName(_ kind: ResultKind) -> String {
+        switch kind {
+        case .album: return String(localized: "Album")
+        case .playlist: return String(localized: "Playlist")
+        case .artist: return String(localized: "Artist")
+        case .track: return String(localized: "Song")
+        case .folder: return String(localized: "Folder")
+        }
+    }
+
+    static func placeholder(_ kind: ResultKind) -> String {
+        switch kind {
+        case .album: return "square.stack"
+        case .playlist: return "music.note.list"
+        case .artist: return "music.mic"
+        case .track: return "music.note"
+        case .folder: return "folder"
+        }
+    }
+
+    /// A song of the page as its row shows it; numbered on an album.
+    static func trackItem(_ entry: SourceResult, artwork: ArtworkSource?, number: UInt32?) -> TrackItem {
+        var shown = TrackItem(result: entry, artwork: artwork)
+        shown.number = number
+        return shown
+    }
+}
+
+/// More on a source's page: Play Next and Play Last for a container whose songs may join the queue
+/// (not a remote source's), Add to Playlist… once every page of its songs is in, and Open in
+/// {Service}.
+private struct SourcePageMoreMenu: View {
+    var plugin: String
+    /// The container to queue; nil when it cannot play here.
+    var collection: CollectionReference?
+    /// Its playable songs, when every page is in.
+    var tracks: [TrackReference]
+    var link: String?
+
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(SourcesStore.self) private var sources
+
+    /// Whether the menu has anything to offer.
+    static func hasItems(remote: Bool, playable: Bool, link: String?) -> Bool {
+        (playable && !remote) || ServiceLink.url(link) != nil
+    }
+
+    var body: some View {
+        Menu {
+            if let collection, !sources.isRemote(plugin) {
+                Button("Play Next") { playback.enqueue(collection, next: true) }
+                Button("Play Last") { playback.enqueue(collection, next: false) }
+                if !tracks.isEmpty {
+                    AddToPlaylistMenu(collection: .tracks(tracks))
+                }
+                if ServiceLink.url(link) != nil {
+                    Divider()
+                }
+            }
+            OpenInServiceButton(link: link, source: plugin)
+        } label: {
+            Label("More", systemImage: "ellipsis")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+        .fixedSize()
+        .accessibilityLabel(Text("More Actions"))
     }
 }

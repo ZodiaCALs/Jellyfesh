@@ -117,6 +117,14 @@ final class SourcesStore {
         return String(localized: "Content from \(name(of: source))")
     }
 
+    /// "Also in Navidrome, Spotify": the other sources that have an item the core merged in unified
+    /// search (`SourceItem.also_in`); nil when there are none.
+    func alsoIn(_ others: [String]) -> String? {
+        guard !others.isEmpty else { return nil }
+        let names = others.map { name(of: $0) }.joined(separator: ", ")
+        return String(localized: "Also in \(names)")
+    }
+
     /// A player the app provides was registered with the core (or removed, with nil).
     func setExternalSource(_ id: String, name: String?) {
         externalSources[id] = name
@@ -309,10 +317,23 @@ final class BrowseModel {
     private(set) var isLoading = false
     private(set) var error: String?
     private(set) var unavailable = false
+    /// The first page has arrived.
+    private(set) var loaded = false
 
     init(plugin: String, node: String?) {
         self.plugin = plugin
         self.node = node
+    }
+
+    /// Every page is here: the songs can be counted and added to a playlist.
+    var isComplete: Bool { loaded && nextPage == nil && !isLoading }
+
+    /// The songs of the pages loaded so far, in order.
+    var songs: [SourceResult] { items.filter { $0.kind == .track } }
+
+    /// The songs that can join the queue and playlists: playable, with a track.
+    var playableTracks: [TrackReference] {
+        items.filter { $0.kind == .track && $0.playable }.compactMap(\.track)
     }
 
     func start(_ sources: SourcesStore) {
@@ -350,6 +371,16 @@ final class BrowseModel {
         let known = Set(items.map(\.id))
         items.append(contentsOf: batch.items.filter { !known.contains($0.id) })
         nextPage = batch.nextPage
+        loaded = true
+    }
+
+    /// The song numbers of an album page: each song's place among the page's songs, from 1.
+    func songNumbers() -> [String: UInt32] {
+        var numbers: [String: UInt32] = [:]
+        for (index, song) in songs.enumerated() where numbers[song.id] == nil {
+            numbers[song.id] = UInt32(index + 1)
+        }
+        return numbers
     }
 
     /// The tracks of this page in order, and where `item` is among them (to play from it).

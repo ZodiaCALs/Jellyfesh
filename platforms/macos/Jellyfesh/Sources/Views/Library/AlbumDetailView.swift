@@ -1,6 +1,7 @@
-// An album (after Apple Music): large artwork, the title, the artist in accent text (it opens the
-// artist), genre, year and song count, Play, Shuffle and More (Play Next, Play Last, Add to
-// Playlist…), its tracks in the core's order, and a footer with the song count and length.
+// An album (after Apple Music), with the header every album, playlist and artist page shares
+// (CollectionHeader): large artwork, the title, the artist in accent text (it opens the artist),
+// genre, year and song count, Play, Shuffle and More (Play Next, Play Last, Add to Playlist…); then
+// its tracks in the core's order, and a footer with the song count and length.
 
 import SwiftUI
 
@@ -67,42 +68,24 @@ struct AlbumDetailView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .bottom, spacing: Tokens.Space.s6) {
-            ArtworkView(source: (album.artworkHash ?? songs.first?.artworkHash).map(ArtworkSource.hash), size: 240,
-                        cornerRadius: Tokens.Artwork.radiusGrid, placeholder: "square.stack")
-                .elevation(Tokens.Elevation.shadow2)
-            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                Text(title)
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .lineLimit(2)
-                    .accessibilityAddTraits(.isHeader)
-                if let artistName {
-                    Button {
-                        openArtist(named: artistName)
-                    } label: {
-                        Text(artistName)
-                            .typography(Tokens.TypeRoles.nowPlayingArtist)
-                            .foregroundStyle(palette[Tokens.Accent.accentText])
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(.isLink)
-                }
-                Text(CountText.joined([
-                    songs.first?.genre,
-                    (album.year ?? songs.first?.year).map { String($0) },
-                    loaded ? CountText.songs(songs.count) : nil,
-                ]))
-                .typography(Tokens.TypeRoles.listSecondary)
-                .foregroundStyle(palette[Tokens.Ink.ink70])
-                HStack(spacing: Tokens.Space.s2) {
-                    PlayShuffleButtons(collection: .album(id: album.id), disabled: songs.isEmpty)
-                    CollectionMoreMenu(collection: .album(id: album.id))
-                        .disabled(songs.isEmpty)
-                }
-                .padding(.top, Tokens.Space.s2)
-            }
-            Spacer(minLength: 0)
+        let artist = artistName
+        let showArtist: (() -> Void)? = artist.map { name in { self.openArtist(named: name) } }
+        return CollectionHeader(
+            artwork: (album.artworkHash ?? songs.first?.artworkHash).map(ArtworkSource.hash),
+            placeholder: "square.stack",
+            kind: String(localized: "Album"),
+            title: title,
+            artist: artist,
+            openArtist: showArtist,
+            facts: CountText.joined([
+                songs.first?.genre,
+                (album.year ?? songs.first?.year).map { String($0) },
+                loaded ? CountText.songs(songs.count) : nil,
+            ])
+        ) {
+            PlayShuffleButtons(collection: .album(id: album.id), disabled: songs.isEmpty)
+            CollectionMoreMenu(collection: .album(id: album.id))
+                .disabled(songs.isEmpty)
         }
     }
 

@@ -454,3 +454,61 @@ final class SignInFormTests: XCTestCase {
         XCTAssertEqual(SignInForm.spelledOut("AB 12"), "A B 1 2")
     }
 }
+
+@MainActor
+final class SourcePageTests: XCTestCase {
+    private func song(_ id: String, playable: Bool = true) -> SourceResult {
+        var item = Fixture.result(id, source: "p", track: .source(SourceSong(plugin: "p", id: id, title: id)))
+        item.playable = playable
+        return item
+    }
+
+    func testAnAlbumPageNumbersItsSongsAndKnowsWhenEveryPageIsIn() {
+        let client = FakeCoreClient()
+        let sources = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let model = BrowseModel(plugin: "p", node: "album-1")
+        model.start(sources)
+        XCTAssertEqual(client.sent.last, .browse(plugin: "p", node: "album-1", page: 0))
+        XCTAssertFalse(model.isComplete)
+
+        let folder = Fixture.result("f", source: "p", kind: .folder)
+        sources.apply(browse: BrowseBatch(request: client.lastCommandID, plugin: "p", node: "album-1",
+                                          items: [song("a"), folder, song("b")], nextPage: 1, error: nil))
+        XCTAssertTrue(model.loaded)
+        XCTAssertFalse(model.isComplete, "another page is to come")
+        model.loadMore(sources)
+        XCTAssertEqual(client.sent.last, .browse(plugin: "p", node: "album-1", page: 1))
+        sources.apply(browse: BrowseBatch(request: client.lastCommandID, plugin: "p", node: "album-1",
+                                          items: [song("c", playable: false)], nextPage: nil, error: nil))
+        XCTAssertTrue(model.isComplete)
+
+        let ids = model.songs.map(\.id)
+        XCTAssertEqual(ids.count, 3, "folders are not songs")
+        XCTAssertEqual(model.songNumbers(), [ids[0]: 1, ids[1]: 2, ids[2]: 3])
+        XCTAssertEqual(model.playableTracks.count, 2, "a song that cannot play here joins no queue")
+    }
+
+    func testAContainerPlaysWhileOneOfItsSongsCan() {
+        let album = Fixture.result("album-1", source: "p", kind: .album)
+        XCTAssertTrue(SourcePage.canPlay(item: album, songs: [], complete: false), "before its songs are in")
+        XCTAssertTrue(SourcePage.canPlay(item: album, songs: [song("a", playable: false), song("b")], complete: true))
+        XCTAssertFalse(SourcePage.canPlay(item: album, songs: [song("a", playable: false)], complete: true),
+                       "none of its songs can play here: its main action opens it in its service")
+        var locked = album
+        locked.playable = false
+        XCTAssertFalse(SourcePage.canPlay(item: locked, songs: [song("a")], complete: false))
+    }
+
+    func testOtherSourcesAreNamed() {
+        let sources = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        sources.apply(SourcesState(version: 1, plugins: [Fixture.plugin()], allowCommunity: false))
+        XCTAssertNil(sources.alsoIn([]))
+        XCTAssertEqual(sources.alsoIn(["org.example.subsonic"]), String(localized: "Also in \("Example")"))
+    }
+
+    func testAnAlbumRowIsNumbered() {
+        let row = SourcePage.trackItem(song("a"), artwork: nil, number: 4)
+        XCTAssertEqual(row.number, 4)
+        XCTAssertEqual(SourcePage.kindName(.album), String(localized: "Album"))
+    }
+}

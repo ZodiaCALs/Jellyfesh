@@ -4,12 +4,15 @@
 import SwiftUI
 
 /// An album in a grid or shelf: artwork (`artwork.radius-grid`, Luminous 16 pt on `shadow-2`),
-/// title and artist. Opens the album. Hovering or focusing lifts the cover 4 pt onto `shadow-3`
-/// and shows a 40 pt play button in its bottom start corner; a press scales it to 97 %.
+/// title and artist (and in Search the other sources that have it). Opens the album. Hovering or
+/// focusing lifts the cover 4 pt onto `shadow-3` and shows a 40 pt play button in its bottom start
+/// corner; a press scales it to 97 %.
 struct AlbumCard: View {
     var album: AlbumSummary
     /// Artwork side in points; nil fills the grid cell.
     var size: CGFloat?
+    /// "Also in …", in unified search.
+    var alsoIn: String? = nil
 
     @Environment(Router.self) private var router
     @Environment(PlaybackStore.self) private var playback
@@ -56,7 +59,7 @@ struct AlbumCard: View {
                     .typography(Tokens.TypeRoles.listTitle)
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                     .lineLimit(1)
-                Text(album.albumArtist ?? String(localized: "Unknown Artist"))
+                Text(CountText.joined([album.albumArtist ?? String(localized: "Unknown Artist"), alsoIn]))
                     .typography(Tokens.TypeRoles.listSecondary)
                     .foregroundStyle(palette[Tokens.Ink.ink70])
                     .lineLimit(1)
@@ -73,9 +76,97 @@ struct AlbumCard: View {
             AddToPlaylistMenu(collection: .album(id: album.id))
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(album.albumArtist.map { "\(album.title), \($0)" } ?? album.title))
+        .accessibilityLabel(Text([album.title, album.albumArtist, alsoIn].compactMap { $0 }.joined(separator: ", ")))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { router.open(.album(album)) }
+    }
+}
+
+/// The header of an album, playlist or artist page, the library's and a source's alike (docs/ui.md,
+/// "Album, artist and playlist pages"): the artwork (240 pt, `artwork.radius-grid` on shadow-2; a
+/// circle for an artist), the kind, the title, the artist in accent text (a link when it opens the
+/// artist), the facts and a credit, then the page's actions (Play, Shuffle, More).
+struct CollectionHeader<Actions: View>: View {
+    var artwork: ArtworkSource?
+    var placeholder: String
+    /// An artist's picture is round.
+    var round = false
+    /// "Album", "Playlist", "Artist".
+    var kind: String? = nil
+    var title: String
+    var artist: String? = nil
+    /// Opens the artist; nil shows the artist as text.
+    var openArtist: (() -> Void)? = nil
+    /// "Rock · 2019 · 12 songs".
+    var facts: String? = nil
+    /// "Content from {Service}", for a source that asks for it.
+    var credit: String? = nil
+    @ViewBuilder var actions: Actions
+
+    @Environment(\.palette) private var palette
+
+    static var artworkSide: CGFloat { 240 }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: Tokens.Space.s6) {
+            picture
+            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                if let kind {
+                    Text(kind.uppercased())
+                        .font(.system(size: 11, weight: .bold))
+                        .tracking(0.6)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                }
+                Text(title)
+                    .font(.system(size: 30, weight: .bold))
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                    .lineLimit(2)
+                    .accessibilityAddTraits(.isHeader)
+                if let artist, !artist.isEmpty {
+                    if let openArtist {
+                        Button(action: openArtist) {
+                            Text(artist)
+                                .typography(Tokens.TypeRoles.nowPlayingArtist)
+                                .foregroundStyle(palette[Tokens.Accent.accentText])
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(.isLink)
+                    } else {
+                        Text(artist)
+                            .typography(Tokens.TypeRoles.nowPlayingArtist)
+                            .foregroundStyle(palette[Tokens.Accent.accentText])
+                    }
+                }
+                if let facts, !facts.isEmpty {
+                    Text(facts)
+                        .typography(Tokens.TypeRoles.listSecondary)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                }
+                if let credit {
+                    Text(credit)
+                        .typography(Tokens.TypeRoles.listSecondary)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                }
+                HStack(spacing: Tokens.Space.s2) {
+                    actions
+                }
+                .padding(.top, Tokens.Space.s2)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder private var picture: some View {
+        if round {
+            ArtworkView(source: artwork, size: Self.artworkSide, cornerRadius: Self.artworkSide / 2,
+                        placeholder: placeholder)
+                .clipShape(Circle())
+                .elevation(Tokens.Elevation.shadow2)
+        } else {
+            ArtworkView(source: artwork, size: Self.artworkSide, cornerRadius: Tokens.Artwork.radiusGrid,
+                        placeholder: placeholder)
+                .elevation(Tokens.Elevation.shadow2)
+        }
     }
 }
 

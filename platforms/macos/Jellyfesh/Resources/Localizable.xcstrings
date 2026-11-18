@@ -2745,6 +2745,28 @@
         }
       }
     },
+    "Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件夹"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "資料夾"
+          }
+        }
+      }
+    },
     "Folders": {
       "localizations": {
         "ja": {
@@ -6481,6 +6503,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "以純色表面取代玻璃效果，以短暫的淡入淡出取代移動。"
+          }
+        }
+      }
+    },
+    "Song": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌曲"
           }
         }
       }
