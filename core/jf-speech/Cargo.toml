@@ -19,12 +19,16 @@ sha2.workspace = true
 ureq.workspace = true
 rustls.workspace = true
 rustls-native-certs.workspace = true
+# whisper.cpp, CPU only; its log lines go to `tracing`.
+whisper-rs = { workspace = true, optional = true, features = ["tracing_backend"] }
 
 [features]
 default = []
-# Recognition through whisper.cpp (ADR-0019 §5). Off by default and for wasm32.
-# Reserved: whisper-rs and the recogniser come in the next change.
-whisper = []
+# Recognition through whisper.cpp (ADR-0019 §5): a C++ build with CMake, and bindgen with
+# libclang. Off by default and for wasm32.
+whisper = ["dep:whisper-rs"]
 
 [dev-dependencies]
 tempfile.workspace = true
+# Reads the smoke test's speech (tests/whisper_smoke.rs).
+hound.workspace = true

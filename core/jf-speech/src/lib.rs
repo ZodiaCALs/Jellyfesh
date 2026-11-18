@@ -17,6 +17,10 @@ use std::sync::atomic::AtomicBool;
 
 mod catalogue;
 mod store;
+#[cfg(feature = "whisper")]
+mod whisper;
+#[cfg(any(test, feature = "whisper"))]
+mod words;
 
 pub use catalogue::{DEFAULT_MODEL, ModelInfo, catalogue, model};
 pub use store::ModelStore;
@@ -92,9 +96,10 @@ pub trait Recognizer: Send + Sync {
     /// Recognises `pcm` with the model at `model_path` (described by `model`).
     ///
     /// `pcm`: 16 kHz mono f32 in [-1, 1]. `progress` receives the fraction
-    /// done, from 0 to 1. Setting `cancel` stops the recognition soon after,
-    /// with [`SpeechError::Cancelled`]. Runs on the caller's thread and may
-    /// take minutes; one recognition at a time.
+    /// done, from 0 to 1, on the caller's thread. Setting `cancel` stops the
+    /// recognition soon after, with [`SpeechError::Cancelled`]. Blocks the
+    /// caller for as long as it takes (minutes for a song); recognitions run
+    /// one at a time, and a second call waits for the first.
     fn transcribe(
         &self,
         model: &ModelInfo,
@@ -106,8 +111,16 @@ pub trait Recognizer: Send + Sync {
     ) -> Result<Transcript, SpeechError>;
 }
 
-/// The recogniser this build has: whisper.cpp's with the feature `whisper`,
-/// `None` without it. (Not yet: the whisper.cpp recogniser comes next.)
+/// The recogniser this build has: whisper.cpp's with the feature `whisper`
+/// (one for the process, which keeps the model it loaded last), `None`
+/// without it.
 pub fn recognizer() -> Option<Arc<dyn Recognizer>> {
+    #[cfg(feature = "whisper")]
+    {
+        static WHISPER: std::sync::OnceLock<Arc<whisper::Whisper>> = std::sync::OnceLock::new();
+        let whisper = WHISPER.get_or_init(|| Arc::new(whisper::Whisper::new()));
+        Some(Arc::clone(whisper) as Arc<dyn Recognizer>)
+    }
+    #[cfg(not(feature = "whisper"))]
     None
 }
