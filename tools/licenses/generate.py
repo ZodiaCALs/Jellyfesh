@@ -34,6 +34,28 @@ DEFAULT_PACKAGES = [
     "jf-subsonic", "jf-jellyfin", "jf-qqmusic", "jf-spotify", "jf-netease",
     "jf-community-netease", "jf-community-qqmusic",
 ]
+# C and C++ that a crate builds from sources it ships, which `cargo tree` cannot see:
+# per crate, each component's name, its version (read from a file in the crate's
+# folder), licence, licence files in that folder, and holders when it has none.
+VENDORED = {
+    # whisper.cpp and ggml, built with CMake for on-device speech recognition
+    # (core/jf-speech, feature `whisper`). Only the CPU back-end is built.
+    "whisper-rs-sys": [
+        {
+            "name": "whisper.cpp (with ggml)",
+            "version": ("whisper.cpp/CMakeLists.txt", r'project\("whisper\.cpp" VERSION ([^)\s]+)\)'),
+            "licence": "MIT",
+            "files": ["whisper.cpp/LICENSE"],
+        },
+        {
+            # ggml/src/ggml-cpu/ops.cpp: YaRN RoPE scaling, after github.com/jquesnelle/yarn.
+            "name": "YaRN (in ggml)",
+            "version": ("whisper.cpp/CMakeLists.txt", r'project\("whisper\.cpp" VERSION ([^)\s]+)\)'),
+            "licence": "MIT",
+            "holders": ["Jeffrey Quesnelle and Bowen Peng"],
+        },
+    ],
+}
 # Where an npm package's licence file goes on to list what the package's own
 # build tooling bundles, which does not reach the programs built with it.
 NPM_BUNDLED_SECTION = "\n# Licenses of bundled dependencies"
@@ -86,6 +108,25 @@ def licence_files(path):
         if os.path.isfile(full) and LICENSE_FILE.match(entry):
             files.append(full)
     return files
+
+
+def vendored(name, src):
+    """Rows for the C and C++ components the crate `name` (unpacked at `src`) builds."""
+    rows = []
+    for item in VENDORED.get(name, []):
+        if src is None:
+            sys.exit(f"{name} builds {item['name']}, but its sources are not in the Cargo registry")
+        path, pattern = item["version"]
+        with open(os.path.join(src, path), encoding="utf-8") as fh:
+            found = re.search(pattern, fh.read())
+        if not found:
+            sys.exit(f"no version of {item['name']} in {name}/{path}")
+        texts = []
+        for f in item.get("files", []):
+            with open(os.path.join(src, f), encoding="utf-8", errors="replace") as fh:
+                texts.append(fh.read().strip())
+        rows.append((item["name"], found.group(1), item["licence"], texts, item.get("holders", [])))
+    return rows
 
 
 def parse_args(argv):
@@ -151,6 +192,13 @@ def main():
                 texts.setdefault(sha, text)
                 shas.append(sha)
         rows.append((name, version, licence, shas, authors.get((name, version), [])))
+        for component, release, terms, texts_found, holders in vendored(name, src):
+            shas = []
+            for text in texts_found:
+                sha = hashlib.sha256(text.encode()).hexdigest()[:12]
+                texts.setdefault(sha, text)
+                shas.append(sha)
+            rows.append((component, release, terms, shas, holders))
     for folder, name in npm:
         version, licence, files, who = npm_package(folder, name)
         shas = []
