@@ -27,6 +27,13 @@ object Links {
     /** The {Service} of Open in {Service}: the plugin's name, else its id. */
     fun serviceName(sources: SourcesSnapshot, plugin: String): String =
         sources.plugins.firstOrNull { it.id == plugin }?.name?.takeIf { it.isNotBlank() } ?: plugin
+
+    /**
+     * The {Service} of "Content from {Service}", the credit a source's views show when its plugin
+     * asks for attribution (docs/ui.md, "Links and remote playback"); null for every other source.
+     */
+    fun attributedService(sources: SourcesSnapshot, plugin: String): String? =
+        sources.plugins.firstOrNull { it.id == plugin }?.takeIf { !it.attribution.isNullOrBlank() }?.let { serviceName(sources, plugin) }
 }
 
 /** What choosing a row from a source does (search and browse rows). */

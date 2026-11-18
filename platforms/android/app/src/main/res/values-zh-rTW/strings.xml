@@ -152,6 +152,7 @@
     <string name="source_uninstall_title">解除安裝 %1$s？</string>
     <string name="source_uninstall_body">它的設定與登入資訊會被移除。</string>
     <string name="source_gone">這個來源已不再安裝。</string>
+    <string name="source_attribution">內容來自 %1$s</string>
     <string name="source_installing">正在安裝外掛…</string>
     <string name="source_install_failed">無法讀取這個檔案。</string>
     <string name="browse_empty">這裡什麼都沒有。</string>

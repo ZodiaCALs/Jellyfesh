@@ -180,6 +180,11 @@ data class PluginSummary(
      * its remote control. Playing its songs starts a remote session; they never join the queue.
      */
     val remotePlayback: Boolean = false,
+    /**
+     * The credit its views must show, when the service's terms ask for one: the views say
+     * "Content from {Service}" (docs/ui.md), with no logos until they are approved.
+     */
+    val attribution: String? = null,
 )
 
 /**

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -80,6 +81,7 @@ import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.search.SearchModel
 import org.jellyfesh.logic.search.SearchState
 import org.jellyfesh.logic.sources.ItemAction
+import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.sources.SourceItems
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.tokens.Tokens
@@ -205,7 +207,13 @@ fun SearchScreen(state: CoreState) {
             val plugin = state.sources.plugins.firstOrNull { it.id == section.source }
             val name = plugin?.name ?: section.source
             item(key = "src-${section.source}-h") {
-                JfText(name, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize), modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp).semantics { heading() })
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
+                    JfText(name, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize), modifier = Modifier.semantics { heading() })
+                    // "Content from {Service}" under a source whose terms ask for the credit.
+                    Links.attributedService(state.sources, section.source)?.let {
+                        JfText(stringResource(R.string.source_attribution, it), style = JfType.listSecondary, color = Jf.colors.ink70)
+                    }
+                }
             }
             section.error?.let { error ->
                 item(key = "src-${section.source}-e") { Notice(stringResource(R.string.search_source_failed, name, error), warning = true) }

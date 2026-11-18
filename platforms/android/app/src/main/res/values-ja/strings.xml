@@ -152,6 +152,7 @@
     <string name="source_uninstall_title">%1$s をアンインストールしますか？</string>
     <string name="source_uninstall_body">設定とサインイン情報が削除されます。</string>
     <string name="source_gone">このソースはもうインストールされていません。</string>
+    <string name="source_attribution">%1$s 提供のコンテンツ</string>
     <string name="source_installing">プラグインをインストールしています…</string>
     <string name="source_install_failed">ファイルを読み取れませんでした。</string>
     <string name="browse_empty">何もありません。</string>

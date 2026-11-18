@@ -670,6 +670,7 @@ object FfiMapping {
         settingsJson = settingsJson,
         icon = icon,
         remotePlayback = remotePlayback,
+        attribution = attribution,
     )
 
     fun FSourcePreset.toLogic(): SourcePreset = SourcePreset(

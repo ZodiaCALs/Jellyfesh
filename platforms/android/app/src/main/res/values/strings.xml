@@ -186,6 +186,7 @@
     <string name="source_uninstall_title">Uninstall %1$s?</string>
     <string name="source_uninstall_body">Its settings and sign-in are removed.</string>
     <string name="source_gone">This source is no longer installed.</string>
+    <string name="source_attribution">Content from %1$s</string>
     <string name="source_installing">Installing the plugin…</string>
     <string name="source_install_failed">The file could not be read.</string>
     <string name="browse_empty">Nothing here.</string>

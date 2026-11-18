@@ -46,6 +46,16 @@ class LinksTest {
     }
 
     @Test
+    fun onlyASourceThatAsksForAttributionIsCredited() {
+        val spotify = PluginSummary("sp", "Spotify", "1.0.0", "x", PluginBadge.Official, false, emptyList(), emptyList(), true, null, false, "{}", "{}", null, attribution = "Spotify")
+        val sources = SourcesSnapshot.Empty.copy(plugins = listOf(spotify, spotify.copy(id = "plain", name = "Plain", attribution = null), spotify.copy(id = "blank", attribution = " ")))
+        assertEquals("Spotify", Links.attributedService(sources, "sp"))
+        assertNull(Links.attributedService(sources, "plain"))
+        assertNull(Links.attributedService(sources, "blank"))
+        assertNull(Links.attributedService(sources, "gone"))
+    }
+
+    @Test
     fun aPlayableSongPlaysWithTheListsOtherPlayableSongs() {
         val list = listOf(item("1"), item("2", playable = false, link = "https://y.qq.example/song/2"), item("3"))
         val action = SourceItems.mainAction(list[2], list)

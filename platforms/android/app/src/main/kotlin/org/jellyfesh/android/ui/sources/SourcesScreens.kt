@@ -82,6 +82,7 @@ import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.sources.AuthFlow
 import org.jellyfesh.logic.sources.Disclosure
+import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.sources.SourceItems
 import org.jellyfesh.logic.sources.SourceState
 import org.jellyfesh.logic.sources.YourSources
@@ -486,7 +487,11 @@ fun SourceBrowseScreen(pluginId: String, node: String?, title: String, link: Str
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
             item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
-            item(key = "title") { ScreenTitle(title) }
+            item(key = "title") {
+                // "Content from {Service}" for a source whose terms ask for the credit.
+                val credit = Links.attributedService(state.sources, pluginId)?.let { stringResource(R.string.source_attribution, it) }
+                ScreenTitle(title, subtitle = credit)
+            }
             itemsIndexed(items, key = { i, it -> "$i-${it.id}" }) { _, item ->
                 val action = SourceItems.mainAction(item, items)
                 SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {

@@ -152,6 +152,7 @@
     <string name="source_uninstall_title">卸载 %1$s？</string>
     <string name="source_uninstall_body">它的设置和登录信息会被移除。</string>
     <string name="source_gone">这个来源已不再安装。</string>
+    <string name="source_attribution">内容来自 %1$s</string>
     <string name="source_installing">正在安装插件…</string>
     <string name="source_install_failed">无法读取这个文件。</string>
     <string name="browse_empty">这里什么也没有。</string>
