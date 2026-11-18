@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 @testable import Jellyfesh
 
@@ -370,5 +371,86 @@ final class QueueStoreTests: XCTestCase {
         XCTAssertEqual(client.queueWindowRequests.first?.offset, 51)
         XCTAssertEqual(store.upNext.count, 51, "an entry already shown is not added twice")
         XCTAssertEqual(store.upNext.last?.uid, 200)
+    }
+}
+
+@MainActor
+final class SignInStepTests: XCTestCase {
+    func testAQuickConnectCodeIsAStepOfItsOwn() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(methods: [.qr])
+        store.beginSignIn(plugin, method: .qr)
+        let step = SignInStep.showCode(code: "481 516", hint: "Enter it under Quick Connect in Jellyfin.",
+                                       expiresAtMs: nil)
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 5, step: step))
+        XCTAssertEqual(store.signIn?.step, step)
+        XCTAssertFalse(store.signIn?.isOver ?? true, "the core still waits for the approval")
+        store.endSignIn()
+        XCTAssertEqual(client.sent.last, .cancelLogin(plugin: plugin.id, flow: 5))
+    }
+
+    func testAQRCodeKeepsThePluginsSentence() {
+        let store = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        let plugin = Fixture.plugin(methods: [.qr])
+        store.beginSignIn(plugin, method: .qr)
+        let step = SignInStep.showQR(data: "https://example.com/qr", hint: "Scan with Example.", expiresAtMs: 99)
+        store.apply(signIn: SignInUpdate(plugin: plugin.id, flow: 2, step: step))
+        guard case .showQR(_, let hint, let expires)? = store.signIn?.step else { return XCTFail("expected a QR step") }
+        XCTAssertEqual(hint, "Scan with Example.")
+        XCTAssertEqual(expires, 99)
+    }
+}
+
+final class SignInFormTests: XCTestCase {
+    private let user = SignInField(name: "username", label: "User Name", secret: false, placeholder: nil)
+    private let password = SignInField(name: "password", label: "Password", secret: true, placeholder: nil)
+    private let note = SignInField(name: "device", label: "Device Name", kind: .text, secret: false, required: false,
+                                   placeholder: "Mac", help: "Shown in the server's dashboard.")
+
+    func testSignInWaitsForEveryRequiredField() {
+        let fields = [user, password, note]
+        XCTAssertFalse(SignInForm.canSubmit(fields, values: [:]))
+        XCTAssertFalse(SignInForm.canSubmit(fields, values: ["username": "ada", "password": "  "]),
+                       "spaces are not a password")
+        XCTAssertTrue(SignInForm.canSubmit(fields, values: ["username": "ada", "password": "secret"]),
+                      "an optional field may stay empty")
+        XCTAssertTrue(SignInForm.canSubmit([], values: [:]))
+    }
+
+    func testANumberFieldKeepsDigits() {
+        let code = SignInField(name: "code", label: "Code", kind: .number, secret: false, placeholder: nil)
+        XCTAssertEqual(SignInForm.accepted("12 a-3", for: code), "123")
+        XCTAssertEqual(SignInForm.accepted("１２３", for: code), "123", "full-width digits from an input method")
+        XCTAssertEqual(SignInForm.accepted("ada 12", for: user), "ada 12", "other fields keep what is typed")
+    }
+
+    func testTheLineUnderALabelMarksOptionalFieldsAndCarriesTheHelp() {
+        XCTAssertNil(SignInForm.note(for: user))
+        XCTAssertEqual(SignInForm.note(for: note),
+                       "\(String(localized: "Optional")) · Shown in the server's dashboard.")
+        var helped = user
+        helped.help = "The name you sign in to the server with."
+        XCTAssertEqual(SignInForm.note(for: helped), "The name you sign in to the server with.")
+        var bare = note
+        bare.help = nil
+        XCTAssertEqual(SignInForm.note(for: bare), String(localized: "Optional"))
+    }
+
+    func testTheKindPicksTheFieldAndWhatTheSystemFillsIn() {
+        let cookie = SignInField(name: "cookie", label: "Cookie", kind: .cookieHeader, secret: true, placeholder: nil)
+        XCTAssertTrue(SignInForm.isMultiline(cookie))
+        XCTAssertFalse(SignInForm.isMultiline(password))
+        XCTAssertNil(SignInForm.contentType(of: cookie))
+        XCTAssertEqual(SignInForm.contentType(of: password), .password)
+        XCTAssertEqual(SignInForm.contentType(of: user), .username)
+        let key = SignInField(name: "api_key", label: "API Key", secret: true, placeholder: nil)
+        XCTAssertNil(SignInForm.contentType(of: key), "an API key is not a password to save")
+        let mail = SignInField(name: "mail", label: "Email", kind: .email, secret: false, placeholder: nil)
+        XCTAssertEqual(SignInForm.contentType(of: mail), .emailAddress)
+    }
+
+    func testACodeIsSpelledOutForVoiceOver() {
+        XCTAssertEqual(SignInForm.spelledOut("AB 12"), "A B 1 2")
     }
 }

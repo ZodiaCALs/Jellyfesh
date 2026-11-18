@@ -541,17 +541,36 @@ struct SourcesState: Hashable, Sendable {
     static let empty = SourcesState(version: 0, plugins: [], allowCommunity: false)
 }
 
+/// What a sign-in field holds (`AuthFieldKind`): it picks the field and what the system offers to
+/// fill it with.
+enum SignInFieldKind: Hashable, Sendable {
+    case text, email, url
+    /// Digits only, such as a one-time code.
+    case number
+    /// A `Cookie:` header copied from a browser (Paste Cookies).
+    case cookieHeader
+}
+
 /// A field to ask for during sign-in (`AuthField`).
 struct SignInField: Hashable, Sendable {
     var name: String
     var label: String
+    var kind: SignInFieldKind = .text
+    /// Masks the input (passwords, keys).
     var secret: Bool
+    /// The person must fill it in: Sign In waits for it.
+    var required: Bool = true
     var placeholder: String?
+    /// A sentence of help under the field.
+    var help: String? = nil
 }
 
 /// One step of a sign-in flow (`AuthStep`).
 enum SignInStep: Hashable, Sendable {
-    case showQR(data: String, expiresAtMs: Int64?)
+    /// A QR code for the service's app to scan, with the plugin's sentence about it.
+    case showQR(data: String, hint: String? = nil, expiresAtMs: Int64?)
+    /// A code to enter on another device (Jellyfin's Quick Connect), shown large; `hint` says where.
+    case showCode(code: String, hint: String, expiresAtMs: Int64?)
     case openURL(String)
     case askFields([SignInField])
     case waiting(String)

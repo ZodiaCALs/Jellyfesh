@@ -554,18 +554,35 @@ extension SourcesState {
     }
 }
 
+extension SignInFieldKind {
+    init(_ k: AuthFieldKind) {
+        switch k {
+        case .text: self = .text
+        case .email: self = .email
+        case .url: self = .url
+        case .number: self = .number
+        case .cookieHeader: self = .cookieHeader
+        }
+    }
+}
+
+extension SignInField {
+    init(_ f: AuthField) {
+        self.init(name: f.name, label: f.label, kind: SignInFieldKind(f.kind), secret: f.secret,
+                  required: f.required, placeholder: f.placeholder, help: f.help)
+    }
+}
+
 extension SignInUpdate {
     init(_ u: AuthUpdate) {
         let step: SignInStep
         switch u.step {
-        case .showQr(let data, _, let expiresAtMs): step = .showQR(data: data, expiresAtMs: expiresAtMs)
-        // A code to type on another device (Jellyfin Quick Connect), shown as text for now.
-        case .showCode(let code, let hint, _): step = .waiting("\(hint): \(code)")
+        case .showQr(let data, let hint, let expiresAtMs):
+            step = .showQR(data: data, hint: hint, expiresAtMs: expiresAtMs)
+        case .showCode(let code, let hint, let expiresAtMs):
+            step = .showCode(code: code, hint: hint, expiresAtMs: expiresAtMs)
         case .openUrl(let url): step = .openURL(url)
-        case .askFields(let fields):
-            step = .askFields(fields.map {
-                SignInField(name: $0.name, label: $0.label, secret: $0.secret, placeholder: $0.placeholder)
-            })
+        case .askFields(let fields): step = .askFields(fields.map { SignInField($0) })
         case .waiting(let message): step = .waiting(message)
         case .done(let account): step = .done(account: account)
         case .failed(let message): step = .failed(message)

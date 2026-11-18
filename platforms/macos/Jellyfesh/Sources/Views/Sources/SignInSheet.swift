@@ -1,7 +1,8 @@
 // Sign-in flows (docs/core-api.md: BeginLogin, SubmitLogin, CancelLogin, Auth updates): the core
-// drives the steps and the sheet renders each one, a QR code to scan, the browser to continue
-// in, or fields to fill. Closing the sheet before the end cancels the flow. And the disclosure
-// for community plugins (ADR-0012).
+// drives the steps and the sheet renders each one, a QR code to scan, a code to enter on another
+// device (Jellyfin's Quick Connect), the browser to continue in, or fields to fill as the plugin
+// describes them. Closing the sheet before the end cancels the flow. And the disclosure for
+// community plugins (ADR-0012).
 
 import AppKit
 import SwiftUI
@@ -49,7 +50,7 @@ private struct SignInStepView: View {
                 ProgressView()
                     .controlSize(.large)
                     .padding()
-            case .showQR(let data, _)?:
+            case .showQR(let data, let hint, _)?:
                 VStack(spacing: Tokens.Space.s3) {
                     if let image = QRCode.image(for: data) {
                         Image(nsImage: image)
@@ -61,10 +62,12 @@ private struct SignInStepView: View {
                             .background(RoundedRectangle(cornerRadius: Tokens.Radius.rLg).fill(Color.white))
                             .accessibilityLabel(Text("Sign-in QR code"))
                     }
-                    Text("Scan the code with the \(flow.pluginName) app on your phone.")
+                    Text(scanSentence(hint))
                         .multilineTextAlignment(.center)
                         .foregroundStyle(.secondary)
                 }
+            case .showCode(let code, let hint, _)?:
+                SignInCode(code: code, hint: hint)
             case .openURL(let address)?:
                 VStack(spacing: Tokens.Space.s3) {
                     Text("Continue in your browser. Come back here when you are done.")
@@ -95,6 +98,12 @@ private struct SignInStepView: View {
         }
     }
 
+    /// The plugin's sentence under its QR code, or the shared one when it gives none.
+    private func scanSentence(_ hint: String?) -> String {
+        if let hint, !hint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return hint }
+        return String(localized: "Scan the code with the \(flow.pluginName) app on your phone.")
+    }
+
     private func message(_ text: String, symbol: String, tint: Color) -> some View {
         VStack(spacing: Tokens.Space.s3) {
             Image(systemName: symbol)
@@ -115,7 +124,40 @@ private struct SignInStepView: View {
     }
 }
 
-/// The fields a plugin asks for (`AuthStep::AskFields`); secrets are never kept here.
+/// A code to enter on another device (`AuthStep::ShowCode`, Jellyfin's Quick Connect): large and
+/// selectable, with the plugin's words for where to enter it, while the core waits for the
+/// approval.
+private struct SignInCode: View {
+    var code: String
+    var hint: String
+
+    var body: some View {
+        VStack(spacing: Tokens.Space.s3) {
+            Text(verbatim: code)
+                .font(.system(size: 40, weight: .bold))
+                .monospacedDigit()
+                .tracking(6)
+                .textSelection(.enabled)
+                .accessibilityLabel(Text("Code \(SignInForm.spelledOut(code))"))
+            if !hint.isEmpty {
+                Text(hint)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: Tokens.Space.s2) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Waiting for approval…")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// The fields a plugin asks for (`AuthStep::AskFields`), as it describes them: "Optional" and its
+/// help under a field's label, the field its kind needs (several lines for a pasted Cookie header)
+/// and what the system may fill in. Sign In waits for the required fields. Secrets are never kept
+/// here.
 private struct SignInFieldsForm: View {
     var fields: [SignInField]
 
@@ -125,11 +167,7 @@ private struct SignInFieldsForm: View {
     var body: some View {
         Form {
             ForEach(fields, id: \.name) { field in
-                if field.secret {
-                    SecureField(field.label, text: binding(for: field.name), prompt: field.placeholder.map { Text($0) })
-                } else {
-                    TextField(field.label, text: binding(for: field.name), prompt: field.placeholder.map { Text($0) })
-                }
+                SignInFieldRow(field: field, text: binding(for: field))
             }
             HStack {
                 Spacer()
@@ -137,6 +175,7 @@ private struct SignInFieldsForm: View {
                     sources.submitSignIn(fields: values)
                 }
                 .keyboardShortcut(.defaultAction)
+                .disabled(!SignInForm.canSubmit(fields, values: values))
             }
         }
         .formStyle(.grouped)
@@ -145,8 +184,51 @@ private struct SignInFieldsForm: View {
         }
     }
 
-    private func binding(for name: String) -> Binding<String> {
-        Binding(get: { values[name] ?? "" }, set: { values[name] = $0 })
+    private func binding(for field: SignInField) -> Binding<String> {
+        Binding(get: { values[field.name] ?? "" },
+                set: { values[field.name] = SignInForm.accepted($0, for: field) })
+    }
+}
+
+/// One field: its label with the line under it, and the plugin's placeholder.
+private struct SignInFieldRow: View {
+    var field: SignInField
+    @Binding var text: String
+
+    var body: some View {
+        if SignInForm.isMultiline(field) {
+            VStack(alignment: .leading, spacing: Tokens.Space.s1) {
+                Text(field.label)
+                if let note = SignInForm.note(for: field) {
+                    Text(note)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                TextEditor(text: $text)
+                    .font(.system(size: 12, design: .monospaced))
+                    .autocorrectionDisabled()
+                    .frame(minHeight: 72, maxHeight: 120)
+                    .accessibilityLabel(Text(field.label))
+            }
+        } else if field.secret {
+            SecureField(text: $text, prompt: prompt) { label }
+                .textContentType(SignInForm.contentType(of: field))
+        } else {
+            TextField(text: $text, prompt: prompt) { label }
+                .textContentType(SignInForm.contentType(of: field))
+                .autocorrectionDisabled()
+        }
+    }
+
+    private var prompt: Text? {
+        field.placeholder.map { Text($0) }
+    }
+
+    @ViewBuilder private var label: some View {
+        Text(field.label)
+        if let note = SignInForm.note(for: field) {
+            Text(note)
+        }
     }
 }
 
