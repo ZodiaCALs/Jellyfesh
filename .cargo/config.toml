@@ -1,2 +1,11 @@
 [alias]
 xtask = "run --quiet --package xtask --"
+
+# Windows: link the C runtime into jf_ffi.dll and jf.exe, so they start on PCs
+# without the Visual C++ Redistributable. C and C++ built by the cc and cmake
+# crates (ring, whisper.cpp) follow this flag and use /MT to match.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
