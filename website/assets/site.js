@@ -20,22 +20,21 @@ const STRINGS = {
     "shots.title": "A first look", "shots.lead": "The Linux app in this release. The macOS, Windows and Android apps share its design.",
     "footer.rights": "© 2026 Jellyfesh. All rights reserved.", "footer.notices": "Third-party notices", "footer.legal": "Legal", "footer.source": "Source",
     "dl.title": "Download Jellyfesh",
-    "dl.lead": "Version {version}. Builds are not signed yet; the note under each system says how to open them.",
+    "dl.lead": "Version {version}: one download for each system. The note under each says how to install it.",
     "dl.forYou": "For this device", "dl.soon": "Coming soon",
-    "dl.soonNote": "Built automatically once the project’s repository is published.",
+    "dl.soonNote": "Not in this release yet.",
     "dl.verify": "Check a download with sha256sum (Linux), shasum -a 256 (macOS) or Get-FileHash (Windows) against the SHA-256 shown.",
-    "dl.cli": "Command line", "dl.cli.req": "The jf player for terminals and scripts",
-    "dl.plugins": "Official plugins", "dl.plugins.req": "Subsonic, OpenSubsonic (Navidrome and others) and Jellyfin",
-    "dl.plugins.note": "Every app already includes them. Download one to update it between releases: Settings → Sources → Install plugin.",
+    "dl.community": "Community plugins", "dl.community.req": "The unofficial NetEase Cloud Music and QQ Music plugins, for the apps above",
+    "dl.community.note": "The apps here don’t include them. Unzip, read the README, then use Settings → Sources → Install from File…",
     "dl.web": "Web", "dl.web.req": "In your browser: a current Chrome, Edge, Firefox or Safari · for your Subsonic, Navidrome or Jellyfin server",
     "dl.web.note": "Nothing to install; add it to your home screen or dock if you like. The zip is the same app, to host next to your own server.",
     "dl.unavailable": "The download list could not be loaded. Open this page from the website, not from a file.",
     "os.macos": "macOS", "os.macos.req": "macOS 14.2 or later · Apple silicon and Intel",
-    "os.macos.note": "Unsigned for now: the first time, right-click the app and choose Open.",
+    "os.macos.note": "Open the disk image and drag Jellyfesh to Applications. If macOS says it can’t check the app, allow it in System Settings → Privacy & Security.",
     "os.windows": "Windows", "os.windows.req": "Windows 10 (1809) or later · x64 and Arm64",
-    "os.windows.note": "Unsigned for now: if SmartScreen appears, choose More info, then Run anyway.",
-    "os.linux": "Linux", "os.linux.req": "GTK 4.14 and libadwaita 1.5 or later · x86_64",
-    "os.linux.note": "Unpack the archive and run ./install.sh, or install the Flatpak bundle.",
+    "os.windows.note": "Run Setup: it installs Jellyfesh for you, without administrator rights. If SmartScreen appears, choose More info, then Run anyway.",
+    "os.linux": "Linux", "os.linux.req": "Any distribution with Flatpak · x86_64",
+    "os.linux.note": "Install it with flatpak install --user and the file’s name; the GNOME runtime comes from Flathub.",
     "os.android": "Android", "os.android.req": "Android 8.0 or later",
     "os.android.note": "Allow installing apps from this source when Android asks.",
     "privacy.title": "Privacy",
@@ -62,22 +61,21 @@ const STRINGS = {
     "shots.title": "抢先一览", "shots.lead": "本版本的 Linux 应用。macOS、Windows 和 Android 应用采用同样的设计。",
     "footer.rights": "© 2026 Jellyfesh。保留所有权利。", "footer.notices": "第三方声明", "footer.legal": "法律信息", "footer.source": "源代码",
     "dl.title": "下载 Jellyfesh",
-    "dl.lead": "版本 {version}。安装包尚未签名，各系统下方的说明介绍了打开方法。",
+    "dl.lead": "版本 {version}：每个系统一个下载，下方的说明介绍了安装方法。",
     "dl.forYou": "适用于本设备", "dl.soon": "即将推出",
-    "dl.soonNote": "项目仓库发布后将自动构建。",
+    "dl.soonNote": "本次发布尚未包含。",
     "dl.verify": "可用 sha256sum（Linux）、shasum -a 256（macOS）或 Get-FileHash（Windows）核对下载文件与所示 SHA-256 是否一致。",
-    "dl.cli": "命令行", "dl.cli.req": "适用于终端和脚本的 jf 播放器",
-    "dl.plugins": "官方插件", "dl.plugins.req": "Subsonic、OpenSubsonic（Navidrome 等）和 Jellyfin",
-    "dl.plugins.note": "每个应用都已内置。如需在两次发布之间更新，请下载后在“设置 → 来源 → 安装插件”中安装。",
+    "dl.community": "社区插件", "dl.community.req": "适用于上述应用的非官方网易云音乐和 QQ 音乐插件",
+    "dl.community.note": "这里的应用不内置这些插件。解压并阅读 README 后，在“设置 → 来源 → 从文件安装…”中安装。",
     "dl.web": "网页版", "dl.web.req": "在浏览器中使用：新版 Chrome、Edge、Firefox 或 Safari · 适用于你的 Subsonic、Navidrome 或 Jellyfin 服务器",
     "dl.web.note": "无需安装；也可以添加到主屏幕或程序坞。zip 文件是同一个应用，可以放在你自己的服务器旁托管。",
     "dl.unavailable": "无法载入下载列表。请从网站打开此页面，而不是从本地文件打开。",
     "os.macos": "macOS", "os.macos.req": "macOS 14.2 或更高版本 · Apple 芯片与 Intel",
-    "os.macos.note": "暂未签名：首次打开时，请右键点击应用并选择“打开”。",
+    "os.macos.note": "打开磁盘映像，将 Jellyfesh 拖到“应用程序”文件夹。如果 macOS 提示无法检查此应用，请在“系统设置 → 隐私与安全性”中允许打开。",
     "os.windows": "Windows", "os.windows.req": "Windows 10（1809）或更高版本 · x64 与 Arm64",
-    "os.windows.note": "暂未签名：如出现 SmartScreen，请点击“更多信息”，再点击“仍要运行”。",
-    "os.linux": "Linux", "os.linux.req": "GTK 4.14 与 libadwaita 1.5 或更高版本 · x86_64",
-    "os.linux.note": "解压后运行 ./install.sh，或安装 Flatpak 包。",
+    "os.windows.note": "运行安装程序：它会为你安装 Jellyfesh，无需管理员权限。如出现 SmartScreen，请点击“更多信息”，再点击“仍要运行”。",
+    "os.linux": "Linux", "os.linux.req": "任何支持 Flatpak 的发行版 · x86_64",
+    "os.linux.note": "用 flatpak install --user 加文件名安装；GNOME 运行时来自 Flathub。",
     "os.android": "Android", "os.android.req": "Android 8.0 或更高版本",
     "os.android.note": "Android 询问时，请允许安装来自此来源的应用。",
     "privacy.title": "隐私",
@@ -104,22 +102,21 @@ const STRINGS = {
     "shots.title": "搶先一覽", "shots.lead": "本版本的 Linux 應用程式。macOS、Windows 與 Android 應用程式採用相同的設計。",
     "footer.rights": "© 2026 Jellyfesh。保留所有權利。", "footer.notices": "第三方聲明", "footer.legal": "法律資訊", "footer.source": "原始碼",
     "dl.title": "下載 Jellyfesh",
-    "dl.lead": "版本 {version}。安裝檔尚未簽署，各系統下方的說明介紹了開啟方式。",
+    "dl.lead": "版本 {version}：每個系統一個下載，下方的說明介紹了安裝方式。",
     "dl.forYou": "適用於本裝置", "dl.soon": "即將推出",
-    "dl.soonNote": "專案儲存庫發布後將自動建置。",
+    "dl.soonNote": "本次發行尚未包含。",
     "dl.verify": "可用 sha256sum（Linux）、shasum -a 256（macOS）或 Get-FileHash（Windows）核對下載檔案與所示 SHA-256 是否相符。",
-    "dl.cli": "命令列", "dl.cli.req": "適用於終端機與指令碼的 jf 播放器",
-    "dl.plugins": "官方外掛", "dl.plugins.req": "Subsonic、OpenSubsonic（Navidrome 等）與 Jellyfin",
-    "dl.plugins.note": "每個應用程式皆已內建。如需在兩次發行之間更新，請下載後在「設定 → 來源 → 安裝外掛」中安裝。",
+    "dl.community": "社群外掛", "dl.community.req": "適用於上述應用程式的非官方網易雲音樂與 QQ 音樂外掛",
+    "dl.community.note": "這裡的應用程式不內建這些外掛。解壓縮並閱讀 README 後，在「設定 → 來源 → 從檔案安裝…」中安裝。",
     "dl.web": "網頁版", "dl.web.req": "在瀏覽器中使用：新版 Chrome、Edge、Firefox 或 Safari · 適用於你的 Subsonic、Navidrome 或 Jellyfin 伺服器",
     "dl.web.note": "無需安裝；也可以加入主畫面或 Dock。zip 檔是同一個應用程式，可放在你自己的伺服器旁架設。",
     "dl.unavailable": "無法載入下載清單。請從網站開啟此頁面，而不是從本機檔案開啟。",
     "os.macos": "macOS", "os.macos.req": "macOS 14.2 或更新版本 · Apple 晶片與 Intel",
-    "os.macos.note": "暫未簽署：首次開啟時，請在 App 上按右鍵並選擇「打開」。",
+    "os.macos.note": "開啟磁碟映像檔，將 Jellyfesh 拖到「應用程式」檔案夾。如果 macOS 表示無法檢查此 App，請在「系統設定 → 隱私權與安全性」中允許開啟。",
     "os.windows": "Windows", "os.windows.req": "Windows 10（1809）或更新版本 · x64 與 Arm64",
-    "os.windows.note": "暫未簽署：如出現 SmartScreen，請按「其他資訊」，再按「仍要執行」。",
-    "os.linux": "Linux", "os.linux.req": "GTK 4.14 與 libadwaita 1.5 或更新版本 · x86_64",
-    "os.linux.note": "解壓縮後執行 ./install.sh，或安裝 Flatpak 套件。",
+    "os.windows.note": "執行安裝程式：它會為你安裝 Jellyfesh，無需系統管理員權限。如出現 SmartScreen，請按「其他資訊」，再按「仍要執行」。",
+    "os.linux": "Linux", "os.linux.req": "任何支援 Flatpak 的發行版 · x86_64",
+    "os.linux.note": "用 flatpak install --user 加上檔案名稱安裝；GNOME 執行環境來自 Flathub。",
     "os.android": "Android", "os.android.req": "Android 8.0 或更新版本",
     "os.android.note": "Android 詢問時，請允許安裝來自此來源的應用程式。",
     "privacy.title": "隱私",
@@ -146,22 +143,21 @@ const STRINGS = {
     "shots.title": "ひと足先に", "shots.lead": "このリリースの Linux アプリ。macOS、Windows、Android 版も同じデザインです。",
     "footer.rights": "© 2026 Jellyfesh. All rights reserved.", "footer.notices": "サードパーティのライセンス", "footer.legal": "法的情報", "footer.source": "ソース",
     "dl.title": "Jellyfesh をダウンロード",
-    "dl.lead": "バージョン {version}。ビルドはまだ署名されていません。各システムの下に開き方を記載しています。",
+    "dl.lead": "バージョン {version}：システムごとにひとつのダウンロードです。インストール方法は各システムの下に記載しています。",
     "dl.forYou": "このデバイス向け", "dl.soon": "近日公開",
-    "dl.soonNote": "プロジェクトのリポジトリ公開後に自動でビルドされます。",
+    "dl.soonNote": "このリリースにはまだ含まれていません。",
     "dl.verify": "sha256sum（Linux）、shasum -a 256（macOS）、Get-FileHash（Windows）で、表示されている SHA-256 と照合できます。",
-    "dl.cli": "コマンドライン", "dl.cli.req": "ターミナルやスクリプト向けの jf プレーヤー",
-    "dl.plugins": "公式プラグイン", "dl.plugins.req": "Subsonic、OpenSubsonic（Navidrome など）、Jellyfin",
-    "dl.plugins.note": "どのアプリにも最初から入っています。リリースの合間に更新するときは、ダウンロードして「設定 → ソース → プラグインをインストール」から入れてください。",
+    "dl.community": "コミュニティプラグイン", "dl.community.req": "上記アプリ向けの非公式 NetEase Cloud Music・QQ Music プラグイン",
+    "dl.community.note": "ここにあるアプリには含まれていません。展開して README を読んでから、「設定 → ソース → ファイルからインストール…」で追加してください。",
     "dl.web": "Web 版", "dl.web.req": "ブラウザで使えます：最新の Chrome・Edge・Firefox・Safari · Subsonic・Navidrome・Jellyfin サーバー向け",
     "dl.web.note": "インストールは不要です。ホーム画面や Dock に追加することもできます。zip は同じアプリで、自分のサーバーの隣でホストするためのものです。",
     "dl.unavailable": "ダウンロード一覧を読み込めませんでした。ファイルからではなく、ウェブサイトからこのページを開いてください。",
     "os.macos": "macOS", "os.macos.req": "macOS 14.2 以降 · Apple シリコンと Intel",
-    "os.macos.note": "現在は未署名です。初回はアプリを右クリックして「開く」を選んでください。",
+    "os.macos.note": "ディスクイメージを開き、Jellyfesh を「アプリケーション」フォルダにドラッグしてください。macOS がアプリを確認できないと表示した場合は、「システム設定 → プライバシーとセキュリティ」で開くことを許可してください。",
     "os.windows": "Windows", "os.windows.req": "Windows 10（1809）以降 · x64 と Arm64",
-    "os.windows.note": "現在は未署名です。SmartScreen が表示されたら「詳細情報」→「実行」を選んでください。",
-    "os.linux": "Linux", "os.linux.req": "GTK 4.14 と libadwaita 1.5 以降 · x86_64",
-    "os.linux.note": "アーカイブを展開して ./install.sh を実行するか、Flatpak バンドルをインストールしてください。",
+    "os.windows.note": "セットアップを実行すると、管理者権限なしで Jellyfesh がインストールされます。SmartScreen が表示されたら「詳細情報」→「実行」を選んでください。",
+    "os.linux": "Linux", "os.linux.req": "Flatpak が使えるディストリビューション · x86_64",
+    "os.linux.note": "flatpak install --user にファイル名を付けてインストールしてください。GNOME ランタイムは Flathub から入ります。",
     "os.android": "Android", "os.android.req": "Android 8.0 以降",
     "os.android.note": "Android に確認されたら、このソースからのインストールを許可してください。",
     "privacy.title": "プライバシー",
@@ -259,7 +255,8 @@ async function setupDownloads() {
   }
   window.__vars = { version: manifest.version };
   const mine = detectOs();
-  const order = ["web", "macos", "windows", "linux", "android", "plugins", "cli"];
+  // One download per platform (tools/release/build_site.py), the community plugins last.
+  const order = ["web", "macos", "windows", "linux", "android", "community"];
   // Jellyfesh Web is at app/ when the site was built with it (build_site.py --app).
   const webApp = manifest.web_app || null;
   window.__renderDownloads = () => {
@@ -271,7 +268,7 @@ async function setupDownloads() {
       card.className = "card platform" + (platform === mine ? " recommended" : "");
       const h3 = document.createElement("h3");
       const title = document.createElement("span");
-      const own = platform === "cli" || platform === "plugins" || platform === "web";
+      const own = platform === "community" || platform === "web";
       title.textContent = own ? t(`dl.${platform}`) : t(`os.${platform}`);
       h3.append(title);
       if (platform === mine) {
@@ -318,12 +315,10 @@ async function setupDownloads() {
           ul.append(li);
         }
         card.append(ul);
-        if (platform !== "cli") {
-          const note = document.createElement("p");
-          note.className = "note";
-          note.textContent = own ? t(`dl.${platform}.note`) : t(`os.${platform}.note`);
-          card.append(note);
-        }
+        const note = document.createElement("p");
+        note.className = "note";
+        note.textContent = own ? t(`dl.${platform}.note`) : t(`os.${platform}.note`);
+        card.append(note);
       } else if (platform === "web") {
         const note = document.createElement("p");
         note.className = "note";
