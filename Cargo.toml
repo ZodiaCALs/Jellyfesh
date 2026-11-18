@@ -11,6 +11,8 @@ members = [
     "xtask",
     "tools/jf-plugin",
     "tools/jf-plugin/plugin-build",
+    # Jellyfesh Pro licence keys: the owner's key pair, issuing and checking (ADR-0021).
+    "tools/jf-licence",
     # Jellyfesh Web's relay for services that refuse browsers (ADR-0022, docs/web-relay.md).
     "tools/jf-relay",
     "plugins/sdk",
@@ -20,6 +22,8 @@ members = [
     "plugins/qqmusic",
     "plugins/spotify",
     "plugins/netease",
+    # Extensions (ADR-0019, ADR-0020): Jellyfesh Pro capabilities.
+    "plugins/ai-lyrics",
     # Unofficial community plugins (ADR-0012, amended for v0.0.6): bundled
     # unsigned, off until the person allows community plugins.
     "plugins/community/common",
@@ -31,7 +35,7 @@ members = [
 # Guest crates (the plugin SDK and test plugins) target wasm32-unknown-unknown; they also
 # compile for the host, but a plain `cargo build` skips them, and the bindings generator
 # (built by `cargo xtask bindings`).
-default-members = ["core/*", "apps/cli", "xtask", "tools/jf-plugin", "tools/jf-plugin/plugin-build", "tools/jf-relay"]
+default-members = ["core/*", "apps/cli", "xtask", "tools/jf-plugin", "tools/jf-plugin/plugin-build", "tools/jf-relay", "tools/jf-licence"]
 
 [workspace.package]
 version = "0.0.6"
@@ -198,6 +202,9 @@ opt-level = "s"
 opt-level = "s"
 
 [profile.release.package.jf-netease]
+opt-level = "s"
+
+[profile.release.package.jf-ai-lyrics]
 opt-level = "s"
 
 # The unofficial community plugins (plugins/community), the same way; their
