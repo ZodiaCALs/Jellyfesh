@@ -278,6 +278,12 @@
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>播放队列</value>
   </data>
+  <data name="Browse_Empty.Text" xml:space="preserve">
+    <value>这里什么也没有</value>
+  </data>
+  <data name="Browse_ErrorTitle.Text" xml:space="preserve">
+    <value>该来源没有响应</value>
+  </data>
   <data name="Common_AddMusicFolder.Content" xml:space="preserve">
     <value>添加音乐文件夹…</value>
   </data>
@@ -517,6 +523,9 @@
   </data>
   <data name="Link_OpenIn" xml:space="preserve">
     <value>在 {0} 中打开</value>
+  </data>
+  <data name="List_Separator" xml:space="preserve">
+    <value>、</value>
   </data>
   <data name="Lyrics_InfoFrom" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -962,6 +971,9 @@
   <data name="Search_Albums.Text" xml:space="preserve">
     <value>专辑</value>
   </data>
+  <data name="Search_AlsoIn" xml:space="preserve">
+    <value>也在 {0}</value>
+  </data>
   <data name="Search_ArtistList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>艺人</value>
   </data>
@@ -980,11 +992,11 @@
   <data name="Search_NothingFound.Text" xml:space="preserve">
     <value>没有结果</value>
   </data>
+  <data name="Search_NothingFoundBody.Text" xml:space="preserve">
+    <value>换个关键词试试。</value>
+  </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>来自你的来源</value>
-  </data>
-  <data name="Search_PlayAll.Content" xml:space="preserve">
-    <value>全部播放</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌曲</value>
@@ -994,6 +1006,12 @@
   </data>
   <data name="Search_SourcesNotAvailable.Text" xml:space="preserve">
     <value>搜索在线来源将在之后的版本中提供；现在只搜索你的资料库。</value>
+  </data>
+  <data name="Search_StartBody.Text" xml:space="preserve">
+    <value>在资料库和各个来源中查找歌曲、专辑和艺人。</value>
+  </data>
+  <data name="Search_StartTitle.Text" xml:space="preserve">
+    <value>搜索你的音乐</value>
   </data>
   <data name="Search_Title.Text" xml:space="preserve">
     <value>搜索</value>
@@ -1127,6 +1145,9 @@
   <data name="Sort_Year" xml:space="preserve">
     <value>年份</value>
   </data>
+  <data name="Source_Attribution" xml:space="preserve">
+    <value>内容来自 {0}</value>
+  </data>
   <data name="SourcePreset_Jellyfin" xml:space="preserve">
     <value>你的 Jellyfin 服务器</value>
   </data>
@@ -1196,17 +1217,11 @@
   <data name="Sources_CommunityHint.Text" xml:space="preserve">
     <value>官方来源由 Jellyfesh 签名。社区插件由他人制作，除非你允许，否则保持关闭。</value>
   </data>
-  <data name="Sources_Crumb" xml:space="preserve">
-    <value>来源</value>
-  </data>
   <data name="Sources_EmptyBody.Text" xml:space="preserve">
     <value>从 .jfpkg 文件安装来源插件。</value>
   </data>
   <data name="Sources_EmptyTitle.Text" xml:space="preserve">
     <value>尚未安装来源</value>
-  </data>
-  <data name="Sources_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>文件夹、专辑和歌单</value>
   </data>
   <data name="Sources_Install.Content" xml:space="preserve">
     <value>从文件安装…</value>
@@ -1221,7 +1236,7 @@
     <value>来源设置…</value>
   </data>
   <data name="Sources_More.Content" xml:space="preserve">
-    <value>显示更多</value>
+    <value>加载更多</value>
   </data>
   <data name="Sources_None.Text" xml:space="preserve">
     <value>尚未安装来源</value>
@@ -1231,9 +1246,6 @@
   </data>
   <data name="Sources_Title.Text" xml:space="preserve">
     <value>来源</value>
-  </data>
-  <data name="Sources_Tracks.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>歌曲</value>
   </data>
   <data name="Sources_Yours.Text" xml:space="preserve">
     <value>我的来源</value>

@@ -110,6 +110,9 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
 
     public SourcesViewModel CreateSources() => new(Services);
 
+    /// <summary>A page of a source's catalogue: its top level, a folder, an artist, an album or a playlist.</summary>
+    public SourceBrowseViewModel CreateSourceBrowse(SourceTarget target) => new(Services, target);
+
     public SettingsViewModel CreateSettings(Func<string, string?> iconPreview) => new(Services, Player, iconPreview);
 
     private void OnChanged(SliceChange changes)

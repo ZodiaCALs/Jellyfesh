@@ -54,6 +54,7 @@ public sealed partial class MainWindow : Window
         [typeof(AlbumPage)] = "albums",
         [typeof(ArtistPage)] = "artists",
         [typeof(PlaylistPage)] = "playlists",
+        [typeof(SourceBrowsePage)] = "sources",
     };
 
     private readonly AppViewModel _vm;
@@ -573,10 +574,6 @@ public sealed partial class MainWindow : Window
         else if (_nowPlayingOpen)
         {
             CloseNowPlaying();
-        }
-        else if (ContentFrame.Content is SourcesPage sources && sources.GoUp())
-        {
-            // Up a level of the browsed source, then back to the list of sources.
         }
         else if (ContentFrame.CanGoBack)
         {

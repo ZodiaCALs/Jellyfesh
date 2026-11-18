@@ -237,43 +237,17 @@ public sealed class SourceChoice
 }
 
 /// <summary>
-/// One level of a source's catalogue (a breadcrumb shows its title). The first crumb,
-/// <see cref="IsSources"/>, leads back to the list of sources.
-/// </summary>
-public sealed record BrowseLevel(string? Node, string Title, bool IsSources = false, string? Link = null)
-{
-    public override string ToString() => Title;
-}
-
-/// <summary>
 /// The Sources page: the intro, Add a Source (the core's presets), Your Sources (each installed
-/// source with its status) and Sources Settings…. Choosing a source browses its catalogue
-/// (Command.Browse): pages stream in as BrowsePage events, the person drills into folders and plays
-/// albums or playlists as collections, and the breadcrumb's first crumb leads back to the list.
+/// source with its status) and Sources Settings…. Choosing a source opens its catalogue on a page
+/// of its own (<see cref="SourceBrowseViewModel"/>), as in the other apps.
 /// </summary>
 public sealed partial class SourcesViewModel : PageViewModel
 {
-    private ulong _request;
-    private uint? _nextPage;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSourceOpen))]
-    [NotifyPropertyChangedFor(nameof(OpenInLabel))]
-    private SourceChoice? _selected;
-
-    /// <summary>A page of the catalogue is on its way.</summary>
-    [ObservableProperty]
-    private bool _isBrowsing;
-
-    [ObservableProperty]
-    private string? _error;
-
     public SourcesViewModel(ShellServices services)
         : base(services)
     {
         SignIns = new SourceSignIns(services);
         SignIns.Requested += flow => SignInRequested?.Invoke(flow);
-        Path.CollectionChanged += (_, _) => OnPropertyChanged(nameof(LevelLink));
     }
 
     public SourceSignIns SignIns { get; }
@@ -281,46 +255,17 @@ public sealed partial class SourcesViewModel : PageViewModel
     /// <summary>Raised when a sign-in from Add a Source should open (the app shows it in a dialog).</summary>
     public event Action<SignInViewModel>? SignInRequested;
 
+    /// <summary>Raised when a source should open its catalogue (the app opens its page).</summary>
+    public event Action<SourceTarget>? BrowseRequested;
+
     /// <summary>Add a Source: the services the core offers, in its order; empty hides the section.</summary>
     public ObservableCollection<SourcePresetViewModel> Presets { get; } = [];
 
     /// <summary>Your Sources: every installed source, on or off.</summary>
     public ObservableCollection<SourceChoice> Choices { get; } = [];
 
-    public ObservableCollection<BrowseLevel> Path { get; } = [];
-
-    public ObservableCollection<TrackItem> Tracks { get; } = [];
-
-    public ObservableCollection<SourceEntryItem> Entries { get; } = [];
-
-    /// <summary>A source is being browsed (otherwise the page lists the sources).</summary>
-    public bool IsSourceOpen => Selected is not null;
-
-    public bool HasNextPage => _nextPage is not null;
-
     /// <summary>Connects to a service from Add a Source; see <see cref="SourceSignIns.Connect"/>.</summary>
     public void Connect(SourcePresetViewModel preset, string? address, AuthMethod method) => SignIns.Connect(preset, address, method);
-
-    /// <summary>
-    /// Back, one step at a time: up a level of the catalogue, then to the list of sources. False
-    /// when there is nothing to go back to on this page.
-    /// </summary>
-    public bool GoUp()
-    {
-        if (Path.Count > 2)
-        {
-            GoTo(Path[^2]);
-            return true;
-        }
-
-        if (Selected is not null)
-        {
-            Selected = null;
-            return true;
-        }
-
-        return false;
-    }
 
     protected override Task LoadCoreAsync()
     {
@@ -336,174 +281,19 @@ public sealed partial class SourcesViewModel : PageViewModel
         }
     }
 
-    protected override void OnNotification(CoreEvent e)
-    {
-        switch (e)
-        {
-            case CoreEvent.BrowsePage { Update: var u } when u.Request == _request:
-                IsBrowsing = false;
-                Error = u.Error;
-                _nextPage = u.NextPage;
-                OnPropertyChanged(nameof(HasNextPage));
-                foreach (var item in u.Items)
-                {
-                    if (item.Kind == ItemKind.Track)
-                    {
-                        var t = new TrackItem(Tracks.Count) { Localizer = S.L };
-                        t.Load(item);
-                        Tracks.Add(t);
-                    }
-                    else
-                    {
-                        Entries.Add(new SourceEntryItem(item, S.L));
-                    }
-                }
-
-                break;
-            case CoreEvent.CommandFailed f when f.Id == _request:
-                IsBrowsing = false;
-                IsNotAvailable = f.Message.Contains("not available", StringComparison.OrdinalIgnoreCase);
-                Error = IsNotAvailable ? null : f.Message;
-                break;
-        }
-    }
-
-    partial void OnSelectedChanged(SourceChoice? value)
-    {
-        Path.Clear();
-        Tracks.Clear();
-        Entries.Clear();
-        Error = null;
-        IsBrowsing = false;
-        _request = 0;
-        _nextPage = null;
-        OnPropertyChanged(nameof(HasNextPage));
-        if (value is not null)
-        {
-            Path.Add(new BrowseLevel(null, S.L.Get("Sources_Crumb"), IsSources: true));
-            Path.Add(new BrowseLevel(null, value.Name));
-            Browse(null, 0, clear: true);
-        }
-    }
-
-    /// <summary>Choosing a source in Your Sources browses it (when it is on and has a catalogue).</summary>
+    /// <summary>Choosing a source in Your Sources opens its catalogue (when it is on and has one).</summary>
     [RelayCommand]
     private void Open(SourceChoice? choice)
     {
         if (choice is { CanBrowse: true })
         {
-            Selected = choice;
+            BrowseRequested?.Invoke(SourceTarget.Root(choice.Plugin));
         }
-    }
-
-    [RelayCommand]
-    private void OpenEntry(SourceEntryItem? entry)
-    {
-        if (entry is null || Selected is null)
-        {
-            return;
-        }
-
-        if (entry.Item.Kind is ItemKind.Folder or ItemKind.Artist)
-        {
-            Path.Add(new BrowseLevel(entry.Item.Id, entry.Title, Link: entry.Link));
-            Browse(entry.Item.Id, 0, clear: true);
-        }
-        else if (entry.CanPlay)
-        {
-            S.Send(new CoreCommand.PlayCollection(new Collection.Source(entry.Item.Source, entry.Item.Id), 0, false));
-        }
-        else if (entry.HasLink)
-        {
-            ItemLinks.Open(S, entry.Link); // cannot play here: its link is the main action
-        }
-    }
-
-    /// <summary>The level being browsed has a link (an artist): More offers Open in {Service}.</summary>
-    public string? LevelLink => Path.Count > 0 ? Path[^1].Link : null;
-
-    /// <summary>"Open in {Service}" for the browsed source.</summary>
-    public string OpenInLabel => ItemLinks.OpenInLabel(S.L, Selected?.Name ?? string.Empty);
-
-    /// <summary>More › Open in {Service} for the level being browsed.</summary>
-    [RelayCommand]
-    private void OpenLevelLink() => ItemLinks.Open(S, LevelLink);
-
-    /// <summary>Back to a level of the breadcrumb; its first crumb leads back to the list of sources.</summary>
-    [RelayCommand]
-    private void GoTo(BrowseLevel? level)
-    {
-        if (level is null)
-        {
-            return;
-        }
-
-        if (level.IsSources)
-        {
-            Selected = null;
-            return;
-        }
-
-        var index = Path.IndexOf(level);
-        if (index < 0)
-        {
-            return;
-        }
-
-        while (Path.Count > index + 1)
-        {
-            Path.RemoveAt(Path.Count - 1);
-        }
-
-        Browse(level.Node, 0, clear: true);
-    }
-
-    [RelayCommand]
-    private void LoadMore()
-    {
-        if (_nextPage is { } page && Path.Count > 0)
-        {
-            Browse(Path[^1].Node, page, clear: false);
-        }
-    }
-
-    /// <summary>Plays the songs from this one; one that cannot play here but has a link opens it instead.</summary>
-    [RelayCommand]
-    private void PlayTrack(TrackItem? item)
-    {
-        if (item?.Ref is { } r && item.IsPlayable)
-        {
-            var refs = Tracks.Where(t => t.IsPlayable).Select(t => t.Ref).OfType<TrackRef>().ToArray();
-            S.Send(new CoreCommand.PlayTracks(refs, (uint)Math.Max(0, Array.IndexOf(refs, r))));
-        }
-        else if (item is { OpensLink: true })
-        {
-            ItemLinks.Open(S, item.Link);
-        }
-    }
-
-    private void Browse(string? node, uint page, bool clear)
-    {
-        if (Selected is null)
-        {
-            return;
-        }
-
-        if (clear)
-        {
-            Tracks.Clear();
-            Entries.Clear();
-        }
-
-        Error = null;
-        IsBrowsing = true;
-        _request = S.SendHandled(new CoreCommand.Browse(Selected.Id, node, page));
     }
 
     private void Refresh(SourcesState sources)
     {
         SourceSignIns.Sync(Presets, sources, S.L);
-        var selected = Selected?.Id;
         Choices.Clear();
         foreach (var plugin in sources.Plugins)
         {
@@ -511,11 +301,5 @@ public sealed partial class SourcesViewModel : PageViewModel
         }
 
         IsEmpty = Choices.Count == 0;
-
-        // A source that was uninstalled or turned off while browsed leads back to the list.
-        if (selected is not null && Choices.FirstOrDefault(c => c.Id == selected) is not { CanBrowse: true })
-        {
-            Selected = null;
-        }
     }
 }

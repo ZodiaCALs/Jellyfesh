@@ -553,7 +553,7 @@ public class ViewModelTests
         var live = Live("org.sub", []);
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [library, live], null, false)));
         var first = Assert.Single(Assert.Single(search.OnlineGroups).Tracks);
-        Assert.Equal("Sub", first.Origin);
+        Assert.Null(first.Origin); // its group names its source; no other has it
         Assert.True(search.SourceStates[0].IsDone);
         Assert.False(search.SourceStates[1].IsDone);
 
@@ -565,11 +565,11 @@ public class ViewModelTests
         // From Your Sources: one group per source, each item under the source that gave it.
         Assert.Equal(["Sub", "Jelly"], search.OnlineGroups.Select(g => g.Name));
         var only = Assert.Single(search.OnlineGroups[0].Tracks);
-        Assert.Equal("Sub · Jelly", only.Origin);
+        Assert.Equal("Search_AlsoIn", only.Origin); // "Also in Jelly" (SourceBrowseTests checks the words)
         Assert.Empty(search.OnlineGroups[0].Entries);
         Assert.Equal("Harbour", Assert.Single(search.OnlineGroups[1].Entries).Title);
         Assert.False(search.OnlineGroups[1].HasTracks);
-        Assert.Equal("Jelly", search.Tracks[0].Origin);
+        Assert.Equal("Search_AlsoIn", search.Tracks[0].Origin);
         Assert.Equal("slow", search.SourceStates[1].Error);
         Assert.False(search.IsSearchingSources);
 

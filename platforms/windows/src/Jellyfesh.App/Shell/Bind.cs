@@ -14,6 +14,8 @@ public static class Bind
 
     public static Visibility VisibleIf(string? text) => string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
 
+    public static Visibility VisibleIfEmpty(string? text) => string.IsNullOrEmpty(text) ? Visibility.Visible : Visibility.Collapsed;
+
     public static Visibility VisibleIfNull(object? value) => value is null ? Visibility.Visible : Visibility.Collapsed;
 
     public static Visibility VisibleIfNotNull(object? value) => value is null ? Visibility.Collapsed : Visibility.Visible;

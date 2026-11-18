@@ -1,4 +1,5 @@
 using Jellyfesh.App.Shell;
+using Jellyfesh.Core;
 using Jellyfesh.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -24,8 +25,9 @@ public sealed partial class SearchPage : JfPage
         _menu = new TrackMenu(AppHost.Services).Flyout;
         _entryMenu = new EntryMenu(AppHost.Services).Flyout;
         Lists.Attach(TrackList, 40, menu: _menu);
-        Lists.Attach(AlbumShelf, 168);
-        Lists.Attach(ArtistShelf, 0);
+        Lists.Attach(AlbumList, 40, menu: new CollectionMenu(AppHost.Services, o => o is AlbumItem a ? new Collection.Album(a.Id) : null).Flyout);
+        Lists.Attach(ArtistList, 0, menu: new CollectionMenu(AppHost.Services, o => o is ArtistItem { IsLoaded: true } a ? new Collection.Artist(a.Id) : null).Flyout);
+        ViewModel.OpenRequested += target => AppHost.Window.Navigate(typeof(SourceBrowsePage), target);
         Loaded += (_, _) => FocusBox();
     }
 
@@ -70,7 +72,7 @@ public sealed partial class SearchPage : JfPage
 
     private void OnOnlineTrackClick(object sender, ItemClickEventArgs e) => ViewModel.PlayTrackCommand.Execute(e.ClickedItem as TrackItem);
 
-    private void OnEntryClick(object sender, ItemClickEventArgs e) => ViewModel.PlayEntryCommand.Execute(e.ClickedItem as SourceEntryItem);
+    private void OnEntryClick(object sender, ItemClickEventArgs e) => ViewModel.OpenEntryCommand.Execute(e.ClickedItem as SourceEntryItem);
 
     private void OnAlbumClick(object sender, ItemClickEventArgs e)
     {

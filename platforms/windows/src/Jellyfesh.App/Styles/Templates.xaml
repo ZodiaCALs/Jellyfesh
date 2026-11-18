@@ -86,6 +86,24 @@
             AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}" />
     </DataTemplate>
 
+    <!-- An album as a row (Search's library results, as in the other apps): its cover, title and artist. -->
+    <DataTemplate x:Key="AlbumRowTemplate" x:DataType="vm:AlbumItem">
+        <Grid Height="{th:Token Key=Player.RowHeight}" ColumnSpacing="12" Background="Transparent"
+              AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="40" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Width="40" Height="40" CornerRadius="{th:Token Key=Artwork.RadiusList, Kind=Corner}" Background="{ThemeResource JfFill}">
+                <Image controls:Artwork.DecodeSize="80" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+            </Border>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Title, Mode=OneWay}" />
+                <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
     <!-- Artists have no images in this release: a monogram on accent-soft (COL-06). -->
     <DataTemplate x:Key="ArtistTileTemplate" x:DataType="vm:ArtistItem">
         <StackPanel Width="136" Spacing="8" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">

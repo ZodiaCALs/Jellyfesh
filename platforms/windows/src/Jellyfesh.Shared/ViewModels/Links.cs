@@ -20,6 +20,15 @@ public static class ItemLinks
     public static string OpenInLabel(ILocalizer l, string service) => l.Format("Link_OpenIn", service);
 
     /// <summary>
+    /// "Content from Spotify" for a source whose terms ask for credit (PluginSummary.attribution),
+    /// shown in its views; null for every other source. No logos until they are approved.
+    /// </summary>
+    public static string? Attribution(SourcesState sources, string? plugin, ILocalizer l) =>
+        sources.Plugins.FirstOrDefault(p => p.Id == plugin) is { Attribution: not null } source
+            ? l.Format("Source_Attribution", source.Name)
+            : null;
+
+    /// <summary>
     /// Whether a link can be opened: web addresses only (the core sends https links filled in from the
     /// plugin's templates); anything else a plugin might put there is ignored.
     /// </summary>

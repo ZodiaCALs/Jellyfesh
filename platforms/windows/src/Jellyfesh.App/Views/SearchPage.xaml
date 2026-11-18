@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Unified search (docs/ui.md): one field; the library answers as you type (Songs, Albums, Artists); the
-    same words go to every enabled source, whose merged results stream in below under From Your Sources,
-    one group per source, with each source's state. Nothing found: No Results.
+    Unified search (docs/ui.md): one field; the library answers as you type (Songs, Albums, Artists, as
+    rows); the same words go to every enabled source, whose merged results stream in below under From
+    Your Sources, one group per source with each source's state ("Content from {Service}" for one that
+    asks for credit), an item the core merged naming the others ("Also in …"). A source's album,
+    artist, playlist or folder opens its page. Before anything is typed: "Search Your Music"; nothing
+    found: "No Results", as in the other apps.
 -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.SearchPage"
@@ -20,22 +23,6 @@
             <Setter Property="ScrollViewer.VerticalScrollMode" Value="Disabled" />
             <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
         </Style>
-        <Style x:Key="ShelfStyle" TargetType="GridView">
-            <Setter Property="SelectionMode" Value="None" />
-            <Setter Property="IsItemClickEnabled" Value="True" />
-            <Setter Property="ItemContainerStyle" Value="{StaticResource JfGridTileStyle}" />
-            <Setter Property="ScrollViewer.HorizontalScrollMode" Value="Enabled" />
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
-            <Setter Property="ScrollViewer.VerticalScrollMode" Value="Disabled" />
-            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
-            <Setter Property="ItemsPanel">
-                <Setter.Value>
-                    <ItemsPanelTemplate>
-                        <ItemsStackPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Page.Resources>
 
     <Grid Padding="32,24,32,0" RowSpacing="16">
@@ -45,21 +32,16 @@
         </Grid.RowDefinitions>
         <StackPanel Spacing="12">
             <TextBlock x:Uid="Search_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Search" />
-            <Grid MaxWidth="720" HorizontalAlignment="Left" ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBox
-                    x:Name="Box"
-                    x:Uid="Search_Box"
-                    MinWidth="320"
-                    AutomationProperties.Name="Search"
-                    KeyDown="OnBoxKeyDown"
-                    PlaceholderText="Songs, albums and artists"
-                    Text="{x:Bind ViewModel.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <Button x:Uid="Search_PlayAll" Grid.Column="1" Command="{x:Bind ViewModel.PlayAllCommand}" Content="Play All" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Tracks.Count), Mode=OneWay}" />
-            </Grid>
+            <TextBox
+                x:Name="Box"
+                x:Uid="Search_Box"
+                MinWidth="320"
+                MaxWidth="720"
+                HorizontalAlignment="Left"
+                AutomationProperties.Name="Search"
+                KeyDown="OnBoxKeyDown"
+                PlaceholderText="Songs, albums and artists"
+                Text="{x:Bind ViewModel.Query, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.SourceStates}">
                 <ItemsRepeater.Layout>
                     <StackLayout Orientation="Horizontal" Spacing="8" />
@@ -86,11 +68,11 @@
                 </StackPanel>
                 <StackPanel Spacing="4" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Albums.Count), Mode=OneWay}">
                     <TextBlock x:Uid="Search_Albums" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Albums" />
-                    <GridView x:Name="AlbumShelf" x:Uid="Search_AlbumList" Height="252" AutomationProperties.Name="Albums" ItemClick="OnAlbumClick" ItemTemplate="{StaticResource AlbumTileTemplate}" ItemsSource="{x:Bind ViewModel.Albums}" Style="{StaticResource ShelfStyle}" />
+                    <ListView x:Name="AlbumList" x:Uid="Search_AlbumList" AutomationProperties.Name="Albums" ItemClick="OnAlbumClick" ItemTemplate="{StaticResource AlbumRowTemplate}" ItemsSource="{x:Bind ViewModel.Albums}" Style="{StaticResource InlineListStyle}" />
                 </StackPanel>
                 <StackPanel Spacing="4" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Artists.Count), Mode=OneWay}">
                     <TextBlock x:Uid="Search_Artists" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Artists" />
-                    <GridView x:Name="ArtistShelf" x:Uid="Search_ArtistList" Height="212" AutomationProperties.Name="Artists" ItemClick="OnArtistClick" ItemTemplate="{StaticResource ArtistTileTemplate}" ItemsSource="{x:Bind ViewModel.Artists}" Style="{StaticResource ShelfStyle}" />
+                    <ListView x:Name="ArtistList" x:Uid="Search_ArtistList" AutomationProperties.Name="Artists" ItemClick="OnArtistClick" ItemTemplate="{StaticResource ArtistRowTemplate}" ItemsSource="{x:Bind ViewModel.Artists}" Style="{StaticResource InlineListStyle}" />
                 </StackPanel>
                 <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasOnlineResults), Mode=OneWay}">
                     <TextBlock x:Uid="Search_Online" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="From Your Sources" />
@@ -102,6 +84,7 @@
                             <DataTemplate x:DataType="vm:SourceResultGroup">
                                 <StackPanel Spacing="4">
                                     <TextBlock AutomationProperties.HeadingLevel="Level3" Style="{StaticResource JfListTitleText}" FontWeight="SemiBold" Text="{x:Bind Name}" />
+                                    <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Attribution}" Visibility="{x:Bind shell:Bind.Visible(HasAttribution)}" />
                                     <ListView AutomationProperties.Name="{x:Bind Name}" ItemClick="OnOnlineTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind Tracks}" Loaded="OnOnlineTracksLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(HasTracks)}" />
                                     <ListView AutomationProperties.Name="{x:Bind Name}" ItemClick="OnEntryClick" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind Entries}" Loaded="OnOnlineEntriesLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(HasEntries)}" />
                                 </StackPanel>
@@ -109,7 +92,15 @@
                         </ItemsRepeater.ItemTemplate>
                     </ItemsRepeater>
                 </StackPanel>
-                <TextBlock x:Uid="Search_NothingFound" Style="{StaticResource JfSecondaryBodyText}" Text="No Results" Visibility="{x:Bind shell:Bind.VisibleIfNothingFound(ViewModel.SearchedText, ViewModel.HasResults, ViewModel.IsSearchingSources), Mode=OneWay}" />
+                <!-- Before anything is typed, and when nothing was found (the other apps' words). -->
+                <StackPanel Spacing="4" Visibility="{x:Bind shell:Bind.VisibleIfEmpty(ViewModel.SearchedText), Mode=OneWay}">
+                    <TextBlock x:Uid="Search_StartTitle" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Search Your Music" />
+                    <TextBlock x:Uid="Search_StartBody" Style="{StaticResource JfSecondaryBodyText}" Text="Find songs, albums and artists in your library and in your sources." />
+                </StackPanel>
+                <StackPanel Spacing="4" Visibility="{x:Bind shell:Bind.VisibleIfNothingFound(ViewModel.SearchedText, ViewModel.HasResults, ViewModel.IsSearchingSources), Mode=OneWay}">
+                    <TextBlock x:Uid="Search_NothingFound" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="No Results" />
+                    <TextBlock x:Uid="Search_NothingFoundBody" Style="{StaticResource JfSecondaryBodyText}" Text="Try other words." />
+                </StackPanel>
                 <TextBlock x:Uid="Search_SourcesNotAvailable" Style="{StaticResource JfSecondaryBodyText}" Text="Searching your online sources comes in a later build; your library is searched now." Visibility="{x:Bind shell:Bind.Visible(ViewModel.SourcesNotAvailable), Mode=OneWay}" />
             </StackPanel>
         </ScrollViewer>

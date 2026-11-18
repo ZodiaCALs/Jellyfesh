@@ -278,6 +278,12 @@
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>キュー</value>
   </data>
+  <data name="Browse_Empty.Text" xml:space="preserve">
+    <value>何もありません</value>
+  </data>
+  <data name="Browse_ErrorTitle.Text" xml:space="preserve">
+    <value>ソースから応答がありません</value>
+  </data>
   <data name="Common_AddMusicFolder.Content" xml:space="preserve">
     <value>音楽フォルダを追加…</value>
   </data>
@@ -517,6 +523,9 @@
   </data>
   <data name="Link_OpenIn" xml:space="preserve">
     <value>{0} で開く</value>
+  </data>
+  <data name="List_Separator" xml:space="preserve">
+    <value>、</value>
   </data>
   <data name="Lyrics_InfoFrom" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -962,6 +971,9 @@
   <data name="Search_Albums.Text" xml:space="preserve">
     <value>アルバム</value>
   </data>
+  <data name="Search_AlsoIn" xml:space="preserve">
+    <value>{0} にもあります</value>
+  </data>
   <data name="Search_ArtistList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>アーティスト</value>
   </data>
@@ -980,11 +992,11 @@
   <data name="Search_NothingFound.Text" xml:space="preserve">
     <value>結果はありません</value>
   </data>
+  <data name="Search_NothingFoundBody.Text" xml:space="preserve">
+    <value>別の言葉で試してください。</value>
+  </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>ソースから</value>
-  </data>
-  <data name="Search_PlayAll.Content" xml:space="preserve">
-    <value>すべて再生</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>曲</value>
@@ -994,6 +1006,12 @@
   </data>
   <data name="Search_SourcesNotAvailable.Text" xml:space="preserve">
     <value>オンラインのソースの検索は今後のビルドで対応します。いまはライブラリを検索しています。</value>
+  </data>
+  <data name="Search_StartBody.Text" xml:space="preserve">
+    <value>ライブラリと各ソースから、曲、アルバム、アーティストを探します。</value>
+  </data>
+  <data name="Search_StartTitle.Text" xml:space="preserve">
+    <value>音楽を検索</value>
   </data>
   <data name="Search_Title.Text" xml:space="preserve">
     <value>検索</value>
@@ -1127,6 +1145,9 @@
   <data name="Sort_Year" xml:space="preserve">
     <value>年</value>
   </data>
+  <data name="Source_Attribution" xml:space="preserve">
+    <value>{0} 提供のコンテンツ</value>
+  </data>
   <data name="SourcePreset_Jellyfin" xml:space="preserve">
     <value>お使いの Jellyfin サーバー</value>
   </data>
@@ -1196,17 +1217,11 @@
   <data name="Sources_CommunityHint.Text" xml:space="preserve">
     <value>公式ソースは Jellyfesh が署名しています。コミュニティプラグインは他の人が作ったもので、許可しない限りオフのままです。</value>
   </data>
-  <data name="Sources_Crumb" xml:space="preserve">
-    <value>ソース</value>
-  </data>
   <data name="Sources_EmptyBody.Text" xml:space="preserve">
     <value>.jfpkg ファイルからソースのプラグインをインストールします。</value>
   </data>
   <data name="Sources_EmptyTitle.Text" xml:space="preserve">
     <value>ソースはインストールされていません</value>
-  </data>
-  <data name="Sources_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>フォルダ、アルバム、プレイリスト</value>
   </data>
   <data name="Sources_Install.Content" xml:space="preserve">
     <value>ファイルからインストール…</value>
@@ -1221,7 +1236,7 @@
     <value>ソースの設定…</value>
   </data>
   <data name="Sources_More.Content" xml:space="preserve">
-    <value>さらに表示</value>
+    <value>さらに読み込む</value>
   </data>
   <data name="Sources_None.Text" xml:space="preserve">
     <value>ソースはインストールされていません</value>
@@ -1231,9 +1246,6 @@
   </data>
   <data name="Sources_Title.Text" xml:space="preserve">
     <value>ソース</value>
-  </data>
-  <data name="Sources_Tracks.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>曲</value>
   </data>
   <data name="Sources_Yours.Text" xml:space="preserve">
     <value>マイソース</value>

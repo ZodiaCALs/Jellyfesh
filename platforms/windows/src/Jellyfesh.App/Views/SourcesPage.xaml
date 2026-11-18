@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Sources (docs/ui.md): the intro line, Add a Source (the core's presets, through the Connect dialog),
-    Your Sources (each installed source with its status; choosing one browses it) and Sources Settings….
-    Browsing a source shows its catalogue behind a breadcrumb whose first crumb leads back here: drill into
-    folders and artists, play albums and playlists whole. Rows with a link offer Open in {Service} (an
-    item that cannot play here opens it when chosen), and so does More for an artist being browsed.
+    Your Sources (each installed source with its status; choosing one opens its catalogue on its own
+    page, SourceBrowsePage) and Sources Settings….
 -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.SourcesPage"
@@ -23,7 +21,7 @@
         <TextBlock x:Uid="Sources_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Sources" />
 
         <!-- ===== The list: intro, Add a Source, Your Sources, Sources Settings… ===== -->
-        <ScrollViewer Grid.Row="1" Visibility="{x:Bind shell:Bind.Collapsed(ViewModel.IsSourceOpen), Mode=OneWay}">
+        <ScrollViewer Grid.Row="1">
             <StackPanel MaxWidth="720" Padding="0,0,0,112" HorizontalAlignment="Left" Spacing="24">
                 <TextBlock x:Uid="Sources_Intro" Style="{StaticResource JfSecondaryBodyText}" Text="Sources bring music from servers and services into Jellyfesh." />
 
@@ -112,43 +110,5 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- ===== A source's catalogue ===== -->
-        <Grid Grid.Row="1" RowSpacing="16" Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsSourceOpen), Mode=OneWay}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid ColumnSpacing="8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <BreadcrumbBar x:Name="Crumbs" VerticalAlignment="Center" ItemClicked="OnCrumbClicked" ItemsSource="{x:Bind ViewModel.Path}" />
-                <Button
-                    x:Uid="More_Button"
-                    Grid.Column="1"
-                    AutomationProperties.Name="More"
-                    Style="{StaticResource JfIconButtonStyle}"
-                    ToolTipService.ToolTip="More"
-                    Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.LevelLink), Mode=OneWay}">
-                    <controls:StrokeIcon Data="{StaticResource IconMore}" Size="18" />
-                    <Button.Flyout>
-                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                            <MenuFlyoutItem Command="{x:Bind ViewModel.OpenLevelLinkCommand}" Text="{x:Bind ViewModel.OpenInLabel, Mode=OneWay}" />
-                        </MenuFlyout>
-                    </Button.Flyout>
-                </Button>
-            </Grid>
-            <ScrollViewer Grid.Row="1">
-                <StackPanel Padding="0,0,0,112" Spacing="8">
-                    <ListView x:Name="EntryList" x:Uid="Sources_Entries" AutomationProperties.Name="Folders, Albums and Playlists" IsItemClickEnabled="True" ItemClick="OnEntryClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind ViewModel.Entries}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />
-                    <ListView x:Name="TrackList" x:Uid="Sources_Tracks" AutomationProperties.Name="Songs" IsItemClickEnabled="True" ItemClick="OnTrackClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.Tracks}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />
-                    <ProgressRing HorizontalAlignment="Center" IsActive="{x:Bind ViewModel.IsBrowsing, Mode=OneWay}" />
-                    <Button x:Uid="Sources_More" HorizontalAlignment="Center" Command="{x:Bind ViewModel.LoadMoreCommand}" Content="Show More" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasNextPage), Mode=OneWay}" />
-                    <TextBlock Foreground="{ThemeResource JfDanger}" Style="{StaticResource JfBodyText}" Text="{x:Bind ViewModel.Error, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.Error), Mode=OneWay}" />
-                    <TextBlock x:Uid="Common_NotAvailable" Style="{StaticResource JfSecondaryBodyText}" Text="Coming in a later build." Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsNotAvailable), Mode=OneWay}" />
-                </StackPanel>
-            </ScrollViewer>
-        </Grid>
     </Grid>
 </shell:JfPage>

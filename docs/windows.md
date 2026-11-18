@@ -140,14 +140,29 @@ plugin settings applied with **Save**.
 * **Song menu:** Play Next, Play Last, Add to Playlist…, Add to Favourites or
   Remove from Favourites, Go to Album, Go to Artist and Show in Explorer
   (library songs; the core's search finds the album and artist).
-* **Search:** library results first (Songs, Albums, Artists), then **From Your
-  Sources**, one group per source; "No Results" when nothing is found.
+* **Search:** "Search Your Music" and a sentence before anything is typed;
+  library results first (Songs, Albums, Artists, as rows), then **From Your
+  Sources**, one group per source ("Content from {Service}" under one that asks
+  for credit), an item the core merged saying "Also in …"; a source's album,
+  artist, playlist or folder opens its page; "No Results" and "Try other
+  words." when nothing is found.
 * **Sources:** the intro line, **Add a Source** (the core's presets; a service
   opens "Connect to …" for the Server Address and how to sign in, then the
   sign-in dialog), **Your Sources** (every installed source with its badge
   and "Signed in as …", "Not signed in" or "Off"; choosing one that is on
-  browses it, behind a breadcrumb whose first crumb, Esc or Back lead back to
-  the list) and **Sources Settings…**, which opens Settings › Sources.
+  opens its catalogue) and **Sources Settings…**, which opens Settings ›
+  Sources.
+* **A source's pages** (`SourceBrowsePage`, after the web's): the top level or
+  a folder lists what it holds in the source's order, folders, albums and
+  songs mixed; an album or a playlist has the large header (artwork, kind,
+  title, the artist in accent text, the song count, **Play**, **Shuffle**,
+  More with Play Next, Play Last and Open in {Service}), its songs (numbered on
+  an album) and the "12 songs, 48 minutes" footer; an artist plays its albums.
+  Choosing an album, artist, playlist or folder opens its page (Back returns);
+  a song plays with the rest of its album or playlist after it. **Load More**
+  while the source has more; "This Source Did Not Answer" with its message;
+  "Nothing Here"; Open in {Service} as the main action when nothing plays here;
+  "Content from {Service}" for a source that asks for credit.
 * **Now Playing:** Queue has "Up Next", **Clear Queue** (it asks first) and
   "Nothing Up Next"; Info is "About This Song" with Title, Artist, Album, Year
   (library songs), Length, Format, Lyrics (timing and file, or "None found")
@@ -405,7 +420,7 @@ The keys every Jellyfesh app shares ([`ui.md`](ui.md), "Keyboard"):
 | Shift+Right / Shift+Left | Skip 5 seconds forward / back |
 | Ctrl+Up / Ctrl+Down | Volume up / down |
 | Ctrl+F | Search |
-| Esc | Back (closes Now Playing first; on the Sources page, up a level, then to the list) |
+| Esc | Back (closes Now Playing first) |
 
 None of them acts while a text box has focus, in the window or in a dialog.
 The arrow keys are read before the focused control (`PreviewKeyDown` on the

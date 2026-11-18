@@ -278,6 +278,12 @@
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Queue</value>
   </data>
+  <data name="Browse_Empty.Text" xml:space="preserve">
+    <value>Nothing Here</value>
+  </data>
+  <data name="Browse_ErrorTitle.Text" xml:space="preserve">
+    <value>This Source Did Not Answer</value>
+  </data>
   <data name="Common_AddMusicFolder.Content" xml:space="preserve">
     <value>Add Music Folder…</value>
   </data>
@@ -517,6 +523,9 @@
   </data>
   <data name="Link_OpenIn" xml:space="preserve">
     <value>Open in {0}</value>
+  </data>
+  <data name="List_Separator" xml:space="preserve">
+    <value>, </value>
   </data>
   <data name="Lyrics_InfoFrom" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -962,6 +971,9 @@
   <data name="Search_Albums.Text" xml:space="preserve">
     <value>Albums</value>
   </data>
+  <data name="Search_AlsoIn" xml:space="preserve">
+    <value>Also in {0}</value>
+  </data>
   <data name="Search_ArtistList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Artists</value>
   </data>
@@ -980,11 +992,11 @@
   <data name="Search_NothingFound.Text" xml:space="preserve">
     <value>No Results</value>
   </data>
+  <data name="Search_NothingFoundBody.Text" xml:space="preserve">
+    <value>Try other words.</value>
+  </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>From Your Sources</value>
-  </data>
-  <data name="Search_PlayAll.Content" xml:space="preserve">
-    <value>Play All</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Songs</value>
@@ -994,6 +1006,12 @@
   </data>
   <data name="Search_SourcesNotAvailable.Text" xml:space="preserve">
     <value>Searching your online sources comes in a later build; your library is searched now.</value>
+  </data>
+  <data name="Search_StartBody.Text" xml:space="preserve">
+    <value>Find songs, albums and artists in your library and in your sources.</value>
+  </data>
+  <data name="Search_StartTitle.Text" xml:space="preserve">
+    <value>Search Your Music</value>
   </data>
   <data name="Search_Title.Text" xml:space="preserve">
     <value>Search</value>
@@ -1127,6 +1145,9 @@
   <data name="Sort_Year" xml:space="preserve">
     <value>Year</value>
   </data>
+  <data name="Source_Attribution" xml:space="preserve">
+    <value>Content from {0}</value>
+  </data>
   <data name="SourcePreset_Jellyfin" xml:space="preserve">
     <value>Your Jellyfin server</value>
   </data>
@@ -1196,17 +1217,11 @@
   <data name="Sources_CommunityHint.Text" xml:space="preserve">
     <value>Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.</value>
   </data>
-  <data name="Sources_Crumb" xml:space="preserve">
-    <value>Sources</value>
-  </data>
   <data name="Sources_EmptyBody.Text" xml:space="preserve">
     <value>Install a source plugin from a .jfpkg file.</value>
   </data>
   <data name="Sources_EmptyTitle.Text" xml:space="preserve">
     <value>No Sources Installed</value>
-  </data>
-  <data name="Sources_Entries.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Folders, Albums and Playlists</value>
   </data>
   <data name="Sources_Install.Content" xml:space="preserve">
     <value>Install from File…</value>
@@ -1221,7 +1236,7 @@
     <value>Sources Settings…</value>
   </data>
   <data name="Sources_More.Content" xml:space="preserve">
-    <value>Show More</value>
+    <value>Load More</value>
   </data>
   <data name="Sources_None.Text" xml:space="preserve">
     <value>No Sources Installed</value>
@@ -1231,9 +1246,6 @@
   </data>
   <data name="Sources_Title.Text" xml:space="preserve">
     <value>Sources</value>
-  </data>
-  <data name="Sources_Tracks.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Songs</value>
   </data>
   <data name="Sources_Yours.Text" xml:space="preserve">
     <value>Your Sources</value>

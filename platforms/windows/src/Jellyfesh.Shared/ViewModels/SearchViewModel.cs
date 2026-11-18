@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Jellyfesh.Core;
+using Jellyfesh.Formatting;
 
 namespace Jellyfesh.ViewModels;
 
@@ -24,12 +25,17 @@ public sealed partial class SourceSearchState(string source, string name) : Obse
 }
 
 /// <summary>From Your Sources: one source's results (docs/ui.md, "Search"), in the core's merged order.</summary>
-public sealed class SourceResultGroup(string source, string name)
+public sealed class SourceResultGroup(string source, string name, string? attribution = null)
 {
     public string Source { get; } = source;
 
     /// <summary>The source's name, the group's heading.</summary>
     public string Name { get; } = name;
+
+    /// <summary>"Content from {Service}" under the heading, for a source that asks for credit.</summary>
+    public string? Attribution { get; } = attribution;
+
+    public bool HasAttribution => Attribution is not null;
 
     /// <summary>Playable songs only online sources have.</summary>
     public ObservableCollection<TrackItem> Tracks { get; } = [];
@@ -139,33 +145,23 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         }
     }
 
-    /// <summary>Plays an album or playlist; anything else with a link opens it in its service.</summary>
+    /// <summary>Raised when a source's album, artist, playlist or folder should open its page (the view navigates).</summary>
+    public event Action<SourceTarget>? OpenRequested;
+
+    /// <summary>
+    /// A source's album, artist, playlist or folder opens its page (docs/parity.md N6); one that
+    /// cannot play here and has a link opens the link instead (docs/ui.md).
+    /// </summary>
     [RelayCommand]
-    private void PlayEntry(SourceEntryItem? item)
+    private void OpenEntry(SourceEntryItem? item)
     {
-        if (item is { CanPlay: true })
+        if (item is { OpensPage: true })
         {
-            S.Send(new CoreCommand.PlayCollection(new Collection.Source(item.Item.Source, item.Item.Id), 0, false));
+            OpenRequested?.Invoke(SourceTarget.Of(item.Item));
         }
         else if (item is { HasLink: true })
         {
             ItemLinks.Open(S, item.Link);
-        }
-    }
-
-    [RelayCommand]
-    private async Task PlayAll()
-    {
-        var text = _searched;
-        if (text.Length == 0)
-        {
-            return;
-        }
-
-        var refs = await S.QueryAsync(c => c.TracksForQuery(text, 200));
-        if (refs.IsOk && refs.Value!.Count > 0)
-        {
-            S.Send(new CoreCommand.PlayTracks(refs.Value!, 0));
         }
     }
 
@@ -195,7 +191,7 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
             var group = OnlineGroups.FirstOrDefault(g => g.Source == item.Source);
             if (group is null)
             {
-                group = new SourceResultGroup(item.Source, SourceName(item.Source));
+                group = new SourceResultGroup(item.Source, SourceName(item.Source), ItemLinks.Attribution(S.Hub.State.Sources, item.Source, S.L));
                 OnlineGroups.Add(group);
             }
 
@@ -203,12 +199,12 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
             {
                 var track = new TrackItem(group.Tracks.Count) { Localizer = S.L };
                 track.Load(item);
-                track.Origin = Origin(item);
+                track.Origin = AlsoIn(item);
                 group.Tracks.Add(track);
             }
             else
             {
-                group.Entries.Add(new SourceEntryItem(item, S.L) { Origin = Origin(item) });
+                group.Entries.Add(new SourceEntryItem(item, S.L) { Origin = AlsoIn(item) });
             }
         }
 
@@ -217,7 +213,7 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         {
             foreach (var row in Tracks.Where(t => t.Ref == item.Track))
             {
-                row.Origin = string.Join(" · ", item.AlsoIn.Select(SourceName));
+                row.Origin = AlsoIn(item);
             }
         }
 
@@ -233,8 +229,15 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         UpdateHasResults();
     }
 
-    private string Origin(SourceItem item) =>
-        string.Join(" · ", new[] { item.Source }.Concat(item.AlsoIn).Distinct().Select(SourceName));
+    /// <summary>
+    /// "Also in Navidrome, Spotify": the other sources that have an item the core merged
+    /// (SourceItem.also_in), as the other apps say it (docs/parity.md N5); null when there are none.
+    /// </summary>
+    private string? AlsoIn(SourceItem item)
+    {
+        var others = item.AlsoIn.Where(s => s != item.Source).Distinct().Select(SourceName).ToList();
+        return others.Count == 0 ? null : S.L.Format("Search_AlsoIn", string.Join(S.L.Get("List_Separator"), others));
+    }
 
     private string SourceName(string id) =>
         id == LibrarySource

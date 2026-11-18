@@ -287,6 +287,8 @@ public enum PluginBadge
 /// <param name="RemotePlayback">The service plays on the person's own devices and Jellyfesh is its
 /// remote control (ADR-0018): its songs start a remote session and never join the queue, so Play
 /// Next, Play Last and Add to Playlist are not offered for them.</param>
+/// <param name="Attribution">Set when the service's terms ask for credit: its views then say
+/// "Content from {Service}" (docs/ui.md, "Links and remote playback").</param>
 public sealed record PluginInfo(
     string Id,
     string Name,
@@ -302,7 +304,8 @@ public sealed record PluginInfo(
     string SettingsSchemaJson,
     string SettingsJson,
     string? Icon,
-    bool RemotePlayback = false);
+    bool RemotePlayback = false,
+    string? Attribution = null);
 
 /// <summary>
 /// A music service offered in Settings → Sources → Add a Source, listed while its official plugin

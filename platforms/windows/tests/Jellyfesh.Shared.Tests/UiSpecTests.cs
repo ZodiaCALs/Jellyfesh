@@ -285,7 +285,7 @@ public class UiSpecTests
     }
 
     [Fact]
-    public void Sources_page_lists_add_a_source_and_your_sources_then_browses_one()
+    public void Sources_page_lists_add_a_source_and_your_sources_then_opens_one()
     {
         using var h = new AppHarness();
         var subsonic = Plugin("org.jellyfesh.subsonic", account: "ana") with { Name = "Subsonic", Enabled = true };
@@ -295,46 +295,41 @@ public class UiSpecTests
         h.Started();
         var sources = h.App.CreateSources();
         sources.Activate();
+        var opened = new List<SourceTarget>();
+        sources.BrowseRequested += opened.Add;
 
         Assert.Equal(["Navidrome"], sources.Presets.Select(p => p.Name));
         Assert.Equal(["Subsonic", "Jellyfin"], sources.Choices.Select(c => c.Name)); // every installed source, on or off
         Assert.Equal(["Source_SignedInAs", "Source_StatusOff"], sources.Choices.Select(c => c.Status));
-        Assert.False(sources.IsSourceOpen);
 
-        // A source that is off is not browsed.
+        // A source that is off is not opened.
         sources.OpenCommand.Execute(sources.Choices[1]);
-        Assert.False(sources.IsSourceOpen);
-        Assert.DoesNotContain(h.Core.Sent, c => c is CoreCommand.Browse);
+        Assert.Empty(opened);
 
-        // Choosing a source browses it, behind a breadcrumb that leads back to the list.
+        // Choosing a source opens its catalogue on a page of its own, at its top level.
         sources.OpenCommand.Execute(sources.Choices[0]);
-        Assert.True(sources.IsSourceOpen);
+        var root = Assert.Single(opened);
+        Assert.Equal(new SourceTarget("org.jellyfesh.subsonic", null, "Subsonic", null), root);
+        sources.Deactivate();
+
+        var page = h.App.CreateSourceBrowse(root);
+        page.Activate();
         Assert.Equal(new CoreCommand.Browse("org.jellyfesh.subsonic", null, 0), h.Core.Sent[^1]);
-        Assert.Equal(["Sources_Crumb", "Subsonic"], sources.Path.Select(p => p.Title));
+        Assert.Equal(string.Empty, page.KindLabel);
+        Assert.False(page.IsCollection);
         var request = (ulong)h.Core.Sent.Count;
         var folder = new SourceItem("org.jellyfesh.subsonic", ItemKind.Folder, "f1", "Jazz", null, null, null, null, false, null, null, []);
         h.Emit(new CoreEvent.BrowsePage(new BrowseUpdate(request, "org.jellyfesh.subsonic", null, [folder], null, null)));
-        sources.OpenEntryCommand.Execute(sources.Entries[0]);
-        Assert.Equal(new CoreCommand.Browse("org.jellyfesh.subsonic", "f1", 0), h.Core.Sent[^1]);
-        Assert.Equal(3, sources.Path.Count);
+        Assert.True(page.IsComplete);
+        Assert.False(page.CanPlay); // a top level is no collection
 
-        // Back goes up a level, then to the list.
-        Assert.True(sources.GoUp());
-        Assert.Equal(2, sources.Path.Count);
-        Assert.True(sources.GoUp());
-        Assert.False(sources.IsSourceOpen);
-        Assert.False(sources.GoUp());
-
-        // The first crumb also leads back to the list.
-        sources.OpenCommand.Execute(sources.Choices[0]);
-        sources.GoToCommand.Execute(sources.Path[0]);
-        Assert.False(sources.IsSourceOpen);
-
-        // Turning the browsed source off leads back to the list too.
-        sources.OpenCommand.Execute(sources.Choices[0]);
-        h.Emit(new CoreEvent.Sources(new SourcesState(2, [subsonic with { Enabled = false }, off], [navidrome], false)));
-        Assert.False(sources.IsSourceOpen);
-        sources.Deactivate();
+        // A folder opens its own page (Back is the frame's).
+        var next = new List<SourceTarget>();
+        page.OpenRequested += next.Add;
+        page.OpenCommand.Execute(page.Rows[0]);
+        Assert.Equal("f1", Assert.Single(next).Node);
+        Assert.Equal(ItemKind.Folder, next[0].Kind);
+        page.Deactivate();
     }
 
     [Fact]

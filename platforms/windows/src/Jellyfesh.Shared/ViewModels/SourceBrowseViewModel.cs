@@ -1,0 +1,349 @@
+using System.Collections.ObjectModel;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Jellyfesh.Core;
+using Jellyfesh.Formatting;
+
+namespace Jellyfesh.ViewModels;
+
+/// <summary>What a source page shows: the source's top level (no node), a folder, an artist, an album or a playlist.</summary>
+public sealed record SourceTarget(string Plugin, string? Node, string Title, ItemKind? Kind, SourceItem? Item = null)
+{
+    /// <summary>The source's top level, titled with its name.</summary>
+    public static SourceTarget Root(PluginInfo plugin) => new(plugin.Id, null, plugin.Name, null);
+
+    /// <summary>An album, artist, playlist or folder the source listed.</summary>
+    public static SourceTarget Of(SourceItem item) => new(item.Source, item.Id, item.Title, item.Kind, item);
+}
+
+/// <summary>
+/// A page of a source's catalogue (docs/ui.md, "Sources"; the web's source page is the model,
+/// docs/parity.md N17, N18): the source's top level or a folder lists what it holds; an album or a
+/// playlist has the large header (artwork, kind, title, the artist in accent text, the song count,
+/// Play, Shuffle and More) above its songs, numbered on an album, and the "12 songs, 48 minutes"
+/// footer. Pages of the catalogue stream in as BrowsePage events, in the plugin's order (folders,
+/// albums and songs mixed as the source lists them), with Load More while there are more. Choosing
+/// an album, artist, playlist or folder opens its own page; a song plays with the rest of its album
+/// or playlist after it. A source that asks for credit says "Content from {Service}". Nothing here
+/// sorts or filters: the order and what plays are the core's.
+/// </summary>
+public sealed partial class SourceBrowseViewModel : PageViewModel
+{
+    private ulong _request;
+    private uint _requestedPage;
+    private uint? _nextPage;
+    private bool _started;
+
+    /// <summary>A page was asked for while the page was shown and has not arrived (asked again on return).</summary>
+    private bool _pending;
+
+    /// <summary>Items so far, songs or not, in the plugin's order: a song's place for PlayCollection's start.</summary>
+    private int _itemCount;
+
+    [ObservableProperty]
+    private bool _isBrowsing;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string? _error;
+
+    [ObservableProperty]
+    private bool _hasNextPage;
+
+    /// <summary>Every page has arrived.</summary>
+    [ObservableProperty]
+    private bool _isComplete;
+
+    /// <summary>The song count under an album's or playlist's title ("12 songs"), once every page is here.</summary>
+    [ObservableProperty]
+    private string _facts = string.Empty;
+
+    /// <summary>"12 songs, 48 minutes" under the last song, once every page is here.</summary>
+    [ObservableProperty]
+    private string _footer = string.Empty;
+
+    /// <summary>Play and Shuffle show: something of this album, artist, playlist or folder plays here.</summary>
+    [ObservableProperty]
+    private bool _canPlay;
+
+    /// <summary>Nothing here plays here, but the item has a link: Open in {Service} is the main action.</summary>
+    [ObservableProperty]
+    private bool _opensLink;
+
+    /// <summary>Every page is here and the source listed nothing: "Nothing Here".</summary>
+    [ObservableProperty]
+    private bool _isNothingHere;
+
+    public SourceBrowseViewModel(ShellServices services, SourceTarget target)
+        : base(services)
+    {
+        Target = target;
+        var l = services.L;
+        var sources = services.Hub.State.Sources;
+        Title = target.Title;
+        KindLabel = target.Kind is { } kind ? l.Get("Kind_" + kind) : string.Empty;
+        Subtitle = target.Kind is ItemKind.Album or ItemKind.Playlist ? target.Item?.Subtitle ?? string.Empty : string.Empty;
+        Attribution = ItemLinks.Attribution(sources, target.Plugin, l);
+        Link = ItemLinks.Usable(target.Item?.Link);
+        OpenInLabel = ItemLinks.OpenInLabel(l, ItemLinks.ServiceName(sources, target.Plugin));
+        IsRemote = ItemLinks.IsRemoteSource(sources, target.Plugin);
+        Header = target.Item is { } item ? new SourceEntryItem(item, l) : null;
+    }
+
+    public SourceTarget Target { get; }
+
+    public string Title { get; }
+
+    /// <summary>"Album", "Playlist", "Artist" or "Folder" above the title; empty for the source's top level.</summary>
+    public string KindLabel { get; }
+
+    /// <summary>An album's artist (or a playlist's line), in accent text under the title.</summary>
+    public string Subtitle { get; }
+
+    /// <summary>"Content from {Service}", or null when the source does not ask for credit.</summary>
+    public string? Attribution { get; }
+
+    public bool HasAttribution => Attribution is not null;
+
+    /// <summary>The item's artwork (and its link) for the header; null for the source's top level.</summary>
+    public SourceEntryItem? Header { get; }
+
+    /// <summary>An album or a playlist: the large header with the artwork and the footer.</summary>
+    public bool IsCollection => Target.Kind is ItemKind.Album or ItemKind.Playlist;
+
+    /// <summary>An album's songs are numbered.</summary>
+    public bool IsNumbered => Target.Kind == ItemKind.Album;
+
+    /// <summary>The item opens in its service (More › Open in {Service}).</summary>
+    public string? Link { get; }
+
+    public bool HasLink => Link is not null;
+
+    /// <summary>"Open in {Service}".</summary>
+    public string OpenInLabel { get; }
+
+    /// <summary>The source plays on the person's own devices: no Play Next or Play Last (ADR-0018).</summary>
+    public bool IsRemote { get; }
+
+    /// <summary>Play Next and Play Last are offered.</summary>
+    public bool CanQueue => CanPlay && !IsRemote;
+
+    /// <summary>More has something to offer.</summary>
+    public bool HasMore => CanQueue || HasLink;
+
+    public bool HasError => Error is not null;
+
+    /// <summary>What the source listed so far, in its order: <see cref="SourceEntryItem"/>s and <see cref="TrackItem"/>s.</summary>
+    public ObservableCollection<object> Rows { get; } = [];
+
+    /// <summary>The songs among <see cref="Rows"/>.</summary>
+    public IEnumerable<TrackItem> Tracks => Rows.OfType<TrackItem>();
+
+    /// <summary>Choosing an album, artist, playlist or folder opens its page (the view navigates).</summary>
+    public event Action<SourceTarget>? OpenRequested;
+
+    protected override Task LoadCoreAsync()
+    {
+        // Pages come as events; the library's revision does not change what a source lists.
+        if (!_started)
+        {
+            _started = true;
+            Browse(0, clear: true);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected override void OnActivated()
+    {
+        if (_pending)
+        {
+            // Its answer came while the page was not shown: ask again.
+            Browse(_requestedPage, clear: _requestedPage == 0);
+        }
+    }
+
+    protected override void OnNotification(CoreEvent e)
+    {
+        switch (e)
+        {
+            case CoreEvent.BrowsePage { Update: var u } when u.Request == _request:
+                _pending = false;
+                IsBrowsing = false;
+                Error = u.Error;
+                _nextPage = u.NextPage;
+                HasNextPage = u.NextPage is not null;
+                Add(u.Items);
+                IsComplete = u.Error is null && u.NextPage is null;
+                Summarize();
+                break;
+            case CoreEvent.CommandFailed f when f.Id == _request:
+                _pending = false;
+                IsBrowsing = false;
+                IsNotAvailable = SearchViewModel.IsNotAvailableMessage(f.Message);
+                Error = IsNotAvailable ? null : f.Message;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// A row was chosen: an album, artist, playlist or folder opens its page (or its link, when it
+    /// cannot play here and has one); a song plays, with the rest of its album or playlist after it,
+    /// or opens its link when it cannot play here.
+    /// </summary>
+    [RelayCommand]
+    private void Open(object? row)
+    {
+        switch (row)
+        {
+            case SourceEntryItem entry when entry.OpensPage:
+                OpenRequested?.Invoke(SourceTarget.Of(entry.Item));
+                break;
+            case SourceEntryItem entry:
+                ItemLinks.Open(S, entry.Link);
+                break;
+            case TrackItem { IsPlayable: true } track:
+                PlayFrom(track);
+                break;
+            case TrackItem { OpensLink: true } track:
+                ItemLinks.Open(S, track.Link);
+                break;
+        }
+    }
+
+    [RelayCommand]
+    private void Play() => PlayAll(shuffle: false);
+
+    [RelayCommand]
+    private void Shuffle() => PlayAll(shuffle: true);
+
+    [RelayCommand]
+    private void PlayNext()
+    {
+        if (CanQueue && Target.Node is { } node)
+        {
+            CollectionActions.PlayNext(S, new Collection.Source(Target.Plugin, node));
+        }
+    }
+
+    [RelayCommand]
+    private void PlayLast()
+    {
+        if (CanQueue && Target.Node is { } node)
+        {
+            CollectionActions.PlayLast(S, new Collection.Source(Target.Plugin, node));
+        }
+    }
+
+    /// <summary>Open in {Service} (More, or the main action when nothing here plays here).</summary>
+    [RelayCommand]
+    private void OpenLink() => ItemLinks.Open(S, Link);
+
+    [RelayCommand]
+    private void LoadMore()
+    {
+        if (_nextPage is { } page && !IsBrowsing)
+        {
+            Browse(page, clear: false);
+        }
+    }
+
+    private void PlayAll(bool shuffle)
+    {
+        if (!CanPlay)
+        {
+            return;
+        }
+
+        if (Target.Node is { } node)
+        {
+            // The core fetches every page and queues what plays here, in the source's order (an
+            // artist plays its albums).
+            CollectionActions.Play(S, new Collection.Source(Target.Plugin, node), shuffle);
+        }
+    }
+
+    private void PlayFrom(TrackItem track)
+    {
+        if (IsCollection && Target.Node is { } node && track.SourceIndex is { } index)
+        {
+            // The whole album or playlist, starting at this song (the core counts in the source's order).
+            S.Send(new CoreCommand.PlayCollection(new Collection.Source(Target.Plugin, node), (uint)index, false));
+            return;
+        }
+
+        var refs = Tracks.Where(t => t.IsPlayable).Select(t => t.Ref).OfType<TrackRef>().ToArray();
+        var start = Array.IndexOf(refs, track.Ref);
+        if (start >= 0)
+        {
+            S.Send(new CoreCommand.PlayTracks(refs, (uint)start));
+        }
+    }
+
+    private void Browse(uint page, bool clear)
+    {
+        if (clear)
+        {
+            Rows.Clear();
+            _itemCount = 0;
+            IsComplete = false;
+            Summarize();
+        }
+
+        Error = null;
+        IsBrowsing = true;
+        _pending = true;
+        _requestedPage = page;
+        _request = S.SendHandled(new CoreCommand.Browse(Target.Plugin, Target.Node, page));
+    }
+
+    private void Add(IReadOnlyList<SourceItem> items)
+    {
+        foreach (var item in items)
+        {
+            var index = _itemCount++;
+            if (item.Kind == ItemKind.Track)
+            {
+                var track = new TrackItem(Rows.Count) { Localizer = S.L, SourceIndex = index };
+                track.Load(item);
+                if (IsNumbered)
+                {
+                    track.Number = (Tracks.Count() + 1).ToString(S.L.Culture);
+                }
+
+                Rows.Add(track);
+            }
+            else
+            {
+                Rows.Add(new SourceEntryItem(item, S.L));
+            }
+        }
+    }
+
+    private void Summarize()
+    {
+        var tracks = Tracks.ToList();
+
+        // Play and Shuffle play the whole album, artist, playlist or folder (the source's top level is
+        // no collection): offered once something of it plays here.
+        CanPlay = Target.Node is not null
+            && (tracks.Any(t => t.IsPlayable) || (Target.Kind == ItemKind.Artist && Rows.OfType<SourceEntryItem>().Any(e => e.CanPlay)));
+        OpensLink = !CanPlay && HasLink && IsComplete && tracks.Count > 0;
+        IsNothingHere = IsComplete && Rows.Count == 0;
+        if (IsComplete && tracks.Count > 0)
+        {
+            var songs = S.L.Plural("Count_Songs", tracks.Count);
+            var total = tracks.Aggregate(0UL, (sum, t) => sum + (t.DurationMs ?? 0));
+            Facts = IsCollection ? songs : string.Empty;
+            Footer = IsCollection ? S.L.Format("Album_Summary", songs, TimeFormat.LongTotal(total, S.L)) : string.Empty;
+        }
+        else
+        {
+            Facts = string.Empty;
+            Footer = string.Empty;
+        }
+
+        OnPropertyChanged(nameof(CanQueue));
+        OnPropertyChanged(nameof(HasMore));
+    }
+}

@@ -235,6 +235,12 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
     /// <summary>Opens the song in its service (Open in {Service}), when its source declares links.</summary>
     public string? Link { get; private set; }
 
+    /// <summary>Its length, for a page's total ("12 songs, 48 minutes").</summary>
+    public ulong? DurationMs { get; private set; }
+
+    /// <summary>Its place among everything its source listed for the page (songs or not), for PlayCollection's start.</summary>
+    public int? SourceIndex { get; init; }
+
     /// <summary>It cannot play here but has a link: choosing the row opens the link (docs/ui.md).</summary>
     public bool OpensLink => !IsPlayable && Link is not null;
 
@@ -250,6 +256,7 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         Title = model.Title;
         Subtitle = model.Artist ?? l.Get("Library_UnknownArtist");
         Duration = TimeFormat.Duration(model.DurationMs);
+        DurationMs = model.DurationMs;
         Number = model.TrackNo?.ToString(l.Culture) ?? string.Empty;
         SetArtwork(null, model.ArtworkHash);
         Done();
@@ -262,6 +269,7 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         Title = row.Title;
         Subtitle = row.Artist ?? l.Get("Library_UnknownArtist");
         Duration = TimeFormat.Duration(row.DurationMs);
+        DurationMs = row.DurationMs;
         IsFavorite = row.Favorite;
         IsMissing = row.Missing;
         IsPlayable = !row.Missing;
@@ -282,6 +290,7 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         Title = item.Title;
         Subtitle = item.Subtitle ?? string.Empty;
         Duration = TimeFormat.Duration(item.DurationMs);
+        DurationMs = item.DurationMs;
         IsPlayable = item.Playable && item.Track is not null;
         UnplayableReason = item.UnplayableReason ?? (item.Playable ? null : l.Get("Track_Unplayable"));
         SourceId = item.Source;
@@ -357,6 +366,12 @@ public sealed class SourceEntryItem : ArtworkItem
     public string? Origin { get; init; }
 
     public bool CanPlay => Item.Playable && Item.Kind is ItemKind.Album or ItemKind.Playlist;
+
+    /// <summary>
+    /// Choosing it opens its page: a folder or an artist always, an album or a playlist unless it
+    /// cannot play here and has a link, which it then opens instead (docs/ui.md).
+    /// </summary>
+    public bool OpensPage => Item.Kind is ItemKind.Folder or ItemKind.Artist || (Item.Kind is ItemKind.Album or ItemKind.Playlist && (Item.Playable || !HasLink));
 
     public string AccessibleName => AlbumItem.Join(Title, Subtitle, KindLabel, Origin);
 

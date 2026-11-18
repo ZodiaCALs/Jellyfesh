@@ -12,7 +12,14 @@ namespace Jellyfesh.App.Shell;
 /// </summary>
 internal static class Lists
 {
-    public static void Attach(ListViewBase list, double artworkSize, Action<int>? realize = null, FlyoutBase? menu = null)
+    public static void Attach(ListViewBase list, double artworkSize, Action<int>? realize = null, FlyoutBase? menu = null) =>
+        Attach(list, artworkSize, realize, menu is null ? null : _ => menu);
+
+    /// <summary>
+    /// The same for a list whose rows are of more than one kind (a source's albums and songs): each
+    /// realised row gets the menu <paramref name="menuFor"/> gives for it, or none.
+    /// </summary>
+    public static void Attach(ListViewBase list, double artworkSize, Action<int>? realize, Func<object?, FlyoutBase?>? menuFor)
     {
         list.ContainerContentChanging += (sender, args) =>
         {
@@ -28,9 +35,13 @@ internal static class Lists
             }
 
             realize?.Invoke(args.ItemIndex);
-            if (menu is not null && args.ItemContainer.ContextFlyout is null)
+            if (menuFor is not null)
             {
-                args.ItemContainer.ContextFlyout = menu;
+                var menu = menuFor(args.Item);
+                if (!ReferenceEquals(args.ItemContainer.ContextFlyout, menu))
+                {
+                    args.ItemContainer.ContextFlyout = menu;
+                }
             }
 
             if (args.Item is ArtworkItem item && artworkSize > 0)

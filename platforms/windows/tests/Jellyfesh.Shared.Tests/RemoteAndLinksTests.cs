@@ -188,43 +188,54 @@ public class RemoteAndLinksTests
         search.PlayTrackCommand.Execute(playable);
         Assert.Equal([track], Assert.IsType<CoreCommand.PlayTracks>(h.Core.Sent[^1]).Tracks);
 
+        // A source's artist, album or playlist opens its page (docs/parity.md N6), never plays at once.
+        var pages = new List<SourceTarget>();
+        search.OpenRequested += pages.Add;
         var artist = new SourceEntryItem(new SourceItem("org.qq", ItemKind.Artist, "a1", "Singer", null, null, null, null, false, null, null, [], "https://y.example/singer/a1"), KeyLocalizer.Instance);
-        search.PlayEntryCommand.Execute(artist);
-        Assert.Equal("https://y.example/singer/a1", h.Platform.Opened[^1]);
+        search.OpenEntryCommand.Execute(artist);
         var album = new SourceEntryItem(new SourceItem("org.qq", ItemKind.Album, "al1", "Album", null, null, null, null, true, null, null, [], "https://y.example/album/al1"), KeyLocalizer.Instance);
-        search.PlayEntryCommand.Execute(album);
-        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source("org.qq", "al1"), 0, false), h.Core.Sent[^1]);
-        Assert.Equal(2, h.Platform.Opened.Count);
+        search.OpenEntryCommand.Execute(album);
+        Assert.Equal([("a1", ItemKind.Artist), ("al1", ItemKind.Album)], pages.Select(t => (t.Node!, t.Kind!.Value)));
+        Assert.DoesNotContain(h.Core.Sent, c => c is CoreCommand.PlayCollection);
+
+        // An album that cannot play here opens its link instead.
+        var locked2 = new SourceEntryItem(new SourceItem("org.qq", ItemKind.Album, "al2", "VIP Album", null, null, null, null, false, "VIP only", null, [], "https://y.example/album/al2"), KeyLocalizer.Instance);
+        search.OpenEntryCommand.Execute(locked2);
+        Assert.Equal("https://y.example/album/al2", h.Platform.Opened[^1]);
+        Assert.Equal(2, pages.Count);
     }
 
     [Fact]
-    public void The_sources_page_opens_links_and_offers_the_browsed_artists()
+    public void A_source_page_opens_links_and_offers_its_artists_page()
     {
         using var h = new AppHarness();
         var qq = Plugin("org.qq", "QQ Music", remote: false);
         h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [qq], [], false) };
         h.Started();
-        var sources = h.App.CreateSources();
-        sources.Activate();
-        sources.OpenCommand.Execute(sources.Choices[0]);
+        var page = h.App.CreateSourceBrowse(SourceTarget.Root(qq));
+        page.Activate();
         var request = (ulong)h.Core.Sent.Count;
         var artist = new SourceItem("org.qq", ItemKind.Artist, "a1", "Singer", null, null, null, null, false, null, null, [], "https://y.example/singer/a1");
         var locked = new SourceItem("org.qq", ItemKind.Track, "s1", "Song", null, null, null, null, false, "VIP only", null, [], "https://y.example/song/s1");
         h.Emit(new CoreEvent.BrowsePage(new BrowseUpdate(request, "org.qq", null, [artist, locked], null, null)));
-        Assert.Null(sources.LevelLink);
-        Assert.Equal("Link_OpenIn", sources.OpenInLabel);
+        Assert.False(page.HasLink);
+        Assert.Equal("Link_OpenIn", page.OpenInLabel);
 
-        sources.PlayTrackCommand.Execute(sources.Tracks[0]);
+        // A song that cannot play here opens its link.
+        page.OpenCommand.Execute(page.Rows[1]);
         Assert.Equal(["https://y.example/song/s1"], h.Platform.Opened);
 
-        // An artist is browsed; its level offers Open in {Service} in More.
-        sources.OpenEntryCommand.Execute(sources.Entries[0]);
-        Assert.Equal("https://y.example/singer/a1", sources.LevelLink);
-        sources.OpenLevelLinkCommand.Execute(null);
+        // An artist opens its page, whose More offers Open in {Service}.
+        SourceTarget? opened = null;
+        page.OpenRequested += t => opened = t;
+        page.OpenCommand.Execute(page.Rows[0]);
+        Assert.NotNull(opened);
+        var artistPage = h.App.CreateSourceBrowse(opened!);
+        Assert.True(artistPage.HasLink);
+        Assert.True(artistPage.HasMore);
+        artistPage.OpenLinkCommand.Execute(null);
         Assert.Equal("https://y.example/singer/a1", h.Platform.Opened[^1]);
-        Assert.True(sources.GoUp());
-        Assert.Null(sources.LevelLink);
-        sources.Deactivate();
+        page.Deactivate();
     }
 
     [Fact]

@@ -227,7 +227,8 @@ public static class FfiMapping
         p.Id, p.Name, p.Version, p.Author,
         p.Badge == F.PluginBadge.Official ? M.PluginBadge.Official : M.PluginBadge.Community,
         p.VendorPlayback, p.Capabilities.ToArray(), List(p.AuthMethods, ToModel), p.Enabled, p.Account,
-        p.NeedsDisclosure, p.SettingsSchemaJson, p.SettingsJson, p.Icon, p.RemotePlayback);
+        p.NeedsDisclosure, p.SettingsSchemaJson, p.SettingsJson, p.Icon, p.RemotePlayback,
+        string.IsNullOrWhiteSpace(p.Attribution) ? null : p.Attribution);
 
     public static M.AuthMethod ToModel(F.AuthMethod a) => a switch
     {

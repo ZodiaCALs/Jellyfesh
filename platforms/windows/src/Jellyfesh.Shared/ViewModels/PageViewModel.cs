@@ -43,6 +43,15 @@ public abstract partial class PageViewModel : ObservableObject
             _revision = revision;
             _ = LoadAsync();
         }
+        else
+        {
+            OnActivated();
+        }
+    }
+
+    /// <summary>Shown again with nothing to reload: a page catches up on what it missed while hidden.</summary>
+    protected virtual void OnActivated()
+    {
     }
 
     public void Deactivate()
