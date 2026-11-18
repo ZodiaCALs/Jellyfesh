@@ -1,0 +1,53 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. A chorus written once but sung twice: the written chorus takes the first time it is sung.",
+ "duration_ms": 45000,
+ "lyrics": [
+  "Walking down the river road",
+  "Sing it loud sing it clear",
+  "Every light is shining here"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["Walking", 10000, 10535],
+    ["down", 10595, 10995],
+    ["the", 11055, 11410],
+    ["river", 11470, 11915],
+    ["road", 11975, 12375]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Sing", 16000, 16400],
+    ["it", 16460, 16770],
+    ["loud", 16830, 17230],
+    ["sing", 17290, 17690],
+    ["it", 17750, 18060],
+    ["clear", 18120, 18565],
+    ["Every", 18625, 19070],
+    ["light", 19130, 19575],
+    ["is", 19635, 19945],
+    ["shining", 20005, 20540],
+    ["here", 20600, 21000]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Sing", 30000, 30400],
+    ["it", 30460, 30770],
+    ["loud", 30830, 31230],
+    ["sing", 31290, 31690],
+    ["it", 31750, 32060],
+    ["clear", 32120, 32565],
+    ["Every", 32625, 33070],
+    ["light", 33130, 33575],
+    ["is", 33635, 33945],
+    ["shining", 34005, 34540],
+    ["here", 34600, 35000]
+   ]
+  }
+ ]
+}

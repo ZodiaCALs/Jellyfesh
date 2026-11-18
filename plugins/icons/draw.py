@@ -166,6 +166,25 @@ def netease(px, py):
     return max(coverage(outline), coverage(mark))
 
 
+def ai_lyrics(px, py):
+    """A sound wave above two lines of text: lyrics timed to what is sung."""
+    bars = [(70, 18), (96, 34), (122, 52), (148, 30), (174, 44), (200, 20)]
+    wave = min(segment(px, py, x, 98 - h / 2, x, 98 + h / 2) for x, h in bars) - 8
+    first = segment(px, py, 64, 164, 192, 164) - 9
+    second = segment(px, py, 64, 196, 150, 196) - 9
+    return max(coverage(wave), coverage(first), 0.7 * coverage(second))
+
+
+def customize(px, py):
+    """Three sliders with their knobs: the app's look, set by hand."""
+    alpha = 0.0
+    for y, knob in ((84, 160), (128, 96), (172, 140)):
+        track = segment(px, py, 64, y, 192, y) - 6
+        alpha = max(alpha, 0.65 * coverage(track))
+        alpha = max(alpha, coverage(math.hypot(px - knob, py - y) - 17))
+    return alpha
+
+
 if __name__ == "__main__":
     out = sys.argv[1] if len(sys.argv) > 1 else "plugins"
     render(f"{out}/subsonic/icon.png", "#2a9bb5", "#23367f", subsonic)
@@ -173,3 +192,5 @@ if __name__ == "__main__":
     render(f"{out}/qqmusic/icon.png", "#e3a23c", "#b04a2c", qqmusic)
     render(f"{out}/spotify/icon.png", "#4f74e3", "#2a2d86", spotify)
     render(f"{out}/netease/icon.png", "#c64a82", "#5b2b7c", netease)
+    render(f"{out}/ai-lyrics/icon.png", "#3fb39a", "#1f5f8f", ai_lyrics)
+    render(f"{out}/customize/icon.png", "#e06a6a", "#7a3fa8", customize)

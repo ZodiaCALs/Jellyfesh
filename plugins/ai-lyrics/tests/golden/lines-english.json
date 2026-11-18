@@ -1,0 +1,43 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Lines from recognised English words alone: split after about ten words, at pauses over 0.8 s and at a comma.",
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["We", 3000, 3310],
+    ["were", 3370, 3770],
+    ["running", 3830, 4365],
+    ["through", 4425, 4960],
+    ["the", 5020, 5375],
+    ["fields", 5435, 5925],
+    ["of", 5985, 6295],
+    ["gold", 6355, 6755],
+    ["under", 6815, 7260],
+    ["skies", 7320, 7765],
+    ["of", 7825, 8135],
+    ["blue", 8195, 8595],
+    ["and", 8655, 9010],
+    ["never", 9070, 9515],
+    ["stopping", 9575, 10155],
+    ["Waiting", 11200, 11735],
+    ["for", 11795, 12150],
+    ["the", 12210, 12565],
+    ["night,", 12625, 13115],
+    ["the", 13175, 13530],
+    ["stars", 13590, 14035],
+    ["will", 14095, 14495],
+    ["show", 14555, 14955],
+    ["the", 15015, 15370],
+    ["way", 15430, 15785],
+    ["back", 15845, 16245],
+    ["home", 16305, 16705]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Goodbye", 20000, 20535]
+   ]
+  }
+ ]
+}

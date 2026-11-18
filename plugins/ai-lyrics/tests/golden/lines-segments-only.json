@@ -1,0 +1,23 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. A server that gives segments without word times: each segment's words share its time by length.",
+ "segments": [
+  {
+   "text": " Hello from the other room",
+   "start_ms": 1000,
+   "end_ms": 3500,
+   "words": []
+  },
+  {
+   "text": " 你好世界",
+   "start_ms": 4200,
+   "end_ms": 5800,
+   "words": []
+  },
+  {
+   "text": " [Music]",
+   "start_ms": 6000,
+   "end_ms": 9000,
+   "words": []
+  }
+ ]
+}

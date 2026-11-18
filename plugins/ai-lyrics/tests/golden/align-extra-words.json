@@ -1,0 +1,52 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Ad-libs the lyrics do not have (oh, yeah, baby, woo) are heard and left out.",
+ "duration_ms": 16000,
+ "lyrics": [
+  "Dancing on the edge of time",
+  "Every second feels like mine"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["Oh", 2000, 2310],
+    ["yeah", 2370, 2770]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Dancing", 5000, 5535],
+    ["on", 5595, 5905],
+    ["the", 5965, 6320],
+    ["edge", 6380, 6780],
+    ["of", 6840, 7150],
+    ["time,", 7210, 7655],
+    ["baby", 7715, 8115]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["yeah", 8200, 8600],
+    ["yeah", 8660, 9060]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Every", 10000, 10445],
+    ["second", 10505, 10995],
+    ["feels", 11055, 11500],
+    ["like", 11560, 11960],
+    ["mine", 12020, 12420]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["woo!", 13500, 13900]
+   ]
+  }
+ ]
+}

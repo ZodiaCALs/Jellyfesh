@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI Lyrics",
+  "description": "Makes word-timed lyrics for songs that have none, or times the plain lyrics a song has. Lyrics it makes are marked as made by AI.",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "description": "On This Device keeps the song on this device. Online sends the song's audio to your provider, after you allow it, with your own API key; the provider's terms and prices apply.",
+      "oneOf": [
+        { "const": "on-device", "title": "On This Device" },
+        { "const": "online", "title": "Online" }
+      ],
+      "default": "on-device",
+      "x-jf-group": "Mode"
+    },
+    "model": {
+      "type": "string",
+      "title": "Model",
+      "description": "Larger models recognise singing better and take longer. The model is downloaded once, when you ask for it.",
+      "oneOf": [
+        { "const": "tiny", "title": "Tiny" },
+        { "const": "base", "title": "Base" },
+        { "const": "small", "title": "Small" },
+        { "const": "large-v3-turbo-q5_0", "title": "Large Turbo" }
+      ],
+      "default": "base",
+      "x-jf-group": "On This Device"
+    },
+    "provider": {
+      "type": "string",
+      "title": "Provider",
+      "description": "Where the audio goes in the Online mode. Custom is a server that speaks OpenAI's speech-to-text API, such as one you run yourself.",
+      "oneOf": [
+        { "const": "openai", "title": "OpenAI" },
+        { "const": "groq", "title": "Groq" },
+        { "const": "custom", "title": "Custom" }
+      ],
+      "default": "openai",
+      "x-jf-group": "Online"
+    },
+    "server_url": {
+      "type": "string",
+      "format": "uri",
+      "title": "Server Address",
+      "description": "For Custom: the address of the API, up to and including its version, for example http://192.168.1.20:8000/v1.",
+      "maxLength": 512,
+      "x-jf-group": "Online"
+    },
+    "online_model": {
+      "type": "string",
+      "title": "Model",
+      "description": "Leave empty for the provider's model with word timing: whisper-1 at OpenAI, whisper-large-v3-turbo at Groq, whisper-1 on a Custom server.",
+      "maxLength": 128,
+      "default": "",
+      "x-jf-group": "Online"
+    },
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "The language sung. Detect lets the model decide, or uses the language of the song's lyrics when it is known.",
+      "oneOf": [
+        { "const": "auto", "title": "Detect" },
+        { "const": "en", "title": "English" },
+        { "const": "zh", "title": "Chinese" },
+        { "const": "ja", "title": "Japanese" },
+        { "const": "ko", "title": "Korean" },
+        { "const": "es", "title": "Spanish" },
+        { "const": "fr", "title": "French" },
+        { "const": "de", "title": "German" },
+        { "const": "it", "title": "Italian" },
+        { "const": "pt", "title": "Portuguese" },
+        { "const": "ru", "title": "Russian" },
+        { "const": "uk", "title": "Ukrainian" },
+        { "const": "pl", "title": "Polish" },
+        { "const": "nl", "title": "Dutch" },
+        { "const": "sv", "title": "Swedish" },
+        { "const": "no", "title": "Norwegian" },
+        { "const": "da", "title": "Danish" },
+        { "const": "fi", "title": "Finnish" },
+        { "const": "cs", "title": "Czech" },
+        { "const": "hu", "title": "Hungarian" },
+        { "const": "ro", "title": "Romanian" },
+        { "const": "el", "title": "Greek" },
+        { "const": "tr", "title": "Turkish" },
+        { "const": "ar", "title": "Arabic" },
+        { "const": "he", "title": "Hebrew" },
+        { "const": "hi", "title": "Hindi" },
+        { "const": "th", "title": "Thai" },
+        { "const": "vi", "title": "Vietnamese" },
+        { "const": "id", "title": "Indonesian" },
+        { "const": "ms", "title": "Malay" },
+        { "const": "tl", "title": "Tagalog" }
+      ],
+      "default": "auto",
+      "x-jf-group": "Language"
+    },
+    "automatic": {
+      "type": "boolean",
+      "title": "Create Automatically",
+      "description": "Makes lyrics for each song that starts playing without synced lyrics. In the Online mode every such song is sent to your provider.",
+      "default": false,
+      "x-jf-group": "Automatic"
+    }
+  },
+  "additionalProperties": false
+}

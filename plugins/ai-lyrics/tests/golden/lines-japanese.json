@@ -1,0 +1,25 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Lines from recognised Japanese words: kana and kanji joined, split at 、 once a line is long enough.",
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["空", 4000, 4330],
+    ["の", 4370, 4700],
+    ["向こう", 4740, 5730],
+    ["に", 5770, 6100],
+    ["あの", 6140, 6800],
+    ["日", 6840, 7170],
+    ["の", 7210, 7540],
+    ["夢", 7580, 7910],
+    ["が", 7950, 8280],
+    ["見えた、", 8320, 9640],
+    ["だから", 9680, 10670],
+    ["今日", 10710, 11370],
+    ["も", 11410, 11740],
+    ["歩いて", 11780, 12770],
+    ["いく", 12810, 13470]
+   ]
+  }
+ ]
+}

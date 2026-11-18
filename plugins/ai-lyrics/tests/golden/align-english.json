@@ -1,0 +1,45 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. English lyrics; the recogniser misspells, contracts and mishears a few words.",
+ "duration_ms": 30000,
+ "lyrics": [
+  "Morning light on the harbour wall",
+  "Paper boats that never fall",
+  "Hold the rope and count to ten",
+  "We will sail the night again"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["Morning", 12000, 12535],
+    ["light", 12595, 13040],
+    ["on", 13100, 13410],
+    ["the", 13470, 13825],
+    ["harbor", 13885, 14375],
+    ["wall,", 14435, 14880],
+    ["Paper", 14940, 15385],
+    ["boats", 15445, 15890],
+    ["that", 15950, 16350],
+    ["never", 16410, 16855],
+    ["fall.", 16915, 17360]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Hold", 20000, 20400],
+    ["the", 20460, 20815],
+    ["rope", 20875, 21275],
+    ["and", 21335, 21690],
+    ["count", 21750, 22195],
+    ["to", 22255, 22565],
+    ["ten.", 22625, 23025],
+    ["We'll", 23400, 23845],
+    ["sail", 23905, 24305],
+    ["the", 24365, 24720],
+    ["light", 24780, 25225],
+    ["again.", 25285, 25775]
+   ]
+  }
+ ]
+}

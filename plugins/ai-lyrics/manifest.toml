@@ -1,0 +1,24 @@
+id = "org.jellyfesh.ai-lyrics"
+name = "AI Lyrics"
+version = "0.0.7"
+api_version = "1.2"
+author = "Jellyfesh"
+description = "Word-timed lyrics made with Whisper, on this device or with your own speech API key"
+official = true
+# make_lyrics is a Jellyfesh Pro capability (ADR-0021); auth keeps the online
+# provider's API key.
+capabilities = ["auth", "make_lyrics"]
+playback_mode = "stream"
+auth = ["api-key"]
+# audio: the song's audio for the online mode, only after the person allows
+# sending it; speech: Whisper in the app for the on-device mode.
+permissions = ["audio", "speech"]
+
+[network]
+# OpenAI and Groq, and a server the person runs (Custom), for the online mode
+# only. On the device nothing is sent anywhere.
+allow = ["api.openai.com", "api.groq.com", "${settings.server_url}"]
+max_rps = 5
+
+[settings]
+schema = "settings.schema.json"

@@ -1,0 +1,28 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Chinese lyrics timed with recognised words of several characters; 走 is heard as 奏.",
+ "duration_ms": 20000,
+ "lyrics": [
+  "风吹过，安静的街",
+  "我们一起走到天边"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["风吹过", 5000, 5990],
+    ["安静的", 6070, 7060],
+    ["街", 7140, 7470]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["我们", 9000, 9660],
+    ["一起", 9720, 10380],
+    ["奏", 10440, 10770],
+    ["到", 10830, 11160],
+    ["天边", 11220, 11880]
+   ]
+  }
+ ]
+}

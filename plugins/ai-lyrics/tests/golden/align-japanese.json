@@ -1,0 +1,27 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Japanese lyrics; the recogniser writes some kanji in kana and some hiragana in katakana.",
+ "duration_ms": 15000,
+ "lyrics": [
+  "夜空に光る星をみて",
+  "君の名前を呼んだ"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["夜空に", 3000, 3990],
+    ["ひかる", 4030, 5020],
+    ["星を", 5060, 5720],
+    ["見て", 5760, 6420]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["キミの", 8000, 8990],
+    ["名前を", 9030, 10020],
+    ["ヨンだ", 10060, 11050]
+   ]
+  }
+ ]
+}

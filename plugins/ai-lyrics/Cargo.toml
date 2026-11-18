@@ -1,0 +1,28 @@
+[package]
+name = "jf-ai-lyrics"
+description = "Jellyfesh's AI Lyrics plugin: word-timed lyrics with Whisper on the device or the person's own OpenAI-compatible speech API (ADR-0019)."
+# The plugin's own version: keep it equal to `version` in manifest.toml.
+version = "0.0.7"
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+jf-plugin-sdk.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+# NFKC for matching lyrics with recognised words (ADR-0019 §6).
+unicode-normalization.workspace = true
+
+[dev-dependencies]
+jf-plugin-host.workspace = true
+jf-plugin-testkit.workspace = true
+# The made lyrics must read as enhanced LRC with word times in the core.
+jf-lyrics.workspace = true

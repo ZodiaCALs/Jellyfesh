@@ -1,0 +1,22 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Lyrics that are not the ones sung: too few words match, so nothing is timed.",
+ "lyrics": [
+  "Paper lanterns over Kyoto",
+  "Bicycles beneath the rain",
+  "Nobody remembers the summer"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["completely", 1000, 1670],
+    ["different", 1730, 2355],
+    ["words", 2415, 2860],
+    ["sung", 2920, 3320],
+    ["here", 3380, 3780],
+    ["tonight", 3840, 4375]
+   ]
+  }
+ ],
+ "fails": "NoMatch"
+}

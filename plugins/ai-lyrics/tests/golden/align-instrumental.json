@@ -1,0 +1,53 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. A long instrumental between the verses: a pause line marks it, and the unheard \"high\" stays with its line.",
+ "duration_ms": 50000,
+ "lyrics": [
+  "First verse begins in the quiet",
+  "Holding the lantern up high",
+  "",
+  "Second verse after the solo",
+  "Bringing the morning light home"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["First", 5000, 5445],
+    ["verse", 5505, 5950],
+    ["begins", 6010, 6500],
+    ["in", 6560, 6870],
+    ["the", 6930, 7285],
+    ["quiet", 7345, 7790]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Holding", 8500, 9035],
+    ["the", 9095, 9450],
+    ["lantern", 9510, 10045],
+    ["up", 10105, 10415]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Second", 40000, 40490],
+    ["verse", 40550, 40995],
+    ["after", 41055, 41500],
+    ["the", 41560, 41915],
+    ["solo", 41975, 42375]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Bringing", 43500, 44080],
+    ["the", 44140, 44495],
+    ["morning", 44555, 45090],
+    ["light", 45150, 45595],
+    ["home", 45655, 46055]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Annotations such as [Music] and (instrumental break) are not lyrics; the long break becomes a pause line.",
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["[Music]", 0, 4000]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Light", 4500, 4945],
+    ["a", 5005, 5270],
+    ["candle", 5330, 5820],
+    ["in", 5880, 6190],
+    ["the", 6250, 6605],
+    ["window", 6665, 7155]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["(instrumental", 9000, 9600],
+    ["break)", 9660, 10260]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["♪", 12000, 14000]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Keep", 25000, 25400],
+    ["it", 25460, 25770],
+    ["burning", 25830, 26365],
+    ["till", 26425, 26825],
+    ["I'm", 26885, 27240],
+    ["home", 27300, 27700]
+   ]
+  }
+ ]
+}

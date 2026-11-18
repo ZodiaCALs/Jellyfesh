@@ -1,0 +1,70 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. A chorus written twice and sung twice: each written chorus takes its own time.",
+ "duration_ms": 50000,
+ "lyrics": [
+  "[Verse 1]",
+  "Walking down the river road",
+  "[Chorus]",
+  "Sing it loud sing it clear",
+  "Every light is shining here",
+  "[Verse 2]",
+  "Counting stars along the way",
+  "[Chorus]",
+  "Sing it loud sing it clear",
+  "Every light is shining here"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["Walking", 10000, 10535],
+    ["down", 10595, 10995],
+    ["the", 11055, 11410],
+    ["river", 11470, 11915],
+    ["road", 11975, 12375]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Sing", 16000, 16400],
+    ["it", 16460, 16770],
+    ["loud", 16830, 17230],
+    ["sing", 17290, 17690],
+    ["it", 17750, 18060],
+    ["clear", 18120, 18565],
+    ["Every", 18625, 19070],
+    ["light", 19130, 19575],
+    ["is", 19635, 19945],
+    ["shining", 20005, 20540],
+    ["here", 20600, 21000]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Counting", 30000, 30580],
+    ["stars", 30640, 31085],
+    ["along", 31145, 31590],
+    ["the", 31650, 32005],
+    ["way", 32065, 32420]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Sing", 36000, 36400],
+    ["it", 36460, 36770],
+    ["loud", 36830, 37230],
+    ["sing", 37290, 37690],
+    ["it", 37750, 38060],
+    ["clear", 38120, 38565],
+    ["Every", 38625, 39070],
+    ["light", 39130, 39575],
+    ["is", 39635, 39945],
+    ["shining", 40005, 40540],
+    ["here", 40600, 41000]
+   ]
+  }
+ ]
+}

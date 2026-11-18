@@ -1,0 +1,42 @@
+{
+ "_comment": "Invented test data: the lyrics and the recognised words were written for this test and come from no song or recording. Words the recogniser missed: the start of line 2, all of line 3 (sung softly) and \"and\" in line 4.",
+ "duration_ms": 25000,
+ "lyrics": [
+  "Over the hills and far away",
+  "Silver rivers run to the sea",
+  "Nobody knows where the wind will go",
+  "Follow the song and follow me"
+ ],
+ "segments": [
+  {
+   "text": "",
+   "words": [
+    ["Over", 4000, 4400],
+    ["the", 4460, 4815],
+    ["hills", 4875, 5320],
+    ["and", 5380, 5735],
+    ["far", 5795, 6150],
+    ["away", 6210, 6610]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["run", 8800, 9155],
+    ["to", 9215, 9525],
+    ["the", 9585, 9940],
+    ["sea", 10000, 10355]
+   ]
+  },
+  {
+   "text": "",
+   "words": [
+    ["Follow", 17000, 17490],
+    ["the", 17550, 17905],
+    ["song", 17965, 18365],
+    ["follow", 18425, 18915],
+    ["me", 18975, 19285]
+   ]
+  }
+ ]
+}
