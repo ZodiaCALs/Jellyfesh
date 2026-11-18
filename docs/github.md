@@ -193,10 +193,10 @@ in base64 (`base64 < FILE | gh secret set NAME`, or paste the output of
 | `APPLE_MAS_PROFILE` | secret | the Mac App Store provisioning profile of `org.jellyfesh.Jellyfesh` (base64) | No Mac App Store package |
 | `WINDOWS_SIGNING_PFX`, `WINDOWS_SIGNING_PASSWORD` | secrets | a code-signing certificate with its private key (.pfx, base64) and its password | The Windows app and installer are unsigned |
 | `MS_STORE_IDENTITY_NAME`, `MS_STORE_PUBLISHER`, `MS_STORE_PUBLISHER_NAME` | secrets | Partner Center → the app → Product identity: Package/Identity/Name, Package/Identity/Publisher (`CN=…`) and Package/Properties/PublisherDisplayName | No Microsoft Store package |
-| `JF_LICENCE_PUBLIC_KEYS` | variable | the public keys licence keys are checked with: `id:hex` entries separated by commas, without spaces, as `tools/jf-licence keygen` prints them (public keys are not secret) | No licence key is accepted; a malformed value stops the release at its first job |
+| `JF_LICENCE_PUBLIC_KEYS` | variable | the public keys licence keys are checked with: `id:hex` entries (a key id of 0 to 255 and 64 hex digits) separated by commas, without spaces, the line `tools/jf-licence keygen` is to print (ADR-0021; public keys are not secret) | No licence key is accepted; a malformed value stops the release at its first job |
 | `JF_PRO_PREVIEW` | variable | `0` ends Pro Preview in the Jellyfesh Web the website serves (`web.yml`) | Pro Preview stays on there |
 
-The private key of the licence keys (`tools/jf-licence keygen`) never goes
+The private key of the licence keys (`tools/jf-licence keygen`, which comes with the `core/jf-licence` crate) never goes
 into the repository or a workflow; keep it in a password manager, or in the
 secret `JF_LICENCE_SIGNING_KEY` if a workflow should ever issue keys (none
 does yet).
