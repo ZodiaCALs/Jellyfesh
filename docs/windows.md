@@ -237,6 +237,24 @@ installing, ADR-0016), and writes
 `.sha256`. The version comes from the `v*` tag in `GITHUB_REF_NAME`, else from
 `Directory.Build.props`. `CARGO_TARGET_DIR` is respected.
 
+**The installer** that releases carry, `Jellyfesh-<version>-Windows-Setup.exe`, is
+made from the two published folders (`platforms/windows/publish/win-<arch>/Jellyfesh`)
+by `scripts/installer.ps1` with Inno Setup 6.3 or later (`installer/Jellyfesh.iss`;
+the `windows-2025` runner image has Inno Setup 6.7):
+
+```powershell
+pwsh platforms/windows/scripts/build.ps1                  # both architectures first
+pwsh platforms/windows/scripts/installer.ps1              # artifacts/Jellyfesh-<version>-Windows-Setup.exe
+```
+
+One Setup serves x64 and Arm64 PCs and installs the build for the PC's own
+processor, for the current user without administrator rights, in
+`%LOCALAPPDATA%\Programs\Jellyfesh`, with a Start menu shortcut and an
+uninstaller in Settings › Apps. It installs over any earlier version (the
+folder is emptied first; the library and settings live elsewhere and stay).
+With `-SigningCertificate`, Setup and its uninstaller are signed;
+`build.ps1 -SigningCertificate` signs Jellyfesh's own files inside first.
+
 To run from Visual Studio 2022 (17.14+ with the WinUI workload) or
 `dotnet build`, generate first, then pick x64 or ARM64:
 
