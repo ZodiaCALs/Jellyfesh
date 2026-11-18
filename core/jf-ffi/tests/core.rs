@@ -34,6 +34,7 @@ fn config(dir: &Path, output: OutputKind) -> CoreConfig {
         persist_session: false,
         watch_folders: false,
         bundled_plugins: Vec::new(),
+        distribution: Distribution::Source,
     }
 }
 

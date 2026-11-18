@@ -366,6 +366,16 @@ impl App {
                 self.emit(&Change::Error);
                 self.toast(&message);
             }
+            // v0.0.7 (AI Lyrics, Customize, Pro, updates, Discover, details,
+            // comments, source covers): not shown yet.
+            Event::AiLyrics(_)
+            | Event::Look(_)
+            | Event::Pro(_)
+            | Event::Update(_)
+            | Event::Discover(_)
+            | Event::Details(_)
+            | Event::Comments(_)
+            | Event::Artwork(_) => {}
         }
         // Muted is part of the snapshot; it only changes with SetMuted, which
         // republishes the playback slice.

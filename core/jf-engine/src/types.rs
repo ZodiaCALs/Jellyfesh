@@ -282,6 +282,10 @@ pub struct TrackInfo {
     /// Bit rate in bits per second, when known: exact for PCM, otherwise the average over the
     /// file (or the MP4 media data), which includes container overhead.
     pub bitrate: Option<u32>,
+    /// Bits per sample of the source, for formats that have them (PCM, FLAC, ALAC); `None`
+    /// for lossy codecs, which decode to floating point.
+    #[serde(default)]
+    pub bits_per_sample: Option<u32>,
 }
 
 /// What the engine reports. Read them from [`Engine::events`](crate::Engine::events).

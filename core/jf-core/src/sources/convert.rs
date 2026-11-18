@@ -4,14 +4,14 @@ use jf_library::SearchResults;
 use jf_plugin_host::links::Links;
 use jf_plugin_host::merge::MergedItem;
 use jf_plugin_host::{
-    AuthKind, AuthStep as HostStep, FieldKind, FieldSpec, ImageRef, Item, ItemKind as HostKind, LyricFormat,
-    PlaybackMode, PluginInfo, SignatureStatus, StreamInfo, UnplayableReason, capability_name,
+    AuthKind, AuthStep as HostStep, Capability, FieldKind, FieldSpec, ImageRef, Item, ItemKind as HostKind,
+    LyricFormat, PlaybackMode, PluginInfo, SignatureStatus, StreamInfo, UnplayableReason, capability_name,
 };
 use jf_session::{SourceTrack, TrackRef};
 
 use crate::types::{
-    ArtworkRef, AuthField, AuthFieldKind, AuthMethod, AuthStep, ItemKind, PluginBadge, PluginSummary,
-    SourceItem, SourcePreset,
+    ArtworkRef, AuthField, AuthFieldKind, AuthMethod, AuthStep, ItemKind, PluginBadge, PluginKind,
+    PluginSummary, SourceItem, SourcePreset,
 };
 
 /// The `source` of library results.
@@ -103,6 +103,8 @@ pub(crate) fn source_item(plugin: &str, item: &Item, links: &Links) -> SourceIte
         track,
         also_in: Vec::new(),
         link: links.url_for(item.kind, &item.id),
+        artist_id: item.artist_id.clone(),
+        album_id: item.album_id.clone(),
     }
 }
 
@@ -178,6 +180,8 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             track: Some(TrackRef::Library(t.id)),
             also_in: Vec::new(),
             link: None,
+            artist_id: None,
+            album_id: None,
         });
     }
     for a in &results.albums {
@@ -198,6 +202,8 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             track: None,
             also_in: Vec::new(),
             link: None,
+            artist_id: None,
+            album_id: None,
         });
     }
     for a in &results.artists {
@@ -216,6 +222,8 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             track: None,
             also_in: Vec::new(),
             link: None,
+            artist_id: None,
+            album_id: None,
         });
     }
     (items, rows)
@@ -401,6 +409,16 @@ pub(crate) fn summary(
         },
         settings_json: info.settings.to_string(),
         icon,
+        kind: if jf_plugin_host::is_extension(&info.capabilities) {
+            PluginKind::Extension
+        } else {
+            PluginKind::Source
+        },
+        requires_pro: jf_plugin_host::requires_pro(&info.capabilities),
+        permissions: info.permissions.iter().map(ToString::to_string).collect(),
+        discover: info.capabilities.contains(&Capability::Discover),
+        details: info.capabilities.contains(&Capability::Details),
+        comments: info.capabilities.contains(&Capability::Comments),
     }
 }
 

@@ -48,6 +48,45 @@ pub struct CoreConfig {
     #[uniffi(default = [])]
     #[serde(default)]
     pub bundled_plugins: Vec<String>,
+    /// How this build reached the person (ADR-0021 §4): which stores sell Jellyfesh Pro here,
+    /// and whether the core checks for updates (`Direct` only). `Source` when left out of JSON.
+    #[serde(default)]
+    pub distribution: Distribution,
+}
+
+/// How this build of the app reached the person.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, uniffi::Enum)]
+pub enum Distribution {
+    /// A download from the project's release page: checks for updates itself.
+    Direct,
+    AppStore,
+    MicrosoftStore,
+    GooglePlay,
+    /// Jellyfesh Web.
+    Web,
+    /// Built from source.
+    #[default]
+    Source,
+}
+
+/// A store that sells Jellyfesh Pro.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum Store {
+    AppStore,
+    MicrosoftStore,
+    GooglePlay,
+}
+
+/// What a store says about Jellyfesh Pro, as the app's store glue verified it with the platform.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct StoreEntitlement {
+    pub store: Store,
+    /// The store's product id (`org.jellyfesh.pro`, or `pro` on Google Play).
+    pub product: String,
+    /// Whether the person owns it now (false after a refund or revocation).
+    pub active: bool,
+    /// The store's transaction or order id, if it gives one.
+    pub transaction: Option<String>,
 }
 
 /// Where the engine sends audio.
@@ -253,6 +292,96 @@ pub enum Command {
     Remote {
         action: RemoteAction,
     },
+    /// Makes synced lyrics for a song with the AI Lyrics plugin (a job in the `AiLyrics` slice).
+    MakeLyrics {
+        song: SongRef,
+    },
+    /// Stops a waiting or running lyrics job.
+    CancelLyrics {
+        job: u64,
+    },
+    /// Deletes the lyrics AI Lyrics made for a song.
+    DeleteMadeLyrics {
+        song: SongRef,
+    },
+    /// The person allowed sending songs' audio to `origin` for this plugin.
+    AllowAudioUpload {
+        plugin: String,
+        origin: String,
+    },
+    /// Stop Allowing: no more audio goes to `origin` for this plugin.
+    RevokeAudioUpload {
+        plugin: String,
+        origin: String,
+    },
+    /// Downloads an on-device speech model.
+    DownloadSpeechModel {
+        id: String,
+    },
+    /// Stops a model download (what came so far is kept).
+    CancelSpeechModelDownload {
+        id: String,
+    },
+    /// Deletes a downloaded speech model.
+    DeleteSpeechModel {
+        id: String,
+    },
+    /// Restores a plugin's settings to the schema's defaults (Reset to Defaults).
+    ResetPluginSettings {
+        plugin: String,
+    },
+    /// Activates Jellyfesh Pro with a licence key (`JFP1-…`).
+    ActivateLicence {
+        key: String,
+    },
+    /// Removes the licence key.
+    RemoveLicence,
+    /// Checks for a newer release now (direct downloads only).
+    CheckForUpdates,
+    /// A source's Discover page (`library` for the library's); answered by `Event::Discover`.
+    Discover {
+        source: String,
+    },
+    /// More about an item; answered by `Event::Details`.
+    Details {
+        item: ItemRef,
+    },
+    /// A page of comments (`page` `None` is the first, else the previous page's `next`);
+    /// answered by `Event::Comments`.
+    Comments {
+        item: ItemRef,
+        page: Option<String>,
+    },
+}
+
+/// A song to make lyrics for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum SongRef {
+    /// The song playing now.
+    Current,
+    /// A library song.
+    Library { id: i64 },
+}
+
+/// An item to show details or comments for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum ItemRef {
+    /// A library track.
+    Track { id: i64 },
+    /// A library album.
+    Album { id: i64 },
+    /// A library artist.
+    Artist { id: i64 },
+    /// An audio file that is not in the library.
+    File { path: String },
+    /// An item a source listed: its `SourceItem.source`, `kind` and `id`.
+    Source {
+        plugin: String,
+        item_kind: ItemKind,
+        id: String,
+    },
 }
 
 /// What `Command::Remote` asks of the remote session.
@@ -311,6 +440,11 @@ pub enum Collection {
         id: i64,
     },
     Favorites,
+    /// Every song in the library, in the Songs page's order.
+    Songs {
+        sort: TrackSort,
+        descending: bool,
+    },
     Tracks {
         tracks: Vec<TrackRef>,
     },
@@ -436,6 +570,15 @@ pub struct Settings {
     pub watch_folders: bool,
     /// Community (unofficial) plugins may be installed and enabled. Off by default.
     pub allow_community_plugins: bool,
+    /// Check for Updates Automatically (direct downloads only): at most once a day. On by
+    /// default.
+    #[uniffi(default = true)]
+    #[serde(default = "yes")]
+    pub check_for_updates: bool,
+}
+
+fn yes() -> bool {
+    true
 }
 
 /// Which ReplayGain value to apply.
@@ -554,6 +697,37 @@ pub struct PluginSummary {
     pub settings_json: String,
     /// The package's icon as a PNG file in the cache folder (named by its content).
     pub icon: Option<String>,
+    /// Source (Settings › Sources) or Extension (Settings › Extensions).
+    #[serde(default = "source_kind")]
+    pub kind: PluginKind,
+    /// It has a Jellyfesh Pro capability (`make_lyrics`, `appearance`).
+    #[serde(default)]
+    pub requires_pro: bool,
+    /// The host imports the manifest declares (`audio`, `speech`), for the install screen.
+    #[serde(default)]
+    pub permissions: Vec<String>,
+    /// It has a Discover page of its own.
+    #[serde(default)]
+    pub discover: bool,
+    /// It describes items (biography, notes, facts).
+    #[serde(default)]
+    pub details: bool,
+    /// It shows comments: offer a Comments pane.
+    #[serde(default)]
+    pub comments: bool,
+}
+
+/// Where Settings lists a plugin.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum PluginKind {
+    /// A music source: Settings › Sources.
+    Source,
+    /// AI Lyrics, Customize and the like: Settings › Extensions.
+    Extension,
+}
+
+fn source_kind() -> PluginKind {
+    PluginKind::Source
 }
 
 /// A music service the apps offer in Sources → Add a Source, listed while its official plugin
@@ -599,6 +773,10 @@ pub struct SourcesSnapshot {
     pub secret_storage: SecretStorage,
     /// Set when online sources cannot run at all.
     pub unavailable: Option<String>,
+    /// Plugins may be installed from files and community plugins allowed (false in store
+    /// builds: hide Install from File… and Allow Community Plugins).
+    #[serde(default = "yes")]
+    pub can_install_plugins: bool,
 }
 
 /// How a sign-in field is entered.
@@ -718,6 +896,13 @@ pub struct SourceItem {
     /// An `https` link that opens the item in its service ("Open in {Service}"), when its
     /// source declares one. The main action for items that cannot play here.
     pub link: Option<String>,
+    /// Go to Artist for a source track or album: the source's id of its artist (for `Browse`
+    /// and `Details`).
+    #[serde(default)]
+    pub artist_id: Option<String>,
+    /// Go to Album for a source track: the source's id of its album.
+    #[serde(default)]
+    pub album_id: Option<String>,
 }
 
 /// Results from one source for one search.
@@ -1038,6 +1223,9 @@ pub struct TrackInfo {
     pub gapless: bool,
     /// Bit rate in bits per second, when known (the file's average for compressed formats).
     pub bitrate: Option<u32>,
+    /// Bits per sample of the source (PCM, FLAC, ALAC); none for lossy codecs.
+    #[serde(default)]
+    pub bits_per_sample: Option<u32>,
 }
 
 /// What is playing, with display metadata.
@@ -1057,6 +1245,10 @@ pub struct NowPlaying {
     pub format: Option<TrackInfo>,
     /// Opens the track in its service, for source tracks whose plugin declares links.
     pub link: Option<String>,
+    /// What is playing, as decoded: codec, sample rate, bit depth, channels, bitrate and the
+    /// quality label, once the engine has opened it.
+    #[serde(default)]
+    pub quality: Option<AudioFormat>,
 }
 
 // ---- lyrics -------------------------------------------------------------------------------------
@@ -1233,6 +1425,8 @@ pub enum LyricsSource {
     Embedded,
     /// The plugin with this id (its attribution, if any, is in `LyricDoc.source.origin`).
     Plugin { id: String },
+    /// Made by AI Lyrics: "Made by AI Lyrics · {engine}".
+    Made { plugin: String, engine: String },
 }
 
 /// The `Lyrics` slice for the current track.
@@ -1354,6 +1548,10 @@ pub struct Snapshot {
     pub sources: SourcesSnapshot,
     pub remote: RemoteSnapshot,
     pub muted: bool,
+    pub ai_lyrics: AiLyricsSnapshot,
+    pub look: LookSnapshot,
+    pub pro: ProSnapshot,
+    pub update: UpdateSnapshot,
 }
 
 /// What the core tells the listener. Slices arrive whole whenever their version changes.
@@ -1429,6 +1627,474 @@ pub enum Event {
     Error {
         message: String,
     },
+    AiLyrics {
+        snapshot: AiLyricsSnapshot,
+    },
+    Look {
+        snapshot: LookSnapshot,
+    },
+    Pro {
+        snapshot: ProSnapshot,
+    },
+    Update {
+        snapshot: UpdateSnapshot,
+    },
+    /// A Discover page (`Command::Discover`).
+    Discover {
+        page: DiscoverPage,
+    },
+    /// An item's details (`Command::Details`).
+    Details {
+        page: DetailsPage,
+    },
+    /// A page of comments (`Command::Comments`).
+    Comments {
+        page: CommentsPage,
+    },
+    /// A source picture asked for with `source_artwork` is cached (`path`), or cannot be had.
+    Artwork {
+        ready: ArtworkReady,
+    },
+}
+
+// ---- AI Lyrics (ADR-0019) -----------------------------------------------------------------------
+
+/// Where AI Lyrics recognises the words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum AiLyricsMode {
+    /// Whisper in the app; nothing leaves the device.
+    OnDevice,
+    /// The person's own provider, with their API key, after consent.
+    Online,
+}
+
+/// What making lyrics would do now.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct AiLyricsPlan {
+    pub mode: AiLyricsMode,
+    /// The engine, in the plugin's words: "Whisper Base on this device".
+    pub engine: String,
+    /// The origin the online mode sends audio to.
+    pub upload_to: Option<String>,
+    /// Lyrics are made for each song that starts playing without synced lyrics.
+    pub automatic: bool,
+}
+
+/// What must happen before lyrics can be made.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum AiLyricsNeed {
+    /// Ready: `MakeLyrics` works.
+    Nothing,
+    /// Jellyfesh Pro is inactive: show the Pro sheet.
+    Pro,
+    /// The online mode needs the person's API key: open AI Lyrics settings.
+    SignIn,
+    /// Ask "Send This Song to {origin}?" and answer with `AllowAudioUpload`.
+    Consent { origin: String },
+    /// Download this model first.
+    Model { id: String, name: String, bytes: u64 },
+    /// Making lyrics cannot work as set up.
+    Unavailable { reason: String },
+}
+
+/// Where a lyrics job is.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum LyricsJobStage {
+    Waiting,
+    ReadingAudio,
+    Sending {
+        origin: String,
+    },
+    /// `fraction` 0–1.
+    Recognising {
+        fraction: f32,
+    },
+    TimingWords,
+    Done,
+    Failed {
+        message: String,
+    },
+    Cancelled,
+}
+
+/// A lyrics job.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct LyricsJob {
+    pub id: u64,
+    pub title: String,
+    pub artist: Option<String>,
+    /// The queue entry it is for, when it was made for the song playing.
+    pub uid: Option<u64>,
+    /// The library track it is for, when the song is in the library.
+    pub library_id: Option<i64>,
+    pub stage: LyricsJobStage,
+}
+
+/// Where an on-device speech model is.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum SpeechModelStatus {
+    NotDownloaded,
+    /// `fraction` 0–1.
+    Downloading {
+        fraction: f32,
+    },
+    Ready,
+    Failed {
+        message: String,
+    },
+}
+
+/// An on-device speech model.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct SpeechModelState {
+    pub id: String,
+    pub name: String,
+    pub bytes: u64,
+    pub state: SpeechModelStatus,
+}
+
+/// An origin the person allowed a plugin to send audio to.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Record)]
+pub struct AudioConsent {
+    pub plugin: String,
+    pub origin: String,
+}
+
+/// The `AiLyrics` slice.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct AiLyricsSnapshot {
+    pub version: u64,
+    /// Offer Create Synced Lyrics (Pro may still be needed: see `need`).
+    pub available: bool,
+    pub plugin: Option<String>,
+    pub plan: Option<AiLyricsPlan>,
+    pub need: AiLyricsNeed,
+    pub jobs: Vec<LyricsJob>,
+    pub models: Vec<SpeechModelState>,
+    pub consents: Vec<AudioConsent>,
+}
+
+// ---- the look (ADR-0020) ------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum Typeface {
+    System,
+    Rounded,
+    Serif,
+    Mono,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum Density {
+    Compact,
+    Standard,
+    Roomy,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum LyricsWeight {
+    Regular,
+    Medium,
+    Semibold,
+    Bold,
+    Heavy,
+}
+
+/// The colour of the sung part of lyrics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum LyricsHighlight {
+    Artwork,
+    Accent,
+    /// `0xRRGGBB`.
+    Custom {
+        rgb: u32,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum Place {
+    Home,
+    Albums,
+    Artists,
+    Songs,
+    Playlists,
+    Favourites,
+    Search,
+    Sources,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum HomeSection {
+    Summary,
+    RecentlyAdded,
+    RecentlyPlayed,
+    MostPlayed,
+    Favourites,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum NowPlayingLayout {
+    Stage,
+    Artwork,
+    Lyrics,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum MiniPlayerStyle {
+    Bar,
+    Compact,
+    Floating,
+}
+
+/// The `Look` slice: every value resolved (ADR-0020 §2).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct LookSnapshot {
+    pub version: u64,
+    pub corner_scale: f32,
+    pub glass: f32,
+    pub aurora: f32,
+    pub typeface: Typeface,
+    pub text_scale: f32,
+    pub density: Density,
+    pub lyrics_weight: LyricsWeight,
+    pub lyrics_glow: f32,
+    pub lyrics_highlight: LyricsHighlight,
+    pub sidebar: Vec<Place>,
+    pub home: Vec<HomeSection>,
+    pub now_playing: NowPlayingLayout,
+    pub mini_player: MiniPlayerStyle,
+    /// An appearance plugin sets the look; false: every value is the Luminous default.
+    pub customized: bool,
+    pub plugin: Option<String>,
+}
+
+// ---- Jellyfesh Pro (ADR-0021) -------------------------------------------------------------------
+
+/// Where Pro comes from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum ProSource {
+    None,
+    /// "Pro features are free during the public beta."
+    Preview,
+    /// "Jellyfesh Pro · Purchased".
+    Store {
+        store: Store,
+    },
+    /// "Jellyfesh Pro · Licence …ABCD".
+    Licence {
+        id_suffix: String,
+        issued_at_ms: i64,
+    },
+}
+
+/// Why a licence key was not accepted.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum LicenceError {
+    Malformed,
+    UnknownKey,
+    BadSignature,
+    WrongProduct,
+    Revoked,
+}
+
+/// The `Pro` slice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ProSnapshot {
+    pub version: u64,
+    pub active: bool,
+    pub source: ProSource,
+    pub preview: bool,
+    pub licence_error: Option<LicenceError>,
+    /// The stores this build can sell Pro in.
+    pub stores: Vec<Store>,
+    /// Licence keys work in this build: show Enter Licence Key… (false in App Store and
+    /// Google Play builds).
+    #[serde(default = "yes")]
+    pub licence_keys: bool,
+}
+
+// ---- updates (ADR-0021 §5) ----------------------------------------------------------------------
+
+/// A newer release.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct UpdateInfo {
+    pub version: String,
+    /// Its release page.
+    pub url: String,
+}
+
+/// The `Update` slice.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct UpdateSnapshot {
+    pub version: u64,
+    /// Show Check for Updates and its setting (direct downloads).
+    pub supported: bool,
+    pub checking: bool,
+    pub available: Option<UpdateInfo>,
+    pub last_checked_ms: Option<i64>,
+    pub auto: bool,
+    pub error: Option<String>,
+}
+
+// ---- Discover, details and comments (ADR-0022) --------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum ShelfStyle {
+    Row,
+    Grid,
+    Chart,
+}
+
+/// One shelf of a Discover page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct Shelf {
+    pub id: String,
+    pub title: String,
+    pub style: ShelfStyle,
+    pub items: Vec<SourceItem>,
+    /// A node to browse for See All.
+    pub more: Option<String>,
+}
+
+/// A Discover page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct DiscoverPage {
+    pub request: u64,
+    pub source: String,
+    pub shelves: Vec<Shelf>,
+    pub error: Option<String>,
+}
+
+/// What a fact is.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+#[serde(tag = "type")]
+pub enum FactKey {
+    Version,
+    Genre,
+    Language,
+    Released,
+    Label,
+    Composer,
+    Lyricist,
+    Arranger,
+    Producer,
+    Popularity,
+    Quality,
+    Isrc,
+    Disc,
+    Track,
+    Other { label: String },
+}
+
+/// One fact about an item.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Record)]
+pub struct Fact {
+    pub key: FactKey,
+    pub value: String,
+}
+
+/// How good what plays is, as the core judges it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
+pub enum QualityLabel {
+    HiResLossless,
+    Lossless,
+    High,
+    Standard,
+}
+
+/// The format of what plays or of a file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct AudioFormat {
+    pub codec: Option<String>,
+    pub sample_rate_hz: Option<u32>,
+    pub bit_depth: Option<u32>,
+    pub channels: Option<u32>,
+    pub bitrate_kbps: Option<u32>,
+    pub lossless: Option<bool>,
+    pub quality: Option<QualityLabel>,
+}
+
+/// ReplayGain values (gains in dB, peaks as linear amplitude).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct ReplayGainValues {
+    pub track_gain_db: Option<f32>,
+    pub track_peak: Option<f32>,
+    pub album_gain_db: Option<f32>,
+    pub album_peak: Option<f32>,
+}
+
+/// Technical information about a file or a stream.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct TechnicalInfo {
+    pub format: AudioFormat,
+    pub container: Option<String>,
+    pub file_size_bytes: Option<u64>,
+    pub duration_ms: Option<u64>,
+    pub replaygain: Option<ReplayGainValues>,
+    pub path: Option<String>,
+}
+
+/// An item's details.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct DetailsPage {
+    pub request: u64,
+    pub item: ItemRef,
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub description: Option<String>,
+    pub image: Option<ArtworkRef>,
+    pub facts: Vec<Fact>,
+    pub technical: Option<TechnicalInfo>,
+    pub comment_count: Option<u64>,
+    pub attribution: Option<String>,
+    pub error: Option<String>,
+}
+
+/// A comment on a source item.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct CommentEntry {
+    pub id: String,
+    pub author: String,
+    pub avatar: Option<ArtworkRef>,
+    pub text: String,
+    pub likes: Option<u64>,
+    pub time_ms: Option<i64>,
+    pub replies: Option<u64>,
+}
+
+/// A page of comments.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct CommentsPage {
+    pub request: u64,
+    pub item: ItemRef,
+    pub hot: Vec<CommentEntry>,
+    pub comments: Vec<CommentEntry>,
+    pub total: Option<u64>,
+    pub next: Option<String>,
+    pub attribution: Option<String>,
+    pub error: Option<String>,
+}
+
+/// A source picture fetched into the artwork cache.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, uniffi::Record)]
+pub struct ArtworkReady {
+    pub url: String,
+    pub size_px: u32,
+    pub path: Option<String>,
+}
+
+/// What the lyrics bar shows at a time (`lyrics_bar`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, uniffi::Record)]
+pub struct LyricsBar {
+    pub line: Option<u32>,
+    pub next: Option<u32>,
+    pub words: Vec<f32>,
+    pub line_progress: f32,
 }
 
 /// JSON for the map fields: keys sorted, so the same value always gives the same text, and

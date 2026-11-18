@@ -93,6 +93,34 @@ impl JellyfeshCore {
         })
     }
 
+    /// What the app's store says about Jellyfesh Pro, after the app's store glue verified it
+    /// with the platform (StoreKit 2, `StoreContext`, Play Billing). Send it at start and on every
+    /// change the store reports; the `Pro` slice follows.
+    pub fn set_store_entitlement(&self, entitlement: StoreEntitlement) -> Result<(), CoreFfiError> {
+        self.query(|core| {
+            core.set_store_entitlement(entitlement.into());
+            Ok(())
+        })
+    }
+
+    /// A plugin's settings schema in `language` (a BCP 47 tag: `zh-Hans`, `zh-TW`, `ja-JP`;
+    /// English where it has no translation), with the settings in the plugin's order. `None`
+    /// when the plugin is not installed.
+    pub fn localized_settings_schema(
+        &self,
+        plugin: String,
+        language: String,
+    ) -> Result<Option<String>, CoreFfiError> {
+        self.query(|core| Ok(core.localized_settings_schema(&plugin, &language)))
+    }
+
+    /// A source picture (an `ArtworkRef.Url` of a source item, Now Playing, a shelf, details or
+    /// comments) as a cached file fitted to about `size_px`: the path at once when it is cached,
+    /// otherwise `None` while the core fetches it, and an `Event.Artwork` follows.
+    pub fn source_artwork(&self, url: String, size_px: u32) -> Result<Option<String>, CoreFfiError> {
+        self.query(|core| Ok(core.source_artwork(&url, size_px)))
+    }
+
     /// Removes the player registered under `id`.
     pub fn unregister_external_player(&self, id: String) {
         if let State::Running(core) = &*read(&self.state) {
@@ -387,6 +415,14 @@ pub fn default_data_dir() -> Option<String> {
 #[uniffi::export]
 pub fn default_cache_dir() -> Option<String> {
     jf::paths::default_cache_dir().conv()
+}
+
+/// What the one-line lyrics bar (and Desktop Lyrics) shows at `t_ms`: the line, the next
+/// line and each word's progress (ADR-0022 §6). Apps that draw every frame port it instead
+/// (`tests/contract/lyrics-bar.json`).
+#[uniffi::export]
+pub fn lyrics_bar(timeline: LyricTimeline, t_ms: u32) -> LyricsBar {
+    jf::lyrics_bar(&timeline.into(), t_ms).into()
 }
 
 /// The version of this library (`jf-ffi`, released with the core).

@@ -25,6 +25,8 @@ namespace Jellyfesh.Ffi;
 /// <param name="WatchFolders">Watch library folders while Settings.WatchFolders is on.</param>
 /// <param name="BundledPlugins">.jfpkg packages the app ships: installed at start when missing,
 /// updated when newer, never reinstalled once the person uninstalled one. Null means none.</param>
+/// <param name="Distribution">How this build reached the person (ADR-0021 §4): which stores sell
+/// Jellyfesh Pro here, and whether the core checks for updates (Direct only).</param>
 public sealed record CoreConfig(
     string DataDir,
     string CacheDir,
@@ -34,7 +36,39 @@ public sealed record CoreConfig(
     bool PersistSession = true,
     bool WatchFolders = true,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    IReadOnlyList<string>? BundledPlugins = null);
+    IReadOnlyList<string>? BundledPlugins = null,
+    Distribution Distribution = Distribution.Source);
+
+/// <summary>How this build of the app reached the person.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<Distribution>))]
+public enum Distribution
+{
+    /// <summary>A download from the project's release page: checks for updates itself.</summary>
+    Direct,
+    AppStore,
+    MicrosoftStore,
+    GooglePlay,
+    /// <summary>Jellyfesh Web.</summary>
+    Web,
+    /// <summary>Built from source.</summary>
+    Source,
+}
+
+/// <summary>A store that sells Jellyfesh Pro.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<Store>))]
+public enum Store
+{
+    AppStore,
+    MicrosoftStore,
+    GooglePlay,
+}
+
+/// <summary>What a store says about Jellyfesh Pro, as the app's store glue verified it
+/// (JellyfeshCore.SetStoreEntitlement).</summary>
+/// <param name="Product">The store's product id (org.jellyfesh.pro).</param>
+/// <param name="Active">Whether the person owns it now (false after a refund).</param>
+/// <param name="Transaction">The store's transaction or order id, if it gives one.</param>
+public sealed record StoreEntitlement(Store Store, string Product, bool Active, string? Transaction);
 
 /// <summary>Where the engine sends audio.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -108,6 +142,21 @@ public abstract record OutputKind
 [JsonDerivedType(typeof(Command.Search), "Search")]
 [JsonDerivedType(typeof(Command.Browse), "Browse")]
 [JsonDerivedType(typeof(Command.Remote), "Remote")]
+[JsonDerivedType(typeof(Command.MakeLyrics), "MakeLyrics")]
+[JsonDerivedType(typeof(Command.CancelLyrics), "CancelLyrics")]
+[JsonDerivedType(typeof(Command.DeleteMadeLyrics), "DeleteMadeLyrics")]
+[JsonDerivedType(typeof(Command.AllowAudioUpload), "AllowAudioUpload")]
+[JsonDerivedType(typeof(Command.RevokeAudioUpload), "RevokeAudioUpload")]
+[JsonDerivedType(typeof(Command.DownloadSpeechModel), "DownloadSpeechModel")]
+[JsonDerivedType(typeof(Command.CancelSpeechModelDownload), "CancelSpeechModelDownload")]
+[JsonDerivedType(typeof(Command.DeleteSpeechModel), "DeleteSpeechModel")]
+[JsonDerivedType(typeof(Command.ResetPluginSettings), "ResetPluginSettings")]
+[JsonDerivedType(typeof(Command.ActivateLicence), "ActivateLicence")]
+[JsonDerivedType(typeof(Command.RemoveLicence), "RemoveLicence")]
+[JsonDerivedType(typeof(Command.CheckForUpdates), "CheckForUpdates")]
+[JsonDerivedType(typeof(Command.Discover), "Discover")]
+[JsonDerivedType(typeof(Command.Details), "Details")]
+[JsonDerivedType(typeof(Command.Comments), "Comments")]
 public abstract record Command
 {
     private Command() { }
@@ -233,6 +282,91 @@ public abstract record Command
     /// control the service's player instead of the engine.
     /// </summary>
     public sealed record Remote(RemoteAction Action) : Command;
+
+    /// <summary>Makes synced lyrics for a song with the AI Lyrics plugin (a job in the AiLyrics slice).</summary>
+    public sealed record MakeLyrics(SongRef Song) : Command;
+
+    /// <summary>Stops a waiting or running lyrics job.</summary>
+    public sealed record CancelLyrics(ulong Job) : Command;
+
+    /// <summary>Deletes the lyrics AI Lyrics made for a song.</summary>
+    public sealed record DeleteMadeLyrics(SongRef Song) : Command;
+
+    /// <summary>The person allowed sending songs' audio to Origin for this plugin.</summary>
+    public sealed record AllowAudioUpload(string Plugin, string Origin) : Command;
+
+    /// <summary>Stop Allowing: no more audio goes to Origin for this plugin.</summary>
+    public sealed record RevokeAudioUpload(string Plugin, string Origin) : Command;
+
+    /// <summary>Downloads an on-device speech model.</summary>
+    public sealed record DownloadSpeechModel(string Id) : Command;
+
+    /// <summary>Stops a model download (what came so far is kept).</summary>
+    public sealed record CancelSpeechModelDownload(string Id) : Command;
+
+    public sealed record DeleteSpeechModel(string Id) : Command;
+
+    /// <summary>Restores a plugin's settings to the schema's defaults (Reset to Defaults).</summary>
+    public sealed record ResetPluginSettings(string Plugin) : Command;
+
+    /// <summary>Activates Jellyfesh Pro with a licence key (JFP1-…).</summary>
+    public sealed record ActivateLicence(string Key) : Command;
+
+    public sealed record RemoveLicence : Command;
+
+    /// <summary>Checks for a newer release now (direct downloads only).</summary>
+    public sealed record CheckForUpdates : Command;
+
+    /// <summary>A source's Discover page ("library" for the library's); answered by Event.Discover.</summary>
+    public sealed record Discover(string Source) : Command;
+
+    /// <summary>More about an item; answered by Event.Details.</summary>
+    public sealed record Details(ItemRef Item) : Command;
+
+    /// <summary>A page of comments (null Page is the first); answered by Event.Comments.</summary>
+    public sealed record Comments(ItemRef Item, string? Page) : Command;
+}
+
+/// <summary>A song to make lyrics for.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(SongRef.Current), "Current")]
+[JsonDerivedType(typeof(SongRef.Library), "Library")]
+public abstract record SongRef
+{
+    private SongRef() { }
+
+    /// <summary>The song playing now.</summary>
+    public sealed record Current : SongRef;
+
+    /// <summary>A library song.</summary>
+    public sealed record Library(long Id) : SongRef;
+}
+
+/// <summary>An item to show details or comments for.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ItemRef.Track), "Track")]
+[JsonDerivedType(typeof(ItemRef.Album), "Album")]
+[JsonDerivedType(typeof(ItemRef.Artist), "Artist")]
+[JsonDerivedType(typeof(ItemRef.File), "File")]
+[JsonDerivedType(typeof(ItemRef.Source), "Source")]
+public abstract record ItemRef
+{
+    private ItemRef() { }
+
+    /// <summary>A library track.</summary>
+    public sealed record Track(long Id) : ItemRef;
+
+    /// <summary>A library album.</summary>
+    public sealed record Album(long Id) : ItemRef;
+
+    /// <summary>A library artist.</summary>
+    public sealed record Artist(long Id) : ItemRef;
+
+    /// <summary>An audio file that is not in the library.</summary>
+    public sealed record File(string Path) : ItemRef;
+
+    /// <summary>An item a source listed: its SourceItem.Source, Kind and Id.</summary>
+    public sealed record Source(string Plugin, ItemKind ItemKind, string Id) : ItemRef;
 }
 
 /// <summary>What Command.Remote asks of the remote session.</summary>
@@ -294,6 +428,7 @@ public sealed record SourceTrack(
 [JsonDerivedType(typeof(Collection.Artist), "Artist")]
 [JsonDerivedType(typeof(Collection.Playlist), "Playlist")]
 [JsonDerivedType(typeof(Collection.Favorites), "Favorites")]
+[JsonDerivedType(typeof(Collection.Songs), "Songs")]
 [JsonDerivedType(typeof(Collection.Tracks), "Tracks")]
 [JsonDerivedType(typeof(Collection.Source), "Source")]
 public abstract record Collection
@@ -307,6 +442,9 @@ public abstract record Collection
     public sealed record Playlist(long Id) : Collection;
 
     public sealed record Favorites : Collection;
+
+    /// <summary>Every song in the library, in the Songs page's order.</summary>
+    public sealed record Songs(TrackSort Sort, bool Descending) : Collection;
 
     /// <summary>A list of tracks (the Rust field is `tracks`).</summary>
     public sealed record Tracks([property: JsonPropertyName("tracks")] IReadOnlyList<TrackRef> Value) : Collection;
@@ -424,7 +562,8 @@ public sealed record Settings(
     string? OutputDevice,
     bool ResumeOnLaunch,
     bool WatchFolders,
-    bool AllowCommunityPlugins);
+    bool AllowCommunityPlugins,
+    bool CheckForUpdates = true);
 
 [JsonConverter(typeof(JsonStringEnumConverter<ReplayGainMode>))]
 public enum ReplayGainMode
@@ -495,7 +634,21 @@ public sealed record PluginSummary(
     string SettingsSchemaJson,
     string SettingsJson,
     string? Icon,
-    bool RemotePlayback = false);
+    bool RemotePlayback = false,
+    PluginKind Kind = PluginKind.Source,
+    bool RequiresPro = false,
+    IReadOnlyList<string>? Permissions = null,
+    bool Discover = false,
+    bool Details = false,
+    bool Comments = false);
+
+/// <summary>Where Settings lists a plugin: Sources, or Extensions (AI Lyrics, Customize).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<PluginKind>))]
+public enum PluginKind
+{
+    Source,
+    Extension,
+}
 
 /// <summary>Where sign-ins are kept.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<SecretStorage>))]
@@ -533,7 +686,8 @@ public sealed record SourcesSnapshot(
     IReadOnlyList<SourcePreset> Presets,
     bool AllowCommunity,
     SecretStorage SecretStorage,
-    string? Unavailable);
+    string? Unavailable,
+    bool CanInstallPlugins = true);
 
 /// <summary>How a sign-in field is entered.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<AuthFieldKind>))]
@@ -629,7 +783,9 @@ public sealed record SourceItem(
     string? UnplayableReason,
     TrackRef? Track,
     IReadOnlyList<string> AlsoIn,
-    string? Link = null);
+    string? Link = null,
+    string? ArtistId = null,
+    string? AlbumId = null);
 
 /// <summary>Results from one source for one search; Done on the last.</summary>
 public sealed record SearchUpdate(
@@ -826,7 +982,7 @@ public sealed record QueueSnapshot(
 public sealed record HistoryEntry(TrackRef Track, long PlayedAtMs);
 
 /// <summary>Facts about an opened track; Bitrate in bits per second when known.</summary>
-public sealed record TrackInfo(string Codec, uint SampleRate, ushort Channels, long? DurationUs, bool Gapless, uint? Bitrate);
+public sealed record TrackInfo(string Codec, uint SampleRate, ushort Channels, long? DurationUs, bool Gapless, uint? Bitrate, uint? BitsPerSample = null);
 
 /// <summary>What is playing, with display metadata.</summary>
 /// <param name="Link">Opens the track in its service, for source tracks whose plugin declares
@@ -841,7 +997,8 @@ public sealed record NowPlaying(
     ulong? DurationMs,
     ArtworkRef? Artwork,
     TrackInfo? Format,
-    string? Link = null);
+    string? Link = null,
+    AudioFormat? Quality = null);
 
 // ---- remote sessions ------------------------------------------------------------------------
 
@@ -979,6 +1136,7 @@ public sealed record LyricTimeline(
 [JsonDerivedType(typeof(LyricsSource.Sidecar), "Sidecar")]
 [JsonDerivedType(typeof(LyricsSource.Embedded), "Embedded")]
 [JsonDerivedType(typeof(LyricsSource.Plugin), "Plugin")]
+[JsonDerivedType(typeof(LyricsSource.Made), "Made")]
 public abstract record LyricsSource
 {
     private LyricsSource() { }
@@ -991,6 +1149,10 @@ public abstract record LyricsSource
 
     /// <summary>The plugin with this id (its attribution is in LyricDoc.Source.Origin).</summary>
     public sealed record Plugin(string Id) : LyricsSource;
+
+    /// <summary>Made by AI Lyrics: "Made by AI Lyrics · {Engine}". The Rust field `plugin` is
+    /// PluginId here, since LyricsSource.Plugin is a sibling record.</summary>
+    public sealed record Made([property: JsonPropertyName("plugin")] string PluginId, string Engine) : LyricsSource;
 }
 
 /// <summary>The Lyrics slice for the current track.</summary>
@@ -1036,7 +1198,11 @@ public sealed record Snapshot(
     DevicesSnapshot Devices,
     SourcesSnapshot Sources,
     bool Muted,
-    RemoteSnapshot? Remote = null);
+    RemoteSnapshot? Remote = null,
+    AiLyricsSnapshot? AiLyrics = null,
+    LookSnapshot? Look = null,
+    ProSnapshot? Pro = null,
+    UpdateSnapshot? Update = null);
 
 /// <summary>What the core tells the listener. Slice events carry the slice as Snapshot.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -1058,6 +1224,14 @@ public sealed record Snapshot(
 [JsonDerivedType(typeof(Event.Buffering), "Buffering")]
 [JsonDerivedType(typeof(Event.CommandFailed), "CommandFailed")]
 [JsonDerivedType(typeof(Event.Error), "Error")]
+[JsonDerivedType(typeof(Event.AiLyrics), "AiLyrics")]
+[JsonDerivedType(typeof(Event.Look), "Look")]
+[JsonDerivedType(typeof(Event.Pro), "Pro")]
+[JsonDerivedType(typeof(Event.UpdateStatus), "Update")]
+[JsonDerivedType(typeof(Event.Discover), "Discover")]
+[JsonDerivedType(typeof(Event.Details), "Details")]
+[JsonDerivedType(typeof(Event.Comments), "Comments")]
+[JsonDerivedType(typeof(Event.Artwork), "Artwork")]
 public abstract record Event
 {
     private Event() { }
@@ -1106,4 +1280,459 @@ public abstract record Event
 
     /// <summary>A problem not tied to a command.</summary>
     public sealed record Error(string Message) : Event;
+
+    public sealed record AiLyrics(AiLyricsSnapshot Snapshot) : Event;
+
+    public sealed record Look(LookSnapshot Snapshot) : Event;
+
+    public sealed record Pro(ProSnapshot Snapshot) : Event;
+
+    /// <summary>The Update slice changed. The Rust variant is `Update`; C# calls it UpdateStatus
+    /// because Update is a member of Event.Auth, SearchResults and BrowsePage.</summary>
+    public sealed record UpdateStatus(UpdateSnapshot Snapshot) : Event;
+
+    /// <summary>A Discover page (Command.Discover).</summary>
+    public sealed record Discover(DiscoverPage Page) : Event;
+
+    /// <summary>An item's details (Command.Details).</summary>
+    public sealed record Details(DetailsPage Page) : Event;
+
+    /// <summary>A page of comments (Command.Comments).</summary>
+    public sealed record Comments(CommentsPage Page) : Event;
+
+    /// <summary>A picture asked for with SourceArtwork is cached (Ready.Path), or cannot be had (null).</summary>
+    public sealed record Artwork(ArtworkReady Ready) : Event;
 }
+
+// ---- AI Lyrics (ADR-0019) -------------------------------------------------------------------
+
+[JsonConverter(typeof(JsonStringEnumConverter<AiLyricsMode>))]
+public enum AiLyricsMode
+{
+    /// <summary>Whisper in the app; nothing leaves the device.</summary>
+    OnDevice,
+    /// <summary>The person's own provider, with their API key, after consent.</summary>
+    Online,
+}
+
+/// <summary>What making lyrics would do now.</summary>
+/// <param name="Engine">The engine, in the plugin's words: "Whisper Base on this device".</param>
+/// <param name="UploadTo">The origin the online mode sends audio to.</param>
+/// <param name="Automatic">Lyrics are made for each song that starts without synced lyrics.</param>
+public sealed record AiLyricsPlan(AiLyricsMode Mode, string Engine, string? UploadTo, bool Automatic);
+
+/// <summary>What must happen before lyrics can be made.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(AiLyricsNeed.Nothing), "Nothing")]
+[JsonDerivedType(typeof(AiLyricsNeed.Pro), "Pro")]
+[JsonDerivedType(typeof(AiLyricsNeed.SignIn), "SignIn")]
+[JsonDerivedType(typeof(AiLyricsNeed.Consent), "Consent")]
+[JsonDerivedType(typeof(AiLyricsNeed.Model), "Model")]
+[JsonDerivedType(typeof(AiLyricsNeed.Unavailable), "Unavailable")]
+public abstract record AiLyricsNeed
+{
+    private AiLyricsNeed() { }
+
+    /// <summary>Ready: MakeLyrics works.</summary>
+    public sealed record Nothing : AiLyricsNeed;
+
+    /// <summary>Jellyfesh Pro is inactive: show the Pro sheet.</summary>
+    public sealed record Pro : AiLyricsNeed;
+
+    /// <summary>The online mode needs the person's API key: open AI Lyrics settings.</summary>
+    public sealed record SignIn : AiLyricsNeed;
+
+    /// <summary>Ask "Send This Song to {Origin}?" and answer with AllowAudioUpload.</summary>
+    public sealed record Consent(string Origin) : AiLyricsNeed;
+
+    /// <summary>Download this model first.</summary>
+    public sealed record Model(string Id, string Name, ulong Bytes) : AiLyricsNeed;
+
+    /// <summary>Making lyrics cannot work as set up.</summary>
+    public sealed record Unavailable(string Reason) : AiLyricsNeed;
+}
+
+/// <summary>Where a lyrics job is.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(LyricsJobStage.Waiting), "Waiting")]
+[JsonDerivedType(typeof(LyricsJobStage.ReadingAudio), "ReadingAudio")]
+[JsonDerivedType(typeof(LyricsJobStage.Sending), "Sending")]
+[JsonDerivedType(typeof(LyricsJobStage.Recognising), "Recognising")]
+[JsonDerivedType(typeof(LyricsJobStage.TimingWords), "TimingWords")]
+[JsonDerivedType(typeof(LyricsJobStage.Done), "Done")]
+[JsonDerivedType(typeof(LyricsJobStage.Failed), "Failed")]
+[JsonDerivedType(typeof(LyricsJobStage.Cancelled), "Cancelled")]
+public abstract record LyricsJobStage
+{
+    private LyricsJobStage() { }
+
+    public sealed record Waiting : LyricsJobStage;
+
+    public sealed record ReadingAudio : LyricsJobStage;
+
+    public sealed record Sending(string Origin) : LyricsJobStage;
+
+    /// <summary>Fraction 0–1.</summary>
+    public sealed record Recognising(float Fraction) : LyricsJobStage;
+
+    public sealed record TimingWords : LyricsJobStage;
+
+    public sealed record Done : LyricsJobStage;
+
+    public sealed record Failed(string Message) : LyricsJobStage;
+
+    public sealed record Cancelled : LyricsJobStage;
+}
+
+/// <summary>A lyrics job: Uid when made for the song playing, LibraryId when the song is in the library.</summary>
+public sealed record LyricsJob(ulong Id, string Title, string? Artist, ulong? Uid, long? LibraryId, LyricsJobStage Stage);
+
+/// <summary>Where an on-device speech model is.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(SpeechModelStatus.NotDownloaded), "NotDownloaded")]
+[JsonDerivedType(typeof(SpeechModelStatus.Downloading), "Downloading")]
+[JsonDerivedType(typeof(SpeechModelStatus.Ready), "Ready")]
+[JsonDerivedType(typeof(SpeechModelStatus.Failed), "Failed")]
+public abstract record SpeechModelStatus
+{
+    private SpeechModelStatus() { }
+
+    public sealed record NotDownloaded : SpeechModelStatus;
+
+    /// <summary>Fraction 0–1.</summary>
+    public sealed record Downloading(float Fraction) : SpeechModelStatus;
+
+    public sealed record Ready : SpeechModelStatus;
+
+    public sealed record Failed(string Message) : SpeechModelStatus;
+}
+
+/// <summary>An on-device speech model ("Base · 142 MB").</summary>
+public sealed record SpeechModelState(string Id, string Name, ulong Bytes, SpeechModelStatus State);
+
+/// <summary>An origin the person allowed a plugin to send audio to.</summary>
+public sealed record AudioConsent(string Plugin, string Origin);
+
+/// <summary>The AiLyrics slice.</summary>
+/// <param name="Available">Offer Create Synced Lyrics (Pro may still be needed: see Need).</param>
+public sealed record AiLyricsSnapshot(
+    ulong Version,
+    bool Available,
+    string? Plugin,
+    AiLyricsPlan? Plan,
+    AiLyricsNeed Need,
+    IReadOnlyList<LyricsJob> Jobs,
+    IReadOnlyList<SpeechModelState> Models,
+    IReadOnlyList<AudioConsent> Consents);
+
+// ---- the look (ADR-0020) --------------------------------------------------------------------
+
+[JsonConverter(typeof(JsonStringEnumConverter<Typeface>))]
+public enum Typeface
+{
+    System,
+    Rounded,
+    Serif,
+    Mono,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<Density>))]
+public enum Density
+{
+    Compact,
+    Standard,
+    Roomy,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<LyricsWeight>))]
+public enum LyricsWeight
+{
+    Regular,
+    Medium,
+    Semibold,
+    Bold,
+    Heavy,
+}
+
+/// <summary>The colour of the sung part of lyrics.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(LyricsHighlight.Artwork), "Artwork")]
+[JsonDerivedType(typeof(LyricsHighlight.Accent), "Accent")]
+[JsonDerivedType(typeof(LyricsHighlight.Custom), "Custom")]
+public abstract record LyricsHighlight
+{
+    private LyricsHighlight() { }
+
+    public sealed record Artwork : LyricsHighlight;
+
+    public sealed record Accent : LyricsHighlight;
+
+    /// <summary>0xRRGGBB.</summary>
+    public sealed record Custom(uint Rgb) : LyricsHighlight;
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<Place>))]
+public enum Place
+{
+    Home,
+    Albums,
+    Artists,
+    Songs,
+    Playlists,
+    Favourites,
+    Search,
+    Sources,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<HomeSection>))]
+public enum HomeSection
+{
+    Summary,
+    RecentlyAdded,
+    RecentlyPlayed,
+    MostPlayed,
+    Favourites,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<NowPlayingLayout>))]
+public enum NowPlayingLayout
+{
+    Stage,
+    Artwork,
+    Lyrics,
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter<MiniPlayerStyle>))]
+public enum MiniPlayerStyle
+{
+    Bar,
+    Compact,
+    Floating,
+}
+
+/// <summary>The Look slice: every value resolved (ADR-0020 §2); with Customized false, the
+/// Luminous defaults.</summary>
+public sealed record LookSnapshot(
+    ulong Version,
+    float CornerScale,
+    float Glass,
+    float Aurora,
+    Typeface Typeface,
+    float TextScale,
+    Density Density,
+    LyricsWeight LyricsWeight,
+    float LyricsGlow,
+    LyricsHighlight LyricsHighlight,
+    IReadOnlyList<Place> Sidebar,
+    IReadOnlyList<HomeSection> Home,
+    NowPlayingLayout NowPlaying,
+    MiniPlayerStyle MiniPlayer,
+    bool Customized,
+    string? Plugin);
+
+// ---- Jellyfesh Pro (ADR-0021) ---------------------------------------------------------------
+
+/// <summary>Where Pro comes from.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(ProSource.None), "None")]
+[JsonDerivedType(typeof(ProSource.Preview), "Preview")]
+[JsonDerivedType(typeof(ProSource.Store), "Store")]
+[JsonDerivedType(typeof(ProSource.Licence), "Licence")]
+public abstract record ProSource
+{
+    private ProSource() { }
+
+    public sealed record None : ProSource;
+
+    /// <summary>"Pro features are free during the public beta."</summary>
+    public sealed record Preview : ProSource;
+
+    /// <summary>"Jellyfesh Pro · Purchased" (the Rust field is `store`).</summary>
+    public sealed record Store([property: JsonPropertyName("store")] global::Jellyfesh.Ffi.Store Value) : ProSource;
+
+    /// <summary>"Jellyfesh Pro · Licence …{IdSuffix}"; issued at midnight UTC, in ms since the epoch.</summary>
+    public sealed record Licence(string IdSuffix, long IssuedAtMs) : ProSource;
+}
+
+/// <summary>Why a licence key was not accepted (the apps word it).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<LicenceError>))]
+public enum LicenceError
+{
+    Malformed,
+    UnknownKey,
+    BadSignature,
+    WrongProduct,
+    Revoked,
+}
+
+/// <summary>The Pro slice; Stores are the stores this build can sell Pro in.</summary>
+public sealed record ProSnapshot(
+    ulong Version,
+    bool Active,
+    ProSource Source,
+    bool Preview,
+    LicenceError? LicenceError,
+    IReadOnlyList<Store> Stores,
+    bool LicenceKeys = true);
+
+// ---- updates (ADR-0021 §5) ------------------------------------------------------------------
+
+/// <summary>A newer release and its page.</summary>
+public sealed record UpdateInfo(string Version, string Url);
+
+/// <summary>The Update slice: Supported for direct downloads.</summary>
+public sealed record UpdateSnapshot(
+    ulong Version,
+    bool Supported,
+    bool Checking,
+    UpdateInfo? Available,
+    long? LastCheckedMs,
+    bool Auto,
+    string? Error);
+
+// ---- Discover, details and comments (ADR-0022) ----------------------------------------------
+
+[JsonConverter(typeof(JsonStringEnumConverter<ShelfStyle>))]
+public enum ShelfStyle
+{
+    Row,
+    Grid,
+    Chart,
+}
+
+/// <summary>One shelf of a Discover page; More is a node to browse for See All.</summary>
+public sealed record Shelf(string Id, string Title, ShelfStyle Style, IReadOnlyList<SourceItem> Items, string? More);
+
+/// <summary>A Discover page.</summary>
+public sealed record DiscoverPage(ulong Request, string Source, IReadOnlyList<Shelf> Shelves, string? Error);
+
+/// <summary>What a fact is; the apps word the keys.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(FactKey.Version), "Version")]
+[JsonDerivedType(typeof(FactKey.Genre), "Genre")]
+[JsonDerivedType(typeof(FactKey.Language), "Language")]
+[JsonDerivedType(typeof(FactKey.Released), "Released")]
+[JsonDerivedType(typeof(FactKey.Label), "Label")]
+[JsonDerivedType(typeof(FactKey.Composer), "Composer")]
+[JsonDerivedType(typeof(FactKey.Lyricist), "Lyricist")]
+[JsonDerivedType(typeof(FactKey.Arranger), "Arranger")]
+[JsonDerivedType(typeof(FactKey.Producer), "Producer")]
+[JsonDerivedType(typeof(FactKey.Popularity), "Popularity")]
+[JsonDerivedType(typeof(FactKey.Quality), "Quality")]
+[JsonDerivedType(typeof(FactKey.Isrc), "Isrc")]
+[JsonDerivedType(typeof(FactKey.Disc), "Disc")]
+[JsonDerivedType(typeof(FactKey.Track), "Track")]
+[JsonDerivedType(typeof(FactKey.Other), "Other")]
+public abstract record FactKey
+{
+    private FactKey() { }
+
+    public sealed record Version : FactKey;
+
+    public sealed record Genre : FactKey;
+
+    public sealed record Language : FactKey;
+
+    public sealed record Released : FactKey;
+
+    public sealed record Label : FactKey;
+
+    public sealed record Composer : FactKey;
+
+    public sealed record Lyricist : FactKey;
+
+    public sealed record Arranger : FactKey;
+
+    public sealed record Producer : FactKey;
+
+    public sealed record Popularity : FactKey;
+
+    public sealed record Quality : FactKey;
+
+    public sealed record Isrc : FactKey;
+
+    public sealed record Disc : FactKey;
+
+    public sealed record Track : FactKey;
+
+    /// <summary>The service's own label (the Rust field `label`; Text here, since FactKey.Label is
+    /// a sibling record).</summary>
+    public sealed record Other([property: JsonPropertyName("label")] string Text) : FactKey;
+}
+
+public sealed record Fact(FactKey Key, string Value);
+
+/// <summary>How good what plays is, as the core judges it (the apps word it).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<QualityLabel>))]
+public enum QualityLabel
+{
+    HiResLossless,
+    Lossless,
+    High,
+    Standard,
+}
+
+/// <summary>The format of what plays or of a file.</summary>
+public sealed record AudioFormat(
+    string? Codec,
+    uint? SampleRateHz,
+    uint? BitDepth,
+    uint? Channels,
+    uint? BitrateKbps,
+    bool? Lossless,
+    QualityLabel? Quality);
+
+/// <summary>ReplayGain values: gains in dB, peaks as linear amplitude.</summary>
+public sealed record ReplayGainValues(float? TrackGainDb, float? TrackPeak, float? AlbumGainDb, float? AlbumPeak);
+
+/// <summary>Technical information about a file or a stream.</summary>
+public sealed record TechnicalInfo(
+    AudioFormat Format,
+    string? Container,
+    ulong? FileSizeBytes,
+    ulong? DurationMs,
+    ReplayGainValues? Replaygain,
+    string? Path);
+
+/// <summary>An item's details (Event.Details).</summary>
+/// <param name="Image">A large cover or an artist photo: a cached file, or a URL for SourceArtwork.</param>
+public sealed record DetailsPage(
+    ulong Request,
+    ItemRef Item,
+    string Title,
+    string? Subtitle,
+    string? Description,
+    ArtworkRef? Image,
+    IReadOnlyList<Fact> Facts,
+    TechnicalInfo? Technical,
+    ulong? CommentCount,
+    string? Attribution,
+    string? Error);
+
+/// <summary>A comment on a source item; TimeMs in ms since the epoch.</summary>
+public sealed record CommentEntry(
+    string Id,
+    string Author,
+    ArtworkRef? Avatar,
+    string Text,
+    ulong? Likes,
+    long? TimeMs,
+    ulong? Replies);
+
+/// <summary>A page of comments; ask for Next with Command.Comments.</summary>
+public sealed record CommentsPage(
+    ulong Request,
+    ItemRef Item,
+    IReadOnlyList<CommentEntry> Hot,
+    IReadOnlyList<CommentEntry> Comments,
+    ulong? Total,
+    string? Next,
+    string? Attribution,
+    string? Error);
+
+/// <summary>A source picture fetched into the artwork cache; Path null when it cannot be had.</summary>
+public sealed record ArtworkReady(string Url, uint SizePx, string? Path);
+
+/// <summary>What the lyrics bar shows at a time (JellyfeshMethods.LyricsBar): the line, the next
+/// line, each word's progress (0–1) and, for lines without word timing, the line's progress.</summary>
+public sealed record LyricsBar(uint? Line, uint? Next, IReadOnlyList<float> Words, float LineProgress);

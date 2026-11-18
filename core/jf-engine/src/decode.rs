@@ -293,6 +293,7 @@ impl Source {
             channels: u16::try_from(channels).unwrap_or(u16::MAX),
             duration_us,
             bitrate,
+            bits_per_sample: params.bits_per_sample.filter(|&b| b > 0),
         };
         let decoder_trims = [
             CODEC_ID_MP1,

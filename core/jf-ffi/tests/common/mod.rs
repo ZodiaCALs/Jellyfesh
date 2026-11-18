@@ -92,6 +92,10 @@ pub fn collections() -> Vec<jf::Collection> {
         jf::Collection::Artist { id: 4 },
         jf::Collection::Playlist { id: 5 },
         jf::Collection::Favorites,
+        jf::Collection::Songs {
+            sort: jf::TrackSort::Title,
+            descending: true,
+        },
         jf::Collection::Tracks { tracks: track_refs() },
         jf::Collection::Source {
             plugin: "org.jellyfesh.jellyfin".into(),
@@ -139,6 +143,7 @@ pub fn settings() -> jf::Settings {
         resume_on_launch: true,
         watch_folders: false,
         allow_community_plugins: true,
+        check_for_updates: false,
     }
 }
 
@@ -330,7 +335,349 @@ pub fn commands() -> Vec<jf::Command> {
     ] {
         out.push(Remote { action });
     }
+    out.extend([
+        MakeLyrics {
+            song: jf::SongRef::Current,
+        },
+        MakeLyrics {
+            song: jf::SongRef::Library { id: 42 },
+        },
+        CancelLyrics { job: 3 },
+        DeleteMadeLyrics {
+            song: jf::SongRef::Library { id: 42 },
+        },
+        AllowAudioUpload {
+            plugin: "org.jellyfesh.ai-lyrics".into(),
+            origin: "https://api.example.com".into(),
+        },
+        RevokeAudioUpload {
+            plugin: "org.jellyfesh.ai-lyrics".into(),
+            origin: "https://api.example.com".into(),
+        },
+        DownloadSpeechModel { id: "base".into() },
+        CancelSpeechModelDownload { id: "base".into() },
+        DeleteSpeechModel { id: "tiny".into() },
+        ResetPluginSettings {
+            plugin: "org.jellyfesh.customize".into(),
+        },
+        ActivateLicence {
+            key: "JFP1-INVENTED-TEST-KEY".into(),
+        },
+        RemoveLicence,
+        CheckForUpdates,
+        Discover {
+            source: "library".into(),
+        },
+        Discover {
+            source: "org.x".into(),
+        },
+    ]);
+    for item in item_refs() {
+        out.push(Details { item: item.clone() });
+        out.push(Comments {
+            item,
+            page: Some("2".into()),
+        });
+    }
+    out.push(Comments {
+        item: jf::ItemRef::Track { id: 42 },
+        page: None,
+    });
     out
+}
+
+/// Every kind of item reference.
+pub fn item_refs() -> Vec<jf::ItemRef> {
+    vec![
+        jf::ItemRef::Track { id: 42 },
+        jf::ItemRef::Album { id: 3 },
+        jf::ItemRef::Artist { id: 4 },
+        jf::ItemRef::File {
+            path: "/music/loose/Harbor.mp3".into(),
+        },
+        jf::ItemRef::Source {
+            plugin: "org.x".into(),
+            item_kind: jf::ItemKind::Album,
+            id: "al:1".into(),
+        },
+    ]
+}
+
+/// The format of a sample FLAC file.
+pub fn audio_format() -> jf::AudioFormat {
+    jf::AudioFormat {
+        codec: Some("flac".into()),
+        sample_rate_hz: Some(96_000),
+        bit_depth: Some(24),
+        channels: Some(2),
+        bitrate_kbps: Some(3_100),
+        lossless: Some(true),
+        quality: Some(jf::QualityLabel::HiResLossless),
+    }
+}
+
+/// An AI Lyrics slice with a job in every stage and a model in every state.
+pub fn ai_lyrics() -> jf::AiLyricsSnapshot {
+    let job = |id, stage| jf::LyricsJob {
+        id,
+        title: "Lantern".into(),
+        artist: Some("Sample Artist".into()),
+        uid: Some(2),
+        library_id: Some(42),
+        stage,
+    };
+    let model = |id: &str, name: &str, bytes, state| jf::SpeechModelState {
+        id: id.into(),
+        name: name.into(),
+        bytes,
+        state,
+    };
+    jf::AiLyricsSnapshot {
+        version: 3,
+        available: true,
+        plugin: Some("org.jellyfesh.ai-lyrics".into()),
+        plan: Some(jf::AiLyricsPlan {
+            mode: jf::AiLyricsMode::Online,
+            engine: "whisper-1 at api.example.com".into(),
+            upload_to: Some("https://api.example.com".into()),
+            automatic: true,
+        }),
+        need: jf::AiLyricsNeed::Consent {
+            origin: "https://api.example.com".into(),
+        },
+        jobs: vec![
+            job(1, jf::LyricsJobStage::Waiting),
+            job(2, jf::LyricsJobStage::ReadingAudio),
+            job(
+                3,
+                jf::LyricsJobStage::Sending {
+                    origin: "https://api.example.com".into(),
+                },
+            ),
+            job(4, jf::LyricsJobStage::Recognising { fraction: 0.42 }),
+            job(5, jf::LyricsJobStage::TimingWords),
+            job(6, jf::LyricsJobStage::Done),
+            job(
+                7,
+                jf::LyricsJobStage::Failed {
+                    message: "the provider refused the key".into(),
+                },
+            ),
+            jf::LyricsJob {
+                uid: None,
+                library_id: None,
+                artist: None,
+                ..job(8, jf::LyricsJobStage::Cancelled)
+            },
+        ],
+        models: vec![
+            model("tiny", "Tiny", 77_691_713, jf::SpeechModelStatus::NotDownloaded),
+            model(
+                "base",
+                "Base",
+                147_951_465,
+                jf::SpeechModelStatus::Downloading { fraction: 0.35 },
+            ),
+            model("small", "Small", 487_601_967, jf::SpeechModelStatus::Ready),
+            model(
+                "large-v3-turbo-q5_0",
+                "Large Turbo",
+                574_041_195,
+                jf::SpeechModelStatus::Failed {
+                    message: "the download was cut off".into(),
+                },
+            ),
+        ],
+        consents: vec![jf::AudioConsent {
+            plugin: "org.jellyfesh.ai-lyrics".into(),
+            origin: "https://api.example.com".into(),
+        }],
+    }
+}
+
+/// Every other need, for events.
+pub fn ai_lyrics_needs() -> Vec<jf::AiLyricsNeed> {
+    vec![
+        jf::AiLyricsNeed::Nothing,
+        jf::AiLyricsNeed::Pro,
+        jf::AiLyricsNeed::SignIn,
+        jf::AiLyricsNeed::Model {
+            id: "base".into(),
+            name: "Base".into(),
+            bytes: 147_951_465,
+        },
+        jf::AiLyricsNeed::Unavailable {
+            reason: "on-device recognition is not in this build".into(),
+        },
+    ]
+}
+
+/// A customised look with values off every default.
+pub fn look() -> jf::LookSnapshot {
+    jf::LookSnapshot {
+        version: 2,
+        corner_scale: 1.5,
+        glass: 0.25,
+        aurora: 0.5,
+        typeface: jf::Typeface::Rounded,
+        text_scale: 1.15,
+        density: jf::Density::Roomy,
+        lyrics_weight: jf::LyricsWeight::Heavy,
+        lyrics_glow: 0.8,
+        lyrics_highlight: jf::LyricsHighlight::Custom { rgb: 0x00ff_8800 },
+        sidebar: vec![jf::Place::Songs, jf::Place::Home, jf::Place::Search],
+        home: vec![jf::HomeSection::Favourites, jf::HomeSection::Summary],
+        now_playing: jf::NowPlayingLayout::Lyrics,
+        mini_player: jf::MiniPlayerStyle::Floating,
+        customized: true,
+        plugin: Some("org.jellyfesh.customize".into()),
+    }
+}
+
+pub fn pro() -> jf::ProSnapshot {
+    jf::ProSnapshot {
+        version: 4,
+        active: true,
+        source: jf::ProSource::Licence {
+            id_suffix: "ABCD".into(),
+            issued_at_ms: 1_763_337_600_000,
+        },
+        preview: false,
+        licence_error: Some(jf::LicenceError::Revoked),
+        stores: vec![jf::Store::MicrosoftStore],
+        licence_keys: false,
+    }
+}
+
+pub fn update() -> jf::UpdateSnapshot {
+    jf::UpdateSnapshot {
+        version: 2,
+        supported: true,
+        checking: false,
+        available: Some(jf::UpdateInfo {
+            version: "0.0.8-beta.1".into(),
+            url: "https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.8-beta.1".into(),
+        }),
+        last_checked_ms: Some(1_763_400_000_000),
+        auto: true,
+        error: Some("the release list could not be read".into()),
+    }
+}
+
+pub fn discover() -> jf::DiscoverPage {
+    jf::DiscoverPage {
+        request: jf::CommandId(30),
+        source: "org.x".into(),
+        shelves: vec![
+            jf::Shelf {
+                id: "new".into(),
+                title: "New Releases".into(),
+                style: jf::ShelfStyle::Row,
+                items: vec![source_item()],
+                more: Some("chart:new".into()),
+            },
+            jf::Shelf {
+                id: "for_you".into(),
+                title: "For You".into(),
+                style: jf::ShelfStyle::Grid,
+                items: vec![source_item()],
+                more: None,
+            },
+            jf::Shelf {
+                id: "top".into(),
+                title: "Top Songs".into(),
+                style: jf::ShelfStyle::Chart,
+                items: Vec::new(),
+                more: None,
+            },
+        ],
+        error: Some("one shelf could not be loaded".into()),
+    }
+}
+
+/// Details of a library track with every fact key.
+pub fn details() -> jf::DetailsPage {
+    let keys = [
+        jf::FactKey::Version,
+        jf::FactKey::Genre,
+        jf::FactKey::Language,
+        jf::FactKey::Released,
+        jf::FactKey::Label,
+        jf::FactKey::Composer,
+        jf::FactKey::Lyricist,
+        jf::FactKey::Arranger,
+        jf::FactKey::Producer,
+        jf::FactKey::Popularity,
+        jf::FactKey::Quality,
+        jf::FactKey::Isrc,
+        jf::FactKey::Disc,
+        jf::FactKey::Track,
+        jf::FactKey::Other { label: "Mood".into() },
+    ];
+    jf::DetailsPage {
+        request: jf::CommandId(31),
+        item: jf::ItemRef::Track { id: 42 },
+        title: "Lantern".into(),
+        subtitle: Some("Sample Artist".into()),
+        description: Some("Invented notes for the test.".into()),
+        image: Some(jf::ArtworkRef::Url(
+            "https://music.example/art/7-large.jpg".into(),
+        )),
+        facts: keys
+            .into_iter()
+            .map(|key| jf::Fact {
+                key,
+                value: "Sample".into(),
+            })
+            .collect(),
+        technical: Some(jf::TechnicalInfo {
+            format: audio_format(),
+            container: Some("flac".into()),
+            file_size_bytes: Some(71_234_567),
+            duration_ms: Some(184_000),
+            replaygain: Some(jf::ReplayGainValues {
+                track_gain_db: Some(-6.5),
+                track_peak: Some(0.98),
+                album_gain_db: Some(-7.0),
+                album_peak: Some(1.0),
+            }),
+            path: Some("/music/Night Swim/01 Lantern.flac".into()),
+        }),
+        comment_count: Some(3),
+        attribution: Some("Example Service".into()),
+        error: None,
+    }
+}
+
+pub fn comments() -> jf::CommentsPage {
+    let comment = |id: &str| jf::CommentEntry {
+        id: id.into(),
+        author: "Invented Listener".into(),
+        avatar: Some(jf::ArtworkRef::Url("https://music.example/face.png".into())),
+        text: "An invented comment for the test.".into(),
+        likes: Some(7),
+        time_ms: Some(1_700_000_000_000),
+        replies: Some(1),
+    };
+    jf::CommentsPage {
+        request: jf::CommandId(32),
+        item: item_refs()[4].clone(),
+        hot: vec![comment("h1")],
+        comments: vec![
+            comment("c1"),
+            jf::CommentEntry {
+                avatar: None,
+                likes: None,
+                time_ms: None,
+                replies: None,
+                ..comment("c2")
+            },
+        ],
+        total: Some(3),
+        next: Some("2".into()),
+        attribution: Some("Example Service".into()),
+        error: None,
+    }
 }
 
 pub fn track() -> jf::Track {
@@ -421,6 +768,8 @@ pub fn source_item() -> jf::SourceItem {
         track: Some(jf::TrackRef::Library(42)),
         also_in: vec!["org.x".into()],
         link: Some("https://music.example.com/song/42".into()),
+        artist_id: Some("ar:1".into()),
+        album_id: Some("al:1".into()),
     }
 }
 
@@ -544,8 +893,10 @@ pub fn now_playing() -> jf::NowPlaying {
             duration_us: Some(184_000_000),
             gapless: true,
             bitrate: Some(912_000),
+            bits_per_sample: Some(16),
         }),
         link: None,
+        quality: Some(audio_format()),
     }
 }
 
@@ -651,6 +1002,12 @@ pub fn sources() -> jf::SourcesSnapshot {
             settings_schema_json: r#"{"type":"object"}"#.into(),
             settings_json: "{}".into(),
             icon: Some("/cache/plugin-icons/0123456789abcdef.png".into()),
+            kind: jf::PluginKind::Extension,
+            requires_pro: true,
+            permissions: vec!["audio".into(), "speech".into()],
+            discover: true,
+            details: true,
+            comments: true,
         }],
         presets: vec![jf::SourcePreset {
             id: "navidrome".into(),
@@ -665,6 +1022,7 @@ pub fn sources() -> jf::SourcesSnapshot {
         allow_community: true,
         secret_storage: jf::SecretStorage::SessionOnly,
         unavailable: None,
+        can_install_plugins: false,
     }
 }
 
@@ -682,6 +1040,10 @@ pub fn snapshot() -> jf::Snapshot {
         sources: Arc::new(sources()),
         remote: Arc::new(remote()),
         muted: true,
+        ai_lyrics: Arc::new(ai_lyrics()),
+        look: Arc::new(look()),
+        pro: Arc::new(pro()),
+        update: Arc::new(update()),
     }
 }
 
@@ -698,7 +1060,7 @@ pub fn scan_report() -> jf::ScanReport {
 /// Every event variant, with every auth step and scan status.
 pub fn events() -> Vec<jf::Event> {
     use jf::Event::*;
-    let update = |step| {
+    let auth = |step| {
         Auth(jf::AuthUpdate {
             plugin: "org.x".into(),
             flow: 3,
@@ -731,20 +1093,20 @@ pub fn events() -> Vec<jf::Event> {
         Settings(Arc::new(settings())),
         Devices(Arc::new(devices())),
         Sources(Arc::new(sources())),
-        update(jf::AuthStep::ShowQr {
+        auth(jf::AuthStep::ShowQr {
             data: "otpauth://x".into(),
             hint: Some("Scan with the Example app".into()),
             expires_at_ms: Some(1_700_000_000_000),
         }),
-        update(jf::AuthStep::ShowCode {
+        auth(jf::AuthStep::ShowCode {
             code: "482 913".into(),
             hint: "In Example, open Quick Connect".into(),
             expires_at_ms: None,
         }),
-        update(jf::AuthStep::OpenUrl {
+        auth(jf::AuthStep::OpenUrl {
             url: "https://music.example/login".into(),
         }),
-        update(jf::AuthStep::AskFields {
+        auth(jf::AuthStep::AskFields {
             fields: vec![
                 jf::AuthField {
                     name: "username".into(),
@@ -766,13 +1128,13 @@ pub fn events() -> Vec<jf::Event> {
                 },
             ],
         }),
-        update(jf::AuthStep::Waiting {
+        auth(jf::AuthStep::Waiting {
             message: "Waiting for the browser".into(),
         }),
-        update(jf::AuthStep::Done {
+        auth(jf::AuthStep::Done {
             account: "listener".into(),
         }),
-        update(jf::AuthStep::Failed {
+        auth(jf::AuthStep::Failed {
             message: "wrong password".into(),
         }),
         SearchResults(Arc::new(jf::SearchUpdate {
@@ -817,6 +1179,66 @@ pub fn events() -> Vec<jf::Event> {
         Error {
             message: "cannot read /music/broken.flac".into(),
         },
+        Lyrics(Arc::new(jf::LyricsSnapshot {
+            source: Some(jf::LyricsSource::Made {
+                plugin: "org.jellyfesh.ai-lyrics".into(),
+                engine: "Whisper Base on this device".into(),
+            }),
+            ..lyrics()
+        })),
+        AiLyrics(Arc::new(ai_lyrics())),
+        Look(Arc::new(look())),
+        Look(Arc::new(jf::LookSnapshot::defaults(1))),
+        Pro(Arc::new(pro())),
+        Pro(Arc::new(jf::ProSnapshot {
+            source: jf::ProSource::Store {
+                store: jf::Store::AppStore,
+            },
+            licence_error: None,
+            stores: vec![jf::Store::AppStore, jf::Store::GooglePlay],
+            ..pro()
+        })),
+        Pro(Arc::new(jf::ProSnapshot {
+            active: true,
+            source: jf::ProSource::Preview,
+            preview: true,
+            licence_error: Some(jf::LicenceError::Malformed),
+            ..pro()
+        })),
+        Pro(Arc::new(jf::ProSnapshot {
+            active: false,
+            source: jf::ProSource::None,
+            licence_error: Some(jf::LicenceError::BadSignature),
+            ..pro()
+        })),
+        Update(Arc::new(update())),
+        Update(Arc::new(jf::UpdateSnapshot {
+            checking: true,
+            available: None,
+            last_checked_ms: None,
+            error: None,
+            ..update()
+        })),
+        Discover(Arc::new(discover())),
+        Details(Arc::new(details())),
+        Details(Arc::new(jf::DetailsPage {
+            item: item_refs()[4].clone(),
+            image: Some(jf::ArtworkRef::File("/cache/artwork/ab12cd.jpg".into())),
+            technical: None,
+            error: Some("the source gave no details".into()),
+            ..details()
+        })),
+        Comments(Arc::new(comments())),
+        Artwork(Arc::new(jf::ArtworkReady {
+            url: "https://music.example/art/7.jpg".into(),
+            size_px: 256,
+            path: Some("/cache/source-artwork/ab12cd-256.jpg".into()),
+        })),
+        Artwork(Arc::new(jf::ArtworkReady {
+            url: "https://music.example/art/8.jpg".into(),
+            size_px: 512,
+            path: None,
+        })),
     ]
 }
 
@@ -870,6 +1292,7 @@ pub fn config() -> jf::Config {
         persist_session: true,
         watch_folders: false,
         bundled_plugins: vec!["/app/plugins/subsonic.jfpkg".into()],
+        distribution: jf::Distribution::Direct,
         ..jf::Config::new("/data/jellyfesh", "/cache/jellyfesh")
     }
 }

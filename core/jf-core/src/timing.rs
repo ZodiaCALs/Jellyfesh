@@ -13,10 +13,15 @@
 //!   [`jf_lyrics::LyricTimeline::next_change`]) into a wall-clock delay, so a
 //!   view sleeps until something on screen actually changes instead of
 //!   drawing every frame. That is what keeps Still mode cheap.
+//! * [`lyrics_bar`] says what the one-line lyrics bar and Desktop Lyrics
+//!   show at a time: the line, the next line and each word's progress
+//!   (ADR-0022 §6). Shells in other languages port it and pass
+//!   `tests/contract/lyrics-bar.json`.
 
 use std::time::Duration;
 
 use jf_engine::PlaybackAnchor;
+use jf_lyrics::LyricTimeline;
 
 /// Corrections up to this size are slewed; larger ones (a seek the engine did
 /// not mark as one) jump.
@@ -142,6 +147,93 @@ pub fn next_step_us(position_us: i64, step_us: i64) -> Option<i64> {
     (step_us > 0).then(|| (position_us.div_euclid(step_us) + 1) * step_us)
 }
 
+/// What the lyrics bar shows at a time (see [`lyrics_bar`]).
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LyricsBar {
+    /// The line to show, as an index into `LyricDoc::lines`: the active line
+    /// ([`LyricTimeline::cursor`]), or in a gap between lines the last one
+    /// that started (it stays until the next one starts). `None` before the
+    /// first line and for unsynced lyrics.
+    pub line: Option<usize>,
+    /// The line after it, shown dimmed or on a second row: the next line by
+    /// start (before the first line, the first one).
+    pub next: Option<usize>,
+    /// How much of each word of `line` is sung, `0.0..=1.0`: 1 for words
+    /// that ended, 0 for words still to come, the share of the word's time
+    /// for the one being sung (1 once a zero-length word starts). Empty for
+    /// lines without word timing.
+    pub words: Vec<f32>,
+    /// How much of `line` is over, `0.0..=1.0`, for lines without word
+    /// timing: from its start to its end (or, without an end, the next
+    /// line's start). 0 when neither is known, and in a gap after the line.
+    pub line_progress: f32,
+}
+
+/// What the one-line lyrics bar (and Desktop Lyrics) shows at `t_ms`
+/// (ADR-0022 §6): the line, the next line and each word's progress, from the
+/// lyrics' [`LyricTimeline`]. Lines are in start order, as the timeline
+/// keeps them. Costs a binary search and one pass over the line's words, so
+/// it may run every frame while words are swept.
+pub fn lyrics_bar(timeline: &LyricTimeline, t_ms: u32) -> LyricsBar {
+    let timed = |i: usize| timeline.line_starts.get(i).is_some_and(|&s| s != u32::MAX);
+    let count = timeline.line_starts.len();
+    let cursor = timeline.cursor(t_ms);
+    let active = cursor.line.is_some();
+    let line = cursor.line.or_else(|| {
+        // The last line that started, if any: it stays through the gap.
+        let started = timeline.line_starts.partition_point(|&s| s <= t_ms);
+        (0..started).rev().find(|&i| timed(i))
+    });
+    let next = match line {
+        Some(l) => (l + 1..count).find(|&i| timed(i)),
+        None => (0..count).find(|&i| timed(i)),
+    };
+    let Some(l) = line else {
+        return LyricsBar {
+            next,
+            ..LyricsBar::default()
+        };
+    };
+    let (from, to) = match (timeline.word_offsets.get(l), timeline.word_offsets.get(l + 1)) {
+        (Some(&from), Some(&to)) => (from as usize, to as usize),
+        _ => (0, 0),
+    };
+    let words: Vec<f32> = (from..to)
+        .map(|w| {
+            let start = timeline.word_starts[w];
+            let end = timeline.word_ends[w].max(start);
+            if t_ms < start {
+                0.0
+            } else if t_ms >= end {
+                1.0
+            } else {
+                (t_ms - start) as f32 / (end - start) as f32
+            }
+        })
+        .collect();
+    let start = timeline.line_starts[l];
+    let end = match timeline.line_ends.get(l) {
+        Some(&end) if end != u32::MAX => Some(end),
+        _ => next.map(|n| timeline.line_starts[n]),
+    };
+    let line_progress = match end {
+        _ if !active && t_ms >= start => {
+            // In the gap after the line: it is over.
+            if words.is_empty() { 0.0 } else { 1.0 }
+        }
+        Some(end) if end > start => {
+            ((t_ms.saturating_sub(start)) as f32 / (end - start) as f32).clamp(0.0, 1.0)
+        }
+        _ => 0.0,
+    };
+    LyricsBar {
+        line: Some(l),
+        next,
+        words,
+        line_progress,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -226,6 +318,44 @@ mod tests {
         assert_eq!(c.position_us(1_000 * MS), 240_000_000);
         c.update(anchor(2, -50, 0, 1.0), 0);
         assert_eq!(c.position_us(0), 0);
+    }
+
+    fn bar_timeline() -> LyricTimeline {
+        // Invented lines for the test: word-timed, a gap, then a line
+        // without words and without an end.
+        let text = "[00:01.00]<00:01.00>one <00:01.50>two <00:02.00>\n\
+                    [00:04.00]<00:04.00>three <00:04.40>four <00:05.00>\n\
+                    [00:08.00]five six\n";
+        jf_lyrics::parse(text, Some(jf_lyrics::Format::Lrc))
+            .unwrap()
+            .timeline()
+    }
+
+    #[test]
+    fn the_lyrics_bar_shows_the_line_the_next_and_each_words_progress() {
+        let tl = bar_timeline();
+        let before = lyrics_bar(&tl, 500);
+        assert_eq!((before.line, before.next), (None, Some(0)));
+        assert!(before.words.is_empty());
+
+        let first = lyrics_bar(&tl, 1_250);
+        assert_eq!((first.line, first.next), (Some(0), Some(1)));
+        assert_eq!(first.words, vec![0.5, 0.0]);
+        let later = lyrics_bar(&tl, 1_750);
+        assert_eq!(later.words, vec![1.0, 0.5]);
+
+        // In the gap the last line stays, fully sung, and the next waits.
+        let gap = lyrics_bar(&tl, 3_000);
+        assert_eq!((gap.line, gap.next), (Some(0), Some(1)));
+        assert_eq!(gap.words, vec![1.0, 1.0]);
+        assert_eq!(gap.line_progress, 1.0);
+
+        // A line without words: progress through the line to the next start.
+        let plain = lyrics_bar(&tl, 9_000);
+        assert_eq!((plain.line, plain.next), (Some(2), None));
+        assert!(plain.words.is_empty());
+        assert_eq!(plain.line_progress, 0.0, "no end and no next line");
+        assert_eq!(lyrics_bar(&LyricTimeline::default(), 1_000), LyricsBar::default());
     }
 
     #[test]

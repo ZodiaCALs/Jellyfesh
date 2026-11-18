@@ -52,7 +52,7 @@ pub use jf_plugin_host::{
     HostOptions, Limits, MemorySecretStore, SecretError, SecretStore, trust::TrustList,
 };
 pub use jf_session::{HistoryEntry, QueueItem, RepeatMode, SourceTrack, TrackRef};
-pub use timing::DisplayClock;
+pub use timing::{DisplayClock, LyricsBar, lyrics_bar};
 pub use types::*;
 
 use actor::{Actor, Msg, Shared};
@@ -167,6 +167,35 @@ impl Core {
             .unwrap_or_else(|e| e.into_inner())
             .insert(id.to_owned(), (name.to_owned(), player));
         Ok(())
+    }
+
+    /// What the app's store says about Jellyfesh Pro (ADR-0021 §2), after the
+    /// app's store glue verified it with the platform (StoreKit 2,
+    /// `StoreContext`, Play Billing). Send it at start and whenever the store
+    /// reports a change (a purchase, a restore, a refund); the `Pro` slice
+    /// follows. Stores the build does not sell in are ignored.
+    pub fn set_store_entitlement(&self, entitlement: StoreEntitlement) {
+        let _ = self.tx.send(Msg::StoreEntitlement(entitlement));
+    }
+
+    /// A plugin's settings schema in `language` (a BCP 47 tag: `zh-Hans`,
+    /// `zh-TW`, `ja-JP`; English where the plugin has no translation), with
+    /// the settings in the plugin's order (ADR-0020 §3). `None` when the
+    /// plugin is not installed or sources are off.
+    pub fn localized_settings_schema(&self, plugin: &str, language: &str) -> Option<String> {
+        self.shared.host()?.localized_settings_schema(plugin, language)
+    }
+
+    /// A source picture (`ArtworkRef::Url` of a source item, Now Playing, a
+    /// Discover shelf, details or comments) as a file in the artwork cache,
+    /// fitted to about `size_px` (ADR-0022 §5). When it is cached, the path
+    /// comes back at once; otherwise this returns `None`, starts fetching it
+    /// through its plugin (the plugin's allowlist and the picture's headers)
+    /// and an `Event::Artwork` follows with the path, or with `None` when it
+    /// cannot be had. Cheap enough to call for every list row as it appears:
+    /// requests are deduplicated and fetched a few at a time.
+    pub fn source_artwork(&self, url: &str, size_px: u32) -> Option<std::path::PathBuf> {
+        self.shared.source_artwork(url, size_px)
     }
 
     /// Removes the player registered under `id`; its tracks can no longer

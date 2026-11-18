@@ -15,7 +15,7 @@ use jf_session::{QueueItem, RepeatMode, TrackRef};
 use serde::{Deserialize, Serialize};
 
 /// How the core is set up.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
     /// Holds `library.sqlite` and `session.sqlite`.
     pub data_dir: PathBuf,
@@ -42,6 +42,45 @@ pub struct Config {
     /// uninstalled (remembered with the settings) until they install it
     /// again themselves. Failures are reported as [`Event::Error`].
     pub bundled_plugins: Vec<PathBuf>,
+    /// How this build reached the person (ADR-0021 §4): which stores can sell
+    /// Jellyfesh Pro here, and whether the core checks for updates
+    /// ([`Distribution::Direct`] only).
+    pub distribution: Distribution,
+    /// On-device speech recognition for AI Lyrics (ADR-0019 §5):
+    /// `jf_speech::recognizer()` in builds with Whisper, `None` elsewhere
+    /// (then the on-device mode says it is unavailable).
+    pub speech: Option<Arc<dyn jf_speech::Recognizer>>,
+    /// Where speech models are downloaded from: `None` for whisper.cpp's
+    /// published models (`jf_speech::catalogue`); tests point it at a local
+    /// server (`{url}/{file}`).
+    pub speech_model_url: Option<String>,
+    /// The releases API the update check asks (direct downloads only):
+    /// GitHub's list for the project by default; tests point it at a local
+    /// server.
+    pub update_url: String,
+}
+
+/// The releases the update check reads (ADR-0021 §5).
+pub const RELEASES_URL: &str = "https://api.github.com/repos/ZodiaCALs/Jellyfesh/releases?per_page=10";
+
+impl std::fmt::Debug for Config {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Config")
+            .field("data_dir", &self.data_dir)
+            .field("cache_dir", &self.cache_dir)
+            .field("output", &self.output)
+            .field("buffer_ms", &self.buffer_ms)
+            .field("restore_session", &self.restore_session)
+            .field("persist_session", &self.persist_session)
+            .field("watch_folders", &self.watch_folders)
+            .field("sources", &self.sources)
+            .field("bundled_plugins", &self.bundled_plugins)
+            .field("distribution", &self.distribution)
+            .field("speech", &self.speech.is_some())
+            .field("speech_model_url", &self.speech_model_url)
+            .field("update_url", &self.update_url)
+            .finish()
+    }
 }
 
 impl Config {
@@ -59,8 +98,66 @@ impl Config {
             watch_folders: true,
             sources: SourcesConfig::default(),
             bundled_plugins: Vec::new(),
+            distribution: Distribution::Source,
+            speech: None,
+            speech_model_url: None,
+            update_url: RELEASES_URL.to_owned(),
         }
     }
+}
+
+/// How this build of the app reached the person (ADR-0021 §4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Distribution {
+    /// A download from the project's release page: checks for updates itself.
+    Direct,
+    /// The Mac App Store.
+    AppStore,
+    /// The Microsoft Store.
+    MicrosoftStore,
+    /// Google Play.
+    GooglePlay,
+    /// Jellyfesh Web.
+    Web,
+    /// Built from source.
+    #[default]
+    Source,
+}
+
+impl Distribution {
+    /// The store that sells Jellyfesh Pro in this build, if any.
+    pub fn store(self) -> Option<Store> {
+        match self {
+            Distribution::AppStore => Some(Store::AppStore),
+            Distribution::MicrosoftStore => Some(Store::MicrosoftStore),
+            Distribution::GooglePlay => Some(Store::GooglePlay),
+            Distribution::Direct | Distribution::Web | Distribution::Source => None,
+        }
+    }
+}
+
+/// A store that sells Jellyfesh Pro (product `org.jellyfesh.pro`; `pro` on
+/// Google Play).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Store {
+    AppStore,
+    MicrosoftStore,
+    GooglePlay,
+}
+
+/// What a store says about Jellyfesh Pro, as the app's store glue verified it
+/// with the platform ([`crate::Core::set_store_entitlement`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoreEntitlement {
+    pub store: Store,
+    /// The store's product id (`org.jellyfesh.pro`, or `pro` on Google Play).
+    pub product: String,
+    /// Whether the person owns it now (false after a refund or revocation).
+    pub active: bool,
+    /// The store's transaction or order id, if it gives one.
+    pub transaction: Option<String>,
 }
 
 /// How online sources (plugins) run.
@@ -320,6 +417,109 @@ pub enum Command {
     Remote {
         action: RemoteAction,
     },
+
+    // ---- AI Lyrics (ADR-0019) ---------------------------------------------------------------
+    /// Makes synced lyrics for a song with the AI Lyrics plugin. The job
+    /// joins the `AiLyrics` slice's `jobs`; one runs at a time. Fails while
+    /// the slice's `need` is not `Nothing` (Pro, sign-in, consent, a model).
+    MakeLyrics {
+        song: SongRef,
+    },
+    /// Stops a waiting or running job.
+    CancelLyrics {
+        job: u64,
+    },
+    /// Deletes the lyrics AI Lyrics made for a song.
+    DeleteMadeLyrics {
+        song: SongRef,
+    },
+    /// The person allowed sending songs' audio to `origin` for this plugin
+    /// (the `Consent` need's origin).
+    AllowAudioUpload {
+        plugin: String,
+        origin: String,
+    },
+    /// Stop Allowing: no more audio goes to `origin` for this plugin.
+    RevokeAudioUpload {
+        plugin: String,
+        origin: String,
+    },
+    /// Downloads an on-device speech model (`AiLyricsSnapshot::models`).
+    DownloadSpeechModel {
+        id: String,
+    },
+    /// Stops a model download; what came so far is kept for later.
+    CancelSpeechModelDownload {
+        id: String,
+    },
+    /// Deletes a downloaded model.
+    DeleteSpeechModel {
+        id: String,
+    },
+
+    // ---- plugins, Pro and updates (ADR-0020, ADR-0021) ----------------------------------------
+    /// Restores a plugin's settings to the schema's defaults (Reset to
+    /// Defaults).
+    ResetPluginSettings {
+        plugin: String,
+    },
+    /// Activates Jellyfesh Pro with a licence key (`JFP1-…`); a bad key
+    /// leaves `ProSnapshot::licence_error` set.
+    ActivateLicence {
+        key: String,
+    },
+    /// Removes the licence key.
+    RemoveLicence,
+    /// Checks for a newer release now (direct downloads only).
+    CheckForUpdates,
+
+    // ---- Discover, details and comments (ADR-0022) ----------------------------------------------
+    /// A source's Discover page (`library` for the library's); answered by
+    /// `Event::Discover`.
+    Discover {
+        source: String,
+    },
+    /// More about an item; answered by `Event::Details`.
+    Details {
+        item: ItemRef,
+    },
+    /// A page of comments on a source item (`page` `None` is the first,
+    /// otherwise the `next` of the page before); answered by
+    /// `Event::Comments`.
+    Comments {
+        item: ItemRef,
+        page: Option<String>,
+    },
+}
+
+/// A song to make lyrics for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SongRef {
+    /// The song playing now (a library track, a file or a source track).
+    Current,
+    /// A library song.
+    Library { id: i64 },
+}
+
+/// An item to show details or comments for.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ItemRef {
+    /// A library track.
+    Track { id: i64 },
+    /// A library album.
+    Album { id: i64 },
+    /// A library artist.
+    Artist { id: i64 },
+    /// An audio file that is not in the library.
+    File { path: PathBuf },
+    /// An item a source listed: its `SourceItem::source`, `kind` and `id`.
+    Source {
+        plugin: String,
+        item_kind: ItemKind,
+        id: String,
+    },
 }
 
 /// What [`Command::Remote`] asks of the remote session.
@@ -351,6 +551,12 @@ pub enum Collection {
         id: i64,
     },
     Favorites,
+    /// Every song in the library, in the Songs page's order (`sort`, and
+    /// `descending` as `TrackQuery` takes them).
+    Songs {
+        sort: jf_library::TrackSort,
+        descending: bool,
+    },
     Tracks {
         tracks: Vec<TrackRef>,
     },
@@ -476,6 +682,9 @@ pub struct Settings {
     /// Community (unofficial) plugins may be installed and enabled
     /// (ADR-0012). Off by default.
     pub allow_community_plugins: bool,
+    /// Check for Updates Automatically (direct downloads only; ADR-0021 §5):
+    /// at most once a day. On by default.
+    pub check_for_updates: bool,
 }
 
 impl Default for Settings {
@@ -499,6 +708,7 @@ impl Default for Settings {
             resume_on_launch: false,
             watch_folders: true,
             allow_community_plugins: false,
+            check_for_updates: true,
         }
     }
 }
@@ -574,6 +784,31 @@ pub struct PluginSummary {
     /// The package's icon as a PNG file in the cache folder (named by its
     /// content, so an update gets a new path).
     pub icon: Option<PathBuf>,
+    /// Source (Settings › Sources) or Extension (Settings › Extensions:
+    /// plugins that make lyrics or change the look and offer no music).
+    pub kind: PluginKind,
+    /// It has a Jellyfesh Pro capability (`make_lyrics`, `appearance`); its
+    /// calls answer "needs Jellyfesh Pro" while Pro is inactive.
+    pub requires_pro: bool,
+    /// The host imports the manifest declares (`audio`, `speech`), for the
+    /// install screen.
+    pub permissions: Vec<String>,
+    /// It has a Discover page of its own (`discover`).
+    pub discover: bool,
+    /// It describes items (`details`): biography, notes, facts.
+    pub details: bool,
+    /// It shows comments (`comments`): offer a Comments pane.
+    pub comments: bool,
+}
+
+/// Where Settings lists a plugin (ADR-0020 §5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PluginKind {
+    /// A music source: Settings › Sources.
+    Source,
+    /// AI Lyrics, Customize and the like: Settings › Extensions.
+    Extension,
 }
 
 /// A music service the apps offer in Sources → Add a Source
@@ -623,6 +858,11 @@ pub struct SourcesSnapshot {
     /// Set when online sources cannot run at all (turned off in this
     /// build's configuration, or the plugin host failed to start).
     pub unavailable: Option<String>,
+    /// Plugins may be installed from files and community plugins allowed:
+    /// false in store builds (App Store, Microsoft Store, Google Play;
+    /// ADR-0021 §4), where the apps hide Install from File… and Allow
+    /// Community Plugins and the core refuses both.
+    pub can_install_plugins: bool,
 }
 
 /// How a sign-in field is entered.
@@ -699,7 +939,7 @@ pub struct AuthUpdate {
 }
 
 /// What a list row is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ItemKind {
     Track,
@@ -744,6 +984,15 @@ pub struct SourceItem {
     /// {Service}"), when the source's plugin declares one for its kind
     /// (ADR-0018). The main action for items that cannot play here.
     pub link: Option<String>,
+    /// Go to Artist for a source track or album: the source's id of its
+    /// artist (`Browse { plugin: source, node: artist_id }` lists the
+    /// artist's albums; `Details` with `ItemRef::Source { item_kind: Artist }`
+    /// describes the artist). `None` for library items and when the source
+    /// does not say.
+    pub artist_id: Option<String>,
+    /// Go to Album for a source track: the source's id of its album, for
+    /// `Browse` and `Details` the same way.
+    pub album_id: Option<String>,
 }
 
 /// Results from one source for one search: its section of the results.
@@ -890,6 +1139,10 @@ pub struct NowPlaying {
     /// Opens the track in its service, for source tracks whose plugin
     /// declares links.
     pub link: Option<String>,
+    /// What is playing, as decoded (ADR-0022 §3): codec, sample rate, bit
+    /// depth, channels, bitrate and the quality label, once the engine has
+    /// opened it; `None` before.
+    pub quality: Option<AudioFormat>,
 }
 
 /// What a remote device is.
@@ -1017,6 +1270,9 @@ pub enum LyricsSource {
     /// The plugin with this id (its attribution, if any, is in
     /// `LyricDoc::source.origin`).
     Plugin(String),
+    /// Made by AI Lyrics (ADR-0019): the plugin and the engine, shown as
+    /// "Made by AI Lyrics · {engine}".
+    Made { plugin: String, engine: String },
 }
 
 /// The `Lyrics` slice for the current track.
@@ -1066,6 +1322,14 @@ pub struct Snapshot {
     pub sources: Arc<SourcesSnapshot>,
     pub remote: Arc<RemoteSnapshot>,
     pub muted: bool,
+    /// AI Lyrics (ADR-0019).
+    pub ai_lyrics: Arc<AiLyricsSnapshot>,
+    /// The look, every value resolved (ADR-0020).
+    pub look: Arc<LookSnapshot>,
+    /// Jellyfesh Pro (ADR-0021).
+    pub pro: Arc<ProSnapshot>,
+    /// Update checks (ADR-0021 §5).
+    pub update: Arc<UpdateSnapshot>,
 }
 
 /// What the core tells subscribers. Slices arrive whole whenever their
@@ -1109,4 +1373,595 @@ pub enum Event {
     Error {
         message: String,
     },
+    /// The `AiLyrics` slice changed.
+    AiLyrics(Arc<AiLyricsSnapshot>),
+    /// The `Look` slice changed.
+    Look(Arc<LookSnapshot>),
+    /// The `Pro` slice changed.
+    Pro(Arc<ProSnapshot>),
+    /// The `Update` slice changed.
+    Update(Arc<UpdateSnapshot>),
+    /// A Discover page (`Command::Discover`).
+    Discover(Arc<DiscoverPage>),
+    /// An item's details (`Command::Details`).
+    Details(Arc<DetailsPage>),
+    /// A page of comments (`Command::Comments`).
+    Comments(Arc<CommentsPage>),
+    /// A source picture asked for with [`crate::Core::source_artwork`] is in
+    /// the cache (`path`), or cannot be had (`None`: stop waiting).
+    Artwork(Arc<ArtworkReady>),
+}
+
+// ---- AI Lyrics (ADR-0019) ------------------------------------------------------------------------
+
+/// Where AI Lyrics recognises the words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AiLyricsMode {
+    /// Whisper in the app; nothing leaves the device.
+    OnDevice,
+    /// The person's own provider, with their API key, after consent.
+    Online,
+}
+
+/// What making lyrics would do now (the plugin's plan).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AiLyricsPlan {
+    pub mode: AiLyricsMode,
+    /// The engine, in the plugin's words: "Whisper Base on this device".
+    pub engine: String,
+    /// The origin the online mode sends audio to (`https://api.openai.com`).
+    pub upload_to: Option<String>,
+    /// Lyrics are made for each song that starts playing without synced
+    /// lyrics.
+    pub automatic: bool,
+}
+
+/// What must happen before lyrics can be made. Apps show the matching
+/// prompt ("Download the Base model (142 MB) to make lyrics on this device.").
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AiLyricsNeed {
+    /// Ready: `MakeLyrics` works.
+    Nothing,
+    /// Jellyfesh Pro is inactive: show the Pro sheet.
+    Pro,
+    /// The online mode needs the person's API key: open AI Lyrics settings
+    /// (its Sign In).
+    SignIn,
+    /// Ask "Send This Song to {origin}?" and answer with
+    /// `AllowAudioUpload { plugin, origin }`.
+    Consent { origin: String },
+    /// Download this model first (`DownloadSpeechModel { id }`).
+    Model { id: String, name: String, bytes: u64 },
+    /// Making lyrics cannot work as set up; the text says why.
+    Unavailable { reason: String },
+}
+
+/// Where a lyrics job is.
+#[derive(Debug, Clone, PartialEq)]
+pub enum LyricsJobStage {
+    /// Behind another job.
+    Waiting,
+    /// "Reading Audio…"
+    ReadingAudio,
+    /// "Sending to {origin}…"
+    Sending {
+        origin: String,
+    },
+    /// "Recognising… 42%" (`fraction` 0–1).
+    Recognising {
+        fraction: f32,
+    },
+    /// "Timing Words…"
+    TimingWords,
+    /// Finished: the song's lyrics show as made by AI Lyrics.
+    Done,
+    /// "Couldn't make lyrics: {message}" with Try Again.
+    Failed {
+        message: String,
+    },
+    Cancelled,
+}
+
+/// A lyrics job. Finished jobs stay listed (the newest 20) so the apps can
+/// show how they ended.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LyricsJob {
+    pub id: u64,
+    pub title: String,
+    pub artist: Option<String>,
+    /// The queue entry it is for, when it was made for the song playing.
+    pub uid: Option<u64>,
+    /// The library track it is for, when the song is in the library.
+    pub library_id: Option<i64>,
+    pub stage: LyricsJobStage,
+}
+
+/// Where an on-device speech model is.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SpeechModelStatus {
+    NotDownloaded,
+    /// "Downloading… 35%" (`fraction` 0–1).
+    Downloading {
+        fraction: f32,
+    },
+    Ready,
+    Failed {
+        message: String,
+    },
+}
+
+/// An on-device speech model ("Base · 142 MB").
+#[derive(Debug, Clone, PartialEq)]
+pub struct SpeechModelState {
+    /// `tiny`, `base`, `small`, `large-v3-turbo-q5_0`.
+    pub id: String,
+    pub name: String,
+    pub bytes: u64,
+    pub state: SpeechModelStatus,
+}
+
+/// An origin the person allowed a plugin to send audio to.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct AudioConsent {
+    pub plugin: String,
+    pub origin: String,
+}
+
+/// The `AiLyrics` slice.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AiLyricsSnapshot {
+    pub version: u64,
+    /// Offer Create Synced Lyrics: an AI Lyrics plugin is installed and on
+    /// (Pro may still be needed: see `need`).
+    pub available: bool,
+    /// The AI Lyrics plugin (the first enabled `make_lyrics` plugin).
+    pub plugin: Option<String>,
+    /// What it would do now; `None` until the plugin answered (or while Pro
+    /// is inactive).
+    pub plan: Option<AiLyricsPlan>,
+    /// What is needed first.
+    pub need: AiLyricsNeed,
+    /// Waiting, running and the latest finished jobs, oldest first.
+    pub jobs: Vec<LyricsJob>,
+    /// The on-device models, in the catalogue's order.
+    pub models: Vec<SpeechModelState>,
+    /// Where audio may go (Settings › AI Lyrics › Sending Audio).
+    pub consents: Vec<AudioConsent>,
+}
+
+// ---- the look (ADR-0020) ------------------------------------------------------------------------
+
+/// The face text uses.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Typeface {
+    System,
+    Rounded,
+    Serif,
+    Mono,
+}
+
+/// Spacing: × 0.8, 1.0 or 1.2.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Density {
+    Compact,
+    Standard,
+    Roomy,
+}
+
+/// The weight of lyric lines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LyricsWeight {
+    Regular,
+    Medium,
+    Semibold,
+    Bold,
+    Heavy,
+}
+
+/// The colour of the sung part of lyrics.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum LyricsHighlight {
+    /// The artwork's colour.
+    Artwork,
+    /// The accent colour from Appearance.
+    Accent,
+    /// This colour, `0xRRGGBB`.
+    Custom { rgb: u32 },
+}
+
+/// A place in the sidebar (navigation pane, Library switcher).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Place {
+    Home,
+    Albums,
+    Artists,
+    Songs,
+    Playlists,
+    Favourites,
+    Search,
+    Sources,
+}
+
+/// A section of Home.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum HomeSection {
+    Summary,
+    RecentlyAdded,
+    RecentlyPlayed,
+    MostPlayed,
+    Favourites,
+}
+
+/// How Now Playing is laid out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NowPlayingLayout {
+    /// The v0.0.6 stage.
+    Stage,
+    /// A large cover with the current line below.
+    Artwork,
+    /// Lyrics full width with a small cover in the corner.
+    Lyrics,
+}
+
+/// The mini-player.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MiniPlayerStyle {
+    Bar,
+    Compact,
+    Floating,
+}
+
+/// The `Look` slice: every value resolved, defaults filled in, so the apps
+/// apply one thing (ADR-0020 §2). With `customized` false every value is the
+/// Luminous default. Reduce Transparency and the Transparency setting still
+/// win over `glass`; Reduce Motion still wins over motion.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LookSnapshot {
+    pub version: u64,
+    /// Radii × this (0–2).
+    pub corner_scale: f32,
+    /// Glass alpha and blur × this (0–1).
+    pub glass: f32,
+    /// The aurora field's strength (0–1).
+    pub aurora: f32,
+    pub typeface: Typeface,
+    /// Every type size × this (0.85–1.30).
+    pub text_scale: f32,
+    pub density: Density,
+    pub lyrics_weight: LyricsWeight,
+    /// The glow around the sung line (0–1).
+    pub lyrics_glow: f32,
+    pub lyrics_highlight: LyricsHighlight,
+    /// The places shown, in order (Settings is never listed, always shown).
+    pub sidebar: Vec<Place>,
+    /// Home's sections, in order.
+    pub home: Vec<HomeSection>,
+    pub now_playing: NowPlayingLayout,
+    pub mini_player: MiniPlayerStyle,
+    /// An appearance plugin sets the look (Pro active).
+    pub customized: bool,
+    /// That plugin.
+    pub plugin: Option<String>,
+}
+
+impl LookSnapshot {
+    /// The Luminous defaults.
+    pub fn defaults(version: u64) -> LookSnapshot {
+        LookSnapshot {
+            version,
+            corner_scale: 1.0,
+            glass: 1.0,
+            aurora: jf_tokens::field::AURORA_STRENGTH,
+            typeface: Typeface::System,
+            text_scale: 1.0,
+            density: Density::Standard,
+            lyrics_weight: LyricsWeight::Bold,
+            lyrics_glow: 0.6,
+            lyrics_highlight: LyricsHighlight::Artwork,
+            sidebar: vec![
+                Place::Home,
+                Place::Albums,
+                Place::Artists,
+                Place::Songs,
+                Place::Playlists,
+                Place::Favourites,
+                Place::Search,
+                Place::Sources,
+            ],
+            home: vec![
+                HomeSection::Summary,
+                HomeSection::RecentlyAdded,
+                HomeSection::RecentlyPlayed,
+                HomeSection::MostPlayed,
+            ],
+            now_playing: NowPlayingLayout::Stage,
+            mini_player: MiniPlayerStyle::Bar,
+            customized: false,
+            plugin: None,
+        }
+    }
+}
+
+// ---- Jellyfesh Pro (ADR-0021) ----------------------------------------------------------------------
+
+/// Where Pro comes from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProSource {
+    /// Pro is inactive.
+    None,
+    /// A Pro Preview build: "Pro features are free during the public beta."
+    Preview,
+    /// Bought in a store: "Jellyfesh Pro · Purchased".
+    Store { store: Store },
+    /// A licence key: "Jellyfesh Pro · Licence …ABCD".
+    Licence {
+        /// The last four characters of the licence id ("ABCD").
+        id_suffix: String,
+        /// When the key was issued, midnight UTC, in ms since the Unix epoch.
+        issued_at_ms: i64,
+    },
+}
+
+/// Why a licence key was not accepted. The apps word them: "That doesn't
+/// look like a Jellyfesh licence key." (malformed), "This licence key isn't
+/// valid." (unknown key, bad signature), "This key is for another product."
+/// and "This licence key has been withdrawn."
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LicenceError {
+    Malformed,
+    UnknownKey,
+    BadSignature,
+    WrongProduct,
+    Revoked,
+}
+
+/// The `Pro` slice.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProSnapshot {
+    pub version: u64,
+    /// Pro features work.
+    pub active: bool,
+    pub source: ProSource,
+    /// This build treats Pro as active for the public beta.
+    pub preview: bool,
+    /// Why the last licence key was refused, until a key is accepted or the
+    /// licence removed.
+    pub licence_error: Option<LicenceError>,
+    /// The stores this build can sell Pro in (show Buy and Restore
+    /// Purchases only for these).
+    pub stores: Vec<Store>,
+    /// Licence keys work in this build: show Enter Licence Key…. False in
+    /// App Store and Google Play builds, which sell Pro only through their
+    /// store (`ActivateLicence` fails there).
+    pub licence_keys: bool,
+}
+
+// ---- updates (ADR-0021 §5) -------------------------------------------------------------------------
+
+/// A newer release.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateInfo {
+    /// "0.0.8" (pre-release suffixes included: "0.0.8-beta.1").
+    pub version: String,
+    /// Its release page (View Release).
+    pub url: String,
+}
+
+/// The `Update` slice. Only direct downloads check (`supported`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UpdateSnapshot {
+    pub version: u64,
+    /// Show Check for Updates and its setting (direct downloads).
+    pub supported: bool,
+    /// A check is running.
+    pub checking: bool,
+    /// "Jellyfesh {version} Is Available", when a newer release exists.
+    pub available: Option<UpdateInfo>,
+    /// When the last check finished, in ms since the Unix epoch.
+    pub last_checked_ms: Option<i64>,
+    /// Checks run by themselves (supported and the setting is on).
+    pub auto: bool,
+    /// Why the last check failed, until one succeeds.
+    pub error: Option<String>,
+}
+
+// ---- Discover (ADR-0022) ------------------------------------------------------------------------
+
+/// How a shelf is shown.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShelfStyle {
+    /// One scrolling row of covers.
+    Row,
+    /// A grid of covers.
+    Grid,
+    /// A numbered list.
+    Chart,
+}
+
+/// One shelf of a Discover page.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Shelf {
+    pub id: String,
+    /// The heading. Shelves the core makes have stable ids instead of
+    /// words the apps must translate: `for_you`, `recently_added`,
+    /// `most_played`, `rediscover`; their titles are English ("For You").
+    pub title: String,
+    pub style: ShelfStyle,
+    pub items: Vec<SourceItem>,
+    /// A node to browse for See All (`Browse { plugin, node }`).
+    pub more: Option<String>,
+}
+
+/// A Discover page.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DiscoverPage {
+    /// The `Discover` command it answers.
+    pub request: CommandId,
+    /// `library` or the plugin.
+    pub source: String,
+    pub shelves: Vec<Shelf>,
+    /// Why there is no page.
+    pub error: Option<String>,
+}
+
+// ---- details and comments (ADR-0022) ------------------------------------------------------------
+
+/// What a fact is; the apps word the keys ("Released", "Composer").
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum FactKey {
+    /// A version or subtitle ("Live", "2011 Remaster").
+    Version,
+    Genre,
+    Language,
+    Released,
+    Label,
+    Composer,
+    Lyricist,
+    Arranger,
+    Producer,
+    Popularity,
+    Quality,
+    /// International Standard Recording Code.
+    Isrc,
+    /// "Disc 1 of 2".
+    Disc,
+    /// "Track 3 of 12".
+    Track,
+    /// The service's own label.
+    Other {
+        label: String,
+    },
+}
+
+/// One fact about an item.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Fact {
+    pub key: FactKey,
+    pub value: String,
+}
+
+/// How good what plays is, as the core judges it (ADR-0022 §3): Hi-Res
+/// Lossless (lossless above 16-bit or 48 kHz), Lossless, High (lossy at
+/// 256 kbit/s or more), Standard. The apps word it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QualityLabel {
+    HiResLossless,
+    Lossless,
+    High,
+    Standard,
+}
+
+/// The format of what plays or of a file.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AudioFormat {
+    /// Short lowercase codec name: `flac`, `mp3`, `aac`, `alac`, `vorbis`,
+    /// `opus`, `pcm`.
+    pub codec: Option<String>,
+    pub sample_rate_hz: Option<u32>,
+    pub bit_depth: Option<u32>,
+    pub channels: Option<u32>,
+    pub bitrate_kbps: Option<u32>,
+    pub lossless: Option<bool>,
+    pub quality: Option<QualityLabel>,
+}
+
+/// ReplayGain values (gains in dB, peaks as linear amplitude).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ReplayGainValues {
+    pub track_gain_db: Option<f32>,
+    pub track_peak: Option<f32>,
+    pub album_gain_db: Option<f32>,
+    pub album_peak: Option<f32>,
+}
+
+/// Technical information about a file or a stream.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TechnicalInfo {
+    pub format: AudioFormat,
+    /// The container: `flac`, `mp3`, `mp4`, `ogg`, `wav`, …
+    pub container: Option<String>,
+    pub file_size_bytes: Option<u64>,
+    pub duration_ms: Option<u64>,
+    pub replaygain: Option<ReplayGainValues>,
+    /// The file, for local items.
+    pub path: Option<PathBuf>,
+}
+
+/// An item's details.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DetailsPage {
+    /// The `Details` command it answers.
+    pub request: CommandId,
+    pub item: ItemRef,
+    pub title: String,
+    /// The artist (or album artist).
+    pub subtitle: Option<String>,
+    /// Album notes, an artist's biography.
+    pub description: Option<String>,
+    /// A large cover or an artist photo: a cached file, or (for a source
+    /// picture still to fetch) its URL for [`crate::Core::source_artwork`].
+    pub image: Option<ArtworkRef>,
+    pub facts: Vec<Fact>,
+    /// For songs: the file's format, or the stream's once it played.
+    pub technical: Option<TechnicalInfo>,
+    /// How many comments the service has for it.
+    pub comment_count: Option<u64>,
+    /// The source's attribution, when its terms ask for one.
+    pub attribution: Option<String>,
+    /// Why there are no details (or only some).
+    pub error: Option<String>,
+}
+
+/// A comment on a source item.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommentEntry {
+    pub id: String,
+    pub author: String,
+    pub avatar: Option<ArtworkRef>,
+    pub text: String,
+    pub likes: Option<u64>,
+    /// When it was written, in ms since the Unix epoch.
+    pub time_ms: Option<i64>,
+    pub replies: Option<u64>,
+}
+
+/// A page of comments.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommentsPage {
+    /// The `Comments` command it answers.
+    pub request: CommandId,
+    pub item: ItemRef,
+    /// The service's highlighted comments (first page only).
+    pub hot: Vec<CommentEntry>,
+    pub comments: Vec<CommentEntry>,
+    pub total: Option<u64>,
+    /// Ask for it with `Comments { page: next }`.
+    pub next: Option<String>,
+    /// Show it with the comments ("Comments from {attribution}").
+    pub attribution: Option<String>,
+    pub error: Option<String>,
+}
+
+/// A source picture fetched into the artwork cache.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArtworkReady {
+    /// The URL asked for (`ArtworkRef::Url`).
+    pub url: String,
+    /// The size asked for.
+    pub size_px: u32,
+    /// The cached file, or `None` when it cannot be had.
+    pub path: Option<PathBuf>,
 }

@@ -19,6 +19,9 @@ jf-engine.workspace = true
 jf-session.workspace = true
 jf-tokens.workspace = true
 jf-plugin-host.workspace = true
+# On-device recognition for AI Lyrics (ADR-0019 §5): the model catalogue and downloads; the
+# recogniser itself comes from the app (`Config::speech`), so whisper stays off here.
+jf-speech = { path = "../jf-speech", default-features = false }
 blake3.workspace = true
 crossbeam-channel.workspace = true
 serde.workspace = true

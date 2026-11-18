@@ -1,4 +1,4 @@
-# The core API (v0.0.6)
+# The core API (v0.0.7)
 
 Every UI (the Linux app in Rust, the macOS, Windows and Android apps through
 the FFI bindings, and the `jf` CLI) talks to `jf-core` the same way, and
@@ -26,8 +26,13 @@ first (at most a minute) and still reports their results.
 
 `Config` also carries `sources: SourcesConfig` (the plugin host on or off,
 the app's `SecretStore`, the host's trust list and limits for tests, the
-per-source search deadline, 8 s) and `bundled_plugins: Vec<PathBuf>` (see
-"Online sources").
+per-source search deadline, 8 s), `bundled_plugins: Vec<PathBuf>` (see
+"Online sources"), `distribution: Distribution` (how this build reached the
+person: `Direct`, `AppStore`, `MicrosoftStore`, `GooglePlay`, `Web` or
+`Source`, the default; it decides which stores sell Pro and whether the core
+checks for updates) and `speech: Option<Arc<dyn jf_speech::Recognizer>>`
+(on-device recognition for AI Lyrics: `jf_speech::recognizer()` in builds with
+Whisper; `None` makes the on-device mode unavailable).
 
 ## Slices (in `Snapshot`, and as events when they change)
 
@@ -43,20 +48,31 @@ per-source search deadline, 8 s) and `bundled_plugins: Vec<PathBuf>` (see
 | `sources: SourcesSnapshot` | `Sources` | installed plugins (badge, signing key, capabilities, sign-in methods, account, settings schema and values, icon, why one is off, vendor or remote playback), the services offered in Add a Source (`presets`), community allowed, where sign-ins are kept, why sources are unavailable |
 | `remote: RemoteSnapshot` | `Remote` | the remote session (ADR-0018): source and its name, status, the track and its album or playlist (as `SourceItem`s), **anchor**, shuffle, repeat, the playing device, every device, the last error; `source` is `None` without a session |
 | `muted`, `scanning`, `library_revision` | `LibraryChanged`, `Scan` | `LibraryChanged` after any catalogue, playlist, favourite or play-count change: lists query again |
+| `ai_lyrics: AiLyricsSnapshot` | `AiLyrics` | AI Lyrics (ADR-0019): whether to offer it, the plugin, its plan, what is needed first, the jobs, the speech models, the consents; see "AI Lyrics" |
+| `look: LookSnapshot` | `Look` | the look, every value resolved (ADR-0020); see "The look" |
+| `pro: ProSnapshot` | `Pro` | Jellyfesh Pro (ADR-0021); see "Jellyfesh Pro" |
+| `update: UpdateSnapshot` | `Update` | update checks for direct downloads; see "Updates" |
 
 Other events: `PlaylistCreated { request, id }` (after `CreatePlaylist` and
 `ImportPlaylist`), `Auth(AuthUpdate)` (sign-in steps),
 `SearchResults(SearchUpdate)` (one per source per search, see below; `done`
-on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`.
+on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`; and from
+v0.0.7 `Discover(DiscoverPage)`, `Details(DetailsPage)`,
+`Comments(CommentsPage)` (answers to the commands of those names, each with
+the `request` id `send` returned) and `Artwork(ArtworkReady)` (a source
+picture is cached, see "Covers").
 
 ## Commands
 
 * **Transport:** `Play`, `Pause`, `TogglePlayPause`, `Stop`, `Next`, `Previous`
   (restarts after 3 s), `Seek`, `SetVolume`, `SetMuted`.
 * **Queue:** `PlayTracks`, `PlayCollection` (album, artist, playlist,
-  favourites, a track list, or a source container; optional shuffle),
-  `Enqueue`, `EnqueueCollection` (Play Next / Play Last), `RemoveFromQueue`,
-  `MoveInQueue`, `JumpTo`, `ClearQueue`, `SetShuffle`, `SetRepeat`.
+  favourites, every library song (`Collection::Songs { sort, descending }`,
+  the Songs page's order with `TrackQuery`'s sort keys: Play and Shuffle for
+  all songs, with no paging), a track list, or a source container; optional
+  shuffle), `Enqueue`, `EnqueueCollection` (Play Next / Play Last),
+  `RemoveFromQueue`, `MoveInQueue`, `JumpTo`, `ClearQueue`, `SetShuffle`,
+  `SetRepeat`.
 * **Settings and output:** `SetSettings` (send back a modified copy of the
   slice), `SetEq`, `SetReplayGain`, `SetCrossfade`, `SetOutputDevice`,
   `RefreshDevices` (send on OS device notifications; the core never polls).
@@ -71,8 +87,18 @@ on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`.
   `CancelLogin`, `Logout`, `Search` (library and
   sources, merged and de-duplicated), `Browse`; `PlayCollection` and
   `EnqueueCollection` with `Collection::Source`; `Remote { action }`
-  (`Refresh`, `Transfer { device }`, `SetVolume { percent }`, `End`). See
-  "Online sources".
+  (`Refresh`, `Transfer { device }`, `SetVolume { percent }`, `End`);
+  `ResetPluginSettings { plugin }` (Reset to Defaults: the schema's
+  defaults). See "Online sources".
+* **AI Lyrics:** `MakeLyrics { song }`, `CancelLyrics { job }`,
+  `DeleteMadeLyrics { song }`, `AllowAudioUpload { plugin, origin }`,
+  `RevokeAudioUpload { plugin, origin }`, `DownloadSpeechModel { id }`,
+  `CancelSpeechModelDownload { id }`, `DeleteSpeechModel { id }`. See "AI
+  Lyrics".
+* **Pro and updates:** `ActivateLicence { key }`, `RemoveLicence`,
+  `CheckForUpdates`.
+* **Discover, details, comments:** `Discover { source }`, `Details { item }`,
+  `Comments { item, page }`.
 
 ## Queries (synchronous, on the caller's thread)
 
@@ -81,8 +107,12 @@ on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`.
 `recently_added`, `recently_played`, `most_played`, `playlists`, `playlist`,
 `playlist_entries`, `favorites`, `is_favorite`, `artwork_thumbnail(hash, size)`,
 `export_playlist(id, path)`, `roots`, `stats`, `queue_window`, `history`,
-`tracks_for_query`; free functions `output_devices()` and `eq_presets()`. They are cheap enough
-for list views but are not for per-frame use; call them off the UI thread.
+`tracks_for_query`, `localized_settings_schema(plugin, language)` and
+`source_artwork(url, size_px)` (see "Covers"); free functions
+`output_devices()`, `eq_presets()` and `lyrics_bar(timeline, t_ms)` (see
+"Drawing time"). They are cheap enough for list views but are not for
+per-frame use; call them off the UI thread. `set_store_entitlement(entitlement)`
+reports a store purchase (see "Jellyfesh Pro").
 
 Track lists (playlists, favourites, history) come as `TrackRow`s: what to
 show, and the `TrackRef` to queue. Library rows carry `artwork_hash` for
@@ -101,9 +131,11 @@ hue), reduce_effects, transparency (0 solid … 1 clearest, default 0.5;
 the core keeps it within 0–1), lyrics_size (small/medium/large),
 lyrics_align (start/center), show_translation, show_romanization, crossfade
 (enabled, 1–12 s, album continuity), replaygain_mode, preamp_db, eq,
-output_device, resume_on_launch, watch_folders, allow_community_plugins.
-The core applies playback, library and source settings; shells apply the
-appearance ones.
+output_device, resume_on_launch (the core resumes the restored queue at its
+saved position when it starts, when session restore is on), watch_folders,
+allow_community_plugins, check_for_updates (direct downloads: at most one
+check a day; on by default). The core applies playback, library and source
+settings; shells apply the appearance ones.
 
 Transparency scales the alpha of the glass grades: `jf_palette::glass_alpha`
 (token alpha at 0.5, opaque at 0, half the token alpha at 1) or
@@ -121,6 +153,18 @@ visible changes: `next_second_us`, `next_step_us` (progress bars),
 those into sleeps. Shells in other languages port `DisplayClock`,
 `LyricTimeline::cursor` and `next_change` and must pass
 `tests/contract/lyrics-cursor.json`. Monotonic time: `monotonic_now_ns()`.
+
+**The lyrics bar** (ADR-0022 §6): `lyrics_bar(timeline, t_ms) -> LyricsBar`
+says what the one-line lyrics bar (player bar, mini-player) and Desktop
+Lyrics show at a time: `line` (the active line, or in a gap between lines
+the last one that started; `None` before the first line), `next` (the next
+line by start; before the first line, the first one), `words` (each word of
+`line` from 0, still to come, to 1, sung: the share of the word's time for
+the word being sung) and `line_progress` (0–1 through `line`, for lines
+without word timing; its end, or the next line's start). Draw the sung part
+of each word by its value. Shells that draw every frame port it (it is a
+binary search and one pass over a line's words) and must pass
+`tests/contract/lyrics-bar.json`; the FFI also exports it.
 
 ## Playback output
 
@@ -264,9 +308,218 @@ or hanging plugin never holds up a command or a snapshot.
   The core calls it from the session's thread; its errors show as the
   slice's `error`. `unregister_external_player(id)` removes it.
 
+## Playing and showing quality
+
+`NowPlaying::quality: Option<AudioFormat>` is what is playing as decoded:
+`codec`, `sample_rate_hz`, `bit_depth`, `channels`, `bitrate_kbps`,
+`lossless` and `quality`, a `QualityLabel` the core decides (apps word it,
+never compute it): `HiResLossless` (lossless above 16-bit or above 48 kHz),
+`Lossless`, `High` (lossy at 256 kbit/s or more), `Standard`. It is `None`
+until the engine has opened the track, and a new `NowPlaying` event carries
+it then and on every track change. `NowPlaying::format` (`TrackInfo`) keeps
+the engine's raw facts and gains `bits_per_sample` (PCM, FLAC, ALAC).
+
+## Details and comments (ADR-0022)
+
+`Details { item: ItemRef }` answers with `Event::Details(DetailsPage)`:
+`item` and `request` (match them to what you asked), `title`, `subtitle`
+(artist), `description` (album notes, an artist's biography), `image` (a
+large cover or an artist photo: `ArtworkRef::File` to load, or
+`ArtworkRef::Url` to fetch with `source_artwork`), `facts` (`Fact { key:
+FactKey, value }`: the apps word the known keys `Version`, `Genre`,
+`Language`, `Released`, `Label`, `Composer`, `Lyricist`, `Arranger`,
+`Producer`, `Popularity`, `Quality`, `Isrc`, `Disc` ("1 of 2"), `Track` ("3
+of 12"); `Other { label }` carries the service's own label), `technical`
+(`TechnicalInfo`: `format` as above, `container`, `file_size_bytes`,
+`duration_ms`, `replaygain`, `path`), `comment_count`, `attribution` and
+`error`. `ItemRef` names a library `Track`, `Album` or `Artist` by id, a
+`File` outside the library, or `Source { plugin, item_kind, id }` (an item a
+source listed: its `SourceItem::source`, `kind` and `id`). Library items come
+from the tags and the file; source items from the plugin's `details` (when
+`PluginSummary::details`) and, for tracks that played, what the stream said.
+
+`Comments { item, page }` (sources with `PluginSummary::comments`) answers
+with `Event::Comments(CommentsPage)`: `hot` (first page only), `comments`,
+`total`, `next` (send `Comments { item, page: next }` for more),
+`attribution` (show it with the comments) and `error`. Comments are
+read-only and never stored.
+
+**Artist and album pages for source items.** `SourceItem::artist_id` and
+`album_id` are the source's ids of a track's or album's artist and album.
+Go to Artist: `Browse { plugin: source, node: Some(artist_id) }` lists the
+artist's albums (or tracks) and `Details { item: ItemRef::Source { plugin,
+item_kind: Artist, id: artist_id } }` gives the photo, biography and facts.
+Go to Album: the same with `album_id` and `ItemKind::Album`; the album's
+tracks come from `Browse`, its cover and facts from `Details`, and
+`PlayCollection { collection: Collection::Source { plugin, id: album_id } }`
+plays it. Library items keep using the library queries.
+
+## Discover (ADR-0022)
+
+`Discover { source }` answers with `Event::Discover(DiscoverPage { request,
+source, shelves, error })`. Each `Shelf` has an `id`, a `title`, a `style`
+(`Row`: one scrolling row of covers; `Grid`; `Chart`: a numbered list),
+`items` (`SourceItem`s, at most 50) and `more` (a node for See All: `Browse
+{ plugin: source, node: Some(more) }`). A plugin with `PluginSummary::discover`
+makes its own shelves (at most 12, in its words); for other sources the core
+makes them from the service's suggestions ("For You", id `for_you`, while
+signed in) and the top level of `Browse` (each root node a shelf of its first
+page), keeping to the source's content policy. `source: "library"` gives the
+library's page: Recently Added (`recently_added`), Most Played
+(`most_played`) and Rediscover (`rediscover`: albums not played for a long
+time). Shelves the core makes have stable ids; word their titles by id.
+
+## Covers (ADR-0022 §5)
+
+Source pictures (`ArtworkRef::Url` of source items, Now Playing, shelves,
+details and comment avatars) are fetched by the core, never by the apps: the
+plugin's allowlist decides, the picture's own headers go with the request
+(some services need them), and `http` links move to `https` where only that
+is allowed. For each one shown:
+
+1. call `source_artwork(url, size_px)` (`size_px` about the size drawn: 64,
+   128, 256, 512 or 1024);
+2. a path means the picture is in the cache: load the file;
+3. `None` means the core is fetching it: show the placeholder, and when
+   `Event::Artwork(ArtworkReady { url, size_px, path })` arrives for that
+   `url`, load `path` (or keep the placeholder when it is `None`: the
+   picture cannot be had, so stop asking for it in this view).
+
+Calling it for every list row as it appears is fine: requests for the same
+picture are made once, a few run at a time, and the newest requests go first
+while scrolling; the cache is bounded and evicts the least recently used
+files. Library rows keep `artwork_hash` and `artwork_thumbnail`.
+
+## AI Lyrics (ADR-0019)
+
+The `AiLyrics` slice: `available` (an AI Lyrics plugin, the first enabled
+plugin with `make_lyrics`, is installed and on: offer Create Synced Lyrics),
+`plugin`, `plan` (`AiLyricsPlan { mode: OnDevice | Online, engine,
+upload_to, automatic }`, `None` until the plugin answered or while Pro is
+inactive), `need`, `jobs`, `models` and `consents`.
+
+`need` is what must happen before `MakeLyrics` works, re-read whenever the
+plugin's settings, its sign-in, Pro, the consents or the models change:
+
+| `need` | Show |
+| --- | --- |
+| `Nothing` | Create Synced Lyrics works |
+| `Pro` | the Pro sheet |
+| `SignIn` | "Add your API key to make lyrics online." and Open AI Lyrics Settings (its Sign In) |
+| `Consent { origin }` | "Send This Song to {origin}?" (ui.md); Allow sends `AllowAudioUpload { plugin, origin }` |
+| `Model { id, name, bytes }` | "Download the {name} model ({bytes}) to make lyrics on this device." and Download (`DownloadSpeechModel { id }`) |
+| `Unavailable { reason }` | the reason |
+
+`MakeLyrics { song: SongRef::Current | SongRef::Library { id } }` queues a job
+(it fails with the reason while `need` is not `Nothing`, and for songs that
+play elsewhere or only open in another app). `jobs` lists waiting and running
+jobs and the newest finished ones, oldest first: `LyricsJob { id, title,
+artist, uid (the queue entry, when made for the song playing), library_id,
+stage }`. One runs at a time. `stage`: `Waiting`, `ReadingAudio`, `Sending {
+origin }`, `Recognising { fraction }` (0–1), `TimingWords`, then `Done`,
+`Failed { message }` ("Couldn't make lyrics: {message}", Try Again sends
+`MakeLyrics` again) or `Cancelled`. `CancelLyrics { job }` stops one.
+
+Made lyrics are kept in `<data>/made-lyrics/` and used whenever the song's
+own lyrics are missing or unsynced: the `Lyrics` slice then has `source:
+LyricsSource::Made { plugin, engine }` ("Made by AI Lyrics · {engine}").
+`DeleteMadeLyrics { song }` deletes them (ask first, ui.md).
+
+`models` lists the on-device models (`SpeechModelState { id, name, bytes,
+state }`, `state`: `NotDownloaded`, `Downloading { fraction }`, `Ready`,
+`Failed { message }`); `DownloadSpeechModel { id }`,
+`CancelSpeechModelDownload { id }` (keeps what came, to resume) and
+`DeleteSpeechModel { id }`. `consents` lists `AudioConsent { plugin, origin
+}`; `RevokeAudioUpload { plugin, origin }` is Stop Allowing.
+
+## The look (ADR-0020)
+
+The `Look` slice holds resolved values, so apps apply one thing:
+`corner_scale` (radii ×, 0–2), `glass` (glass alpha and blur ×, 0–1;
+Reduce Transparency and the Transparency setting still win), `aurora` (the
+field's strength, 0–1), `typeface` (`System`, `Rounded`, `Serif`, `Mono`: the
+platform's own faces), `text_scale` (every type size ×, 0.85–1.30),
+`density` (spacing × 0.8, 1.0, 1.2), `lyrics_weight`, `lyrics_glow` (0–1),
+`lyrics_highlight` (`Artwork`, `Accent`, `Custom { rgb }` as `0xRRGGBB`),
+`sidebar` (the places shown, in order; Settings is never listed and always
+shown), `home` (Home's sections, in order), `now_playing` (`Stage`,
+`Artwork`, `Lyrics`), `mini_player` (`Bar`, `Compact`, `Floating`),
+`customized` and `plugin`. With `customized` false every value is the
+Luminous default (`LookSnapshot::defaults`): 1, 1, the token
+`field.aurora-strength` (0.75), System, 1, Standard, Bold, 0.6, Artwork, all
+eight places in the ui.md order, Summary, Recently Added, Recently Played,
+Most Played, Stage, Bar. The core asks the active appearance plugin (the
+first enabled one) when it loads and after its settings change, checks the
+answer, and returns to the defaults while Pro is off.
+
+**Plugin settings in the app's language** (API 1.2):
+`localized_settings_schema(plugin, language)` returns the plugin's schema
+text with its translations for a BCP 47 tag (`zh-Hans`, `zh-TW`, `ja-JP`;
+English where a word is missing), the settings in the plugin's order. Render
+forms from it rather than from `settings_schema_json` once the app has a
+language other than English. Schema profile 1.2 adds `"format": "color"`
+(`#RRGGBB`, a colour well), sliders (`minimum` and `maximum`, `multipleOf`
+the step), ordered checklists (`"type": "array"` with `items` and
+`uniqueItems`; the value lists the shown items in order), `oneOf` choices
+with titles, and `x-jf-group` headings (consecutive properties with the same
+group together); `docs/plugins/authoring.md` has the details.
+
+## Jellyfesh Pro (ADR-0021)
+
+The `Pro` slice: `active`, `source` (`None`; `Preview`: "Pro features are
+free during the public beta."; `Store { store }`: "Jellyfesh Pro ·
+Purchased"; `Licence { id_suffix, issued_at_ms }`: "Jellyfesh Pro · Licence
+…{id_suffix}"), `preview` (a Pro Preview build), `licence_error` (why the last
+key was refused: `Malformed`, `UnknownKey`, `BadSignature`, `WrongProduct`,
+`Revoked`; the apps word them, ui.md), `stores` (where this build can sell
+Pro: show Buy and Restore Purchases only for these) and `licence_keys`
+(show Enter Licence Key… only when true: App Store and Google Play builds
+sell Pro only through their store, and `ActivateLicence` fails there).
+Sources, strongest first: a Preview build, an active store entitlement, a
+valid licence key.
+
+**Store builds** (`Distribution::AppStore`, `MicrosoftStore`, `GooglePlay`;
+ADR-0021 §4): `SourcesSnapshot::can_install_plugins` is false, so hide
+Install from File… and Allow Community Plugins; the core refuses
+`InstallPlugin` and `AcknowledgeUnofficial` and keeps
+`Settings::allow_community_plugins` off (bundled plugins still install and
+update). They have no update check (`UpdateSnapshot::supported` is false).
+
+* `ActivateLicence { key }` checks a key offline (`JFP1-…`; dashes, spaces and
+  case do not matter) and keeps it; a bad one leaves `licence_error`.
+  `RemoveLicence` removes it.
+* Store builds report what their store says with
+  `Core::set_store_entitlement(StoreEntitlement { store, product, active,
+  transaction })` (product `org.jellyfesh.pro`, `pro` on Google Play) at
+  start and on every change.
+* While Pro is inactive, Pro plugins (`PluginSummary::requires_pro`) stay
+  installed, their settings and sign-in work, and their Pro calls answer
+  "needs Jellyfesh Pro": AI Lyrics' `need` is `Pro` and the look is the
+  default. Turning Pro off stops lyrics jobs; nothing is deleted.
+
+`PluginSummary::kind` is `Source` or `Extension` (plugins that make lyrics or
+change the look and offer no music: Settings › Extensions, not Sources);
+`permissions` lists the host imports the manifest declares (`audio`,
+`speech`) for the install screen; `discover`, `details` and `comments` say
+which Discover, details and comments the source offers.
+
+## Updates (ADR-0021 §5)
+
+The `Update` slice: `supported` (direct downloads: show Check for Updates
+and its setting), `checking`, `available` (`UpdateInfo { version, url }`:
+"Jellyfesh {version} Is Available" and View Release opening `url`),
+`last_checked_ms`, `auto` (checks run by themselves: supported and
+`Settings::check_for_updates` on) and `error`. The core checks GitHub's
+releases at most once a day while `auto`, and on `CheckForUpdates`;
+pre-releases count while Jellyfesh is in beta. Nothing is installed.
+
 ## Status in this release's development
 
-Available now: everything from v0.0.2, `PlayCollection`/`EnqueueCollection`
+v0.0.7: the types above are final. While the v0.0.7 core is built, commands
+it does not run yet answer `CommandFailed` with "not yet" and the new slices
+keep their defaults.
+
+Available since v0.0.6: everything from v0.0.2, `PlayCollection`/`EnqueueCollection`
 for albums, artists, playlists, favourites, track lists and source
 containers, playlists, favourites, play statistics, artist pages,
 thumbnails, folder watching, crossfade, output-device switching,

@@ -59,6 +59,8 @@ pub(crate) enum Msg {
     Library(LibraryMsg),
     Media(MediaMsg),
     Sources(SourcesMsg),
+    /// What the app's store says about Jellyfesh Pro.
+    StoreEntitlement(crate::types::StoreEntitlement),
     Shutdown,
 }
 
@@ -133,6 +135,8 @@ pub(crate) struct Shared {
     pub(crate) remote_session: AtomicU64,
     /// Players the app registered, by source id.
     pub(crate) external: RwLock<HashMap<String, External>>,
+    /// The plugin host, for queries the actor need not answer.
+    pub(crate) host: RwLock<Option<jf_plugin_host::PluginHost>>,
 }
 
 /// A player the app registered, with the name its source shows.
@@ -230,15 +234,60 @@ impl Shared {
                     allow_community: false,
                     secret_storage: Default::default(),
                     unavailable: None,
+                    can_install_plugins: true,
                 }),
                 remote: Arc::new(remote::ended(0, None)),
                 muted: false,
+                ai_lyrics: Arc::new(crate::types::AiLyricsSnapshot {
+                    version: 0,
+                    available: false,
+                    plugin: None,
+                    plan: None,
+                    need: crate::types::AiLyricsNeed::Unavailable {
+                        reason: "no AI Lyrics plugin is installed".into(),
+                    },
+                    jobs: Vec::new(),
+                    models: Vec::new(),
+                    consents: Vec::new(),
+                }),
+                look: Arc::new(crate::types::LookSnapshot::defaults(0)),
+                pro: Arc::new(crate::types::ProSnapshot {
+                    version: 0,
+                    active: false,
+                    source: crate::types::ProSource::None,
+                    preview: false,
+                    licence_error: None,
+                    stores: Vec::new(),
+                    licence_keys: true,
+                }),
+                update: Arc::new(crate::types::UpdateSnapshot {
+                    version: 0,
+                    supported: false,
+                    checking: false,
+                    available: None,
+                    last_checked_ms: None,
+                    auto: false,
+                    error: None,
+                }),
             }),
             subscribers: Mutex::new(Vec::new()),
             queue: RwLock::new(queue),
             remote_session: AtomicU64::new(0),
             external: RwLock::new(HashMap::new()),
+            host: RwLock::new(None),
         }
+    }
+
+    /// The plugin host, when sources run.
+    pub(crate) fn host(&self) -> Option<jf_plugin_host::PluginHost> {
+        self.host.read().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// A cached source picture, or `None` while it is fetched (see
+    /// [`crate::Core::source_artwork`]).
+    pub(crate) fn source_artwork(&self, url: &str, size_px: u32) -> Option<PathBuf> {
+        let _ = (url, size_px);
+        None
     }
 
     pub(crate) fn read_queue(&self) -> RwLockReadGuard<'_, Queue> {
@@ -331,12 +380,16 @@ impl Actor {
             }
         }
         // Settings from before v0.0.3 lived under separate keys.
-        let settings = settings.unwrap_or_else(|| Settings {
+        let mut settings = settings.unwrap_or_else(|| Settings {
             eq: eq.clone(),
             replaygain_mode: rg.0,
             preamp_db: rg.1,
             ..Settings::default()
         });
+        if config.distribution.store().is_some() {
+            // Store builds keep community plugins off (ADR-0021 §4).
+            settings.allow_community_plugins = false;
+        }
         let (eq, rg) = (
             settings.eq.clone(),
             (settings.replaygain_mode, settings.preamp_db),
@@ -351,6 +404,7 @@ impl Actor {
         )?;
         let mut sources = Sources::new(&config, settings.allow_community_plugins, &shared, &tx);
         sources.install_bundled(config.bundled_plugins.clone(), declined_bundled);
+        *shared.host.write().unwrap_or_else(|e| e.into_inner()) = sources.ctx().map(|ctx| ctx.host.clone());
         let media_jobs = spawn_media_worker(db, config.cache_dir.clone(), sources.ctx(), tx)?;
 
         let mut actor = Actor {
@@ -427,6 +481,7 @@ impl Actor {
                     Ok(Msg::Library(msg)) => self.on_library(msg),
                     Ok(Msg::Media(msg)) => self.on_media(msg),
                     Ok(Msg::Sources(msg)) => self.on_sources(msg),
+                    Ok(Msg::StoreEntitlement(entitlement)) => self.on_store_entitlement(entitlement),
                     Ok(Msg::Shutdown) | Err(_) => break,
                 },
                 recv(engine_events) -> ev => match ev {
@@ -813,6 +868,11 @@ impl Actor {
                 self.publish_sources(true);
             }
             Command::AcknowledgeUnofficial { id: plugin } => {
+                if self.sources.store_build() {
+                    return Err(CoreError::Other(
+                        "community plugins are not available in this edition of Jellyfesh".into(),
+                    ));
+                }
                 self.sources.acknowledge(&plugin)?;
                 if !self.settings.allow_community_plugins {
                     // Accepting the disclosure turns community plugins on.
@@ -843,6 +903,24 @@ impl Actor {
             Command::Logout { plugin } => self.sources.logout(id, plugin)?,
             Command::Browse { plugin, node, page } => self.sources.browse(id, plugin, node, page)?,
             Command::Remote { action } => self.remote_action(action)?,
+            Command::ResetPluginSettings { plugin } => {
+                self.sources.reset_settings(&plugin)?;
+                self.publish_sources(true);
+            }
+            Command::MakeLyrics { .. }
+            | Command::CancelLyrics { .. }
+            | Command::DeleteMadeLyrics { .. }
+            | Command::AllowAudioUpload { .. }
+            | Command::RevokeAudioUpload { .. }
+            | Command::DownloadSpeechModel { .. }
+            | Command::CancelSpeechModelDownload { .. }
+            | Command::DeleteSpeechModel { .. }
+            | Command::ActivateLicence { .. }
+            | Command::RemoveLicence
+            | Command::CheckForUpdates
+            | Command::Discover { .. }
+            | Command::Details { .. }
+            | Command::Comments { .. } => return Err(CoreError::Other("not yet".into())),
         }
         Ok(())
     }
@@ -1018,6 +1096,12 @@ impl Actor {
                 limit: usize::MAX,
                 ..jf_library::TrackQuery::default()
             }),
+            Collection::Songs { sort, descending } => library(jf_library::TrackQuery {
+                sort: *sort,
+                descending: *descending,
+                limit: usize::MAX,
+                ..jf_library::TrackQuery::default()
+            }),
             Collection::Tracks { tracks } => Ok(tracks.clone()),
             Collection::Playlist { .. } | Collection::Favorites => {
                 Ok(self.collection_entries(collection, 0)?.0)
@@ -1079,7 +1163,11 @@ impl Actor {
 
     /// Applies new settings: the parts the core owns take effect at once;
     /// all of them are saved and published.
-    fn apply_settings(&mut self, settings: Settings) {
+    fn apply_settings(&mut self, mut settings: Settings) {
+        if self.config.distribution.store().is_some() {
+            // Store builds keep community plugins off (ADR-0021 §4).
+            settings.allow_community_plugins = false;
+        }
         let mut settings = settings;
         settings.preamp_db = if settings.preamp_db.is_finite() {
             settings.preamp_db.clamp(-15.0, 15.0)
@@ -1759,6 +1847,7 @@ impl Actor {
                     artwork: artwork.map(ArtworkRef::File),
                     format: None,
                     link: None,
+                    quality: None,
                 };
                 Ok((play, now))
             }
@@ -1802,6 +1891,7 @@ impl Actor {
                     artwork: theme::folder_artwork(path).map(ArtworkRef::File),
                     format: None,
                     link: None,
+                    quality: None,
                 };
                 Ok((play, now))
             }
@@ -1828,6 +1918,10 @@ impl Actor {
                 self.shared.emit(Event::LibraryChanged { revision });
             }
         }
+    }
+
+    fn on_store_entitlement(&mut self, entitlement: crate::types::StoreEntitlement) {
+        tracing::debug!(?entitlement.store, entitlement.active, "store entitlement");
     }
 
     fn on_media(&mut self, msg: MediaMsg) {
@@ -2229,6 +2323,7 @@ fn source_now_playing(item: &QueueItem, track: &SourceTrack, link: Option<String
         artwork: track.artwork_url.clone().map(ArtworkRef::Url),
         format: None,
         link,
+        quality: None,
     }
 }
 

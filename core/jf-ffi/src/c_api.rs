@@ -24,7 +24,7 @@ use serde::de::DeserializeOwned;
 use crate::api::{CoreListener, JellyfeshCore};
 use crate::error::CoreFfiError;
 use crate::secrets::{SecretStore, SecretStoreError};
-use crate::types::{AlbumSort, CoreConfig, Event, TrackQuery, TrackRef};
+use crate::types::{AlbumSort, CoreConfig, Event, LyricTimeline, StoreEntitlement, TrackQuery, TrackRef};
 
 /// Receives each event as JSON. `event_json` is valid only during the call.
 pub type JfEventCallback = Option<unsafe extern "C" fn(user_data: *mut c_void, event_json: *const c_char)>;
@@ -415,6 +415,29 @@ struct Export {
     path: String,
 }
 
+#[derive(serde::Deserialize)]
+struct EntitlementArg {
+    entitlement: StoreEntitlement,
+}
+
+#[derive(serde::Deserialize)]
+struct SchemaArgs {
+    plugin: String,
+    language: String,
+}
+
+#[derive(serde::Deserialize)]
+struct ArtworkArgs {
+    url: String,
+    size_px: u32,
+}
+
+#[derive(serde::Deserialize)]
+struct BarArgs {
+    timeline: LyricTimeline,
+    t_ms: u32,
+}
+
 /// Defines one query function per line: `name(Args) => |core, args| call`.
 macro_rules! queries {
     ($($(#[$doc:meta])* $name:ident($args:ty) => |$core:ident, $a:pat_param| $call:expr;)*) => {
@@ -481,6 +504,33 @@ queries! {
     jf_core_roots(NoArgs) => |core, _a| core.roots();
     /// No arguments → `LibraryStats`.
     jf_core_stats(NoArgs) => |core, _a| core.stats();
+    /// `{"entitlement": StoreEntitlement}` → null.
+    jf_core_set_store_entitlement(EntitlementArg) => |core, a| core.set_store_entitlement(a.entitlement);
+    /// `{"plugin", "language"}` → schema text or null.
+    jf_core_localized_settings_schema(SchemaArgs) => |core, a| core.localized_settings_schema(a.plugin, a.language);
+    /// `{"url", "size_px"}` → path or null (an `Artwork` event follows when null).
+    jf_core_source_artwork(ArtworkArgs) => |core, a| core.source_artwork(a.url, a.size_px);
+}
+
+/// `{"timeline": LyricTimeline, "t_ms"}` → `{"ok": LyricsBar}` (or `{"error"}` for bad JSON).
+///
+/// # Safety
+///
+/// `args_json` must be NULL or a NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn jf_lyrics_bar(args_json: *const c_char) -> *mut c_char {
+    let result = guard(
+        || {
+            if args_json.is_null() {
+                return Err(CoreFfiError::InvalidArgument("lyrics_bar needs arguments".into()));
+            }
+            // SAFETY: forwarded from the caller's contract.
+            let args: BarArgs = unsafe { parse(args_json) }?;
+            Ok(crate::api::lyrics_bar(args.timeline, args.t_ms))
+        },
+        || Err(panicked()),
+    );
+    into_c(envelope(result))
 }
 
 /// Parses the arguments, runs one query and wraps the result in `{"ok"}` or `{"error"}`.

@@ -189,6 +189,8 @@ mod tests {
             track: None,
             also_in: Vec::new(),
             link: Some("https://music.example.com/song/b".into()),
+            artist_id: None,
+            album_id: None,
         }
     }
 

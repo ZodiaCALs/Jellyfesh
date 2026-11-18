@@ -706,6 +706,7 @@ fn lyrics(args: &LyricsArgs) -> Result<()> {
             jf_core::LyricsSource::Sidecar(path) => path.display().to_string(),
             jf_core::LyricsSource::Embedded => "embedded in the file".to_string(),
             jf_core::LyricsSource::Plugin(plugin) => format!("from {plugin}"),
+            jf_core::LyricsSource::Made { plugin, engine } => format!("made by {plugin} ({engine})"),
         };
         (doc, label)
     };

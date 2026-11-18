@@ -223,6 +223,7 @@ impl From<CoreConfig> for jf::Config {
             persist_session: value.persist_session,
             watch_folders: value.watch_folders,
             bundled_plugins: value.bundled_plugins.conv(),
+            distribution: value.distribution.conv(),
             ..jf::Config::new(value.data_dir, value.cache_dir)
         }
     }
@@ -239,10 +240,19 @@ impl From<jf::Config> for CoreConfig {
             persist_session: value.persist_session,
             watch_folders: value.watch_folders,
             bundled_plugins: value.bundled_plugins.conv(),
+            distribution: value.distribution.conv(),
         }
     }
 }
 conv_via_from!(jf::Config => CoreConfig);
+
+use jf::Distribution as CoreDistribution;
+mirror_enum!(CoreDistribution => Distribution { Direct, AppStore, MicrosoftStore, GooglePlay, Web, Source });
+
+use jf::Store as CoreStore;
+mirror_enum!(CoreStore => Store { AppStore, MicrosoftStore, GooglePlay });
+
+mirror_struct!(jf::StoreEntitlement => StoreEntitlement { store, product, active, transaction });
 
 // ---- commands -----------------------------------------------------------------------------------
 
@@ -297,6 +307,33 @@ mirror_enum!(CoreCommand => Command {
     Search { query, scope },
     Browse { plugin, node, page },
     Remote { action },
+    MakeLyrics { song },
+    CancelLyrics { job },
+    DeleteMadeLyrics { song },
+    AllowAudioUpload { plugin, origin },
+    RevokeAudioUpload { plugin, origin },
+    DownloadSpeechModel { id },
+    CancelSpeechModelDownload { id },
+    DeleteSpeechModel { id },
+    ResetPluginSettings { plugin },
+    ActivateLicence { key },
+    RemoveLicence,
+    CheckForUpdates,
+    Discover { source },
+    Details { item },
+    Comments { item, page },
+});
+
+use jf::SongRef as CoreSongRef;
+mirror_enum!(CoreSongRef => SongRef { Current, Library { id } });
+
+use jf::ItemRef as CoreItemRef;
+mirror_enum!(CoreItemRef => ItemRef {
+    Track { id },
+    Album { id },
+    Artist { id },
+    File { path },
+    Source { plugin, item_kind, id },
 });
 
 use jf::RemoteAction as CoreRemoteAction;
@@ -345,6 +382,7 @@ mirror_enum!(CoreCollection => Collection {
     Artist { id },
     Playlist { id },
     Favorites,
+    Songs { sort, descending },
     Tracks { tracks },
     Source { plugin, id },
 });
@@ -396,6 +434,7 @@ mirror_struct!(jf::Settings => Settings {
     resume_on_launch,
     watch_folders,
     allow_community_plugins,
+    check_for_updates,
 });
 
 use jf::ReplayGainMode as CoreReplayGainMode;
@@ -436,7 +475,16 @@ mirror_struct!(jf::PluginSummary => PluginSummary {
     settings_schema_json,
     settings_json,
     icon,
+    kind,
+    requires_pro,
+    permissions,
+    discover,
+    details,
+    comments,
 });
+
+use jf::PluginKind as CorePluginKind;
+mirror_enum!(CorePluginKind => PluginKind { Source, Extension });
 
 use jf::SecretStorage as CoreSecretStorage;
 mirror_enum!(CoreSecretStorage => SecretStorage { Keystore, SessionOnly });
@@ -459,6 +507,7 @@ mirror_struct!(jf::SourcesSnapshot => SourcesSnapshot {
     allow_community,
     secret_storage,
     unavailable,
+    can_install_plugins,
 });
 
 use jf::AuthFieldKind as CoreAuthFieldKind;
@@ -517,6 +566,8 @@ mirror_struct!(jf::SourceItem => SourceItem {
     track,
     also_in,
     link,
+    artist_id,
+    album_id,
 });
 
 impl Conv<u64> for jf::CommandId {
@@ -672,6 +723,7 @@ mirror_struct!(jf::TrackInfo => TrackInfo {
     duration_us,
     gapless,
     bitrate,
+    bits_per_sample,
 });
 mirror_struct!(jf::NowPlaying => NowPlaying {
     uid,
@@ -684,6 +736,7 @@ mirror_struct!(jf::NowPlaying => NowPlaying {
     artwork,
     format,
     link,
+    quality,
 });
 
 // ---- remote sessions ----------------------------------------------------------------------------
@@ -762,6 +815,7 @@ impl From<jf::LyricsSource> for LyricsSource {
             jf::LyricsSource::Sidecar(path) => LyricsSource::Sidecar { path: path.conv() },
             jf::LyricsSource::Embedded => LyricsSource::Embedded,
             jf::LyricsSource::Plugin(id) => LyricsSource::Plugin { id },
+            jf::LyricsSource::Made { plugin, engine } => LyricsSource::Made { plugin, engine },
         }
     }
 }
@@ -772,6 +826,7 @@ impl From<LyricsSource> for jf::LyricsSource {
             LyricsSource::Sidecar { path } => jf::LyricsSource::Sidecar(path.conv()),
             LyricsSource::Embedded => jf::LyricsSource::Embedded,
             LyricsSource::Plugin { id } => jf::LyricsSource::Plugin(id),
+            LyricsSource::Made { plugin, engine } => jf::LyricsSource::Made { plugin, engine },
         }
     }
 }
@@ -807,7 +862,218 @@ into_arc!(
     RemoteSnapshot => jf::RemoteSnapshot,
     SearchUpdate => jf::SearchUpdate,
     BrowseUpdate => jf::BrowseUpdate,
+    AiLyricsSnapshot => jf::AiLyricsSnapshot,
+    LookSnapshot => jf::LookSnapshot,
+    ProSnapshot => jf::ProSnapshot,
+    UpdateSnapshot => jf::UpdateSnapshot,
+    DiscoverPage => jf::DiscoverPage,
+    DetailsPage => jf::DetailsPage,
+    CommentsPage => jf::CommentsPage,
+    ArtworkReady => jf::ArtworkReady,
 );
+
+// ---- AI Lyrics, the look, Pro and updates (ADR-0019 – ADR-0021) ---------------------------------
+
+use jf::AiLyricsMode as CoreAiLyricsMode;
+mirror_enum!(CoreAiLyricsMode => AiLyricsMode { OnDevice, Online });
+mirror_struct!(jf::AiLyricsPlan => AiLyricsPlan { mode, engine, upload_to, automatic });
+
+use jf::AiLyricsNeed as CoreAiLyricsNeed;
+mirror_enum!(CoreAiLyricsNeed => AiLyricsNeed {
+    Nothing,
+    Pro,
+    SignIn,
+    Consent { origin },
+    Model { id, name, bytes },
+    Unavailable { reason },
+});
+
+use jf::LyricsJobStage as CoreLyricsJobStage;
+mirror_enum!(CoreLyricsJobStage => LyricsJobStage {
+    Waiting,
+    ReadingAudio,
+    Sending { origin },
+    Recognising { fraction },
+    TimingWords,
+    Done,
+    Failed { message },
+    Cancelled,
+});
+mirror_struct!(jf::LyricsJob => LyricsJob { id, title, artist, uid, library_id, stage });
+
+use jf::SpeechModelStatus as CoreSpeechModelStatus;
+mirror_enum!(CoreSpeechModelStatus => SpeechModelStatus {
+    NotDownloaded,
+    Downloading { fraction },
+    Ready,
+    Failed { message },
+});
+mirror_struct!(jf::SpeechModelState => SpeechModelState { id, name, bytes, state });
+mirror_struct!(jf::AudioConsent => AudioConsent { plugin, origin });
+mirror_struct!(jf::AiLyricsSnapshot => AiLyricsSnapshot {
+    version,
+    available,
+    plugin,
+    plan,
+    need,
+    jobs,
+    models,
+    consents,
+});
+
+use jf::Typeface as CoreTypeface;
+mirror_enum!(CoreTypeface => Typeface { System, Rounded, Serif, Mono });
+use jf::Density as CoreDensity;
+mirror_enum!(CoreDensity => Density { Compact, Standard, Roomy });
+use jf::LyricsWeight as CoreLyricsWeight;
+mirror_enum!(CoreLyricsWeight => LyricsWeight { Regular, Medium, Semibold, Bold, Heavy });
+use jf::LyricsHighlight as CoreLyricsHighlight;
+mirror_enum!(CoreLyricsHighlight => LyricsHighlight { Artwork, Accent, Custom { rgb } });
+use jf::Place as CorePlace;
+mirror_enum!(CorePlace => Place { Home, Albums, Artists, Songs, Playlists, Favourites, Search, Sources });
+use jf::HomeSection as CoreHomeSection;
+mirror_enum!(CoreHomeSection => HomeSection { Summary, RecentlyAdded, RecentlyPlayed, MostPlayed, Favourites });
+use jf::NowPlayingLayout as CoreNowPlayingLayout;
+mirror_enum!(CoreNowPlayingLayout => NowPlayingLayout { Stage, Artwork, Lyrics });
+use jf::MiniPlayerStyle as CoreMiniPlayerStyle;
+mirror_enum!(CoreMiniPlayerStyle => MiniPlayerStyle { Bar, Compact, Floating });
+mirror_struct!(jf::LookSnapshot => LookSnapshot {
+    version,
+    corner_scale,
+    glass,
+    aurora,
+    typeface,
+    text_scale,
+    density,
+    lyrics_weight,
+    lyrics_glow,
+    lyrics_highlight,
+    sidebar,
+    home,
+    now_playing,
+    mini_player,
+    customized,
+    plugin,
+});
+
+use jf::ProSource as CoreProSource;
+mirror_enum!(CoreProSource => ProSource {
+    None,
+    Preview,
+    Store { store },
+    Licence { id_suffix, issued_at_ms },
+});
+use jf::LicenceError as CoreLicenceError;
+mirror_enum!(CoreLicenceError => LicenceError { Malformed, UnknownKey, BadSignature, WrongProduct, Revoked });
+mirror_struct!(jf::ProSnapshot => ProSnapshot {
+    version,
+    active,
+    source,
+    preview,
+    licence_error,
+    stores,
+    licence_keys,
+});
+
+mirror_struct!(jf::UpdateInfo => UpdateInfo { version, url });
+mirror_struct!(jf::UpdateSnapshot => UpdateSnapshot {
+    version,
+    supported,
+    checking,
+    available,
+    last_checked_ms,
+    auto,
+    error,
+});
+
+// ---- Discover, details and comments (ADR-0022) --------------------------------------------------
+
+use jf::ShelfStyle as CoreShelfStyle;
+mirror_enum!(CoreShelfStyle => ShelfStyle { Row, Grid, Chart });
+mirror_struct!(jf::Shelf => Shelf { id, title, style, items, more });
+mirror_struct!(jf::DiscoverPage => DiscoverPage { request, source, shelves, error });
+
+use jf::FactKey as CoreFactKey;
+mirror_enum!(CoreFactKey => FactKey {
+    Version,
+    Genre,
+    Language,
+    Released,
+    Label,
+    Composer,
+    Lyricist,
+    Arranger,
+    Producer,
+    Popularity,
+    Quality,
+    Isrc,
+    Disc,
+    Track,
+    Other { label },
+});
+mirror_struct!(jf::Fact => Fact { key, value });
+
+use jf::QualityLabel as CoreQualityLabel;
+mirror_enum!(CoreQualityLabel => QualityLabel { HiResLossless, Lossless, High, Standard });
+mirror_struct!(jf::AudioFormat => AudioFormat {
+    codec,
+    sample_rate_hz,
+    bit_depth,
+    channels,
+    bitrate_kbps,
+    lossless,
+    quality,
+});
+mirror_struct!(jf::ReplayGainValues => ReplayGainValues {
+    track_gain_db,
+    track_peak,
+    album_gain_db,
+    album_peak,
+});
+mirror_struct!(jf::TechnicalInfo => TechnicalInfo {
+    format,
+    container,
+    file_size_bytes,
+    duration_ms,
+    replaygain,
+    path,
+});
+mirror_struct!(jf::DetailsPage => DetailsPage {
+    request,
+    item,
+    title,
+    subtitle,
+    description,
+    image,
+    facts,
+    technical,
+    comment_count,
+    attribution,
+    error,
+});
+mirror_struct!(jf::CommentEntry => CommentEntry { id, author, avatar, text, likes, time_ms, replies });
+mirror_struct!(jf::CommentsPage => CommentsPage {
+    request,
+    item,
+    hot,
+    comments,
+    total,
+    next,
+    attribution,
+    error,
+});
+mirror_struct!(jf::ArtworkReady => ArtworkReady { url, size_px, path });
+
+impl From<jf::LyricsBar> for LyricsBar {
+    fn from(value: jf::LyricsBar) -> Self {
+        LyricsBar {
+            line: value.line.conv(),
+            next: value.next.conv(),
+            words: value.words,
+            line_progress: value.line_progress,
+        }
+    }
+}
 
 impl From<jf::Snapshot> for Snapshot {
     fn from(value: jf::Snapshot) -> Self {
@@ -824,6 +1090,10 @@ impl From<jf::Snapshot> for Snapshot {
             sources: value.sources.conv(),
             remote: value.remote.conv(),
             muted: value.muted,
+            ai_lyrics: value.ai_lyrics.conv(),
+            look: value.look.conv(),
+            pro: value.pro.conv(),
+            update: value.update.conv(),
         }
     }
 }
@@ -843,6 +1113,10 @@ impl From<Snapshot> for jf::Snapshot {
             sources: value.sources.conv(),
             remote: value.remote.conv(),
             muted: value.muted,
+            ai_lyrics: value.ai_lyrics.conv(),
+            look: value.look.conv(),
+            pro: value.pro.conv(),
+            update: value.update.conv(),
         }
     }
 }
@@ -897,6 +1171,22 @@ impl From<jf::Event> for Event {
             jf::Event::Buffering { uid, buffering } => Event::Buffering { uid, buffering },
             jf::Event::CommandFailed { id, error } => Event::CommandFailed { id: id.0, error },
             jf::Event::Error { message } => Event::Error { message },
+            jf::Event::AiLyrics(snapshot) => Event::AiLyrics {
+                snapshot: snapshot.conv(),
+            },
+            jf::Event::Look(snapshot) => Event::Look {
+                snapshot: snapshot.conv(),
+            },
+            jf::Event::Pro(snapshot) => Event::Pro {
+                snapshot: snapshot.conv(),
+            },
+            jf::Event::Update(snapshot) => Event::Update {
+                snapshot: snapshot.conv(),
+            },
+            jf::Event::Discover(page) => Event::Discover { page: page.conv() },
+            jf::Event::Details(page) => Event::Details { page: page.conv() },
+            jf::Event::Comments(page) => Event::Comments { page: page.conv() },
+            jf::Event::Artwork(ready) => Event::Artwork { ready: ready.conv() },
         }
     }
 }
@@ -928,6 +1218,14 @@ impl From<Event> for jf::Event {
                 error,
             },
             Event::Error { message } => jf::Event::Error { message },
+            Event::AiLyrics { snapshot } => jf::Event::AiLyrics(snapshot.conv()),
+            Event::Look { snapshot } => jf::Event::Look(snapshot.conv()),
+            Event::Pro { snapshot } => jf::Event::Pro(snapshot.conv()),
+            Event::Update { snapshot } => jf::Event::Update(snapshot.conv()),
+            Event::Discover { page } => jf::Event::Discover(page.conv()),
+            Event::Details { page } => jf::Event::Details(page.conv()),
+            Event::Comments { page } => jf::Event::Comments(page.conv()),
+            Event::Artwork { ready } => jf::Event::Artwork(ready.conv()),
         }
     }
 }

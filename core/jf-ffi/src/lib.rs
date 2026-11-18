@@ -29,7 +29,7 @@ pub mod types;
 
 pub use api::{
     CoreListener, JellyfeshCore, default_cache_dir, default_data_dir, eq_presets, library_version,
-    monotonic_now_ns, output_devices,
+    lyrics_bar, monotonic_now_ns, output_devices,
 };
 pub use error::CoreFfiError;
 pub use external::{ExternalItem, ExternalPlayer, ExternalPlayerError, ExternalState};

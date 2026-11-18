@@ -253,6 +253,21 @@ public sealed class JellyfeshCore : IDisposable
     public LibraryStats Stats() =>
         Query(Native.jf_core_stats, NoArguments, JellyfeshJsonContext.Default.LibraryStats)!;
 
+    /// <summary>What the app's store says about Jellyfesh Pro, after the store glue verified it
+    /// (StoreContext licences). Send it at start and on every change; the Pro slice follows.</summary>
+    public void SetStoreEntitlement(StoreEntitlement entitlement) =>
+        Query(Native.jf_core_set_store_entitlement, Args(new EntitlementArgs(entitlement), InteropJsonContext.Default.EntitlementArgs), JellyfeshJsonContext.Default.String);
+
+    /// <summary>A plugin's settings schema in a language (zh-Hans, zh-TW, ja-JP; English where it
+    /// has no translation), settings in the plugin's order; null when it is not installed.</summary>
+    public string? LocalizedSettingsSchema(string plugin, string language) =>
+        Query(Native.jf_core_localized_settings_schema, Args(new SchemaArgs(plugin, language), InteropJsonContext.Default.SchemaArgs), JellyfeshJsonContext.Default.String);
+
+    /// <summary>A source picture (an ArtworkRef.Url) as a cached file fitted to about sizePx: the
+    /// path when it is cached, else null while the core fetches it and an Event.Artwork follows.</summary>
+    public string? SourceArtwork(string url, uint sizePx) =>
+        Query(Native.jf_core_source_artwork, Args(new ArtworkArgs(url, sizePx), InteropJsonContext.Default.ArtworkArgs), JellyfeshJsonContext.Default.String);
+
     /// <summary>Saves the session, stops playback and the listener. Further calls do nothing.</summary>
     public void Shutdown()
     {
@@ -376,6 +391,14 @@ public static class JellyfeshMethods
 
     /// <summary>The version of the native library.</summary>
     public static string LibraryVersion() => Native.TakeString(Native.jf_library_version()) ?? "";
+
+    /// <summary>What the one-line lyrics bar shows at tMs: the line, the next line and each word's
+    /// progress (tests/contract/lyrics-bar.json). Views that draw every frame use the port in
+    /// Jellyfesh.Shared instead.</summary>
+    public static LyricsBar LyricsBar(LyricTimeline timeline, uint tMs) =>
+        Results.Unwrap(
+            Native.TakeString(Native.jf_lyrics_bar(JsonSerializer.Serialize(new LyricsBarArgs(timeline, tMs), InteropJsonContext.Default.LyricsBarArgs))),
+            JellyfeshJsonContext.Default.LyricsBar)!;
 }
 
 /// <summary>Reads {"ok": value} or {"error": {kind, message}}.</summary>

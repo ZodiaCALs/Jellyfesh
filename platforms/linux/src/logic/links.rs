@@ -83,6 +83,8 @@ mod tests {
             }),
             also_in: Vec::new(),
             link: link.then(|| "https://music.example.com/song/42".into()),
+            artist_id: None,
+            album_id: None,
         }
     }
 

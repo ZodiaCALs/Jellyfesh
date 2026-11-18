@@ -1,4 +1,4 @@
-# The FFI layer (v0.0.6)
+# The FFI layer (v0.0.7)
 
 How the macOS (Swift), Android (Kotlin) and Windows (C#) shells reach
 `jf-core`: one crate, `core/jf-ffi`, exposes the core API of
@@ -74,19 +74,29 @@ The shells code against these names; they follow the Rust ones.
 `playlist(id)`, `playlist_entries(id, offset, limit)`,
 `export_playlist(id, path)`, `favorites(offset, limit)`, `is_favorite(track)`,
 `artwork_thumbnail(hash, size_px) -> Option<String>`,
-`queue_window(offset, limit)`, `history()`, `roots()`, `stats()`; and
+`queue_window(offset, limit)`, `history()`, `roots()`, `stats()`,
+`localized_settings_schema(plugin, language) -> Option<String>`,
+`source_artwork(url, size_px) -> Option<String>` (a cached file, or `None`
+and an `Event::Artwork` follows: `core-api.md`, "Covers") and
+`set_store_entitlement(entitlement)` (`core-api.md`, "Jellyfesh Pro"); and
 `shutdown()`. Swift and Kotlin use lowerCamelCase (`searchLibrary`,
 `artworkThumbnail(hash:sizePx:)`), C# PascalCase (`SearchLibrary`).
 
 **Free functions:** `output_devices()` (throws), `eq_presets()` (the equalizer
 presets every app lists: `flat`, `bass_boost`, `vocal`, `treble`, shown as
 "Flat", "Bass Boost", "Vocal", "Treble"), `monotonic_now_ns()`,
-`default_data_dir()`, `default_cache_dir()`, `library_version()`.
+`default_data_dir()`, `default_cache_dir()`, `library_version()`,
+`lyrics_bar(timeline, t_ms) -> LyricsBar` (the lyrics bar at a time; views
+that draw every frame port it instead, see "Drawing-time ports").
 
 **Config:** `CoreConfig { data_dir, cache_dir, output: OutputKind, buffer_ms
 (200), restore_session (true), persist_session (true), watch_folders (true),
-bundled_plugins ([]) }` (defaults in Swift, Kotlin and C# constructors; in
-JSON `bundled_plugins` may be left out). `bundled_plugins` lists the `.jfpkg`
+bundled_plugins ([]), distribution: Distribution }` (defaults in Swift,
+Kotlin and C# constructors; in JSON `bundled_plugins` and `distribution` may
+be left out, and `distribution` is then `Source`; Swift and Kotlin pass it:
+`Direct` for the release page's downloads, `AppStore`, `MicrosoftStore` or
+`GooglePlay` for store builds). The on-device recogniser for AI Lyrics is
+built into `jf-ffi` where whisper.cpp builds and set by the core itself. `bundled_plugins` lists the `.jfpkg`
 files the app ships (`core-api.md`, "Online sources"). The core's other
 source options keep their defaults; the secret store goes to
 `with_secret_store`.
@@ -103,7 +113,9 @@ with the same type and field names (`Command`, `Event`, `Snapshot`,
 | `CommandId` | `u64` (the value `send` returned) |
 | `usize` (counts, indices, limits) | `u32` (larger values saturate) |
 | tuple variants | named fields: `TrackRef::Library { id }`, `File { path }`, `Source { track }`; `ArtworkRef::File { path }`, `Url { url }`; `LyricsSource::Sidecar { path }`, `Plugin { id }`; `ScanStatus::Progress { progress }`, `Finished { report }`, `Failed { message }` |
-| `Event` tuple variants | slice events carry `snapshot` (`Playback`, `Queue`, `NowPlaying`, `Lyrics`, `Theme`, `Settings`, `Devices`, `Sources`); `Scan { status }`; `Auth`, `SearchResults`, `BrowsePage` carry `update` |
+| `Event` tuple variants | slice events carry `snapshot` (`Playback`, `Queue`, `NowPlaying`, `Lyrics`, `Theme`, `Settings`, `Devices`, `Sources`, `Remote`, `AiLyrics`, `Look`, `Pro`, `Update`); `Scan { status }`; `Auth`, `SearchResults`, `BrowsePage` carry `update`; `Discover`, `Details`, `Comments` carry `page`; `Artwork` carries `ready` |
+| `LyricsSource::Made { plugin, engine }` | the same, named fields |
+| `LyricsBar.line`, `next` (`usize`) | `u32` |
 | `ScanReport.errors: Vec<(PathBuf, String)>` | `Vec<ScanError { path, message }>` |
 | `SubmitLogin.fields: Vec<(String, String)>` | `HashMap<String, String>` |
 | `Theme.colors: BTreeMap<String, [u8; 4]>` | `Vec<ThemeColor { name, rgba: u32 }>`, sorted by name, `rgba` = `0xRRGGBBAA` |
@@ -120,7 +132,11 @@ abstract records with one nested record per variant (`TrackRef.Library`,
 
 **C# exceptions to the names**, because C# forbids a member named like its
 type: `Collection.Tracks.Value`, `ArtworkRef.Url.Value`,
-`ScanStatus.Progress.Value`, `Event.Buffering.Value`; and
+`ScanStatus.Progress.Value`, `Event.Buffering.Value`, `ProSource.Store.Value`;
+`Event.UpdateStatus` (Rust `Event::Update`, whose name `Update` is a member of
+`Event.Auth`, `SearchResults` and `BrowsePage`), `LyricsSource.Made.PluginId`
+(Rust `plugin`) and `FactKey.Other.Text` (Rust `label`), whose names are
+sibling records; and
 `Event.CommandFailed.Message` (Rust `error`), because `Event.Error` is a member
 of every `Event` record. The JSON keeps the Rust names. In the C# tokens,
 `Tokens.Accent.Accent` and `Tokens.Line.Line` are `AccentColor` and
@@ -182,7 +198,10 @@ generated types:
 
 `waitUntil` returns a `Duration` (Kotlin; Swift on macOS 13, plus
 `waitUntilUs` in microseconds) or a `TimeSpan` (C#). Each port replays
-`tests/contract/lyrics-cursor.json` and `tests/contract/display-clock.json`;
+`tests/contract/lyrics-cursor.json` and `tests/contract/display-clock.json`
+(and, from v0.0.7, `tests/contract/lyrics-bar.json`, recorded from
+`jf_core::lyrics_bar` by `core/jf-ffi/tests/drawing_contract.rs`: the lyrics
+bar's line, next line, word progress and line progress at each time);
 the second is recorded from the Rust `DisplayClock` itself
 (`core/jf-ffi/tests/drawing_contract.rs`). Next to them, each language ports
 `jf_palette::glass_alpha` (the transparency setting's glass alpha, which needs
@@ -308,13 +327,14 @@ JellyfeshCore *jf_core_new_with_secret_store(const char *config_json, JfSecretCa
 uint64_t jf_core_send(const JellyfeshCore *core, const char *command_json); /* 0: not sent */
 char *jf_core_snapshot(const JellyfeshCore *core);
 void jf_core_set_listener(const JellyfeshCore *core, JfEventCallback callback, void *user_data);
-char *jf_core_<query>(const JellyfeshCore *core, const char *args_json);    /* one per query */
+char *jf_core_<query>(const JellyfeshCore *core, const char *args_json);    /* one per query, below */
 void jf_core_shutdown(const JellyfeshCore *core);
 void jf_core_free(JellyfeshCore *core);                      /* shuts down if needed */
 char *jf_output_devices(void);                               /* {"ok"} or {"error"} */
 char *jf_eq_presets(void);                                   /* {"ok": [EqPreset]} */
 uint64_t jf_monotonic_now_ns(void);
 char *jf_default_data_dir(void);  char *jf_default_cache_dir(void);  char *jf_library_version(void);
+char *jf_lyrics_bar(const char *args_json);  /* {"timeline", "t_ms"} -> {"ok": LyricsBar} */
 void jf_string_free(char *s);
 ```
 
@@ -322,7 +342,11 @@ void jf_string_free(char *s);
   `jf_string_free`. `event_json` is valid only during the callback.
 * Query arguments are one JSON object named like the UniFFI parameters
   (`{"offset": 0, "limit": 50}`, `{"query": {...}}`, `{"id": 5, "path": "..."}`;
-  NULL or `{}` when there are none). Results are `{"ok": <value>}` or
+  NULL or `{}` when there are none). v0.0.7 adds
+  `jf_core_set_store_entitlement` (`{"entitlement": StoreEntitlement}` →
+  null), `jf_core_localized_settings_schema` (`{"plugin", "language"}` →
+  text or null) and `jf_core_source_artwork` (`{"url", "size_px"}` → path or
+  null). Results are `{"ok": <value>}` or
   `{"error": {"kind": "...", "message": "..."}}`; `jf_core_new` writes the
   error object to `*error_json`.
 * The handle may be used from any thread at once, but `jf_core_free` must not
@@ -353,7 +377,7 @@ sorted. `tests/contract/ffi-types.json` holds one sample of every root type.
 
 | What | Command | Here |
 | --- | --- | --- |
-| Rust: conversions both ways, JSON round trips, the JSON contract, the listener's guarantees, the C ABI (JSON, callback, freeing), the app's secret store (UniFFI and C callback, working and locked), the shared scenario twice | `cargo test -p jf-ffi` | 19 pass |
+| Rust: conversions both ways (every v0.0.7 command, event and slice included), JSON round trips, the JSON contract, the lyrics-bar contract, the listener's guarantees, the C ABI (JSON, callback, freeing, the v0.0.7 queries), the app's secret store (UniFFI and C callback, working and locked), the shared scenario twice | `cargo test -p jf-ffi` | see `cargo test` |
 | Kotlin on the JVM: the ports against the three contracts, the UniFFI bindings against the shared scenario, a Kotlin `SecretStore`, the Android-context JNI path, the generated tokens | `cargo xtask bindings --lang kotlin && cargo xtask tokens --target kotlin && gradle -p platforms/shared/kotlin test` | 8 pass |
 | C# on .NET 10: the ports against the three contracts, every `ffi-types.json` sample, the binding against the shared scenario, listener errors, a C# `SecretStore` (working and locked), the generated tokens | `cargo build -p jf-ffi && cargo xtask tokens --target csharp && dotnet test --project platforms/shared/csharp/Jellyfesh.Tests` | 11 pass |
 | Swift: the ports against the three contracts | add `platforms/shared/swift/Tests` to an Xcode test target | not run |

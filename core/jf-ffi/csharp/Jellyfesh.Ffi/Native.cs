@@ -145,6 +145,18 @@ internal static unsafe partial class Native
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial nint jf_core_stats(CoreHandle core, string argsJson);
 
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial nint jf_core_set_store_entitlement(CoreHandle core, string argsJson);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial nint jf_core_localized_settings_schema(CoreHandle core, string argsJson);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial nint jf_core_source_artwork(CoreHandle core, string argsJson);
+
     // ---- free functions ----------------------------------------------------------------------
 
     [LibraryImport(Library)]
@@ -170,6 +182,10 @@ internal static unsafe partial class Native
     [LibraryImport(Library)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial nint jf_library_version();
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial nint jf_lyrics_bar(string argsJson);
 
     [LibraryImport(Library)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]

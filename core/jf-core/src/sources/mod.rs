@@ -527,6 +527,9 @@ pub(crate) struct Sources {
     /// Bundled community packages waiting for community plugins to be
     /// allowed.
     deferred: Vec<PathBuf>,
+    /// A store build (ADR-0021 §4): no plugins from files, no community
+    /// plugins.
+    store_build: bool,
 }
 
 impl std::fmt::Debug for Sources {
@@ -574,6 +577,7 @@ impl Sources {
             bundled: BTreeSet::new(),
             declined: BTreeSet::new(),
             deferred: Vec::new(),
+            store_build: config.distribution.store().is_some(),
         };
         if !config.sources.enabled {
             sources.unavailable = Some("online sources are turned off in this app's configuration".into());
@@ -770,6 +774,7 @@ impl Sources {
                 .map(|s| s.status().storage())
                 .unwrap_or_default(),
             unavailable: self.unavailable.clone(),
+            can_install_plugins: !self.store_build,
         };
         if !force && self.published.as_deref() == Some(&snapshot) {
             return;
@@ -813,7 +818,17 @@ impl Sources {
 
     // ---- management -----------------------------------------------------
 
+    /// Whether this is a store build, which installs no plugins from files.
+    pub(crate) fn store_build(&self) -> bool {
+        self.store_build
+    }
+
     pub(crate) fn install(&mut self, id: CommandId, path: PathBuf) -> Result<(), CoreError> {
+        if self.store_build {
+            return Err(CoreError::Other(
+                "plugins cannot be installed from files in this edition of Jellyfesh".into(),
+            ));
+        }
         self.job(Job::Install { id, path })
     }
 
@@ -958,6 +973,24 @@ impl Sources {
             )));
         }
         ctx.host.set_enabled(plugin, enabled).map_err(host_error)
+    }
+
+    /// Restores a plugin's settings to its schema's defaults.
+    pub(crate) fn reset_settings(&self, plugin: &str) -> Result<(), CoreError> {
+        let ctx = self.require()?;
+        let info = ctx
+            .host
+            .plugin(plugin)
+            .ok_or_else(|| CoreError::Other(format!("no plugin {plugin} is installed")))?;
+        let defaults = jf_plugin_host::schema::SettingsSchema::parse_with(
+            &info.settings_schema_text,
+            jf_plugin_host::schema::Profile::V1_2,
+        )
+        .map(|schema| schema.defaults())
+        .unwrap_or_else(|_| serde_json::json!({}));
+        ctx.host
+            .set_settings(plugin, &defaults.to_string())
+            .map_err(host_error)
     }
 
     pub(crate) fn set_settings(&self, plugin: &str, json: &str) -> Result<(), CoreError> {
