@@ -134,7 +134,7 @@ targets:
         JF_RUST_LDFLAGS: >-
           -framework CoreAudio -framework AudioToolbox -framework AudioUnit -framework AVFAudio
           -framework CoreFoundation -framework Foundation -framework CoreServices
-          -framework Security -framework SystemConfiguration -framework IOKit
+          -framework Security -framework SystemConfiguration -framework IOKit -framework Accelerate
           -lobjc -liconv -lc++
         OTHER_LDFLAGS: $(inherited) $(JF_RUST_LDFLAGS)
     scheme:

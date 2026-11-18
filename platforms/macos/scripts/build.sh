@@ -89,6 +89,18 @@ if [ "$distribution" = app-store ]; then entitlements="Jellyfesh/Jellyfesh-AppSt
 
 # The deployment target of the app (project.yml) applies to the Rust and C objects too.
 export MACOSX_DEPLOYMENT_TARGET=14.2
+# whisper.cpp, which jf-ffi builds through whisper-rs-sys and CMake for on-device AI Lyrics
+# (ADR-0019): never tuned to the CPU of the Mac that builds it, so each slice runs on every Mac it is
+# for. The x86_64 slice asks for the AVX2 family instead, which every Intel Mac that runs macOS 14.2
+# has; without it that slice would be unoptimised.
+export GGML_NATIVE=OFF
+# The extra settings for a target's build of the core, in the array ggml_env (empty for arm64).
+ggml_env_for() {
+  case "$1" in
+    x86_64-*) ggml_env=(GGML_AVX=ON GGML_AVX2=ON GGML_FMA=ON GGML_F16C=ON) ;;
+    *) ggml_env=() ;;
+  esac
+}
 version="$(sed -n 's/^    MARKETING_VERSION: //p' "$macos/project.yml")"
 mkdir -p "$out"
 
@@ -108,7 +120,8 @@ if [ "$skip_core" -eq 0 ]; then
 
   step "Bindings and tokens"
   # Builds jf-ffi in release for this Mac (target/release) and writes Generated/.
-  cargo xtask bindings --lang swift --release
+  ggml_env_for "$host"
+  env ${ggml_env[@]+"${ggml_env[@]}"} cargo xtask bindings --lang swift --release
   cargo xtask tokens --target swift
 
   step "Static libraries"
@@ -120,8 +133,9 @@ if [ "$skip_core" -eq 0 ]; then
       notes="$out/rustc-$target.log"
       # Without colour (CI sets CARGO_TERM_COLOR=always): the flags are read from this output,
       # and a colour code after the last one would reach the linker as part of a library name.
-      cargo rustc --color never --release --locked --package jf-ffi --lib --crate-type staticlib \
-        --target "$target" -- --print native-static-libs 2>&1 | tee "$notes"
+      ggml_env_for "$target"
+      env ${ggml_env[@]+"${ggml_env[@]}"} cargo rustc --color never --release --locked --package jf-ffi --lib \
+        --crate-type staticlib --target "$target" -- --print native-static-libs 2>&1 | tee "$notes"
       flags="$(tr -d '\033' < "$notes" | sed -n 's/.*native-static-libs: //p' | sed 's/\[[0-9;]*m//g' | tail -n 1)"
       if [ -n "$flags" ]; then link_flags="$flags"; fi
       lib="$target_dir/$target/release/libjf_ffi.a"
