@@ -277,10 +277,77 @@ reads the binding's `Types.cs` to decide).
 
 **CI.** A job on `windows-2025` runs `scripts/build.ps1` after the `plugins`
 job and runs `dotnet test
-platforms/windows/Jellyfesh.Portable.slnf`. The library and session live in
+platforms/windows/Jellyfesh.Portable.slnf`; another, "Windows app starts",
+builds for x64 and runs the smoke test below. The library and session live in
 `%APPDATA%\Jellyfesh`, artwork and backdrops in `%LOCALAPPDATA%\Jellyfesh\cache`
 (the core's defaults; `JF_DATA_DIR` and `JF_CACHE_DIR` override them); the
-app's own log is `%LOCALAPPDATA%\Jellyfesh\logs\app.log`.
+app's own log is `%LOCALAPPDATA%\Jellyfesh\logs\app.log` (`JF_LOG_DIR` moves it).
+`build.ps1` stops when a published folder lacks a file the app cannot start
+without (`Jellyfesh.exe`, `Jellyfesh.dll`, `jf_ffi.dll`, `resources.pri`, the
+Windows App SDK runtime, WinUI).
+
+## When Jellyfesh does not start
+
+**The log.** Every start writes `%LOCALAPPDATA%\Jellyfesh\logs\app.log` (or the
+temporary folder's `Jellyfesh\logs` when that cannot be written): the version,
+edition and distribution, the app's path, Windows version, architecture and
+language, the data and cache folders, then each stage of start-up (loading the
+Windows App SDK runtime, the single-instance check, XAML, the colours and styles,
+the core, the main window). Until the window is open it also records every
+first-chance exception, so the first error of a failed start is there even when
+something later catches it. Lines carry the time and the process id. **Open Log
+Folder** is in Settings › About; a person reporting a problem sends `app.log`.
+
+**A failed start is shown, never silent.** A failure before the main window is
+open is logged in full and shown: a small window ("Jellyfesh Could Not Start",
+the stage and the error, the log file's path and **Open Log Folder**), or a
+message box with the same when XAML itself could not start. Jellyfesh then
+exits. It never stays running without a window, which would also swallow every
+later start through the single-instance redirect. Other safety nets:
+
+* The Windows App SDK's self-contained start (what its UndockedRegFreeWinRT
+  auto-initializer does in a module initializer) runs at the top of `Main`
+  instead (`WindowsAppSdkUndockedRegFreeWinRTInitialize` is off), so a runtime
+  that cannot load is reported rather than ending the process before any of
+  Jellyfesh's code runs.
+* Optional Windows parts (the title bar, Mica, the window and taskbar icons,
+  the taskbar buttons, the system media controls, audio device notifications,
+  the caption buttons' colours) are each guarded: one that fails on a PC is
+  logged once and the window opens without it.
+* A second start waits at most 20 s for the running Jellyfesh to take it, then
+  says that Jellyfesh is running but not answering. Closing the window releases
+  the single-instance key first (as the Windows App SDK recommends), so a new
+  start opens a new window instead of handing itself to a process that is
+  shutting down; and a shutdown that takes longer than 90 s ends the process.
+* Exceptions on other threads and unobserved task exceptions are logged.
+  Native crashes (outside .NET) appear in Windows' Event Viewer, Windows Logs ›
+  Application, as Application Error and .NET Runtime entries.
+
+**`Jellyfesh.exe --smoke-test`** starts the core and the main window, waits for
+its first frames, opens every section (Home, Albums, Artists, Songs, Playlists,
+Favourites, Search, Sources, Settings), each loaded and drawn, closes the
+window (which shuts the core down) and exits. It registers its own
+single-instance key, so a running Jellyfesh never takes it, and shows nothing:
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Every page opened |
+| 1 | Start-up failed, or anything failed on the way (the log says where) |
+| 2 | It timed out (3 minutes) |
+| 3 | Another Jellyfesh took the start, or did not answer |
+| 4 | Shutting down did not end in time |
+
+`scripts/smoke-test.ps1` runs it twice: from the publish folder (its own data,
+cache and log folders, or with `-DefaultFolders` the user's, as in CI), and from
+a copy in a folder whose path has spaces and non-ASCII characters, with its
+folders on such paths too, as for a Windows user name that is not ASCII. It
+prints the log after each run and the event log's entries about Jellyfesh after
+a failed one, and keeps the logs in `<WorkDir>\logs`:
+
+```powershell
+pwsh platforms/windows/scripts/build.ps1 -Architectures x64
+pwsh platforms/windows/scripts/smoke-test.ps1
+```
 
 ## How it works
 

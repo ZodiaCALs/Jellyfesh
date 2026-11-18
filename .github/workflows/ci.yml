@@ -252,6 +252,44 @@ jobs:
       - name: Portable tests
         run: dotnet test --solution platforms/windows/Jellyfesh.Portable.slnf
 
+  # The published Windows app starts (docs/windows.md, "When Jellyfesh does not start"):
+  # Jellyfesh.exe --smoke-test starts the core and the main window, opens every page and closes,
+  # from the publish folder with the default folders, then from a path with spaces and non-ASCII
+  # characters with its data, cache and log there too. The app's log is printed after each run,
+  # and the event log's entries after a failed one; the logs are kept as an artifact.
+  windows-smoke:
+    name: Windows app starts
+    runs-on: windows-latest
+    env:
+      # whisper.cpp in jf-ffi, as in windows-app (build.ps1 sets them too).
+      CMAKE_POLICY_DEFAULT_CMP0091: NEW
+      CMAKE_MSVC_RUNTIME_LIBRARY: MultiThreaded
+      CMAKE_C_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
+      CMAKE_CXX_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.97.0
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+      - name: Build for x64 (platforms/windows/scripts/build.ps1)
+        shell: pwsh
+        run: platforms/windows/scripts/build.ps1 -Architectures x64
+      - name: Start it (platforms/windows/scripts/smoke-test.ps1)
+        shell: pwsh
+        timeout-minutes: 15
+        run: platforms/windows/scripts/smoke-test.ps1 -DefaultFolders -WorkDir "$env:RUNNER_TEMP\jellyfesh-smoke"
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-smoke-logs
+          path: ${{ runner.temp }}/jellyfesh-smoke/logs/
+          if-no-files-found: ignore
+
   # The Android app: logic tests on the JVM, then the APK (docs/android.md).
   android-app:
     name: Android app

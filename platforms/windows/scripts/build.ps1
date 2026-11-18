@@ -122,6 +122,17 @@ function Invoke-Sign([string[]] $Files) {
     if ($LASTEXITCODE -ne 0) { throw "signtool exited with $LASTEXITCODE" }
 }
 
+# Stops the build when a published app lacks a file it cannot start without (docs/windows.md,
+# "When Jellyfesh does not start"): its executable and assembly, the core, the Windows App SDK runtime
+# that loads first, WinUI, and resources.pri, which holds the compiled XAML and the strings of an
+# unpackaged app (without it App.xaml cannot load).
+function Assert-PublishedApp([string] $Folder) {
+    $required = @('Jellyfesh.exe', 'Jellyfesh.dll', 'jf_ffi.dll', 'resources.pri',
+        'Microsoft.WindowsAppRuntime.dll', 'Microsoft.ui.xaml.dll', 'Assets\Icons\ice.ico')
+    $missing = @($required | Where-Object { -not (Test-Path (Join-Path $Folder $_)) })
+    if ($missing.Count -gt 0) { throw "the published app in $Folder lacks $($missing -join ', ')" }
+}
+
 function Get-HostTriple {
     $line = & rustc -vV | Select-String '^host: (.+)$'
     if (-not $line) { throw 'rustc -vV did not name the host' }
@@ -277,6 +288,7 @@ foreach ($arch in $Architectures) {
         "-p:Version=$Version",
         '-p:WindowsPackageType=None',
         '-nologo')
+    Assert-PublishedApp $folder
 
     if (Test-Path $notices) { Copy-Item $notices (Join-Path $folder 'THIRD_PARTY_NOTICES.md') }
     Set-Content -Path (Join-Path $folder 'THIRD_PARTY_NOTICES_DOTNET.md') -Value $dotnetNotices -Encoding utf8
