@@ -1,32 +1,50 @@
 name: Release
 
-# Builds every installation file: jf, the signed official plugins and the
-# unsigned community plugins, the Linux tarball and Flatpak, the macOS DMG, the
-# Windows zips, the Android APK and Jellyfesh Web.
+# Builds Jellyfesh for every platform and, for a version tag, publishes a GitHub release with one
+# download per platform (docs/github.md, "What a release holds"):
 #
-# * A version tag (vX.Y.Z) pushed on its own also publishes them as a GitHub
-#   release, builds that release's website (with Jellyfesh Web at /app/) and
-#   starts web.yml to deploy it. (GitHub starts no workflow for a push of more
-#   than three tags.)
-# * By hand, Actions -> Release -> Run workflow: builds the branch chosen
-#   there, or a version tag typed in (it must be on GitHub), and keeps the
-#   files on the run's page as one download, "Jellyfesh-<name>", even when
-#   some platforms fail. Nothing is published unless "Publish a GitHub
-#   release" is ticked, which needs a version tag.
+#   Jellyfesh-<version>-macOS.dmg               universal; signed and notarized with the Apple secrets
+#   Jellyfesh-<version>-Windows-Setup.exe       one installer for x64 and Arm64, per user, no admin
+#   Jellyfesh-<version>-Linux.flatpak           its GNOME runtime installs from Flathub
+#   Jellyfesh-<version>-Android.apk             only with the Android signing secrets
+#   Jellyfesh-<version>-Web.zip                 Jellyfesh Web to host yourself
+#   Jellyfesh-<version>-Community-Plugins.zip   the unofficial plugins these builds do not bundle
+#   SHA256SUMS.txt
 #
-# Secrets:
-#   JF_PLUGIN_SIGNING_KEY  ed25519 seed (64 hex characters) of the Jellyfesh
-#                          release key; without it the plugins ship unsigned
-#                          and show as Community. The community plugins
-#                          (plugins/community) never get it: they always ship
-#                          unsigned (plugins/release.sh).
-#   JF_SPOTIFY_CLIENT_ID   the Client ID of Jellyfesh's Spotify app, read by the
-#                          Spotify plugin at compile time; without it the
-#                          plugin asks each person for their own.
-#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS,
-#   ANDROID_KEY_PASSWORD   the APK's release keystore (base64) and its
-#                          passwords; without them the release has no APK.
-# The macOS DMG and the Windows zips are not signed yet (ADR-0016).
+# The release's text is a Download table (tools/release/release_body.py) and a link to
+# docs/releases/<tag>.md. Store packages (the Mac App Store .pkg, the Microsoft Store .msixbundle,
+# the Google Play .aab) are made when their secrets are set and stay on the run's page as
+# artifacts; they are never published here. Every build is the commercial edition: no unofficial
+# community plugins inside the apps (JF_EDITION=commercial, ADR-0021 §4).
+#
+# * A version tag (vX.Y.Z) pushed on its own publishes the release (marked pre-release) and starts
+#   web.yml, which deploys the website with the new downloads. (GitHub starts no workflow for a
+#   push of more than three tags.)
+# * By hand, Actions -> Release -> Run workflow: builds the branch chosen there, or a version tag
+#   typed in (it must be on GitHub), and keeps the files on the run's page as one download,
+#   "Jellyfesh-<name>", even when some platforms fail. Nothing is published unless "Publish a
+#   GitHub release" is ticked, which needs a version tag. "Pro Preview" (ticked by default, and
+#   always on for pushed tags) builds with JF_PRO_PREVIEW=1: Pro features free in the beta.
+#
+# A step that needs a secret says so in a notice and carries on when it is missing: the release
+# never fails for a missing secret. Secrets and variables (docs/github.md):
+#   JF_PLUGIN_SIGNING_KEY        the plugin release key; without it the official plugins are unsigned
+#   JF_SPOTIFY_CLIENT_ID         Jellyfesh's Spotify Client ID, built into the Spotify plugin
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#                                Jellyfesh's Android release key; without it there is no APK
+#   PLAY_LICENSE_KEY             (secret or variable) Play Console's licence key for purchases
+#   APPLE_DEVELOPER_ID_P12, APPLE_DEVELOPER_ID_PASSWORD, APPLE_TEAM_ID
+#                                Developer ID signing of the macOS app and disk image
+#   APPLE_NOTARY_KEY_ID, APPLE_NOTARY_ISSUER_ID, APPLE_NOTARY_KEY
+#                                notarization, with an App Store Connect API key
+#   APPLE_MAS_APP_P12, APPLE_MAS_INSTALLER_P12, APPLE_MAS_PASSWORD, APPLE_MAS_PROFILE
+#                                the Mac App Store package
+#   WINDOWS_SIGNING_PFX, WINDOWS_SIGNING_PASSWORD
+#                                signing of the Windows app and installer
+#   MS_STORE_IDENTITY_NAME, MS_STORE_PUBLISHER, MS_STORE_PUBLISHER_NAME
+#                                the Microsoft Store package's identity from Partner Center
+#   variable JF_LICENCE_PUBLIC_KEYS
+#                                the public keys that check licence keys (key-id:hex, comma-separated)
 
 on:
   push:
@@ -34,7 +52,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Version tag to build, for example v0.0.4 (it must be on GitHub); leave empty to build the branch chosen above
+        description: Version tag to build, for example v0.0.7 (it must be on GitHub); leave empty to build the branch chosen above
         required: false
         type: string
         default: ""
@@ -43,6 +61,11 @@ on:
         required: false
         type: boolean
         default: false
+      pro_preview:
+        description: Pro Preview, Pro features free during the public beta (JF_PRO_PREVIEW=1); untick for builds that need Jellyfesh Pro
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -52,6 +75,12 @@ env:
   # What is built: the tag typed into Run workflow, else the pushed tag's or the
   # chosen branch's commit.
   REF: ${{ inputs.tag || github.sha }}
+  # Every build here is the commercial edition (ADR-0021 §4, docs/github.md).
+  JF_EDITION: commercial
+  # Pro Preview: always for a pushed tag, else the Run workflow box (ADR-0021 §2).
+  JF_PRO_PREVIEW: ${{ (github.event_name == 'push' || inputs.pro_preview) && '1' || '0' }}
+  # The public keys every build accepts licence keys from; not secret (ADR-0021 §2).
+  JF_LICENCE_PUBLIC_KEYS: ${{ vars.JF_LICENCE_PUBLIC_KEYS }}
 
 jobs:
   check:
@@ -60,6 +89,7 @@ jobs:
     outputs:
       name: ${{ steps.what.outputs.name }}
       version: ${{ steps.what.outputs.version }}
+      label: ${{ steps.what.outputs.label }}
     steps:
       - name: The tag is on GitHub
         if: inputs.tag != ''
@@ -69,7 +99,7 @@ jobs:
         shell: bash
         run: |
           if ! [[ "$INPUT_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
-            echo "::error::'$INPUT_TAG' is not a version tag such as v0.0.4 (leave it empty to build a branch)"
+            echo "::error::'$INPUT_TAG' is not a version tag such as v0.0.7 (leave it empty to build a branch)"
             exit 1
           fi
           if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$INPUT_TAG" --silent; then
@@ -97,76 +127,38 @@ jobs:
           fi
           if [ "$PUBLISH" = true ]; then
             if [ "$name" != "$LABEL" ]; then
-              echo "::error::Publishing a release needs a version tag such as v0.0.4; '$LABEL' is a branch"
+              echo "::error::Publishing a release needs a version tag such as v0.0.7; '$LABEL' is a branch"
               exit 1
             fi
             if [ ! -f "docs/releases/$name.md" ]; then
-              echo "::error::docs/releases/$name.md is missing: the release's text comes from it"
+              echo "::error::docs/releases/$name.md is missing: the release links to it"
               exit 1
             fi
           fi
           echo "Building $name (version $version); publish: $PUBLISH"
-          echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
-  cli:
-    name: jf ${{ matrix.target }}
-    needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: ubuntu-24.04, target: x86_64-unknown-linux-gnu, archive: tar.gz }
-          - { os: macos-15, target: aarch64-apple-darwin, archive: tar.gz }
-          - { os: macos-15, target: x86_64-apple-darwin, archive: tar.gz }
-          - { os: windows-2025, target: x86_64-pc-windows-msvc, archive: zip }
-          - { os: windows-2025, target: aarch64-pc-windows-msvc, archive: zip }
-    runs-on: ${{ matrix.os }}
-    env:
-      NAME: ${{ needs.check.outputs.name }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ env.REF }}
-      - name: ALSA headers
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
-      - uses: dtolnay/rust-toolchain@1.97.0
-        with:
-          targets: ${{ matrix.target }}
-      - name: Third-party notices
-        shell: bash
-        run: ${{ runner.os == 'Windows' && 'python' || 'python3' }} tools/licenses/generate.py jf-cli
-      - run: cargo build --release --locked --package jf-cli --target ${{ matrix.target }}
-      - name: Package (Unix)
-        if: matrix.archive == 'tar.gz'
+          # The files are Jellyfesh-<label>-<Platform>.<ext>, e.g. Jellyfesh-0.0.7-macOS.dmg.
+          {
+            echo "name=$name"
+            echo "version=$version"
+            echo "label=${name#v}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Edition, Pro Preview and licence keys
         shell: bash
         run: |
-          name="jf-${NAME}-${{ matrix.target }}"
-          mkdir "$name"
-          cp "target/${{ matrix.target }}/release/jf" README.md NOTICE CHANGELOG.md THIRD_PARTY_NOTICES.md "$name/"
-          tar czf "$name.tar.gz" "$name"
-          shasum -a 256 "$name.tar.gz" > "$name.tar.gz.sha256"
-      - name: Package (Windows)
-        if: matrix.archive == 'zip'
-        shell: pwsh
-        run: |
-          $name = "jf-$env:NAME-${{ matrix.target }}"
-          New-Item -ItemType Directory $name | Out-Null
-          Copy-Item "target/${{ matrix.target }}/release/jf.exe", README.md, NOTICE, CHANGELOG.md, THIRD_PARTY_NOTICES.md $name
-          Compress-Archive -Path $name -DestinationPath "$name.zip"
-          (Get-FileHash "$name.zip" -Algorithm SHA256).Hash.ToLower() + "  $name.zip" | Out-File "$name.zip.sha256" -Encoding ascii
-      - uses: actions/upload-artifact@v7
-        with:
-          name: jf-${{ matrix.target }}
-          path: jf-*
+          if [ -z "$JF_LICENCE_PUBLIC_KEYS" ]; then
+            echo "::notice title=No licence keys::The repository variable JF_LICENCE_PUBLIC_KEYS is not set, so these builds accept no licence keys (docs/github.md)"
+          elif ! [[ "$JF_LICENCE_PUBLIC_KEYS" =~ ^[0-9]{1,3}:[0-9a-f]{64}(,[0-9]{1,3}:[0-9a-f]{64})*$ ]]; then
+            echo "::error title=JF_LICENCE_PUBLIC_KEYS::The variable must be key-id:hex entries separated by commas, without spaces, as tools/jf-licence keygen prints them"
+            exit 1
+          fi
+          echo "Edition $JF_EDITION; Pro Preview: $JF_PRO_PREVIEW; licence public keys: ${JF_LICENCE_PUBLIC_KEYS:-none}"
 
   plugins:
-    name: Official and community plugins
+    name: Plugins
     needs: check
     runs-on: ubuntu-24.04
     env:
-      NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -175,81 +167,46 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      # Signs the official plugins; packs the community ones unsigned.
+      # Signs the official plugins, which every app bundles (dist/plugins); packs the community ones
+      # unsigned into dist/community-plugins, as the commercial edition does not bundle them.
       - name: Build, pack and sign
         env:
           JF_PLUGIN_SIGNING_KEY: ${{ secrets.JF_PLUGIN_SIGNING_KEY }}
           JF_SPOTIFY_CLIENT_ID: ${{ secrets.JF_SPOTIFY_CLIENT_ID }}
         run: plugins/release.sh
-      - name: Third-party notices (every shipped component)
-        run: python3 tools/licenses/generate.py
+      - name: Third-party notices of the Linux app and the plugins it bundles
+        run: python3 tools/licenses/generate.py jellyfesh-gtk jf-subsonic jf-jellyfin jf-qqmusic jf-spotify jf-netease
       - uses: actions/upload-artifact@v7
         with:
-          name: notices
+          name: notices-linux
           path: THIRD_PARTY_NOTICES.md
-      - name: Name the packages for the release
+      - name: The community plugins as one download
         shell: bash
         run: |
-          mkdir -p upload
-          for id in subsonic jellyfin qqmusic spotify netease; do
-            cp "dist/plugins/org.jellyfesh.$id.jfpkg" "upload/org.jellyfesh.$id-${NAME}.jfpkg"
-          done
-          for name in netease qqmusic; do
-            cp "dist/plugins/community.unofficial.$name.jfpkg" "upload/community.unofficial.$name-${NAME}.jfpkg"
-          done
-          (cd upload && sha256sum ./*.jfpkg | sed 's| \./| |' > plugins.sha256)
-      # The apps bundle the packages under these names.
+          mkdir -p upload stage
+          cp dist/community-plugins/community.unofficial.*.jfpkg stage/
+          sed "s/{version}/$LABEL/" tools/release/community-plugins-README.txt > stage/README.txt
+          name="Jellyfesh-${LABEL}-Community-Plugins.zip"
+          (cd stage && zip -q "../upload/$name" README.txt community.unofficial.*.jfpkg)
+          unzip -l "upload/$name"
+      # The apps bundle these packages under these names.
       - uses: actions/upload-artifact@v7
         with:
           name: plugins
           path: dist/plugins/*.jfpkg
       - uses: actions/upload-artifact@v7
         with:
-          name: release-plugins
-          path: upload/*
-
-  linux-app:
-    name: Linux app (tarball)
-    needs: [check, plugins]
-    runs-on: ubuntu-24.04
-    env:
-      NAME: ${{ needs.check.outputs.name }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ env.REF }}
-      - name: ALSA, GTK 4 and libadwaita headers
-        run: >-
-          sudo apt-get update && sudo apt-get install -y libasound2-dev
-          libgtk-4-dev libadwaita-1-dev gettext
-      - uses: dtolnay/rust-toolchain@1.97.0
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v8
-        with:
-          name: plugins
-          path: dist/plugins
-      - name: Third-party notices (the app and the plugins it bundles)
-        run: >-
-          python3 tools/licenses/generate.py jellyfesh-gtk jf-subsonic jf-jellyfin jf-qqmusic jf-spotify jf-netease
-          jf-community-netease jf-community-qqmusic
-      - name: Build and pack
-        shell: bash
-        run: |
-          out=$(platforms/linux/packaging/make-tarball.sh "" "$PWD/upload" | tail -1)
-          name="jellyfesh-${NAME}-linux-x86_64.tar.gz"
-          mv "$out" "upload/$name"
-          (cd upload && sha256sum "$name" > "$name.sha256")
-      - uses: actions/upload-artifact@v7
-        with:
-          name: release-linux
+          name: release-community
           path: upload/*
 
   macos-app:
     name: macOS app (DMG)
     needs: [check, plugins]
     runs-on: macos-15
+    outputs:
+      notarized: ${{ steps.notarize.outputs.notarized }}
     env:
-      NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -261,26 +218,89 @@ jobs:
         with:
           name: plugins
           path: dist/plugins
+      - name: Signing certificates (skipped with a notice without the Apple secrets)
+        env:
+          APPLE_DEVELOPER_ID_P12: ${{ secrets.APPLE_DEVELOPER_ID_P12 }}
+          APPLE_DEVELOPER_ID_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_MAS_APP_P12: ${{ secrets.APPLE_MAS_APP_P12 }}
+          APPLE_MAS_INSTALLER_P12: ${{ secrets.APPLE_MAS_INSTALLER_P12 }}
+          APPLE_MAS_PASSWORD: ${{ secrets.APPLE_MAS_PASSWORD }}
+        run: platforms/macos/scripts/keychain.sh "$GITHUB_ENV"
+      # Signed with the Developer ID when keychain.sh found one (JF_MACOS_SIGN_IDENTITY), else ad hoc.
       - name: Build, test and pack (platforms/macos/scripts/build.sh)
+        env:
+          JF_DISTRIBUTION: direct
         run: platforms/macos/scripts/build.sh --test
-      - name: Name the DMG for the release
+      - name: Notarize and staple (skipped with a notice without the Apple secrets)
+        id: notarize
+        env:
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+          APPLE_NOTARY_KEY: ${{ secrets.APPLE_NOTARY_KEY }}
+        shell: bash
+        run: |
+          dmgs=(platforms/macos/build/Jellyfesh-*.dmg)
+          if [ -z "${JF_MACOS_SIGN_IDENTITY:-}" ]; then
+            echo "::notice title=Not notarized::The disk image is not signed with a Developer ID, so it is not notarized (docs/store-release.md)"
+            exit 0
+          fi
+          platforms/macos/scripts/notarize.sh "${dmgs[0]}"
+          if xcrun stapler validate "${dmgs[0]}" > /dev/null 2>&1; then
+            echo "notarized=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Name the disk image for the release
         shell: bash
         run: |
           mkdir -p upload
-          name="Jellyfesh-${NAME}-macos-universal.dmg"
-          cp platforms/macos/build/Jellyfesh-*.dmg "upload/$name"
-          (cd upload && shasum -a 256 "$name" > "$name.sha256")
+          dmgs=(platforms/macos/build/Jellyfesh-*.dmg)
+          cp "${dmgs[0]}" "upload/Jellyfesh-${LABEL}-macOS.dmg"
       - uses: actions/upload-artifact@v7
         with:
           name: release-macos
           path: upload/*
+      # The same core and plugins, built again as the sandboxed App Store app (ADR-0021 §7).
+      - name: Mac App Store package (skipped with a notice without its secrets)
+        env:
+          APPLE_MAS_PROFILE: ${{ secrets.APPLE_MAS_PROFILE }}
+        shell: bash
+        run: |
+          if [ -z "${JF_MAS_APP_IDENTITY:-}" ]; then
+            echo "No Mac App Store certificates (see the notice of the certificates step): no package"
+            exit 0
+          fi
+          if [ -z "$APPLE_MAS_PROFILE" ]; then
+            echo "::notice title=No Mac App Store package::The secret APPLE_MAS_PROFILE (the provisioning profile) is not set (docs/store-release.md)"
+            exit 0
+          fi
+          JF_DISTRIBUTION=app-store JF_MACOS_SIGN_IDENTITY='' platforms/macos/scripts/build.sh --skip-core
+          mkdir -p store
+          platforms/macos/scripts/package-mas.sh platforms/macos/build/app-store/Jellyfesh.app \
+            "store/Jellyfesh-${LABEL}-Mac-App-Store.pkg"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: store-macos
+          path: store/*
+          if-no-files-found: ignore
+      - name: Remove the signing keychain
+        if: always()
+        run: platforms/macos/scripts/keychain.sh --delete
 
   windows-app:
-    name: Windows app (zip)
+    name: Windows app (installer)
     needs: [check, plugins]
     runs-on: windows-2025
+    outputs:
+      signed: ${{ steps.installer.outputs.signed }}
     env:
-      NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
+      JF_DISTRIBUTION: direct
+      # whisper.cpp (core/jf-speech) with the static C runtime and optimised release flags, as in
+      # ci.yml's Windows jobs.
+      CMAKE_POLICY_DEFAULT_CMP0091: NEW
+      CMAKE_MSVC_RUNTIME_LIBRARY: MultiThreaded
+      CMAKE_C_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
+      CMAKE_CXX_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
     steps:
       - uses: actions/checkout@v7
         with:
@@ -295,33 +315,89 @@ jobs:
         with:
           name: plugins
           path: dist/plugins
-      - name: Build and pack (platforms/windows/scripts/build.ps1)
+      - name: Code-signing certificate (skipped with a notice without the Windows secrets)
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_PFX: ${{ secrets.WINDOWS_SIGNING_PFX }}
+          WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+        run: |
+          if (-not $env:WINDOWS_SIGNING_PFX -or -not $env:WINDOWS_SIGNING_PASSWORD) {
+            '::notice title=Not signed::WINDOWS_SIGNING_PFX or WINDOWS_SIGNING_PASSWORD is not set: the Windows app and installer are unsigned (docs/store-release.md)'
+            exit 0
+          }
+          $path = Join-Path $env:RUNNER_TEMP 'windows-signing.pfx'
+          [IO.File]::WriteAllBytes($path, [Convert]::FromBase64String($env:WINDOWS_SIGNING_PFX))
+          "JF_WINDOWS_PFX=$path" >> $env:GITHUB_ENV
+      - name: Build (platforms/windows/scripts/build.ps1)
         shell: pwsh
         env:
           VERSION: ${{ needs.check.outputs.version }}
-        run: platforms/windows/scripts/build.ps1 -Version $env:VERSION
-      - name: Name the zips for the release
+          WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+          MS_STORE_IDENTITY_NAME: ${{ secrets.MS_STORE_IDENTITY_NAME }}
+          MS_STORE_PUBLISHER: ${{ secrets.MS_STORE_PUBLISHER }}
+          MS_STORE_PUBLISHER_NAME: ${{ secrets.MS_STORE_PUBLISHER_NAME }}
+        run: |
+          $options = @{ Version = $env:VERSION }
+          if ($env:JF_WINDOWS_PFX) { $options.SigningCertificate = $env:JF_WINDOWS_PFX }
+          if ($env:MS_STORE_IDENTITY_NAME -and $env:MS_STORE_PUBLISHER -and $env:MS_STORE_PUBLISHER_NAME) {
+            $options.StorePackage = $true
+          }
+          else {
+            '::notice title=No Microsoft Store package::MS_STORE_IDENTITY_NAME, MS_STORE_PUBLISHER or MS_STORE_PUBLISHER_NAME is not set (docs/store-release.md)'
+          }
+          platforms/windows/scripts/build.ps1 @options
+      - name: Installer (platforms/windows/scripts/installer.ps1)
+        id: installer
+        shell: pwsh
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+          WINDOWS_SIGNING_PASSWORD: ${{ secrets.WINDOWS_SIGNING_PASSWORD }}
+        run: |
+          $owner, $repository = $env:GITHUB_REPOSITORY.Split('/')
+          $options = @{ Version = $env:VERSION; OutDir = 'upload'; Website = "https://$($owner.ToLowerInvariant()).github.io/$repository/" }
+          if ($env:JF_WINDOWS_PFX) { $options.SigningCertificate = $env:JF_WINDOWS_PFX }
+          platforms/windows/scripts/installer.ps1 @options
+          $built = "upload/Jellyfesh-$env:VERSION-Windows-Setup.exe"
+          $named = "upload/Jellyfesh-$env:LABEL-Windows-Setup.exe"
+          if ($built -ne $named) { Move-Item $built $named }
+          if ($env:JF_WINDOWS_PFX) { 'signed=true' >> $env:GITHUB_OUTPUT }
+      - name: Name the Microsoft Store package
         shell: pwsh
         run: |
-          New-Item -ItemType Directory upload | Out-Null
-          foreach ($arch in 'x64', 'arm64') {
-            $source = Get-ChildItem "platforms/windows/artifacts/jellyfesh-*-windows-$arch.zip" | Select-Object -First 1
-            $name = "Jellyfesh-$env:NAME-windows-$arch.zip"
-            Copy-Item $source.FullName "upload/$name"
-            $hash = (Get-FileHash "upload/$name" -Algorithm SHA256).Hash.ToLowerInvariant()
-            Set-Content -Path "upload/$name.sha256" -Value "$hash  $name" -Encoding ascii -NoNewline
+          $bundle = Get-ChildItem 'platforms/windows/artifacts/Jellyfesh-*-microsoft-store.msixbundle' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($bundle) {
+            New-Item -ItemType Directory -Force store | Out-Null
+            Copy-Item $bundle.FullName "store/Jellyfesh-$env:LABEL-Microsoft-Store.msixbundle"
           }
       - uses: actions/upload-artifact@v7
         with:
           name: release-windows
           path: upload/*
+      - uses: actions/upload-artifact@v7
+        with:
+          name: store-windows
+          path: store/*
+          if-no-files-found: ignore
+      # The portable zips build.ps1 also makes: for testing, never published.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows-portable-zips
+          path: platforms/windows/artifacts/*.zip
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Remove the certificate
+        if: always()
+        shell: pwsh
+        run: if ($env:JF_WINDOWS_PFX) { Remove-Item $env:JF_WINDOWS_PFX -Force -ErrorAction SilentlyContinue }
 
   android-app:
     name: Android app (APK)
     needs: [check, plugins]
     runs-on: ubuntu-24.04
     env:
-      NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
+      JF_DISTRIBUTION: direct
+      PLAY_LICENSE_KEY: ${{ secrets.PLAY_LICENSE_KEY || vars.PLAY_LICENSE_KEY }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -360,9 +436,11 @@ jobs:
         with:
           name: plugins
           path: dist/plugins
-      - name: Build (platforms/android/scripts/build.sh)
-        run: platforms/android/scripts/build.sh
-      - name: Sign with the release keystore
+      - name: Build the APK and the App Bundle (platforms/android/scripts/build.sh)
+        run: platforms/android/scripts/build.sh --play-bundle
+      # Jellyfesh's APKs are only ever signed with its own release key: without the secrets this
+      # build has no APK, and the release says it is coming.
+      - name: Sign with Jellyfesh's release key (skipped with a notice without the Android secrets)
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -370,33 +448,48 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          mkdir -p upload
-          unsigned=$(ls dist/android/jellyfesh-*-android-unsigned.apk | head -1)
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
-            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set; the release gets no installable APK"
+          mkdir -p upload store
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] ||
+             [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::notice title=No Android APK::The Android signing secrets (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD) are not set, so this build has no APK and the release says the APK is coming (docs/github.md)"
             exit 0
           fi
-          umask 077
-          base64 -d <<< "$ANDROID_KEYSTORE_BASE64" > "$RUNNER_TEMP/release.keystore"
-          name="Jellyfesh-${NAME}.apk"
-          "$APKSIGNER" sign --ks "$RUNNER_TEMP/release.keystore" \
+          apks=(dist/android/jellyfesh-*-android-unsigned.apk)
+          bundles=(dist/android/jellyfesh-*-google-play-unsigned.aab)
+          keystore="$RUNNER_TEMP/release.keystore"
+          trap 'rm -f "$keystore"' EXIT
+          (umask 077 && base64 -d <<< "$ANDROID_KEYSTORE_BASE64" > "$keystore")
+          name="Jellyfesh-${LABEL}-Android.apk"
+          "$APKSIGNER" sign --ks "$keystore" \
             --ks-pass env:ANDROID_KEYSTORE_PASSWORD --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --key-pass env:ANDROID_KEY_PASSWORD --out "upload/$name" "$unsigned"
-          rm -f "$RUNNER_TEMP/release.keystore"
+            --key-pass env:ANDROID_KEY_PASSWORD --out "upload/$name" "${apks[0]}"
           "$APKSIGNER" verify --print-certs "upload/$name"
-          (cd upload && sha256sum "$name" > "$name.sha256")
+          # The App Bundle for Google Play, signed with the same key as its upload key
+          # (apksigner does not sign bundles).
+          bundle="store/Jellyfesh-${LABEL}-Google-Play.aab"
+          jarsigner -keystore "$keystore" -storepass:env ANDROID_KEYSTORE_PASSWORD \
+            -keypass:env ANDROID_KEY_PASSWORD -signedjar "$bundle" "${bundles[0]}" "$ANDROID_KEY_ALIAS"
+          jarsigner -verify "$bundle"
       - uses: actions/upload-artifact@v7
         with:
           name: release-android
           path: upload/*
-          if-no-files-found: warn
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        with:
+          name: store-android
+          path: store/*
+          if-no-files-found: ignore
 
   web-app:
     name: Jellyfesh Web (zip)
     needs: [check, plugins]
     runs-on: ubuntu-24.04
     env:
-      NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
+      # The edition and distribution for the app (docs/github.md).
+      VITE_JF_EDITION: commercial
+      VITE_JF_DISTRIBUTION: web
     steps:
       - uses: actions/checkout@v7
         with:
@@ -411,9 +504,7 @@ jobs:
           cache: npm
           cache-dependency-path: platforms/web/package-lock.json
       # The packages of the plugins job; Jellyfesh Web bundles only Subsonic and
-      # Jellyfin (platforms/web/scripts/build-plugins.mjs lists them). The
-      # community plugins stay out: their services' web interfaces do not allow
-      # calls from a page on another site (CORS).
+      # Jellyfin (platforms/web/scripts/build-plugins.mjs lists them).
       - uses: actions/download-artifact@v8
         with:
           name: plugins
@@ -429,9 +520,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p upload
-          name="jellyfesh-web-${NAME}.zip"
-          (cd platforms/web/dist && zip -qr "$GITHUB_WORKSPACE/upload/$name" .)
-          (cd upload && sha256sum "$name" > "$name.sha256")
+          (cd platforms/web/dist && zip -qr "$GITHUB_WORKSPACE/upload/Jellyfesh-${LABEL}-Web.zip" .)
       - uses: actions/upload-artifact@v7
         with:
           name: release-web
@@ -445,7 +534,7 @@ jobs:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
       options: --privileged
     env:
-      NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -457,44 +546,61 @@ jobs:
           path: dist/plugins
       - uses: actions/download-artifact@v8
         with:
-          name: notices
+          name: notices-linux
+      # flatpak-builder runs the build with the manifest's environment only.
+      - name: The release's edition, distribution and Pro settings into the manifest
+        shell: bash
+        run: |
+          manifest=platforms/linux/packaging/org.jellyfesh.Jellyfesh.json
+          settings="\"JF_EDITION\": \"$JF_EDITION\", \"JF_DISTRIBUTION\": \"direct\", \"JF_PRO_PREVIEW\": \"$JF_PRO_PREVIEW\""
+          # The check job allowed only key ids, hex digits, colons and commas here.
+          if [ -n "$JF_LICENCE_PUBLIC_KEYS" ]; then
+            settings="$settings, \"JF_LICENCE_PUBLIC_KEYS\": \"$JF_LICENCE_PUBLIC_KEYS\""
+          fi
+          sed -i "s|\"CARGO_TERM_COLOR\": \"never\"|\"CARGO_TERM_COLOR\": \"never\", $settings|" "$manifest"
+          if ! grep -q '"JF_DISTRIBUTION": "direct"' "$manifest"; then
+            echo "::error::$manifest has no \"CARGO_TERM_COLOR\": \"never\" entry to put the settings after"
+            exit 1
+          fi
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          bundle: org.jellyfesh.Jellyfesh-${{ needs.check.outputs.name }}.flatpak
+          bundle: Jellyfesh-${{ needs.check.outputs.label }}-Linux.flatpak
           manifest-path: platforms/linux/packaging/org.jellyfesh.Jellyfesh.json
           cache-key: flatpak-builder-${{ github.sha }}
           upload-artifact: false
-      - name: Checksum
+          # The bundle names Flathub as the place of its runtime (flatpak build-bundle
+          # --runtime-repo), so `flatpak install` fetches the GNOME runtime from there.
+          repository-name: flathub
+          repository-url: https://dl.flathub.org/repo/flathub.flatpakrepo
+      - name: Into the release files
         shell: bash
         run: |
           mkdir -p upload
-          name="org.jellyfesh.Jellyfesh-${NAME}.flatpak"
-          mv "$name" upload/
-          (cd upload && sha256sum "$name" > "$name.sha256")
+          mv "Jellyfesh-${LABEL}-Linux.flatpak" upload/
       - uses: actions/upload-artifact@v7
         with:
-          name: release-flatpak
+          name: release-linux
           path: upload/*
 
   # Run by hand without publishing: every file that was built, as one download
   # on the run's page, also when some platforms failed.
   installers:
-    name: All installation files, as one download
+    name: All release files, as one download
     if: always() && needs.check.result == 'success' && !(github.event_name == 'push' || inputs.publish)
-    needs: [check, cli, plugins, linux-app, flatpak, macos-app, windows-app, android-app, web-app]
+    needs: [check, plugins, flatpak, macos-app, windows-app, android-app, web-app]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v8
         with:
-          pattern: "{jf-*,release-*,notices}"
+          pattern: release-*
           merge-multiple: true
           path: files
-      - name: What was built
+      - name: Checksums and what was built
         env:
           NAME: ${{ needs.check.outputs.name }}
         shell: bash
         run: |
-          ls -l files
+          (cd files && sha256sum Jellyfesh-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
           {
             echo "### Jellyfesh $NAME"
             echo
@@ -511,39 +617,46 @@ jobs:
   publish:
     name: Publish
     if: github.event_name == 'push' || inputs.publish
-    needs: [check, cli, plugins, linux-app, flatpak, macos-app, windows-app, android-app, web-app]
+    needs: [check, plugins, flatpak, macos-app, windows-app, android-app, web-app]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
       actions: write # to start web.yml
     env:
       NAME: ${{ needs.check.outputs.name }}
+      LABEL: ${{ needs.check.outputs.label }}
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.REF }}
       - uses: actions/download-artifact@v8
         with:
-          pattern: "{jf-*,release-*}"
+          pattern: release-*
           merge-multiple: true
           path: dist
-      - name: Third-party notices
-        run: python3 tools/licenses/generate.py && cp THIRD_PARTY_NOTICES.md dist/
-      - name: Website
+      - name: Checksums and the release's text
+        env:
+          NOTARIZED: ${{ needs.macos-app.outputs.notarized }}
+          WINDOWS_SIGNED: ${{ needs.windows-app.outputs.signed }}
         shell: bash
         run: |
-          python3 tools/release/build_site.py "${NAME#v}" \
-            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${NAME}/" \
-            --app "dist/jellyfesh-web-${NAME}.zip"
-          (cd dist && zip -qr "jellyfesh-site-${NAME}.zip" site && rm -rf site)
+          ls -l dist
+          (cd dist && sha256sum Jellyfesh-* > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          flags=()
+          if [ "$NOTARIZED" = true ]; then flags+=(--notarized); fi
+          if [ "$WINDOWS_SIGNED" = true ]; then flags+=(--windows-signed); fi
+          if [ "$JF_PRO_PREVIEW" = 1 ]; then flags+=(--pro-preview); fi
+          python3 tools/release/release_body.py --version "$LABEL" --tag "$NAME" \
+            --repository "$GITHUB_REPOSITORY" --files dist --out release-body.md "${flags[@]}"
+          cat release-body.md
       - uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.check.outputs.name }}
           prerelease: true
-          body_path: docs/releases/${{ needs.check.outputs.name }}.md
+          body_path: release-body.md
           files: dist/*
-      # The website on GitHub Pages lists the latest release's files: deploy it
-      # again now (a run started with this token is allowed to start web.yml).
+      # The website lists the latest release's files: deploy it again now (a run
+      # started with this token is allowed to start web.yml).
       - name: Deploy the website with this release
         env:
           GH_TOKEN: ${{ github.token }}
