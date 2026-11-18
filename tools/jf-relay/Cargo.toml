@@ -1,0 +1,24 @@
+[package]
+name = "jf-relay"
+description = "A relay you run yourself, so Jellyfesh Web can reach services that refuse browsers: it forwards the page's wrapped requests to the hosts the bundled plugins' allowlists name."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+clap.workspace = true
+getrandom.workspace = true
+# Manifests, allowlists and the request rules the plugin hosts share.
+jf-plugin-model.workspace = true
+# TLS for ureq: ring as the crypto provider, the operating system's trust store (as the plugin
+# host does).
+rustls.workspace = true
+serde_json.workspace = true
+ureq = { workspace = true, features = ["platform-verifier"] }
+url.workspace = true
+zeroize.workspace = true
