@@ -186,6 +186,17 @@ if ($StorePackage) {
 # ---- 1 to 3: the core's library, the C# binding and the tokens ----
 $hostTriple = Get-HostTriple
 if (-not $SkipNative) {
+    # whisper.cpp, which jf-ffi builds for x64 only (core/jf-speech, feature whisper; ggml does not
+    # build with MSVC for Arm): whisper-rs-sys hands GGML_* and CMAKE_* variables to its CMake build.
+    # Code for any x64 processor rather than the build machine's (GGML_NATIVE), the static C runtime
+    # like the Rust code (.cargo/config.toml), and optimised release flags, which the cmake crate
+    # otherwise replaces with its own without /O2 (the same as .github/workflows/ci.yml). Nothing
+    # else reads them.
+    $env:GGML_NATIVE = 'OFF'
+    $env:CMAKE_POLICY_DEFAULT_CMP0091 = 'NEW'
+    $env:CMAKE_MSVC_RUNTIME_LIBRARY = 'MultiThreaded'
+    $env:CMAKE_C_FLAGS_RELEASE = '-O2 -Ob2 -DNDEBUG'
+    $env:CMAKE_CXX_FLAGS_RELEASE = '-O2 -Ob2 -DNDEBUG'
     Push-Location $Root
     try {
         foreach ($arch in $Architectures) {
