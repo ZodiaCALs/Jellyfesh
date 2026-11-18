@@ -39,6 +39,21 @@ jobs:
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+      - name: whisper.cpp with the static C runtime
+        if: runner.os == 'Windows'
+        shell: bash
+        # whisper-rs-sys (core/jf-speech, feature whisper) passes CMAKE_* variables to its CMake
+        # build. There the cmake crate keeps CMake's default /MD for the configuration it builds
+        # in a debug build, while Rust links the C runtime statically (.cargo/config.toml), and in
+        # a release build replaces the release flags with its own, without /O2. The same as
+        # windows-app below; dashes, not slashes, so Git Bash leaves the flags alone.
+        run: |
+          {
+            echo "CMAKE_POLICY_DEFAULT_CMP0091=NEW"
+            echo "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
+            echo "CMAKE_C_FLAGS_RELEASE=-O2 -Ob2 -DNDEBUG"
+            echo "CMAKE_CXX_FLAGS_RELEASE=-O2 -Ob2 -DNDEBUG"
+          } >> "$GITHUB_ENV"
       - run: cargo fmt --all --check
       - name: Clippy
         shell: bash
@@ -70,6 +85,55 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p jf-cli
       - run: tools/cloud-audio-check/run.sh target/release/jf
+
+  # On-device speech recognition (core/jf-speech, ADR-0019 §5): whisper.cpp with the Tiny model
+  # on a sentence spoken by espeak-ng (tests/whisper_smoke.rs). The model comes from Hugging
+  # Face, cached under its SHA-1 and checked against it; the log shows its SHA-256 for the
+  # catalogue (core/jf-speech/src/catalogue.rs).
+  speech:
+    runs-on: ubuntu-24.04
+    env:
+      TINY_SHA1: bd577a113a864445d4c299885e0cb97d4ba92b5f
+    steps:
+      - uses: actions/checkout@v7
+      - name: espeak-ng, FFmpeg, CMake and libclang (bindgen in whisper-rs-sys)
+        run: sudo apt-get update && sudo apt-get install -y espeak-ng ffmpeg cmake libclang-dev
+      - uses: dtolnay/rust-toolchain@1.97.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Speech to recognise
+        run: |
+          mkdir -p "$RUNNER_TEMP/speech"
+          espeak-ng -v en-us -s 140 -w "$RUNNER_TEMP/speech/espeak.wav" \
+            "Hello world. This is a test of speech recognition on this device."
+          ffmpeg -hide_banner -loglevel error -i "$RUNNER_TEMP/speech/espeak.wav" \
+            -ar 16000 -ac 1 -c:a pcm_s16le "$RUNNER_TEMP/speech/hello.wav"
+          echo "JF_WHISPER_WAV=$RUNNER_TEMP/speech/hello.wav" >> "$GITHUB_ENV"
+      - name: The Tiny model from the cache
+        uses: actions/cache@v6
+        with:
+          path: ~/whisper-models/ggml-tiny.bin
+          key: whisper-ggml-tiny-${{ env.TINY_SHA1 }}
+      - name: Download and verify the Tiny model
+        run: |
+          model="$HOME/whisper-models/ggml-tiny.bin"
+          if [ ! -f "$model" ]; then
+            mkdir -p "$(dirname "$model")"
+            curl -fsSL --retry 5 --retry-all-errors -o "$model.part" \
+              https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin
+            mv "$model.part" "$model"
+          fi
+          echo "$TINY_SHA1  $model" | sha1sum -c -
+          sha256=$(sha256sum "$model" | cut -d ' ' -f 1)
+          echo "ggml-tiny.bin: $(stat -c %s "$model") bytes, SHA-256 $sha256"
+          echo "::notice title=ggml-tiny.bin SHA-256::$sha256"
+          echo "JF_WHISPER_MODEL=$model" >> "$GITHUB_ENV"
+      - name: Tests with whisper.cpp
+        run: cargo test -p jf-speech --features whisper
+      - name: Recognition smoke test
+        env:
+          JF_WHISPER_MODEL_ID: tiny
+          JF_WHISPER_EXPECT: hello,world,test,speech
+        run: cargo test -p jf-speech --features whisper --test whisper_smoke -- --ignored --nocapture
 
   # The Kotlin and C# bindings against the real core (docs/ffi.md, "Tests").
   bindings:
@@ -116,6 +180,13 @@ jobs:
   windows-app:
     name: Windows app
     runs-on: windows-2025
+    env:
+      # For whisper.cpp once jf-ffi builds it (core/jf-speech, feature whisper): the static C
+      # runtime and optimised release flags (see the check job).
+      CMAKE_POLICY_DEFAULT_CMP0091: NEW
+      CMAKE_MSVC_RUNTIME_LIBRARY: MultiThreaded
+      CMAKE_C_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
+      CMAKE_CXX_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@1.97.0
