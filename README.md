@@ -55,7 +55,7 @@
 | --- | --- | --- |
 | **macOS** (SwiftUI) | macOS 14.2 or later, Apple silicon or Intel | Beta. Built and tested by CI; not yet signed or notarized. |
 | **Windows** (WinUI 3, .NET 10) | Windows 10 version 1809 or later, x64 or Arm64 | Beta. Built and tested by CI; not yet signed. |
-| **Linux** (GTK 4, libadwaita) | GTK 4.14 and libadwaita 1.5 or later (Ubuntu 24.04, Debian 13, Fedora 40 and later) | Beta. Tarball and Flatpak. |
+| **Linux** (GTK 4, libadwaita) | GTK 4.14 and libadwaita 1.5 or later (Ubuntu 24.04, Debian 13, Fedora 40 and later) | Beta. Flatpak (with its GNOME runtime from Flathub); `platforms/linux/packaging/` also makes a tarball. |
 | **Android** (Jetpack Compose) | Android 8 or later | Beta. Built and tested by CI. |
 | **Jellyfesh Web** (Svelte, WebAssembly) | A current Chromium-based browser (others untested) | Beta. Online at the website's `/app/` and as a static folder to host yourself. |
 
@@ -81,8 +81,11 @@ by the project; see the release notes' known limitations.
 Official plugins are bundled with the apps and signed with the Jellyfesh
 release key (see the release notes' "Signing and trust"); each uses the
 service's own official interface. The two **unofficial community plugins**
-are bundled too, so you can sign in to NetEase Cloud Music or QQ Music with
-just your account and a QR code: they use the services' private web
+let you sign in to NetEase Cloud Music or QQ Music with just your account
+and a QR code. Builds made from source include them; from v0.0.7 the
+release downloads leave them out, and they come as a separate download,
+`Jellyfesh-<version>-Community-Plugins.zip`, installed with **Install from
+File…** (ADR-0021). They use the services' private web
 interfaces, are not signed by Jellyfesh, and stay off until you turn on
 **Allow Community Plugins** and accept their disclosure (they may break when
 a service changes, and may be against its terms). No plugin works around a
@@ -94,9 +97,13 @@ been tested against mock services only. Plugin pages:
 
 Releases are published on the
 [GitHub releases page](https://github.com/ZodiaCALs/Jellyfesh/releases)
-with SHA-256 checksums for every file. The release notes list each file
-and how to install it. Builds are not yet code-signed: macOS asks you to
-allow the app once in System Settings › Privacy & Security, and Windows
+with one download for each platform: `Jellyfesh-<version>-macOS.dmg`,
+`-Windows-Setup.exe` (x64 and Arm64, installed for you without administrator
+rights), `-Linux.flatpak`, `-Android.apk` and `-Web.zip`, plus
+`-Community-Plugins.zip` with the unofficial plugins, which these builds do
+not include, and `SHA256SUMS.txt`. Each release's text says how to install
+each file. A build that is not signed yet says so there: macOS then asks you
+to allow the app once in System Settings › Privacy & Security, and Windows
 SmartScreen may ask you to confirm.
 
 ## Building from source
@@ -145,7 +152,10 @@ security problems privately through the repository's **Security** tab
 Copyright © 2026 ZodiaCALs. All rights reserved. No licence has been
 granted yet (see [ADR-0016](docs/adr/0016-distribution-licence-versions.md));
 third-party components keep their own licences, listed in
-`THIRD_PARTY_NOTICES.md` in every release.
+`THIRD_PARTY_NOTICES.md` inside every app. Drafts of the licence agreement,
+privacy policy and terms of sale for Jellyfesh Pro are in
+[`legal/`](legal/README.md); they are not in force until a lawyer has
+reviewed them.
 
 QQ Music is a trademark of Tencent; Spotify is a trademark of Spotify AB;
 NetEase Cloud Music is a trademark of NetEase, Inc.; Apple Music is a

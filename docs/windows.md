@@ -265,7 +265,8 @@ dotnet build platforms/windows/src/Jellyfesh.App -p:Platform=x64
 ```
 
 **Official plugins.** The Subsonic and Jellyfin plugins ship inside every
-app and as separate downloads. The project copies `dist/plugins/*.jfpkg`
+app (releases no longer carry them separately; the commercial edition of the
+release workflow leaves out the unofficial community plugins). The project copies `dist/plugins/*.jfpkg`
 (made by `plugins/release.sh`, or the release workflow's `plugins` artifact)
 into the app's `Plugins` folder; `-p:JfBundledPluginsDir=<folder>` points
 elsewhere. Without them the script warns and the app starts with no sources.
@@ -275,7 +276,7 @@ binding has that field, the build leaves it out (`Jellyfesh.Interop.csproj`
 reads the binding's `Types.cs` to decide).
 
 **CI.** A job on `windows-2025` runs `scripts/build.ps1` after the `plugins`
-job, uploads the two zips, and runs `dotnet test
+job and runs `dotnet test
 platforms/windows/Jellyfesh.Portable.slnf`. The library and session live in
 `%APPDATA%\Jellyfesh`, artwork and backdrops in `%LOCALAPPDATA%\Jellyfesh\cache`
 (the core's defaults; `JF_DATA_DIR` and `JF_CACHE_DIR` override them); the

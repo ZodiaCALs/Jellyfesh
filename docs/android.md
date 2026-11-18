@@ -238,15 +238,22 @@ x86_64 (`--release`), generates the bindings and tokens, and runs
 `dist/android/jellyfesh-<version>-android-unsigned.apk`. The release workflow signs it with the
 Jellyfesh release keystore from the repository secrets `ANDROID_KEYSTORE_BASE64`,
 `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` (certificate SHA-256
-`71:8D:02:2E:77:C3:09:7F:FD:F4:E0:B6:E4:FB:DB:62:FF:B3:EF:92:A8:9C:2B:3E:E3:57:F2:58:B7:13:56:46`). Without `-Pjellyfesh.skipCargo=true` Gradle builds the core itself through
-`:core-bindings:cargoNdkBuild`.
+`71:8D:02:2E:77:C3:09:7F:FD:F4:E0:B6:E4:FB:DB:62:FF:B3:EF:92:A8:9C:2B:3E:E3:57:F2:58:B7:13:56:46`)
+and publishes it as `Jellyfesh-<version>-Android.apk`; without those secrets a release has no APK
+and its text says the APK is coming (it is never signed with another key). With `--play-bundle`
+the script also builds the App Bundle for Google Play, which the workflow signs with the same
+keystore as `Jellyfesh-<version>-Google-Play.aab`, a run artifact for Play Console
+(docs/store-release.md), never a release file. Without `-Pjellyfesh.skipCargo=true` Gradle
+builds the core itself through `:core-bindings:cargoNdkBuild`.
 
 Install on a device or emulator (arm64-v8a or x86_64): `adb install -r <apk>`.
 
 ### Bundled plugins
 
-The official Subsonic and Jellyfin plugins ship inside every APK and as separate `.jfpkg`
-downloads. The app's build copies `dist/plugins/*.jfpkg` (made by the plugin packaging script;
+The official plugins ship inside every APK (releases no longer carry them separately). The
+release workflow builds the commercial edition, which leaves out the unofficial community plugins
+(`JF_EDITION=commercial`; they are the release's `Jellyfesh-<version>-Community-Plugins.zip`).
+The app's build copies `dist/plugins/*.jfpkg` (made by the plugin packaging script;
 the release workflow puts them there) into the APK's `assets/plugins` (task `bundlePlugins`,
 stored uncompressed); without them it builds anyway, with a warning. On start the app copies the
 packages into its files once per install or update and passes their paths to the core as

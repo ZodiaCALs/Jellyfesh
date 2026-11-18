@@ -167,29 +167,13 @@ Output goes to `platforms/macos/build/` (`JF_MACOS_OUT` to change it).
 
 ### In CI
 
-A job for the release workflow (not added here; this change only touches
-`platforms/macos`):
-
-```yaml
-macos-app:
-  name: macOS app (DMG)
-  needs: plugins
-  runs-on: macos-15
-  steps:
-    - uses: actions/checkout@v7
-    - uses: dtolnay/rust-toolchain@1.97.0
-      with:
-        targets: aarch64-apple-darwin, x86_64-apple-darwin
-    - uses: actions/download-artifact@v8
-      with:
-        name: plugins
-        path: dist/plugins
-    - run: platforms/macos/scripts/build.sh --test
-    - uses: actions/upload-artifact@v7
-      with:
-        name: release-macos
-        path: platforms/macos/build/Jellyfesh-*.dmg*
-```
+`ci.yml` runs `build.sh --test`. The release workflow's `macos-app` job runs it
+with `JF_EDITION=commercial` and `JF_DISTRIBUTION=direct`; with the Apple secrets
+it signs the app and disk image with the Developer ID (`scripts/keychain.sh`),
+notarizes and staples the disk image (`scripts/notarize.sh`) and builds the
+sandboxed Mac App Store app and its installer package (`JF_DISTRIBUTION=app-store`,
+`scripts/package-mas.sh`). The release carries `Jellyfesh-<version>-macOS.dmg`;
+the package stays on the run's page (docs/github.md, docs/store-release.md).
 
 ### In Xcode
 
@@ -199,8 +183,9 @@ the app and the unit tests.
 
 ### First launch
 
-The app is ad-hoc signed and not notarised (ADR-0016): macOS blocks the first
-launch; allow it in System Settings → Privacy & Security → Open Anyway. The app
+Without the Developer ID and notary secrets the app is ad-hoc signed and not
+notarised (ADR-0016): macOS blocks the first launch; allow it in System Settings →
+Privacy & Security → Open Anyway. The direct download's app
 is not sandboxed and uses the hardened runtime with JIT allowed (the plugin
 host compiles WebAssembly).
 
