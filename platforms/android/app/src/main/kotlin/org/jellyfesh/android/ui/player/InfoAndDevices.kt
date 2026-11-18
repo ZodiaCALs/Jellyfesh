@@ -225,6 +225,6 @@ fun deviceKindLabel(kind: RemoteDeviceKind): Int = when (kind) {
     RemoteDeviceKind.Other -> R.string.device_other
 }
 
-/** The name of the output in use, for the Speakers chip. */
+/** The name of the output in use: the chosen device's, else System Default (docs/ui.md never says "Speakers"). */
 @Composable
-fun outputName(state: CoreState): String = PlayerModel.deviceName(state.devices) ?: stringResource(R.string.np_speakers)
+fun outputName(state: CoreState): String = PlayerModel.deviceName(state.devices) ?: stringResource(R.string.np_system_default)

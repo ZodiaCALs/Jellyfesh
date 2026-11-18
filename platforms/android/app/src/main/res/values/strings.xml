@@ -68,7 +68,7 @@
     <string name="query_failed">Could not load this: %1$s</string>
     <string name="track_missing">File not found</string>
     <string name="unknown_artist">Unknown Artist</string>
-    <string name="unknown_title">Unknown Song</string>
+    <string name="unknown_title">Unknown Title</string>
     <string name="toast_plays_next">Plays next</string>
     <string name="toast_added_to_queue">Added to the queue</string>
     <string name="toast_added_to_playlist">Added to “%1$s”</string>
@@ -134,7 +134,8 @@
     <string name="playlist_delete_title">Delete “%1$s”?</string>
     <string name="playlist_delete_body">The songs stay in your library.</string>
     <string name="playlist_add_title">Add to Playlist</string>
-    <string name="playlist_empty">This playlist is empty.</string>
+    <string name="playlist_empty">This Playlist Is Empty</string>
+    <string name="playlist_empty_body">Add songs from their menu with Add to Playlist.</string>
 
     <!-- Search -->
     <string name="search_hint">Songs, albums and artists</string>
@@ -146,7 +147,7 @@
     <string name="search_sources_unavailable">Searching your sources is not available in this build yet.</string>
     <string name="search_source_failed">%1$s did not answer: %2$s</string>
     <string name="search_searching">Searching your sources…</string>
-    <string name="search_also_in">also in %1$s</string>
+    <string name="search_also_in">Also in %1$s</string>
     <string name="a11y_clear_search">Clear search</string>
     <string name="kind_tracks">Songs</string>
     <string name="kind_albums">Albums</string>
@@ -239,7 +240,6 @@
     <string name="np_lyrics">Lyrics</string>
     <string name="np_queue">Queue</string>
     <string name="np_info">Info</string>
-    <string name="np_speakers">Speakers</string>
     <string name="np_output_device">Output Device</string>
     <string name="np_system_default">System Default</string>
     <string name="np_follows_system">Follows the system’s choice</string>
@@ -266,7 +266,7 @@
 
     <!-- Lyrics -->
     <string name="lyrics_none_title">No Lyrics</string>
-    <string name="lyrics_none_body">Put an .lrc or .ttml file next to the song, or lyrics in its tags.</string>
+    <string name="lyrics_none_body">Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.</string>
     <string name="lyrics_unsynced">These lyrics are not timed.</string>
 
     <!-- Queue -->
@@ -381,7 +381,7 @@
     <string name="find_music_desc">Add the folders the system knows hold music.</string>
     <string name="folders_title">Music Folders</string>
     <string name="folders_desc">Jellyfesh reads every audio file in these folders.</string>
-    <string name="folders_empty">No folders yet.</string>
+    <string name="folders_empty">No Folders Yet</string>
     <string name="folder_remove_title">Remove “%1$s” from the library?</string>
     <string name="folder_remove_body">Its songs leave the library and its playlists. The files stay where they are.</string>
     <string name="folder_added">Adding the folder to your library…</string>
@@ -396,7 +396,7 @@
     <string name="last_scan_value">Added %1$d, updated %2$d, removed %3$d</string>
 
     <string name="show_translation">Show Translations</string>
-    <string name="show_translation_desc">Under each line, when the lyrics have them.</string>
+    <string name="show_translation_desc">A line in another language under each lyric line, when the lyrics have one.</string>
     <string name="show_romanization">Show Romanization</string>
     <string name="show_romanization_desc">How each line reads in Latin letters, when the lyrics have it.</string>
 

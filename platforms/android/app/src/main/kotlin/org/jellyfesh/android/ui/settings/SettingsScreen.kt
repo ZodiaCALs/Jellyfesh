@@ -825,21 +825,20 @@ private fun LazyListScope.watchFolders(settings: Settings) {
     }
 }
 
-/** Rescan Library: the scan's progress while it runs, and what the last scan did. */
+/**
+ * Rescan Library, as every app shows it: the sentence beside the Rescan Library button (off while
+ * a scan runs), the scan's progress while it runs, and what the last scan did.
+ */
 private fun LazyListScope.rescan(state: CoreState) {
     item(key = "scan") {
         val graph = LocalGraph.current
         Panel {
             val progress = state.lastScan as? ScanStatus.Progress
             SettingRow(
-                stringResource(R.string.rescan_title),
-                description = when {
-                    state.scanning && progress != null -> stringResource(R.string.scanning, progress.filesSeen.toInt())
-                    else -> stringResource(R.string.rescan_desc)
-                },
-                onClick = if (state.scanning) null else ({ graph.send(Command.Rescan) }),
+                stringResource(R.string.rescan_desc),
+                description = if (state.scanning && progress != null) stringResource(R.string.scanning, progress.filesSeen.toInt()) else null,
             ) {
-                JfIcon(R.drawable.ic_refresh, if (state.scanning) Jf.colors.ink30 else Jf.colors.accentText, size = 20.dp)
+                JfButton(stringResource(R.string.rescan_title), { graph.send(Command.Rescan) }, icon = R.drawable.ic_refresh, enabled = !state.scanning)
             }
             val last = when (val scan = state.lastScan) {
                 is ScanStatus.Finished -> stringResource(R.string.last_scan_value, scan.added, scan.updated, scan.removed)

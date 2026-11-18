@@ -63,6 +63,8 @@ class StringsTest {
             "Server address", "Sign in with a QR code", "Manage sources", "Follow System", "Length in seconds", "Purple",
             // v0.0.6: links and remote playback.
             "Open in Browser", "Open Link", "Connected to", "Casting to", "Disconnect", "Stop Remote",
+            // The output at System Default, and the Devices picker.
+            "Speakers", "Outputs",
         )
         for (word in avoided) {
             assertTrue(english.none { it.contains(word) }, "\"$word\" is in the strings")
@@ -80,5 +82,17 @@ class StringsTest {
         assertEquals("Stop Controlling", names.getValue("remote_stop").single())
         assertEquals("Lyrics aren’t shown while %1\$s plays.", names.getValue("remote_lyrics").single())
         assertEquals("Up Next is in %1\$s.", names.getValue("remote_queue").single())
+        // docs/parity.md, "The words": the words the other apps use.
+        assertEquals("Remove from Queue", names.getValue("queue_remove").single())
+        assertEquals("No Folders Yet", names.getValue("folders_empty").single())
+        assertEquals("Unknown Title", names.getValue("unknown_title").single())
+        assertEquals("Also in %1\$s", names.getValue("search_also_in").single())
+        assertEquals("Content from %1\$s", names.getValue("source_attribution").single())
+        assertEquals("This Source Did Not Answer", names.getValue("browse_failed_title").single())
+        assertEquals("Nothing Here", names.getValue("browse_empty").single())
+        assertEquals("This Playlist Is Empty", names.getValue("playlist_empty").single())
+        assertEquals("Rescan Library", names.getValue("rescan_title").single())
+        assertEquals("Optional", names.getValue("sign_in_optional").single())
+        assertEquals("Waiting for approval…", names.getValue("sign_in_code_waiting").single())
     }
 }

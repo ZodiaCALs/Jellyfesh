@@ -363,7 +363,7 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                     })
                 }
             }
-            pagedStates(entries, R.drawable.ic_playlist, R.string.playlist_empty, null)
+            pagedStates(entries, R.drawable.ic_playlist, R.string.playlist_empty, R.string.playlist_empty_body)
             val count = entries.count
             items(count, key = { i -> entries[PlaylistReorder.rowAt(i, shownPending)]?.entryId ?: "pending-$i" }) { i ->
                 val entry = entries[PlaylistReorder.rowAt(i, shownPending)]

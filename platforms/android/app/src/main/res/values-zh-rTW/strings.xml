@@ -58,7 +58,7 @@
     <string name="query_failed">無法載入：%1$s</string>
     <string name="track_missing">找不到檔案</string>
     <string name="unknown_artist">未知藝人</string>
-    <string name="unknown_title">未知歌曲</string>
+    <string name="unknown_title">未知標題</string>
     <string name="toast_plays_next">將接著播放</string>
     <string name="toast_added_to_queue">已加入播放佇列</string>
     <string name="toast_added_to_playlist">已加入「%1$s」</string>
@@ -104,7 +104,8 @@
     <string name="playlist_delete_title">刪除「%1$s」？</string>
     <string name="playlist_delete_body">歌曲仍會保留在資料庫中。</string>
     <string name="playlist_add_title">加入播放清單</string>
-    <string name="playlist_empty">這個播放清單是空的。</string>
+    <string name="playlist_empty">這個播放清單是空的</string>
+    <string name="playlist_empty_body">在歌曲的選單中選擇「加入播放清單…」來加入歌曲。</string>
     <string name="search_hint">歌曲、專輯和藝人</string>
     <string name="search_empty_title">搜尋你的音樂</string>
     <string name="search_empty_body">在資料庫與各個來源中尋找歌曲、專輯和藝人。</string>
@@ -199,7 +200,6 @@
     <string name="np_lyrics">歌詞</string>
     <string name="np_queue">播放佇列</string>
     <string name="np_info">資訊</string>
-    <string name="np_speakers">喇叭</string>
     <string name="np_output_device">輸出裝置</string>
     <string name="np_system_default">系統預設</string>
     <string name="np_follows_system">跟隨系統的選擇</string>
@@ -224,7 +224,7 @@
     <string name="repeat_all">全部重複</string>
     <string name="repeat_one">單曲重複</string>
     <string name="lyrics_none_title">沒有歌詞</string>
-    <string name="lyrics_none_body">在歌曲旁放一個 .lrc 或 .ttml 檔案，或把歌詞寫入它的標籤。</string>
+    <string name="lyrics_none_body">Jellyfesh 會顯示歌曲旁的 .lrc、.ttml 或 .vtt 檔案中的歌詞，或檔案標籤中的歌詞。</string>
     <string name="lyrics_unsynced">這些歌詞沒有時間軸。</string>
     <string name="queue_up_next">接下來播放</string>
     <string name="queue_clear">清除播放佇列</string>
@@ -330,7 +330,7 @@
     <string name="find_music_desc">加入系統已知存放音樂的資料夾。</string>
     <string name="folders_title">音樂資料夾</string>
     <string name="folders_desc">Jellyfesh 會讀取這些資料夾中的所有音訊檔案。</string>
-    <string name="folders_empty">還沒有資料夾。</string>
+    <string name="folders_empty">還沒有資料夾</string>
     <string name="folder_remove_title">從資料庫中移除「%1$s」？</string>
     <string name="folder_remove_body">其中的歌曲會離開資料庫和播放清單，檔案仍留在原處。</string>
     <string name="folder_added">正在將資料夾加入資料庫…</string>
@@ -344,7 +344,7 @@
     <string name="last_scan">上次掃描</string>
     <string name="last_scan_value">加入 %1$d，更新 %2$d，移除 %3$d</string>
     <string name="show_translation">顯示翻譯</string>
-    <string name="show_translation_desc">歌詞附有翻譯時，顯示在每行下方。</string>
+    <string name="show_translation_desc">歌詞附有翻譯時，在每行歌詞下方顯示另一種語言。</string>
     <string name="show_romanization">顯示羅馬拼音</string>
     <string name="show_romanization_desc">歌詞附有羅馬拼音時，顯示每行的拉丁字母讀法。</string>
     <string name="allow_community">允許社群外掛</string>

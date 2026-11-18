@@ -58,7 +58,7 @@
     <string name="query_failed">読み込めませんでした：%1$s</string>
     <string name="track_missing">ファイルが見つかりません</string>
     <string name="unknown_artist">不明なアーティスト</string>
-    <string name="unknown_title">不明な曲</string>
+    <string name="unknown_title">不明なタイトル</string>
     <string name="toast_plays_next">次に再生します</string>
     <string name="toast_added_to_queue">キューに追加しました</string>
     <string name="toast_added_to_playlist">「%1$s」に追加しました</string>
@@ -104,7 +104,8 @@
     <string name="playlist_delete_title">「%1$s」を削除しますか？</string>
     <string name="playlist_delete_body">曲はライブラリに残ります。</string>
     <string name="playlist_add_title">プレイリストに追加</string>
-    <string name="playlist_empty">このプレイリストは空です。</string>
+    <string name="playlist_empty">このプレイリストは空です</string>
+    <string name="playlist_empty_body">曲のメニューの「プレイリストに追加…」で曲を追加できます。</string>
     <string name="search_hint">曲、アルバム、アーティスト</string>
     <string name="search_empty_title">音楽を検索</string>
     <string name="search_empty_body">ライブラリと各ソースから、曲、アルバム、アーティストを探します。</string>
@@ -199,7 +200,6 @@
     <string name="np_lyrics">歌詞</string>
     <string name="np_queue">キュー</string>
     <string name="np_info">情報</string>
-    <string name="np_speakers">スピーカー</string>
     <string name="np_output_device">出力デバイス</string>
     <string name="np_system_default">システムの既定</string>
     <string name="np_follows_system">システムの選択に従います</string>
@@ -224,7 +224,7 @@
     <string name="repeat_all">すべてリピート</string>
     <string name="repeat_one">1 曲リピート</string>
     <string name="lyrics_none_title">歌詞がありません</string>
-    <string name="lyrics_none_body">曲の隣に .lrc か .ttml のファイルを置くか、タグに歌詞を入れてください。</string>
+    <string name="lyrics_none_body">Jellyfesh は、曲と同じ場所にある .lrc・.ttml・.vtt ファイルや、曲のタグから歌詞を表示します。</string>
     <string name="lyrics_unsynced">この歌詞にはタイミングがありません。</string>
     <string name="queue_up_next">次に再生</string>
     <string name="queue_clear">キューを消去</string>
@@ -330,7 +330,7 @@
     <string name="find_music_desc">システムが把握している音楽フォルダを追加します。</string>
     <string name="folders_title">音楽フォルダ</string>
     <string name="folders_desc">Jellyfesh はこれらのフォルダ内のすべてのオーディオファイルを読み取ります。</string>
-    <string name="folders_empty">フォルダはまだありません。</string>
+    <string name="folders_empty">フォルダはまだありません</string>
     <string name="folder_remove_title">「%1$s」をライブラリから削除しますか？</string>
     <string name="folder_remove_body">その曲はライブラリとプレイリストから外れます。ファイルはそのまま残ります。</string>
     <string name="folder_added">フォルダをライブラリに追加しています…</string>
@@ -344,7 +344,7 @@
     <string name="last_scan">前回のスキャン</string>
     <string name="last_scan_value">追加 %1$d、更新 %2$d、削除 %3$d</string>
     <string name="show_translation">翻訳を表示</string>
-    <string name="show_translation_desc">歌詞に翻訳があるとき、各行の下に表示します。</string>
+    <string name="show_translation_desc">歌詞に翻訳があるとき、各行の下に別の言語の行を表示します。</string>
     <string name="show_romanization">ローマ字を表示</string>
     <string name="show_romanization_desc">歌詞にローマ字があるとき、各行の読みをラテン文字で表示します。</string>
     <string name="allow_community">コミュニティプラグインを許可</string>

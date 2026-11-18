@@ -58,7 +58,7 @@
     <string name="query_failed">无法载入：%1$s</string>
     <string name="track_missing">找不到文件</string>
     <string name="unknown_artist">未知艺人</string>
-    <string name="unknown_title">未知歌曲</string>
+    <string name="unknown_title">未知标题</string>
     <string name="toast_plays_next">将在下一首播放</string>
     <string name="toast_added_to_queue">已加入播放队列</string>
     <string name="toast_added_to_playlist">已添加到“%1$s”</string>
@@ -104,7 +104,8 @@
     <string name="playlist_delete_title">删除“%1$s”？</string>
     <string name="playlist_delete_body">歌曲仍保留在资料库中。</string>
     <string name="playlist_add_title">添加到歌单</string>
-    <string name="playlist_empty">这个歌单是空的。</string>
+    <string name="playlist_empty">这个歌单是空的</string>
+    <string name="playlist_empty_body">在歌曲的菜单中选择“添加到歌单…”来添加歌曲。</string>
     <string name="search_hint">歌曲、专辑和艺人</string>
     <string name="search_empty_title">搜索你的音乐</string>
     <string name="search_empty_body">在资料库和各个来源中查找歌曲、专辑和艺人。</string>
@@ -199,7 +200,6 @@
     <string name="np_lyrics">歌词</string>
     <string name="np_queue">播放队列</string>
     <string name="np_info">信息</string>
-    <string name="np_speakers">扬声器</string>
     <string name="np_output_device">输出设备</string>
     <string name="np_system_default">系统默认</string>
     <string name="np_follows_system">跟随系统的选择</string>
@@ -224,7 +224,7 @@
     <string name="repeat_all">全部循环</string>
     <string name="repeat_one">单曲循环</string>
     <string name="lyrics_none_title">没有歌词</string>
-    <string name="lyrics_none_body">在歌曲旁放一个 .lrc 或 .ttml 文件，或把歌词写入它的标签。</string>
+    <string name="lyrics_none_body">Jellyfesh 会显示歌曲旁的 .lrc、.ttml 或 .vtt 文件中的歌词，或文件标签中的歌词。</string>
     <string name="lyrics_unsynced">这些歌词没有时间轴。</string>
     <string name="queue_up_next">接下来播放</string>
     <string name="queue_clear">清空播放队列</string>
@@ -330,7 +330,7 @@
     <string name="find_music_desc">添加系统已知存放音乐的文件夹。</string>
     <string name="folders_title">音乐文件夹</string>
     <string name="folders_desc">Jellyfesh 会读取这些文件夹中的所有音频文件。</string>
-    <string name="folders_empty">还没有文件夹。</string>
+    <string name="folders_empty">还没有文件夹</string>
     <string name="folder_remove_title">从资料库中移除“%1$s”？</string>
     <string name="folder_remove_body">其中的歌曲会离开资料库和歌单，文件仍保留在原处。</string>
     <string name="folder_added">正在把文件夹加入资料库…</string>
@@ -344,7 +344,7 @@
     <string name="last_scan">上次扫描</string>
     <string name="last_scan_value">添加 %1$d，更新 %2$d，移除 %3$d</string>
     <string name="show_translation">显示翻译</string>
-    <string name="show_translation_desc">歌词附有翻译时，显示在每行下方。</string>
+    <string name="show_translation_desc">歌词附有翻译时，在每行歌词下方显示另一种语言。</string>
     <string name="show_romanization">显示罗马字</string>
     <string name="show_romanization_desc">歌词附有罗马字时，显示每行的拉丁字母读法。</string>
     <string name="allow_community">允许社区插件</string>
