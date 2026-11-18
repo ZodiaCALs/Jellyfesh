@@ -101,6 +101,8 @@ function Find-Signtool {
 $iscc = Find-Iscc
 Write-Host "Inno Setup $((Get-Item $iscc).VersionInfo.ProductVersion) ($iscc)"
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+# Absolute: ISCC would take a relative /O path from the script's folder.
+$OutDir = (Resolve-Path $OutDir).Path
 $name = "Jellyfesh-$Version-Windows-Setup"
 $arguments = @(
     "/DJfVersion=$Version",
