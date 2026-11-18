@@ -1,5 +1,6 @@
 // Application events SwiftUI does not cover: launch and quit (the core saves the session), files
-// opened from Finder (audio plays, `.jfpkg` installs), the Dock menu and the About panel.
+// opened from Finder (audio plays, `.jfpkg` installs) and the Dock menu. About Jellyfesh is a window
+// of its own (AboutView).
 
 import AppKit
 
@@ -64,30 +65,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func previousTrack(_ sender: Any?) {
         model.playback.previous()
-    }
-
-    /// The standard About panel with the design credits (docs/design-tokens.md, NOTICE).
-    @MainActor
-    static func showAbout() {
-        let credits = NSMutableAttributedString()
-        let lines = [
-            String(localized: "An elegant, lightweight music player."),
-            String(localized: "Designed with the Misty design language."),
-            String(localized: "Design tokens derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0."),
-            String(localized: "Core version \(FFICoreClient.coreVersion)"),
-        ]
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
-            .foregroundColor: NSColor.secondaryLabelColor,
-            .paragraphStyle: paragraph,
-        ]
-        credits.append(NSAttributedString(string: lines.joined(separator: "\n"), attributes: attributes))
-        NSApplication.shared.orderFrontStandardAboutPanel(options: [
-            .applicationName: "Jellyfesh",
-            .credits: credits,
-        ])
-        NSApplication.shared.activate()
     }
 }

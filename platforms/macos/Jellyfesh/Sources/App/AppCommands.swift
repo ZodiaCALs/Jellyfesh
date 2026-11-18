@@ -11,9 +11,7 @@ struct AppCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("About Jellyfesh") {
-                AppDelegate.showAbout()
-            }
+            AboutMenuItem()
         }
 
         CommandGroup(replacing: .newItem) {
@@ -26,6 +24,17 @@ struct AppCommands: Commands {
 
         CommandMenu("Controls") {
             ControlsMenuItems(model: model)
+        }
+    }
+}
+
+/// About Jellyfesh: opens the About window (AboutView).
+private struct AboutMenuItem: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("About Jellyfesh") {
+            openWindow(id: AboutView.windowID)
         }
     }
 }

@@ -1,5 +1,5 @@
-// The app: one main window (library, Now Playing, the mini player), the Settings window and the
-// menu bar commands.
+// The app: one main window (library, Now Playing, the mini player), the Settings window, the About
+// window and the menu bar commands.
 
 import SwiftUI
 
@@ -24,6 +24,15 @@ struct JellyfeshApp: App {
             SettingsView()
                 .stores(model)
         }
+
+        // About Jellyfesh in the app menu opens it; it is not listed in the Window menu.
+        Window("About Jellyfesh", id: AboutView.windowID) {
+            AboutView()
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+        .commandsRemoved()
     }
 }
 

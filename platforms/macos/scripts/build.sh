@@ -32,6 +32,8 @@
 #                      are signed with it (hardened runtime, secure timestamp) instead of ad hoc;
 #                      JF_MACOS_KEYCHAIN names its keychain when it is not in the search list
 #                      (scripts/keychain.sh makes one in CI)
+#   JF_WEBSITE         the website About links to, with its third-party licences page; in GitHub
+#                      Actions it defaults to https://OWNER.github.io/NAME/ (GITHUB_REPOSITORY)
 #
 # Written for the bash 3.2 that macOS ships.
 set -euo pipefail
@@ -48,7 +50,7 @@ for arg in "$@"; do
   case "$arg" in
     --test) run_tests=1 ;;
     --skip-core) skip_core=1 ;;
-    -h | --help) sed -n '2,34p' "$0"; exit 0 ;;
+    -h | --help) sed -n '2,36p' "$0"; exit 0 ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
@@ -72,6 +74,16 @@ keychain_args=()
 if [ -n "${JF_MACOS_KEYCHAIN:-}" ]; then keychain_args=(--keychain "$JF_MACOS_KEYCHAIN"); fi
 # The Swift conditions of the edition and distribution, e.g. JF_EDITION_COMMERCIAL JF_DISTRIBUTION_APP_STORE.
 edition_conditions="JF_EDITION_$(printf '%s' "$edition" | tr 'a-z-' 'A-Z_') JF_DISTRIBUTION_$(printf '%s' "$distribution" | tr 'a-z-' 'A-Z_')"
+# The website About links to (project.yml JF_WEBSITE): as given, else the repository's GitHub Pages
+# address in GitHub Actions, where web.yml publishes the website (docs/github.md), else none.
+website="${JF_WEBSITE:-}"
+if [ -z "$website" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
+  repo_owner="${GITHUB_REPOSITORY%%/*}"
+  repo_name="${GITHUB_REPOSITORY#*/}"
+  if [ -n "$repo_owner" ] && [ -n "$repo_name" ] && [ "$repo_name" = "${repo_name#*/}" ]; then
+    website="https://$(printf '%s' "$repo_owner" | tr 'A-Z' 'a-z').github.io/$repo_name/"
+  fi
+fi
 entitlements="Jellyfesh/Jellyfesh.entitlements"
 if [ "$distribution" = app-store ]; then entitlements="Jellyfesh/Jellyfesh-AppStore.entitlements"; fi
 
@@ -205,6 +217,7 @@ if [ -n "$conditions" ]; then
   echo "Swift conditions: $conditions"
 fi
 echo "edition $edition, distribution $distribution ($edition_conditions)"
+echo "website: ${website:-none}"
 edition_settings=("JF_EDITION=$edition" "JF_DISTRIBUTION=$distribution"
   "JF_EDITION_CONDITIONS=$edition_conditions" "JF_ENTITLEMENTS=$entitlements")
 
@@ -213,7 +226,7 @@ if [ "$run_tests" -eq 1 ]; then
   step "Unit tests"
   xcodebuild -project "$macos/Jellyfesh.xcodeproj" -scheme Jellyfesh -configuration Debug \
     -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath "$derived" \
-    ${extra:+"$extra"} "$swift_conditions" "${edition_settings[@]}" test
+    ${extra:+"$extra"} "$swift_conditions" "${edition_settings[@]}" "JF_WEBSITE=$website" test
 fi
 
 step "Release build"
@@ -221,7 +234,7 @@ xcodebuild -project "$macos/Jellyfesh.xcodeproj" -scheme Jellyfesh -configuratio
   -destination "generic/platform=macOS" -derivedDataPath "$derived" \
   ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
-  ${extra:+"$extra"} "$swift_conditions" "${edition_settings[@]}" build
+  ${extra:+"$extra"} "$swift_conditions" "${edition_settings[@]}" "JF_WEBSITE=$website" build
 
 app="$derived/Build/Products/Release/Jellyfesh.app"
 echo "architectures: $(lipo -archs "$app/Contents/MacOS/Jellyfesh")"

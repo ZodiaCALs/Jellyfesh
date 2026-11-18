@@ -37,6 +37,8 @@
 	<string>$(JF_EDITION)</string>
 	<key>JFDistribution</key>
 	<string>$(JF_DISTRIBUTION)</string>
+	<key>JFWebsite</key>
+	<string>$(JF_WEBSITE)</string>
 	<key>NSSupportsAutomaticTermination</key>
 	<false/>
 	<key>NSSupportsSuddenTermination</key>

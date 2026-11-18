@@ -113,6 +113,11 @@ targets:
         JF_EDITION: community
         JF_DISTRIBUTION: source
         JF_EDITION_CONDITIONS: JF_EDITION_COMMUNITY JF_DISTRIBUTION_SOURCE
+        # The website About links to, with the third-party licences it publishes
+        # (THIRD_PARTY_NOTICES.html, tools/release/build_site.py), read as the Info.plist key JFWebsite.
+        # scripts/build.sh sets it from JF_WEBSITE, else in GitHub Actions to the repository's GitHub
+        # Pages address (docs/github.md); without one, About shows the version only.
+        JF_WEBSITE: ""
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) $(JF_SWIFT_CONDITIONS) $(JF_EDITION_CONDITIONS)
         # Carries NSAppleMusicUsageDescription: MusicKit (Apple Music, ADR-0010) terminates an app that
         # uses it without one.

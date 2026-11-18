@@ -23,6 +23,28 @@
         }
       }
     },
+    "%@ (core %@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（コア %2$@）"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（核心 %2$@）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（核心 %2$@）"
+          }
+        }
+      }
+    },
     "%@ kHz": {
       "localizations": {
         "ja": {
@@ -1993,28 +2015,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "控制"
-          }
-        }
-      }
-    },
-    "Core version %@": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コアのバージョン %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "核心版本 %@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "核心版本 %@"
           }
         }
       }
@@ -7145,6 +7145,28 @@
         }
       }
     },
+    "Third-Party Licences": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サードパーティのライセンス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第三方许可"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第三方授權"
+          }
+        }
+      }
+    },
     "This Mac": {
       "localizations": {
         "ja": {
@@ -7933,6 +7955,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "監看資料夾"
+          }
+        }
+      }
+    },
+    "Website": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウェブサイト"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "网站"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "網站"
           }
         }
       }

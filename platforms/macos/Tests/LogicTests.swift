@@ -327,3 +327,32 @@ final class FormattingTests: XCTestCase {
         XCTAssertEqual(ArtworkLoader.thumbnailSize(for: 4000), 1024)
     }
 }
+
+final class AboutInfoTests: XCTestCase {
+    func testTheWebsiteAndItsLicencesPage() {
+        let links = AboutInfo.links(website: " https://example.github.io/jellyfesh ")
+        XCTAssertEqual(links?.website.absoluteString, "https://example.github.io/jellyfesh/")
+        XCTAssertEqual(links?.licences.absoluteString, "https://example.github.io/jellyfesh/THIRD_PARTY_NOTICES.html")
+        XCTAssertEqual(AboutInfo.links(website: "https://jellyfesh.example/")?.website.absoluteString,
+                       "https://jellyfesh.example/", "a slash is not doubled")
+    }
+
+    func testNoWebsiteMeansNoLinks() {
+        XCTAssertNil(AboutInfo.links(website: nil))
+        XCTAssertNil(AboutInfo.links(website: ""))
+        XCTAssertNil(AboutInfo.links(website: "ftp://example.com/"), "only web addresses")
+        XCTAssertNil(AboutInfo.links(website: "$(JF_WEBSITE)"), "a setting the build did not fill in")
+    }
+
+    func testTheCoresVersionShowsOnlyWhenItDiffers() {
+        XCTAssertEqual(AboutInfo.version(app: "0.0.6", core: "0.0.6"), "0.0.6")
+        XCTAssertEqual(AboutInfo.version(app: "0.0.6", core: nil), "0.0.6")
+        let both = AboutInfo.version(app: "0.0.6", core: "0.0.7")
+        XCTAssertTrue(both.contains("0.0.6") && both.contains("0.0.7"), both)
+        XCTAssertEqual(AboutInfo.version(app: "", core: "0.0.7"), "0.0.7")
+    }
+
+    func testTheVersionComesFromTheBuild() {
+        XCTAssertFalse(AboutInfo.appVersion().isEmpty, "MARKETING_VERSION, never typed in")
+    }
+}
