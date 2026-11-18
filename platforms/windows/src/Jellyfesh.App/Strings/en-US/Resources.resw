@@ -1029,7 +1029,10 @@
     <value>Settings</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
-    <value>Finish signing in in your browser. Jellyfesh continues by itself when you are done.</value>
+    <value>Continue in your browser. Come back here when you are done.</value>
+  </data>
+  <data name="SignIn_CodeSpoken" xml:space="preserve">
+    <value>Code {0}</value>
   </data>
   <data name="SignIn_CopyLink.Content" xml:space="preserve">
     <value>Copy the Link Instead</value>
@@ -1040,8 +1043,8 @@
   <data name="SignIn_Done" xml:space="preserve">
     <value>Signed in as {0}.</value>
   </data>
-  <data name="SignIn_Failed" xml:space="preserve">
-    <value>Signing in did not work: {0}</value>
+  <data name="SignIn_FailedNoReason" xml:space="preserve">
+    <value>Signing in did not work.</value>
   </data>
   <data name="SignIn_MethodApiKey" xml:space="preserve">
     <value>Enter API Key</value>
@@ -1059,13 +1062,16 @@
     <value>Sign In with QR Code</value>
   </data>
   <data name="SignIn_OpenAgain.Content" xml:space="preserve">
-    <value>Open the Page Again</value>
+    <value>Open Browser Again</value>
+  </data>
+  <data name="SignIn_Optional" xml:space="preserve">
+    <value>Optional</value>
   </data>
   <data name="SignIn_QrCode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>QR code</value>
   </data>
-  <data name="SignIn_ScanQr.Text" xml:space="preserve">
-    <value>Scan this code with the service's app on your phone.</value>
+  <data name="SignIn_ScanQr" xml:space="preserve">
+    <value>Scan the code with the {0} app on your phone.</value>
   </data>
   <data name="SignIn_Starting" xml:space="preserve">
     <value>Starting…</value>
@@ -1075,6 +1081,9 @@
   </data>
   <data name="SignIn_Title" xml:space="preserve">
     <value>Sign In to {0}</value>
+  </data>
+  <data name="SignIn_WaitingApproval.Text" xml:space="preserve">
+    <value>Waiting for approval…</value>
   </data>
   <data name="Songs_Empty.Text" xml:space="preserve">
     <value>Add a music folder to see your songs here.</value>

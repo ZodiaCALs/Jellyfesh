@@ -1029,7 +1029,10 @@
     <value>设置</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
-    <value>请在浏览器中完成登录。完成后 Jellyfesh 会自动继续。</value>
+    <value>请在浏览器中继续，完成后回到这里。</value>
+  </data>
+  <data name="SignIn_CodeSpoken" xml:space="preserve">
+    <value>代码 {0}</value>
   </data>
   <data name="SignIn_CopyLink.Content" xml:space="preserve">
     <value>改为复制链接</value>
@@ -1040,8 +1043,8 @@
   <data name="SignIn_Done" xml:space="preserve">
     <value>已登录为 {0}。</value>
   </data>
-  <data name="SignIn_Failed" xml:space="preserve">
-    <value>登录未成功：{0}</value>
+  <data name="SignIn_FailedNoReason" xml:space="preserve">
+    <value>登录未成功。</value>
   </data>
   <data name="SignIn_MethodApiKey" xml:space="preserve">
     <value>输入 API 密钥</value>
@@ -1059,13 +1062,16 @@
     <value>扫码登录</value>
   </data>
   <data name="SignIn_OpenAgain.Content" xml:space="preserve">
-    <value>再次打开页面</value>
+    <value>再次打开浏览器</value>
+  </data>
+  <data name="SignIn_Optional" xml:space="preserve">
+    <value>选填</value>
   </data>
   <data name="SignIn_QrCode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>二维码</value>
   </data>
-  <data name="SignIn_ScanQr.Text" xml:space="preserve">
-    <value>请用手机上该服务的应用扫描此二维码。</value>
+  <data name="SignIn_ScanQr" xml:space="preserve">
+    <value>用手机上的 {0} 应用扫描二维码。</value>
   </data>
   <data name="SignIn_Starting" xml:space="preserve">
     <value>正在开始…</value>
@@ -1075,6 +1081,9 @@
   </data>
   <data name="SignIn_Title" xml:space="preserve">
     <value>登录 {0}</value>
+  </data>
+  <data name="SignIn_WaitingApproval.Text" xml:space="preserve">
+    <value>等待批准…</value>
   </data>
   <data name="Songs_Empty.Text" xml:space="preserve">
     <value>添加音乐文件夹后，你的歌曲会显示在这里。</value>

@@ -240,14 +240,31 @@ public static class FfiMapping
 
     public static M.AuthUpdate ToModel(F.AuthUpdate u) => new(u.Plugin, u.Flow, u.Step switch
     {
-        F.AuthStep.ShowQr q => new M.AuthStep.ShowQr(q.Data, q.ExpiresAtMs),
+        F.AuthStep.ShowQr q => new M.AuthStep.ShowQr(q.Data, q.ExpiresAtMs, q.Hint),
+        F.AuthStep.ShowCode c => new M.AuthStep.ShowCode(c.Code, c.Hint, c.ExpiresAtMs),
         F.AuthStep.OpenUrl o => new M.AuthStep.OpenUrl(o.Url),
-        F.AuthStep.AskFields a => new M.AuthStep.AskFields(List(a.Fields, f => new M.AuthField(f.Name, f.Label, f.Secret, f.Placeholder))),
+        F.AuthStep.AskFields a => new M.AuthStep.AskFields(List(a.Fields, ToModel)),
         F.AuthStep.Waiting w => new M.AuthStep.Waiting(w.Message),
         F.AuthStep.Done d => new M.AuthStep.Done(d.Account),
         F.AuthStep.Failed f => new M.AuthStep.Failed(f.Message),
         _ => new M.AuthStep.Failed("unknown sign-in step"),
     });
+
+    public static M.AuthField ToModel(F.AuthField f) => new(
+        f.Name,
+        f.Label,
+        f.Secret,
+        f.Placeholder,
+        f.Kind switch
+        {
+            F.AuthFieldKind.Email => M.AuthFieldKind.Email,
+            F.AuthFieldKind.Url => M.AuthFieldKind.Url,
+            F.AuthFieldKind.Number => M.AuthFieldKind.Number,
+            F.AuthFieldKind.CookieHeader => M.AuthFieldKind.CookieHeader,
+            _ => M.AuthFieldKind.Text,
+        },
+        f.Required,
+        f.Help);
 
     public static M.SearchUpdate ToModel(F.SearchUpdate u) =>
         new(u.Request, u.Query, u.Source, List(u.Items, ToModel), u.Error, u.Done);

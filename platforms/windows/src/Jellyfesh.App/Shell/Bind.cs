@@ -1,5 +1,6 @@
 using Jellyfesh.Core;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 
 namespace Jellyfesh.App.Shell;
@@ -44,6 +45,22 @@ public static class Bind
         (Brush)Application.Current.Resources[current ? "JfAccentText" : "JfInk90"];
 
     public static double Dim(bool dim) => dim ? 0.45 : 1.0;
+
+    public static TextWrapping Wrap(bool wrap) => wrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
+
+    /// <summary>The touch keyboard for a sign-in field's kind (e-mail, web address, digits).</summary>
+    public static InputScope InputScopeFor(AuthFieldKind kind)
+    {
+        var scope = new InputScope();
+        scope.Names.Add(new InputScopeName(kind switch
+        {
+            AuthFieldKind.Email => InputScopeNameValue.EmailSmtpAddress,
+            AuthFieldKind.Url => InputScopeNameValue.Url,
+            AuthFieldKind.Number => InputScopeNameValue.Number,
+            _ => InputScopeNameValue.Default,
+        }));
+        return scope;
+    }
 
     public static string RepeatGlyph(RepeatMode mode) => Glyph(mode == RepeatMode.One ? "IconRepeatOne" : "IconRepeat");
 

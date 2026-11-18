@@ -324,15 +324,40 @@ public sealed record SourcePreset(
     string? AddressExample,
     string? Account);
 
-/// <summary>A field to ask for during sign-in.</summary>
-public sealed record AuthField(string Name, string Label, bool Secret, string? Placeholder);
+/// <summary>How a sign-in field is entered: the keyboard and the field it gets.</summary>
+public enum AuthFieldKind
+{
+    Text,
+    Email,
+    Url,
+    Number,
+
+    /// <summary>A Cookie header pasted from a browser: several lines.</summary>
+    CookieHeader,
+}
+
+/// <summary>A field to ask for during sign-in, as the plugin describes it.</summary>
+/// <param name="Required">Sign In waits until it has something in it.</param>
+/// <param name="Help">A sentence shown under the field.</param>
+public sealed record AuthField(
+    string Name,
+    string Label,
+    bool Secret,
+    string? Placeholder,
+    AuthFieldKind Kind = AuthFieldKind.Text,
+    bool Required = true,
+    string? Help = null);
 
 /// <summary>One step of a sign-in flow.</summary>
 public abstract record AuthStep
 {
     private AuthStep() { }
 
-    public sealed record ShowQr(string Data, long? ExpiresAtMs) : AuthStep;
+    /// <summary>A QR code of <paramref name="Data"/> to scan; <paramref name="Hint"/> is the plugin's sentence under it.</summary>
+    public sealed record ShowQr(string Data, long? ExpiresAtMs, string? Hint = null) : AuthStep;
+
+    /// <summary>A code shown large, to enter on another device (Jellyfin's Quick Connect); <paramref name="Hint"/> says where.</summary>
+    public sealed record ShowCode(string Code, string Hint, long? ExpiresAtMs) : AuthStep;
 
     public sealed record OpenUrl(string Url) : AuthStep;
 

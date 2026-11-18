@@ -1029,7 +1029,10 @@
     <value>設定</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
-    <value>ブラウザでサインインを完了してください。完了すると Jellyfesh が自動で続けます。</value>
+    <value>ブラウザで続けてください。終わったらここに戻ってください。</value>
+  </data>
+  <data name="SignIn_CodeSpoken" xml:space="preserve">
+    <value>コード {0}</value>
   </data>
   <data name="SignIn_CopyLink.Content" xml:space="preserve">
     <value>代わりにリンクをコピー</value>
@@ -1040,8 +1043,8 @@
   <data name="SignIn_Done" xml:space="preserve">
     <value>{0} としてサインインしました。</value>
   </data>
-  <data name="SignIn_Failed" xml:space="preserve">
-    <value>サインインできませんでした：{0}</value>
+  <data name="SignIn_FailedNoReason" xml:space="preserve">
+    <value>サインインできませんでした。</value>
   </data>
   <data name="SignIn_MethodApiKey" xml:space="preserve">
     <value>API キーを入力</value>
@@ -1059,13 +1062,16 @@
     <value>QR コードでサインイン</value>
   </data>
   <data name="SignIn_OpenAgain.Content" xml:space="preserve">
-    <value>ページをもう一度開く</value>
+    <value>ブラウザをもう一度開く</value>
+  </data>
+  <data name="SignIn_Optional" xml:space="preserve">
+    <value>任意</value>
   </data>
   <data name="SignIn_QrCode.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>QR コード</value>
   </data>
-  <data name="SignIn_ScanQr.Text" xml:space="preserve">
-    <value>スマートフォンでサービスのアプリを使って、このコードを読み取ってください。</value>
+  <data name="SignIn_ScanQr" xml:space="preserve">
+    <value>スマートフォンの {0} アプリでコードを読み取ってください。</value>
   </data>
   <data name="SignIn_Starting" xml:space="preserve">
     <value>開始しています…</value>
@@ -1075,6 +1081,9 @@
   </data>
   <data name="SignIn_Title" xml:space="preserve">
     <value>{0} にサインイン</value>
+  </data>
+  <data name="SignIn_WaitingApproval.Text" xml:space="preserve">
+    <value>承認を待っています…</value>
   </data>
   <data name="Songs_Empty.Text" xml:space="preserve">
     <value>音楽フォルダを追加すると、ここに曲が表示されます。</value>

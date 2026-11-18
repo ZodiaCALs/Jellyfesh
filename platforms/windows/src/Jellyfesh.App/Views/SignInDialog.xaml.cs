@@ -25,7 +25,7 @@ public sealed partial class SignInDialog : ContentDialog
 
     private void OnFlowChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(SignInViewModel.Stage) or nameof(SignInViewModel.Message))
+        if (e.PropertyName is nameof(SignInViewModel.Stage) or nameof(SignInViewModel.Message) or nameof(SignInViewModel.CanSubmit))
         {
             ShowStage();
         }
@@ -42,16 +42,18 @@ public sealed partial class SignInDialog : ContentDialog
         }
 
         QrPanel.Visibility = Bind.Visible(stage == SignInStage.ShowQr);
+        CodePanel.Visibility = Bind.Visible(stage == SignInStage.ShowCode);
         UrlPanel.Visibility = Bind.Visible(stage == SignInStage.OpenUrl);
         FieldsPanel.Visibility = Bind.Visible(stage == SignInStage.AskFields);
         ResultText.Visibility = Bind.Visible(stage is SignInStage.Done or SignInStage.Failed);
         ResultText.Text = stage switch
         {
             SignInStage.Done => l.Format("SignIn_Done", Flow.Account ?? string.Empty),
-            SignInStage.Failed => l.Format("SignIn_Failed", Flow.Message),
+            SignInStage.Failed => Flow.FailureText,
             _ => string.Empty,
         };
         PrimaryButtonText = stage == SignInStage.AskFields ? l.Get("SignIn_Submit") : string.Empty;
+        IsPrimaryButtonEnabled = Flow.CanSubmit;
         CloseButtonText = l.Get(stage is SignInStage.Done or SignInStage.Failed ? "Action_Close" : "Action_Cancel");
     }
 
