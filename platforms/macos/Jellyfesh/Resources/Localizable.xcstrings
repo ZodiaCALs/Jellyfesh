@@ -583,24 +583,24 @@
         }
       }
     },
-    "A translation under each line, when the lyrics have one.": {
+    "A line in another language under each lyric line, when the lyrics have one.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "歌詞に翻訳があれば、各行の下に表示します。"
+            "value": "歌詞に翻訳があるとき、各行の下に別の言語の行を表示します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "歌词附有翻译时，在每行下方显示。"
+            "value": "歌词附有翻译时，在每行歌词下方显示另一种语言。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "歌詞附有翻譯時，在每行下方顯示。"
+            "value": "歌詞附有翻譯時，在每行歌詞下方顯示另一種語言。"
           }
         }
       }
@@ -3427,6 +3427,28 @@
         }
       }
     },
+    "Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh は、曲と同じ場所にある .lrc・.ttml・.vtt ファイルや、曲のタグから歌詞を表示します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh 会显示歌曲旁的 .lrc、.ttml 或 .vtt 文件中的歌词，或文件标签中的歌词。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh 會顯示歌曲旁的 .lrc、.ttml 或 .vtt 檔案中的歌詞，或檔案標籤中的歌詞。"
+          }
+        }
+      }
+    },
     "Lagoon": {
       "localizations": {
         "ja": {
@@ -3797,28 +3819,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "歌詞來自歌曲的標籤，或旁邊同名的 .lrc、.ttml、.vtt 檔案。Jellyfesh 不會自行轉寫：只有歌詞本身帶有羅馬拼音時才會顯示。"
-          }
-        }
-      }
-    },
-    "Lyrics show here when the song has them: in its tags, or in an .lrc or .ttml file beside it.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "曲に歌詞があれば（タグ内、または同じ場所の .lrc・.ttml ファイル）、ここに表示されます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果歌曲有歌词（在标签中，或旁边的 .lrc、.ttml 文件里），会显示在这里。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "如果歌曲有歌詞（在標籤中，或旁邊的 .lrc、.ttml 檔案裡），會顯示在這裡。"
           }
         }
       }
@@ -4395,7 +4395,7 @@
         }
       }
     },
-    "Nothing Is Playing": {
+    "Nothing Playing": {
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -4897,6 +4897,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暫停"
+          }
+        }
+      }
+    },
+    "Pick a song, an album or a playlist.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曲、アルバム、プレイリストを選んでください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一首歌、一张专辑或一个歌单。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇一首歌、一張專輯或一個播放清單。"
           }
         }
       }
@@ -6947,6 +6969,28 @@
         }
       }
     },
+    "The artwork, blurred, or the Misty field in its colour.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ぼかしたアートワーク、または同じ色の Misty の背景です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模糊的封面，或同一颜色的 Misty 背景。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模糊的封面，或同一顏色的 Misty 背景。"
+          }
+        }
+      }
+    },
     "The colour of buttons, selections and the Misty field.": {
       "localizations": {
         "ja": {
@@ -6991,28 +7035,6 @@
         }
       }
     },
-    "The lit Misty field in the artwork's colour, with the artwork framed.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アートワークの色に染まった Misty の背景に、アートワークを額装して表示します。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以封面颜色点亮的 Misty 背景，封面置于框中。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以封面顏色點亮的 Misty 背景，封面置於框中。"
-          }
-        }
-      }
-    },
     "The player has stopped.": {
       "localizations": {
         "ja": {
@@ -7031,28 +7053,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "播放器已停止運作。"
-          }
-        }
-      }
-    },
-    "The song's artwork, blurred, behind Now Playing.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "再生画面の背後に、ぼかした曲のアートワークを表示します。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在正在播放页面后方显示模糊的歌曲封面。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在正在播放頁面後方顯示模糊的歌曲封面。"
           }
         }
       }
@@ -7321,24 +7321,24 @@
         }
       }
     },
-    "Try other words, or check the spelling.": {
+    "Try other words.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "別の言葉で試すか、綴りを確認してください。"
+            "value": "別の言葉で試してください。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "换个关键词，或检查拼写。"
+            "value": "换个关键词试试。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "換個關鍵字，或檢查拼字。"
+            "value": "換個關鍵字試試。"
           }
         }
       }

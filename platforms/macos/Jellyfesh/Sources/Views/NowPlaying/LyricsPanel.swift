@@ -39,7 +39,7 @@ struct LyricsPanel: View {
             }
         } else {
             EmptyState(title: "No Lyrics", symbol: "quote.bubble",
-                       message: "Lyrics show here when the song has them: in its tags, or in an .lrc or .ttml file beside it.")
+                       message: "Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.")
         }
     }
 }

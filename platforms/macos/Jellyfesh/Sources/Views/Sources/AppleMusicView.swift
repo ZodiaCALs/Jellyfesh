@@ -193,7 +193,7 @@ struct AppleMusicResultsView: View {
                         .foregroundStyle(palette[Tokens.Semantic.danger])
                 } else if results.isEmpty && !search.isSearching && !showsTitle {
                     EmptyState(title: "No Results", symbol: "magnifyingglass",
-                               message: "Try other words, or check the spelling.")
+                               message: "Try other words.")
                         .frame(maxWidth: .infinity, minHeight: 240)
                 }
                 if !results.songs.isEmpty {

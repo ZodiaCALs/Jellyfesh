@@ -204,7 +204,7 @@ private struct RemoteInfoPanel: View {
             }
             .scrollIndicators(.automatic)
         } else {
-            EmptyState(title: "Nothing Is Playing", symbol: "info.circle")
+            EmptyState(title: "Nothing Playing", symbol: "info.circle", message: "Pick a song, an album or a playlist.")
         }
     }
 }
@@ -280,7 +280,7 @@ private struct LocalInfoPanel: View {
                 }
             }
         } else {
-            EmptyState(title: "Nothing Is Playing", symbol: "info.circle")
+            EmptyState(title: "Nothing Playing", symbol: "info.circle", message: "Pick a song, an album or a playlist.")
         }
     }
 

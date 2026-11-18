@@ -99,9 +99,7 @@ struct AppearanceSettings: View {
                     BackdropChoices(selection: current.style) { settings.setStyle($0) }
                 } label: {
                     Text("Now Playing Backdrop")
-                    Text(current.style == .artwork
-                         ? LocalizedStringKey("The song's artwork, blurred, behind Now Playing.")
-                         : LocalizedStringKey("The lit Misty field in the artwork's colour, with the artwork framed."))
+                    Text("The artwork, blurred, or the Misty field in its colour.")
                 }
             }
 
@@ -119,7 +117,7 @@ struct AppearanceSettings: View {
                 .pickerStyle(.segmented)
                 Toggle(isOn: Binding(get: { current.showTranslation }, set: { settings.setShowTranslation($0) })) {
                     Text("Show Translations")
-                    Text("A translation under each line, when the lyrics have one.")
+                    Text("A line in another language under each lyric line, when the lyrics have one.")
                 }
                 Toggle(isOn: Binding(get: { current.showRomanization }, set: { settings.setShowRomanization($0) })) {
                     Text("Show Romanization")
