@@ -120,7 +120,10 @@ object PlayerModel {
 enum class SessionPlaybackState { Idle, Buffering, Ready, Ended }
 
 data class SessionItem(
-    val uid: Long,
+    /** The media item's id, unique in the session's list: the queue entry's, or the remote session's song. */
+    val id: String,
+    /** The queue entry's uid, which choosing the item jumps to; null for a remote session's song. */
+    val uid: Long?,
     val title: String?,
     val artist: String?,
     val album: String?,
@@ -145,24 +148,27 @@ data class SessionModel(
 enum class SeekKind { InCurrentItem, ToItem, Next, Previous, DefaultPosition }
 
 object SessionModels {
+    /**
+     * The session for the core's slices: the engine's song and Up Next, or, while a remote
+     * session runs, the service's song (docs/ui.md: the system's media controls follow it, as on
+     * the other platforms).
+     */
     fun from(state: CoreState): SessionModel {
+        if (state.remote.isActive) return remote(state)
         val now = state.nowPlaying
         val current = now?.let {
             SessionItem(
+                id = entryId(it.uid),
                 uid = it.uid,
                 title = it.title,
                 artist = it.artist,
                 album = it.album,
-                artworkUri = when (val art = it.artwork) {
-                    is ArtworkRef.File -> "file://" + art.path
-                    is ArtworkRef.Url -> art.url
-                    null -> null
-                },
+                artworkUri = artworkUri(it.artwork),
                 durationMs = it.durationMs ?: state.playback.anchor.durationUs?.div(1_000),
             )
         }
         val upNext = state.queue.upNext.map { item ->
-            SessionItem(item.uid, Labels.provisionalTitle(item.track), null, null, null, null)
+            SessionItem(entryId(item.uid), item.uid, Labels.provisionalTitle(item.track), null, null, null, null)
         }
         val items = listOfNotNull(current) + upNext
         val status = state.playback.status
@@ -185,17 +191,66 @@ object SessionModels {
         )
     }
 
+    /**
+     * The remote session's song as the notification and lock screen show it: what the player
+     * views show ([PlayerModel.track]: the service's song, or the service before it names one),
+     * with the session's anchor, play state, shuffle and repeat. The service keeps its own Up Next,
+     * so the song stands alone; Next and Previous still reach the service, as the core routes them.
+     */
+    private fun remote(state: CoreState): SessionModel {
+        val remote = state.remote
+        val track = PlayerModel.track(state)
+        val current = track?.let {
+            SessionItem(
+                id = it.key,
+                uid = null,
+                title = it.title,
+                artist = it.artist,
+                album = it.album,
+                artworkUri = artworkUri(it.artwork),
+                durationMs = PlayerModel.durationUs(state)?.div(1_000),
+            )
+        }
+        val sessionState = when {
+            current == null -> SessionPlaybackState.Idle
+            remote.status == Status.Ended -> SessionPlaybackState.Ended
+            remote.status == Status.Stopped -> SessionPlaybackState.Idle
+            else -> SessionPlaybackState.Ready
+        }
+        return SessionModel(
+            playWhenReady = remote.status == Status.Playing,
+            state = sessionState,
+            items = listOfNotNull(current),
+            currentIndex = 0,
+            shuffle = remote.shuffle,
+            repeat = remote.repeat,
+            anchor = remote.anchor,
+            buffering = false,
+        )
+    }
+
+    private fun entryId(uid: Long): String = "entry:$uid"
+
+    private fun artworkUri(artwork: ArtworkRef?): String? = when (artwork) {
+        is ArtworkRef.File -> "file://" + artwork.path
+        is ArtworkRef.Url -> artwork.url
+        null -> null
+    }
+
     /** The core command for a seek the system asked for. */
     fun seekCommand(model: SessionModel, kind: SeekKind, index: Int, positionMs: Long): Command? = when (kind) {
         SeekKind.Next -> Command.Next
         SeekKind.Previous -> Command.Previous
         SeekKind.InCurrentItem -> Command.Seek(positionMs.coerceAtLeast(0))
-        SeekKind.DefaultPosition -> if (index == model.currentIndex) Command.Seek(0) else model.items.getOrNull(index)?.let { Command.JumpTo(it.uid) }
+        SeekKind.DefaultPosition -> if (index == model.currentIndex) Command.Seek(0) else jumpTo(model, index)
         SeekKind.ToItem -> when {
             index == model.currentIndex -> Command.Seek(positionMs.coerceAtLeast(0))
-            else -> model.items.getOrNull(index)?.let { Command.JumpTo(it.uid) }
+            else -> jumpTo(model, index)
         }
     }
+
+    /** Jumps to the queue entry at [index]; nothing for a remote session's song or an index past the list. */
+    private fun jumpTo(model: SessionModel, index: Int): Command? = model.items.getOrNull(index)?.uid?.let { Command.JumpTo(it) }
 }
 
 /** Audio focus changes Android reports. */

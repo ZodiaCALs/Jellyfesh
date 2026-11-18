@@ -27,8 +27,11 @@ import org.jellyfesh.logic.time.positionAtUs
 /**
  * The Media3 face of the core (architecture §11: a `SimpleBasePlayer` facade). It plays nothing
  * itself: the system's requests (notification buttons, lock screen, headset and Bluetooth keys)
- * become core commands, and its state is the core's slices, mapped by [SessionModels]. Runs on
- * the main looper, as Media3 requires.
+ * become core commands, and its state is the core's slices, mapped by [SessionModels]: the
+ * engine's song and Up Next, or a remote session's song while one runs (the core routes the
+ * commands to the service then). Next and Previous work with a remote session's single song too:
+ * Media3 hands an otherwise ignored skip to [handleSeek] with its command. Runs on the main
+ * looper, as Media3 requires.
  */
 @OptIn(UnstableApi::class)
 class CorePlayer(private val graph: AppGraph, looper: Looper) : SimpleBasePlayer(looper) {
@@ -57,8 +60,8 @@ class CorePlayer(private val graph: AppGraph, looper: Looper) : SimpleBasePlayer
                 .setIsPlayable(true)
                 .setIsBrowsable(false)
                 .build()
-            MediaItemData.Builder(item.uid)
-                .setMediaItem(MediaItem.Builder().setMediaId(item.uid.toString()).setMediaMetadata(metadata).build())
+            MediaItemData.Builder(item.id)
+                .setMediaItem(MediaItem.Builder().setMediaId(item.id).setMediaMetadata(metadata).build())
                 .setMediaMetadata(metadata)
                 .setDurationUs(item.durationMs?.times(1_000) ?: C.TIME_UNSET)
                 .setIsSeekable(true)

@@ -9,10 +9,13 @@ import org.jellyfesh.logic.core.ArtworkRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.DeviceInfo
 import org.jellyfesh.logic.core.DevicesSnapshot
+import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.NowPlaying
 import org.jellyfesh.logic.core.QueueItem
 import org.jellyfesh.logic.core.QueueSnapshot
+import org.jellyfesh.logic.core.RemoteSnapshot
 import org.jellyfesh.logic.core.RepeatMode
+import org.jellyfesh.logic.core.SourceItem
 import org.jellyfesh.logic.core.SourceTrack
 import org.jellyfesh.logic.core.Status
 import org.jellyfesh.logic.core.TrackInfo
@@ -108,6 +111,48 @@ class PlayerModelTest {
         assertEquals(SessionPlaybackState.Ready, model.state)
         assertTrue(model.playWhenReady)
         assertEquals(SessionPlaybackState.Idle, SessionModels.from(CoreState()).state)
+    }
+
+    @Test
+    fun aRemoteSessionTakesTheSystemsMediaControls() {
+        val song = SourceItem(
+            source = "spotify", kind = ItemKind.Track, id = "t1", title = "Remote Song", subtitle = "Remote Artist",
+            album = "Remote Album", durationMs = 180_000, artwork = ArtworkRef.Url("https://img.example/t1.jpg"),
+            playable = true, unplayableReason = null, track = null, alsoIn = emptyList(),
+        )
+        val engine = CoreState(
+            nowPlaying = now(7),
+            queue = QueueSnapshot.Empty.copy(version = 1, len = 2, position = 0, upNext = listOf(QueueItem(8, TrackRef.Library(8)))),
+        )
+        val remote = RemoteSnapshot.Empty.copy(
+            version = 3, source = "spotify", sourceName = "Spotify", status = Status.Playing, item = song,
+            anchor = anchor(30_000, 1_000), shuffle = true, repeat = RepeatMode.All,
+        )
+        val model = SessionModels.from(engine.copy(remote = remote))
+        // The service's song alone: its Up Next stays in the service.
+        assertEquals(1, model.items.size)
+        val item = model.items.single()
+        assertEquals("Remote Song", item.title)
+        assertEquals("Remote Artist", item.artist)
+        assertEquals("https://img.example/t1.jpg", item.artworkUri)
+        assertEquals(240_000L, item.durationMs, "the anchor's length first")
+        assertNull(item.uid)
+        assertTrue(model.playWhenReady)
+        assertEquals(SessionPlaybackState.Ready, model.state)
+        assertTrue(model.shuffle)
+        assertEquals(RepeatMode.All, model.repeat)
+        assertEquals(remote.anchor, model.anchor)
+        // Skips and seeks go to the core, which routes them to the service; there is no entry to jump to.
+        assertEquals(Command.Next, SessionModels.seekCommand(model, SeekKind.Next, -1, 0))
+        assertEquals(Command.Previous, SessionModels.seekCommand(model, SeekKind.Previous, -1, 0))
+        assertEquals(Command.Seek(42_000), SessionModels.seekCommand(model, SeekKind.InCurrentItem, 0, 42_000))
+        assertNull(SessionModels.seekCommand(model, SeekKind.ToItem, 1, 0))
+        // Paused, and before the service names its song (the service's name stands in, as in the player).
+        val paused = SessionModels.from(engine.copy(remote = remote.copy(status = Status.Paused, item = null)))
+        assertEquals("Spotify", paused.items.single().title)
+        assertTrue(!paused.playWhenReady)
+        // When the session ends, the engine's song and Up Next come back.
+        assertEquals(listOf(7L, 8L), SessionModels.from(engine.copy(remote = remote.copy(source = null))).items.map { it.uid })
     }
 
     @Test
