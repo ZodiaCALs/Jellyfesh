@@ -310,6 +310,17 @@ enum AccentChoices {
     /// The swatches' hues in the order shown: Misty blue first, then round the wheel.
     static let swatchHues: [Float] = [250, 210, 180, 150, 120, 60, 30, 0, 330, 290]
 
+    /// The swatches' names in `swatchHues` order, as every app names them (docs/ui.md: the last
+    /// one is Violet).
+    static var swatchNames: [String] {
+        [
+            String(localized: "Blue"), String(localized: "Cyan"), String(localized: "Teal"),
+            String(localized: "Green"), String(localized: "Olive"), String(localized: "Orange"),
+            String(localized: "Red"), String(localized: "Rose"), String(localized: "Magenta"),
+            String(localized: "Violet"),
+        ]
+    }
+
     /// A hue in degrees, normalised to 0..<360 (NaN counts as Misty's 250).
     static func normalize(_ hue: Float) -> Float {
         guard hue.isFinite else { return 250 }

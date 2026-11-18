@@ -149,6 +149,15 @@ final class DesignTests: XCTestCase {
         XCTAssertEqual(AccentChoices.accent(hue: 250, dark: false), 0x0059_A7FF)
     }
 
+    func testEverySwatchHasItsName() {
+        let names = AccentChoices.swatchNames
+        XCTAssertEqual(names.count, AccentChoices.swatchHues.count)
+        XCTAssertEqual(Set(names).count, names.count, "no two swatches share a name")
+        XCTAssertEqual(names.first, String(localized: "Blue"))
+        XCTAssertEqual(names[7], String(localized: "Rose"), "hue 0")
+        XCTAssertEqual(names.last, String(localized: "Violet"), "docs/ui.md: Violet, not Purple")
+    }
+
     func testSwatchesMatchFixedHuesOnly() {
         XCTAssertEqual(AccentChoices.swatchHues, [250, 210, 180, 150, 120, 60, 30, 0, 330, 290])
         XCTAssertEqual(AccentChoices.swatchIndex(.fixed(hue: 250)), 0)

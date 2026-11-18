@@ -233,8 +233,8 @@ private struct MiniWindow: View {
     }
 }
 
-/// The ten accent swatches (`AccentChoices.swatchHues`), each a 44 pt target. The ring slides to
-/// the chosen one (`matchedGeometryEffect`).
+/// The ten accent swatches (`AccentChoices.swatchHues`), each a 44 pt target named Blue … Violet.
+/// The ring slides to the chosen one (`matchedGeometryEffect`).
 private struct AccentSwatches: View {
     var selected: Int?
     var choose: (Float) -> Void
@@ -244,9 +244,11 @@ private struct AccentSwatches: View {
     @Namespace private var namespace
 
     var body: some View {
+        let names = AccentChoices.swatchNames
         HStack(spacing: 0) {
             ForEach(Array(AccentChoices.swatchHues.enumerated()), id: \.offset) { index, hue in
                 let chosen = selected == index
+                let name = index < names.count ? names[index] : ""
                 Button {
                     withAnimation(Motion.unless(!effects.animates, Motion.move)) {
                         choose(hue)
@@ -267,9 +269,9 @@ private struct AccentSwatches: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PressScaleStyle(scale: 0.92))
-                .accessibilityLabel(Text("Hue \(Int(hue))"))
+                .accessibilityLabel(Text(name))
                 .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
-                .help(Text("Hue \(Int(hue))"))
+                .help(Text(name))
             }
         }
         .accessibilityElement(children: .contain)

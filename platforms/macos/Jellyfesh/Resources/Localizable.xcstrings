@@ -1645,6 +1645,28 @@
         }
       }
     },
+    "Blue": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブルー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓝色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藍色"
+          }
+        }
+      }
+    },
     "By line": {
       "localizations": {
         "ja": {
@@ -2081,6 +2103,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "自訂"
+          }
+        }
+      }
+    },
+    "Cyan": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シアン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青色"
           }
         }
       }
@@ -2877,6 +2921,28 @@
         }
       }
     },
+    "Green": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グリーン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "绿色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "綠色"
+          }
+        }
+      }
+    },
     "Hide Now Playing": {
       "localizations": {
         "ja": {
@@ -2983,28 +3049,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "色相"
-          }
-        }
-      }
-    },
-    "Hue %lld": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "色相 %lld"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "色相 %lld"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "色相 %lld"
           }
         }
       }
@@ -3823,6 +3867,28 @@
         }
       }
     },
+    "Magenta": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マゼンタ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "洋红"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "洋紅"
+          }
+        }
+      }
+    },
     "Make a playlist to keep songs together.": {
       "localizations": {
         "ja": {
@@ -4615,6 +4681,28 @@
         }
       }
     },
+    "Olive": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オリーブ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "橄榄绿"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "橄欖綠"
+          }
+        }
+      }
+    },
     "On": {
       "localizations": {
         "ja": {
@@ -4721,6 +4809,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟正在播放"
+          }
+        }
+      }
+    },
+    "Orange": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オレンジ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "橙色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "橙色"
           }
         }
       }
@@ -5385,6 +5495,28 @@
         }
       }
     },
+    "Red": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レッド"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "红色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紅色"
+          }
+        }
+      }
+    },
     "Reduce Motion and Transparency": {
       "localizations": {
         "ja": {
@@ -5733,6 +5865,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "繼續播放"
+          }
+        }
+      }
+    },
+    "Rose": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ローズ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "玫瑰红"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "玫瑰紅"
           }
         }
       }
@@ -6859,6 +7013,28 @@
         }
       }
     },
+    "Teal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ティール"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓝绿色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藍綠色"
+          }
+        }
+      }
+    },
     "Teal Deep": {
       "localizations": {
         "ja": {
@@ -7669,6 +7845,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "版本 %@"
+          }
+        }
+      }
+    },
+    "Violet": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バイオレット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紫罗兰色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紫羅蘭色"
           }
         }
       }
