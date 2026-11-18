@@ -17,7 +17,8 @@ repo="$(cd "$here/../../.." && pwd)"
 binary=${1:-}
 out=${2:-$repo/target/dist}
 if [[ -z "$binary" ]]; then
-  cargo build --release --locked -p jellyfesh-gtk --manifest-path "$repo/Cargo.toml"
+  # whisper.cpp (on-device AI Lyrics) for any x86_64 CPU, not only this machine's.
+  GGML_NATIVE="${GGML_NATIVE:-OFF}" cargo build --release --locked -p jellyfesh-gtk --manifest-path "$repo/Cargo.toml"
   binary="$repo/target/release/jellyfesh"
 fi
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/Cargo.toml" | head -1)

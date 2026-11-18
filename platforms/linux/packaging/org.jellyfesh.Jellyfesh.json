@@ -22,7 +22,9 @@
     "append-path": "/usr/lib/sdk/rust-stable/bin",
     "env": {
       "CARGO_HOME": "/run/build/jellyfesh/cargo",
-      "CARGO_TERM_COLOR": "never"
+      "CARGO_TERM_COLOR": "never",
+      "GGML_NATIVE": "OFF",
+      "WHISPER_DONT_GENERATE_BINDINGS": "1"
     }
   },
   "cleanup": [

@@ -81,6 +81,9 @@ env:
   JF_PRO_PREVIEW: ${{ (github.event_name == 'push' || inputs.pro_preview) && '1' || '0' }}
   # The public keys every build accepts licence keys from; not secret (ADR-0021 §2).
   JF_LICENCE_PUBLIC_KEYS: ${{ vars.JF_LICENCE_PUBLIC_KEYS }}
+  # whisper.cpp (on-device AI Lyrics, ADR-0019) for any CPU of each architecture, never the
+  # runner's own (-march=native would crash on other machines).
+  GGML_NATIVE: "OFF"
 
 jobs:
   check:
@@ -296,7 +299,7 @@ jobs:
       LABEL: ${{ needs.check.outputs.label }}
       JF_DISTRIBUTION: direct
       # whisper.cpp (core/jf-speech) with the static C runtime and optimised release flags, as in
-      # ci.yml's Windows jobs.
+      # ci.yml's Windows jobs and build.ps1 (Arm64 builds leave whisper.cpp out).
       CMAKE_POLICY_DEFAULT_CMP0091: NEW
       CMAKE_MSVC_RUNTIME_LIBRARY: MultiThreaded
       CMAKE_C_FLAGS_RELEASE: -O2 -Ob2 -DNDEBUG
@@ -402,8 +405,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.REF }}
-      - name: ALSA headers (host build of the bindings)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: ALSA headers and libclang (host build of the bindings; bindgen in whisper-rs-sys)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libclang-dev
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           targets: aarch64-linux-android, x86_64-linux-android
