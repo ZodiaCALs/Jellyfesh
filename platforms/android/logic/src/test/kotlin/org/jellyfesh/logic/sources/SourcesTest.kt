@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 import org.jellyfesh.logic.core.AuthField
+import org.jellyfesh.logic.core.AuthFieldKind
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.AuthStep
 import org.jellyfesh.logic.core.AuthUpdate
@@ -88,11 +89,46 @@ class AuthFlowTest {
     }
 
     @Test
-    fun qrCountdownRoundsUp() {
-        val step = AuthStep.ShowQr("data", expiresAtMs = 10_500)
-        assertEquals(1, AuthFlow.secondsLeft(step, 9_600))
-        assertEquals(0, AuthFlow.secondsLeft(step, 11_000))
-        assertNull(AuthFlow.secondsLeft(AuthStep.ShowQr("data", null), 0))
+    fun optionalFieldsMayStayEmpty() {
+        val form = listOf(
+            AuthField("user", "User Name", false, null),
+            AuthField("password", "Password", true, null),
+            AuthField("device", "Device Name", false, "Jellyfesh", required = false, help = "Shown in the server’s list of devices."),
+        )
+        var session = AuthFlow.onUpdate(AuthSession("p", AuthMethod.PasswordExchange), AuthUpdate("p", 3, AuthStep.AskFields(form)))!!
+        session = AuthFlow.edit(session, "user", "listener")
+        assertEquals(listOf("password"), AuthFlow.missing(form, session.values).map { it.name })
+        session = AuthFlow.edit(session, "password", "   ")
+        assertEquals(listOf("password"), AuthFlow.missing(form, session.values).map { it.name }, "spaces alone do not count")
+        session = AuthFlow.edit(session, "password", "hunter2")
+        val (_, command) = AuthFlow.submit(session)!!
+        // The empty optional field goes along empty, as in every app.
+        assertEquals(Command.SubmitLogin("p", 3, mapOf("user" to "listener", "password" to "hunter2", "device" to "")), command)
+    }
+
+    @Test
+    fun eachFieldIsTypedAsItsKindAsks() {
+        fun field(kind: AuthFieldKind, secret: Boolean = false) = AuthField("f", "F", secret, null, kind)
+        assertEquals(FieldInput.Text, AuthFlow.input(field(AuthFieldKind.Text)))
+        assertEquals(FieldInput.Email, AuthFlow.input(field(AuthFieldKind.Email)))
+        assertEquals(FieldInput.Url, AuthFlow.input(field(AuthFieldKind.Url)))
+        assertEquals(FieldInput.Digits, AuthFlow.input(field(AuthFieldKind.Number)))
+        assertEquals(FieldInput.Lines, AuthFlow.input(field(AuthFieldKind.CookieHeader)))
+        // A secret is masked whatever its kind.
+        assertEquals(FieldInput.Secret, AuthFlow.input(field(AuthFieldKind.Number, secret = true)))
+        assertEquals(FieldInput.Secret, AuthFlow.input(field(AuthFieldKind.CookieHeader, secret = true)))
+    }
+
+    @Test
+    fun aQuickConnectCodeIsItsOwnStepAndSpelledOut() {
+        val session = AuthFlow.onUpdate(
+            AuthSession("org.jellyfesh.jellyfin", AuthMethod.Qr),
+            AuthUpdate("org.jellyfesh.jellyfin", 4, AuthStep.ShowCode("482 913", "Enter this code in Quick Connect on a signed-in device.")),
+        )!!
+        assertEquals("482 913", (session.step as AuthStep.ShowCode).code)
+        assertFalse(session.finished)
+        assertEquals("4 8 2 9 1 3", AuthFlow.spelled("482 913"))
+        assertEquals("A B C 1", AuthFlow.spelled(" AB\tC1 "))
     }
 
     @Test

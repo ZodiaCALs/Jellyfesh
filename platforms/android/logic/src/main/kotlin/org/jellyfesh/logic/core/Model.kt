@@ -216,10 +216,30 @@ data class SourcesSnapshot(
     }
 }
 
-data class AuthField(val name: String, val label: String, val secret: Boolean, val placeholder: String?)
+/** How a sign-in field is typed (the core's `AuthFieldKind`): the keyboard, or lines for a pasted cookie header. */
+enum class AuthFieldKind { Text, Email, Url, Number, CookieHeader }
+
+/**
+ * A field a sign-in step asks for, as the plugin describes it: [secret] masks it, [required]
+ * fields must be filled before Sign In (optional ones may stay empty), [help] is a sentence under
+ * the input and [kind] picks how it is typed.
+ */
+data class AuthField(
+    val name: String,
+    val label: String,
+    val secret: Boolean,
+    val placeholder: String?,
+    val kind: AuthFieldKind = AuthFieldKind.Text,
+    val required: Boolean = true,
+    val help: String? = null,
+)
 
 sealed interface AuthStep {
-    data class ShowQr(val data: String, val expiresAtMs: Long?) : AuthStep
+    /** A QR code for the service's app to scan; [hint] is the plugin's own sentence for it, if any. */
+    data class ShowQr(val data: String, val expiresAtMs: Long?, val hint: String? = null) : AuthStep
+
+    /** A code shown large, to type on another device ([hint] says where), as with Jellyfin's Quick Connect. */
+    data class ShowCode(val code: String, val hint: String, val expiresAtMs: Long? = null) : AuthStep
     data class OpenUrl(val url: String) : AuthStep
     data class AskFields(val fields: List<AuthField>) : AuthStep
     data class Waiting(val message: String) : AuthStep

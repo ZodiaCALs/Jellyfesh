@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import androidx.compose.ui.unit.sp
 import org.jellyfesh.android.R
 import org.jellyfesh.android.ui.LocalAuthRedirects
 import org.jellyfesh.android.ui.components.JfText
@@ -52,10 +53,10 @@ import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.core.SourcePreset
-import org.jellyfesh.logic.format.TimeFormat
 import org.jellyfesh.logic.qr.QrMatrix
 import org.jellyfesh.logic.sources.AuthFlow
 import org.jellyfesh.logic.sources.AuthSession
+import org.jellyfesh.logic.sources.FieldInput
 
 /**
  * Sign-in sheets. The core runs each flow (ADR-0004); the sheet draws its steps natively: a QR
@@ -145,6 +146,7 @@ private fun SignInContent(name: String, start: Pair<AuthSession, Command>, dismi
             }
             step == null -> JfText(stringResource(R.string.sign_in_starting), style = JfType.small, color = Jf.colors.ink70)
             step is AuthStep.ShowQr -> QrStep(name, step)
+            step is AuthStep.ShowCode -> CodeStep(step)
             step is AuthStep.OpenUrl -> {
                 JfText(stringResource(R.string.sign_in_browser_body), style = JfType.small, color = Jf.colors.ink90)
                 JfButton(stringResource(R.string.sign_in_open_again), { openInBrowser(context, step.url) }, icon = R.drawable.ic_external)
@@ -162,7 +164,8 @@ private fun SignInContent(name: String, start: Pair<AuthSession, Command>, dismi
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { JfButton(stringResource(R.string.action_done), dismiss, style = ButtonStyle.Accent) }
             }
             step is AuthStep.Failed -> {
-                JfText(stringResource(R.string.sign_in_failed, step.message), style = JfType.small, color = Jf.colors.danger)
+                // The plugin's message alone, as every app shows it.
+                JfText(step.message, style = JfType.small, color = Jf.colors.danger)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
                     JfButton(stringResource(R.string.action_close), dismiss, style = ButtonStyle.Quiet)
                     JfButton(stringResource(R.string.action_retry), {
@@ -179,20 +182,14 @@ private fun openInBrowser(context: android.content.Context, url: String) {
     runCatching { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, Uri.parse(url)) }
 }
 
+/**
+ * A QR code for the service's app to scan, with the plugin's own sentence when it gives one (else
+ * "Scan the code with the {name} app on your phone."), as every app shows it. The core polls
+ * meanwhile and moves on by itself.
+ */
 @Composable
 private fun QrStep(name: String, step: AuthStep.ShowQr) {
     val matrix = remember(step.data) { QrMatrix.encode(step.data) }
-    // A countdown that ticks once a second while the sheet is open (only with an expiry).
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    if (step.expiresAtMs != null) {
-        LaunchedEffect(step) {
-            while (true) {
-                now = System.currentTimeMillis()
-                delay(1_000 - now % 1_000)
-            }
-        }
-    }
-    val left = AuthFlow.secondsLeft(step, now)
     val label = stringResource(R.string.a11y_qr)
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (matrix != null) {
@@ -215,29 +212,64 @@ private fun QrStep(name: String, step: AuthStep.ShowQr) {
                 }
             }
         }
-        JfText(stringResource(R.string.sign_in_qr_body, name), style = JfType.small, textAlign = TextAlign.Center)
-        if (left != null) {
-            JfText(
-                if (left > 0) stringResource(R.string.sign_in_qr_expires, TimeFormat.clock(left * 1_000)) else stringResource(R.string.sign_in_qr_expired),
-                style = JfType.caption,
-                color = Jf.colors.ink50,
-            )
-        }
+        val hint = step.hint?.takeIf { it.isNotBlank() } ?: stringResource(R.string.sign_in_qr_body, name)
+        JfText(hint, style = JfType.small, color = Jf.colors.ink70, textAlign = TextAlign.Center)
     }
 }
 
+/**
+ * A code to type on another device (Jellyfin's Quick Connect): large and selectable, spelled out
+ * for TalkBack, with the plugin's sentence saying where it goes, while the core waits for the
+ * approval.
+ */
+@Composable
+private fun CodeStep(step: AuthStep.ShowCode) {
+    val colors = Jf.colors
+    val spoken = stringResource(R.string.sign_in_code_a11y, AuthFlow.spelled(step.code))
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SelectionContainer {
+            JfText(
+                step.code,
+                style = JfType.style(40f, 1.2f, 700).copy(letterSpacing = 4.sp, fontFeatureSettings = "tnum"),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 8.dp).semantics { contentDescription = spoken },
+            )
+        }
+        if (step.hint.isNotBlank()) JfText(step.hint, style = JfType.small, color = colors.ink70, textAlign = TextAlign.Center)
+        JfText(stringResource(R.string.sign_in_code_waiting), style = JfType.caption, color = colors.ink50, textAlign = TextAlign.Center)
+    }
+}
+
+/**
+ * The fields the plugin asks for, as it describes them: the label ("Optional" beside a field that
+ * may stay empty), the input its kind asks for (masked for secrets, several lines for a pasted
+ * cookie header) with the plugin's placeholder, and its help under it. Sign In waits for the
+ * required fields only.
+ */
 @Composable
 private fun FieldsStep(session: AuthSession, step: AuthStep.AskFields, onEdit: (String, String) -> Unit, onSubmit: () -> Unit) {
     val missing = AuthFlow.missing(step.fields, session.values)
+    val optional = stringResource(R.string.sign_in_optional)
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         step.fields.forEach { field ->
+            val input = AuthFlow.input(field)
             JfTextField(
                 value = session.values[field.name].orEmpty(),
                 onValueChange = { onEdit(field.name, it) },
                 label = field.label,
                 placeholder = field.placeholder,
-                secret = field.secret,
-                keyboard = if (field.name.contains("url", ignoreCase = true)) KeyboardType.Uri else KeyboardType.Text,
+                secret = input == FieldInput.Secret,
+                keyboard = when (input) {
+                    FieldInput.Email -> KeyboardType.Email
+                    FieldInput.Url -> KeyboardType.Uri
+                    FieldInput.Digits -> KeyboardType.Number
+                    FieldInput.Secret -> KeyboardType.Password
+                    FieldInput.Text, FieldInput.Lines -> KeyboardType.Text
+                },
+                singleLine = input != FieldInput.Lines,
+                minLines = if (input == FieldInput.Lines) 4 else 1,
+                supporting = field.help?.takeIf { it.isNotBlank() },
+                labelNote = optional.takeIf { !field.required },
             )
         }
         if (step.fields.any { it.secret }) {

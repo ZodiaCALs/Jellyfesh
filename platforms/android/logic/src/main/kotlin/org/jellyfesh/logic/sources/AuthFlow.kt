@@ -1,6 +1,7 @@
 package org.jellyfesh.logic.sources
 
 import org.jellyfesh.logic.core.AuthField
+import org.jellyfesh.logic.core.AuthFieldKind
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.AuthStep
 import org.jellyfesh.logic.core.AuthUpdate
@@ -68,9 +69,27 @@ object AuthFlow {
     fun edit(session: AuthSession, field: String, value: String): AuthSession =
         session.copy(values = session.values + (field to value))
 
-    /** The fields that still need a value (every field is required unless it has a placeholder only). */
+    /** The required fields that are still empty (spaces alone do not count); optional ones may stay empty. */
     fun missing(fields: List<AuthField>, values: Map<String, String>): List<AuthField> =
-        fields.filter { values[it.name].isNullOrBlank() }
+        fields.filter { it.required && values[it.name].isNullOrBlank() }
+
+    /**
+     * How [field] is typed: masked when it is secret, several lines for a pasted cookie header,
+     * otherwise one line with the keyboard its kind asks for (as every app does).
+     */
+    fun input(field: AuthField): FieldInput = when {
+        field.secret -> FieldInput.Secret
+        else -> when (field.kind) {
+            AuthFieldKind.Text -> FieldInput.Text
+            AuthFieldKind.Email -> FieldInput.Email
+            AuthFieldKind.Url -> FieldInput.Url
+            AuthFieldKind.Number -> FieldInput.Digits
+            AuthFieldKind.CookieHeader -> FieldInput.Lines
+        }
+    }
+
+    /** A sign-in code as TalkBack spells it, one character at a time: `AB 12` reads "A B 1 2". */
+    fun spelled(code: String): String = code.filterNot { it.isWhitespace() }.toList().joinToString(" ")
 
     /**
      * Sends the form. The values leave the session at once: secrets pass through to the core one
@@ -96,12 +115,11 @@ object AuthFlow {
         return Command.SubmitLogin(session.plugin, flow, mapOf(REDIRECT_FIELD to url))
     }
 
-    /** Whole seconds left on a QR code, or null without an expiry. */
-    fun secondsLeft(step: AuthStep.ShowQr, nowMs: Long): Long? =
-        step.expiresAtMs?.let { ((it - nowMs + 999) / 1_000).coerceAtLeast(0) }
-
     const val REDIRECT_FIELD = "redirect_url"
 }
+
+/** Where a sign-in field's answer is typed ([AuthFlow.input]). */
+enum class FieldInput { Text, Email, Url, Digits, Secret, Lines }
 
 /**
  * The community-plugin disclosure (ADR-0012): shown when the person turns on "Allow community

@@ -13,6 +13,7 @@ import org.jellyfesh.ffi.AppearancePref as FAppearancePref
 import org.jellyfesh.ffi.Artist as FArtist
 import org.jellyfesh.ffi.ArtworkRef as FArtworkRef
 import org.jellyfesh.ffi.AuthField as FAuthField
+import org.jellyfesh.ffi.AuthFieldKind as FAuthFieldKind
 import org.jellyfesh.ffi.AuthMethod as FAuthMethod
 import org.jellyfesh.ffi.AuthStep as FAuthStep
 import org.jellyfesh.ffi.AuthUpdate as FAuthUpdate
@@ -85,6 +86,7 @@ import org.jellyfesh.logic.core.AppearancePref
 import org.jellyfesh.logic.core.Artist
 import org.jellyfesh.logic.core.ArtworkRef
 import org.jellyfesh.logic.core.AuthField
+import org.jellyfesh.logic.core.AuthFieldKind
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.AuthStep
 import org.jellyfesh.logic.core.AuthUpdate
@@ -684,15 +686,29 @@ object FfiMapping {
     fun FSourcesSnapshot.toLogic(): SourcesSnapshot =
         SourcesSnapshot(version.toLong(), plugins.map { it.toLogic() }, presets.map { it.toLogic() }, allowCommunity)
 
-    private fun FAuthField.toLogic(): AuthField = AuthField(name, label, secret, placeholder)
+    private fun FAuthField.toLogic(): AuthField = AuthField(
+        name = name,
+        label = label,
+        secret = secret,
+        placeholder = placeholder,
+        kind = when (kind) {
+            FAuthFieldKind.TEXT -> AuthFieldKind.Text
+            FAuthFieldKind.EMAIL -> AuthFieldKind.Email
+            FAuthFieldKind.URL -> AuthFieldKind.Url
+            FAuthFieldKind.NUMBER -> AuthFieldKind.Number
+            FAuthFieldKind.COOKIE_HEADER -> AuthFieldKind.CookieHeader
+        },
+        required = required,
+        help = help,
+    )
 
     fun FAuthUpdate.toLogic(): AuthUpdate = AuthUpdate(
         plugin = plugin,
         flow = flow.toLong(),
         step = when (val s = step) {
-            is FAuthStep.ShowQr -> AuthStep.ShowQr(s.data, s.expiresAtMs)
-            // A code to type on another device (Jellyfin Quick Connect), shown as text for now.
-            is FAuthStep.ShowCode -> AuthStep.Waiting("${s.hint}: ${s.code}")
+            is FAuthStep.ShowQr -> AuthStep.ShowQr(s.data, s.expiresAtMs, s.hint)
+            // A code to type on another device (Jellyfin's Quick Connect), shown large.
+            is FAuthStep.ShowCode -> AuthStep.ShowCode(s.code, s.hint, s.expiresAtMs)
             is FAuthStep.OpenUrl -> AuthStep.OpenUrl(s.url)
             is FAuthStep.AskFields -> AuthStep.AskFields(s.fields.map { it.toLogic() })
             is FAuthStep.Waiting -> AuthStep.Waiting(s.message)

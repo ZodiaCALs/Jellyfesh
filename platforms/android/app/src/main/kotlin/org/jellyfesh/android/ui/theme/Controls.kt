@@ -850,7 +850,10 @@ fun VerticalBandSlider(
     }
 }
 
-/** A text field drawn in the theme: label above, a quiet filled box, masked when [secret]. */
+/**
+ * A text field drawn in the theme: label above (with [labelNote], such as "Optional", at its end),
+ * a quiet filled box, masked when [secret]; [minLines] above 1 makes it a box of several lines.
+ */
 @Composable
 fun JfTextField(
     value: String,
@@ -863,17 +866,24 @@ fun JfTextField(
     error: String? = null,
     singleLine: Boolean = true,
     supporting: String? = null,
+    labelNote: String? = null,
+    minLines: Int = 1,
 ) {
     val colors = Jf.colors
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(Tokens.Radius.rMd.dp)
+    val spoken = listOfNotNull(label, labelNote).joinToString(", ")
     androidx.compose.foundation.layout.Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        JfText(label, style = JfType.label, color = colors.ink70)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            JfText(label, style = JfType.label, color = colors.ink70, modifier = Modifier.weight(1f, fill = false))
+            if (labelNote != null) JfText(labelNote, style = JfType.caption, color = colors.ink50, maxLines = 1)
+        }
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            singleLine = singleLine,
+            singleLine = singleLine && minLines <= 1,
+            minLines = if (singleLine && minLines <= 1) 1 else minLines.coerceAtLeast(1),
             textStyle = JfType.body.copy(color = colors.ink90),
             cursorBrush = androidx.compose.ui.graphics.SolidColor(colors.accentText),
             visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
@@ -884,7 +894,7 @@ fun JfTextField(
             interactionSource = interaction,
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = label },
+                .semantics { contentDescription = spoken },
             decorationBox = { inner ->
                 Box(
                     Modifier
@@ -893,7 +903,7 @@ fun JfTextField(
                         .background(colors.fill, shape)
                         .border(if (focused) 2.dp else 1.dp, if (error != null) colors.danger else if (focused) colors.accentText else colors.line, shape)
                         .padding(horizontal = 14.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.CenterStart,
+                    contentAlignment = if (minLines > 1) Alignment.TopStart else Alignment.CenterStart,
                 ) {
                     if (value.isEmpty() && placeholder != null) JfText(placeholder, style = JfType.body, color = colors.ink50, maxLines = 1)
                     inner()
