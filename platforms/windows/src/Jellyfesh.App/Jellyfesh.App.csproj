@@ -51,6 +51,21 @@
     <JfBundledPluginsDir Condition="'$(JfBundledPluginsDir)' == ''">$(JfRepoRoot)dist/plugins/</JfBundledPluginsDir>
   </PropertyGroup>
 
+  <!-- The website About links to, with its third-party licences page (docs/parity.md N28): JfWebsite or
+       JF_WEBSITE as given, else in GitHub Actions the repository's GitHub Pages address, where web.yml
+       publishes the website, as the macOS and Android builds do; else none (About shows no link). -->
+  <PropertyGroup>
+    <JfWebsite Condition="'$(JfWebsite)' == ''">$(JF_WEBSITE)</JfWebsite>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(JfWebsite)' == '' and $(GITHUB_REPOSITORY.Contains('/'))">
+    <_JfRepoOwner>$(GITHUB_REPOSITORY.Substring(0, $(GITHUB_REPOSITORY.IndexOf('/'))).ToLowerInvariant())</_JfRepoOwner>
+    <_JfRepoName>$(GITHUB_REPOSITORY.Substring($([MSBuild]::Add($(GITHUB_REPOSITORY.IndexOf('/')), 1))))</_JfRepoName>
+    <JfWebsite>https://$(_JfRepoOwner).github.io/$(_JfRepoName)/</JfWebsite>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="JfWebsite" Value="$(JfWebsite)" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="CommunityToolkit.Mvvm" />

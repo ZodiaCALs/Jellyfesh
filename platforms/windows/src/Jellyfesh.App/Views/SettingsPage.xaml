@@ -684,7 +684,7 @@
                     </Border>
                 </StackPanel>
 
-                <!-- ===== About: the version (from the build), the licences, the log folder ===== -->
+                <!-- ===== About: the version (from the build), the website and the licences where the build knows them, the log folder ===== -->
                 <StackPanel x:Name="AboutPanel" Spacing="16" Visibility="Collapsed">
                     <Border Style="{StaticResource JfCardStyle}">
                         <StackPanel Spacing="10">
@@ -699,6 +699,7 @@
                             <TextBlock x:Uid="About_Misty" Style="{StaticResource JfSecondaryBodyText}" Text="Designed with the Misty design language. Design tokens derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0." />
                             <TextBlock x:Uid="About_Rights" Style="{StaticResource JfSecondaryBodyText}" Text="All rights reserved. Third-party licences are listed in the notices file next to the app." />
                             <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Name="WebsiteButton" x:Uid="About_Website" Click="OnWebsiteClick" Content="Website" Style="{StaticResource JfChipButtonStyle}" Visibility="Collapsed" />
                                 <Button x:Name="LicencesButton" x:Uid="About_Licences" Click="OnLicencesClick" Content="Third-Party Licences" Style="{StaticResource JfChipButtonStyle}" />
                                 <Button x:Uid="About_Logs" Click="OnOpenLogsClick" Content="Open Log Folder" Style="{StaticResource JfChipButtonStyle}" />
                             </StackPanel>

@@ -7,6 +7,7 @@ using Jellyfesh.App.Theming;
 using Jellyfesh.Appearance;
 using Jellyfesh.Formatting;
 using Jellyfesh.Interop;
+using Jellyfesh.Services;
 using Jellyfesh.Settings;
 using Jellyfesh.ViewModels;
 using Microsoft.UI.Xaml;
@@ -47,7 +48,8 @@ public sealed partial class SettingsPage : JfPage
             SyncChoices();
         };
         Unloaded += (_, _) => AppHost.App.ThemeChanged -= OnThemeChanged;
-        LicencesButton.Visibility = Bind.Visible(File.Exists(NoticesPath));
+        LicencesButton.Visibility = Bind.Visible(File.Exists(NoticesPath) || Links is not null);
+        WebsiteButton.Visibility = Bind.Visible(Links is not null);
         VersionText.Text = Version();
         AboutIcon.Source = new BitmapImage(AppAssets.IconPng(AppHost.App.AppIcon, 64));
     }
@@ -56,6 +58,10 @@ public sealed partial class SettingsPage : JfPage
 
     /// <summary>The third-party notices the build puts next to the app (scripts/build.ps1).</summary>
     private static string NoticesPath => Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.md");
+
+    /// <summary>The website and its licences page, when the build knows the website (JfWebsite).</summary>
+    private static AboutInfo.Links? Links { get; } = AboutInfo.LinksFor(
+        Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "JfWebsite")?.Value);
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -76,24 +82,18 @@ public sealed partial class SettingsPage : JfPage
 
     private static string Version()
     {
-        var app = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.4";
-        var plus = app.IndexOf('+', StringComparison.Ordinal);
-        if (plus > 0)
-        {
-            app = app[..plus];
-        }
-
-        string core;
+        var app = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        string? core;
         try
         {
             core = FfiCoreClient.LibraryVersion();
         }
         catch (Exception)
         {
-            core = "?";
+            core = null;
         }
 
-        return AppHost.L.Format("About_Version", app, core);
+        return AboutInfo.Version(app, core, AppHost.L);
     }
 
     private void OnSectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
@@ -312,11 +312,24 @@ public sealed partial class SettingsPage : JfPage
         }
     }
 
+    /// <summary>The notices file next to the app, else the website's licences page.</summary>
     private void OnLicencesClick(object sender, RoutedEventArgs e)
     {
         if (File.Exists(NoticesPath))
         {
             Process.Start(new ProcessStartInfo(NoticesPath) { UseShellExecute = true });
+        }
+        else if (Links is { } links)
+        {
+            AppHost.Platform.OpenUrl(links.Licences.AbsoluteUri);
+        }
+    }
+
+    private void OnWebsiteClick(object sender, RoutedEventArgs e)
+    {
+        if (Links is { } links)
+        {
+            AppHost.Platform.OpenUrl(links.Website.AbsoluteUri);
         }
     }
 

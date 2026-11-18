@@ -32,6 +32,12 @@
   <data name="About_Version" xml:space="preserve">
     <value>版本 {0} · 核心 {1}</value>
   </data>
+  <data name="About_VersionOnly" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="About_Website.Content" xml:space="preserve">
+    <value>網站</value>
+  </data>
   <data name="Action_Cancel" xml:space="preserve">
     <value>取消</value>
   </data>
