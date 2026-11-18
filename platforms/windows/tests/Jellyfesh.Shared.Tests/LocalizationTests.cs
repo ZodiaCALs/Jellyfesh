@@ -44,8 +44,9 @@ public partial class LocalizationTests
         var src = Contract.PathOf("platforms", "windows", "src");
         var used = Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            .SelectMany(f => KeyLiteral().Matches(File.ReadAllText(f)).Select(m => m.Groups[1].Value))
+            .SelectMany(f => KeyLiteral().Matches(NativeEntryPoint().Replace(File.ReadAllText(f), string.Empty)).Select(m => m.Groups[1].Value))
             .Where(k => k is not ("Count_Songs" or "Count_Albums" or "Count_Artists" or "Count_Minutes" or "Count_Hours")) // read through Plural
+            .Where(k => k != k.ToUpperInvariant()) // environment variables (JF_LOG_DIR), not strings
             .Concat(Dynamic)
             .ToHashSet(StringComparer.Ordinal);
         var missing = used.Where(k => !english.ContainsKey(k)).Order(StringComparer.Ordinal).ToList();
@@ -84,6 +85,10 @@ public partial class LocalizationTests
 
     [GeneratedRegex("\"([A-Z][A-Za-z]+_[A-Za-z0-9_]+)\"")]
     private static partial Regex KeyLiteral();
+
+    /// <summary>Native functions' names (LibraryImport's EntryPoint), which are not strings.</summary>
+    [GeneratedRegex("EntryPoint\\s*=\\s*\"[^\"]*\"")]
+    private static partial Regex NativeEntryPoint();
 
     [GeneratedRegex(@"\{(\d+)(?::[^}]*)?\}")]
     private static partial Regex Placeholder();

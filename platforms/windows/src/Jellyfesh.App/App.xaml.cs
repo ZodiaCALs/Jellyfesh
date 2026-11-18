@@ -4,14 +4,15 @@ using Jellyfesh.Core;
 using Jellyfesh.Interop;
 using Jellyfesh.Services;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 
 namespace Jellyfesh.App;
 
 /// <summary>
 /// The application: installs the theme brushes and the control style dictionary, starts the core
 /// (with the bundled official plugins) and opens the main window. Shells hold no business logic
-/// (ADR-0001): everything after start-up is the view models in Jellyfesh.Shared.
+/// (ADR-0001): everything after start-up is the view models in Jellyfesh.Shared. Each step is a
+/// stage of Startup: a failure is logged and shown, and Jellyfesh then exits rather than lingering
+/// without a window (docs/windows.md, "When Jellyfesh does not start").
 /// </summary>
 public partial class App : Application
 {
@@ -19,57 +20,100 @@ public partial class App : Application
 
     public App()
     {
-        InitializeComponent();
-
-        // The Jf* brushes first: the style dictionaries below refer to them.
-        ThemeBrushes.Install(Resources);
-        Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("ms-appx:///Styles/Controls.xaml") });
-        Resources.MergedDictionaries.Add(new Styles.Templates());
+        // First, so that XAML's own failures from here on reach the log.
         UnhandledException += OnUnhandledException;
+        try
+        {
+            Startup.EnterStage("loading App.xaml (WinUI's resources)");
+            InitializeComponent();
+
+            // The Jf* brushes first: the style dictionaries below refer to them.
+            Startup.EnterStage("loading the colours and styles");
+            ThemeBrushes.Install(Resources);
+            Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("ms-appx:///Styles/Controls.xaml") });
+            Resources.MergedDictionaries.Add(new Styles.Templates());
+        }
+        catch (Exception e)
+        {
+            // Without its styles no window of the app can be drawn: a message box says why.
+            Startup.Fail(e, xamlWorks: false);
+        }
     }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
-        ICoreClient core;
+        ICoreClient? core = null;
         try
         {
-            core = FfiCoreClient.Start(bundledPlugins: BundledPlugins.Find(AppContext.BaseDirectory));
-        }
-        catch (Exception e) when (e is CoreQueryException or DllNotFoundException or EntryPointNotFoundException or BadImageFormatException or TypeInitializationException)
-        {
-            AppLog.Write("core did not start", e);
-            StartupErrorWindow.Show(e.Message);
-            return;
-        }
+            Startup.EnterStage("starting the core");
+            core = StartCore();
 
-        _main = new MainWindow(core);
-        _main.Activate();
+            Startup.EnterStage("opening the main window");
+            _main = new MainWindow(core);
+
+            Startup.EnterStage("showing the main window");
+            _main.Activate();
+            Startup.MarkWindowOpen();
+            if (Startup.SmokeTest)
+            {
+                SmokeTest.Run(_main);
+            }
+        }
+        catch (Exception e)
+        {
+            var window = _main;
+            _main = null;
+            if (window is not null)
+            {
+                Quietly(window.Close); // its Closed handler shuts the core down
+            }
+            else if (core is not null)
+            {
+                Quietly(core.Dispose);
+            }
+
+            Startup.Fail(e, xamlWorks: true);
+        }
     }
 
     /// <summary>Another start was redirected here: show the window (called on a background thread).</summary>
     internal static void BringToFront() => _main?.DispatcherQueue.TryEnqueue(() => _main?.BringToFront());
 
+    /// <summary>The core in its folders (logged, so a report says where the library is), with the plugins shipped in the app.</summary>
+    private static FfiCoreClient StartCore()
+    {
+        var (data, cache) = FfiCoreClient.DefaultFolders();
+        var plugins = BundledPlugins.Find(AppContext.BaseDirectory);
+        AppLog.Write($"  data: {data}");
+        AppLog.Write($"  cache: {cache}");
+        AppLog.Write($"  bundled plugins: {plugins.Count}");
+        return FfiCoreClient.Start(data, cache, plugins);
+    }
+
     private static void OnUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
     {
-        AppLog.Write("unhandled exception", e.Exception);
+        // Message keeps the original exception's message when Exception does not (WinUI's remarks).
+        AppLog.Write($"unhandled exception while {Startup.Stage}: {e.Message}", e.Exception);
+        if (!Startup.WindowOpen || Startup.SmokeTest)
+        {
+            e.Handled = true;
+            Startup.Fail(e.Exception, xamlWorks: true);
+            return;
+        }
 
         // A view that failed to draw should not end playback; anything the runtime cannot recover from still ends the process.
         e.Handled = e.Exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException);
     }
-}
 
-/// <summary>A minimal window that says why Jellyfesh could not start (no core, no main window).</summary>
-internal static class StartupErrorWindow
-{
-    public static void Show(string message)
+    private static void Quietly(Action action)
     {
-        var l = new Platform.ResourceLocalizer();
-        var window = new Window { Title = "Jellyfesh" };
-        var panel = new StackPanel { Spacing = 12, Margin = new Thickness(32), MaxWidth = 560, HorizontalAlignment = HorizontalAlignment.Left };
-        panel.Children.Add(new TextBlock { Text = l.Get("Startup_FailedTitle"), FontSize = 20, FontWeight = Microsoft.UI.Text.FontWeights.Bold, TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = l.Get("Startup_FailedBody"), TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBox { Text = message, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
-        window.Content = panel;
-        window.Activate();
+        try
+        {
+            action();
+        }
+        catch (Exception e)
+        {
+            AppLog.Write("cleaning up after a failed start failed too", e);
+        }
     }
 }

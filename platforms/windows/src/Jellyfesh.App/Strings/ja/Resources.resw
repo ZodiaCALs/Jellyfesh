@@ -1230,10 +1230,19 @@
     <value>マイソース</value>
   </data>
   <data name="Startup_FailedBody" xml:space="preserve">
-    <value>音楽エンジンを起動できませんでした。Jellyfesh を再インストールすると直ることがあります。詳細は以下のとおりです。</value>
+    <value>Jellyfesh の起動中に問題が発生しました。詳細は以下のとおりです。報告の際はログファイルを添付してください。</value>
   </data>
   <data name="Startup_FailedTitle" xml:space="preserve">
     <value>Jellyfesh を起動できませんでした</value>
+  </data>
+  <data name="Startup_LogFile" xml:space="preserve">
+    <value>ログファイル</value>
+  </data>
+  <data name="Startup_NotAnswering" xml:space="preserve">
+    <value>Jellyfesh はすでに実行中ですが、応答していません。タスク マネージャーで Jellyfesh を終了してから、もう一度起動してください。</value>
+  </data>
+  <data name="Startup_OpenLogFolder" xml:space="preserve">
+    <value>ログフォルダを開く</value>
   </data>
   <data name="Time_HoursAndMinutes" xml:space="preserve">
     <value>{0} {1}</value>

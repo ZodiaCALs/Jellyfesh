@@ -1230,10 +1230,19 @@
     <value>Your Sources</value>
   </data>
   <data name="Startup_FailedBody" xml:space="preserve">
-    <value>The music engine did not start. Reinstalling Jellyfesh usually helps; the details are below.</value>
+    <value>Something went wrong while Jellyfesh was starting. The details are below; please send the log file with your report.</value>
   </data>
   <data name="Startup_FailedTitle" xml:space="preserve">
     <value>Jellyfesh Could Not Start</value>
+  </data>
+  <data name="Startup_LogFile" xml:space="preserve">
+    <value>Log File</value>
+  </data>
+  <data name="Startup_NotAnswering" xml:space="preserve">
+    <value>Jellyfesh is already running but isn't answering. End Jellyfesh in Task Manager, then start it again.</value>
+  </data>
+  <data name="Startup_OpenLogFolder" xml:space="preserve">
+    <value>Open Log Folder</value>
   </data>
   <data name="Time_HoursAndMinutes" xml:space="preserve">
     <value>{0} {1}</value>

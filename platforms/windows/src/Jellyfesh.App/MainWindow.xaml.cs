@@ -8,6 +8,7 @@ using Jellyfesh.App.Views;
 using Jellyfesh.Core;
 using Jellyfesh.Drawing;
 using Jellyfesh.Interop;
+using Jellyfesh.Services;
 using Jellyfesh.ViewModels;
 using Microsoft.UI;
 using Microsoft.UI.Dispatching;
@@ -74,6 +75,7 @@ public sealed partial class MainWindow : Window
     private bool _themeApplied;
     private bool _syncingNav;
     private Notification? _shownNotice;
+    private readonly HashSet<string> _failedParts = [];
 
     public MainWindow(ICoreClient core)
     {
@@ -94,13 +96,17 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         // Shadows of the library (covers, groups, the player bar) fall on the field (ThemeShadow receivers).
-        Elevation.AddReceiver(Elevation.Library, Field);
+        Optional("the library's shadows", () => Elevation.AddReceiver(Elevation.Library, Field));
 
         Title = "Jellyfesh";
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(AppTitleBar);
+        Optional("the title bar", () =>
+        {
+            ExtendsContentIntoTitleBar = true;
+            SetTitleBar(AppTitleBar);
+        });
         _hwnd = WindowNative.GetWindowHandle(this);
-        PlaceWindow();
+        Optional("placing the window", PlaceWindow);
+        ContentFrame.NavigationFailed += OnNavigationFailed;
 
         _backdrop = new BackdropController(this);
         _backdrop.Changed += ApplyMaterial;
@@ -131,12 +137,14 @@ public sealed partial class MainWindow : Window
         Root.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnRootPointerPressed), handledEventsToo: true);
 
         _vm.Start();
-        ReadSystemPreferences();
+        Optional("the system's colours and animation setting", ReadSystemPreferences);
         _backdrop.Refresh();
-        _shell = new WindowShell(_hwnd, _vm.Player, l);
-        _shell.SetIcon(_vm.AppIcon);
-        _media = new MediaTransport(_hwnd, _vm.Player, _vm.Services, queue);
-        _devices = new AudioDeviceNotifications(queue, c => _vm.Services.Send(c));
+
+        // The Windows parts: each that fails is logged and left out, and the window opens without it.
+        _shell = Optional("the taskbar buttons and the window icon", () => new WindowShell(_hwnd, _vm.Player, l));
+        Optional("the window icon", () => _shell?.SetIcon(_vm.AppIcon));
+        _media = Optional("the system media controls", () => new MediaTransport(_hwnd, _vm.Player, _vm.Services, queue));
+        _devices = Optional("the audio device notifications", () => new AudioDeviceNotifications(queue, c => _vm.Services.Send(c)));
         _vm.Services.Send(new CoreCommand.RefreshDevices());
 
         SelectSection("home");
@@ -317,6 +325,66 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Runs a part of the window that it can do without (the title bar, icons, media controls, …):
+    /// one that fails on this PC is logged, once per part, and the window goes on without it.
+    /// </summary>
+    private void Optional(string what, Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception e)
+        {
+            if (_failedParts.Add(what))
+            {
+                AppLog.Write($"{what}: not available on this PC", e);
+            }
+        }
+    }
+
+    private T? Optional<T>(string what, Func<T> create)
+        where T : class
+    {
+        T? made = null;
+        Optional(what, () => made = create());
+        return made;
+    }
+
+    private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
+    {
+        AppLog.Write($"opening {e.SourcePageType?.Name ?? "a page"} failed", e.Exception);
+        if (Startup.SmokeTest)
+        {
+            e.Handled = true;
+            Startup.Fail(e.Exception, xamlWorks: true);
+        }
+    }
+
+    // ---- the smoke test (Jellyfesh.exe --smoke-test, Shell/SmokeTest.cs) ----
+
+    /// <summary>Every section, in the navigation pane's order, then Settings: what the smoke test opens.</summary>
+    internal static IReadOnlyList<string> SmokeSections { get; } = [.. TopPages.Keys, "settings"];
+
+    /// <summary>The window's content, whose first frames the smoke test waits for.</summary>
+    internal FrameworkElement ContentRoot => Root;
+
+    /// <summary>Opens a section as the pane would, and returns the page that now shows.</summary>
+    internal FrameworkElement? ShowSection(string tag)
+    {
+        if (tag == "settings")
+        {
+            Navigate(typeof(SettingsPage));
+        }
+        else
+        {
+            SelectSection(tag);
+        }
+
+        return ContentFrame.Content as FrameworkElement;
+    }
+
     // ---- what draws while it can be seen (Still mode) ----
 
     /// <summary>
@@ -403,9 +471,9 @@ public sealed partial class MainWindow : Window
         _themeApplied = true;
         ThemeBrushes.SetTransparency(_vm.Settings.Transparency);
         _backdrop.SetReduceEffects(_vm.Settings.ReduceEffects);
-        _shell?.SetIcon(_vm.AppIcon);
-        TitleIcon.ImageSource = new BitmapImage(AppAssets.IconPng(_vm.AppIcon, 32));
-        ApplyCaptionButtons(dark);
+        Optional("the window icon", () => _shell?.SetIcon(_vm.AppIcon));
+        Optional("the title bar's icon", () => TitleIcon.ImageSource = new BitmapImage(AppAssets.IconPng(_vm.AppIcon, 32)));
+        Optional("the caption buttons' colours", () => ApplyCaptionButtons(dark));
         NowPlaying.ApplyTheme();
     }
 
@@ -694,9 +762,20 @@ public sealed partial class MainWindow : Window
 
     private void OnClosed(object sender, WindowEventArgs args)
     {
-        _media?.Dispose();
-        _devices?.Dispose();
-        _shell?.Dispose();
+        AppLog.Write("the window closed; shutting down");
+
+        // A new start now opens a new window rather than handing itself to this process; and should
+        // shutting down hang, the process still ends, so it never lingers without a window.
+        Program.ReleaseInstanceKey();
+        if (Startup.WindowOpen)
+        {
+            Startup.ArmWatchdog(Startup.SmokeTest ? TimeSpan.FromSeconds(60) : TimeSpan.FromSeconds(90), ExitCodes.ShutdownHung, "shutting down");
+        }
+
+        Optional("closing the media controls", () => _media?.Dispose());
+        Optional("closing the device notifications", () => _devices?.Dispose());
+        Optional("closing the taskbar buttons", () => _shell?.Dispose());
         _vm.Dispose(); // saves the session and shuts the core down
+        AppLog.Write("shut down");
     }
 }

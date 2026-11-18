@@ -22,6 +22,7 @@ internal sealed class BackdropController
     private readonly AccessibilitySettings _accessibility = new();
     private MicaBackdrop? _mica;
     private bool _reduceEffects;
+    private bool _backdropFailed;
 
     public BackdropController(Window window)
     {
@@ -51,20 +52,39 @@ internal sealed class BackdropController
     public void Refresh()
     {
         var batterySaver = false;
+        var effects = true;
+        var highContrast = false;
         Try(() => batterySaver = PowerManager.EnergySaverStatus == EnergySaverStatus.On);
-        var solid = _reduceEffects || !_ui.AdvancedEffectsEnabled || batterySaver || _accessibility.HighContrast;
-        var mica = !solid && MicaController.IsSupported();
-        if (mica)
+        Try(() => effects = _ui.AdvancedEffectsEnabled);
+        Try(() => highContrast = _accessibility.HighContrast);
+        var solid = _reduceEffects || !effects || batterySaver || highContrast;
+        var mica = false;
+        try
         {
-            _mica ??= new MicaBackdrop { Kind = MicaKind.BaseAlt };
-            if (!ReferenceEquals(_window.SystemBackdrop, _mica))
+            // Mica is Windows 11's; on Windows 10 IsSupported is false and the field shows instead.
+            mica = !solid && MicaController.IsSupported();
+            if (mica)
             {
-                _window.SystemBackdrop = _mica;
+                _mica ??= new MicaBackdrop { Kind = MicaKind.BaseAlt };
+                if (!ReferenceEquals(_window.SystemBackdrop, _mica))
+                {
+                    _window.SystemBackdrop = _mica;
+                }
+            }
+            else if (_window.SystemBackdrop is not null)
+            {
+                _window.SystemBackdrop = null;
             }
         }
-        else if (_window.SystemBackdrop is not null)
+        catch (Exception e)
         {
-            _window.SystemBackdrop = null;
+            // Without a system backdrop the window shows the field: the look of Windows 10.
+            mica = false;
+            if (!_backdropFailed)
+            {
+                _backdropFailed = true;
+                Shell.AppLog.Write("Mica is not available", e);
+            }
         }
 
         HasMica = mica;

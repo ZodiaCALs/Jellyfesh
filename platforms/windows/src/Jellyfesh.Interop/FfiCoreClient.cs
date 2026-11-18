@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Jellyfesh.Core;
 using F = Jellyfesh.Ffi;
@@ -28,16 +29,49 @@ public sealed class FfiCoreClient : ICoreClient
     {
         try
         {
-            var data = dataDir ?? F.JellyfeshMethods.DefaultDataDir()
-                ?? throw new CoreQueryException(CoreQueryError.Core, "no data folder");
-            var cache = cacheDir ?? F.JellyfeshMethods.DefaultCacheDir()
-                ?? throw new CoreQueryException(CoreQueryError.Core, "no cache folder");
-            return new FfiCoreClient(new F.JellyfeshCore(Config(data, cache, bundledPlugins ?? [])));
+            if (dataDir is null || cacheDir is null)
+            {
+                var (data, cache) = DefaultFolders();
+                dataDir ??= data;
+                cacheDir ??= cache;
+            }
+
+            return new FfiCoreClient(new F.JellyfeshCore(Config(dataDir, cacheDir, bundledPlugins ?? [])));
         }
         catch (F.CoreFfiException e)
         {
             throw Map(e);
         }
+    }
+
+    /// <summary>
+    /// The library's and the cache's folders: the core's defaults (on Windows %APPDATA%\Jellyfesh and
+    /// %LOCALAPPDATA%\Jellyfesh\cache; JF_DATA_DIR and JF_CACHE_DIR override them), or the same
+    /// places through the known-folder API when the environment does not name them. Throws
+    /// <see cref="CoreQueryException"/> when there is neither.
+    /// </summary>
+    public static (string Data, string Cache) DefaultFolders()
+    {
+        try
+        {
+            var data = F.JellyfeshMethods.DefaultDataDir()
+                ?? KnownFolder(Environment.SpecialFolder.ApplicationData, "Jellyfesh")
+                ?? throw new CoreQueryException(CoreQueryError.Core, "no data folder");
+            var cache = F.JellyfeshMethods.DefaultCacheDir()
+                ?? KnownFolder(Environment.SpecialFolder.LocalApplicationData, "Jellyfesh", "cache")
+                ?? throw new CoreQueryException(CoreQueryError.Core, "no cache folder");
+            return (data, cache);
+        }
+        catch (F.CoreFfiException e)
+        {
+            throw Map(e);
+        }
+    }
+
+    private static string? KnownFolder(Environment.SpecialFolder folder, params string[] parts)
+    {
+        var root = Environment.GetFolderPath(folder);
+        return string.IsNullOrEmpty(root) ? null : Path.Combine([root, .. parts]);
     }
 
     /// <summary>Whether this build passes bundled plugins to the core (the binding has the field).</summary>

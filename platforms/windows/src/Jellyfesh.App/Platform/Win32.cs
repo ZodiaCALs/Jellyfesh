@@ -89,14 +89,41 @@ internal static unsafe partial class Win32
     [LibraryImport("ole32.dll")]
     public static partial int CoWaitForMultipleObjects(uint flags, uint timeout, uint count, nint* handles, out uint index);
 
-    /// <summary>Waits for <paramref name="handle"/> while still dispatching COM calls (safe on an STA thread).</summary>
-    public static void WaitPumpingCom(nint handle)
+    /// <summary>
+    /// Waits up to <paramref name="timeout"/> for <paramref name="handle"/> while still dispatching
+    /// COM calls (safe on an STA thread); true when it was signalled (S_OK), false when the time ran
+    /// out (RPC_S_CALLPENDING) or the wait failed.
+    /// </summary>
+    public static bool WaitPumpingCom(nint handle, TimeSpan timeout)
     {
-        const uint Infinite = 0xFFFFFFFF;
         var handles = stackalloc nint[1];
         handles[0] = handle;
-        _ = CoWaitForMultipleObjects(0, Infinite, 1, handles, out _);
+        var ms = (uint)Math.Clamp(timeout.TotalMilliseconds, 0, uint.MaxValue - 1);
+        return CoWaitForMultipleObjects(0, ms, 1, handles, out _) == 0;
     }
+
+    public const uint MB_OK = 0x00000000;
+    public const uint MB_ICONERROR = 0x00000010;
+    public const uint MB_SETFOREGROUND = 0x00010000;
+
+    /// <summary>A message box with no owner window: what start-up shows when even XAML could not start.</summary>
+    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int MessageBox(nint hWnd, string text, string caption, uint type);
+
+    [LibraryImport("kernel32.dll")]
+    public static partial nint GetCurrentProcess();
+
+    /// <summary>Ends the process at once with <paramref name="exitCode"/> (the last resort of a watchdog; no DLL is notified).</summary>
+    [LibraryImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool TerminateProcess(nint process, uint exitCode);
+
+    /// <summary>
+    /// Loads Microsoft.WindowsAppRuntime.dll, whose loading sets up the Windows App SDK's
+    /// registration-free WinRT for a self-contained app (the function itself only returns S_OK).
+    /// </summary>
+    [LibraryImport("Microsoft.WindowsAppRuntime.dll", EntryPoint = "WindowsAppRuntime_EnsureIsLoaded")]
+    public static partial int WindowsAppRuntimeEnsureIsLoaded();
 
     public static int LoWord(nint value) => (int)(value & 0xFFFF);
 

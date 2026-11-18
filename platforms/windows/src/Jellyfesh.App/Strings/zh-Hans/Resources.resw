@@ -1230,10 +1230,19 @@
     <value>我的来源</value>
   </data>
   <data name="Startup_FailedBody" xml:space="preserve">
-    <value>音乐引擎未能启动。重新安装 Jellyfesh 通常可以解决；详细信息如下。</value>
+    <value>Jellyfesh 启动时出现问题。详细信息如下；报告问题时请附上日志文件。</value>
   </data>
   <data name="Startup_FailedTitle" xml:space="preserve">
     <value>Jellyfesh 无法启动</value>
+  </data>
+  <data name="Startup_LogFile" xml:space="preserve">
+    <value>日志文件</value>
+  </data>
+  <data name="Startup_NotAnswering" xml:space="preserve">
+    <value>Jellyfesh 已在运行，但没有响应。请在任务管理器中结束 Jellyfesh，然后重新启动它。</value>
+  </data>
+  <data name="Startup_OpenLogFolder" xml:space="preserve">
+    <value>打开日志文件夹</value>
   </data>
   <data name="Time_HoursAndMinutes" xml:space="preserve">
     <value>{0} {1}</value>
