@@ -1,0 +1,27 @@
+[package]
+name = "jf-licence"
+description = "Jellyfesh Pro licence keys (ADR-0021): JFP1 keys in Crockford base32, Ed25519-signed, checked offline against the public keys built in."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+# Builds for wasm32-unknown-unknown too (Jellyfesh Web checks keys in the browser): no OS-only
+# dependencies outside the `issue` feature.
+[dependencies]
+ed25519-dalek.workspace = true
+getrandom = { workspace = true, optional = true }
+
+[features]
+default = []
+# Making key pairs and issuing keys, for tools/jf-licence and tests. Never in the apps.
+issue = ["dep:getrandom"]
+
+[dev-dependencies]
+# The tests issue keys with a key pair they make.
+jf-licence = { path = ".", features = ["issue"] }
+getrandom = { workspace = true, features = ["sys_rng"] }

@@ -1,0 +1,23 @@
+[package]
+name = "jf-licence-tool"
+description = "jf-licence: makes the Jellyfesh Pro signing key pair, issues licence keys and checks them (ADR-0021)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "jf-licence"
+path = "src/main.rs"
+
+[dependencies]
+jf-licence = { path = "../../core/jf-licence", features = ["issue"] }
+anyhow.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
