@@ -17,9 +17,17 @@
 //!   installs packages. A worker verifies its plugin's package before it runs
 //!   it; the build reads the packages with it too.
 //!
+//! * [`CookieJar`] and [`redirect`]: for requests that go through a relay
+//!   (`docs/web-relay.md`), which hands the service's `Set-Cookie` and
+//!   redirects back to the worker: the plugin's cookie jar ([`cookies`], as
+//!   the native host keeps one) and the next hop of a redirect, as the native
+//!   host follows one.
+//!
 //! Errors are thrown as JavaScript errors whose message is the WIT error as
 //! JSON (`{"NotAllowed":"…"}`, `{"InvalidKey":"…"}`), which the worker turns
 //! into the component's error variants.
+
+pub mod cookies;
 
 use jf_plugin_model::allow::{Access, Allowlist};
 use jf_plugin_model::crypto;
@@ -137,6 +145,97 @@ impl Sandbox {
             "max_timeout_ms": rules::MAX_TIMEOUT.as_millis() as u64,
         }))
     }
+}
+
+/// A plugin's cookies, for its requests through a relay ([`cookies::Jar`]). Times are ms since
+/// the epoch (`Date.now()`).
+#[wasm_bindgen]
+#[derive(Debug, Default)]
+pub struct CookieJar {
+    jar: cookies::Jar,
+}
+
+#[wasm_bindgen]
+impl CookieJar {
+    /// The jar [`CookieJar::to_json`] or [`CookieJar::persistent_json`] wrote, or an empty one.
+    #[wasm_bindgen(constructor)]
+    pub fn new(json: Option<String>) -> CookieJar {
+        CookieJar {
+            jar: json
+                .map(|text| cookies::Jar::from_json(&text))
+                .unwrap_or_default(),
+        }
+    }
+
+    /// The `Cookie` header for a request to `url`, or `undefined`.
+    pub fn header(&mut self, url: &str, now_ms: f64) -> Option<String> {
+        let url = Url::parse(url).ok()?;
+        self.jar.header(&url, now_ms.max(0.0) as u64)
+    }
+
+    /// Keeps the `Set-Cookie` headers (a JSON list of strings) of an answer from `url`; true when
+    /// the jar changed.
+    pub fn store(&mut self, url: &str, set_cookies: &str, now_ms: f64) -> bool {
+        let (Ok(url), Ok(headers)) = (Url::parse(url), serde_json::from_str::<Vec<String>>(set_cookies))
+        else {
+            return false;
+        };
+        let mut changed = false;
+        for header in &headers {
+            changed |= self.jar.store(&url, header, now_ms.max(0.0) as u64);
+        }
+        changed
+    }
+
+    /// Every cookie, for the page to hand the next worker of this visit.
+    pub fn to_json(&self) -> String {
+        self.jar.to_json()
+    }
+
+    /// The cookies that outlive the visit, for the page to keep.
+    pub fn persistent_json(&self, now_ms: f64) -> String {
+        self.jar.persistent(now_ms.max(0.0) as u64).to_json()
+    }
+}
+
+/// The next hop of a redirect, as the native host follows one: `{"url", "method", "drop_body",
+/// "cross_origin"}` for a 301, 302, 303, 307 or 308 with a `Location`, else `null`. A 303, and a
+/// 301 or 302 answering a POST, continue as a GET without the body (and without `Content-Type`
+/// and `Content-Encoding`); across origins the plugin's `Authorization` and `Cookie` headers stay
+/// behind. Throws `InvalidRequest` for a Location that is not a URL.
+#[wasm_bindgen]
+pub fn redirect(method: &str, url: &str, status: u16, location: Option<String>) -> Result<String, JsError> {
+    #[derive(Serialize)]
+    struct Hop {
+        url: String,
+        method: String,
+        drop_body: bool,
+        cross_origin: bool,
+    }
+    let Some(location) = location.filter(|_| matches!(status, 301 | 302 | 303 | 307 | 308)) else {
+        return Ok("null".into());
+    };
+    let from =
+        Url::parse(url).map_err(|e| thrown(&HttpError::InvalidRequest(format!("bad URL {url:?}: {e}"))))?;
+    let mut next = from.join(&location).map_err(|e| {
+        thrown(&HttpError::InvalidRequest(format!(
+            "bad redirect {location:?}: {e}"
+        )))
+    })?;
+    next.set_fragment(None);
+    let post = method.eq_ignore_ascii_case("post");
+    let to_get = status == 303 || (matches!(status, 301 | 302) && post);
+    let method = if to_get && !method.eq_ignore_ascii_case("head") {
+        "GET".to_owned()
+    } else {
+        method.to_ascii_uppercase()
+    };
+    Ok(json(&Hop {
+        cross_origin: next.origin() != from.origin(),
+        url: next.into(),
+        method,
+        drop_body: to_get,
+    }))
 }
 
 /// A package as the browser shows and runs it.
@@ -420,6 +519,41 @@ schema = "settings.schema.json"
         ));
         assert_eq!(s.access("http://192.168.1.20:4533/x").as_deref(), Some("user"));
         assert_eq!(s.access("http://192.168.1.20:9999/x"), None);
+    }
+
+    #[test]
+    fn redirects_follow_the_native_rules() {
+        let hop = |method: &str, status: u16, location: &str| -> Value {
+            serde_json::from_str(
+                &redirect(
+                    method,
+                    "https://u.y.qq.com/a/b?x=1",
+                    status,
+                    Some(location.into()),
+                )
+                .unwrap(),
+            )
+            .unwrap()
+        };
+        assert_eq!(
+            hop("POST", 303, "/c#frag"),
+            json!({"url": "https://u.y.qq.com/c", "method": "GET", "drop_body": true, "cross_origin": false})
+        );
+        assert_eq!(hop("POST", 302, "d")["url"], "https://u.y.qq.com/a/d");
+        assert_eq!(hop("POST", 302, "d")["method"], "GET");
+        assert_eq!(
+            hop("POST", 307, "d")["method"],
+            "POST",
+            "307 keeps the method and body"
+        );
+        assert_eq!(hop("POST", 307, "d")["drop_body"], false);
+        assert_eq!(hop("GET", 301, "https://y.qq.com/")["cross_origin"], true);
+        assert_eq!(hop("HEAD", 303, "/x")["method"], "HEAD");
+        assert_eq!(
+            redirect("GET", "https://u.y.qq.com/", 200, Some("/x".into())).unwrap(),
+            "null"
+        );
+        assert_eq!(redirect("GET", "https://u.y.qq.com/", 302, None).unwrap(), "null");
     }
 
     #[test]

@@ -12,6 +12,7 @@
 //!   sections and sign-in flows (`jf-plugin-model`);
 //! * [`lyrics`]: lyric documents and timelines (`jf-lyrics`) from plugins,
 //!   tags and lyrics files;
+//! * [`relay`]: which services refuse browsers, and the relay's address;
 //! * [`settings`], [`qr`], and the themes of a fixed hue (`jf-palette`).
 //!
 //! Two modules sit beside it: `jf-web-media` (artwork themes and backdrops,
@@ -27,6 +28,7 @@
 pub mod library;
 pub mod lyrics;
 pub mod qr;
+pub mod relay;
 pub mod rules;
 pub mod session;
 pub mod settings;
@@ -514,6 +516,25 @@ pub fn install_refusal(
             Err(other) => Some(other.to_string()),
         },
     )
+}
+
+/// The service a plugin reaches that does not let browsers connect to it directly
+/// ([`relay::refusing_service`]: by the plugin's id or the hosts of its allow rules, an
+/// `AllowRule` list), or `undefined`. Jellyfesh Web says so before signing in, unless a relay is
+/// set up (ADR-0022 §7).
+#[wasm_bindgen]
+pub fn refusing_service(plugin: &str, rules: &str) -> Result<Option<String>, JsError> {
+    let rules: Vec<AllowRule> = parse(rules, "allow rules")?;
+    Ok(relay::refusing_service(plugin, &rules).map(str::to_owned))
+}
+
+/// The relay address from Settings › Sources › Relay, normalised (no trailing slash); throws
+/// why it cannot be used from this page as a code for the page's words: `invalid`,
+/// `credentials`, `query` or `mixed-content` (on an https page only an https relay or one on
+/// this computer).
+#[wasm_bindgen]
+pub fn relay_address(address: &str, page_is_https: bool) -> Result<String, JsError> {
+    relay::relay_address(address, page_is_https).map_err(|problem| JsError::new(problem.code()))
 }
 
 /// Whether a bundled package of version `bundled` replaces the installed version `installed`
