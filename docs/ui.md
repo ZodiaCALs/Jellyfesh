@@ -393,3 +393,10 @@ conventions and must not reuse these keys.
   Shortcuts are in the main menu.
 * Plugin settings apply as each field is committed on macOS and Linux, and
   with **Save** on Windows, Android and the web.
+* **Store builds** (App Store, Microsoft Store, Google Play): no **Install
+  from File…** and no **Allow Community Plugins** (the core's
+  `can_install_plugins` is false); App Store and Google Play builds have no
+  **Enter Licence Key…** (Pro through the store only). Store builds have no
+  Check for Updates (the store updates them). ADR-0021 §4.
+* **On-device AI Lyrics:** not in Jellyfesh Web and not on Windows on Arm
+  (whisper.cpp does not build there with MSVC); both offer the online mode.

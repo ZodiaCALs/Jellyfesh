@@ -79,10 +79,20 @@ dependency.
    the unofficial community plugins; their packages are separate downloads
    on the release page, installed with **Install from File…**, and **Allow
    Community Plugins** still gates them (ADR-0012). Builds from source
-   (`JF_EDITION=community`, the default) bundle them as in v0.0.6. Whether
-   App Store builds may install plugins from files at all is a question for
-   App Review (guideline 2.5.2); it stays possible until review says
-   otherwise.
+   (`JF_EDITION=community`, the default) bundle them as in v0.0.6.
+
+   **Store builds** (AppStore, MicrosoftStore, GooglePlay; amended
+   2026-11-18) run only the official plugins they ship with: the core
+   refuses to install plugins from files there and keeps community plugins
+   off (`SourcesSnapshot.can_install_plugins` is false; the apps hide
+   **Install from File…** and **Allow Community Plugins**). App Review
+   guidelines 2.5.2, 2.4.5(iv) and 4.7, Google Play's rule on downloaded
+   code and the Microsoft Store's policy on dynamic code all restrict code
+   that changes an app after review. **App Store and Google Play builds sell
+   Pro only through the store** (App Review 3.1.1 and Play's payments
+   policy): they hide **Enter Licence Key…**. Direct downloads, Linux, the
+   web and the Microsoft Store (which allows other payment for apps) keep
+   licence keys.
 
 5. **Updates.** Store builds update through their stores. Direct builds
    check GitHub's releases API at most once a day while **Check for Updates
