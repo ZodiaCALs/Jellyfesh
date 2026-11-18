@@ -72,6 +72,7 @@ import org.jellyfesh.android.ui.library.barFade
 import org.jellyfesh.android.ui.library.listPadding
 import org.jellyfesh.android.ui.library.rememberLibraryAccess
 import org.jellyfesh.android.ui.nav.LocalNav
+import org.jellyfesh.android.ui.sources.PluginIcon
 import org.jellyfesh.android.ui.sources.PresetRow
 import org.jellyfesh.android.ui.sources.pluginStatus
 import org.jellyfesh.android.ui.sources.rememberConnectSheet
@@ -887,7 +888,7 @@ private fun LazyListScope.installed(state: CoreState) {
             }
             state.sources.plugins.forEachIndexed { i, plugin ->
                 if (i > 0) Divider()
-                NavRow(plugin.name, pluginStatus(plugin), onClick = { nav.push(Screen.Source(plugin.id)) }, leading = { InitialTile(plugin.name, icon = R.drawable.ic_sources) })
+                NavRow(plugin.name, pluginStatus(plugin), onClick = { nav.push(Screen.Source(plugin.id)) }, leading = { PluginIcon(plugin.name, plugin.icon) })
             }
         }
     }

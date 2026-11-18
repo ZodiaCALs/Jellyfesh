@@ -83,18 +83,19 @@ import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.sources.AuthFlow
 import org.jellyfesh.logic.sources.Disclosure
 import org.jellyfesh.logic.sources.SourceItems
+import org.jellyfesh.logic.sources.SourceState
+import org.jellyfesh.logic.sources.YourSources
 import org.jellyfesh.logic.state.CoreState
 
 /**
  * The Sources tab (docs/ui.md, "Sources"): what sources are, Add a Source (the core's services),
- * Your Sources (each installed source with its status; choosing one opens it), then Sources
- * Settings…, which opens Settings › Sources. Install from File… stays beside it, as on Android it
- * is the quickest way to a plugin someone sent.
+ * Your Sources (each installed source with its icon and status; choosing one browses it, or opens
+ * its page while it is off or has nothing to browse), then Sources Settings…, which opens
+ * Settings › Sources (where Install from File… is, as in every app).
  */
 @Composable
 fun SourcesScreen(state: CoreState) {
     val nav = LocalNav.current
-    val install = rememberPluginInstaller()
     val connect = rememberConnectSheet()
     val plugins = state.sources.plugins
     val presets = state.sources.presets
@@ -123,31 +124,32 @@ fun SourcesScreen(state: CoreState) {
             NavRow(
                 title = plugin.name,
                 subtitle = pluginStatus(plugin),
-                onClick = { nav.push(Screen.Source(plugin.id)) },
-                leading = { InitialTile(plugin.name, icon = R.drawable.ic_sources) },
+                onClick = { nav.push(YourSources.opens(plugin)) },
+                leading = { PluginIcon(plugin.name, plugin.icon) },
             )
         }
         item(key = "actions") {
-            Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 JfButton(stringResource(R.string.sources_settings), { nav.openSettings(SettingsSection.Sources) }, icon = R.drawable.ic_settings)
-                JfButton(stringResource(R.string.action_install_plugin), install, style = ButtonStyle.Quiet, icon = R.drawable.ic_add)
             }
         }
     }
 }
 
-/** A source's line in a list: its badge and whether it is on and signed in. */
+/**
+ * A source's line in a list: its badge, then "Off", "Signed in as …" or "Not signed in"; a source
+ * that needs no sign-in shows its badge alone ([YourSources.state]).
+ */
 @Composable
 fun pluginStatus(plugin: PluginSummary): String {
     val badge = stringResource(if (plugin.badge == PluginBadge.Official) R.string.badge_official else R.string.badge_community)
-    val account = plugin.account
-    val state = when {
-        !plugin.enabled -> stringResource(R.string.source_disabled)
-        account != null -> stringResource(R.string.source_signed_in, account)
-        plugin.authMethods.isNotEmpty() -> stringResource(R.string.source_not_signed_in)
-        else -> stringResource(R.string.source_enabled)
+    val state = when (YourSources.state(plugin)) {
+        SourceState.Off -> stringResource(R.string.source_disabled)
+        SourceState.SignedIn -> stringResource(R.string.source_signed_in, plugin.account.orEmpty())
+        SourceState.NotSignedIn -> stringResource(R.string.source_not_signed_in)
+        SourceState.Ready -> null
     }
-    return "$badge · $state"
+    return listOfNotNull(badge, state).joinToString(" · ")
 }
 
 /** A service of Add a Source (the Sources tab and Settings › Sources): its picture, name and line. */
@@ -157,7 +159,7 @@ fun PresetRow(preset: SourcePreset, plugins: List<PluginSummary>, onClick: () ->
         title = preset.name,
         subtitle = presetDescription(preset),
         onClick = onClick,
-        leading = { PresetIcon(preset.name, plugins.firstOrNull { it.id == preset.plugin }?.icon) },
+        leading = { PluginIcon(preset.name, plugins.firstOrNull { it.id == preset.plugin }?.icon) },
     )
 }
 
@@ -184,11 +186,12 @@ private fun presetAbout(id: String): Int? = when (id) {
 }
 
 /**
- * A service's picture: its plugin's icon (a file in the core's cache), drawn as the package made
- * it, since it comes shaped already; the sources glyph while it loads or when the package has none.
+ * A source's or a service's picture: its plugin's icon (a file in the core's cache), drawn as the
+ * package made it, since it comes shaped already; the sources glyph while it loads or when the
+ * package has none. Add a Source, Your Sources and Settings › Sources › Installed show it.
  */
 @Composable
-private fun PresetIcon(name: String, icon: String?) {
+fun PluginIcon(name: String, icon: String?) {
     val size = 44.dp
     val px = with(LocalDensity.current) { size.roundToPx() }
     val image = rememberArtwork(LocalGraph.current.images, icon?.let { ArtKey.File(it) }, px)
@@ -372,7 +375,7 @@ fun SourceScreen(pluginId: String, state: CoreState) {
             item(key = "account-h") { SectionHeader(stringResource(R.string.source_account)) }
             item(key = "account") { AccountPanel(plugin) }
             item(key = "settings") { PluginSettingsPanel(plugin) }
-            if ("browse" in plugin.capabilities && plugin.enabled) {
+            if (YourSources.canBrowse(plugin)) {
                 item(key = "browse") {
                     Panel {
                         SettingRow(stringResource(R.string.source_browse), onClick = { nav.push(Screen.SourceBrowse(plugin.id, null, plugin.name)) })
