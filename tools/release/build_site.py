@@ -20,8 +20,10 @@
   build wrote (the jellyfesh-site zip that releases before 0.0.7 carried);
 * writes releases.json (version, the files with platform, label, size,
   SHA-256 and URL, and web_app when the site has Jellyfesh Web) for the
-  download page, shots.json from docs/screenshots/linux/, the release notes
-  as releases/latest.html and THIRD_PARTY_NOTICES.html;
+  download page, shots.json (the Linux app's screenshots from
+  docs/screenshots/linux/ and a few of Jellyfesh Web's from
+  docs/screenshots/web/, captioned as sample music, each with its size), the
+  release notes as releases/latest.html and THIRD_PARTY_NOTICES.html;
 * copies the picture of the app under the home page's hero
   (assets/app-now-playing.png) from Jellyfesh Web's screenshots, taken
   against the test servers' invented library: the page labels it as sample
@@ -36,6 +38,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import sys
 import zipfile
 
@@ -51,6 +54,62 @@ FILES = [
     (r"Jellyfesh-{v}-Web\.zip", "web", "Jellyfesh Web {v} to host yourself (.zip)"),
     (r"Jellyfesh-{v}-Community-Plugins\.zip", "community", "Community plugins {v} (.zip)"),
 ]
+
+
+# Jellyfesh Web's screenshots on the home page (docs/screenshots/web/, taken against the test
+# servers' invented library: the captions say sample music), as (file stem, caption).
+WEB_SHOTS = [
+    ("home-light-desktop", "Home"),
+    ("album-light-desktop", "An album"),
+    ("now-playing-misty-light-desktop", "Now Playing with the Misty backdrop"),
+    ("search-dark-desktop", "Search across your sources, dark"),
+    ("now-playing-lyrics-artwork-dark-phone", "Lyrics on a phone"),
+]
+
+# Words for the parts of the Linux screenshots' file names.
+SHOT_WORDS = {
+    "now-playing": "Now Playing", "player-bar": "Player bar", "preferences": "Settings",
+    "artwork": "Artwork backdrop", "misty": "Misty backdrop", "narrow": "narrow window",
+    "queue": "queue", "zh-cn": "in Chinese", "light": "light", "dark": "dark",
+    "album": "An album", "albums": "Albums", "playlist": "A playlist", "search": "Search",
+    "appearance": "Appearance", "playback": "Playback",
+}
+
+
+def png_size(path):
+    """(width, height) of a PNG, from its header; None for anything else."""
+    with open(path, "rb") as fh:
+        head = fh.read(24)
+    if head[:8] != b"\x89PNG\r\n\x1a\n" or head[12:16] != b"IHDR":
+        return None
+    return struct.unpack(">II", head[16:24])
+
+
+def shot_caption(stem):
+    """A screenshot's file name as words: now-playing-artwork-dark → Now Playing, Artwork backdrop, dark."""
+    words = []
+    rest = stem
+    while rest:
+        for key in sorted(SHOT_WORDS, key=len, reverse=True):
+            if rest == key or rest.startswith(key + "-"):
+                words.append(SHOT_WORDS[key])
+                rest = rest[len(key) + 1:]
+                break
+        else:
+            part, _, rest = rest.partition("-")
+            words.append(part)
+    return ", ".join(words)
+
+
+def add_shot(shots, site, path, alt, caption):
+    """Copies a screenshot to assets/shots/ and lists it with its size."""
+    name = os.path.basename(path)
+    shutil.copy2(path, os.path.join(site, "assets", "shots", name))
+    shot = {"src": f"assets/shots/{name}", "alt": alt, "caption": caption}
+    size = png_size(path)
+    if size:
+        shot["width"], shot["height"] = size
+    shots.append(shot)
 
 
 def option(name):
@@ -245,14 +304,18 @@ def main():
         shutil.copy2(hero_shot, os.path.join(site, "assets", "app-now-playing.png"))
 
     shots = []
+    os.makedirs(os.path.join(site, "assets", "shots"), exist_ok=True)
     shot_dir = os.path.join(ROOT, "docs", "screenshots", "linux")
     if os.path.isdir(shot_dir):
-        os.makedirs(os.path.join(site, "assets", "shots"), exist_ok=True)
         for name in sorted(os.listdir(shot_dir)):
             if name.endswith(".png"):
-                shutil.copy2(os.path.join(shot_dir, name), os.path.join(site, "assets", "shots", name))
-                caption = os.path.splitext(name)[0].replace("-", " ").replace("_", " ")
-                shots.append({"src": f"assets/shots/{name}", "alt": f"Jellyfesh on Linux: {caption}", "caption": caption})
+                caption = shot_caption(os.path.splitext(name)[0])
+                add_shot(shots, site, os.path.join(shot_dir, name), f"Jellyfesh on Linux: {caption}", f"Linux: {caption}")
+    web_dir = os.path.join(ROOT, "docs", "screenshots", "web")
+    for stem, caption in WEB_SHOTS:
+        path = os.path.join(web_dir, f"{stem}-mock-server.png")
+        if os.path.exists(path):
+            add_shot(shots, site, path, f"Jellyfesh Web with sample music: {caption}", f"Web: {caption} (sample music)")
     with open(os.path.join(site, "shots.json"), "w", encoding="utf-8") as fh:
         json.dump(shots, fh, indent=2)
 

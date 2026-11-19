@@ -162,9 +162,13 @@ section .lead { color: var(--ink-70); margin: 0 0 32px; max-width: 60ch; }
 .card .mark { width: 36px; height: 36px; border-radius: 12px; background: var(--accent-soft); color: var(--accent-text); display: grid; place-items: center; margin-bottom: 14px; font-size: 18px; }
 
 .band { background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--field-2) 70%, transparent) 100%); }
-.shots { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+/* Each screenshot at its own aspect ratio (its width and height attributes); one whose size is not
+   known yet holds a 16:10 place until it loads. Tall ones (phones) are kept to a sensible height. */
+.shots { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
 .shots figure { margin: 0; }
-.shots img { border-radius: var(--radius-m); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.shots img { width: 100%; height: auto; border-radius: var(--radius-m); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.shots img:not([width]) { aspect-ratio: 16 / 10; }
+.shots img[width][height] { max-height: 560px; width: auto; max-width: 100%; margin-inline: auto; }
 .shots figcaption { color: var(--ink-50); font-size: 14px; margin-top: 8px; }
 
 /* Downloads */

@@ -68,7 +68,11 @@ test.afterAll(async () => {
 test('library views', async () => {
   await setLook('light', 'artwork');
   await nav(page, 'Home').click();
-  await expect(page.getByRole('region', { name: 'Jellyfin' }).getByRole('button', { name: 'Open Albums' })).toBeVisible();
+  // Both servers' shelves loaded (not their placeholders).
+  for (const source of ['Subsonic', 'Jellyfin']) {
+    await expect(page.getByRole('region', { name: source }).getByRole('button', { name: 'Open Albums' })).toBeVisible();
+  }
+  await expect(page.getByRole('status')).toHaveCount(0);
   await shot('home-light-desktop');
   await openAlbum(page, 'Jellyfin', 'Slow Tide');
   // A track number turns into a play glyph under the pointer.
