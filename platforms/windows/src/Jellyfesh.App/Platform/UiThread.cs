@@ -46,7 +46,7 @@ internal sealed class DispatcherOneShotTimer : IOneShotTimer
     public void Stop() => _timer.Stop();
 }
 
-/// <summary>Strings from the .resw files through MRT Core (works unpackaged with resources.pri).</summary>
+/// <summary>Strings from the .resw files through MRT Core (unpackaged: Jellyfesh.pri next to the executable).</summary>
 internal sealed class ResourceLocalizer : ILocalizer
 {
     private readonly ResourceLoader? _loader;
@@ -59,7 +59,7 @@ internal sealed class ResourceLocalizer : ILocalizer
         }
         catch (Exception)
         {
-            _loader = null; // a missing resources.pri shows keys rather than failing to start
+            _loader = null; // a missing resource index shows keys rather than failing to start
         }
     }
 

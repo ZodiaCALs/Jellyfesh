@@ -298,8 +298,11 @@ builds for x64 and runs the smoke test below. The library and session live in
 (the core's defaults; `JF_DATA_DIR` and `JF_CACHE_DIR` override them); the
 app's own log is `%LOCALAPPDATA%\Jellyfesh\logs\app.log` (`JF_LOG_DIR` moves it).
 `build.ps1` stops when a published folder lacks a file the app cannot start
-without (`Jellyfesh.exe`, `Jellyfesh.dll`, `jf_ffi.dll`, `resources.pri`, the
-Windows App SDK runtime, WinUI).
+without (`Jellyfesh.exe`, `Jellyfesh.dll`, `jf_ffi.dll`, the Windows App SDK
+runtime, WinUI, `Microsoft.UI.Xaml.Controls.pri` and the app's own resource index)
+and lists the folder's `.pri` files. An unpackaged build names its index after the
+executable, `Jellyfesh.pri` (its compiled XAML and strings); MRT Core looks for
+`resources.pri`, then `<executable>.pri`, next to the executable, so either serves.
 
 ## When Jellyfesh does not start
 

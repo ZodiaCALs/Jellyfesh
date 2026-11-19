@@ -142,6 +142,20 @@ internal static class Startup
             CultureInfo.InvariantCulture,
             $"  Windows {Environment.OSVersion.Version}, {RuntimeInformation.OSArchitecture} (process {RuntimeInformation.ProcessArchitecture}), .NET {Environment.Version}, language {CultureInfo.CurrentUICulture.Name}"));
         AppLog.Write($"  log: {AppLog.FilePath}");
+
+        // The resource indexes next to the app: the app's own (Jellyfesh.pri, its XAML and strings)
+        // and WinUI's. MRT Core needs the first to load App.xaml in an unpackaged app.
+        string indexes;
+        try
+        {
+            indexes = string.Join(", ", Directory.EnumerateFiles(AppContext.BaseDirectory, "*.pri").Select(Path.GetFileName).Order(StringComparer.OrdinalIgnoreCase));
+        }
+        catch (Exception e)
+        {
+            indexes = "unreadable (" + e.Message + ")";
+        }
+
+        AppLog.Write($"  resource indexes: {(indexes.Length == 0 ? "none" : indexes)}");
     }
 
     private static void OnFirstChance(object? sender, FirstChanceExceptionEventArgs e)

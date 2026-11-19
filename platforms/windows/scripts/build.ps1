@@ -124,12 +124,20 @@ function Invoke-Sign([string[]] $Files) {
 
 # Stops the build when a published app lacks a file it cannot start without (docs/windows.md,
 # "When Jellyfesh does not start"): its executable and assembly, the core, the Windows App SDK runtime
-# that loads first, WinUI, and resources.pri, which holds the compiled XAML and the strings of an
-# unpackaged app (without it App.xaml cannot load).
+# that loads first, WinUI and WinUI's controls' resources, and the app's own resource index, which
+# holds its compiled XAML and its strings (without it App.xaml cannot load). An unpackaged build
+# names that index after the executable, Jellyfesh.pri; MRT Core looks for resources.pri, then
+# <executable>.pri, next to the executable (MrmGetFilePathFromName), so either will do. The
+# folder's .pri files are listed either way.
 function Assert-PublishedApp([string] $Folder) {
-    $required = @('Jellyfesh.exe', 'Jellyfesh.dll', 'jf_ffi.dll', 'resources.pri',
-        'Microsoft.WindowsAppRuntime.dll', 'Microsoft.ui.xaml.dll', 'Assets\Icons\ice.ico')
+    $pris = @(Get-ChildItem $Folder -Filter '*.pri' -File | ForEach-Object Name)
+    Write-Host "Resource indexes in $(Split-Path $Folder -Leaf): $(if ($pris.Count -gt 0) { $pris -join ', ' } else { 'none' })"
+    $required = @('Jellyfesh.exe', 'Jellyfesh.dll', 'jf_ffi.dll', 'Microsoft.WindowsAppRuntime.dll', 'Microsoft.ui.xaml.dll',
+        'Microsoft.UI.Xaml.Controls.pri', 'Assets\Icons\ice.ico')
     $missing = @($required | Where-Object { -not (Test-Path (Join-Path $Folder $_)) })
+    if (-not (Test-Path (Join-Path $Folder 'Jellyfesh.pri')) -and -not (Test-Path (Join-Path $Folder 'resources.pri'))) {
+        $missing += 'Jellyfesh.pri (or resources.pri)'
+    }
     if ($missing.Count -gt 0) { throw "the published app in $Folder lacks $($missing -join ', ')" }
 }
 

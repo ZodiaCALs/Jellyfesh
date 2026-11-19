@@ -12,7 +12,7 @@ namespace Jellyfesh.App.Shell;
 /// What a failed start shows (Startup.Fail): why Jellyfesh could not start, the details, and the
 /// log file to send with a report, with Open Log Folder. A plain window built in code, so it needs
 /// none of the app's styles; a message box when even that cannot open. The words fall back to
-/// English when the string tables cannot be read (no resources.pri).
+/// English when the string tables cannot be read (no Jellyfesh.pri).
 /// </summary>
 internal static class StartupErrorWindow
 {
