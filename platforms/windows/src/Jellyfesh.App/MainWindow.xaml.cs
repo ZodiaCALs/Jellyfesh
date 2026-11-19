@@ -96,6 +96,12 @@ public sealed partial class MainWindow : Window
 
         InitializeComponent();
 
+        // The keyboard's Back key. In code because WinUI's XAML parser has no name for it: its table
+        // of VirtualKey values (EnumValueTable) stops at the original keys, so Key="GoBack" fails to load.
+        var backKey = new KeyboardAccelerator { Key = VirtualKey.GoBack };
+        backKey.Invoked += OnBackKey;
+        Root.KeyboardAccelerators.Add(backKey);
+
         // Shadows of the library (covers, groups, the player bar) fall on the field (ThemeShadow receivers).
         Optional("the library's shadows", () => Elevation.AddReceiver(Elevation.Library, Field));
 

@@ -28,6 +28,11 @@ public partial class App : Application
     /// <summary>OnLaunched ran: XAML started on the thread, so a window can show a failure.</summary>
     private static bool _launched;
 
+    /// <summary>How many of XAML's own warnings the log keeps per run.</summary>
+    private const int XamlWarningsLogged = 20;
+
+    private static int _xamlWarnings;
+
     public App()
     {
         // First, so that XAML's own failures reach the log: WinUI reports a failure to load
@@ -53,6 +58,14 @@ public partial class App : Application
         ICoreClient? core = null;
         try
         {
+            // A resource a view refers to that does not resolve, and (in a smoke test) a failed
+            // binding: XAML reports them here rather than as exceptions.
+            DebugSettings.XamlResourceReferenceFailed += (_, e) => LogXamlWarning("resource reference failed", e.Message);
+            if (Startup.SmokeTest)
+            {
+                DebugSettings.BindingFailed += (_, e) => LogXamlWarning("binding failed", e.Message);
+            }
+
             // The Jf* brushes first: the style dictionaries below refer to them.
             Startup.EnterStage("loading the colours and styles");
             ThemeBrushes.Install(Resources);
@@ -119,6 +132,14 @@ public partial class App : Application
 
         // A view that failed to draw should not end playback; anything the runtime cannot recover from still ends the process.
         e.Handled = e.Exception is not (OutOfMemoryException or StackOverflowException or AccessViolationException);
+    }
+
+    private static void LogXamlWarning(string what, string message)
+    {
+        if (Interlocked.Increment(ref _xamlWarnings) <= XamlWarningsLogged)
+        {
+            AppLog.Write($"XAML {what} while {Startup.Stage}: {message}");
+        }
     }
 
     private static void Quietly(Action action)

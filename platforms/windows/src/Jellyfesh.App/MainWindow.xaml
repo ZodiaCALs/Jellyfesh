@@ -40,7 +40,7 @@
             <KeyboardAccelerator Key="F9" Invoked="OnVolumeDownKey" />
             <KeyboardAccelerator Key="F10" Invoked="OnVolumeUpKey" />
             <KeyboardAccelerator Key="Left" Modifiers="Menu" Invoked="OnBackKey" />
-            <KeyboardAccelerator Key="GoBack" Invoked="OnBackKey" />
+            <!-- The keyboard's Back key is added in code: WinUI's XAML parser knows no VirtualKey.GoBack. -->
         </Grid.KeyboardAccelerators>
 
         <!-- The Luminous field at the theme hue: the sky and four large glows (no photograph, MAT-02), behind the pane too. -->
