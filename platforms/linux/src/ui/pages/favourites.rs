@@ -8,10 +8,9 @@ use crate::ui::convert;
 use crate::ui::i18n::tr;
 use crate::ui::models::{Item, ItemData, store};
 use crate::ui::pages::library::{LIST_WIDTH, clamped};
-use crate::ui::pages::{frame, show_small_title, status, titled_scroller};
+use crate::ui::pages::{frame, play_and_shuffle, show_small_title, status, titled_scroller_with};
 use crate::ui::rows::{RowStyle, row_factory};
 use crate::ui::state::{Change, app, spawn};
-use crate::ui::widgets::glyph;
 
 /// Favourites come in pages of this size until a short page ends the list
 /// (the core gives no count).
@@ -27,7 +26,16 @@ pub fn page() -> adw::NavigationPage {
     list.add_css_class("track-list");
     list.update_property(&[gtk::accessible::Property::Label(&tr("Favourites"))]);
     list.connect_activate(|_, position| actions::play(Collection::Favorites, position as usize, false));
-    let (scroll, small) = titled_scroller(&tr("Favourites"), &clamped(&list), Some(LIST_WIDTH));
+    // Play and Shuffle under the title, as on Songs and in every app.
+    let (actions_row, play, shuffle) = play_and_shuffle();
+    play.connect_clicked(|_| actions::play(Collection::Favorites, 0, false));
+    shuffle.connect_clicked(|_| actions::play(Collection::Favorites, 0, true));
+    let (scroll, small) = titled_scroller_with(
+        &tr("Favourites"),
+        Some(actions_row.upcast_ref()),
+        &clamped(&list),
+        Some(LIST_WIDTH),
+    );
     let stack = gtk::Stack::new();
     stack.add_named(&scroll, Some("list"));
     stack.add_named(
@@ -46,12 +54,6 @@ pub fn page() -> adw::NavigationPage {
     stack.add_named(&error, Some("error"));
     let (page, header) = frame(&tr("Favourites"), "favourites", &stack);
     show_small_title(&header, &small);
-    let shuffle = glyph::button("shuffle", 18, &tr("Shuffle"));
-    shuffle.connect_clicked(|_| actions::play(Collection::Favorites, 0, true));
-    header.pack_end(&shuffle);
-    let play = glyph::button("play", 18, &tr("Play"));
-    play.connect_clicked(|_| actions::play(Collection::Favorites, 0, false));
-    header.pack_end(&play);
 
     let refresh = {
         let model = model.downgrade();

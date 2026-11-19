@@ -12,11 +12,10 @@ use crate::ui::i18n::tr;
 use crate::ui::models::{Item, ItemData, Kind};
 use crate::ui::pages::detail::Header;
 use crate::ui::pages::library::{clamped, paged};
-use crate::ui::pages::{follow_title, frame, keep_alive, large_title, scroller, small_title, status};
+use crate::ui::pages::{follow_title, frame, keep_alive, large_title, pill, scroller, small_title, status};
 use crate::ui::rows::{ListRow, RowStyle};
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::thumbs::ArtKey;
-use crate::ui::widgets::glyph;
 use crate::ui::{actions, dnd, window};
 
 pub fn page() -> adw::NavigationPage {
@@ -30,9 +29,21 @@ pub fn page() -> adw::NavigationPage {
         }
     });
     let title = large_title(&tr("Playlists"));
+    // New Playlist… and Import Playlist… under the title, as in every app.
+    let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    buttons.add_css_class("page-actions");
+    let add = pill(&tr("New Playlist…"), "plus", false);
+    add.add_css_class("glass-pill");
+    add.connect_clicked(|_| new_playlist());
+    let import = pill(&tr("Import Playlist…"), "folder", false);
+    import.add_css_class("glass-pill");
+    import.connect_clicked(|_| import_playlist());
+    buttons.append(&add);
+    buttons.append(&import);
     let column = gtk::Box::new(gtk::Orientation::Vertical, 8);
     column.add_css_class("titled-list");
     column.append(&title);
+    column.append(&buttons);
     column.append(&list);
     let clamp = adw::Clamp::builder().child(&column).maximum_size(1000).build();
     let scroll = scroller(&clamp);
@@ -56,12 +67,6 @@ pub fn page() -> adw::NavigationPage {
     let (page, header) = frame(&tr("Playlists"), "playlists", &stack);
     let small = small_title(&header, &tr("Playlists"));
     follow_title(&scroll, &title, &small);
-    let add = glyph::button("plus", 18, &tr("New Playlist…"));
-    add.connect_clicked(|_| new_playlist());
-    header.pack_end(&add);
-    let import = glyph::button("folder", 18, &tr("Import Playlist…"));
-    import.connect_clicked(|_| import_playlist());
-    header.pack_end(&import);
 
     let refresh = {
         let list = list.downgrade();
@@ -160,7 +165,7 @@ pub fn open_when_created(request: jf_core::CommandId) {
 
 fn import_playlist() {
     let filter = gtk::FileFilter::new();
-    filter.set_name(Some(&tr("Playlists (M3U)")));
+    filter.set_name(Some(&tr("Playlists (M3U8)")));
     filter.add_suffix("m3u");
     filter.add_suffix("m3u8");
     let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
@@ -205,6 +210,32 @@ fn export_playlist(id: i64, name: &str) {
     });
 }
 
+/// Puts `label` (for `action`) into `menu` right before the item for
+/// `before`, in that item's section; at the end of the menu without one.
+fn insert_before(menu: &gtk::gio::Menu, before: &str, label: &str, action: &str) {
+    for i in 0..menu.n_items() {
+        let Some(section) = menu
+            .item_link(i, gtk::gio::MENU_LINK_SECTION.as_str())
+            .and_downcast::<gtk::gio::Menu>()
+        else {
+            continue;
+        };
+        for j in 0..section.n_items() {
+            let found = section
+                .item_attribute_value(j, gtk::gio::MENU_ATTRIBUTE_ACTION.as_str(), None)
+                .and_then(|v| v.get::<String>())
+                .is_some_and(|a| a == before);
+            if found {
+                section.insert(j, Some(label), Some(action));
+                return;
+            }
+        }
+    }
+    let section = gtk::gio::Menu::new();
+    section.append(Some(label), Some(action));
+    menu.append_section(None, &section);
+}
+
 pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
     let header = Header::new(&tr("Playlist"), false);
     header.subtitle.set_visible(false);
@@ -226,9 +257,13 @@ pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         title: name.clone(),
         ..ItemData::default()
     });
-    let export = gtk::gio::Menu::new();
-    export.append(Some(&tr("Export Playlist…")), Some("playlist.export"));
-    menu.append_section(None, &export);
+    // Rename…, Export Playlist…, Delete Playlist…, as in every app.
+    insert_before(
+        &menu,
+        "win.delete-playlist",
+        &tr("Export Playlist…"),
+        "playlist.export",
+    );
     header.more.set_menu_model(Some(&menu));
     let group = gtk::gio::SimpleActionGroup::new();
     let export_action = gtk::gio::SimpleAction::new("export", None);
@@ -293,6 +328,14 @@ pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
     body.append(&header_clamp);
     let list_scroll = scroller(&clamped(&list));
     body.append(&list_scroll);
+    // A playlist without songs says how to add some.
+    let empty = status(
+        "view-list-symbolic",
+        &tr("This Playlist Is Empty"),
+        &tr("Add songs from their menu with Add to Playlist."),
+    );
+    empty.set_visible(false);
+    body.append(&empty);
     let (page, _) = frame(&name, &format!("playlist-{id}"), &body);
 
     let header = Rc::new(header);
@@ -300,8 +343,10 @@ pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         let header = Rc::downgrade(&header);
         let model = model.downgrade();
         let page = page.downgrade();
+        let (list_scroll, empty) = (list_scroll.downgrade(), empty.downgrade());
         move || {
             let (header, model, page) = (header.clone(), model.clone(), page.clone());
+            let (list_scroll, empty) = (list_scroll.clone(), empty.clone());
             spawn(async move {
                 let result = app()
                     .query(move |core| core.playlist(id).map_err(|e| e.to_string()))
@@ -327,6 +372,10 @@ pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
                         ]));
                         header.art.set_art(p.artwork_hash.clone().map(ArtKey::Hash));
                         model.reload(p.entry_count);
+                        if let (Some(list), Some(empty)) = (list_scroll.upgrade(), empty.upgrade()) {
+                            list.set_visible(p.entry_count > 0);
+                            empty.set_visible(p.entry_count == 0);
+                        }
                     }
                     Some(Err(e)) => header.meta.set_label(&e),
                     None => {}

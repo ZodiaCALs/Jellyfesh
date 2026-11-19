@@ -127,9 +127,14 @@ window.jf-window.wide .large-title {
   margin: {{space.s2}} {{space.s3}} {{space.s3}};
 }
 
-/* Play and Shuffle under a list's title (Songs). */
+/* Play and Shuffle under a list's title (Songs, Favourites). */
 .title-block > .page-actions {
   margin: 0 {{space.s3}} {{space.s4}};
+}
+
+/* New Playlist… and Import Playlist… under the Playlists title. */
+.titled-list > .page-actions {
+  margin-bottom: {{space.s3}};
 }
 
 .home > .large-title,
