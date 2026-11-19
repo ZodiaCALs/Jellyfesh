@@ -164,6 +164,27 @@ impl ModelStore {
         Ok(())
     }
 
+    /// The models this store offers: the [`catalogue`]'s.
+    pub fn models(&self) -> &'static [ModelInfo] {
+        self.models
+    }
+
+    /// The model with this id, as this store offers it.
+    pub fn model(&self, id: &str) -> Option<&'static ModelInfo> {
+        self.info(id)
+    }
+
+    /// A store for `models` instead of the catalogue's, downloading
+    /// `{base_url}/{file}`: tests verify small files of their own with it.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn with_models(dir: impl Into<PathBuf>, base_url: &str, models: &'static [ModelInfo]) -> ModelStore {
+        ModelStore {
+            dir: dir.into(),
+            base_url: Some(base_url.trim_end_matches('/').to_owned()),
+            models,
+        }
+    }
+
     fn info(&self, id: &str) -> Option<&'static ModelInfo> {
         self.models.iter().find(|m| m.id == id)
     }
