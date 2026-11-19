@@ -120,6 +120,12 @@ struct LyricsTimeline: Equatable, @unchecked Sendable {
 
     /// Start of each line in `LyricsDocument.lines`, ascending.
     var lineStarts: [UInt32] { timeline.lineStarts }
+    /// End of each line; `UInt32.max` when the line never ends.
+    var lineEnds: [UInt32] { timeline.lineEnds }
+    /// Words of line `i` are at `wordOffsets[i]..<wordOffsets[i + 1]` in the word arrays.
+    var wordOffsets: [UInt32] { timeline.wordOffsets }
+    var wordStarts: [UInt32] { timeline.wordStarts }
+    var wordEnds: [UInt32] { timeline.wordEnds }
 }
 
 /// Milliseconds for the lyric cursor from a drawn position in microseconds.
