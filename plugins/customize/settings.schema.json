@@ -1,0 +1,297 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Customize",
+  "description": "How Jellyfesh looks in every app: its shapes, glass and type, the lyrics, and the order of its places. Reset to Defaults brings back the Luminous look.",
+  "type": "object",
+  "properties": {
+    "corners": {
+      "type": "number",
+      "title": "Corners",
+      "description": "How round corners are: 0 is square, 1 is Luminous, 2 is twice as round.",
+      "minimum": 0,
+      "maximum": 2,
+      "multipleOf": 0.05,
+      "default": 1,
+      "x-jf-group": "Look"
+    },
+    "glass": {
+      "type": "number",
+      "title": "Glass",
+      "description": "How much panels show what lies behind them: 0 is solid, 1 is Luminous glass. Reduce Transparency still makes them solid.",
+      "minimum": 0,
+      "maximum": 1,
+      "multipleOf": 0.05,
+      "default": 1,
+      "x-jf-group": "Look"
+    },
+    "aurora": {
+      "type": "number",
+      "title": "Aurora",
+      "description": "How strongly the glow in the artwork's colours shows behind every screen.",
+      "minimum": 0,
+      "maximum": 1,
+      "multipleOf": 0.05,
+      "default": 0.75,
+      "x-jf-group": "Look"
+    },
+    "typeface": {
+      "type": "string",
+      "title": "Typeface",
+      "description": "Your system's own fonts in this style; none are added.",
+      "oneOf": [
+        {
+          "const": "system",
+          "title": "System"
+        },
+        {
+          "const": "rounded",
+          "title": "Rounded"
+        },
+        {
+          "const": "serif",
+          "title": "Serif"
+        },
+        {
+          "const": "mono",
+          "title": "Monospaced"
+        }
+      ],
+      "default": "system",
+      "x-jf-group": "Look"
+    },
+    "text_size": {
+      "type": "number",
+      "title": "Text Size",
+      "description": "Every text size, from 85% to 130%.",
+      "minimum": 0.85,
+      "maximum": 1.3,
+      "multipleOf": 0.05,
+      "default": 1,
+      "x-jf-group": "Look"
+    },
+    "density": {
+      "type": "string",
+      "title": "Density",
+      "description": "The space between things.",
+      "oneOf": [
+        {
+          "const": "compact",
+          "title": "Compact"
+        },
+        {
+          "const": "standard",
+          "title": "Standard"
+        },
+        {
+          "const": "roomy",
+          "title": "Roomy"
+        }
+      ],
+      "default": "standard",
+      "x-jf-group": "Look"
+    },
+    "lyrics_weight": {
+      "type": "string",
+      "title": "Weight",
+      "description": "How heavy the lyrics' lines are.",
+      "oneOf": [
+        {
+          "const": "regular",
+          "title": "Regular"
+        },
+        {
+          "const": "medium",
+          "title": "Medium"
+        },
+        {
+          "const": "semibold",
+          "title": "Semibold"
+        },
+        {
+          "const": "bold",
+          "title": "Bold"
+        },
+        {
+          "const": "heavy",
+          "title": "Heavy"
+        }
+      ],
+      "default": "bold",
+      "x-jf-group": "Lyrics"
+    },
+    "lyrics_glow": {
+      "type": "number",
+      "title": "Glow",
+      "description": "The soft light around the line being sung.",
+      "minimum": 0,
+      "maximum": 1,
+      "multipleOf": 0.05,
+      "default": 0.6,
+      "x-jf-group": "Lyrics"
+    },
+    "highlight": {
+      "type": "string",
+      "title": "Highlight",
+      "description": "The colour of the words already sung.",
+      "oneOf": [
+        {
+          "const": "artwork",
+          "title": "Artwork"
+        },
+        {
+          "const": "accent",
+          "title": "Accent Colour"
+        },
+        {
+          "const": "custom",
+          "title": "Custom Colour"
+        }
+      ],
+      "default": "artwork",
+      "x-jf-group": "Lyrics"
+    },
+    "highlight_colour": {
+      "type": "string",
+      "format": "color",
+      "title": "Highlight Colour",
+      "description": "Used when Highlight is Custom Colour.",
+      "default": "#FF8A3D",
+      "x-jf-group": "Lyrics"
+    },
+    "sidebar": {
+      "type": "array",
+      "title": "Sidebar",
+      "description": "The places the sidebar shows, in this order. At least one place of your library stays, and Settings is always there.",
+      "items": {
+        "type": "string",
+        "oneOf": [
+          {
+            "const": "home",
+            "title": "Home"
+          },
+          {
+            "const": "albums",
+            "title": "Albums"
+          },
+          {
+            "const": "artists",
+            "title": "Artists"
+          },
+          {
+            "const": "songs",
+            "title": "Songs"
+          },
+          {
+            "const": "playlists",
+            "title": "Playlists"
+          },
+          {
+            "const": "favourites",
+            "title": "Favourites"
+          },
+          {
+            "const": "search",
+            "title": "Search"
+          },
+          {
+            "const": "sources",
+            "title": "Sources"
+          }
+        ]
+      },
+      "uniqueItems": true,
+      "default": [
+        "home",
+        "albums",
+        "artists",
+        "songs",
+        "playlists",
+        "favourites",
+        "search",
+        "sources"
+      ],
+      "x-jf-group": "Layout"
+    },
+    "home": {
+      "type": "array",
+      "title": "Home",
+      "description": "The sections Home shows, in this order.",
+      "items": {
+        "type": "string",
+        "oneOf": [
+          {
+            "const": "summary",
+            "title": "Library Summary"
+          },
+          {
+            "const": "recently-added",
+            "title": "Recently Added"
+          },
+          {
+            "const": "recently-played",
+            "title": "Recently Played"
+          },
+          {
+            "const": "most-played",
+            "title": "Most Played"
+          },
+          {
+            "const": "favourites",
+            "title": "Favourites"
+          }
+        ]
+      },
+      "uniqueItems": true,
+      "default": [
+        "summary",
+        "recently-added",
+        "recently-played",
+        "most-played"
+      ],
+      "x-jf-group": "Layout"
+    },
+    "now_playing": {
+      "type": "string",
+      "title": "Now Playing",
+      "description": "Stage is the one you know; Artwork shows a large cover with the line being sung below it; Lyrics fills the screen with them, with a small cover in the corner.",
+      "oneOf": [
+        {
+          "const": "stage",
+          "title": "Stage"
+        },
+        {
+          "const": "artwork",
+          "title": "Artwork"
+        },
+        {
+          "const": "lyrics",
+          "title": "Lyrics"
+        }
+      ],
+      "default": "stage",
+      "x-jf-group": "Layout"
+    },
+    "mini_player": {
+      "type": "string",
+      "title": "Mini-Player",
+      "description": "The player at the bottom: the full bar, a compact bar with the cover, title and Play, or a floating capsule.",
+      "oneOf": [
+        {
+          "const": "bar",
+          "title": "Bar"
+        },
+        {
+          "const": "compact",
+          "title": "Compact"
+        },
+        {
+          "const": "floating",
+          "title": "Floating"
+        }
+      ],
+      "default": "bar",
+      "x-jf-group": "Layout"
+    }
+  },
+  "additionalProperties": false
+}

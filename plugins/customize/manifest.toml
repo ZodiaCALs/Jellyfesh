@@ -1,0 +1,14 @@
+id = "org.jellyfesh.customize"
+name = "Customize"
+version = "0.0.7"
+api_version = "1.2"
+author = "Jellyfesh"
+description = "The app's look and layout: corners, glass, typeface, lyrics style, sidebar, Home, Now Playing and the mini-player"
+official = true
+# appearance is a Jellyfesh Pro capability (ADR-0020, ADR-0021). No network:
+# the look comes from the settings alone.
+capabilities = ["appearance"]
+playback_mode = "stream"
+
+[settings]
+schema = "settings.schema.json"
