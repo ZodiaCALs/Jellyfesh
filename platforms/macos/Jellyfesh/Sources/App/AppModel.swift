@@ -50,6 +50,8 @@ final class AppModel {
     let distribution: AppDistribution
     /// The Settings tab to show when the window opens.
     var settingsTab: SettingsTab = .appearance
+    /// The extension Settings › Extensions opens to (Appearance › Customize…), until it has.
+    var extensionsFocus: String?
 
     private let nowPlayingCenter: NowPlayingCenter
     private let dockIcon: DockIcon

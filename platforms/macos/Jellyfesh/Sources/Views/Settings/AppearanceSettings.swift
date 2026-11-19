@@ -2,13 +2,16 @@
 // theme with small previews; the accent colour (follow the artwork, ten swatches or a custom hue
 // on a hue track); transparency from Solid to Clear with a live preview; Reduce motion and
 // transparency; the Now Playing background with previews; the lyrics' size, alignment,
-// translation and romanization, the lyrics bar and Desktop Lyrics (ADR-0022 §6); and the app icon
-// (ADR-0017). Every change applies at once and the core keeps it (SetSettings); sliders send their
-// value when they are let go.
+// translation and romanization, the lyrics bar and Desktop Lyrics (ADR-0022 §6); the app icon
+// (ADR-0017); and Customize…, which opens Settings › Extensions › Customize (ADR-0020). Every change
+// applies at once and the core keeps it (SetSettings); sliders send their value when they are let
+// go.
 
 import SwiftUI
 
 struct AppearanceSettings: View {
+    @Environment(AppModel.self) private var model
+    @Environment(ProStore.self) private var pro
     @Environment(SettingsStore.self) private var settings
     @Environment(ThemeStore.self) private var theme
     @Environment(\.palette) private var palette
@@ -148,6 +151,30 @@ struct AppearanceSettings: View {
                 Text("Automatic uses Ice in light appearance and Steel in dark appearance. Other choices change the Dock icon while Jellyfesh is open; Finder keeps Ice.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Button {
+                    model.extensionsFocus = LookStore.customizeID
+                    model.settingsTab = .extensions
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Customize…")
+                            Text("Corners, glass, type, lyrics style and layout.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if !pro.isActive {
+                            ProBadge()
+                        }
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
         .formStyle(.grouped)

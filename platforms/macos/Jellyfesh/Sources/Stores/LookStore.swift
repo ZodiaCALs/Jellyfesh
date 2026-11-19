@@ -8,6 +8,9 @@ import Observation
 @MainActor
 @Observable
 final class LookStore {
+    /// The official appearance plugin (Settings › Appearance › Customize… opens it).
+    nonisolated static let customizeID = "org.jellyfesh.customize"
+
     private(set) var state: LookState = .luminous
 
     func apply(_ state: LookState) {

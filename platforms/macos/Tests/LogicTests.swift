@@ -59,6 +59,7 @@ final class SchemaFormTests: XCTestCase {
             "quality": { "type": "string", "enum": ["low", "high"], "enumNames": ["Low", "High"] },
             "region": { "oneOf": [ { "const": "eu", "title": "Europe" }, { "const": "us" } ] },
             "volume": { "type": "number", "minimum": 0, "maximum": 1 },
+            "retries": { "type": "integer", "minimum": 1 },
             "nested": { "type": "object" }
         }
     }
@@ -67,14 +68,15 @@ final class SchemaFormTests: XCTestCase {
     func testReadsFieldsInTheSchemasOrder() throws {
         let fields = try SchemaForm.fields(schemaJSON: schema)
         XCTAssertEqual(fields.map(\.key),
-                       ["server_url", "api_key", "transcode", "max_bitrate", "quality", "region", "volume"])
+                       ["server_url", "api_key", "transcode", "max_bitrate", "quality", "region", "volume", "retries"])
         XCTAssertEqual(fields[0].title, "Server")
         XCTAssertTrue(fields[0].required)
         XCTAssertEqual(fields[0].kind, .text(secret: false, url: true))
         XCTAssertEqual(fields[1].title, "Api key")
         XCTAssertEqual(fields[1].kind, .text(secret: true, url: false))
         XCTAssertEqual(fields[2].kind, .toggle)
-        XCTAssertEqual(fields[3].kind, .integer(min: 64, max: 320, step: 32))
+        // Both bounds make a slider (profile 1.2), stepped by multipleOf.
+        XCTAssertEqual(fields[3].kind, .slider(min: 64, max: 320, step: 32, integer: true))
         XCTAssertEqual(fields[4].kind, .choice([
             SchemaField.Choice(value: .string("low"), label: "Low"),
             SchemaField.Choice(value: .string("high"), label: "High"),
@@ -83,7 +85,83 @@ final class SchemaFormTests: XCTestCase {
             SchemaField.Choice(value: .string("eu"), label: "Europe"),
             SchemaField.Choice(value: .string("us"), label: "us"),
         ]))
-        if case .number = fields[6].kind {} else { XCTFail("volume is a number") }
+        XCTAssertEqual(fields[6].kind, .slider(min: 0, max: 1, step: nil, integer: false))
+        XCTAssertEqual(fields[7].kind, .integer(min: 1, max: 1_000_000, step: 1))
+        XCTAssertNil(fields[0].group)
+    }
+
+    /// Schema profile 1.2, as the Customize plugin uses it.
+    private let profile12 = """
+    {
+        "type": "object",
+        "properties": {
+            "corners": { "type": "number", "minimum": 0, "maximum": 2, "multipleOf": 0.05, "x-jf-group": "Look" },
+            "typeface": { "type": "string", "oneOf": [ { "const": "system", "title": "System" },
+                                                       { "const": "serif", "title": "Serif" } ], "x-jf-group": "Look" },
+            "highlight_colour": { "type": "string", "format": "color", "default": "#FF8A3D", "x-jf-group": "Lyrics" },
+            "sidebar": { "type": "array", "uniqueItems": true, "x-jf-group": "Layout",
+                         "items": { "type": "string", "oneOf": [ { "const": "home", "title": "Home" },
+                                                                 { "const": "songs", "title": "Songs" },
+                                                                 { "const": "search", "title": "Search" } ] } },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "loose": { "type": "boolean", "x-jf-group": "Look" }
+        }
+    }
+    """
+
+    func testProfile12Fields() throws {
+        let fields = try SchemaForm.fields(schemaJSON: profile12)
+        XCTAssertEqual(fields.map(\.key), ["corners", "typeface", "highlight_colour", "sidebar", "loose"],
+                       "an array that is not a checklist is skipped")
+        XCTAssertEqual(fields[0].kind, .slider(min: 0, max: 2, step: 0.05, integer: false))
+        XCTAssertEqual(fields[2].kind, .color)
+        let places = [SchemaField.Choice(value: .string("home"), label: "Home"),
+                      SchemaField.Choice(value: .string("songs"), label: "Songs"),
+                      SchemaField.Choice(value: .string("search"), label: "Search")]
+        XCTAssertEqual(fields[3].kind, .checklist(places))
+        let groups = SchemaForm.groups(fields)
+        XCTAssertEqual(groups.map(\.title), ["Look", "Lyrics", "Layout", "Look"], "consecutive fields share a heading")
+        XCTAssertEqual(groups[0].fields.map(\.key), ["corners", "typeface"])
+    }
+
+    func testOrderedChecklists() {
+        let places = [SchemaField.Choice(value: .string("home"), label: "Home"),
+                      SchemaField.Choice(value: .string("songs"), label: "Songs"),
+                      SchemaField.Choice(value: .string("search"), label: "Search")]
+        let value = JSONValue.array([.string("search"), .string("home"), .string("gone"), .string("home")])
+        let rows = SchemaForm.checklistRows(options: places, value: value)
+        XCTAssertEqual(rows.map { $0.choice.label }, ["Search", "Home", "Songs"])
+        XCTAssertEqual(rows.map { $0.shown }, [true, true, false])
+        XCTAssertEqual(SchemaForm.checklistValue(options: places, value: value, item: .string("songs"), shown: true),
+                       .array([.string("search"), .string("home"), .string("songs")]))
+        XCTAssertEqual(SchemaForm.checklistValue(options: places, value: value, item: .string("search"), shown: false),
+                       .array([.string("home")]))
+        XCTAssertEqual(SchemaForm.checklistValue(options: places, value: value, moving: .string("home"), by: -1),
+                       .array([.string("home"), .string("search")]))
+        XCTAssertEqual(SchemaForm.checklistValue(options: places, value: value, moving: .string("home"), by: 1),
+                       .array([.string("search"), .string("home")]), "the last stays last")
+        XCTAssertEqual(SchemaForm.checklistRows(options: places, value: nil).map { $0.shown }, [false, false, false])
+    }
+
+    func testColours() {
+        XCTAssertEqual(SchemaForm.rgb(hex: "#FF8A3D"), 0xFF8A3D)
+        XCTAssertEqual(SchemaForm.rgb(hex: "#ff8a3d"), 0xFF8A3D)
+        XCTAssertNil(SchemaForm.rgb(hex: "FF8A3D"))
+        XCTAssertNil(SchemaForm.rgb(hex: "#FF8A3"))
+        XCTAssertNil(SchemaForm.rgb(hex: "#GG8A3D"))
+        XCTAssertEqual(SchemaForm.hex(rgb: 0xFF8A3D), "#FF8A3D")
+        XCTAssertEqual(SchemaForm.hex(rgb: 0x00000A), "#00000A")
+        XCTAssertEqual(SchemaForm.rgb(red: 1, green: 138.0 / 255, blue: 61.0 / 255), 0xFF8A3D)
+        XCTAssertEqual(SchemaForm.rgb(red: 2, green: -1, blue: .nan), 0xFF0000, "out of range is clamped")
+    }
+
+    func testSliderValuesShowTheirStepsDecimals() {
+        XCTAssertEqual(SchemaForm.fractionDigits(step: 32, integer: true), 0)
+        XCTAssertEqual(SchemaForm.fractionDigits(step: 1, integer: false), 0)
+        XCTAssertEqual(SchemaForm.fractionDigits(step: 0.5, integer: false), 1)
+        XCTAssertEqual(SchemaForm.fractionDigits(step: 0.05, integer: false), 2)
+        XCTAssertEqual(SchemaForm.fractionDigits(step: 0.001, integer: false), 2, "two at most")
+        XCTAssertEqual(SchemaForm.fractionDigits(step: nil, integer: false), 2)
     }
 
     func testEmptyAndBrokenSchemas() throws {

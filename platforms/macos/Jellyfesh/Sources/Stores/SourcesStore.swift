@@ -10,7 +10,8 @@ import Observation
 /// The window whose sign-in sheet follows a flow: Settings (Sources), or the main window (its
 /// Sources page). The flow's sheet opens where it was started, and only there.
 enum SignInWindow: Hashable {
-    case settings, main
+    /// Settings › Sources, the Sources page, and Settings › Extensions (AI Lyrics' API key).
+    case settings, main, extensions
 }
 
 /// A sign-in flow in progress, as the sign-in sheet shows it.
@@ -64,6 +65,15 @@ final class SourcesStore {
     /// Settings sent and not yet reported back, by plugin, so a quick second change builds on the
     /// first instead of on the older settings.
     @ObservationIgnored private var sentSettings: [String: String] = [:]
+    /// Plugins' settings schemas in the app's language (API 1.2), by plugin id.
+    private(set) var localizedSchemas: [String: LocalizedSchema] = [:]
+
+    struct LocalizedSchema: Equatable {
+        /// The plugin version and language it was asked for.
+        var version: String
+        var language: String
+        var json: String
+    }
 
     init(client: CoreClient, tracker: CommandTracker, toasts: ToastCenter) {
         self.client = client
@@ -76,7 +86,12 @@ final class SourcesStore {
         sentSettings = [:]
     }
 
-    var plugins: [SourcePlugin] { sources.plugins }
+    /// The music sources (Settings › Sources and the Sources page); extensions are apart.
+    var plugins: [SourcePlugin] { sources.sourcePlugins }
+    /// AI Lyrics, Customize and other extensions (Settings › Extensions).
+    var extensions: [SourcePlugin] { sources.extensionPlugins }
+    /// This build may install plugins from files (store builds may not).
+    var canInstallPlugins: Bool { sources.canInstallPlugins }
     /// The services Add a Source offers.
     var presets: [SourcePreset] { sources.presets }
     /// Some source is on and signed in (Home welcomes the person only while none is).
@@ -128,6 +143,34 @@ final class SourcesStore {
         return String(localized: "Also in \(names)")
     }
 
+    /// The language plugin settings are shown in: the app's own (`zh-Hans`, `zh-Hant`, `ja`), or
+    /// nil for English, which is the schema's own.
+    nonisolated static func schemaLanguage(preferred: [String]) -> String? {
+        guard let first = preferred.first, !first.lowercased().hasPrefix("en") else { return nil }
+        return first
+    }
+
+    /// A plugin's settings schema in the app's language once the core has given it, else its own.
+    func settingsSchema(of plugin: SourcePlugin) -> String {
+        guard let localized = localizedSchemas[plugin.id], localized.version == plugin.version else {
+            return plugin.settingsSchemaJSON
+        }
+        return localized.json
+    }
+
+    /// Asks the core for a plugin's settings schema in `language` (see `schemaLanguage`), once per
+    /// version of the plugin.
+    func loadSettingsSchema(of plugin: SourcePlugin, language: String?) async {
+        guard let language else { return }
+        if let known = localizedSchemas[plugin.id], known.version == plugin.version, known.language == language {
+            return
+        }
+        guard let json = try? await client.localizedSettingsSchema(plugin: plugin.id, language: language),
+              !json.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return }
+        localizedSchemas[plugin.id] = LocalizedSchema(version: plugin.version, language: language, json: json)
+    }
+
     /// A player the app provides was registered with the core (or removed, with nil).
     func setExternalSource(_ id: String, name: String?) {
         externalSources[id] = name
@@ -137,6 +180,13 @@ final class SourcesStore {
 
     func install(path: String) {
         send(.installPlugin(path: path))
+    }
+
+    /// Reset to Defaults: the core restores a plugin's settings (Customize's look, for one).
+    func resetSettings(_ id: String) {
+        editedSettings[id] = nil
+        sentSettings[id] = nil
+        send(.resetPluginSettings(plugin: id))
     }
 
     func uninstall(_ id: String) {

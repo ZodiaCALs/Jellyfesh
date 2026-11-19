@@ -1,4 +1,5 @@
-// The Settings window: Appearance (with the lyrics settings), Playback, Library and Sources.
+// The Settings window: Appearance (with the lyrics settings), Playback, Library, Sources and
+// Extensions.
 // Native forms (the window chrome is the platform's, Misty PLT-10); every change goes to the core
 // as a settings command, and the app applies the appearance ones.
 
@@ -29,6 +30,9 @@ struct SettingsView: View {
             SourcesSettings()
                 .tabItem { Label("Sources", systemImage: "antenna.radiowaves.left.and.right") }
                 .tag(SettingsTab.sources)
+            ExtensionsSettings()
+                .tabItem { Label("Extensions", systemImage: "puzzlepiece.extension") }
+                .tag(SettingsTab.extensions)
         }
         .frame(width: 640, height: 560)
         .environment(\.palette, theme.palette(for: colorScheme))

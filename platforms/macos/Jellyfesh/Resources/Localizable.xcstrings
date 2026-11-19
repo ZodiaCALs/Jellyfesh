@@ -649,6 +649,28 @@
         }
       }
     },
+    "API Key Added": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API キーを追加済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加 API 密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加入 API 金鑰"
+          }
+        }
+      }
+    },
     "About Jellyfesh": {
       "localizations": {
         "ja": {
@@ -2063,6 +2085,28 @@
         }
       }
     },
+    "Corners, glass, type, lyrics style and layout.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角の丸み、ガラス、文字、歌詞のスタイル、レイアウト。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圆角、玻璃、字体、歌词样式和布局。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圓角、玻璃、字體、歌詞樣式和版面配置。"
+          }
+        }
+      }
+    },
     "Couldn't make lyrics: %@": {
       "localizations": {
         "ja": {
@@ -2147,6 +2191,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "自訂"
+          }
+        }
+      }
+    },
+    "Customize…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタマイズ…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自定义…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自訂…"
           }
         }
       }
@@ -2675,6 +2741,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "匯出播放清單…"
+          }
+        }
+      }
+    },
+    "Extensions": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拡張機能"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扩展"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "延伸功能"
           }
         }
       }
@@ -3757,6 +3845,28 @@
         }
       }
     },
+    "Learn More…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳しく見る…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "了解更多…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瞭解更多…"
+          }
+        }
+      }
+    },
     "Length": {
       "localizations": {
         "ja": {
@@ -4259,6 +4369,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "最常播放"
+          }
+        }
+      }
+    },
+    "Move Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下へ移動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下移"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下移"
+          }
+        }
+      }
+    },
+    "Move Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上へ移動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上移"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上移"
           }
         }
       }
@@ -5139,6 +5293,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "輸出裝置"
+          }
+        }
+      }
+    },
+    "Part of Jellyfesh Pro.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro の機能です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是 Jellyfesh Pro 的功能。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這是 Jellyfesh Pro 的功能。"
           }
         }
       }
@@ -6129,6 +6305,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新掃描資料庫"
+          }
+        }
+      }
+    },
+    "Reset to Defaults": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトに戻す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复默认设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回復預設值"
           }
         }
       }

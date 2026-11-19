@@ -238,3 +238,53 @@ final class BuildFlagTests: XCTestCase {
                                                     .artwork(ArtworkFetched(url: "u", sizePx: 64, path: nil))])
     }
 }
+
+@MainActor
+final class ExtensionsStoreTests: XCTestCase {
+    private func extensionPlugin(_ id: String, version: String = "0.0.7") -> SourcePlugin {
+        var plugin = Fixture.plugin(id, methods: [], schema: #"{"type":"object","properties":{"glass":{"type":"number"}}}"#)
+        plugin.isExtension = true
+        plugin.requiresPro = true
+        plugin.version = version
+        return plugin
+    }
+
+    func testExtensionsAreListedApartFromSources() {
+        let store = SourcesStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        let customize = extensionPlugin(LookStore.customizeID)
+        var state = SourcesState(version: 1, plugins: [Fixture.plugin(), customize], allowCommunity: false)
+        state.canInstallPlugins = false
+        store.apply(state)
+        XCTAssertEqual(store.plugins.map(\.id), ["org.example.subsonic"])
+        XCTAssertEqual(store.extensions.map(\.id), [LookStore.customizeID])
+        XCTAssertEqual(store.plugin(LookStore.customizeID)?.id, LookStore.customizeID, "settings still find it")
+        XCTAssertFalse(store.canInstallPlugins)
+    }
+
+    func testSettingsShowInTheAppsLanguage() async {
+        XCTAssertNil(SourcesStore.schemaLanguage(preferred: ["en"]))
+        XCTAssertNil(SourcesStore.schemaLanguage(preferred: ["en-GB", "ja"]))
+        XCTAssertEqual(SourcesStore.schemaLanguage(preferred: ["zh-Hans"]), "zh-Hans")
+        XCTAssertNil(SourcesStore.schemaLanguage(preferred: []))
+
+        let client = FakeCoreClient()
+        let customize = extensionPlugin(LookStore.customizeID)
+        let localized = #"{"type":"object","properties":{"glass":{"type":"number","title":"玻璃"}}}"#
+        client.localizedSchemas["\(LookStore.customizeID)|zh-Hans"] = localized
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        XCTAssertEqual(store.settingsSchema(of: customize), customize.settingsSchemaJSON, "English until asked")
+        await store.loadSettingsSchema(of: customize, language: nil)
+        XCTAssertEqual(store.settingsSchema(of: customize), customize.settingsSchemaJSON)
+        await store.loadSettingsSchema(of: customize, language: "zh-Hans")
+        XCTAssertEqual(store.settingsSchema(of: customize), localized)
+        let updated = extensionPlugin(LookStore.customizeID, version: "0.0.8")
+        XCTAssertEqual(store.settingsSchema(of: updated), updated.settingsSchemaJSON, "a new version asks again")
+    }
+
+    func testResetToDefaults() {
+        let client = FakeCoreClient()
+        let store = SourcesStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.resetSettings(LookStore.customizeID)
+        XCTAssertEqual(client.sent.last, .resetPluginSettings(plugin: LookStore.customizeID))
+    }
+}
