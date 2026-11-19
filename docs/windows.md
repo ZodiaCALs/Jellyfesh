@@ -310,8 +310,12 @@ executable, `Jellyfesh.pri` (its compiled XAML and strings); MRT Core looks for
 temporary folder's `Jellyfesh\logs` when that cannot be written): the version,
 edition and distribution, the app's path, Windows version, architecture and
 language, the data and cache folders, then each stage of start-up (loading the
-Windows App SDK runtime, the single-instance check, XAML, the colours and styles,
-the core, the main window). Until the window is open it also records every
+Windows App SDK runtime, the single-instance check, XAML, creating the
+application, WinUI loading App.xaml, the colours and styles, the core, the main
+window). The colours and styles go into `Application.Resources` in
+`OnLaunched`: WinUI makes the `App` object in `Application.Start`'s callback,
+before it creates the thread's application resources and loads App.xaml, so
+`Resources` fails there with E_UNEXPECTED (0x8000FFFF). Until the window is open it also records every
 first-chance exception, so the first error of a failed start is there even when
 something later catches it. Lines carry the time and the process id. **Open Log
 Folder** is in Settings › About; a person reporting a problem sends `app.log`.

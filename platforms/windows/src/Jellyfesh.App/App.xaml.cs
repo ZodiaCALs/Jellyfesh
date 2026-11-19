@@ -14,37 +14,51 @@ namespace Jellyfesh.App;
 /// stage of Startup: a failure is logged and shown, and Jellyfesh then exits rather than lingering
 /// without a window (docs/windows.md, "When Jellyfesh does not start").
 /// </summary>
+/// <remarks>
+/// WinUI makes this object in Application.Start's callback, before XAML runs on the thread:
+/// InitializeComponent only notes where App.xaml is, and Application.Resources does not exist yet
+/// (it fails with E_UNEXPECTED). WinUI then creates the thread's application, loads App.xaml and
+/// calls <see cref="OnLaunched"/>, where the resources are installed (microsoft-ui-xaml:
+/// FrameworkApplication::StartDesktop, LoadComponent, DXamlCore::EnsureCoreApplicationInitialized).
+/// </remarks>
 public partial class App : Application
 {
     private static MainWindow? _main;
 
+    /// <summary>OnLaunched ran: XAML started on the thread, so a window can show a failure.</summary>
+    private static bool _launched;
+
     public App()
     {
-        // First, so that XAML's own failures from here on reach the log.
+        // First, so that XAML's own failures reach the log: WinUI reports a failure to load
+        // App.xaml, which happens after this constructor, through this event.
         UnhandledException += OnUnhandledException;
         try
         {
-            Startup.EnterStage("loading App.xaml (WinUI's resources)");
+            Startup.EnterStage("creating the application");
             InitializeComponent();
+        }
+        catch (Exception e)
+        {
+            Startup.Fail(e, xamlWorks: false);
+            return;
+        }
 
+        Startup.EnterStage("loading App.xaml (WinUI's resources)");
+    }
+
+    protected override void OnLaunched(LaunchActivatedEventArgs args)
+    {
+        _launched = true;
+        ICoreClient? core = null;
+        try
+        {
             // The Jf* brushes first: the style dictionaries below refer to them.
             Startup.EnterStage("loading the colours and styles");
             ThemeBrushes.Install(Resources);
             Resources.MergedDictionaries.Add(new ResourceDictionary { Source = new Uri("ms-appx:///Styles/Controls.xaml") });
             Resources.MergedDictionaries.Add(new Styles.Templates());
-        }
-        catch (Exception e)
-        {
-            // Without its styles no window of the app can be drawn: a message box says why.
-            Startup.Fail(e, xamlWorks: false);
-        }
-    }
 
-    protected override void OnLaunched(LaunchActivatedEventArgs args)
-    {
-        ICoreClient? core = null;
-        try
-        {
             Startup.EnterStage("starting the core");
             core = StartCore();
 
@@ -96,8 +110,10 @@ public partial class App : Application
         AppLog.Write($"unhandled exception while {Startup.Stage}: {e.Message}", e.Exception);
         if (!Startup.WindowOpen || Startup.SmokeTest)
         {
+            // Before OnLaunched (App.xaml did not load) WinUI ends the process once this returns: a
+            // message box, which waits, says why.
             e.Handled = true;
-            Startup.Fail(e.Exception, xamlWorks: true);
+            Startup.Fail(e.Exception, xamlWorks: _launched);
             return;
         }
 

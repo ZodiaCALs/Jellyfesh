@@ -16,7 +16,8 @@ Two runs:
      cache and log folders on such paths too, as for a person whose Windows user name is not ASCII.
 
 After each run the app's log is printed; after a failed one also the Windows Application event log's
-entries about Jellyfesh (crashes .NET never sees). The logs are copied to <WorkDir>\logs. Exits 1
+.NET Runtime, Application Error and Windows Error Reporting entries and any about Jellyfesh (crashes
+.NET never sees). The logs are copied to <WorkDir>\logs. Exits 1
 when any run failed.
 
 .PARAMETER App
@@ -119,11 +120,14 @@ function Invoke-SmokeRun {
     }
 
     if (-not $ok) {
-        Write-Host '-- the Application event log about Jellyfesh since the run started'
+        # Crashes outside .NET's reach (a fail-fast in WinUI, a native exception) leave only these.
+        Write-Host '-- the Application event log since the run started (.NET Runtime, Application Error, Windows Error Reporting, or about Jellyfesh)'
+        $crashProviders = @('.NET Runtime', 'Application Error', 'Windows Error Reporting')
         try {
-            Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $start } -ErrorAction Stop |
-                Where-Object { $_.Message -match 'Jellyfesh' } |
-                ForEach-Object { Write-Host "   [$($_.TimeCreated)] $($_.ProviderName) $($_.Id): $($_.Message)" }
+            $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $start } -ErrorAction Stop |
+                Where-Object { $_.ProviderName -in $crashProviders -or $_.Message -match 'Jellyfesh' })
+            if ($events.Count -eq 0) { Write-Host '   (none)' }
+            $events | ForEach-Object { Write-Host "   [$($_.TimeCreated)] $($_.ProviderName) $($_.Id): $($_.Message)" }
         }
         catch {
             Write-Host "   (none: $($_.Exception.Message))"
