@@ -65,6 +65,8 @@ import org.jellyfesh.android.ui.nav.NavController
 import org.jellyfesh.android.ui.nav.chromeHeight
 import org.jellyfesh.android.ui.player.NowPlayingPanel
 import org.jellyfesh.android.ui.player.NowPlayingScreen
+import org.jellyfesh.android.ui.player.lyricsBarHeight
+import org.jellyfesh.android.ui.player.lyricsBarTranslates
 import org.jellyfesh.android.ui.search.SearchScreen
 import org.jellyfesh.android.ui.settings.SettingsScreen
 import org.jellyfesh.android.ui.signals.SignalMessages
@@ -81,6 +83,7 @@ import org.jellyfesh.android.ui.theme.MistyField
 import org.jellyfesh.android.ui.theme.fadeOutAbove
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.rememberPlaybackTime
+import org.jellyfesh.logic.lyrics.LyricsBars
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.seek.SeekGeometry
@@ -154,6 +157,8 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
     val navState by graph.nav.collectAsStateWithLifecycle()
     val reduce = Jf.effects.reduceMotion
     val hasPlayer = PlayerModel.track(state) != null
+    // Show Lyrics Bar: the line being sung above the player, while the song playing here has timed lyrics.
+    val lyricsBar = hasPlayer && LyricsBars.shows(state.settings.showLyricsBar, state.currentLyrics, PlayerModel.isRemote(state))
     var requestedPanel by remember { mutableStateOf<NowPlayingPanel?>(null) }
     val navigationInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     SignalMessages(graph, overlays)
@@ -167,7 +172,7 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
             val windowWidth = maxWidth.value
             // The floating chrome above the system navigation bar: the tab bar capsule, and the
             // mini-player pill (or the player bar) when something plays.
-            val chromeHeight: Dp = chromeHeight(hasPlayer, wide)
+            val chromeHeight: Dp = chromeHeight(hasPlayer, wide, lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar })
             // Library screens and their chrome. Hidden from accessibility while a layer covers them.
             val covered = navState.nowPlayingOpen || overlays.isOpen
             GlassBackdrop(
@@ -207,6 +212,7 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
                     tab = navState.tab,
                     wide = wide,
                     onSelect = nav::select,
+                    lyricsBar = lyricsBar,
                     onOpenNowPlaying = { panel ->
                         requestedPanel = panel
                         nav.openNowPlaying()

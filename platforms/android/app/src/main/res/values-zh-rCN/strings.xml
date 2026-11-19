@@ -348,6 +348,8 @@
     <string name="show_translation_desc">歌词附有翻译时，在每行歌词下方显示另一种语言。</string>
     <string name="show_romanization">显示罗马字</string>
     <string name="show_romanization_desc">歌词附有罗马字时，显示每行的拉丁字母读法。</string>
+    <string name="show_lyrics_bar">显示歌词栏</string>
+    <string name="show_lyrics_bar_desc">在迷你播放器上方显示正在唱的那一行。</string>
     <string name="allow_community">允许社区插件</string>
     <string name="community_plugins">社区插件</string>
     <string name="allow_community_desc">官方来源由 Jellyfesh 签名。社区插件由他人制作，除非你允许，否则保持关闭。</string>

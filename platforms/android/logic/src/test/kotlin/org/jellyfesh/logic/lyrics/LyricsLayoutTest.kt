@@ -122,4 +122,25 @@ class LyricsLayoutTest {
         assertEquals(listOf(Box(5f, 0f, 20f, 20f)), SweepGeometry.lit(rows, 0.5f, rtl = true))
         assertEquals(emptyList(), SweepGeometry.lit(rows, 0f, rtl = false))
     }
+
+    @Test
+    fun theLyricsBarFillsWordsByTheCoresProgress() {
+        val row = LyricRow(0, "one two three", listOf(0..2, 4..6, 8..12), 0, null, null, null, org.jellyfesh.logic.core.TextDir.Ltr, cjk = false, isGap = false)
+        // The first word sung, the second half-way.
+        assertEquals(Sweep(4, 4..6, 0.5f), LyricsLayout.barSweep(row, LyricsBar(0, 1, listOf(1f, 0.5f, 0f), 0.4f), reduceMotion = false))
+        // Every word sung: the whole line, with the gap after it.
+        assertEquals(Sweep(13, null, 0f), LyricsLayout.barSweep(row, LyricsBar(0, 1, listOf(1f, 1f, 1f), 1f), reduceMotion = false))
+        // Before the first word.
+        assertEquals(Sweep(0, null, 0f), LyricsLayout.barSweep(row, LyricsBar(0, 1, listOf(0f, 0f, 0f), 0f), reduceMotion = false))
+        // Reduced motion lights the line whole.
+        assertEquals(Sweep.allSung(row), LyricsLayout.barSweep(row, LyricsBar(0, 1, listOf(0.2f, 0f, 0f), 0.1f), reduceMotion = true))
+    }
+
+    @Test
+    fun aLineWithoutWordTimingFillsByItsProgress() {
+        val row = LyricRow(0, "a timed line", emptyList(), 0, null, null, null, org.jellyfesh.logic.core.TextDir.Ltr, cjk = false, isGap = false)
+        assertEquals(Sweep(0, 0 until 12, 0.25f), LyricsLayout.barSweep(row, LyricsBar(0, null, emptyList(), 0.25f), reduceMotion = false))
+        assertEquals(Sweep.NoneSung, LyricsLayout.barSweep(row, LyricsBar(0, null, emptyList(), 0f), reduceMotion = false))
+        assertEquals(Sweep.allSung(row), LyricsLayout.barSweep(row, LyricsBar(0, null, emptyList(), 1f), reduceMotion = false))
+    }
 }

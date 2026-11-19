@@ -407,6 +407,11 @@ private fun LazyListScope.lyrics(settings: Settings) {
             SettingRow(stringResource(R.string.show_romanization), description = stringResource(R.string.show_romanization_desc)) {
                 JfSwitch(settings.showRomanization, { on -> edit { copy(showRomanization = on) } })
             }
+            Divider()
+            // Desktop Lyrics, the other v0.0.7 switch here, is for desktops (docs/ui.md, Allowed differences).
+            SettingRow(stringResource(R.string.show_lyrics_bar), description = stringResource(R.string.show_lyrics_bar_desc)) {
+                JfSwitch(settings.showLyricsBar, { on -> edit { copy(showLyricsBar = on) } })
+            }
         }
     }
 }

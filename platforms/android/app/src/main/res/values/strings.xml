@@ -400,6 +400,8 @@
     <string name="show_translation_desc">A line in another language under each lyric line, when the lyrics have one.</string>
     <string name="show_romanization">Show Romanization</string>
     <string name="show_romanization_desc">How each line reads in Latin letters, when the lyrics have it.</string>
+    <string name="show_lyrics_bar">Show Lyrics Bar</string>
+    <string name="show_lyrics_bar_desc">The line being sung, above the mini-player.</string>
 
     <string name="allow_community">Allow Community Plugins</string>
     <string name="community_plugins">Community Plugins</string>

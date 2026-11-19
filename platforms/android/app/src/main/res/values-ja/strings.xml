@@ -348,6 +348,8 @@
     <string name="show_translation_desc">歌詞に翻訳があるとき、各行の下に別の言語の行を表示します。</string>
     <string name="show_romanization">ローマ字を表示</string>
     <string name="show_romanization_desc">歌詞にローマ字があるとき、各行の読みをラテン文字で表示します。</string>
+    <string name="show_lyrics_bar">歌詞バーを表示</string>
+    <string name="show_lyrics_bar_desc">歌われている行をミニプレーヤーの上に表示します。</string>
     <string name="allow_community">コミュニティプラグインを許可</string>
     <string name="community_plugins">コミュニティプラグイン</string>
     <string name="allow_community_desc">公式のソースには Jellyfesh の署名があります。コミュニティプラグインはほかの人が作ったもので、許可しない限りオフのままです。</string>

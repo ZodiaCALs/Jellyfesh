@@ -61,6 +61,7 @@ import org.jellyfesh.android.ui.theme.PlayPauseButton
 import org.jellyfesh.android.ui.theme.PlayPauseGlyph
 import org.jellyfesh.android.ui.theme.TouchTarget
 import org.jellyfesh.android.ui.player.DeviceButton
+import org.jellyfesh.android.ui.player.LyricsBarStrip
 import org.jellyfesh.android.ui.player.NowPlayingPanel
 import org.jellyfesh.android.ui.player.PlayerVolume
 import org.jellyfesh.android.ui.player.SeekWithTimes
@@ -135,11 +136,14 @@ private val ChromeBottom = 10.dp
 
 /**
  * How much of the screen's bottom the floating chrome covers (the system navigation bar not
- * included): the tab bar, and the mini-player or the player bar when something plays. Screens
- * leave this free under their last rows, and their content fades out just above it.
+ * included): the tab bar, the mini-player or the player bar when something plays, and the lyrics
+ * bar above it when it shows ([lyricsBar], its height). Screens leave this free under their last
+ * rows, and their content fades out just above it.
  */
-fun chromeHeight(hasPlayer: Boolean, wide: Boolean): Dp =
-    ChromeBottom + TabBarHeight + if (!hasPlayer) 0.dp else ChromeGap + if (wide) PlayerBarHeight else MiniPlayerHeight
+fun chromeHeight(hasPlayer: Boolean, wide: Boolean, lyricsBar: Dp? = null): Dp =
+    ChromeBottom + TabBarHeight +
+        (if (!hasPlayer) 0.dp else ChromeGap + if (wide) PlayerBarHeight else MiniPlayerHeight) +
+        (if (hasPlayer && lyricsBar != null) ChromeGap + lyricsBar else 0.dp)
 
 /**
  * The floating chrome at the bottom of the library screens (Luminous): the mini-player pill (when
@@ -155,6 +159,7 @@ fun BottomChrome(
     onSelect: (Tab) -> Unit,
     onOpenNowPlaying: (NowPlayingPanel?) -> Unit,
     modifier: Modifier = Modifier,
+    lyricsBar: Boolean = false,
 ) {
     Column(
         modifier
@@ -165,6 +170,8 @@ fun BottomChrome(
         verticalArrangement = Arrangement.spacedBy(ChromeGap),
     ) {
         if (PlayerModel.track(state) != null) {
+            // The line being sung, above the player (Show Lyrics Bar).
+            if (lyricsBar) LyricsBarStrip(state, { onOpenNowPlaying(NowPlayingPanel.Lyrics) }, Modifier.widthIn(max = 600.dp))
             if (wide) {
                 PlayerBar(state, onOpenNowPlaying, Modifier.widthIn(max = 1240.dp))
             } else {

@@ -102,6 +102,34 @@ object LyricsLayout {
         }
     }
 
+    /**
+     * The sweep of the lyrics bar's line from the core's `lyrics_bar` ([bar]): the words sung
+     * whole, then the share of the word being sung; a line without word timing fills as one by
+     * its line progress. With [reduceMotion] the line lights whole.
+     */
+    fun barSweep(row: LyricRow, bar: LyricsBar, reduceMotion: Boolean): Sweep {
+        if (reduceMotion) return Sweep.allSung(row)
+        if (row.wordRanges.isEmpty() || bar.words.isEmpty()) {
+            val p = bar.lineProgress.coerceIn(0f, 1f)
+            return when {
+                p >= 1f -> Sweep.allSung(row)
+                p <= 0f || row.text.isEmpty() -> Sweep.NoneSung
+                else -> Sweep(0, 0 until row.text.length, p)
+            }
+        }
+        var sungEnd = 0
+        for ((i, p) in bar.words.withIndex()) {
+            val range = row.wordRanges.getOrNull(i) ?: break
+            when {
+                // The word is sung, and the space after it with it.
+                p >= 1f -> sungEnd = row.wordRanges.getOrNull(i + 1)?.first ?: row.text.length
+                p > 0f -> return Sweep(sungEnd, range, p)
+                else -> break
+            }
+        }
+        return Sweep(sungEnd, null, 0f)
+    }
+
     /** True when [text] holds Han, Hiragana, Katakana or Hangul characters. */
     fun isCjk(text: String): Boolean {
         var i = 0

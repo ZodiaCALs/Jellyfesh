@@ -280,7 +280,14 @@ private fun LyricLine(
         when {
             row.isGap -> BasicText("• • •", style = base.copy(color = if (active) colors.ink70 else inactive))
             active && cursor != null && row.wordRanges.isNotEmpty() ->
-                SweepText(row, cursor, base, sung = colors.ink90, unsung = colors.ink70, rtl = row.direction == TextDir.Rtl || LocalLayoutDirection.current == LayoutDirection.Rtl && row.direction == TextDir.Auto)
+                SweepText(
+                    row,
+                    { LyricsLayout.sweep(row, cursor.value, reduceMotion = false) },
+                    base,
+                    sung = colors.ink90,
+                    unsung = colors.ink70,
+                    rtl = row.direction == TextDir.Rtl || LocalLayoutDirection.current == LayoutDirection.Rtl && row.direction == TextDir.Auto,
+                )
             else -> BasicText(row.text, style = base.copy(color = lineColor))
         }
         val aux = if (active || !synced) colors.ink70 else inactive
@@ -293,21 +300,33 @@ private fun LyricLine(
 }
 
 /**
- * The active word-timed line: drawn in the unsung ink, then again in the sung ink clipped to the
- * words already sung plus the sung part of the current word. Reads the cursor in the draw phase,
- * so a moving sweep redraws this one line and recomposes nothing.
+ * A line being sung: drawn in the unsung ink, then again in the sung ink clipped to the words
+ * already sung plus the sung part of the current word. Reads [sweep] in the draw phase, so a
+ * moving sweep redraws this one line and recomposes nothing (Now Playing's active line, and the
+ * lyrics bar's).
  */
 @Composable
-private fun SweepText(row: LyricRow, cursor: State<LyricCursor>, style: TextStyle, sung: Color, unsung: Color, rtl: Boolean) {
+internal fun SweepText(
+    row: LyricRow,
+    sweep: () -> org.jellyfesh.logic.lyrics.Sweep,
+    style: TextStyle,
+    sung: Color,
+    unsung: Color,
+    rtl: Boolean,
+    modifier: Modifier = Modifier,
+    maxLines: Int = Int.MAX_VALUE,
+) {
     val layout = remember(row) { mutableStateOf<TextLayoutResult?>(null) }
     BasicText(
         row.text,
         style = style.copy(color = unsung),
         onTextLayout = { layout.value = it },
-        modifier = Modifier.drawWithContent {
+        maxLines = maxLines,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        modifier = modifier.drawWithContent {
             drawContent()
             val l = layout.value ?: return@drawWithContent
-            val sweep = LyricsLayout.sweep(row, cursor.value, reduceMotion = false)
+            val sweep = sweep()
             val path = Path()
             if (sweep.sungEnd > 0) path.addPath(l.getPathForRange(0, sweep.sungEnd.coerceAtMost(row.text.length)))
             val current = sweep.current

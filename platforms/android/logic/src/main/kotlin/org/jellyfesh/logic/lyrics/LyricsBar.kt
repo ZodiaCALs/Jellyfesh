@@ -1,5 +1,8 @@
 package org.jellyfesh.logic.lyrics
 
+import org.jellyfesh.logic.core.LyricsSnapshot
+import org.jellyfesh.logic.core.Timing
+
 /**
  * The core's `LyricTimeline` arrays, copied once per Lyrics slice: times in milliseconds, with
  * [NONE] (the core's `u32::MAX`) for "no line" in [segmentLines] and "no end" in [lineEnds].
@@ -72,6 +75,21 @@ object LyricsBars {
         }
         return LyricsBar(line, next, words, lineProgress)
     }
+
+    /**
+     * Whether the lyrics bar shows above the mini-player (docs/ui.md, "Lyrics, word by word"):
+     * Show Lyrics Bar is on and the song playing here has timed lyrics. A remote session's song
+     * has none here ("Lyrics aren't shown while {Service} plays").
+     */
+    fun shows(showLyricsBar: Boolean, lyrics: LyricsSnapshot?, remote: Boolean): Boolean {
+        if (!showLyricsBar || remote) return false
+        val doc = lyrics?.doc ?: return false
+        val timeline = lyrics.timeline ?: return false
+        return doc.timing != Timing.Unsynced && doc.lines.isNotEmpty() && !timeline.isEmpty
+    }
+
+    /** The line the bar shows: the bar's line, or before the first line the one to come. */
+    fun shownLine(bar: LyricsBar): Int? = bar.line ?: bar.next
 
     /** The active line at [tMs] (the line of the core's `LyricTimeline::cursor`), or null. */
     fun activeLine(timeline: TimelineArrays, tMs: Long): Int? {

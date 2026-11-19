@@ -348,6 +348,8 @@
     <string name="show_translation_desc">歌詞附有翻譯時，在每行歌詞下方顯示另一種語言。</string>
     <string name="show_romanization">顯示羅馬拼音</string>
     <string name="show_romanization_desc">歌詞附有羅馬拼音時，顯示每行的拉丁字母讀法。</string>
+    <string name="show_lyrics_bar">顯示歌詞列</string>
+    <string name="show_lyrics_bar_desc">在迷你播放器上方顯示正在唱的那一行。</string>
     <string name="allow_community">允許社群外掛</string>
     <string name="community_plugins">社群外掛</string>
     <string name="allow_community_desc">官方來源由 Jellyfesh 簽署。社群外掛由他人製作，除非你允許，否則保持關閉。</string>
