@@ -70,13 +70,13 @@ A changed English string needs its three translations in every app.
 6. Fixed: the words of [3](#3-the-words) (swatches Blue … Violet, System Default, Install from File…, Word by word / Line by line / Unsynced).
 
 **Windows**
-1. `ShowCode` is not mapped, so Jellyfin's "Sign In with QR Code" (Quick Connect) ends in "unknown sign-in step" [N10].
+1. Fixed: Jellyfin's Quick Connect code is a step of its own, and fields keep their help, required and kind [N10, N11].
 2. Resume Playback is ignored at launch (`win/Jellyfesh.Shared/ViewModels/AppViewModel.cs` `Start()`) [N26].
-3. Source albums and playlists play the moment they are chosen, in Browse and Search; there is no page with their songs [N6, N17].
-4. No "Content from {Service}" attribution: `PluginInfo` has no attribution field [N19].
+3. Fixed: a source's albums, artists, playlists and folders open pages of their own (artwork, Play, Shuffle, More, the songs and their total), from its catalogue and from Search [N6, N17, N18].
+4. Fixed: "Content from {Service}" on a source's pages and under its group in Search [N19].
 5. Songs › Play and Shuffle take the first 2,000 songs; a row plays 500 [N2].
-6. About has no website link [N28].
-7. Words: "Turn on “{0}”?", the sign-in sentences, "Hue {0}" swatches, "No Lyrics for This Song", "Show More" ([3](#3-the-words)).
+6. Fixed: About links to the website and its licences when the build knows them [N28].
+7. Fixed: the words of [3](#3-the-words); also Add to Playlist… on tiles (N3), "Also in …" (N5), and the views of V1, V3, V5, V6, V10, V11, V14, V15, V16, V18, V19, V20 and V21 as the other apps have them.
 
 **Linux**
 1. Source covers never load: `linux/ui/convert.rs:36` maps `ArtworkRef::Url` to nothing [N29].
@@ -153,7 +153,7 @@ under the table: where the code is, or where the missing part belongs.
 | A remote source's songs: no Play Next, Play Last, Add to Playlist | ✓ | ✓ | ✓ | ✓ | n/a (follows from N20: no remote sources) |
 | Album and artist page More: Play Next, Play Last, Add to Playlist… | ✓ | ✓ | ✓ | ✓ | ✓ (no Add to Playlist…: allowed) |
 | Playlist page More: + Rename…, Export Playlist…, Delete Playlist… (asks) | ✓ | ✓ | ✓ (Export last, V7) | ✓ | n/a (allowed: no playlists) |
-| Album, artist and playlist tiles and rows: Play, Shuffle, Play Next, Play Last, Add to Playlist… | ✓ | partial: no Add to Playlist… [N3] | ✓ | ✓ | partial: Play Next, Play Last, Go to Artist only [N4] |
+| Album, artist and playlist tiles and rows: Play, Shuffle, Play Next, Play Last, Add to Playlist… | ✓ | ✓ | ✓ | ✓ | partial: Play Next, Play Last, Go to Artist only [N4] |
 | Play and Shuffle buttons on Songs, album, artist and playlist pages | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Albums sort: Title, Artist, Year, Recently Added, Descending | ✓ | ✓ | ✓ | ✓ | ✓ (a select, V9) |
 | Songs sort: + Album | ✓ | ✓ | ✓ | ✓ | ✓ (a select, V9) |
@@ -169,8 +169,8 @@ under the table: where the code is, or where the missing part belongs.
 | Library first: Songs, Albums, Artists | ✓ | ✓ | ✓ | ✓ | ✓ |
 | From Your Sources, one group per source | ✓ | ✓ | ✓ | ✓ | ✓ |
 | "No Results" | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Merged items name the other sources ("Also in …") | ✓ | partial: names without "Also in" [N5] | ✓ | ✓ | ✓ |
-| A source album, artist or playlist opens its page | ✓ | ✗ plays at once [N6] | ✓ | ✓ | ✓ |
+| Merged items name the other sources ("Also in …") | ✓ | ✓ | ✓ | ✓ | ✓ |
+| A source album, artist or playlist opens its page | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 * **N5** `also_in`: macOS `mac/Views/Search/SearchView.swift` ("Also in %@"), Android `search_also_in`, web `web/components/ItemRow.svelte` ("Also in {sources}"). Windows `win/Jellyfesh.Shared/ViewModels/SearchViewModel.cs:216` writes the source names as `Origin` without the words. Linux never reads `also_in`: add it to the second line in `linux/ui/pages/search.rs` `render_section` (and `linux/ui/convert.rs` `source_item`).
 * **N6** Windows `win/Jellyfesh.Shared/ViewModels/SearchViewModel.cs:144` `PlayEntry` sends `PlayCollection(Collection.Source …)` for albums, artists and playlists. Open a browse page instead (see N17).
@@ -184,21 +184,21 @@ under the table: where the code is, or where the missing part belongs.
 | Connect: Server Address (the core's example as placeholder), one button per method | ✓ | ✓ | ✓ | ✓ | partial: the whole settings form [N8] |
 | Sign in with user name and password | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sign in with an API key | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Sign in with a QR code (`ShowQr`) | ✓ | ✓ (plugin's hint dropped, N11) | ✓ | ✓ | ✓ |
-| Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | ✓ | ✗ fails [N10] | ✓ | ✓ | ✓ |
+| Sign in with a QR code (`ShowQr`) | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sign in in the browser (OAuth, `OpenUrl`) | ✓ | ✓ | ✓ | ✓ | ✗ [N13] |
-| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | partial [N11] | ✓ | ✓ | ✓ |
+| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Paste Cookies (cookie import) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✗ [N13] |
 | Sign Out | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Your Sources: each with its badge and sign-in state, or Off | ✓ | ✓ | ✓ | ✓ | partial: no badge [N15] |
 | Your Sources: choosing one browses it | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Settings › Sources › Installed: a button per sign-in method, or Sign Out | ✓ | ✓ | ✓ | ✓ | partial: one Sign In [N16] |
 | Browse: pages, Load More, folders and artists drill in | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Browse: an album or playlist opens its songs | ✓ | ✗ plays at once [N17] | ✓ | ✓ | ✓ |
-| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✗ [N17] | ✓ | partial: albums and playlists ✓; an artist has no header yet (Play and Shuffle in More) [N18] | ✓ |
+| Browse: an album or playlist opens its songs | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✓ (an artist page has no picture yet) | ✓ | partial: albums and playlists ✓; an artist has no header yet (Play and Shuffle in More) [N18] | ✓ |
 | Open in {Service}: song menu, More menus, Now Playing More and Info | ✓ | ✓ | ✓ | ✓ | ✓ |
 | An unplayable item with a link opens it as its main action | ✓ | ✓ | ✓ | ✓ | ✓ |
-| "Content from {Service}" for sources with `attribution` | ✓ | ✗ [N19] | ✓ | ✓ | ✗ [N19] |
+| "Content from {Service}" for sources with `attribution` | ✓ | ✓ | ✓ | ✓ | ✗ [N19] |
 | Remote: "Playing on {Device}" and the error line in the player bar, mini-player, Now Playing | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: Devices (sends `Refresh` on open; kinds; playing one checked; `Transfer`) | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
 | Remote: the device's volume, hidden without one | ✓ | ✓ | ✓ | ✓ | ✗ [N20] |
@@ -317,7 +317,7 @@ under the table: where the code is, or where the missing part belongs.
 |---|---|---|---|---|---|
 | Where About lives (app menu; Settings; main menu; Settings; Settings) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | The version, from the build | ✓ | ✓ | ✓ | ✓ | ✓ |
-| The website, where the build knows it | ✓ | ✗ [N28] | ✓ | ✓ | ✗ [N28] |
+| The website, where the build knows it | ✓ | ✓ | ✓ | ✓ | ✗ [N28] |
 | Third-party licences | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 * **N28** macOS `mac/App/AppDelegate.swift` `showAbout()`: the standard panel with the tagline, the Misty credit and the core version. Windows `win/Jellyfesh.App/Views/SettingsPage.xaml` About: version, Third-Party Licences (the notices file next to the app), Open Log Folder. Linux `linux/ui/about.rs`: version, Design, Design Tokens and "Licence: No licence has been chosen yet: all rights reserved." (check against the licence work under way). Android `and/ui/settings/SettingsScreen.kt` `about()`: version, Website and Third-Party Licences when the build knows the website (`jellyfesh.website` or `GITHUB_REPOSITORY`). Web `web/views/Settings.svelte:548`: "Third-party notices" (`THIRD_PARTY_NOTICES.txt`), no website. Give macOS, Windows, Linux and the web the website and licences the way Android derives them.
@@ -454,7 +454,8 @@ parity pass (docs/macos.md), as listed here.
 * Info's Lyrics row: "By word", "By line", "Not timed" (`mac/Views/NowPlaying/QueuePanel.swift:350`); the others say Word by word, Line by line, Unsynced.
 * Tooltips "Sort albums", "Sort songs" and the label "Output device": Title Case (Sort Albums, Sort Songs, Output Device, as Windows, Linux and Android).
 
-**Windows** (`win/Jellyfesh.App/Strings/en-US/Resources.resw`)
+**Windows** (`win/Jellyfesh.App/Strings/en-US/Resources.resw`): all fixed in the parity pass, as
+listed here.
 * `Community_PluginTitle` "Turn on “{0}”?" (used in `win/Jellyfesh.Shared/ViewModels/SettingsViewModel.cs:906`): **Turn On “{0}”?** as in every other app.
 * `Appearance_SwatchName` "Hue {0}" for the ten swatches (`SettingsViewModel.cs:253`): use the colour names, ending with Violet.
 * `Lyrics_None` "No Lyrics for This Song": **No Lyrics** (the others; v0.0.7 uses it too).
