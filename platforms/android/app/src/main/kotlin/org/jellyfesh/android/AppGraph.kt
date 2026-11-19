@@ -99,6 +99,8 @@ class AppGraph(private val app: Application) {
                 return@launch
             }
             bridge = MonotonicBridge(coreNow = started::monotonicNowNs, platformNow = System::nanoTime)
+            // The core's word on source pictures goes straight to the artwork loader.
+            store.artworkListener = images.covers::onReady
             store.attach(started)
             client = started
             _startup.value = CoreStartup.Ready

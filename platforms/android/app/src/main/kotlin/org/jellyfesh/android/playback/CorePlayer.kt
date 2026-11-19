@@ -41,6 +41,10 @@ class CorePlayer(private val graph: AppGraph, looper: Looper) : SimpleBasePlayer
     /** Requests waiting for the core's next slice, so the system UI does not flicker back. */
     private val waiting = mutableListOf<SettableFuture<Any?>>()
 
+    /** Source pictures as the core's cached files (null: none to be had), and those being asked for. */
+    private val covers = LinkedHashMap<String, String?>()
+    private val coversAsked = HashSet<String>()
+
     private val job: Job = graph.scope.launch {
         graph.store.state.collect { state ->
             model = SessionModels.from(state)
@@ -50,13 +54,33 @@ class CorePlayer(private val graph: AppGraph, looper: Looper) : SimpleBasePlayer
         }
     }
 
+    /**
+     * The `file://` URI of a source's picture once the core has cached it; until then none, while
+     * the artwork loader waits for the core's word and the state is drawn again when it comes.
+     * Media3 is never given the source's URL, so the app fetches nothing itself.
+     */
+    private fun coverUri(url: String): String? {
+        if (covers.containsKey(url)) return covers[url]?.let { "file://$it" }
+        if (coversAsked.add(url)) {
+            graph.scope.launch {
+                val path = graph.images.sourceFile(url, COVER_PX)
+                coversAsked.remove(url)
+                covers[url] = path
+                while (covers.size > 16) covers.remove(covers.keys.first())
+                invalidateState()
+            }
+        }
+        return null
+    }
+
     override fun getState(): State {
         val items = model.items.map { item ->
+            val artwork = item.artworkUri ?: item.artworkUrl?.let(::coverUri)
             val metadata = MediaMetadata.Builder()
                 .setTitle(item.title)
                 .setArtist(item.artist)
                 .setAlbumTitle(item.album)
-                .setArtworkUri(item.artworkUri?.let(Uri::parse))
+                .setArtworkUri(artwork?.let(Uri::parse))
                 .setIsPlayable(true)
                 .setIsBrowsable(false)
                 .build()
@@ -158,6 +182,9 @@ class CorePlayer(private val graph: AppGraph, looper: Looper) : SimpleBasePlayer
     }
 
     private companion object {
+        /** The size the notification and lock screen show a source's picture at. */
+        const val COVER_PX = 512
+
         val COMMANDS: Player.Commands = Player.Commands.Builder()
             .addAll(
                 Player.COMMAND_PLAY_PAUSE,

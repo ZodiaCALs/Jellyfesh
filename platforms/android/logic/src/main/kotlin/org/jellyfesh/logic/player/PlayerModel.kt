@@ -127,9 +127,14 @@ data class SessionItem(
     val title: String?,
     val artist: String?,
     val album: String?,
-    /** A `file://` or `https://` URI for the lock screen and notification. */
+    /** A `file://` URI of a cached image for the lock screen and notification. */
     val artworkUri: String?,
     val durationMs: Long?,
+    /**
+     * A source's picture, which the app never fetches itself: the session shows the file the core
+     * caches for it (docs/core-api.md, "Covers") once it is there.
+     */
+    val artworkUrl: String? = null,
 )
 
 data class SessionModel(
@@ -165,6 +170,7 @@ object SessionModels {
                 album = it.album,
                 artworkUri = artworkUri(it.artwork),
                 durationMs = it.durationMs ?: state.playback.anchor.durationUs?.div(1_000),
+                artworkUrl = artworkUrl(it.artwork),
             )
         }
         val upNext = state.queue.upNext.map { item ->
@@ -209,6 +215,7 @@ object SessionModels {
                 album = it.album,
                 artworkUri = artworkUri(it.artwork),
                 durationMs = PlayerModel.durationUs(state)?.div(1_000),
+                artworkUrl = artworkUrl(it.artwork),
             )
         }
         val sessionState = when {
@@ -231,11 +238,9 @@ object SessionModels {
 
     private fun entryId(uid: Long): String = "entry:$uid"
 
-    private fun artworkUri(artwork: ArtworkRef?): String? = when (artwork) {
-        is ArtworkRef.File -> "file://" + artwork.path
-        is ArtworkRef.Url -> artwork.url
-        null -> null
-    }
+    private fun artworkUri(artwork: ArtworkRef?): String? = (artwork as? ArtworkRef.File)?.let { "file://" + it.path }
+
+    private fun artworkUrl(artwork: ArtworkRef?): String? = (artwork as? ArtworkRef.Url)?.url?.takeIf { it.isNotBlank() }
 
     /** The core command for a seek the system asked for. */
     fun seekCommand(model: SessionModel, kind: SeekKind, index: Int, positionMs: Long): Command? = when (kind) {

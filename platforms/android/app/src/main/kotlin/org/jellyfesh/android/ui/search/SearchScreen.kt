@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -52,6 +53,7 @@ import org.jellyfesh.android.ui.actions.TrackActions
 import org.jellyfesh.android.ui.actions.TrackTarget
 import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.components.AlbumCard
+import org.jellyfesh.android.ui.components.ArtworkImage
 import org.jellyfesh.android.ui.components.EmptyState
 import org.jellyfesh.android.ui.components.InitialTile
 import org.jellyfesh.android.ui.components.JfIcon
@@ -310,11 +312,19 @@ fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMo
             trailing = openIn?.let { label -> { JfIcon(R.drawable.ic_external, Jf.colors.ink50, size = 18.dp, description = label) } },
         )
     } else {
+        val art = ArtKey.of(item.artwork)
         NavRow(
             item.title,
             subtitle,
             onClick = onClick,
-            leading = { InitialTile(item.title, icon = kindIcon(item.kind)) },
+            leading = {
+                // Its cover (an artist's picture round), else its kind's glyph.
+                if (art != null) {
+                    ArtworkImage(art, item.title, 44.dp, if (item.kind == ItemKind.Artist) CircleShape else RoundedCornerShape(Tokens.Artwork.radiusList.dp))
+                } else {
+                    InitialTile(item.title, icon = kindIcon(item.kind))
+                }
+            },
             onMore = onMore,
             trailingIcon = if (opensLink) R.drawable.ic_external else R.drawable.ic_chevron_right,
         )

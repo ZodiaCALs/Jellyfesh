@@ -134,7 +134,9 @@ class PlayerModelTest {
         val item = model.items.single()
         assertEquals("Remote Song", item.title)
         assertEquals("Remote Artist", item.artist)
-        assertEquals("https://img.example/t1.jpg", item.artworkUri)
+        // The source's picture comes from the core's cache, never as a URL to fetch.
+        assertNull(item.artworkUri)
+        assertEquals("https://img.example/t1.jpg", item.artworkUrl)
         assertEquals(240_000L, item.durationMs, "the anchor's length first")
         assertNull(item.uid)
         assertTrue(model.playWhenReady)

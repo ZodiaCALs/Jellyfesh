@@ -229,6 +229,6 @@ private fun rowText(track: TrackRef): Triple<String, String?, ArtKey?> {
             Triple(t?.title ?: unknown, t?.let { Labels.artistAlbum(it.artist, it.album) }, ArtKey.ofHash(t?.artworkHash))
         }
         is TrackRef.File -> Triple(Labels.provisionalTitle(track) ?: unknown, null, null)
-        is TrackRef.Source -> Triple(track.track.title, Labels.artistAlbum(track.track.artist, track.track.album), null)
+        is TrackRef.Source -> Triple(track.track.title, Labels.artistAlbum(track.track.artist, track.track.album), ArtKey.ofUrl(track.track.artworkUrl))
     }
 }
