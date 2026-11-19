@@ -127,7 +127,9 @@ plugin settings applied with **Save**.
   source signed in, "Welcome to Jellyfesh" with **Add Music Folder…** (it adds
   the folder directly) and **Add a Source** (the Sources page).
 * **Library pages:** Albums is a grid and Artists a list; Songs has **Play**
-  and **Shuffle**. Albums and Songs sort from a menu (Title, Artist, Year,
+  and **Shuffle**, which play every song in the page's order
+  (`Collection::Songs { sort, descending }`, nothing paged in first), and a
+  song chosen plays them all from it. Albums and Songs sort from a menu (Title, Artist, Year,
   Recently Added; Songs also Album) with **Descending**; each order starts in
   its own direction (newest first for Year and Recently Added). Empty pages
   say "No Albums Yet", "No Artists Yet" or "No Songs Yet" with **Add Music

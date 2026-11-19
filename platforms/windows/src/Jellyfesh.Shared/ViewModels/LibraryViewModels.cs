@@ -590,12 +590,13 @@ public sealed partial class ArtistDetailViewModel(ShellServices services, Artist
     }
 }
 
-/// <summary>Every song, virtualised and sorted by the core: Play and Shuffle, then the list.</summary>
+/// <summary>
+/// Every song, virtualised and sorted by the core: Play and Shuffle, then the list. Playing sends
+/// the whole library in the page's order as Collection::Songs, so no song is left out and nothing
+/// is paged in first (docs/core-api.md, "Commands").
+/// </summary>
 public sealed partial class SongsViewModel(ShellServices services) : PageViewModel(services)
 {
-    /// <summary>How many songs Play and Shuffle queue (a command carries its track list, so it is capped).</summary>
-    public const uint WholeList = TrackActions.FollowingTracks * 4;
-
     private bool _choosing;
 
     [ObservableProperty]
@@ -652,54 +653,30 @@ public sealed partial class SongsViewModel(ShellServices services) : PageViewMod
         IsEmpty = list.Items.Count == 0;
     }
 
-    /// <summary>Plays the song and the ones after it in this order.</summary>
-    [RelayCommand]
-    private async Task PlayFrom(TrackItem? item)
-    {
-        if (item is null || item.Index < 0)
-        {
-            return;
-        }
+    /// <summary>The whole library in this page's order.</summary>
+    public Collection AllSongs => new Collection.Songs(Sort, Descending);
 
-        var refs = await PageAsync((uint)item.Index, TrackActions.FollowingTracks);
-        if (refs.Length > 0)
+    /// <summary>Plays every song in this order, from the one chosen.</summary>
+    [RelayCommand]
+    private void PlayFrom(TrackItem? item)
+    {
+        if (item is not null && item.Index >= 0)
         {
-            S.Send(new CoreCommand.PlayTracks(refs, 0));
+            S.Send(new CoreCommand.PlayCollection(AllSongs, (uint)item.Index, false));
         }
     }
 
-    /// <summary>Play: the songs from the top, in this order.</summary>
+    /// <summary>Play: every song from the top, in this order.</summary>
     [RelayCommand]
-    private async Task Play()
-    {
-        var refs = await PageAsync(0, WholeList);
-        if (refs.Length > 0)
-        {
-            S.Send(new CoreCommand.PlayTracks(refs, 0));
-        }
-    }
+    private void Play() => S.Send(new CoreCommand.PlayCollection(AllSongs, 0, false));
 
-    /// <summary>Shuffle: the same songs in random order.</summary>
+    /// <summary>Shuffle: every song in random order.</summary>
     [RelayCommand]
-    private async Task Shuffle()
-    {
-        var refs = await PageAsync(0, WholeList);
-        if (refs.Length > 0)
-        {
-            S.Send(new CoreCommand.PlayCollection(new Collection.Tracks(refs), 0, true));
-        }
-    }
+    private void Shuffle() => S.Send(new CoreCommand.PlayCollection(AllSongs, 0, true));
 
     /// <summary>The empty page's Add Music Folder….</summary>
     [RelayCommand]
     private Task AddFolder() => LibraryActions.AddFolderAsync(S);
-
-    private async Task<TrackRef[]> PageAsync(uint offset, uint limit)
-    {
-        var query = new TrackQuery(offset, limit, Sort, Descending);
-        var page = await S.QueryAsync(c => c.Tracks(query));
-        return page.IsOk ? page.Value!.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray() : [];
-    }
 }
 
 public sealed partial class PlaylistsViewModel(ShellServices services) : PageViewModel(services)

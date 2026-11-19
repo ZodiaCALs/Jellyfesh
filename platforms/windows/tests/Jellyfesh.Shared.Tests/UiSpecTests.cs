@@ -84,7 +84,7 @@ public class UiSpecTests
     }
 
     [Fact]
-    public async Task Songs_play_and_shuffle_in_the_chosen_order()
+    public void Songs_play_and_shuffle_every_song_in_the_chosen_order()
     {
         using var h = new AppHarness();
         h.Core.TrackRows.Add(Samples.Track(1, "First"));
@@ -95,20 +95,20 @@ public class UiSpecTests
         Assert.Equal([TrackSort.Title, TrackSort.Artist, TrackSort.Album, TrackSort.Year, TrackSort.Added], songs.Sorts);
         Assert.Equal(TrackSort.Artist, songs.Sort); // as in the macOS and Android apps and the web (docs/parity.md V6)
 
+        // The whole library as Collection::Songs, in the page's order: nothing paged in first.
         songs.Sort = TrackSort.Year;
         Assert.True(songs.Descending);
-        await songs.PlayCommand.ExecuteAsync(null);
-        Assert.Contains(new TrackQuery(0, SongsViewModel.WholeList, TrackSort.Year, true), Queries(h));
-        var play = Assert.IsType<CoreCommand.PlayTracks>(h.Core.Sent[^1]);
-        Assert.Equal([new TrackRef.Library(1), new TrackRef.Library(2)], play.Tracks);
-        Assert.Equal(0u, play.Start);
+        songs.PlayCommand.Execute(null);
+        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Songs(TrackSort.Year, true), 0, false), h.Core.Sent[^1]);
 
         songs.Descending = false;
-        await songs.ShuffleCommand.ExecuteAsync(null);
-        Assert.Contains(new TrackQuery(0, SongsViewModel.WholeList, TrackSort.Year, false), Queries(h));
-        var shuffle = Assert.IsType<CoreCommand.PlayCollection>(h.Core.Sent[^1]);
-        Assert.True(shuffle.Shuffle);
-        Assert.Equal(2, Assert.IsType<Collection.Tracks>(shuffle.Collection).Items.Count);
+        songs.ShuffleCommand.Execute(null);
+        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Songs(TrackSort.Year, false), 0, true), h.Core.Sent[^1]);
+
+        // Choosing a song plays them all from it.
+        songs.PlayFromCommand.Execute(new TrackItem(1) { Localizer = h.S.L });
+        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Songs(TrackSort.Year, false), 1, false), h.Core.Sent[^1]);
+        Assert.DoesNotContain(h.Core.TrackQueries.ToArray(), q => q.Limit > 500); // no list of songs sent along
     }
 
     [Fact]
