@@ -25,6 +25,7 @@ import org.jellyfesh.ffi.Command
 import org.jellyfesh.ffi.CoreConfig
 import org.jellyfesh.ffi.CoreFfiException
 import org.jellyfesh.ffi.CoreListener
+import org.jellyfesh.ffi.Distribution
 import org.jellyfesh.ffi.Event
 import org.jellyfesh.ffi.JellyfeshCore
 import org.jellyfesh.ffi.OutputKind
@@ -67,6 +68,7 @@ class CoreBindingsTest {
                 restoreSession = config.field("restore_session").jsonPrimitive.boolean,
                 persistSession = config.field("persist_session").jsonPrimitive.boolean,
                 watchFolders = config.field("watch_folders").jsonPrimitive.boolean,
+                distribution = Distribution.SOURCE,
             ),
         )
         val events = LinkedBlockingQueue<Event>()
@@ -207,6 +209,7 @@ class CoreBindingsTest {
                     restoreSession = false,
                     persistSession = false,
                     watchFolders = false,
+                    distribution = Distribution.SOURCE,
                 ),
                 keychain,
             )
