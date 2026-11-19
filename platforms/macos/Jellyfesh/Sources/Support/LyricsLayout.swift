@@ -82,13 +82,4 @@ enum LyricsLayout {
             }
         }
     }
-
-    /// How much of `word` is sung at `progress` (0 to 1) for the sweep: words already sung are
-    /// full, words not reached are empty.
-    static func fill(wordIndex: Int, current: Int?, progress: Float) -> Double {
-        guard let current else { return 0 }
-        if wordIndex < current { return 1 }
-        if wordIndex > current { return 0 }
-        return Double(min(max(progress, 0), 1))
-    }
 }

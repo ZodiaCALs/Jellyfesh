@@ -1,10 +1,11 @@
 // The player bar for content columns 900 pt and wider (docs/design-controls.md, "v0.0.4"; Luminous,
 // docs/ui.md): a floating Veil capsule 80 pt high with r-2xl corners, the content fading out just
-// above it. Start: the artwork and two lines (they open Now Playing). Middle: shuffle, previous,
-// play, next and repeat (play is the only accent fill) above the seek bar with its times. End:
-// Lyrics, Queue, the Devices button while a remote session runs, and the volume. While a remote
-// session runs the bar shows its track with "Playing on {Device}" (ADR-0018). Liquid Glass on
-// macOS 26, like the mini player (FloatingGlass).
+// above it. Start: the artwork and two lines, the second being the line sung now while the lyrics
+// bar shows (LyricsBarView); they open Now Playing. Middle: shuffle, previous, play, next and
+// repeat (play is the only accent fill) above the seek bar with its times. End: Lyrics, Queue, the
+// Devices button while a remote session runs, and the volume. While a remote session runs the bar
+// shows its track with "Playing on {Device}" (ADR-0018). Liquid Glass on macOS 26, like the mini
+// player (FloatingGlass).
 
 import SwiftUI
 
@@ -36,7 +37,7 @@ struct PlayerBar: View {
                 HStack(spacing: Tokens.Space.s3) {
                     ArtworkView(source: item.artwork, size: 56, cornerRadius: Tokens.Radius.rLg)
                         .elevation(Tokens.Elevation.shadow1)
-                    NowPlayingLines(item: item)
+                    PlayerBarLines(item: item)
                     Spacer(minLength: 0)
                 }
                 .contentShape(Rectangle())

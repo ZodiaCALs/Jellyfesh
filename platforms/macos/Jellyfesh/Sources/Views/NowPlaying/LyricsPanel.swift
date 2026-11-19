@@ -2,12 +2,14 @@
 // for every line, scaled by the Lyrics size setting and aligned to the start or the centre. The
 // active line is ink-90 at full size; the others are ink-50 (sung ones ink-30) at 92 % (Luminous),
 // scaled from their start edge; on a wide stage lines are 40 pt bold at line height 1.18
-// (`lyrics.line`). In word-timed lyrics the sung words fill linearly over their duration. The
-// view wakes only when a line or word changes (LyricsSchedule) and draws per frame only while a
-// word is being sung. The active line scrolls to 38 % of the panel in 380 ms and the lines below
-// follow 40 ms apart (the cascade); manual scrolling pauses that for 4 s. Under reduced motion
-// there is no cascade and the view jumps; under the system's Reduce Motion there is no sweep.
-// While a remote session plays, no lyrics show: the service plays its own track.
+// (`lyrics.line`). In word-timed lyrics each word fills over its own duration, as the core's
+// timing helper says (`LyricsTimeline.bar`, shared with the lyrics bar), in the look's highlight,
+// weight and glow. The view wakes only when a line or word changes (LyricsSchedule) and draws per
+// frame only while a word is being sung. The active line scrolls to 38 % of the panel in 380 ms
+// and the lines below follow 40 ms apart (the cascade); manual scrolling pauses that for 4 s.
+// Under reduced motion there is no cascade and the view jumps; under the system's Reduce Motion
+// there is no sweep. While a remote session plays, no lyrics show: the service plays its own
+// track.
 
 import AppKit
 import SwiftUI
@@ -76,6 +78,7 @@ private struct SyncedLyrics: View {
                 document: document,
                 timeline: timeline,
                 cursor: cursor,
+                bar: timeline.bar(atMs: ms),
                 scrollLine: LyricsLayout.scrollLine(active: cursor.line, lastStarted: last),
                 translation: translation,
                 romanization: romanization,
@@ -98,6 +101,8 @@ private struct LyricsScroller: View {
     var document: LyricsDocument
     var timeline: LyricsTimeline
     var cursor: LyricsPosition
+    /// Each word's progress in the line being sung (the timing helper).
+    var bar: LyricsBarState
     var scrollLine: Int?
     var translation: Bool
     var romanization: Bool
@@ -228,14 +233,14 @@ private struct LyricsScroller: View {
 
     /// The sweep of the active word-timed line, when it runs.
     private func sweep(for index: Int, line: LyricsLine) -> LyricLineView.Sweep? {
-        guard cursor.line == index, !line.words.isEmpty, line.direction != .rightToLeft else { return nil }
+        guard cursor.line == index, bar.line == index, !line.words.isEmpty, line.direction != .rightToLeft
+        else { return nil }
         // Under Reduce Motion the whole active line lights at once.
         guard effects.sweepsLyrics else { return nil }
-        let wordInProgress = cursor.word != nil && cursor.wordProgress < 1
         return LyricLineView.Sweep(
-            word: cursor.word,
-            progress: cursor.wordProgress,
-            live: wordInProgress && playback.isPlaying && !playback.buffering && effects.windowVisible
+            line: index,
+            fills: bar.words,
+            live: LyricsBarText.isSweeping(bar) && playback.isPlaying && !playback.buffering && effects.windowVisible
         )
     }
 }
@@ -279,10 +284,11 @@ private struct CascadeOffset: ViewModifier {
 
 /// One lyric line with its translation and romanization lines.
 private struct LyricLineView: View, Equatable {
-    /// The word cursor of the active line: where the sweep is, and whether it moves now.
+    /// The sweep of the active line: each word's progress, and whether it moves now.
     struct Sweep: Equatable {
-        var word: Int?
-        var progress: Float
+        /// The line's index in the document.
+        var line: Int
+        var fills: [Float]
         /// A word is being sung: redraw every frame until it ends.
         var live: Bool
     }
@@ -298,6 +304,7 @@ private struct LyricLineView: View, Equatable {
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.palette) private var palette
+    @Environment(\.look) private var style
 
     static func == (a: LyricLineView, b: LyricLineView) -> Bool {
         a.line == b.line && a.aux == b.aux && a.role == b.role && a.sweep == b.sweep
@@ -317,10 +324,10 @@ private struct LyricLineView: View, Equatable {
         return line.direction == .rightToLeft ? .trailing : .leading
     }
 
-    /// The main line's ink: ink-90 active, ink-50 to come, ink-30 sung.
+    /// The main line's ink: ink-90 active (or the look's highlight), ink-50 to come, ink-30 sung.
     private var lineInk: Color {
         switch role {
-        case .active: return palette.ink(Tokens.Lyrics.inkActive)
+        case .active: return style.customized ? style.sungInk(palette) : palette.ink(Tokens.Lyrics.inkActive)
         case .upcoming: return palette.ink(Tokens.Lyrics.inkInactive)
         case .sung: return palette[Tokens.Ink.ink30]
         }
@@ -361,27 +368,30 @@ private struct LyricLineView: View, Equatable {
     }
 
     @ViewBuilder private func mainLine(lineHeight: Double) -> some View {
-        let type = Typography(size: fontSize, lineHeight: lineHeight, weight: Tokens.Lyrics.line.weight)
+        let weight = style.lyricsWeight(token: Tokens.Lyrics.line.weight)
         if let sweep, !line.words.isEmpty {
             TimelineView(.animation(minimumInterval: nil, paused: !sweep.live)) { _ in
-                SweptWords(words: line.words, current: liveCursor(sweep), fontSize: fontSize,
+                SweptWords(words: line.words, fills: liveFills(sweep), fontSize: fontSize, weight: weight,
                            lineHeight: lineHeight, centred: look.centred)
             }
+            .lyricsGlow(style, palette: palette, size: fontSize)
         } else {
             Text(line.text)
-                .typography(type)
+                .font(.system(size: fontSize, weight: weight, design: style.fontDesign))
+                .lineSpacing(max(0, fontSize * CGFloat(lineHeight - 1.2)))
                 .foregroundStyle(lineInk)
                 .multilineTextAlignment(textAlignment)
                 .environment(\.layoutDirection, line.direction == .rightToLeft ? .rightToLeft : .leftToRight)
                 .fixedSize(horizontal: false, vertical: true)
+                .lyricsGlow(style, palette: palette, size: isActive ? fontSize : 0)
         }
     }
 
-    /// The word cursor now: per frame while a word is sung, else the one the line was drawn with.
-    private func liveCursor(_ sweep: Sweep) -> (word: Int?, progress: Float) {
-        guard sweep.live else { return (sweep.word, sweep.progress) }
-        let cursor = timeline.position(atMs: lyricMilliseconds(playback.positionUs()))
-        return (cursor.word, cursor.wordProgress)
+    /// Each word's progress now: per frame while a word is sung, else what the line was drawn with.
+    private func liveFills(_ sweep: Sweep) -> [Float] {
+        guard sweep.live else { return sweep.fills }
+        let now = timeline.bar(atMs: lyricMilliseconds(playback.positionUs()))
+        return now.line == sweep.line ? now.words : sweep.fills
     }
 
     private static func joined(_ words: [LyricsWord]) -> String {
@@ -394,29 +404,32 @@ private struct LyricLineView: View, Equatable {
     }
 }
 
-/// The words of the active line: sung words in ink-90, the current word filling linearly, the
-/// rest in ink-70 (`lyrics.ink-sung`, `ink-unsung`).
+/// The words of the active line: sung words in the highlight (ink-90 for Artwork), each word
+/// filling over its own duration, the rest in ink-70 (`lyrics.ink-sung`, `ink-unsung`).
 private struct SweptWords: View {
     var words: [LyricsWord]
-    var current: (word: Int?, progress: Float)
+    /// Each word's progress, 0 to 1.
+    var fills: [Float]
     var fontSize: CGFloat
+    var weight: Font.Weight
     var lineHeight: Double
     var centred: Bool
 
     @Environment(\.palette) private var palette
+    @Environment(\.look) private var look
 
     var body: some View {
-        let sung = palette.ink(Tokens.Lyrics.inkSung)
+        let sung = look.sungInk(palette)
         let unsung = palette.ink(Tokens.Lyrics.inkUnsung)
         WordFlow(spaces: words.map { !$0.joinsNext }, spaceWidth: fontSize * 0.28,
                  lineSpacing: fontSize * CGFloat(max(lineHeight - 1.2, 0)), centred: centred) {
             ForEach(Array(words.enumerated()), id: \.offset) { index, word in
                 SweepWord(text: word.text.trimmingCharacters(in: .whitespaces),
-                          fill: LyricsLayout.fill(wordIndex: index, current: current.word, progress: current.progress),
+                          fill: index < fills.count ? Double(min(max(fills[index], 0), 1)) : 0,
                           sung: sung, unsung: unsung)
             }
         }
-        .font(.system(size: fontSize, weight: Font.Weight(cssWeight: Tokens.Lyrics.line.weight)))
+        .font(.system(size: fontSize, weight: weight, design: look.fontDesign))
     }
 }
 

@@ -1,6 +1,7 @@
 // The lyrics bar port (Support/LyricsBar.swift) replays tests/contract/lyrics-bar.json, recorded
 // from jf_core::lyrics_bar by core/jf-ffi/tests/lyrics_bar_contract.rs: line and next exactly,
 // each word's progress and the line's progress within 1e-6 (the file rounds them to millionths).
+// Then the rules the lyrics bar draws by (Views/Common/LyricsBarView.swift).
 
 import Foundation
 import XCTest
@@ -56,5 +57,35 @@ final class LyricsBarContractTests: XCTestCase {
         let empty = LyricsTimeline(lineStarts: [], lineEnds: [], segmentStarts: [], segmentLines: [], wordOffsets: [],
                                    wordStarts: [], wordEnds: [])
         XCTAssertEqual(empty.bar(atMs: 1_000), .empty)
+    }
+}
+
+final class LyricsBarTextTests: XCTestCase {
+    func testWordsKeepTheirSpacing() {
+        XCTAssertEqual(LyricsBarText.wordText(LyricsWord(startMs: 0, endMs: 1, text: " Morning ", joinsNext: false)),
+                       "Morning ")
+        XCTAssertEqual(LyricsBarText.wordText(LyricsWord(startMs: 0, endMs: 1, text: "清", joinsNext: true)), "清")
+    }
+
+    func testTheBarMovesOnlyWhileAWordIsSung() {
+        XCTAssertFalse(LyricsBarText.isSweeping(.empty))
+        XCTAssertFalse(LyricsBarText.isSweeping(LyricsBarState(line: 0, next: 1, words: [1, 0], lineProgress: 0.5)))
+        XCTAssertTrue(LyricsBarText.isSweeping(LyricsBarState(line: 0, next: 1, words: [1, 0.25], lineProgress: 0.6)))
+    }
+
+    func testTheTranslationIsTheOneNowPlayingShows() {
+        let lines = [
+            LyricsLine(id: 7, startMs: 0, endMs: 1000, agent: nil, text: "one", words: [], background: [],
+                       direction: .leftToRight),
+            LyricsLine(id: 8, startMs: 1000, endMs: 2000, agent: nil, text: "two", words: [], background: [],
+                       direction: .leftToRight),
+        ]
+        let document = LyricsDocument(language: "en", timing: .line, lines: lines,
+                                      tracks: [LyricsAuxTrack(kind: .romanization, language: "en-Latn", lines: [7: "wan"]),
+                                               LyricsAuxTrack(kind: .translation, language: "zh-Hans",
+                                                              lines: [7: " 一 ", 8: " "])],
+                                      format: "LRC", origin: nil)
+        XCTAssertEqual(LyricsBarText.translation(in: document, line: lines[0]), "一")
+        XCTAssertNil(LyricsBarText.translation(in: document, line: lines[1]), "a blank translation is none")
     }
 }

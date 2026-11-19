@@ -166,13 +166,6 @@ final class LyricsLayoutTests: XCTestCase {
         XCTAssertEqual(LyricsLayout.lineHeight(for: "Morning", language: "ja"), 1.6)
         XCTAssertEqual(LyricsLayout.lineHeight(for: "Morning folds the harbour", language: "en"), 1.18)
     }
-
-    func testWordFill() {
-        XCTAssertEqual(LyricsLayout.fill(wordIndex: 0, current: 2, progress: 0.5), 1)
-        XCTAssertEqual(LyricsLayout.fill(wordIndex: 2, current: 2, progress: 0.5), 0.5)
-        XCTAssertEqual(LyricsLayout.fill(wordIndex: 3, current: 2, progress: 0.5), 0)
-        XCTAssertEqual(LyricsLayout.fill(wordIndex: 0, current: nil, progress: 0.5), 0)
-    }
 }
 
 final class ScheduleTests: XCTestCase {
