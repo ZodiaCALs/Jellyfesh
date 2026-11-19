@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{Command, LibraryStats, TrackQuery, TrackRef};
+use jf_core::{Command, LibraryStats, TrackQuery};
 
 use crate::logic::{layout, library};
 use crate::ui::convert;
@@ -370,31 +370,17 @@ pub fn songs() -> adw::NavigationPage {
     page
 }
 
-/// Songs played from the list in its order: from `position`, that song and
-/// the next 499 (a queue of the whole library would be long and slow); or,
-/// shuffled, up to 5,000 of them.
+/// Every song in the list's order (`Collection::Songs`, the core queues the
+/// whole library), played from the song at `position`, or shuffled.
 fn play_songs_from(sort: (&'static str, bool), position: u32, shuffle: bool) {
-    let query = if shuffle {
-        song_query(sort, 0, 5_000)
-    } else {
-        song_query(sort, position as usize, 500)
-    };
-    spawn(async move {
-        let refs = app().query(move |core| core.tracks(&query)).await;
-        if let Some(Ok(tracks)) = refs
-            && !tracks.is_empty()
-        {
-            let tracks = tracks.into_iter().map(|t| TrackRef::Library(t.id)).collect();
-            app().send(if shuffle {
-                Command::PlayCollection {
-                    collection: jf_core::Collection::Tracks { tracks },
-                    start: 0,
-                    shuffle: true,
-                }
-            } else {
-                Command::PlayTracks { tracks, start: 0 }
-            });
-        }
+    let (key, descending) = sort;
+    app().send(Command::PlayCollection {
+        collection: jf_core::Collection::Songs {
+            sort: library::song_sort(key),
+            descending,
+        },
+        start: position as usize,
+        shuffle,
     });
 }
 
