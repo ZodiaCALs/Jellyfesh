@@ -46,6 +46,21 @@ interface CoreClient {
     fun roots(): List<String>
     fun stats(): LibraryStats
 
+    /**
+     * The plugin's settings schema in [language] (a BCP 47 tag; English where a word has no
+     * translation), the settings in the plugin's order; null when it is not installed.
+     */
+    fun localizedSettingsSchema(plugin: String, language: String): String?
+
+    /**
+     * A source picture (an `ArtworkRef.Url`) as a cached file fitted to about [sizePx]: the path
+     * when it is cached, else null while the core fetches it ([CoreEvent.Artwork] follows).
+     */
+    fun sourceArtwork(url: String, sizePx: Int): String?
+
+    /** Reports what the store says about Jellyfesh Pro, after the store glue verified it. */
+    fun setStoreEntitlement(entitlement: StoreEntitlement)
+
     /** Audio output devices (a free function of the core). */
     fun outputDevices(): List<DeviceInfo>
 

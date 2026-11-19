@@ -41,6 +41,12 @@ object SortMenus {
     /** The query for a page of Songs in [order]. */
     fun songsQuery(order: SortOrder<TrackSort>, offset: Int, limit: Int): TrackQuery =
         TrackQuery(offset = offset, limit = limit, sort = order.field, descending = order.descending)
+
+    /**
+     * Every library song in the Songs page's [order], as one collection: Play, Shuffle and a row
+     * cover the whole list, whatever has been read of it (the core plays it, with no paging).
+     */
+    fun allSongs(order: SortOrder<TrackSort>): CollectionRef = CollectionRef.Songs(order.field, order.descending)
 }
 
 /** The songs a collection holds, as Add to Playlist… adds them (the core's queries, page by page). */
@@ -65,6 +71,9 @@ object CollectionTracks {
         }
         is CollectionRef.Playlist -> pages { offset -> core.playlistEntries(collection.id, offset, PAGE).map { it.row.track } }
         CollectionRef.Favorites -> pages { offset -> core.favorites(offset, PAGE).map { it.track } }
+        is CollectionRef.Songs -> pages { offset ->
+            core.tracks(TrackQuery(offset = offset, limit = PAGE, sort = collection.sort, descending = collection.descending)).map { TrackRef.Library(it.id) }
+        }
         is CollectionRef.Tracks -> collection.tracks
         is CollectionRef.Source -> emptyList()
     }.filter(::playlistCanHold)

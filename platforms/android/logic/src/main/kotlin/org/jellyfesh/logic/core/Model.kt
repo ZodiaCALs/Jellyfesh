@@ -43,6 +43,9 @@ sealed interface CollectionRef {
     data class Artist(val id: Long) : CollectionRef
     data class Playlist(val id: Long) : CollectionRef
     data object Favorites : CollectionRef
+
+    /** Every library song in the Songs page's order: Play and Shuffle for all songs, with no paging. */
+    data class Songs(val sort: TrackSort, val descending: Boolean) : CollectionRef
     data class Tracks(val tracks: List<TrackRef>) : CollectionRef
     data class Source(val plugin: String, val id: String) : CollectionRef
 }
@@ -141,6 +144,12 @@ data class Settings(
     val resumeOnLaunch: Boolean = false,
     val watchFolders: Boolean = true,
     val allowCommunityPlugins: Boolean = false,
+    /** Check for Updates Automatically (direct downloads only). */
+    val checkForUpdates: Boolean = true,
+    /** Show Lyrics Bar: the current line above the mini-player (Settings › Appearance › Lyrics). */
+    val showLyricsBar: Boolean = true,
+    /** Desktop Lyrics, which phones do not have; kept so a changed copy sends it back as it was. */
+    val desktopLyrics: Boolean = false,
 ) {
     companion object {
         /** The core's default transparency: the glass tokens' own alphas. */
@@ -185,6 +194,18 @@ data class PluginSummary(
      * "Content from {Service}" (docs/ui.md), with no logos until they are approved.
      */
     val attribution: String? = null,
+    /** Settings › Sources for a music source; Settings › Extensions for AI Lyrics, Customize and the like. */
+    val kind: PluginKind = PluginKind.Source,
+    /** It has a Jellyfesh Pro capability: its Pro calls wait for Pro. */
+    val requiresPro: Boolean = false,
+    /** The host imports its manifest declares (`audio`, `speech`). */
+    val permissions: List<String> = emptyList(),
+    /** It has a Discover page of its own (others get one the core makes). */
+    val discover: Boolean = false,
+    /** It describes items (biography, notes, facts). */
+    val details: Boolean = false,
+    /** It shows comments: Now Playing offers a Comments pane. */
+    val comments: Boolean = false,
 )
 
 /**
@@ -215,6 +236,8 @@ data class SourcesSnapshot(
     /** The services offered in Add a Source, in the core's order. */
     val presets: List<SourcePreset>,
     val allowCommunity: Boolean,
+    /** Plugins may be installed from files and community plugins allowed (false in store builds). */
+    val canInstallPlugins: Boolean = true,
 ) {
     companion object {
         val Empty = SourcesSnapshot(0, emptyList(), emptyList(), false)
@@ -282,6 +305,10 @@ data class SourceItem(
      * declares one; the main action of an item that cannot play here.
      */
     val link: String? = null,
+    /** The source's id of a track's or album's artist: Go to Artist (`Browse` and `Details`). */
+    val artistId: String? = null,
+    /** The source's id of a track's album: Go to Album. */
+    val albumId: String? = null,
 )
 
 data class SearchUpdate(
@@ -451,6 +478,8 @@ data class TrackInfo(
     val durationUs: Long?,
     val gapless: Boolean,
     val bitrate: Int?,
+    /** Bits per sample of the source (PCM, FLAC, ALAC); none for lossy codecs. */
+    val bitsPerSample: Int? = null,
 )
 
 data class NowPlaying(
@@ -465,6 +494,8 @@ data class NowPlaying(
     val format: TrackInfo?,
     /** Opens the track in its service, for source tracks whose plugin declares links. */
     val link: String? = null,
+    /** What plays as decoded, with the core's quality label, once the engine has opened it. */
+    val quality: AudioFormat? = null,
 )
 
 // ---- lyrics --------------------------------------------------------------------------------------
@@ -512,6 +543,12 @@ data class LyricDoc(
 sealed interface LyricsSource {
     data class Sidecar(val path: String) : LyricsSource
     data object Embedded : LyricsSource
+
+    /** From a source's plugin (its attribution is in the document's origin). */
+    data class Plugin(val id: String) : LyricsSource
+
+    /** Made by AI Lyrics: "Made by AI Lyrics · {engine}". */
+    data class Made(val plugin: String, val engine: String) : LyricsSource
 }
 
 /**
@@ -624,4 +661,8 @@ data class CoreSnapshot(
     val sources: SourcesSnapshot,
     val muted: Boolean,
     val remote: RemoteSnapshot = RemoteSnapshot.Empty,
+    val aiLyrics: AiLyricsSnapshot = AiLyricsSnapshot.Empty,
+    val look: LookSnapshot = LookSnapshot.Default,
+    val pro: ProSnapshot = ProSnapshot.Inactive,
+    val update: UpdateSnapshot = UpdateSnapshot.Unsupported,
 )

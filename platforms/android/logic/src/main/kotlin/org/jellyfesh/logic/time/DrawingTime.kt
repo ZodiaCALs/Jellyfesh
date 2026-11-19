@@ -26,6 +26,12 @@ interface LyricTimelineLookup {
      * finishes, in milliseconds; null when nothing changes after [tMs].
      */
     fun nextChange(tMs: Long): Long?
+
+    /**
+     * What the one-line lyrics bar shows at [tMs]: the core's `lyrics_bar`, ported
+     * ([org.jellyfesh.logic.lyrics.LyricsBars]) so it can run every frame.
+     */
+    fun bar(tMs: Long): org.jellyfesh.logic.lyrics.LyricsBar
 }
 
 /**

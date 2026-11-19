@@ -249,6 +249,7 @@
     <string name="lyrics_source_sidecar">%1$s から</string>
     <string name="lyrics_source_embedded">ファイルのタグ内</string>
     <string name="lyrics_source_none">見つかりません</string>
+    <string name="lyrics_made_by">AI 歌詞で作成 · %1$s</string>
     <string name="timing_word">単語ごと</string>
     <string name="timing_line">行ごと</string>
     <string name="timing_unsynced">同期なし</string>

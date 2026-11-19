@@ -155,6 +155,7 @@ import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.core.TrackRow
 import org.jellyfesh.logic.core.TrackSort
 import org.jellyfesh.logic.theme.ColorMath
+import org.jellyfesh.android.ffi.FfiMappingV7.toLogic
 
 object FfiMapping {
     // ---- shell -> core ---------------------------------------------------------------------------
@@ -209,6 +210,21 @@ object FfiMapping {
         is Command.Search -> FCommand.Search(query = command.query, scope = ffi(command.scope))
         is Command.Browse -> FCommand.Browse(plugin = command.plugin, node = command.node, page = command.page.u32())
         is Command.Remote -> FCommand.Remote(action = ffi(command.action))
+        is Command.ResetPluginSettings -> FCommand.ResetPluginSettings(plugin = command.plugin)
+        is Command.MakeLyrics -> FCommand.MakeLyrics(song = FfiMappingV7.ffi(command.song))
+        is Command.CancelLyrics -> FCommand.CancelLyrics(job = command.job.toULong())
+        is Command.DeleteMadeLyrics -> FCommand.DeleteMadeLyrics(song = FfiMappingV7.ffi(command.song))
+        is Command.AllowAudioUpload -> FCommand.AllowAudioUpload(plugin = command.plugin, origin = command.origin)
+        is Command.RevokeAudioUpload -> FCommand.RevokeAudioUpload(plugin = command.plugin, origin = command.origin)
+        is Command.DownloadSpeechModel -> FCommand.DownloadSpeechModel(id = command.id)
+        is Command.CancelSpeechModelDownload -> FCommand.CancelSpeechModelDownload(id = command.id)
+        is Command.DeleteSpeechModel -> FCommand.DeleteSpeechModel(id = command.id)
+        is Command.ActivateLicence -> FCommand.ActivateLicence(key = command.key)
+        Command.RemoveLicence -> FCommand.RemoveLicence
+        Command.CheckForUpdates -> FCommand.CheckForUpdates
+        is Command.Discover -> FCommand.Discover(source = command.source)
+        is Command.Details -> FCommand.Details(item = FfiMappingV7.ffi(command.item))
+        is Command.Comments -> FCommand.Comments(item = FfiMappingV7.ffi(command.item), page = command.page)
     }
 
     fun ffi(action: RemoteAction): FRemoteAction = when (action) {
@@ -240,6 +256,7 @@ object FfiMapping {
         is CollectionRef.Artist -> FCollection.Artist(id = collection.id)
         is CollectionRef.Playlist -> FCollection.Playlist(id = collection.id)
         CollectionRef.Favorites -> FCollection.Favorites
+        is CollectionRef.Songs -> FCollection.Songs(sort = ffi(collection.sort), descending = collection.descending)
         is CollectionRef.Tracks -> FCollection.Tracks(tracks = collection.tracks.map(::ffi))
         is CollectionRef.Source -> FCollection.Source(plugin = collection.plugin, id = collection.id)
     }
@@ -330,20 +347,25 @@ object FfiMapping {
         resumeOnLaunch = settings.resumeOnLaunch,
         watchFolders = settings.watchFolders,
         allowCommunityPlugins = settings.allowCommunityPlugins,
+        checkForUpdates = settings.checkForUpdates,
+        showLyricsBar = settings.showLyricsBar,
+        desktopLyrics = settings.desktopLyrics,
     )
+
+    fun ffi(sort: TrackSort): FTrackSort = when (sort) {
+        TrackSort.Artist -> FTrackSort.ARTIST
+        TrackSort.Title -> FTrackSort.TITLE
+        TrackSort.Album -> FTrackSort.ALBUM
+        TrackSort.Year -> FTrackSort.YEAR
+        TrackSort.Duration -> FTrackSort.DURATION
+        TrackSort.Path -> FTrackSort.PATH
+        TrackSort.Added -> FTrackSort.ADDED
+    }
 
     fun ffi(query: TrackQuery): FTrackQuery = FTrackQuery(
         offset = query.offset.u32(),
         limit = query.limit.u32(),
-        sort = when (query.sort) {
-            TrackSort.Artist -> FTrackSort.ARTIST
-            TrackSort.Title -> FTrackSort.TITLE
-            TrackSort.Album -> FTrackSort.ALBUM
-            TrackSort.Year -> FTrackSort.YEAR
-            TrackSort.Duration -> FTrackSort.DURATION
-            TrackSort.Path -> FTrackSort.PATH
-            TrackSort.Added -> FTrackSort.ADDED
-        },
+        sort = ffi(query.sort),
         descending = query.descending,
         albumId = query.albumId,
         artistId = query.artistId,
@@ -387,6 +409,14 @@ object FfiMapping {
         is FEvent.Buffering -> CoreEvent.Buffering(uid.toLong(), buffering)
         is FEvent.CommandFailed -> CoreEvent.CommandFailed(id.toLong(), error)
         is FEvent.Error -> CoreEvent.Error(message)
+        is FEvent.AiLyrics -> CoreEvent.AiLyrics(snapshot.toLogic())
+        is FEvent.Look -> CoreEvent.Look(snapshot.toLogic())
+        is FEvent.Pro -> CoreEvent.Pro(snapshot.toLogic())
+        is FEvent.Update -> CoreEvent.Update(snapshot.toLogic())
+        is FEvent.Discover -> CoreEvent.Discover(page.toLogic())
+        is FEvent.Details -> CoreEvent.Details(page.toLogic())
+        is FEvent.Comments -> CoreEvent.Comments(page.toLogic())
+        is FEvent.Artwork -> CoreEvent.Artwork(ready.toLogic())
     }
 
     fun FSnapshot.toLogic(lyrics: (org.jellyfesh.ffi.LyricTimeline) -> org.jellyfesh.logic.time.LyricTimelineLookup): CoreSnapshot = CoreSnapshot(
@@ -402,6 +432,10 @@ object FfiMapping {
         sources = sources.toLogic(),
         muted = muted,
         remote = remote.toLogic(),
+        aiLyrics = aiLyrics.toLogic(),
+        look = look.toLogic(),
+        pro = pro.toLogic(),
+        update = update.toLogic(),
     )
 
     fun FTrackRef.toLogic(): TrackRef = when (this) {
@@ -481,7 +515,7 @@ object FfiMapping {
     }
 
     fun FTrackInfo.toLogic(): TrackInfo =
-        TrackInfo(codec, sampleRate.toInt(), channels.toInt(), durationUs, gapless, bitrate?.toInt())
+        TrackInfo(codec, sampleRate.toInt(), channels.toInt(), durationUs, gapless, bitrate?.toInt(), bitsPerSample?.toInt())
 
     fun FNowPlaying.toLogic(): NowPlaying = NowPlaying(
         uid = uid.toLong(),
@@ -494,6 +528,7 @@ object FfiMapping {
         artwork = artwork?.toLogic(),
         format = format?.toLogic(),
         link = link,
+        quality = quality?.toLogic(),
     )
 
     private fun FWord.toLogic(): LyricWord = LyricWord(startMs.toLong(), endMs.toLong(), text, joinsNext)
@@ -562,7 +597,8 @@ object FfiMapping {
                 is FLyricsSource.Sidecar -> LyricsSource.Sidecar(s.path)
                 FLyricsSource.Embedded -> LyricsSource.Embedded
                 // Lyrics from a plugin: its attribution is in the document's origin.
-                is FLyricsSource.Plugin -> null
+                is FLyricsSource.Plugin -> LyricsSource.Plugin(s.id)
+                is FLyricsSource.Made -> LyricsSource.Made(s.plugin, s.engine)
                 null -> null
             },
         )
@@ -634,6 +670,9 @@ object FfiMapping {
         resumeOnLaunch = resumeOnLaunch,
         watchFolders = watchFolders,
         allowCommunityPlugins = allowCommunityPlugins,
+        checkForUpdates = checkForUpdates,
+        showLyricsBar = showLyricsBar,
+        desktopLyrics = desktopLyrics,
     )
 
     fun FDeviceInfo.toLogic(): DeviceInfo = DeviceInfo(id, name, isDefault, sampleRates.map { it.toInt() })
@@ -671,6 +710,12 @@ object FfiMapping {
         icon = icon,
         remotePlayback = remotePlayback,
         attribution = attribution,
+        kind = kind.toLogic(),
+        requiresPro = requiresPro,
+        permissions = permissions,
+        discover = discover,
+        details = details,
+        comments = comments,
     )
 
     fun FSourcePreset.toLogic(): SourcePreset = SourcePreset(
@@ -685,7 +730,7 @@ object FfiMapping {
     )
 
     fun FSourcesSnapshot.toLogic(): SourcesSnapshot =
-        SourcesSnapshot(version.toLong(), plugins.map { it.toLogic() }, presets.map { it.toLogic() }, allowCommunity)
+        SourcesSnapshot(version.toLong(), plugins.map { it.toLogic() }, presets.map { it.toLogic() }, allowCommunity, canInstallPlugins)
 
     private fun FAuthField.toLogic(): AuthField = AuthField(
         name = name,
@@ -738,6 +783,8 @@ object FfiMapping {
         track = track?.toLogic(),
         alsoIn = alsoIn,
         link = link,
+        artistId = artistId,
+        albumId = albumId,
     )
 
     fun FRemoteDevice.toLogic(): RemoteDevice = RemoteDevice(

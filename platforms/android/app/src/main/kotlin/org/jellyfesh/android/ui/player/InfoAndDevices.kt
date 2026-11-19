@@ -47,6 +47,7 @@ import org.jellyfesh.logic.format.TimeFormat
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.player.PlayerTrack
 import org.jellyfesh.logic.player.RemoteModel
+import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.state.CoreState
 
 /**
@@ -81,6 +82,10 @@ fun InfoView(track: PlayerTrack, lyrics: LyricsSnapshot?, durationUs: Long?, mod
         val lyricsSource = when (val s = lyrics?.source) {
             is LyricsSource.Sidecar -> stringResource(R.string.lyrics_source_sidecar, s.path.substringAfterLast('/'))
             LyricsSource.Embedded -> stringResource(R.string.lyrics_source_embedded)
+            // A source's lyrics: from its service.
+            is LyricsSource.Plugin -> stringResource(R.string.lyrics_source_sidecar, Links.serviceName(LocalGraph.current.store.state.value.sources, s.id))
+            // "Made by AI Lyrics · {engine}" (docs/ui.md).
+            is LyricsSource.Made -> stringResource(R.string.lyrics_made_by, s.engine)
             null -> stringResource(R.string.lyrics_source_none)
         }
         val timing = when (lyrics?.doc?.timing) {

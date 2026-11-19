@@ -249,6 +249,7 @@
     <string name="lyrics_source_sidecar">来自 %1$s</string>
     <string name="lyrics_source_embedded">来自文件标签</string>
     <string name="lyrics_source_none">未找到</string>
+    <string name="lyrics_made_by">由 AI 歌词生成 · %1$s</string>
     <string name="timing_word">逐字同步</string>
     <string name="timing_line">逐行同步</string>
     <string name="timing_unsynced">未同步</string>

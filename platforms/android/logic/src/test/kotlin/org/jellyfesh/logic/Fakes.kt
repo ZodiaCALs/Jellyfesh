@@ -50,6 +50,27 @@ class SpanTimeline(private val words: List<Span>) : LyricTimelineLookup {
         val points = words.flatMap { listOf(it.startMs, it.endMs) }.filter { it > tMs }
         return points.minOrNull()
     }
+
+    /** The bar the real port gives for these spans: lines in order, words back to back. */
+    override fun bar(tMs: Long): org.jellyfesh.logic.lyrics.LyricsBar {
+        val lines = words.map { it.line }.distinct().sorted()
+        val starts = lines.map { l -> words.filter { it.line == l }.minOf { it.startMs } }
+        val ends = lines.map { l -> words.filter { it.line == l }.maxOf { it.endMs } }
+        val spans = lines.flatMap { l -> words.filter { it.line == l }.sortedBy { it.word } }
+        val offsets = lines.runningFold(0L) { acc, l -> acc + words.count { it.line == l } }
+        val segments = lines.indices.flatMap { i -> listOf(starts[i] to i.toLong(), ends[i] to org.jellyfesh.logic.lyrics.TimelineArrays.NONE) }
+            .sortedBy { it.first }
+        val arrays = org.jellyfesh.logic.lyrics.TimelineArrays(
+            lineStarts = starts.toLongArray(),
+            lineEnds = ends.toLongArray(),
+            segmentStarts = segments.map { it.first }.toLongArray(),
+            segmentLines = segments.map { it.second }.toLongArray(),
+            wordOffsets = offsets.toLongArray(),
+            wordStarts = spans.map { it.startMs }.toLongArray(),
+            wordEnds = spans.map { it.endMs }.toLongArray(),
+        )
+        return org.jellyfesh.logic.lyrics.LyricsBars.bar(arrays, tMs)
+    }
 }
 
 fun anchor(positionMs: Long, atMs: Long, rate: Float = 1f, generation: Long = 1, durationMs: Long? = 240_000) =

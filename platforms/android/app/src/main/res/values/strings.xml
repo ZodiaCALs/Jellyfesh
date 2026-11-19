@@ -295,6 +295,7 @@
     <string name="lyrics_source_sidecar">From %1$s</string>
     <string name="lyrics_source_embedded">In the file’s tags</string>
     <string name="lyrics_source_none">None found</string>
+    <string name="lyrics_made_by">Made by AI Lyrics · %1$s</string>
     <string name="timing_word">Word by word</string>
     <string name="timing_line">Line by line</string>
     <string name="timing_unsynced">Unsynced</string>

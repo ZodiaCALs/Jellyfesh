@@ -52,6 +52,7 @@ class UniffiCoreClientTest {
             restoreSession = false,
             persistSession = false,
             watchFolders = false,
+            distribution = org.jellyfesh.ffi.Distribution.SOURCE,
         ),
     )
 
@@ -204,6 +205,8 @@ class UniffiCoreClientTest {
             track = null,
             alsoIn = emptyList(),
             link = "https://open.example/track/9",
+            artistId = "ar-3",
+            albumId = null,
         )
         val slice = org.jellyfesh.ffi.RemoteSnapshot(
             version = 4uL,

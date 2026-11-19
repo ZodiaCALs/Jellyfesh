@@ -8,19 +8,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.jellyfesh.logic.core.AiLyricsSnapshot
+import org.jellyfesh.logic.core.ArtworkReady
 import org.jellyfesh.logic.core.CoreClient
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreSnapshot
 import org.jellyfesh.logic.core.DevicesSnapshot
+import org.jellyfesh.logic.core.LookSnapshot
 import org.jellyfesh.logic.core.LyricsSnapshot
 import org.jellyfesh.logic.core.NowPlaying
 import org.jellyfesh.logic.core.PlaybackSnapshot
+import org.jellyfesh.logic.core.ProSnapshot
 import org.jellyfesh.logic.core.QueueSnapshot
 import org.jellyfesh.logic.core.RemoteSnapshot
 import org.jellyfesh.logic.core.ScanStatus
 import org.jellyfesh.logic.core.Settings
 import org.jellyfesh.logic.core.SourcesSnapshot
 import org.jellyfesh.logic.core.ThemeSnapshot
+import org.jellyfesh.logic.core.UpdateSnapshot
 
 /**
  * The shell's mirror of the core's slices. Nothing here is decided by the shell: every field is
@@ -45,6 +50,14 @@ data class CoreState(
     val muted: Boolean = false,
     /** The uid a source is buffering, if any. */
     val bufferingUid: Long? = null,
+    /** AI Lyrics (ADR-0019): whether to offer it, what it needs, its jobs and models. */
+    val aiLyrics: AiLyricsSnapshot = AiLyricsSnapshot.Empty,
+    /** The look, every value resolved (ADR-0020); the Luminous defaults until the core sends one. */
+    val look: LookSnapshot = LookSnapshot.Default,
+    /** Jellyfesh Pro (ADR-0021). */
+    val pro: ProSnapshot = ProSnapshot.Inactive,
+    /** Update checks for direct downloads. */
+    val update: UpdateSnapshot = UpdateSnapshot.Unsupported,
 ) {
     /** The lyrics of the track playing now (a slice for another track is not shown). */
     val currentLyrics: LyricsSnapshot?
@@ -82,8 +95,17 @@ object CoreReducer {
             state.bufferingUid == event.uid -> state.copy(bufferingUid = null)
             else -> state
         }
+        is CoreEvent.AiLyrics ->
+            if (event.snapshot.version >= state.aiLyrics.version) state.copy(aiLyrics = event.snapshot) else state
+        is CoreEvent.Look ->
+            if (event.snapshot.version >= state.look.version) state.copy(look = event.snapshot) else state
+        is CoreEvent.Pro ->
+            if (event.snapshot.version >= state.pro.version) state.copy(pro = event.snapshot) else state
+        is CoreEvent.Update ->
+            if (event.snapshot.version >= state.update.version) state.copy(update = event.snapshot) else state
         is CoreEvent.Auth, is CoreEvent.SearchResults, is CoreEvent.BrowsePage, is CoreEvent.CommandFailed,
-        is CoreEvent.Error, is CoreEvent.PlaylistCreated -> state
+        is CoreEvent.Error, is CoreEvent.PlaylistCreated, is CoreEvent.Discover, is CoreEvent.Details,
+        is CoreEvent.Comments, is CoreEvent.Artwork -> state
     }
 
     /**
@@ -104,6 +126,10 @@ object CoreReducer {
         sources = newer(state.sources, snapshot.sources) { it.version },
         remote = newer(state.remote, snapshot.remote) { it.version },
         muted = snapshot.muted,
+        aiLyrics = newer(state.aiLyrics, snapshot.aiLyrics) { it.version },
+        look = newer(state.look, snapshot.look) { it.version },
+        pro = newer(state.pro, snapshot.pro) { it.version },
+        update = newer(state.update, snapshot.update) { it.version },
     )
 
     /**
@@ -144,7 +170,19 @@ class CoreStore {
         _state.update { CoreReducer.merge(it, snapshot) }
     }
 
+    /**
+     * Takes the core's word that a source picture is cached ([CoreEvent.Artwork]), on the core's
+     * event thread. Covers arrive in bursts while lists scroll, so they go straight to the artwork
+     * loader instead of through [signals], where they could push out a search or a sign-in step.
+     */
+    @Volatile
+    var artworkListener: ((ArtworkReady) -> Unit)? = null
+
     fun onEvent(event: CoreEvent) {
+        if (event is CoreEvent.Artwork) {
+            artworkListener?.invoke(event.ready)
+            return
+        }
         var endsSession = false
         _state.update { before ->
             CoreReducer.reduce(before, event).also { after -> endsSession = CoreReducer.endsRemoteSession(before.remote, after.remote) }

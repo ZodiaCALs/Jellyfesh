@@ -22,7 +22,9 @@ import org.jellyfesh.android.system.IconSwitcher
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreClient
 import org.jellyfesh.logic.core.CoreException
+import org.jellyfesh.logic.core.Distribution
 import org.jellyfesh.logic.nav.NavState
+import org.jellyfesh.logic.settings.BuildFlags
 import org.jellyfesh.logic.state.CoreStore
 import org.jellyfesh.logic.time.DrawClock
 import org.jellyfesh.logic.time.MonotonicBridge
@@ -70,6 +72,9 @@ class AppGraph(private val app: Application) {
      */
     val nav = MutableStateFlow(NavState())
 
+    /** How this build reached the person (BuildConfig.DISTRIBUTION): the core decides from it where Pro is sold. */
+    val distribution: Distribution = BuildFlags.distribution(BuildConfig.DISTRIBUTION)
+
     val images = ArtworkLoader(app, this)
     val icons = IconSwitcher(app)
     val library = LibraryAccess(app, this)
@@ -84,6 +89,7 @@ class AppGraph(private val app: Application) {
                     dataDir = File(app.filesDir, "core").path,
                     cacheDir = File(app.cacheDir, "core").path,
                     bundledPlugins = BundledPlugins.prepare(app),
+                    distribution = distribution,
                 )
             } catch (e: CoreException) {
                 _startup.value = CoreStartup.Failed(e.message.orEmpty())

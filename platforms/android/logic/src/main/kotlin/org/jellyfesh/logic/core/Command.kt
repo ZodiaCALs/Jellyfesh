@@ -78,6 +78,41 @@ sealed interface Command {
      * the service's player instead of the engine (the core routes them).
      */
     data class Remote(val action: RemoteAction) : Command
+
+    /** Reset to Defaults: the plugin's settings back to its schema's defaults. */
+    data class ResetPluginSettings(val plugin: String) : Command
+
+    // ---- AI Lyrics (ADR-0019)
+    /** Makes synced lyrics for a song (a job in the AiLyrics slice). */
+    data class MakeLyrics(val song: SongRef) : Command
+    data class CancelLyrics(val job: Long) : Command
+    data class DeleteMadeLyrics(val song: SongRef) : Command
+
+    /** The person allowed sending songs' audio to [origin] for [plugin]. */
+    data class AllowAudioUpload(val plugin: String, val origin: String) : Command
+
+    /** Stop Allowing. */
+    data class RevokeAudioUpload(val plugin: String, val origin: String) : Command
+    data class DownloadSpeechModel(val id: String) : Command
+
+    /** Stops a model download; what came so far is kept to resume. */
+    data class CancelSpeechModelDownload(val id: String) : Command
+    data class DeleteSpeechModel(val id: String) : Command
+
+    // ---- Jellyfesh Pro and updates (ADR-0021)
+    data class ActivateLicence(val key: String) : Command
+    data object RemoveLicence : Command
+    data object CheckForUpdates : Command
+
+    // ---- Discover, details and comments (ADR-0022)
+    /** A source's Discover page (`library` for the library's); answered by [CoreEvent.Discover]. */
+    data class Discover(val source: String) : Command
+
+    /** More about an item; answered by [CoreEvent.Details]. */
+    data class Details(val item: ItemRef) : Command
+
+    /** A page of comments ([page] null for the first); answered by [CoreEvent.Comments]. */
+    data class Comments(val item: ItemRef, val page: String?) : Command
 }
 
 /** What [Command.Remote] asks of the remote session. */

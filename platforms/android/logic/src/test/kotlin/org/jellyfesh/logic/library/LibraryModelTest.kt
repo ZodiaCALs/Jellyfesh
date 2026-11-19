@@ -55,6 +55,29 @@ class LibraryModelTest {
         assertEquals(TrackQuery(offset = 200, limit = 100, sort = TrackSort.Year, descending = true), query)
     }
 
+    @Test
+    fun playAndShuffleCoverEverySongInTheOrderShown() {
+        // The core's collection of the whole library, in the page's order: no paging in the app.
+        assertEquals(CollectionRef.Songs(TrackSort.Album, false), SortMenus.allSongs(SortOrder(TrackSort.Album, false)))
+        assertEquals(CollectionRef.Songs(TrackSort.Added, true), SortMenus.allSongs(SortMenus.song(TrackSort.Added)))
+    }
+
+    @Test
+    fun everySongCanBeAddedToAPlaylistPageByPage() {
+        val library = object : org.jellyfesh.logic.core.CoreClient by FakeCoreClient(snapshot) {
+            val all = (1L..1_203L).map { id -> Track(id, "/m/$id.flac", "Song $id", null, null, null, null, null, null, null, null, null, null, null, null, null, null) }
+            val asked = mutableListOf<TrackQuery>()
+            override fun tracks(query: TrackQuery): List<Track> {
+                asked += query
+                return all.drop(query.offset).take(query.limit)
+            }
+        }
+        val songs = CollectionTracks.of(library, CollectionRef.Songs(TrackSort.Title, true))
+        assertEquals(1_203, songs.size)
+        assertTrue(library.asked.all { it.sort == TrackSort.Title && it.descending })
+        assertEquals(listOf(0, 500, 1_000), library.asked.map { it.offset })
+    }
+
     // ---- Add to Playlist… for a collection ---------------------------------------------------------
 
     private val snapshot = CoreSnapshot(

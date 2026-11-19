@@ -17,6 +17,7 @@ import org.jellyfesh.logic.core.PlaylistEntry
 import org.jellyfesh.logic.core.PlaylistSummary
 import org.jellyfesh.logic.core.QueueItem
 import org.jellyfesh.logic.core.SearchResults
+import org.jellyfesh.logic.core.StoreEntitlement
 import org.jellyfesh.logic.core.Track
 import org.jellyfesh.logic.core.TrackQuery
 import org.jellyfesh.logic.core.TrackRef
@@ -68,6 +69,18 @@ class FakeCoreClient(private var snapshot: CoreSnapshot) : CoreClient {
     override fun history(): List<HistoryEntry> = emptyList()
     override fun roots(): List<String> = emptyList()
     override fun stats(): LibraryStats = LibraryStats(0, 0, 0, 0, 0, 0, 0)
+    /** The schemas [localizedSettingsSchema] answers, by plugin and language. */
+    val schemas = mutableMapOf<Pair<String, String>, String>()
+
+    /** The cached pictures [sourceArtwork] answers, by URL; others are "being fetched" (null). */
+    val covers = mutableMapOf<String, String>()
+    val entitlements = mutableListOf<StoreEntitlement>()
+
+    override fun localizedSettingsSchema(plugin: String, language: String): String? = schemas[plugin to language]
+    override fun sourceArtwork(url: String, sizePx: Int): String? = covers[url]
+    override fun setStoreEntitlement(entitlement: StoreEntitlement) {
+        entitlements += entitlement
+    }
     override fun outputDevices(): List<DeviceInfo> = emptyList()
     override fun eqPresets(): List<EqPreset> = presets
     override fun libraryVersion(): String = version

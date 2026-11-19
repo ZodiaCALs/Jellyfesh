@@ -16,6 +16,8 @@ import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreException
 import org.jellyfesh.logic.core.CoreSnapshot
 import org.jellyfesh.logic.core.DeviceInfo
+import org.jellyfesh.logic.core.Distribution
+import org.jellyfesh.logic.core.StoreEntitlement
 import org.jellyfesh.logic.core.EqPreset
 import org.jellyfesh.logic.core.HistoryEntry
 import org.jellyfesh.logic.core.LibraryStats
@@ -98,6 +100,13 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
 
     override fun stats(): LibraryStats = query { core.stats().toLogic() }
 
+    override fun localizedSettingsSchema(plugin: String, language: String): String? =
+        query { core.localizedSettingsSchema(plugin, language) }
+
+    override fun sourceArtwork(url: String, sizePx: Int): String? = query { core.sourceArtwork(url, sizePx.u32()) }
+
+    override fun setStoreEntitlement(entitlement: StoreEntitlement) = query { core.setStoreEntitlement(FfiMappingV7.ffi(entitlement)) }
+
     // Qualified: the members of the same name would shadow the bindings' top-level functions.
     override fun outputDevices(): List<DeviceInfo> = query { org.jellyfesh.ffi.outputDevices().map { it.toLogic() } }
 
@@ -122,18 +131,20 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
         /**
          * Hands the Android `Context` to the core (ndk-context, needed by the audio output and the
          * keystore before first use; docs/ffi.md) and starts the core with the official plugins
-         * that ship in the APK ([bundledPlugins], `.jfpkg` paths). Pass the application context.
-         * Throws [CoreException] when the library or session cannot be opened.
+         * that ship in the APK ([bundledPlugins], `.jfpkg` paths), telling it how this build was
+         * distributed ([distribution]: where Pro is sold, whether it checks for updates). Pass the
+         * application context. Throws [CoreException] when the library or session cannot be opened.
          */
         fun start(
             context: Any,
             dataDir: String,
             cacheDir: String,
             bundledPlugins: List<String>,
+            distribution: Distribution,
             watchFolders: Boolean = true,
         ): UniffiCoreClient {
             AndroidContext.initialize(context)
-            return startWithoutContext(androidCoreConfig(dataDir, cacheDir, watchFolders, bundledPlugins))
+            return startWithoutContext(androidCoreConfig(dataDir, cacheDir, watchFolders, bundledPlugins, FfiMappingV7.ffi(distribution)))
         }
 
         /** Starts a core from a ready config (JVM tests use a null output). */

@@ -24,13 +24,26 @@ sealed interface CoreEvent {
     /** A problem not tied to a command, such as an unreadable file during playback. */
     data class Error(val message: String) : CoreEvent
 
+    // v0.0.7
+    data class AiLyrics(val snapshot: AiLyricsSnapshot) : CoreEvent
+    data class Look(val snapshot: LookSnapshot) : CoreEvent
+    data class Pro(val snapshot: ProSnapshot) : CoreEvent
+    data class Update(val snapshot: UpdateSnapshot) : CoreEvent
+    data class Discover(val page: DiscoverPage) : CoreEvent
+    data class Details(val page: DetailsPage) : CoreEvent
+    data class Comments(val page: CommentsPage) : CoreEvent
+
+    /** A source picture is cached, or cannot be had; the artwork loader takes it, not the state. */
+    data class Artwork(val ready: ArtworkReady) : CoreEvent
+
     /**
      * True for events that are not state: they matter to whoever is waiting for them (a search,
      * a sign-in, a toast), and the store forwards them on its signal stream.
      */
     val isSignal: Boolean
         get() = when (this) {
-            is Auth, is SearchResults, is BrowsePage, is CommandFailed, is Error, is PlaylistCreated, is Scan -> true
+            is Auth, is SearchResults, is BrowsePage, is CommandFailed, is Error, is PlaylistCreated, is Scan,
+            is Discover, is Details, is Comments -> true
             else -> false
         }
 }

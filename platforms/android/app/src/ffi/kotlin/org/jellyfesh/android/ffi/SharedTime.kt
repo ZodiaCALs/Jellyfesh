@@ -2,6 +2,9 @@ package org.jellyfesh.android.ffi
 
 import org.jellyfesh.ffi.LyricTimeline
 import org.jellyfesh.logic.core.PlaybackAnchor
+import org.jellyfesh.logic.lyrics.LyricsBar
+import org.jellyfesh.logic.lyrics.LyricsBars
+import org.jellyfesh.logic.lyrics.TimelineArrays
 import org.jellyfesh.logic.time.DrawClock
 import org.jellyfesh.logic.time.LyricCursor
 import org.jellyfesh.logic.time.LyricTimelineLookup
@@ -41,7 +44,24 @@ class PortLyricTimeline(private val timeline: LyricTimeline) : LyricTimelineLook
     }
 
     override fun nextChange(tMs: Long): Long? = timeline.nextChange(tMs.toUIntClamped())?.toLong()
+
+    /** The timeline's arrays for the lyrics bar's port, copied once, when the bar first needs them. */
+    private val arrays: TimelineArrays by lazy {
+        TimelineArrays(
+            lineStarts = timeline.lineStarts.longs(),
+            lineEnds = timeline.lineEnds.longs(),
+            segmentStarts = timeline.segmentStarts.longs(),
+            segmentLines = timeline.segmentLines.longs(),
+            wordOffsets = timeline.wordOffsets.longs(),
+            wordStarts = timeline.wordStarts.longs(),
+            wordEnds = timeline.wordEnds.longs(),
+        )
+    }
+
+    override fun bar(tMs: Long): LyricsBar = LyricsBars.bar(arrays, tMs.coerceAtLeast(0))
 }
+
+private fun List<UInt>.longs(): LongArray = LongArray(size) { this[it].toLong() }
 
 private fun Long.toULongClamped(): ULong = if (this < 0) 0uL else toULong()
 
