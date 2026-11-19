@@ -33,6 +33,30 @@
 
   const wide = new MediaQuery('min-width: 900px');
   let fileInput: HTMLInputElement | undefined = $state();
+  let content: HTMLElement | undefined = $state();
+
+  // Each page keeps where it was scrolled to: a page opened anew starts at its top, and going
+  // back finds the one below where it was left (the content column is the one scroller).
+  const offsets = new WeakMap<object, number>();
+  let shown: object | null = null;
+  $effect.pre(() => {
+    const route = nav.route;
+    if (shown && content) offsets.set(shown, content.scrollTop);
+    shown = route;
+  });
+  // The aurora drifts while music plays (app.css).
+  $effect(() => {
+    document.documentElement.toggleAttribute('data-playing', player.playing);
+  });
+  $effect(() => {
+    const route = nav.route;
+    const element = content;
+    if (!element) return;
+    const top = offsets.get(route) ?? 0;
+    element.scrollTop = top;
+    // A page that loads its rows after the first paint is not tall enough yet: try once more.
+    if (top > 0) requestAnimationFrame(() => (element.scrollTop = top));
+  });
   let dragging = $state(false);
   let dragDepth = 0;
   let installEvent = $state<(Event & { prompt(): Promise<void> }) | null>(null);
@@ -188,7 +212,7 @@
     </div>
   </nav>
 
-  <main class="content" id="main" tabindex="-1">
+  <main class="content" id="main" tabindex="-1" bind:this={content}>
     {#if nav.stack.length > 1}
       <button class="back" onclick={() => nav.back()}><Icon name="back" size={18} />{t('Back')}</button>
     {/if}
@@ -413,6 +437,7 @@
   :global(:root[data-motion='reduced']) .route {
     animation: jf-fade-in var(--jf-motion-dur-1) linear;
   }
+  /* The player bar floats over the content column, its ends on the content's own gutters. */
   .dock {
     position: fixed;
     left: 248px;
@@ -423,7 +448,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--jf-space-s2);
-    padding: 0 var(--jf-space-s4);
+    padding: 0 var(--jf-layout-gutter-fluid);
     pointer-events: none;
   }
   .banner {

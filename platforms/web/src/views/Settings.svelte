@@ -591,6 +591,22 @@
     color: var(--jf-ink-90);
     box-shadow: var(--jf-elevation-shadow-1);
   }
+  /* Phones: one row that scrolls sideways, rather than two rows of unequal pills. */
+  @media (max-width: 760px) {
+    .sections {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      scroll-padding-inline: 4px;
+    }
+    .sections::-webkit-scrollbar {
+      display: none;
+    }
+    .sections button {
+      flex: none;
+      padding: 0 var(--jf-space-s4);
+    }
+  }
   .sections button:focus-visible {
     outline: none;
     box-shadow: var(--jf-elevation-focus);

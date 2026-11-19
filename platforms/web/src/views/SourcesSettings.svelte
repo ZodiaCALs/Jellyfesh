@@ -168,8 +168,8 @@
           {:else}
             {t('Not signed in')}
           {/if}
-          {#if source.server}<span class="server"> · {source.server}</span>{/if}
         </p>
+        {#if source.server}<p class="server">{source.server}</p>{/if}
         {#if source.blocked && !source.communityOff && source.enabled}
           <p class="problem" role="alert"><Icon name="alert" size={16} />{source.blocked}</p>
         {/if}
@@ -346,7 +346,7 @@
     min-height: 36px;
     font-size: 14px;
   }
-  .danger {
+  .secondary.danger {
     color: var(--jf-danger);
   }
   .facts {
@@ -426,7 +426,8 @@
     color: var(--jf-success);
   }
   .server {
-    font-weight: 400;
+    margin: 0;
+    font-size: 13px;
     color: var(--jf-ink-70);
     overflow-wrap: anywhere;
   }
@@ -478,10 +479,21 @@
   .secondary:hover {
     background: var(--jf-fill-hover);
   }
+  /* Groups are cards of Mist glass with their heading inside, as in the other sections. */
   .community,
   .relay {
-    margin-top: var(--jf-space-s8);
+    margin-top: var(--jf-space-s5);
     max-width: var(--jf-layout-reading);
+    padding: var(--jf-space-s5) var(--jf-space-s6);
+    border-radius: var(--jf-radius-r-2xl);
+    background: var(--jf-tint-mist);
+    box-shadow:
+      inset 0 0 0 1px var(--jf-glass-edge-soft),
+      var(--jf-elevation-shadow-1);
+  }
+  .community > .section,
+  .relay > .section {
+    margin-bottom: var(--jf-space-s1);
   }
   .relay-form {
     display: flex;
