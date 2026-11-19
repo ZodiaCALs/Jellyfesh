@@ -8,6 +8,7 @@
 //! times, page windows, settings forms, and what the remote session's
 //! slice and the items' links offer.
 
+pub mod about;
 pub mod appearance;
 pub mod browse;
 // WCAG checks of the Luminous field and glass, run by the tests.

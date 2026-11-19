@@ -1,10 +1,64 @@
 //! About: the app icon and the formal spaced-capitals wordmark (ink on
-//! light, white on dark; design/brand), version, credits and legal notes.
+//! light, white on dark; design/brand), the version from the build, the
+//! website and the third-party licences where the build knows them
+//! (docs/ui.md, "Settings"; `logic::about`), and the design credits.
+
+use std::path::PathBuf;
 
 use adw::prelude::*;
 
+use crate::logic::about;
 use crate::ui::APP_ID;
 use crate::ui::i18n::{tr, trf};
+use crate::ui::widgets::glyph::Glyph;
+
+/// What the third-party licences open: the website's page, or the file
+/// installed next to the app.
+enum Licences {
+    Page(String),
+    File(PathBuf),
+}
+
+/// The website and the licences this build knows.
+fn known() -> (Option<about::Links>, Option<Licences>) {
+    let site = about::website(option_env!("JF_WEBSITE"), option_env!("GITHUB_REPOSITORY"));
+    let links = about::links(site.as_deref());
+    let licences = match &links {
+        Some(l) => Some(Licences::Page(l.licences.clone())),
+        None => std::env::current_exe()
+            .ok()
+            .and_then(|exe| about::notices_file(&exe))
+            .filter(|f| f.is_file())
+            .map(Licences::File),
+    };
+    (links, licences)
+}
+
+/// Opens a file in the app the system has for it.
+fn open_file(path: &std::path::Path) {
+    let launcher = gtk::FileLauncher::new(Some(&gtk::gio::File::for_path(path)));
+    let parent = crate::ui::state::app().window.borrow().upgrade();
+    launcher.launch(parent.as_ref(), gtk::gio::Cancellable::NONE, |result| {
+        if let Err(e) = result
+            && !e.matches(gtk::DialogError::Dismissed)
+        {
+            crate::ui::state::app().toast(e.message());
+        }
+    });
+}
+
+/// A row that opens something, with the link glyph at its end.
+fn link_row(title: &str, subtitle: Option<&str>, open: impl Fn() + 'static) -> adw::ActionRow {
+    let row = adw::ActionRow::builder().title(title).activatable(true).build();
+    if let Some(s) = subtitle {
+        row.set_subtitle(gtk::glib::markup_escape_text(s).as_str());
+    }
+    let glyph = Glyph::new("link", 16);
+    glyph.add_css_class("dim-label");
+    row.add_suffix(&glyph);
+    row.connect_activated(move |_| open());
+    row
+}
 
 pub fn present(parent: &impl IsA<gtk::Widget>) {
     let dialog = adw::Dialog::builder()
@@ -60,6 +114,28 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     summary.set_justify(gtk::Justification::Center);
     summary.add_css_class("about-summary");
 
+    // The website and the third-party licences, where the build knows them.
+    let (links, licences) = known();
+    let places = gtk::ListBox::new();
+    places.add_css_class("boxed-list");
+    places.set_selection_mode(gtk::SelectionMode::None);
+    if let Some(l) = &links {
+        let site = l.website.clone();
+        places.append(&link_row(&tr("Website"), Some(&l.website), move || {
+            crate::ui::actions::open_link(&site);
+        }));
+    }
+    match licences {
+        Some(Licences::Page(page)) => places.append(&link_row(&tr("Third-Party Licences"), None, move || {
+            crate::ui::actions::open_link(&page);
+        })),
+        Some(Licences::File(file)) => places.append(&link_row(&tr("Third-Party Licences"), None, move || {
+            open_file(&file);
+        })),
+        None => {}
+    }
+    places.set_visible(places.first_child().is_some());
+
     let credits = gtk::ListBox::new();
     credits.add_css_class("boxed-list");
     credits.set_selection_mode(gtk::SelectionMode::None);
@@ -68,10 +144,6 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         (
             tr("Design Tokens"),
             tr("Derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0."),
-        ),
-        (
-            tr("Licence"),
-            tr("No licence has been chosen yet: all rights reserved."),
         ),
     ] {
         let row = adw::ActionRow::builder()
@@ -86,6 +158,7 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     body.append(&wordmark);
     body.append(&version);
     body.append(&summary);
+    body.append(&places);
     body.append(&credits);
     let scroll = gtk::ScrolledWindow::builder()
         .child(&body)
