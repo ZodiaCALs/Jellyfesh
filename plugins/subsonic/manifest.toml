@@ -1,11 +1,11 @@
 id = "org.jellyfesh.subsonic"
 name = "Subsonic"
-version = "0.0.6"
-api_version = "1.0"
+version = "0.0.7"
+api_version = "1.2"
 author = "Jellyfesh"
 description = "Your Navidrome, Gonic, Airsonic or other Subsonic and OpenSubsonic server"
 official = true
-capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations"]
+capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations", "discover", "details"]
 playback_mode = "stream"
 auth = ["api-key", "password-exchange"]
 

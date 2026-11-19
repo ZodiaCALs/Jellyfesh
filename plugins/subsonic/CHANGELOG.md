@@ -1,5 +1,15 @@
 # Changelog: Subsonic plugin
 
+## 0.0.7 — 2026-11-19
+
+* With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh
+  v0.0.7). **Discover**: the server's album lists Recently Added, Most
+  Played, Recently Played and Random Albums as shelves (`getAlbumList2`).
+  **Details**: album notes (`getAlbumInfo2`) with version, genres, release
+  date and label; artist biographies (`getArtistInfo2`); a song's genre,
+  year and its composer, lyricist, arranger and producer (OpenSubsonic
+  contributors); playlist descriptions; each with the server's cover.
+
 ## 0.0.6 — 2026-11-17
 
 * With Jellyfesh v0.0.6: built with plugin SDK 1.1. The manifest still

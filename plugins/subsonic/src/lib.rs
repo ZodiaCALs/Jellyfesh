@@ -10,10 +10,15 @@
 //!   limit from the quality ([`media`]). Artwork: `getCoverArt`. Lyrics:
 //!   `getLyricsBySongId` (OpenSubsonic `songLyrics`) as LRC or plain text
 //!   ([`lyrics`]), else `getLyrics`. Recommendations: `getSimilarSongs`.
+//! * Discover (API 1.2): `getAlbumList2` recently added, most played,
+//!   recently played and random. Details: `getAlbumInfo2` notes and
+//!   `getAlbum` facts, `getArtistInfo2` biographies, `getSong` facts and
+//!   playlist descriptions ([`details`]).
 //! * JSON answers (`f=json`), extensions found with
 //!   `getOpenSubsonicExtensions`, form POST when the server offers it.
 
 mod api;
+mod details;
 mod items;
 mod lenient;
 mod login;
@@ -59,7 +64,7 @@ pub(crate) fn api_text(error: &PluginError) -> String {
 /// Errors that mean "nothing here" for optional lookups (lyrics, similar
 /// songs): Subsonic errors and odd answers; network and sign-in problems
 /// still count.
-fn soft<T>(result: core::result::Result<T, Failure>) -> Result<Option<T>> {
+pub(crate) fn soft<T>(result: core::result::Result<T, Failure>) -> Result<Option<T>> {
     match result {
         Ok(value) => Ok(Some(value)),
         Err(Failure::Api(error)) if matches!(error.code, 40 | 41 | 42 | 44) => Err(error.into()),
@@ -136,6 +141,49 @@ fn browse_folder(path: &str, page: &PageRequest) -> Result<ItemPage> {
             _ => Err(PluginError::NotFound),
         },
     }
+}
+
+/// Discover's shelves: album lists (`getAlbumList2` type, title, style).
+const SHELVES: [(&str, &str, ShelfStyle); 4] = [
+    ("newest", "Recently Added", ShelfStyle::Row),
+    ("frequent", "Most Played", ShelfStyle::Row),
+    ("recent", "Recently Played", ShelfStyle::Row),
+    ("random", "Random Albums", ShelfStyle::Grid),
+];
+/// Albums per shelf.
+const SHELF_SIZE: u32 = 20;
+
+/// The Discover page: the album lists that have albums. A list the server
+/// cannot give is left out; sign-in and network problems fail the page.
+fn discover_shelves() -> Result<Vec<Shelf>> {
+    let mut shelves = Vec::new();
+    for (kind, title, style) in SHELVES {
+        let page = PageRequest {
+            cursor: None,
+            limit: SHELF_SIZE,
+        };
+        let albums = match album_list(kind, &page) {
+            Ok(page) => page.items,
+            Err(error @ (PluginError::AuthRequired | PluginError::Network(_) | PluginError::RateLimited)) => {
+                return Err(error);
+            }
+            Err(error) => {
+                jf_plugin_sdk::warn!("no {kind} albums for Discover: {}", api_text(&error));
+                continue;
+            }
+        };
+        if albums.is_empty() {
+            continue;
+        }
+        shelves.push(Shelf {
+            id: kind.into(),
+            title: title.into(),
+            style,
+            items: albums,
+            more: Some(format!("f:albums:{kind}")),
+        });
+    }
+    Ok(shelves)
 }
 
 /// `getAlbumList2`, paged by the server.
@@ -480,6 +528,14 @@ impl Plugin for Subsonic {
         };
         let url = api::media_url("getCoverArt", &[("id", &cover), ("size", &size.to_string())])?;
         Ok(Some(ImageRef::new(url)))
+    }
+
+    fn discover() -> Result<Vec<Shelf>> {
+        discover_shelves()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        details::details(&item)
     }
 
     fn recommendations_for_item(item: Item, page: PageRequest) -> Result<ItemPage> {

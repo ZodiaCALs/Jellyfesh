@@ -74,6 +74,14 @@ pub fn list<'de, D: Deserializer<'de>, T: DeserializeOwned>(d: D) -> Result<Vec<
     })
 }
 
+/// An optional object; anything else (or one that does not parse) is none.
+pub fn opt_object<'de, D: Deserializer<'de>, T: DeserializeOwned>(d: D) -> Result<Option<T>, D::Error> {
+    Ok(match Value::deserialize(d)? {
+        value @ Value::Object(_) => serde_json::from_value(value).ok(),
+        _ => None,
+    })
+}
+
 fn number(value: &Value) -> Option<f64> {
     signed(value).filter(|n| *n >= 0.0)
 }

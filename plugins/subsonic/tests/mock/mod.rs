@@ -266,6 +266,18 @@ impl Mock {
                 Some(song) => self.ok(json!({ "song": song })),
                 None => self.fail(70, "Song not found"),
             },
+            "getArtistInfo2" => match lib.find("artists", &id) {
+                Some(_) => self.ok(
+                    json!({ "artistInfo2": lib.0["artistInfo2"].get(&id).cloned().unwrap_or(json!({})) }),
+                ),
+                None => self.fail(70, "Artist not found"),
+            },
+            "getAlbumInfo2" if self.version != "1.12.0" => match lib.find("albums", &id) {
+                Some(_) => {
+                    self.ok(json!({ "albumInfo": lib.0["albumInfo"].get(&id).cloned().unwrap_or(json!({})) }))
+                }
+                None => self.fail(70, "Album not found"),
+            },
             "getAlbumList2" => {
                 let mut albums: Vec<Value> = lib.list("albums").iter().map(without_songs).collect();
                 match p("type").as_deref() {

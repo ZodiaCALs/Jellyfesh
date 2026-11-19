@@ -80,6 +80,21 @@ AIFF, CAF and Matroska audio. Anything else, such as WMA, is converted.
   length.
 * **Similar songs** need a server that finds them (often through an external
   service it is configured with); otherwise the list is empty.
+* **Discover** (Jellyfesh v0.0.7): shelves of the server's album lists,
+  Recently Added, Most Played, Recently Played and Random Albums (twenty
+  each; **See All** opens the whole list). A list that is empty, such as
+  Most Played on a new server, is left out.
+* **Get Info** (v0.0.7) on an album shows its notes, version, genres,
+  release date and label; on an artist, the biography; on a song, its genre,
+  year, composer, lyricist, arranger and producer; on a playlist, its
+  description. Notes and biographies come from your server, which usually
+  gets them from Last.fm (`getAlbumInfo2`, `getArtistInfo2`); the version,
+  label, release date and the people are OpenSubsonic fields that not every
+  server fills in.
+* **Covers** in lists, Discover and Get Info come from your server. Items
+  carry no cover address, because Subsonic puts the sign-in into it: the app
+  asks the plugin for the covers it shows, and the plugin answers from what
+  it listed without another request.
 
 ## Signing out
 

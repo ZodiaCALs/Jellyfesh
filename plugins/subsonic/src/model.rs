@@ -51,6 +51,60 @@ pub struct Song {
     pub is_dir: Option<bool>,
     #[serde(deserialize_with = "lenient::opt_string")]
     pub explicit_status: Option<String>,
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub genre: Option<String>,
+    /// OpenSubsonic: the composers as one text.
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub display_composer: Option<String>,
+    /// OpenSubsonic: who did what (`composer`, `lyricist`, `arranger`, `producer`, …).
+    #[serde(deserialize_with = "lenient::list")]
+    pub contributors: Vec<Contributor>,
+}
+
+/// A name (`ItemGenre`, `RecordLabel`, a contributor's artist).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Named {
+    #[serde(deserialize_with = "lenient::string")]
+    pub name: String,
+}
+
+/// An OpenSubsonic contributor of a song.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Contributor {
+    #[serde(deserialize_with = "lenient::string")]
+    pub role: String,
+    pub artist: Named,
+}
+
+/// An OpenSubsonic date (`ItemDate`): any of year, month and day.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct ItemDate {
+    #[serde(deserialize_with = "lenient::opt_u32")]
+    pub year: Option<u32>,
+    #[serde(deserialize_with = "lenient::opt_u32")]
+    pub month: Option<u32>,
+    #[serde(deserialize_with = "lenient::opt_u32")]
+    pub day: Option<u32>,
+}
+
+impl ItemDate {
+    /// `2021-03-05`, `2021-03` or `2021`.
+    pub fn text(&self) -> Option<String> {
+        let year = self.year.filter(|y| *y > 0)?;
+        Some(
+            match (
+                self.month.filter(|m| (1..=12).contains(m)),
+                self.day.filter(|d| (1..=31).contains(d)),
+            ) {
+                (Some(month), Some(day)) => format!("{year:04}-{month:02}-{day:02}"),
+                (Some(month), None) => format!("{year:04}-{month:02}"),
+                _ => format!("{year:04}"),
+            },
+        )
+    }
 }
 
 /// An album (`AlbumID3`, with its songs for `getAlbum`).
@@ -85,6 +139,20 @@ pub struct Album {
     pub explicit_status: Option<String>,
     #[serde(deserialize_with = "lenient::list")]
     pub song: Vec<Song>,
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub genre: Option<String>,
+    /// OpenSubsonic: every genre.
+    #[serde(deserialize_with = "lenient::list")]
+    pub genres: Vec<Named>,
+    /// OpenSubsonic: the labels it was released on.
+    #[serde(deserialize_with = "lenient::list")]
+    pub record_labels: Vec<Named>,
+    /// OpenSubsonic: when this release came out.
+    #[serde(deserialize_with = "lenient::opt_object")]
+    pub release_date: Option<ItemDate>,
+    /// OpenSubsonic: the album's version ("Deluxe Edition").
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub version: Option<String>,
 }
 
 /// An artist (`ArtistID3`, with albums for `getArtist`).
@@ -122,6 +190,25 @@ pub struct Playlist {
     pub cover_art: Option<String>,
     #[serde(deserialize_with = "lenient::list")]
     pub entry: Vec<Song>,
+    /// The playlist's description.
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub comment: Option<String>,
+}
+
+/// `getArtistInfo2` (`artistInfo2`).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ArtistInfo {
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub biography: Option<String>,
+}
+
+/// `getAlbumInfo2` (`albumInfo`).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AlbumInfo {
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub notes: Option<String>,
 }
 
 /// `getArtists`: artists grouped by index letter.

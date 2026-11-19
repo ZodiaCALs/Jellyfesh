@@ -33,6 +33,10 @@
       "created": "2026-01-10T09:00:00Z",
       "year": 2021,
       "genre": "Ambient",
+      "genres": [{ "name": "Ambient" }, { "name": "Drone" }],
+      "recordLabels": [{ "name": "Invented Records" }],
+      "releaseDate": { "year": 2021, "month": 3, "day": 5 },
+      "version": "Deluxe Edition",
       "explicitStatus": "explicit",
       "song": [
         {
@@ -46,6 +50,8 @@
           "discNumber": 1,
           "year": 2021,
           "genre": "Ambient",
+          "contributors": [{ "role": "composer", "artist": { "id": "ar-9", "name": "Invented Composer" } }, { "role": "lyricist", "artist": { "id": "ar-8", "name": "Invented Lyricist" } }],
+          "displayComposer": "Invented Composer",
           "coverArt": "al-1_6501f00d",
           "size": 28181000,
           "contentType": "audio/flac",
@@ -196,10 +202,20 @@
       ]
     }
   ],
+  "artistInfo2": {
+    "ar-1": {
+      "biography": "An invented orchestra from the far north.<br/>It records long, quiet pieces. <a target='_blank' href=\"https://www.last.fm/music/Invented\">Read more on Last.fm</a>",
+      "largeImageUrl": "https://images.invalid/ar-1.jpg"
+    }
+  },
+  "albumInfo": {
+    "al-1": { "notes": "Invented notes about Polar Night &amp; its long nights." }
+  },
   "playlists": [
     {
       "id": "pl-1",
       "name": "Evening",
+      "comment": "Invented songs for quiet evenings.",
       "owner": "alice",
       "public": false,
       "songCount": 2,

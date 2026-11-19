@@ -91,9 +91,9 @@ fn installs_with_its_manifest() {
     let env = env_for(&server);
     let info = env.host.plugin(ID).unwrap();
     assert_eq!(info.name, "Subsonic");
-    assert_eq!(info.version, "0.0.6");
+    assert_eq!(info.version, "0.0.7");
     assert!(info.official, "signed with the test key, which this host trusts");
-    assert_eq!(info.capabilities.len(), 7);
+    assert_eq!(info.capabilities.len(), 9);
     assert_eq!(
         info.auth_kinds,
         vec![AuthKind::ApiKey, AuthKind::PasswordExchange]
@@ -104,6 +104,7 @@ fn installs_with_its_manifest() {
     assert_eq!(info.settings_schema["properties"]["server_url"]["format"], "uri");
     let capabilities = recv(env.host.capabilities(ID)).unwrap();
     assert!(capabilities.contains(&Capability::Recommendations));
+    assert!(capabilities.contains(&Capability::Discover) && capabilities.contains(&Capability::Details));
 }
 
 #[test]
@@ -840,4 +841,160 @@ fn login_forms_are_described() {
     assert_eq!(form[0].kind, FieldKind::Text);
     assert!(form[1].help.as_deref().unwrap().contains("not the password"));
     flow.cancel();
+}
+
+#[test]
+fn discover_shows_the_album_lists() {
+    let server = Mock::with_api_keys().start();
+    let env = env_for(&server);
+    assert_eq!(
+        recv(env.host.discover(ID)),
+        Err(CallError::Plugin(PluginError::AuthRequired))
+    );
+    sign_in_with_key(&env);
+    server.clear();
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(
+        titles,
+        [
+            "Recently Added",
+            "Most Played",
+            "Recently Played",
+            "Random Albums"
+        ]
+    );
+    let asked: Vec<(String, String)> = mock::all_params(&server)
+        .into_iter()
+        .filter(|(path, _)| path == "/rest/getAlbumList2.view")
+        .map(|(_, p)| (p["type"].clone(), p["size"].clone()))
+        .collect();
+    assert_eq!(
+        asked,
+        [
+            ("newest".to_string(), "20".to_string()),
+            ("frequent".into(), "20".into()),
+            ("recent".into(), "20".into()),
+            ("random".into(), "20".into())
+        ]
+    );
+    // See All browses the whole list.
+    let newest = &shelves[0];
+    assert_eq!(newest.more.as_deref(), Some("f:albums:newest"));
+    let all = recv(env.host.browse(
+        ID,
+        Some(item(ItemKind::Folder, "f:albums:newest", "Recently Added")),
+        page(50),
+    ))
+    .unwrap();
+    assert_eq!(
+        ids(&all),
+        newest.items.iter().map(|i| i.id.clone()).collect::<Vec<_>>()
+    );
+    // Albums carry no cover URL (it would hold the sign-in): the apps ask
+    // `artwork` for the ones on screen, which needs no further request.
+    server.clear();
+    for album in &newest.items {
+        assert!(album.artwork.is_none());
+        let art = recv(env.host.artwork(ID, album.clone(), 300)).unwrap();
+        if album.id != "al:al-3" {
+            let art = art.expect("a cover");
+            assert!(
+                art.url
+                    .starts_with(&format!("{}/rest/getCoverArt.view?", server.url()))
+            );
+        }
+    }
+    assert_eq!(
+        server.count("/rest/getAlbum.view"),
+        1,
+        "a lookup only for the album listed without a cover id"
+    );
+}
+
+#[test]
+fn details_of_albums_artists_songs_and_playlists() {
+    use jf_plugin_host::FactKey;
+    let server = Mock::with_api_keys().start();
+    let env = env_for(&server);
+    sign_in_with_key(&env);
+    let facts = |details: &jf_plugin_host::ItemDetails| -> Vec<(FactKey, String)> {
+        details
+            .facts
+            .iter()
+            .map(|f| (f.key.clone(), f.value.clone()))
+            .collect()
+    };
+
+    let album = recv(
+        env.host
+            .details(ID, item(ItemKind::Album, "al:al-1", "Polar Night")),
+    )
+    .unwrap();
+    assert_eq!(
+        album.description.as_deref(),
+        Some("Invented notes about Polar Night & its long nights.")
+    );
+    assert_eq!(
+        facts(&album),
+        [
+            (FactKey::Version, "Deluxe Edition".to_string()),
+            (FactKey::Genre, "Ambient, Drone".into()),
+            (FactKey::Released, "2021-03-05".into()),
+            (FactKey::Label, "Invented Records".into())
+        ]
+    );
+    let picture = album.image.expect("the album's cover");
+    let q = url_query(&picture.url);
+    assert_eq!((q["id"].as_str(), q["size"].as_str()), ("al-1_6501f00d", "1200"));
+    assert_eq!(fetch(&picture.url, &[]).unwrap().body, PNG);
+    assert_eq!(album.comment_count, None);
+
+    // Without notes or OpenSubsonic fields: the year alone.
+    let plain = recv(
+        env.host
+            .details(ID, item(ItemKind::Album, "al:al-2", "Ice Roads")),
+    )
+    .unwrap();
+    assert_eq!(plain.description, None);
+    assert!(facts(&plain).iter().all(|(k, _)| *k != FactKey::Version));
+
+    let artist = recv(env.host.details(ID, item(ItemKind::Artist, "ar:ar-1", "x"))).unwrap();
+    assert_eq!(
+        artist.description.as_deref(),
+        Some(
+            "An invented orchestra from the far north.\nIt records long, quiet pieces. Read more on Last.fm"
+        )
+    );
+    assert!(artist.image.unwrap().url.contains("id=ar-1_0"));
+
+    let song = recv(env.host.details(ID, track("tr:tr-1", "Aurora"))).unwrap();
+    assert_eq!(
+        facts(&song),
+        [
+            (FactKey::Genre, "Ambient".to_string()),
+            (FactKey::Released, "2021".into()),
+            (FactKey::Composer, "Invented Composer".into()),
+            (FactKey::Lyricist, "Invented Lyricist".into())
+        ]
+    );
+
+    let playlist = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "pl:pl-1", "Evening")),
+    )
+    .unwrap();
+    assert_eq!(
+        playlist.description.as_deref(),
+        Some("Invented songs for quiet evenings.")
+    );
+
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Album, "al:nope", "x"))),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Track, "local:9", "x"))),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
 }

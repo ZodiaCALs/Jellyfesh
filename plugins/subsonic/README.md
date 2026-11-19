@@ -19,6 +19,11 @@ Setup, server preparation and troubleshooting: `docs/plugins/subsonic.md`.
 * **Cover art** at the size the screen needs, **lyrics** (synced lyrics from
   OpenSubsonic servers as timed lines, plain lyrics otherwise) and
   **similar songs** when the server offers them.
+* **Discover** (plugin API 1.2): Recently Added, Most Played, Recently
+  Played and Random Albums (`getAlbumList2`). **Details**: album notes,
+  artist biographies (`getAlbumInfo2`, `getArtistInfo2`, usually from
+  Last.fm through the server), version, genres, release date, label and the
+  people on a song (OpenSubsonic fields), playlist descriptions.
 
 It works with servers that speak the Subsonic API 1.13.0 or newer. Your
 server may be on your home network; Jellyfesh lets this plugin reach that one
