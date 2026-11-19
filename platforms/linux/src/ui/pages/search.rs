@@ -73,7 +73,7 @@ pub fn page() -> adw::NavigationPage {
         &status(
             "system-search-symbolic",
             &tr("Search Your Music"),
-            &tr("Find songs, albums and artists in your library and in every source you have enabled."),
+            &tr("Find songs, albums and artists in your library and in your sources."),
         ),
         Some("hint"),
     );

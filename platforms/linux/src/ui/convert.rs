@@ -6,7 +6,7 @@ use jf_core::{
 };
 
 use crate::logic::format;
-use crate::ui::i18n::{tr, trf, trn};
+use crate::ui::i18n::{tr, trc, trf, trn};
 use crate::ui::models::{ItemData, Kind};
 use crate::ui::thumbs::ArtKey;
 
@@ -28,6 +28,12 @@ pub fn remote_lines(view: &crate::logic::remote::RemoteView) -> (String, String)
     let title = view.title.clone().unwrap_or_else(|| view.service.clone());
     let device = view.device.clone().unwrap_or_else(|| view.service.clone());
     (title, trf("Playing on {device}", &[("device", &device)]))
+}
+
+/// A source's name (its plugin's), or the id while the slice has no such
+/// plugin.
+fn source_name(id: &str) -> String {
+    crate::ui::state::try_app().map_or_else(|| id.to_owned(), |a| a.source_name(id))
 }
 
 pub fn art_of(artwork: Option<&ArtworkRef>) -> Option<ArtKey> {
@@ -156,9 +162,13 @@ pub fn source_item(s: &SourceItem) -> ItemData {
         (true, ItemKind::Track) => Kind::Track,
         _ => Kind::Source,
     };
+    // The other sources that have the same item: "Also in …" (docs/ui.md,
+    // "Search"; the core merges them).
+    let also = crate::logic::search::also_in(&s.also_in, source_name, &trc("list", ", "))
+        .map(|names| trf("Also in {sources}", &[("sources", &names)]));
     let subtitle = match s.kind {
-        ItemKind::Track => format::dot_join([s.subtitle.as_deref(), s.album.as_deref()]),
-        _ => s.subtitle.clone().unwrap_or_default(),
+        ItemKind::Track => format::dot_join([s.subtitle.as_deref(), s.album.as_deref(), also.as_deref()]),
+        _ => format::dot_join([s.subtitle.as_deref(), also.as_deref()]),
     };
     // An item that cannot play here shows why (the source's words).
     let detail = match (&s.unplayable_reason, s.playable) {

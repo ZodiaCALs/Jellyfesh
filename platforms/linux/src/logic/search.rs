@@ -112,6 +112,20 @@ impl SearchState {
     }
 }
 
+/// The other sources that have an item (`SourceItem::also_in`, merged by
+/// the core), named by `name` and joined with `separator`, each once and in
+/// the core's order, for "Also in …"; `None` when no other source has it.
+pub fn also_in(ids: &[String], name: impl Fn(&str) -> String, separator: &str) -> Option<String> {
+    let mut names: Vec<String> = Vec::new();
+    for id in ids {
+        let n = name(id);
+        if !n.trim().is_empty() && !names.contains(&n) {
+            names.push(n);
+        }
+    }
+    (!names.is_empty()).then(|| names.join(separator))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -131,6 +145,8 @@ mod tests {
             track: None,
             also_in: Vec::new(),
             link: None,
+            artist_id: None,
+            album_id: None,
         }
     }
 
@@ -182,6 +198,22 @@ mod tests {
         s.clear();
         assert!(s.sections().is_empty());
         assert!(!s.is_waiting());
+    }
+
+    #[test]
+    fn names_the_other_sources_once_in_order() {
+        let name = |id: &str| match id {
+            "org.example.navidrome" => "Navidrome".to_owned(),
+            "org.example.jellyfin" | "org.example.jellyfin2" => "Jellyfin".to_owned(),
+            other => other.to_owned(),
+        };
+        let ids: Vec<String> = ["org.example.navidrome", "org.example.jellyfin", "org.example.jellyfin2"]
+            .map(String::from)
+            .to_vec();
+        assert_eq!(also_in(&ids, name, ", ").as_deref(), Some("Navidrome, Jellyfin"));
+        assert_eq!(also_in(&ids[1..2], name, "、").as_deref(), Some("Jellyfin"));
+        assert_eq!(also_in(&[], name, ", "), None);
+        assert_eq!(also_in(&[String::new()], name, ", "), None);
     }
 
     #[test]
