@@ -575,6 +575,16 @@ pub struct Settings {
     #[uniffi(default = true)]
     #[serde(default = "yes")]
     pub check_for_updates: bool,
+    /// Show Lyrics Bar (Settings › Appearance › Lyrics): the one-line lyrics bar under the
+    /// player (`lyrics_bar`). On by default.
+    #[uniffi(default = true)]
+    #[serde(default = "yes")]
+    pub show_lyrics_bar: bool,
+    /// Desktop Lyrics (Settings › Appearance › Lyrics): the current line in a window of its own
+    /// above other apps, on desktops. Off by default.
+    #[uniffi(default = false)]
+    #[serde(default)]
+    pub desktop_lyrics: bool,
 }
 
 fn yes() -> bool {

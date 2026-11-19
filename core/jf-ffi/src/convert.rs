@@ -435,6 +435,8 @@ mirror_struct!(jf::Settings => Settings {
     watch_folders,
     allow_community_plugins,
     check_for_updates,
+    show_lyrics_bar,
+    desktop_lyrics,
 });
 
 use jf::ReplayGainMode as CoreReplayGainMode;

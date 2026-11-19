@@ -563,7 +563,9 @@ public sealed record Settings(
     bool ResumeOnLaunch,
     bool WatchFolders,
     bool AllowCommunityPlugins,
-    bool CheckForUpdates = true);
+    bool CheckForUpdates = true,
+    bool ShowLyricsBar = true,
+    bool DesktopLyrics = false);
 
 [JsonConverter(typeof(JsonStringEnumConverter<ReplayGainMode>))]
 public enum ReplayGainMode

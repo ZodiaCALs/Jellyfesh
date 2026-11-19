@@ -685,6 +685,12 @@ pub struct Settings {
     /// Check for Updates Automatically (direct downloads only; ADR-0021 §5):
     /// at most once a day. On by default.
     pub check_for_updates: bool,
+    /// Show Lyrics Bar (Settings › Appearance › Lyrics): the one-line
+    /// lyrics bar under the player ([`crate::lyrics_bar`]). On by default.
+    pub show_lyrics_bar: bool,
+    /// Desktop Lyrics (Settings › Appearance › Lyrics): the current line in
+    /// a window of its own above other apps, on desktops. Off by default.
+    pub desktop_lyrics: bool,
 }
 
 impl Default for Settings {
@@ -709,6 +715,8 @@ impl Default for Settings {
             watch_folders: true,
             allow_community_plugins: false,
             check_for_updates: true,
+            show_lyrics_bar: true,
+            desktop_lyrics: false,
         }
     }
 }
@@ -1964,4 +1972,30 @@ pub struct ArtworkReady {
     pub size_px: u32,
     /// The cached file, or `None` when it cannot be had.
     pub path: Option<PathBuf>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn settings_saved_before_a_field_existed_take_its_default() {
+        let mut saved = serde_json::to_value(Settings {
+            check_for_updates: false,
+            show_lyrics_bar: false,
+            desktop_lyrics: true,
+            ..Settings::default()
+        })
+        .unwrap();
+        let fields = saved.as_object_mut().unwrap();
+        fields.remove("show_lyrics_bar");
+        fields.remove("desktop_lyrics");
+        let read: Settings = serde_json::from_value(saved).unwrap();
+        assert!(
+            !read.check_for_updates,
+            "fields that were saved keep their values"
+        );
+        assert!(read.show_lyrics_bar);
+        assert!(!read.desktop_lyrics);
+    }
 }

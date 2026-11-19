@@ -144,6 +144,8 @@ pub fn settings() -> jf::Settings {
         watch_folders: false,
         allow_community_plugins: true,
         check_for_updates: false,
+        show_lyrics_bar: false,
+        desktop_lyrics: true,
     }
 }
 

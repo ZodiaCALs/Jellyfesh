@@ -134,8 +134,13 @@ lyrics_align (start/center), show_translation, show_romanization, crossfade
 output_device, resume_on_launch (the core resumes the restored queue at its
 saved position when it starts, when session restore is on), watch_folders,
 allow_community_plugins, check_for_updates (direct downloads: at most one
-check a day; on by default). The core applies playback, library and source
-settings; shells apply the appearance ones.
+check a day; on by default), show_lyrics_bar (Show Lyrics Bar in Settings ›
+Appearance › Lyrics: the one-line lyrics bar, on by default) and
+desktop_lyrics (Desktop Lyrics: the current line in a window of its own
+above other apps, off by default). The core applies playback, library and
+source settings; shells apply the appearance ones, the lyrics bar and
+Desktop Lyrics among them. Settings saved before a field existed read with
+its default.
 
 Transparency scales the alpha of the glass grades: `jf_palette::glass_alpha`
 (token alpha at 0.5, opaque at 0, half the token alpha at 1) or

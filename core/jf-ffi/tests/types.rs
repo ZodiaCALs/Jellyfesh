@@ -164,6 +164,30 @@ fn deviations_from_the_core_types() {
     );
 }
 
+/// Settings JSON from an older app or file, without the newer fields, reads with their
+/// defaults: Check for Updates and Show Lyrics Bar on, Desktop Lyrics off.
+#[test]
+fn settings_without_newer_fields_take_their_defaults() {
+    let mut json = serde_json::to_value(Settings::from(common::settings())).unwrap();
+    let fields = json.as_object_mut().unwrap();
+    for key in ["check_for_updates", "show_lyrics_bar", "desktop_lyrics"] {
+        assert!(fields.remove(key).is_some(), "{key} is written");
+    }
+    let read: Settings = serde_json::from_value(json).unwrap();
+    assert!(read.check_for_updates);
+    assert!(read.show_lyrics_bar);
+    assert!(!read.desktop_lyrics);
+    // The values cross into the core and back unchanged.
+    let set = Settings {
+        show_lyrics_bar: false,
+        desktop_lyrics: true,
+        ..read
+    };
+    let core = jf::Settings::from(set.clone());
+    assert!(!core.show_lyrics_bar && core.desktop_lyrics);
+    assert_eq!(Settings::from(core), set);
+}
+
 /// The JSON the C ABI speaks: enums with data are tagged by `type` (written first, which
 /// .NET 8's System.Text.Json needs), plain enums are their name, fields keep their Rust names.
 #[test]
