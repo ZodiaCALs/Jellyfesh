@@ -87,6 +87,31 @@ public static class LibraryActions
 /// <summary>New Playlist… (it asks for the name first) and Add to Playlist… for songs, albums, artists and playlists.</summary>
 public static class PlaylistActions
 {
+    /// <summary>The most songs one Add to Playlist… takes from an artist or a playlist.</summary>
+    public const uint MaxTracks = 100_000;
+
+    /// <summary>
+    /// The songs of an album, an artist or a playlist in the core's order, for Add to Playlist… on a
+    /// tile or a row (docs/parity.md N3); none for anything else.
+    /// </summary>
+    public static async Task<IReadOnlyList<TrackRef>> TracksOfAsync(ShellServices s, Collection collection)
+    {
+        switch (collection)
+        {
+            case Collection.Album album:
+                var albumTracks = await s.QueryAsync(c => c.AlbumTracks(album.Id));
+                return albumTracks.Value?.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray() ?? [];
+            case Collection.Artist artist:
+                var artistTracks = await s.QueryAsync(c => c.Tracks(new TrackQuery(0, MaxTracks, TrackSort.Album, false, null, artist.Id)));
+                return artistTracks.Value?.Select(t => (TrackRef)new TrackRef.Library(t.Id)).ToArray() ?? [];
+            case Collection.Playlist playlist:
+                var entries = await s.QueryAsync(c => c.PlaylistEntries(playlist.Id, 0, MaxTracks));
+                return entries.Value?.Select(e => e.Row.Track).ToArray() ?? [];
+            default:
+                return [];
+        }
+    }
+
     /// <summary>Asks for a name, then makes the playlist with <paramref name="tracks"/> (none for an empty one); nothing when cancelled.</summary>
     public static async Task CreateAsync(ShellServices s, IReadOnlyList<TrackRef> tracks)
     {
@@ -577,7 +602,8 @@ public sealed partial class SongsViewModel(ShellServices services) : PageViewMod
     private PagedList<TrackItem, Track>? _songs;
 
     [ObservableProperty]
-    private TrackSort _sort = TrackSort.Title;
+    // Artist first, as in the macOS and Android apps and the web (docs/parity.md V6).
+    private TrackSort _sort = TrackSort.Artist;
 
     /// <summary>The sort menu's Descending; each order starts in its own direction (newest first for Year and Recently Added).</summary>
     [ObservableProperty]

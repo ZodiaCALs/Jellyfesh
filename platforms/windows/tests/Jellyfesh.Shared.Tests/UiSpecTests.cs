@@ -93,7 +93,7 @@ public class UiSpecTests
         h.Started();
         var songs = h.App.CreateSongs();
         Assert.Equal([TrackSort.Title, TrackSort.Artist, TrackSort.Album, TrackSort.Year, TrackSort.Added], songs.Sorts);
-        Assert.Equal(TrackSort.Title, songs.Sort);
+        Assert.Equal(TrackSort.Artist, songs.Sort); // as in the macOS and Android apps and the web (docs/parity.md V6)
 
         songs.Sort = TrackSort.Year;
         Assert.True(songs.Descending);

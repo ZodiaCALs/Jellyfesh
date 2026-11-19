@@ -16,9 +16,9 @@ public sealed partial class HomePage : JfPage
         InitializeComponent();
         Lists.Attach(AddedShelf, 168, menu: new CollectionMenu(AppHost.Services, o => o is AlbumItem a ? new Collection.Album(a.Id) : null).Flyout);
         var songs = new TrackMenu(AppHost.Services).Flyout;
-        foreach (var shelf in new[] { PlayedShelf, MostShelf })
+        foreach (var list in new[] { PlayedList, MostList })
         {
-            Lists.Attach(shelf, 148, menu: songs);
+            Lists.Attach(list, 40, menu: songs);
         }
     }
 

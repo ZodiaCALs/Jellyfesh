@@ -63,19 +63,6 @@
         </Grid>
     </DataTemplate>
 
-    <!-- Home's rows of songs: a small tile per track. -->
-    <DataTemplate x:Key="TrackTileTemplate" x:DataType="vm:TrackItem">
-        <StackPanel Width="148" Spacing="8" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
-            <Border Width="148" Height="148" CornerRadius="{th:Token Key=Artwork.RadiusGrid, Kind=Corner}" Background="{ThemeResource JfFill}">
-                <Image controls:Artwork.DecodeSize="296" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
-            </Border>
-            <StackPanel Spacing="2">
-                <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Title, Mode=OneWay}" />
-                <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
-            </StackPanel>
-        </StackPanel>
-    </DataTemplate>
-
     <!-- Albums lift on hover and offer a glass play button (Controls/AlbumTile, after Apple Music). -->
     <DataTemplate x:Key="AlbumTileTemplate" x:DataType="vm:AlbumItem">
         <controls:AlbumTile
@@ -137,17 +124,22 @@
         </Grid>
     </DataTemplate>
 
-    <DataTemplate x:Key="PlaylistTileTemplate" x:DataType="vm:PlaylistItem">
-        <StackPanel Width="168" Spacing="8" AutomationProperties.Name="{x:Bind Name}">
-            <Grid Width="168" Height="168" CornerRadius="{th:Token Key=Artwork.RadiusGrid, Kind=Corner}" Background="{ThemeResource JfAccentSoft}">
-                <controls:StrokeIcon Data="{StaticResource IconQueue}" Size="48" Foreground="{ThemeResource JfAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                <Image controls:Artwork.DecodeSize="336" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+    <!-- The Playlists page is a list (docs/parity.md V3): the cover or the playlist glyph, the name and "12 songs, 48 min". -->
+    <DataTemplate x:Key="PlaylistRowTemplate" x:DataType="vm:PlaylistItem">
+        <Grid Height="{th:Token Key=Player.RowHeight}" ColumnSpacing="12" Background="Transparent" AutomationProperties.Name="{x:Bind Name}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="40" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid Width="40" Height="40" CornerRadius="{th:Token Key=Artwork.RadiusList, Kind=Corner}" Background="{ThemeResource JfAccentSoft}">
+                <controls:StrokeIcon Data="{StaticResource IconQueue}" Size="20" Foreground="{ThemeResource JfAccentText}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Image controls:Artwork.DecodeSize="80" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
             </Grid>
-            <StackPanel Spacing="2">
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                 <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Name}" />
                 <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle}" />
             </StackPanel>
-        </StackPanel>
+        </Grid>
     </DataTemplate>
 
     <DataTemplate x:Key="QueueRowTemplate" x:DataType="vm:QueueEntryItem">

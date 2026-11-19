@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Home (docs/ui.md): the library's size, then Recently Added (albums), Recently Played and Most Played
-    (songs). With nothing in the library and no source signed in, the welcome instead, with Add Music
-    Folder… and Add a Source.
+    Home (docs/ui.md): the library's size, then Recently Added (albums, a shelf that scrolls sideways),
+    Recently Played and Most Played (songs as rows on one surface, as in the other apps). With nothing
+    in the library and no source signed in, the welcome instead, with Add Music Folder… and Add a
+    Source.
 -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.HomePage"
@@ -12,7 +13,7 @@
     NavigationCacheMode="Enabled">
 
     <Page.Resources>
-        <!-- A row of tiles that scrolls sideways inside the page. -->
+        <!-- A row of album tiles that scrolls sideways inside the page. -->
         <Style x:Key="ShelfStyle" TargetType="GridView">
             <Setter Property="Height" Value="232" />
             <Setter Property="SelectionMode" Value="None" />
@@ -55,12 +56,16 @@
 
             <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.RecentlyPlayed.Count), Mode=OneWay}">
                 <TextBlock x:Uid="Home_RecentlyPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently Played" />
-                <GridView x:Name="PlayedShelf" x:Uid="Home_RecentlyPlayedList" AutomationProperties.Name="Recently Played" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyPlayed}" Style="{StaticResource ShelfStyle}" />
+                <Border Padding="8" Style="{StaticResource JfCardStyle}">
+                    <ListView x:Name="PlayedList" x:Uid="Home_RecentlyPlayedList" AutomationProperties.Name="Recently Played" IsItemClickEnabled="True" ItemClick="OnTrackClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyPlayed}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />
+                </Border>
             </StackPanel>
 
             <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.MostPlayed.Count), Mode=OneWay}">
                 <TextBlock x:Uid="Home_MostPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Most Played" />
-                <GridView x:Name="MostShelf" x:Uid="Home_MostPlayedList" AutomationProperties.Name="Most Played" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackTileTemplate}" ItemsSource="{x:Bind ViewModel.MostPlayed}" Style="{StaticResource ShelfStyle}" />
+                <Border Padding="8" Style="{StaticResource JfCardStyle}">
+                    <ListView x:Name="MostList" x:Uid="Home_MostPlayedList" AutomationProperties.Name="Most Played" IsItemClickEnabled="True" ItemClick="OnTrackClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.MostPlayed}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />
+                </Border>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

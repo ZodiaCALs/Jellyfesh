@@ -17,7 +17,7 @@ public sealed partial class PlaylistsPage : JfPage
             o => o is PlaylistItem p ? new Collection.Playlist(p.Id) : null,
             "Menu_DeletePlaylist",
             o => ViewModel.DeleteCommand.Execute(o as PlaylistItem));
-        Lists.Attach(PlaylistGrid, 168, menu: menu.Flyout);
+        Lists.Attach(PlaylistGrid, 40, menu: menu.Flyout);
     }
 
     public PlaylistsViewModel ViewModel { get; }
