@@ -925,6 +925,79 @@ pub fn read_file_tags(path: &Path, with_cover: bool) -> Result<FileTags, Library
     })
 }
 
+/// What About This Song shows from a file's tags and audio properties
+/// ([`read_file_details`]).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct FileDetails {
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub album_artist: Option<String>,
+    /// A version or subtitle ("Live", "2011 Remaster").
+    pub subtitle: Option<String>,
+    pub genre: Option<String>,
+    pub language: Option<String>,
+    /// The release (or recording) date as tagged: "2011-05-03", "2011".
+    pub released: Option<String>,
+    /// The label, or the publisher.
+    pub label: Option<String>,
+    pub composer: Option<String>,
+    pub lyricist: Option<String>,
+    pub arranger: Option<String>,
+    pub producer: Option<String>,
+    pub isrc: Option<String>,
+    pub track_no: Option<u32>,
+    pub track_total: Option<u32>,
+    pub disc_no: Option<u32>,
+    pub disc_total: Option<u32>,
+    /// Short lowercase codec name, as [`Track::codec`].
+    pub codec: Option<String>,
+    /// The container: `flac`, `mp3`, `mp4`, `ogg`, `wav`, `aiff`, …
+    pub container: Option<String>,
+    pub sample_rate: Option<u32>,
+    pub bit_depth: Option<u8>,
+    pub channels: Option<u8>,
+    /// The audio bit rate (or the file's overall one) in kbit/s.
+    pub bitrate_kbps: Option<u32>,
+    pub duration_ms: Option<u64>,
+    pub file_size: Option<u64>,
+    pub replaygain: ReplayGain,
+}
+
+/// Reads what About This Song shows from `path`'s tags and audio
+/// properties, without touching any catalogue.
+pub fn read_file_details(path: &Path) -> Result<FileDetails, LibraryError> {
+    let parsed = match tags::parse(&StdFileSystem, path, false) {
+        Ok(parsed) => parsed,
+        Err(tags::ReadError::Io(err)) => return Err(err.into()),
+        Err(tags::ReadError::Format(message)) => {
+            return Err(LibraryError::Tags {
+                path: path.to_path_buf(),
+                message,
+            });
+        }
+    };
+    let mut details = parsed.details();
+    details.file_size = std::fs::metadata(path).ok().map(|m| m.len());
+    Ok(details)
+}
+
+/// The thumbnail size [`make_thumbnail`] makes for a request of `size_px`:
+/// 64, 128, 256, 512 or 1024.
+pub fn thumbnail_size(size_px: u32) -> u32 {
+    thumbnail::bucket(size_px)
+}
+
+/// Writes a JPEG thumbnail of the picture `source` (JPEG or PNG) that fits a
+/// square of [`thumbnail_size`]`(size_px)`, never enlarged, to `target`
+/// (atomically), as the library's own thumbnails are made.
+pub fn make_thumbnail(source: &[u8], size_px: u32, target: &Path) -> Result<(), LibraryError> {
+    thumbnail::make(source, thumbnail::bucket(size_px), target).map_err(|message| LibraryError::Artwork {
+        hash: blake3::hash(source).to_hex().to_string(),
+        message,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

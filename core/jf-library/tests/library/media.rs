@@ -235,3 +235,64 @@ fn file_tags_are_read_without_a_catalogue() {
     assert!(without.cover.is_none());
     assert!(jf_library::read_file_tags(&dir.path().join("missing.flac"), false).is_err());
 }
+
+#[test]
+fn file_details_read_credits_numbers_and_the_format() {
+    let fx = Fixture::new();
+    let path = fx.path("details/invented.flac");
+    fixtures::flac(&path, 1_500);
+    fixtures::tag(&path, |tag| {
+        fixtures::basic(tag, "Invented Song", "Test Artist", "Test Album", 3);
+        fixtures::set_text(tag, ItemKey::TrackTotal, "12");
+        fixtures::set_text(tag, ItemKey::DiscNumber, "1");
+        fixtures::set_text(tag, ItemKey::DiscTotal, "2");
+        fixtures::set_text(tag, ItemKey::TrackSubtitle, "Live");
+        fixtures::set_text(tag, ItemKey::Composer, "A. Composer");
+        fixtures::set_text(tag, ItemKey::Lyricist, "A. Lyricist");
+        fixtures::set_text(tag, ItemKey::Label, "Test Label");
+        fixtures::set_text(tag, ItemKey::ReleaseDate, "2011-05-03");
+        fixtures::set_text(tag, ItemKey::Isrc, "XX0000000001");
+    });
+    let details = jf_library::read_file_details(&path).unwrap();
+    assert_eq!(details.title.as_deref(), Some("Invented Song"));
+    assert_eq!(details.artist.as_deref(), Some("Test Artist"));
+    assert_eq!(details.subtitle.as_deref(), Some("Live"));
+    assert_eq!(details.composer.as_deref(), Some("A. Composer"));
+    assert_eq!(details.lyricist.as_deref(), Some("A. Lyricist"));
+    assert_eq!(details.label.as_deref(), Some("Test Label"));
+    assert_eq!(details.released.as_deref().map(|d| &d[..4]), Some("2011"));
+    assert_eq!(details.isrc.as_deref(), Some("XX0000000001"));
+    assert_eq!((details.track_no, details.track_total), (Some(3), Some(12)));
+    assert_eq!((details.disc_no, details.disc_total), (Some(1), Some(2)));
+    assert_eq!(details.codec.as_deref(), Some("flac"));
+    assert_eq!(details.container.as_deref(), Some("flac"));
+    assert_eq!(details.sample_rate, Some(fixtures::RATE));
+    assert_eq!(details.bit_depth, Some(16));
+    assert_eq!(details.channels, Some(1));
+    assert!(details.duration_ms.is_some_and(|d| d.abs_diff(1_500) <= 5));
+    assert_eq!(details.file_size, Some(fs::metadata(&path).unwrap().len()));
+
+    // ID3v2 in a WAV: "3/12" in the track number.
+    let wav = fx.path("details/invented.wav");
+    fixtures::wav(&wav, 500);
+    fixtures::tag(&wav, |tag| {
+        fixtures::basic(tag, "Invented Tone", "Test Artist", "Test Album", 3);
+        fixtures::set_text(tag, ItemKey::TrackTotal, "12");
+    });
+    let details = jf_library::read_file_details(&wav).unwrap();
+    assert_eq!((details.track_no, details.track_total), (Some(3), Some(12)));
+    assert_eq!(details.codec.as_deref(), Some("pcm"));
+    assert_eq!(details.container.as_deref(), Some("wav"));
+    assert!(jf_library::read_file_details(&fx.path("details/missing.flac")).is_err());
+}
+
+#[test]
+fn thumbnails_of_any_picture() {
+    let fx = Fixture::new();
+    let target = fx.path("thumbs/one.jpg");
+    jf_library::make_thumbnail(&fixtures::png(300, 150, [200, 30, 30]), 100, &target).unwrap();
+    assert_eq!(jf_library::thumbnail_size(100), 128);
+    let jpeg = fs::read(&target).unwrap();
+    assert_eq!(&jpeg[..2], &[0xff, 0xd8], "a JPEG");
+    assert!(jf_library::make_thumbnail(b"not a picture", 64, &fx.path("thumbs/bad.jpg")).is_err());
+}

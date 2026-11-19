@@ -225,6 +225,23 @@ fn codec_name(file_type: FileType) -> Option<&'static str> {
     })
 }
 
+/// The container a file type is, as About This Song names it.
+fn container_name(file_type: FileType) -> Option<&'static str> {
+    Some(match file_type {
+        FileType::Aac => "aac",
+        FileType::Aiff => "aiff",
+        FileType::Ape => "ape",
+        FileType::Flac => "flac",
+        FileType::Mpeg => "mp3",
+        FileType::Mp4 => "mp4",
+        FileType::Mpc => "mpc",
+        FileType::Opus | FileType::Vorbis | FileType::Speex => "ogg",
+        FileType::Wav => "wav",
+        FileType::WavPack => "wavpack",
+        _ => return None,
+    })
+}
+
 impl Parsed {
     /// Tags in priority order: the format's primary tag first, then the others
     /// (an MP3's ID3v1 or APE tag only fills fields its ID3v2 tag lacks).
@@ -287,6 +304,63 @@ impl Parsed {
             },
             isrc: text(&tags, ItemKey::Isrc),
             has_lyrics: !self.synced.is_empty() || text_lyrics(&tags).is_some(),
+        }
+    }
+
+    /// Everything About This Song shows from the file: the catalogue fields
+    /// and the credits, dates and numbers the catalogue does not keep.
+    pub(crate) fn details(&self) -> crate::FileDetails {
+        let tags = self.tags();
+        let meta = self.meta();
+        let properties = self.file.properties();
+        let first = |key| text(&tags, key);
+        let all = |key| joined(&texts(&tags, key));
+        let total = |key, number_key| {
+            first(key)
+                .and_then(|s| leading_number(&s))
+                // "3/12" in the number itself.
+                .or_else(|| {
+                    first(number_key).and_then(|s| s.split_once('/').and_then(|(_, t)| leading_number(t)))
+                })
+        };
+        crate::FileDetails {
+            title: meta.title,
+            artist: meta.artist,
+            album: meta.album,
+            album_artist: meta.album_artist,
+            subtitle: first(ItemKey::TrackSubtitle),
+            genre: meta.genre,
+            language: first(ItemKey::Language),
+            released: [
+                ItemKey::ReleaseDate,
+                ItemKey::RecordingDate,
+                ItemKey::OriginalReleaseDate,
+                ItemKey::Year,
+            ]
+            .into_iter()
+            .find_map(first),
+            label: first(ItemKey::Label).or_else(|| first(ItemKey::Publisher)),
+            composer: all(ItemKey::Composer),
+            lyricist: all(ItemKey::Lyricist),
+            arranger: all(ItemKey::Arranger),
+            producer: all(ItemKey::Producer),
+            isrc: meta.isrc,
+            track_no: meta.track_no,
+            track_total: total(ItemKey::TrackTotal, ItemKey::TrackNumber),
+            disc_no: meta.disc_no,
+            disc_total: total(ItemKey::DiscTotal, ItemKey::DiscNumber),
+            codec: meta.codec,
+            container: container_name(self.file.file_type()).map(str::to_owned),
+            sample_rate: meta.sample_rate,
+            bit_depth: meta.bit_depth,
+            channels: meta.channels,
+            bitrate_kbps: properties
+                .audio_bitrate()
+                .or_else(|| properties.overall_bitrate())
+                .filter(|&kbps| kbps > 0),
+            duration_ms: meta.duration_ms,
+            file_size: None,
+            replaygain: meta.replaygain,
         }
     }
 
