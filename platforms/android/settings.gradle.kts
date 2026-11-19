@@ -23,6 +23,9 @@ pluginManagement {
             content {
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google\\.(android|testing|prefab).*")
+                // Play Billing's data transport needs the Firebase encoders, which only Google's
+                // Maven hosts (com.google.firebase:firebase-encoders, -json and -proto).
+                includeGroupByRegex("com\\.google\\.firebase.*")
                 includeGroupByRegex("androidx.*")
             }
         }
@@ -38,6 +41,9 @@ dependencyResolutionManagement {
             content {
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("com\\.google\\.(android|testing|prefab).*")
+                // Play Billing's data transport needs the Firebase encoders, which only Google's
+                // Maven hosts (com.google.firebase:firebase-encoders, -json and -proto).
+                includeGroupByRegex("com\\.google\\.firebase.*")
                 includeGroupByRegex("androidx.*")
             }
         }
