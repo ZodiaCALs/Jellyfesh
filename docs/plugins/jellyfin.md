@@ -77,6 +77,18 @@ connections still apply.
   synced lyrics as timed lines, others as plain text. Lyrics for tracks from
   other sources are found by title, artist and length.
 * **Instant mix**: suggestions based on a track, album, artist or playlist.
+* **Discover** (Jellyfesh v0.0.7): shelves of Recently Added (the newest
+  albums), Continue Listening (what you stopped in the middle of, such as an
+  audiobook), Favourites and Suggestions (albums Jellyfin picks at random),
+  twenty each; a shelf with nothing in it is left out. **See All** opens the
+  whole list where Jellyfin has one.
+* **Get Info** (v0.0.7) on an album, artist, song or playlist shows its
+  overview from Jellyfin (album notes, a biography, a description) and its
+  genres, release date, label and the composers, lyricists, arrangers and
+  producers Jellyfin knows, with its picture.
+* **Covers**: every item with a picture on the server carries it; Jellyfin
+  serves item pictures without a sign-in, so nothing secret is in their
+  addresses.
 
 ## Signing out
 

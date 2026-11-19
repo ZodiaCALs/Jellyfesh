@@ -416,6 +416,58 @@ impl Mock {
                     .collect();
                 json(query_result(views, 0))
             }
+            // UserLibraryController.GetLatestMedia: the newest music, its
+            // songs grouped into their albums (groupItems), as a bare list.
+            ("GET", "/Items/Latest") => {
+                if let Err(response) = check_enums(request) {
+                    return response;
+                }
+                let fields = list_param(request, "fields");
+                let limit = number(request.query("limit"), 20);
+                let mut albums: Vec<Value> = lib
+                    .list("albums")
+                    .iter()
+                    .filter(|a| visible(a))
+                    .cloned()
+                    .collect();
+                albums.sort_by(|a, b| b["DateCreated"].as_str().cmp(&a["DateCreated"].as_str()));
+                json(Value::Array(
+                    albums.iter().take(limit).map(|a| shape(a, &fields)).collect(),
+                ))
+            }
+            // ItemsController.GetResumeItems: what the account stopped in the middle of.
+            ("GET", "/UserItems/Resume") => {
+                if let Err(response) = check_enums(request) {
+                    return response;
+                }
+                let fields = list_param(request, "fields");
+                let resumed: Vec<Value> = lib
+                    .list("songs")
+                    .iter()
+                    .filter(|s| visible(s) && s["_resume"] == true)
+                    .map(|s| shape(s, &fields))
+                    .collect();
+                json(query_result(resumed, 0))
+            }
+            // SuggestionsController.GetSuggestions: items of the asked types in a
+            // random order (the mock's order is fixed: the albums backwards).
+            ("GET", "/Items/Suggestions") => {
+                if let Err(response) = check_enums(request) {
+                    return response;
+                }
+                let fields = list_param(request, "fields");
+                let kinds = list_param(request, "type");
+                let limit = number(request.query("limit"), 20);
+                let suggested: Vec<Value> = lib
+                    .list("albums")
+                    .iter()
+                    .rev()
+                    .filter(|a| visible(a) && kinds.iter().any(|k| a["Type"] == k.as_str()))
+                    .take(limit)
+                    .map(|a| shape(a, &fields))
+                    .collect();
+                json(query_result(suggested, 0))
+            }
             ("GET", "/Items") => match self.items(&lib, request, &visible) {
                 Ok((list, start, fields)) => {
                     let total = list.len();
@@ -487,6 +539,10 @@ impl Mock {
         let mut all: Vec<Value> = Vec::new();
         for kind in ["albums", "songs", "playlists"] {
             all.extend(lib.list(kind).iter().filter(|i| visible(i)).cloned());
+        }
+        if request.query("ids").is_some() {
+            // Asked by id, any kind of item answers, artists too.
+            all.extend(lib.list("artists").iter().cloned());
         }
         if kinds.is_empty() && request.query("ids").is_none() && request.query("parentId").is_none() {
             // The mock only answers the queries a music client makes.
@@ -699,6 +755,11 @@ fn shape(item: &Value, fields: &[String], may_play: bool) -> Value {
     }
     if !asked("DateCreated") {
         object.remove("DateCreated");
+    }
+    for field in ["Overview", "Genres", "People", "Studios"] {
+        if !asked(field) {
+            object.remove(field);
+        }
     }
     object.insert("ServerId".into(), SERVER_ID.into());
     out

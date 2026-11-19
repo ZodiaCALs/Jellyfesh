@@ -71,6 +71,32 @@ pub struct BaseItem {
     /// With `fields=MediaSources`.
     #[serde(deserialize_with = "lenient")]
     pub media_sources: Vec<MediaSource>,
+    /// With `fields=Overview`: album notes, an artist's biography.
+    #[serde(deserialize_with = "lenient")]
+    pub overview: Option<String>,
+    /// With `fields=Genres`.
+    #[serde(deserialize_with = "lenient")]
+    pub genres: Vec<String>,
+    /// With `fields=People`: composers, lyricists and others.
+    #[serde(deserialize_with = "lenient")]
+    pub people: Vec<Person>,
+    /// With `fields=Studios`: for music, the labels.
+    #[serde(deserialize_with = "lenient")]
+    pub studios: Vec<NameId>,
+    /// When it was released (`2021-03-05T00:00:00.0000000Z`).
+    #[serde(deserialize_with = "lenient")]
+    pub premiere_date: Option<String>,
+}
+
+/// `BaseItemPerson`.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "PascalCase", default)]
+pub struct Person {
+    #[serde(deserialize_with = "lenient")]
+    pub name: Option<String>,
+    /// `PersonKind`: `Composer`, `Lyricist`, `Arranger`, `Producer`, …
+    #[serde(rename = "Type", deserialize_with = "lenient")]
+    pub kind: Option<String>,
 }
 
 /// `NameGuidPair`.

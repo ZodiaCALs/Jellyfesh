@@ -120,9 +120,9 @@ fn installs_with_its_manifest() {
     let env = env_for(&server);
     let info = env.host.plugin(ID).unwrap();
     assert_eq!(info.name, "Jellyfin");
-    assert_eq!(info.version, "0.0.6");
+    assert_eq!(info.version, "0.0.7");
     assert!(info.official, "signed with the test key, which this host trusts");
-    assert_eq!(info.capabilities.len(), 7);
+    assert_eq!(info.capabilities.len(), 9);
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr, AuthKind::PasswordExchange]);
     assert!(info.has_icon);
     assert_eq!(info.settings["quality"], "app");
@@ -131,6 +131,7 @@ fn installs_with_its_manifest() {
     assert_eq!(info.settings_schema["properties"]["server_url"]["format"], "uri");
     let capabilities = recv(env.host.capabilities(ID)).unwrap();
     assert!(capabilities.contains(&Capability::Recommendations));
+    assert!(capabilities.contains(&Capability::Discover) && capabilities.contains(&Capability::Details));
 }
 
 #[test]
@@ -149,7 +150,7 @@ fn password_sign_in_keeps_only_the_token() {
     let first = auth_of(&server, "/Users/AuthenticateByName");
     assert_eq!(first["Client"], "Jellyfesh");
     assert_eq!(first["Device"], "Jellyfesh");
-    assert_eq!(first["Version"], "0.0.6");
+    assert_eq!(first["Version"], "0.0.7");
     let device_id = first["DeviceId"].clone();
     assert_eq!(device_id.len(), 32);
     assert!(device_id.bytes().all(|b| b.is_ascii_hexdigit()));
@@ -999,4 +1000,148 @@ fn signed_in_after_a_restart() {
     assert_eq!(host.plugin(ID).unwrap().account.as_deref(), Some("alice"));
     let found = recv(host.search(ID, "driftwood", kinds(&[ItemKind::Album]), page(5))).unwrap();
     assert_eq!(ids(&found), vec![al(DRIFTWOOD_ALBUM)]);
+}
+
+#[test]
+fn discover_shows_latest_resume_favourites_and_suggestions() {
+    let server = Mock::default().start();
+    let env = env_for(&server);
+    assert_eq!(
+        recv(env.host.discover(ID)),
+        Err(CallError::Plugin(PluginError::AuthRequired))
+    );
+    sign_in(&env);
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(
+        titles,
+        [
+            "Recently Added",
+            "Continue Listening",
+            "Favourites",
+            "Suggestions"
+        ]
+    );
+    let latest = &shelves[0];
+    assert_eq!(
+        latest.items[0].id,
+        format!("al:{SEA_FOG}"),
+        "the newest album first"
+    );
+    assert_eq!(
+        latest.more.as_deref(),
+        Some(format!("f:lib:{MUSIC}:recent").as_str())
+    );
+    let resumed: Vec<String> = shelves[1].items.iter().map(|i| i.id.clone()).collect();
+    assert_eq!(resumed, [format!("tr:{FLOW}")]);
+    assert_eq!(shelves[2].more.as_deref(), Some("f:favourites"));
+    assert!(shelves[2].items.iter().any(|i| i.id == format!("tr:{EBB}")));
+    assert!(shelves[3].items.iter().all(|i| i.kind == ItemKind::Album));
+    // Every item with a picture on the server carries it as its cover, which
+    // needs no sign-in (Driftwood has none).
+    for item in shelves.iter().flat_map(|s| &s.items) {
+        let no_picture = item.id == format!("al:{DRIFTWOOD_ALBUM}") || item.id == format!("tr:{DRIFTWOOD}");
+        match &item.artwork {
+            Some(art) => {
+                assert!(
+                    art.url.starts_with(&format!("{}/Items/", server.url())),
+                    "{}",
+                    art.url
+                );
+                assert!(!art.url.contains("api_key") && art.headers.is_empty());
+            }
+            None => assert!(no_picture, "{} has no cover", item.id),
+        }
+    }
+    let latest_asked = server.requests_to("/Items/Latest");
+    assert_eq!(latest_asked[0].query("groupItems").as_deref(), Some("true"));
+    assert_eq!(
+        latest_asked[0].query("includeItemTypes").as_deref(),
+        Some("Audio")
+    );
+    let suggestions = server.requests_to("/Items/Suggestions");
+    assert_eq!(suggestions[0].query("mediaType").as_deref(), Some("Audio"));
+    assert_eq!(suggestions[0].query("type").as_deref(), Some("MusicAlbum"));
+}
+
+#[test]
+fn details_from_the_overview_genres_studios_and_people() {
+    use jf_plugin_host::FactKey;
+    let server = Mock::default().start();
+    let env = env_for(&server);
+    sign_in(&env);
+    let facts = |details: &jf_plugin_host::ItemDetails| -> Vec<(FactKey, String)> {
+        details
+            .facts
+            .iter()
+            .map(|f| (f.key.clone(), f.value.clone()))
+            .collect()
+    };
+    let album = recv(
+        env.host
+            .details(ID, item(ItemKind::Album, &format!("al:{LOW_WATER}"), "x")),
+    )
+    .unwrap();
+    assert_eq!(
+        album.description.as_deref(),
+        Some("Invented notes about Low Water.\nRecorded at an invented pier & harbour.")
+    );
+    assert_eq!(
+        facts(&album),
+        [
+            (FactKey::Genre, "Folk, Ambient".to_string()),
+            (FactKey::Released, "2022-04-01".into()),
+            (FactKey::Label, "Invented Label".into())
+        ]
+    );
+    let picture = album.image.expect("the album's picture");
+    assert!(
+        picture
+            .url
+            .contains(&format!("/Items/{LOW_WATER}/Images/Primary?"))
+    );
+    assert!(picture.url.contains("fillWidth=1200"));
+    let asked = server.requests_to("/Items");
+    let last = asked.last().unwrap();
+    assert_eq!(
+        last.query("fields").as_deref(),
+        Some("Overview,Genres,People,Studios")
+    );
+
+    let song = recv(
+        env.host
+            .details(ID, item(ItemKind::Track, &format!("tr:{EBB}"), "x")),
+    )
+    .unwrap();
+    assert_eq!(
+        facts(&song),
+        [
+            (FactKey::Genre, "Folk".to_string()),
+            (FactKey::Released, "2022".into()),
+            (FactKey::Composer, "Ada Invented".into()),
+            (FactKey::Lyricist, "Bo Invented".into())
+        ]
+    );
+    let artist = recv(
+        env.host
+            .details(ID, item(ItemKind::Artist, &format!("ar:{HARBOUR}"), "x")),
+    )
+    .unwrap();
+    assert_eq!(
+        artist.description.as_deref(),
+        Some("An invented band from an invented harbour town.")
+    );
+    let playlist = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, &format!("pl:{NIGHT_DRIVE}"), "x")),
+    )
+    .unwrap();
+    assert_eq!(
+        playlist.description.as_deref(),
+        Some("Invented songs for a long drive.")
+    );
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Track, "local:1", "x"))),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
 }

@@ -7,7 +7,8 @@
     { "Name": "Films", "Id": "f1000000000000000000000000000004", "Type": "CollectionFolder", "CollectionType": "movies", "IsFolder": true }
   ],
   "artists": [
-    { "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001", "Type": "MusicArtist", "IsFolder": true, "SortName": "harbour lights", "ImageTags": { "Primary": "art-a1" } },
+    { "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001", "Type": "MusicArtist", "IsFolder": true, "SortName": "harbour lights", "ImageTags": { "Primary": "art-a1" },
+      "Overview": "An invented band from an invented harbour town." },
     { "Name": "The Quiet Tide", "Id": "a2000000000000000000000000000002", "Type": "MusicArtist", "IsFolder": true, "SortName": "quiet tide", "ImageTags": {} },
     { "Name": "Ünïcode & Friends", "Id": "a2000000000000000000000000000003", "Type": "MusicArtist", "IsFolder": true, "SortName": "unicode & friends", "ImageTags": {} }
   ],
@@ -17,6 +18,8 @@
       "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
       "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
       "ProductionYear": 2022, "DateCreated": "2026-01-05T10:00:00.0000000Z", "RunTimeTicks": 7350000000, "ChildCount": 3,
+      "Overview": "Invented notes about Low Water.<br>Recorded at an invented pier &amp; harbour.", "Genres": ["Folk", "Ambient"],
+      "Studios": [{ "Name": "Invented Label", "Id": "e5000000000000000000000000000001" }], "PremiereDate": "2022-04-01T00:00:00.0000000Z",
       "ImageTags": { "Primary": "alb-b1" }, "_library": "f1000000000000000000000000000001"
     },
     {
@@ -44,6 +47,8 @@
   "songs": [
     {
       "Name": "Ebb", "Id": "c4000000000000000000000000000001", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "ebb",
+      "People": [{ "Name": "Ada Invented", "Id": "e6000000000000000000000000000001", "Role": "", "Type": "Composer" },
+                 { "Name": "Bo Invented", "Id": "e6000000000000000000000000000002", "Role": "", "Type": "Lyricist" }], "Genres": ["Folk"],
       "Album": "Low Water", "AlbumId": "b3000000000000000000000000000001", "AlbumPrimaryImageTag": "alb-b1",
       "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
       "Artists": ["Harbour Lights"], "ArtistItems": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
@@ -55,6 +60,7 @@
     },
     {
       "Name": "Flow", "Id": "c4000000000000000000000000000002", "Type": "Audio", "MediaType": "Audio", "IsFolder": false, "SortName": "flow",
+      "_resume": true,
       "Album": "Low Water", "AlbumId": "b3000000000000000000000000000001", "AlbumPrimaryImageTag": "alb-b1",
       "AlbumArtist": "Harbour Lights", "AlbumArtists": [{ "Name": "Harbour Lights", "Id": "a2000000000000000000000000000001" }],
       "Artists": ["Harbour Lights", "The Quiet Tide"],
@@ -122,7 +128,7 @@
   "playlists": [
     {
       "Name": "Night Drive", "Id": "d5000000000000000000000000000001", "Type": "Playlist", "MediaType": "Audio", "IsFolder": true, "SortName": "night drive",
-      "RunTimeTicks": 9340000000, "ChildCount": 4, "ImageTags": { "Primary": "pl-d1" },
+      "RunTimeTicks": 9340000000, "ChildCount": 4, "ImageTags": { "Primary": "pl-d1" }, "Overview": "Invented songs for a long drive.",
       "_entries": ["c4000000000000000000000000000002", "c4000000000000000000000000000006", "c4000000000000000000000000000001", "c4000000000000000000000000000003"]
     },
     {

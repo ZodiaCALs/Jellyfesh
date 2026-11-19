@@ -12,8 +12,13 @@
 //!   Artwork: `/Items/{id}/Images/Primary` at the asked size. Lyrics:
 //!   `/Audio/{id}/Lyrics`, ticks to LRC ([`lyrics`]). Recommendations:
 //!   instant mix. Logout reports the end of the session to the server.
+//! * Discover (API 1.2): Recently Added (`/Items/Latest`), Continue
+//!   Listening (`/UserItems/Resume`), Favourites and Suggestions
+//!   (`/Items/Suggestions`). Details: `Overview`, genres, release date,
+//!   labels and the people on a song ([`details`]).
 
 mod api;
+mod details;
 mod items;
 mod login;
 mod lyrics;
@@ -72,6 +77,122 @@ fn list(path: &str, params: &[(&str, &str)], page: &PageRequest) -> Result<ItemP
         next: (more && got > 0).then(|| (start + got).to_string()),
         total: total.and_then(|t| u32::try_from(t).ok()),
     })
+}
+
+/// Items per Discover shelf.
+const SHELF_SIZE: &str = "20";
+
+/// Common listing parameters for a shelf.
+const SHELF_PARAMS: [(&str, &str); 4] = [
+    ("limit", SHELF_SIZE),
+    ("fields", FIELDS),
+    ("enableImageTypes", "Primary"),
+    ("imageTypeLimit", "1"),
+];
+
+/// One shelf from a list endpoint: (items, or none when the server has no
+/// such list). Sign-in and network problems fail the page.
+fn shelf_items(path: &str, params: &[(&str, &str)], bare_array: bool) -> Result<Option<Vec<Item>>> {
+    let mut query = params.to_vec();
+    query.extend_from_slice(&SHELF_PARAMS);
+    let response = api::send(
+        http::Request::get(api::url(path)?).query(&query),
+        api::Auth::Session,
+    )?;
+    if matches!(response.status, 400 | 404) {
+        jf_plugin_sdk::warn!("no {path} for Discover: HTTP {}", response.status);
+        return Ok(None);
+    }
+    let response = api::check(response)?;
+    let list = if bare_array {
+        api::json::<Vec<model::BaseItem>>(&response)?
+    } else {
+        api::json::<ItemList>(&response)?.items
+    };
+    Ok(Some(items::items(&list)))
+}
+
+/// A Discover shelf and where its items come from.
+struct ShelfSource {
+    id: &'static str,
+    title: &'static str,
+    style: ShelfStyle,
+    /// The browse node of the whole list.
+    more: Option<String>,
+    path: &'static str,
+    params: &'static [(&'static str, &'static str)],
+    /// The endpoint answers a bare list instead of a `QueryResult`.
+    bare: bool,
+}
+
+/// The Discover page: what the server lists for the account.
+fn discover_shelves() -> Result<Vec<Shelf>> {
+    let libraries = api::music_libraries()?;
+    let recent_more = match libraries.as_slice() {
+        [(id, _)] => Some(format!("f:lib:{id}:recent")),
+        _ => None,
+    };
+    let sources = [
+        ShelfSource {
+            id: "latest",
+            title: "Recently Added",
+            style: ShelfStyle::Row,
+            more: recent_more,
+            path: "/Items/Latest",
+            params: &[("includeItemTypes", "Audio"), ("groupItems", "true")],
+            bare: true,
+        },
+        ShelfSource {
+            id: "resume",
+            title: "Continue Listening",
+            style: ShelfStyle::Row,
+            more: None,
+            path: "/UserItems/Resume",
+            params: &[("mediaTypes", "Audio")],
+            bare: false,
+        },
+        ShelfSource {
+            id: "favourites",
+            title: "Favourites",
+            style: ShelfStyle::Grid,
+            more: Some("f:favourites".into()),
+            path: "/Items",
+            params: &[
+                ("isFavorite", "true"),
+                ("recursive", "true"),
+                ("includeItemTypes", "MusicAlbum,Audio"),
+                ("sortBy", "SortName"),
+                ("sortOrder", "Ascending"),
+            ],
+            bare: false,
+        },
+        ShelfSource {
+            id: "suggestions",
+            title: "Suggestions",
+            style: ShelfStyle::Row,
+            more: None,
+            path: "/Items/Suggestions",
+            params: &[("mediaType", "Audio"), ("type", "MusicAlbum")],
+            bare: false,
+        },
+    ];
+    let mut shelves = Vec::new();
+    for source in sources {
+        let Some(found) = shelf_items(source.path, source.params, source.bare)? else {
+            continue;
+        };
+        if found.is_empty() {
+            continue;
+        }
+        shelves.push(Shelf {
+            id: source.id.into(),
+            title: source.title.into(),
+            style: source.style,
+            items: found,
+            more: source.more,
+        });
+    }
+    Ok(shelves)
 }
 
 fn library_sections(library: &str) -> Vec<Item> {
@@ -565,6 +686,14 @@ impl Plugin for Jellyfin {
             Some(&tag),
             size,
         )?)))
+    }
+
+    fn discover() -> Result<Vec<Shelf>> {
+        discover_shelves()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        details::details(&item)
     }
 
     fn recommendations_for_item(item: Item, page: PageRequest) -> Result<ItemPage> {

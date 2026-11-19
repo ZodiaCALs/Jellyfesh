@@ -1,5 +1,14 @@
 # Changelog: Jellyfin plugin
 
+## 0.0.7 — 2026-11-19
+
+* With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh
+  v0.0.7). **Discover**: Recently Added (`/Items/Latest`, songs grouped into
+  albums), Continue Listening (`/UserItems/Resume`), Favourites and
+  Suggestions (`/Items/Suggestions`). **Details**: an item's overview,
+  genres, release date, labels (`Studios`) and the composers, lyricists,
+  arrangers and producers among its people, with its picture.
+
 ## 0.0.6 — 2026-11-17
 
 * With Jellyfesh v0.0.6: built with plugin SDK 1.1. The manifest still

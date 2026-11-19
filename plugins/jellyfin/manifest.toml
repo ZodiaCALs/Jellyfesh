@@ -1,11 +1,11 @@
 id = "org.jellyfesh.jellyfin"
 name = "Jellyfin"
-version = "0.0.6"
-api_version = "1.0"
+version = "0.0.7"
+api_version = "1.2"
 author = "Jellyfesh"
 description = "Music from your Jellyfin server"
 official = true
-capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations"]
+capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations", "discover", "details"]
 playback_mode = "stream"
 # Quick Connect is the qr kind: the plugin shows a code to enter in Jellyfin.
 auth = ["qr", "password-exchange"]

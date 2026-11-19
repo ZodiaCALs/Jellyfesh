@@ -19,6 +19,9 @@ Jellyfesh release key. Setup, server preparation and troubleshooting:
 * **Cover art** at the size the screen needs, **lyrics** (Jellyfin 10.9 and
   later; synced lyrics as timed lines) and **instant mix** suggestions for
   a track, album, artist or playlist.
+* **Discover** (plugin API 1.2): Recently Added, Continue Listening,
+  Favourites and Suggestions. **Details**: an item's overview, genres,
+  release date, labels and the people on a song.
 
 Your server may be on your home network; Jellyfesh lets this plugin reach
 that one address and nothing else.
