@@ -301,10 +301,10 @@ private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
         item(key = "header") { header() }
         item(key = "play") {
             Column {
-                // Shuffles the songs loaded so far: the core has no "whole library" collection yet.
+                // Every song in this order, read or not: the core plays the whole library.
                 PlayButtons(
-                    onPlay = { refs(songs).takeIf { it.isNotEmpty() }?.let { graph.send(Command.PlayCollection(CollectionRef.Tracks(it), 0, false)) } },
-                    onShuffle = { refs(songs).takeIf { it.isNotEmpty() }?.let { graph.send(Command.PlayCollection(CollectionRef.Tracks(it), 0, true)) } },
+                    onPlay = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), 0, false)) },
+                    onShuffle = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), 0, true)) },
                 )
                 SortChip(sortTitle, stringResource(songSortLabel(order.field)), order.descending) {
                     showSortMenu(
@@ -333,15 +333,13 @@ private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
                     art = ArtKey.ofHash(track.artworkHash),
                     durationMs = track.durationMs,
                     playing = ref == playing,
-                    onClick = { graph.send(Command.PlayCollection(CollectionRef.Tracks(refs(songs)), i, false)) },
+                    onClick = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), i, false)) },
                     onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album, artist = track.artist)) },
                 )
             }
         }
     }
 }
-
-private fun refs(songs: PagedSource<org.jellyfesh.logic.core.Track>): List<TrackRef> = songs.loaded().map { TrackRef.Library(it.id) }
 
 /** Play and Shuffle, side by side. */
 @Composable
