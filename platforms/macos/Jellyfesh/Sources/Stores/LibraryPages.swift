@@ -17,6 +17,8 @@ final class HomeModel {
     private(set) var recentAlbums: [AlbumSummary] = []
     private(set) var recentlyPlayed: [SongRow] = []
     private(set) var mostPlayed: [SongRow] = []
+    /// Home's Favourites section, when the look shows it (ADR-0020).
+    private(set) var favorites: [SongRow] = []
     private(set) var loaded = false
     @ObservationIgnored private var loadedRevision: UInt64?
 
@@ -32,10 +34,12 @@ final class HomeModel {
         async let albums = client.albums(order: .added, descending: true, offset: 0, limit: Self.shelfSize)
         async let played = client.recentlyPlayed(limit: Self.listSize)
         async let most = client.mostPlayed(limit: Self.listSize)
+        async let favorites = client.favorites(offset: 0, limit: Self.listSize)
         self.stats = try? await stats
         recentAlbums = (try? await albums) ?? []
         recentlyPlayed = (try? await played) ?? []
         mostPlayed = (try? await most) ?? []
+        self.favorites = (try? await favorites) ?? []
         loaded = true
     }
 }

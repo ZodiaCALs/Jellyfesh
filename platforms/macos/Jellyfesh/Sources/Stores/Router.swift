@@ -36,6 +36,28 @@ enum SidebarItem: Hashable {
         case .playlist: return "music.note.list"
         }
     }
+
+    /// The sidebar item for one of the look's places.
+    init(_ place: LookPlace) {
+        switch place {
+        case .home: self = .home
+        case .albums: self = .albums
+        case .artists: self = .artists
+        case .songs: self = .songs
+        case .playlists: self = .playlists
+        case .favourites: self = .favorites
+        case .search: self = .search
+        case .sources: self = .sources
+        }
+    }
+
+    /// The sidebar's Library and Discover sections for the look's places (ADR-0020): each place
+    /// the look shows, in its order, in the section it belongs to. Luminous's places give the
+    /// v0.0.6 sidebar.
+    static func sections(for places: [LookPlace]) -> (library: [SidebarItem], discover: [SidebarItem]) {
+        let items = places.map(SidebarItem.init)
+        return (items.filter { library.contains($0) }, items.filter { $0 == .search || $0 == .sources })
+    }
 }
 
 /// A page pushed on a section.

@@ -1,6 +1,7 @@
 // Home: the library's size, then recently added albums (newest first, in the core's order) and
 // recently and most played songs; with nothing in the library and no source signed in, a welcome
-// with Add Music Folder… and Add a Source instead.
+// with Add Music Folder… and Add a Source instead. A customized look picks the sections and their
+// order, Favourites among them (ADR-0020); the summary stays under the title while it comes first.
 
 import SwiftUI
 
@@ -10,40 +11,61 @@ struct HomeView: View {
     @Environment(SourcesStore.self) private var sources
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.palette) private var palette
+    @Environment(\.look) private var look
 
     private var home: HomeModel { model.pages.home }
 
     var body: some View {
+        let sections = look.home
         ScrollView {
-            VStack(alignment: .leading, spacing: Tokens.Space.s7) {
-                PageHeader(title: String(localized: "Home"), subtitle: statsLine)
+            VStack(alignment: .leading, spacing: look.spacing(Tokens.Space.s7)) {
+                PageHeader(title: String(localized: "Home"), subtitle: sections.first == .summary ? statsLine : nil)
                 if home.loaded && library.isEmpty && !library.scanning && !sources.hasSignedInSource {
                     WelcomeCard()
                 }
-                if !home.recentAlbums.isEmpty {
-                    VStack(alignment: .leading, spacing: Tokens.Space.s3) {
-                        SectionTitle("Recently Added")
-                        ScrollView(.horizontal) {
-                            LazyHStack(alignment: .top, spacing: Tokens.Space.s5) {
-                                ForEach(home.recentAlbums) { album in
-                                    AlbumCard(album: album, size: 160)
-                                }
-                            }
-                            .padding(.bottom, Tokens.Space.s2)
+                ForEach(Array(sections.enumerated()), id: \.element) { index, section in
+                    switch section {
+                    case .summary:
+                        // First, it is the title's subtitle; elsewhere, a line of its own.
+                        if index > 0, let summary = statsLine {
+                            Text(summary)
+                                .typography(Tokens.TypeRoles.listSecondary)
+                                .foregroundStyle(palette[Tokens.Ink.ink70])
                         }
-                        .scrollIndicators(.hidden)
+                    case .recentlyAdded:
+                        recentlyAdded
+                    case .recentlyPlayed:
+                        trackSection("Recently Played", rows: home.recentlyPlayed, prefix: "recent")
+                    case .mostPlayed:
+                        trackSection("Most Played", rows: home.mostPlayed, prefix: "most")
+                    case .favourites:
+                        trackSection("Favourites", rows: home.favorites, prefix: "favourite")
                     }
                 }
-                trackSection("Recently Played", rows: home.recentlyPlayed, prefix: "recent")
-                trackSection("Most Played", rows: home.mostPlayed, prefix: "most")
             }
-            .padding(.horizontal, Tokens.Space.s7)
-            .padding(.vertical, Tokens.Space.s6)
+            .pagePadding()
             .frame(maxWidth: 1100, alignment: .leading)
         }
         .navigationTitle(Text("Home"))
         .task(id: library.revision) {
             await home.load(revision: library.revision)
+        }
+    }
+
+    @ViewBuilder private var recentlyAdded: some View {
+        if !home.recentAlbums.isEmpty {
+            VStack(alignment: .leading, spacing: Tokens.Space.s3) {
+                SectionTitle("Recently Added")
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: look.spacing(Tokens.Space.s5)) {
+                        ForEach(home.recentAlbums) { album in
+                            AlbumCard(album: album, size: 160)
+                        }
+                    }
+                    .padding(.bottom, Tokens.Space.s2)
+                }
+                .scrollIndicators(.hidden)
+            }
         }
     }
 
@@ -56,7 +78,7 @@ struct HomeView: View {
                 TrackStack(items: items) { index in
                     playback.play(.tracks(items.compactMap(\.track)), from: playableIndex(index, in: items))
                 }
-                .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                .surfaceCard()
             }
         }
     }
@@ -88,7 +110,7 @@ struct WelcomeCard: View {
                 .foregroundStyle(palette[Tokens.Ink.ink90])
                 .accessibilityAddTraits(.isHeader)
             Text("Add your music folders, or connect a server in Sources.")
-                .font(.system(size: 14))
+                .lookFont(size: 14)
                 .foregroundStyle(palette[Tokens.Ink.ink70])
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Tokens.Space.s2) {
@@ -103,6 +125,6 @@ struct WelcomeCard: View {
         }
         .padding(Tokens.Space.s6)
         .frame(maxWidth: 560, alignment: .leading)
-        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+        .surfaceCard()
     }
 }

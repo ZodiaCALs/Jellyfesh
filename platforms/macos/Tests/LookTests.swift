@@ -43,11 +43,25 @@ final class LookStyleTests: XCTestCase {
     func testAnUncustomizedLookKeepsLuminousWhateverItsValues() {
         // The core resolves every value; while not customized the shell still draws Luminous.
         var state = LookState.luminous
+        state.cornerScale = 2
+        state.glass = 0
         state.aurora = 0.1
+        state.typeface = .serif
+        state.textScale = 1.3
+        state.density = .roomy
         state.lyricsWeight = .regular
         state.lyricsGlow = 1
         state.lyricsHighlight = .accent
+        state.sidebar = [.songs]
+        state.home = [.favourites]
         let look = LookStyle(state: state)
+        XCTAssertEqual(look.cornerScale, 1)
+        XCTAssertEqual(look.glass, 1)
+        XCTAssertEqual(look.fontDesign, .default)
+        XCTAssertEqual(look.textScale, 1)
+        XCTAssertEqual(look.densityScale, 1)
+        XCTAssertEqual(look.sidebar, LookPlace.allCases)
+        XCTAssertEqual(look.home, [.summary, .recentlyAdded, .recentlyPlayed, .mostPlayed])
         XCTAssertEqual(look.aurora, Tokens.Field.auroraStrength, accuracy: 1e-9)
         XCTAssertEqual(look.lyricsWeight(token: 700), .bold)
         XCTAssertEqual(look.glowRadius(forSize: 40), 0)
@@ -111,5 +125,15 @@ final class LookStyleTests: XCTestCase {
         XCTAssertEqual(look.home, [.mostPlayed, .summary])
         // Without one of the library's places the sidebar would be empty of music: Luminous's.
         XCTAssertEqual(customized { $0.sidebar = [.search] }.sidebar, LookPlace.allCases)
+    }
+
+    func testTheSidebarKeepsItsSections() {
+        let luminous = SidebarItem.sections(for: LookStyle.luminous.sidebar)
+        XCTAssertEqual(luminous.library, [.home, .albums, .artists, .songs, .playlists, .favorites])
+        XCTAssertEqual(luminous.discover, [.search, .sources])
+        let custom = SidebarItem.sections(for: [.sources, .songs, .home])
+        XCTAssertEqual(custom.library, [.songs, .home])
+        XCTAssertEqual(custom.discover, [.sources])
+        XCTAssertTrue(SidebarItem.sections(for: [.albums]).discover.isEmpty)
     }
 }
