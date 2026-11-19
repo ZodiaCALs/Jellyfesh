@@ -39,7 +39,9 @@ static CATALOGUE: [ModelInfo; 4] = [
         url: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
         approx_bytes: 75 * MIB,
         sha1: "bd577a113a864445d4c299885e0cb97d4ba92b5f",
-        sha256: None,
+        // Computed by CI's speech job from the downloaded file (77,691,713
+        // bytes) after its SHA-1 matched whisper.cpp's list, 2026-11-18.
+        sha256: Some("be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"),
         multilingual: true,
     },
     ModelInfo {

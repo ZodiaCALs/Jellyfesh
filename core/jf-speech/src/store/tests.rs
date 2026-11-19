@@ -500,15 +500,21 @@ fn content_ranges() {
 #[test]
 fn digests_compare_with_the_catalogue() {
     let tiny = crate::model("tiny").unwrap();
-    let digests = Digests {
+    let pinned = tiny.sha256.expect("tiny's SHA-256 is pinned");
+    let right = Digests {
         sha1: tiny.sha1.to_uppercase(),
+        sha256: pinned.to_uppercase(),
+    };
+    assert_eq!(right.mismatch(tiny), None);
+    let wrong = Digests {
+        sha1: tiny.sha1.to_owned(),
         sha256: "00".repeat(32),
     };
-    assert_eq!(digests.mismatch(tiny), None);
-    let pinned = ModelInfo {
-        sha256: Some("ab"),
+    assert!(wrong.mismatch(tiny).unwrap().contains("SHA-256"));
+    let unpinned = ModelInfo {
+        sha256: None,
         ..*tiny
     };
-    assert!(digests.mismatch(&pinned).unwrap().contains("SHA-256"));
+    assert_eq!(wrong.mismatch(&unpinned), None);
     assert_eq!(hex(&[0x00, 0x0f, 0xa5, 0xff]), "000fa5ff");
 }
