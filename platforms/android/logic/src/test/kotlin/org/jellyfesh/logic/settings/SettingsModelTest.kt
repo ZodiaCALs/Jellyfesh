@@ -134,7 +134,7 @@ class SettingsModelTest {
             listOf(SettingsGroup.AddSource, SettingsGroup.Installed, SettingsGroup.CommunityPlugins),
             SettingsLayout.groups(SettingsSection.Sources),
         )
-        assertEquals(listOf(SettingsGroup.About), SettingsLayout.groups(SettingsSection.About))
+        assertEquals(listOf(SettingsGroup.About, SettingsGroup.Updates), SettingsLayout.groups(SettingsSection.About))
     }
 
     @Test
@@ -228,6 +228,10 @@ class SettingsModelTest {
         val links = AboutInfo.links("https://example.github.io/jellyfesh")!!
         assertEquals("https://example.github.io/jellyfesh/", links.website)
         assertEquals("https://example.github.io/jellyfesh/THIRD_PARTY_NOTICES.html", links.licences)
+        // The legal pages (legal/README.md): About and the Pro sheet link to them.
+        assertEquals("https://example.github.io/jellyfesh/legal/eula.html", links.licenceAgreement)
+        assertEquals("https://example.github.io/jellyfesh/legal/privacy.html", links.privacyPolicy)
+        assertEquals("https://example.github.io/jellyfesh/legal/terms-of-sale.html", links.termsOfSale)
         assertEquals(links, AboutInfo.links(" https://example.github.io/jellyfesh/ "))
         // A build without a website shows the version only.
         assertNull(AboutInfo.links(""))

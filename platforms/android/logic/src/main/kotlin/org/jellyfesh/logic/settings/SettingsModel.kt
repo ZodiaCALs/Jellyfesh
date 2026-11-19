@@ -211,6 +211,9 @@ enum class SettingsGroup {
 
     // About
     About,
+
+    /** Check for Updates, in direct downloads only (the Update slice's `supported`). */
+    Updates,
 }
 
 /** Which groups each settings page shows, in the order every app shows them (docs/ui.md). */
@@ -238,26 +241,45 @@ object SettingsLayout {
             SettingsGroup.RescanLibrary,
         )
         SettingsSection.Sources -> listOf(SettingsGroup.AddSource, SettingsGroup.Installed, SettingsGroup.CommunityPlugins)
-        SettingsSection.About -> listOf(SettingsGroup.About)
+        SettingsSection.About -> listOf(SettingsGroup.About, SettingsGroup.Updates)
     }
 }
 
 /**
  * Settings › About: the version from the build (never typed in), and the website with the
- * third-party notices it publishes (`THIRD_PARTY_NOTICES.html`, tools/release/build_site.py).
+ * third-party notices it publishes (`THIRD_PARTY_NOTICES.html`, tools/release/build_site.py) and
+ * the legal pages (`legal/`, legal/README.md): the Licence Agreement, the Privacy Policy and the
+ * Terms of Sale, which About, Settings › Extensions › Jellyfesh Pro and the Pro sheet link to.
  */
 object AboutInfo {
     /** The page the website publishes the third-party notices on, relative to the website. */
     const val NOTICES_PAGE = "THIRD_PARTY_NOTICES.html"
 
-    /** The website and its notices page; null when the build was given no website. */
-    data class Links(val website: String, val licences: String)
+    /** The legal pages, relative to the website (tools/release/legal_pages.py writes them). */
+    const val LICENCE_AGREEMENT_PAGE = "legal/eula.html"
+    const val PRIVACY_POLICY_PAGE = "legal/privacy.html"
+    const val TERMS_OF_SALE_PAGE = "legal/terms-of-sale.html"
+
+    /** The website and the pages it publishes; null when the build was given no website. */
+    data class Links(
+        val website: String,
+        val licences: String,
+        val licenceAgreement: String,
+        val privacyPolicy: String,
+        val termsOfSale: String,
+    )
 
     /** [website] as the build gave it (blank: none); a trailing slash is added. */
     fun links(website: String?): Links? {
         val site = website?.trim()?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
         val base = if (site.endsWith('/')) site else "$site/"
-        return Links(base, base + NOTICES_PAGE)
+        return Links(
+            website = base,
+            licences = base + NOTICES_PAGE,
+            licenceAgreement = base + LICENCE_AGREEMENT_PAGE,
+            privacyPolicy = base + PRIVACY_POLICY_PAGE,
+            termsOfSale = base + TERMS_OF_SALE_PAGE,
+        )
     }
 
     /**

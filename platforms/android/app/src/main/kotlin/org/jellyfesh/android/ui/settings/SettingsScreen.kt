@@ -112,6 +112,7 @@ import org.jellyfesh.logic.settings.SettingsEdits
 import org.jellyfesh.logic.settings.SettingsGroup
 import org.jellyfesh.logic.settings.SettingsLayout
 import org.jellyfesh.logic.sources.Disclosure
+import org.jellyfesh.logic.sources.YourSources
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.theme.AccentChoices
 import org.jellyfesh.logic.theme.Palette
@@ -207,8 +208,9 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.RescanLibrary -> rescan(state)
         SettingsGroup.AddSource -> addSource(state)
         SettingsGroup.Installed -> installed(state)
-        SettingsGroup.CommunityPlugins -> communityPlugins(state.settings)
+        SettingsGroup.CommunityPlugins -> communityPlugins(state)
         SettingsGroup.About -> about()
+        SettingsGroup.Updates -> updates(state)
     }
 }
 
@@ -876,21 +878,30 @@ private fun LazyListScope.addSource(state: CoreState) {
     }
 }
 
-/** Installed, with Install from File… in its heading: each source opens its own page. */
+/**
+ * Installed, with Install from File… in its heading: each source opens its own page. Store builds
+ * install no plugins from files (the core's `can_install_plugins`), so their heading has no
+ * button (docs/ui.md, Allowed differences).
+ */
 private fun LazyListScope.installed(state: CoreState) {
     item(key = "installed-h") {
-        val install = rememberPluginInstaller()
-        SectionHeader(stringResource(R.string.sources_installed)) {
-            JfButton(stringResource(R.string.action_install_plugin), install, style = ButtonStyle.Quiet, icon = R.drawable.ic_add)
+        if (state.sources.canInstallPlugins) {
+            val install = rememberPluginInstaller()
+            SectionHeader(stringResource(R.string.sources_installed)) {
+                JfButton(stringResource(R.string.action_install_plugin), install, style = ButtonStyle.Quiet, icon = R.drawable.ic_add)
+            }
+        } else {
+            SectionHeader(stringResource(R.string.sources_installed))
         }
     }
     item(key = "installed") {
         val nav = LocalNav.current
+        val sources = YourSources.sources(state.sources.plugins)
         Panel {
-            if (state.sources.plugins.isEmpty()) {
+            if (sources.isEmpty()) {
                 SettingRow(stringResource(R.string.sources_empty_title), description = stringResource(R.string.sources_empty_body))
             }
-            state.sources.plugins.forEachIndexed { i, plugin ->
+            sources.forEachIndexed { i, plugin ->
                 if (i > 0) Divider()
                 NavRow(plugin.name, pluginStatus(plugin), onClick = { nav.push(Screen.Source(plugin.id)) }, leading = { PluginIcon(plugin.name, plugin.icon) })
             }
@@ -898,8 +909,13 @@ private fun LazyListScope.installed(state: CoreState) {
     }
 }
 
-/** Community Plugins: what they are, and Allow Community Plugins behind the disclosure (ADR-0012). */
-private fun LazyListScope.communityPlugins(settings: Settings) {
+/**
+ * Community Plugins: what they are, and Allow Community Plugins behind the disclosure (ADR-0012).
+ * Not in store builds, which allow no community plugins (`can_install_plugins` false).
+ */
+private fun LazyListScope.communityPlugins(state: CoreState) {
+    if (!state.sources.canInstallPlugins) return
+    val settings = state.settings
     item(key = "community-h") { SectionHeader(stringResource(R.string.community_plugins)) }
     item(key = "community") {
         val edit = rememberEdit(settings)
@@ -922,7 +938,8 @@ private fun LazyListScope.communityPlugins(settings: Settings) {
 
 /**
  * About: the version from the build (never typed in), and the website with its third-party
- * notices when the build knows the website (BuildConfig.WEBSITE, app/build.gradle.kts).
+ * notices, the Licence Agreement and the Privacy Policy when the build knows the website
+ * (BuildConfig.WEBSITE, app/build.gradle.kts).
  */
 private fun LazyListScope.about() {
     item(key = "about") {
@@ -939,9 +956,11 @@ private fun LazyListScope.about() {
                     JfIcon(R.drawable.ic_external, Jf.colors.ink50, size = 20.dp)
                 }
                 Divider()
-                SettingRow(stringResource(R.string.about_licences), onClick = { openLink(context, links.licences) }) {
-                    JfIcon(R.drawable.ic_external, Jf.colors.ink50, size = 20.dp)
-                }
+                LinkRow(stringResource(R.string.about_licences)) { openLink(context, links.licences) }
+                Divider()
+                LinkRow(stringResource(R.string.about_licence_agreement)) { openLink(context, links.licenceAgreement) }
+                Divider()
+                LinkRow(stringResource(R.string.about_privacy_policy)) { openLink(context, links.privacyPolicy) }
             }
         }
     }
@@ -950,8 +969,52 @@ private fun LazyListScope.about() {
     }
 }
 
+/**
+ * Direct downloads (the Update slice's `supported`; store builds are updated by their store):
+ * "Jellyfesh {version} Is Available" with View Release, Check for Updates and Check for Updates
+ * Automatically. The core checks; nothing is installed.
+ */
+private fun LazyListScope.updates(state: CoreState) {
+    val update = state.update
+    if (!update.supported) return
+    item(key = "updates-h") { SectionHeader(stringResource(R.string.update_title)) }
+    item(key = "updates") {
+        val graph = LocalGraph.current
+        val context = LocalContext.current
+        val edit = rememberEdit(state.settings)
+        Panel {
+            val available = update.available
+            if (available != null) {
+                SettingRow(stringResource(R.string.update_available, available.version)) {
+                    JfButton(stringResource(R.string.update_view_release), { openLink(context, available.url) }, style = ButtonStyle.Accent)
+                }
+                Divider()
+            }
+            SettingRow(
+                stringResource(R.string.update_check),
+                description = if (update.checking) stringResource(R.string.update_checking) else update.error,
+                onClick = if (update.checking) null else ({ graph.send(Command.CheckForUpdates) }),
+            ) {
+                JfIcon(R.drawable.ic_refresh, Jf.colors.ink50, size = 20.dp)
+            }
+            Divider()
+            SettingRow(stringResource(R.string.update_auto)) {
+                JfSwitch(state.settings.checkForUpdates, { on -> edit { copy(checkForUpdates = on) } })
+            }
+        }
+    }
+}
+
+/** A row that opens a web page. */
+@Composable
+internal fun LinkRow(title: String, description: String? = null, onClick: () -> Unit) {
+    SettingRow(title, description = description, onClick = onClick) {
+        JfIcon(R.drawable.ic_external, Jf.colors.ink50, size = 20.dp)
+    }
+}
+
 /** Opens a web page in a Custom Tab (the browser the person uses). */
-private fun openLink(context: android.content.Context, url: String) {
+internal fun openLink(context: android.content.Context, url: String) {
     runCatching { CustomTabsIntent.Builder().setShowTitle(true).build().launchUrl(context, Uri.parse(url)) }
 }
 

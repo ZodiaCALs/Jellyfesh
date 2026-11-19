@@ -106,7 +106,8 @@ import org.jellyfesh.logic.state.CoreState
 fun SourcesScreen(state: CoreState) {
     val nav = LocalNav.current
     val connect = rememberConnectSheet()
-    val plugins = state.sources.plugins
+    // Extensions (AI Lyrics, Customize) are in Settings › Extensions, not among the sources.
+    val plugins = YourSources.sources(state.sources.plugins)
     val presets = state.sources.presets
     LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "title") {
@@ -122,7 +123,7 @@ fun SourcesScreen(state: CoreState) {
         if (presets.isNotEmpty()) {
             item(key = "add-h") { SectionHeader(stringResource(R.string.sources_add)) }
             items(presets, key = { "preset:${it.id}" }) { preset ->
-                PresetRow(preset, plugins) { connect.open(preset) }
+                PresetRow(preset, state.sources.plugins) { connect.open(preset) }
             }
         }
         item(key = "yours-h") { SectionHeader(stringResource(R.string.sources_your)) }

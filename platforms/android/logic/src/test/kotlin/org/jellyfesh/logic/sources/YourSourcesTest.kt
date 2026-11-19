@@ -6,6 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.PluginBadge
+import org.jellyfesh.logic.core.PluginKind
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.nav.Screen
 
@@ -47,5 +48,14 @@ class YourSourcesTest {
         assertEquals(SourceState.SignedIn, YourSources.state(server.copy(account = "listener")))
         assertEquals(SourceState.Off, YourSources.state(server.copy(enabled = false, account = "listener")))
         assertEquals(SourceState.Ready, YourSources.state(server.copy(authMethods = emptyList())))
+    }
+
+    @Test
+    fun extensionsAreNotSources() {
+        val aiLyrics = server.copy(id = "org.jellyfesh.ai-lyrics", name = "AI Lyrics", capabilities = listOf("auth", "make_lyrics"), kind = PluginKind.Extension)
+        assertEquals(listOf(server), YourSources.sources(listOf(aiLyrics, server)))
+        // Search asks the sources only while one of them is on; an extension that is on does not count.
+        assertTrue(YourSources.anyOn(listOf(aiLyrics, server)))
+        assertFalse(YourSources.anyOn(listOf(aiLyrics, server.copy(enabled = false))))
     }
 }

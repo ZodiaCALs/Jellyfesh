@@ -85,6 +85,7 @@ import org.jellyfesh.logic.search.SearchState
 import org.jellyfesh.logic.sources.ItemAction
 import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.sources.SourceItems
+import org.jellyfesh.logic.sources.YourSources
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.tokens.Tokens
 
@@ -105,7 +106,7 @@ fun SearchScreen(state: CoreState) {
 
     // Typing: debounce, then the library's fast query (again whenever the library changes) and,
     // once per query, the sources through the core's merged search.
-    val anySource = state.sources.plugins.any { it.enabled }
+    val anySource = YourSources.anyOn(state.sources.plugins)
     LaunchedEffect(query) {
         search = SearchModel.queryChanged(search, query)
         if (query.isBlank() || !anySource) return@LaunchedEffect
@@ -198,7 +199,7 @@ fun SearchScreen(state: CoreState) {
             }
         }
         // Then From Your Sources, one group per source, as each answers (docs/ui.md, "Search").
-        val sourcesUnavailable = search.sourcesUnavailable && state.sources.plugins.any { it.enabled }
+        val sourcesUnavailable = search.sourcesUnavailable && YourSources.anyOn(state.sources.plugins)
         if (sourcesUnavailable || search.sources.isNotEmpty()) {
             item(key = "src-h") { SectionHeader(stringResource(R.string.search_from_sources)) }
         }

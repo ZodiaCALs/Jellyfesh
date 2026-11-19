@@ -1,5 +1,6 @@
 package org.jellyfesh.logic.sources
 
+import org.jellyfesh.logic.core.PluginKind
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.nav.Screen
 
@@ -20,6 +21,16 @@ enum class SourceState {
 
 /** Your Sources on the Sources tab (docs/ui.md, "Sources"). */
 object YourSources {
+    /**
+     * The music sources among the installed plugins, for Your Sources and Settings › Sources ›
+     * Installed. Extensions (AI Lyrics, Customize: `kind` Extension) are listed in Settings ›
+     * Extensions instead (ADR-0020).
+     */
+    fun sources(plugins: List<PluginSummary>): List<PluginSummary> = plugins.filter { it.kind == PluginKind.Source }
+
+    /** Whether a music source is on: only then does search ask the sources. */
+    fun anyOn(plugins: List<PluginSummary>): Boolean = plugins.any { it.kind == PluginKind.Source && it.enabled }
+
     /** The state a source's line shows after its badge. */
     fun state(plugin: PluginSummary): SourceState = when {
         !plugin.enabled -> SourceState.Off
