@@ -24,6 +24,7 @@ members = [
     "plugins/netease",
     # Extensions (ADR-0019, ADR-0020): Jellyfesh Pro capabilities.
     "plugins/ai-lyrics",
+    "plugins/customize",
     # Unofficial community plugins (ADR-0012, amended for v0.0.6): bundled
     # unsigned, off until the person allows community plugins.
     "plugins/community/common",
@@ -205,6 +206,9 @@ opt-level = "s"
 opt-level = "s"
 
 [profile.release.package.jf-ai-lyrics]
+opt-level = "s"
+
+[profile.release.package.jf-customize]
 opt-level = "s"
 
 # The unofficial community plugins (plugins/community), the same way; their
