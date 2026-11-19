@@ -22,6 +22,7 @@
     alsoIn = [],
     number = null,
     showArt = true,
+    enter = null,
   }: {
     plugin: string;
     item: Item;
@@ -29,6 +30,8 @@
     alsoIn?: string[];
     number?: number | null;
     showArt?: boolean;
+    /** Its place among the first rows of a list, which rise in one after another as it first shows. */
+    enter?: number | null;
   } = $props();
 
   const app = useApp();
@@ -58,7 +61,7 @@
   }
 </script>
 
-<div class="row" class:playing class:unplayable class:linked={opensLink}>
+<div class="row" class:playing class:unplayable class:linked={opensLink} class:enter={enter !== null} style:--i={enter}>
   <button
     class="main"
     onclick={activate}
@@ -115,8 +118,19 @@
   .row:hover {
     background: var(--jf-fill);
   }
+  /* Press feedback: the row darkens while pressed. */
+  .row:has(.main:active:not(:disabled)) {
+    background: var(--jf-fill-press);
+  }
   .row.playing {
     background: var(--jf-accent-soft);
+  }
+  /* The first rows of a list rise in one after another (dur-3 Fluid, 24 ms apart). */
+  .row.enter {
+    animation: jf-page-in var(--jf-motion-dur-3) var(--jf-motion-ease-fluid) calc(var(--i) * 24ms) both;
+  }
+  :global(:root[data-motion='reduced']) .row.enter {
+    animation: none;
   }
   .main {
     flex: 1;

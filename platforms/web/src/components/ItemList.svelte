@@ -47,14 +47,17 @@
     return () => observer.disconnect();
   });
 
-  function activate(item: Item) {
+  /** How many cards and rows rise in one after another as a list first shows. */
+  const STAGGERED = 16;
+
+  function activate(item: Item, origin: HTMLElement | null = null) {
     if (item.kind === 'Track' && onplay) {
       onplay(item);
     } else if (item.kind === 'Track') {
       const { entries, start } = tracksFrom(plugin, tracks, item);
       app.player.playEntries(entries, start);
     } else {
-      app.nav.open({ view: 'browse', plugin, item });
+      app.nav.open({ view: 'browse', plugin, item }, origin);
     }
   }
 </script>
@@ -70,8 +73,8 @@
 {/if}
 {#if containers.length}
   <div class="grid">
-    {#each containers as item (item.kind + item.id)}
-      <ItemCard {plugin} {item} onactivate={() => activate(item)} />
+    {#each containers as item, index (item.kind + item.id)}
+      <ItemCard {plugin} {item} index={index < STAGGERED ? index : null} onactivate={(origin) => activate(item, origin)} />
     {/each}
   </div>
 {/if}
@@ -81,6 +84,7 @@
       <ItemRow
         {plugin}
         {item}
+        enter={index < STAGGERED ? index : null}
         number={numbered ? (item.track_number ?? index + 1) : null}
         alsoIn={alsoIn?.(item) ?? []}
         onactivate={() => activate(item)}
@@ -143,10 +147,13 @@
     margin-top: var(--jf-space-s6);
   }
   /* Luminous: large covers, four to a row on a 1280 px window. */
+  /* Each card's button reaches 8 px beyond its cover (a larger target, and room for the lift);
+     the grid steps out by as much, so covers line up with the page's titles. */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
     gap: var(--jf-space-s3) var(--jf-space-s3);
+    margin-inline: -8px;
   }
   /* A list is a grouped surface: Mist without a blur layer, with shadow-1. */
   .rows {

@@ -13,8 +13,21 @@
   import Icon from './Icon.svelte';
   import Menu from './Menu.svelte';
 
-  let { plugin, item, onactivate }: { plugin: string; item: Item; onactivate: () => void } = $props();
+  let {
+    plugin,
+    item,
+    onactivate,
+    index = null,
+  }: {
+    plugin: string;
+    item: Item;
+    /** Opens the item; `origin` is the cover, which grows into the page where browsers can. */
+    onactivate: (origin: HTMLElement | null) => void;
+    /** Its place among the first cards of a list, which rise in one after another as it first shows. */
+    index?: number | null;
+  } = $props();
   const app = useApp();
+  let cover: HTMLElement | undefined = $state();
   const playable = $derived(item.kind === 'Album' || item.kind === 'Playlist');
   let starting = $state(false);
 
@@ -31,9 +44,9 @@
   }
 </script>
 
-<div class="card">
-  <button class="open" onclick={onactivate} aria-label={t('Open {title}', { title: item.title })}>
-    <span class="cover"><Art {plugin} {item} size={168} radius="grid" /></span>
+<div class="card" class:enter={index !== null} style:--i={index}>
+  <button class="open" onclick={() => onactivate(cover ?? null)} aria-label={t('Open {title}', { title: item.title })}>
+    <span class="cover" bind:this={cover}><Art {plugin} {item} size={168} radius="grid" /></span>
     <span class="title">{item.title}</span>
     <span class="second">{secondary(item)}</span>
   </button>
@@ -53,6 +66,13 @@
     min-width: 0;
     content-visibility: auto;
     contain-intrinsic-size: auto 230px;
+  }
+  /* The first cards of a list rise in one after another (dur-3 Fluid, 30 ms apart). */
+  .card.enter {
+    animation: jf-page-in var(--jf-motion-dur-3) var(--jf-motion-ease-fluid) calc(var(--i) * 30ms) both;
+  }
+  :global(:root[data-motion='reduced']) .card.enter {
+    animation: none;
   }
   .open {
     display: flex;

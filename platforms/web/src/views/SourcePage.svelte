@@ -2,6 +2,7 @@
   // A source's own start page (what its `browse` lists at the top), opened from Your Sources.
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
+  import Skeleton from '../components/Skeleton.svelte';
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
@@ -47,7 +48,7 @@
   {#if error}
     <p class="problem" role="alert"><Icon name="alert" size={18} />{error}</p>
   {:else if loading && items.length === 0}
-    <p class="muted" aria-live="polite">{t('Loading…')}</p>
+    <Skeleton kind="tiles" count={4} />
   {:else if items.length === 0}
     <p class="muted">{t('Nothing here yet.')}</p>
   {/if}

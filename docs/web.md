@@ -165,11 +165,22 @@ after Apple Music and Windows Media Player.
   glyph on hover, and the playing song has a level glyph that moves only
   while it plays. (The servers' plugins give no genre, so album pages show
   none.) Secondary text is `ink-70` or stronger.
-* **Motion** comes from Misty's tokens: pages fade in and rise 8 px, sheets
-  and menus grow from 96 %, theme colours crossfade over 600 ms. With the
-  system's reduced-motion preference or **Reduce Motion and Transparency**,
-  nothing moves: what changes fades briefly, the artwork keeps its size,
-  lyrics jump and the level glyph stands still.
+* **Motion** comes from Misty's tokens: pages fade in and rise 8 px, and the
+  first rows and covers of a list rise in one after another (24 and 30 ms
+  apart, the first 16); an album, artist or playlist opened from its cover
+  grows out of it (a view transition; elsewhere the page rises as usual);
+  sheets and menus grow from 96 %; pill buttons sink to 97 % while pressed,
+  covers lift on hover; theme colours crossfade over 600 ms and a new song's
+  artwork crossfades in over the last; a sung word's light has a soft
+  leading edge; while loading, placeholders the shape of what comes have a
+  slow sheen; and while music plays the aurora drifts very slowly (two
+  minutes each way, a transform of its own layer), resting where it is when
+  the music stops. With the system's reduced-motion preference or **Reduce
+  Motion and Transparency**, nothing moves: what changes fades briefly, the
+  artwork keeps its size, lyrics jump, lists appear at once, the aurora and
+  the sheen stand still and the level glyph stands still. Pages keep where
+  they were scrolled to: one opened anew starts at its top, going back finds
+  the one below as it was left.
 * **Contrast** (WCAG AA) on the stronger field, checked with the core's
   themes for every tenth hue in both appearances, with the field sampled
   across a 1280 × 800 window as the page paints it and the glass at the
@@ -220,7 +231,8 @@ A few touches need newer browsers and are simply left out by older ones:
 the theme crossfade needs `CSS.registerProperty` (Firefox 128, Safari 16.4;
 elsewhere colours change at once), the artwork growing into Now Playing
 needs view transitions (Chrome and Edge 111, Safari 18; elsewhere Now
-Playing rises and fades in), and the play and pause morph needs the CSS `d`
+Playing rises and fades in), and so does a cover growing into its page (Firefox
+has them from 144), and the play and pause morph needs the CSS `d`
 property (not in Safari, which swaps the glyphs).
 
 ## Connecting to your server
@@ -499,7 +511,8 @@ copied. Clearing the site's data in the browser removes all of it.
   plugins load when first needed; translations load only for their language.
 * Nothing runs per frame unless something on screen moves, and what moves
   is CSS the compositor runs: a sweeping lyric word, the playing song's level
-  glyph, a transition. The seek bar, the player bar and the capsule's line
+  glyph, a transition, the aurora's drift while music plays (its layer
+  painted once and moved). The seek bar, the player bar and the capsule's line
   redraw only when their fill moves by a device pixel or a time label
   changes, lyrics at the next line or word change (`next_change`), all from
   the `DisplayClock`; their clocks sleep while the page is hidden, and the
@@ -597,7 +610,10 @@ Tests:
   Reduce Motion and Transparency); and API 1.1 (`links.spec.ts`): a plugin
   made from the Subsonic package with `[links]` offers Open in {Service} in
   search results and on its album page, and one with
-  `playback_mode = "remote"` is refused at install; and services that refuse
+  `playback_mode = "remote"` is refused at install; motion (`motion.spec.ts`:
+  the aurora drifts only while music plays, lists rise in one after another,
+  a cover grows into its page, and Reduce Motion and Transparency stops all
+  of it; the `?e2e` page keeps the aurora still for the other tests); and services that refuse
   browsers (`relay.spec.ts`): the unofficial QQ Music plugin, built with its
   `mock-service` feature, says before sign-in that QQ Music refuses browsers,
   then signs in with WeChat's QR flow through `jf-relay` (built and started

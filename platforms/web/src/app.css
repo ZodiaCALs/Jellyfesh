@@ -33,15 +33,53 @@ body {
   --jf-glow: var(--jf-field-aurora-strength, 0.75);
   overflow: hidden;
   color: var(--jf-ink-90);
-  background:
-    radial-gradient(62% 58% at 4% 0%, color-mix(in srgb, var(--jf-aurora-1, transparent) calc(var(--jf-glow) * 107%), transparent) 0%, transparent 72%),
-    radial-gradient(58% 64% at 100% 96%, color-mix(in srgb, var(--jf-aurora-2, transparent) calc(var(--jf-glow) * 96%), transparent) 0%, transparent 72%),
-    radial-gradient(44% 52% at 0% 100%, color-mix(in srgb, var(--jf-aurora-3, transparent) calc(var(--jf-glow) * 88%), transparent) 0%, transparent 70%),
-    radial-gradient(38% 40% at 92% 4%, color-mix(in srgb, var(--jf-aurora-1, transparent) calc(var(--jf-glow) * 61%), transparent) 0%, transparent 70%),
-    var(--jf-sky);
+  background: var(--jf-sky);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* The glows on a layer of their own, a little larger than the window, which drifts very slowly
+ * while music plays (two minutes one way, two back; a transform, so the compositor moves the
+ * painted layer) and rests where it is when it stops. Reduced motion: it stays put. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -8%;
+  z-index: -1;
+  background:
+    radial-gradient(62% 58% at 9% 6%, color-mix(in srgb, var(--jf-aurora-1, transparent) calc(var(--jf-glow) * 107%), transparent) 0%, transparent 72%),
+    radial-gradient(58% 64% at 95% 92%, color-mix(in srgb, var(--jf-aurora-2, transparent) calc(var(--jf-glow) * 96%), transparent) 0%, transparent 72%),
+    radial-gradient(44% 52% at 6% 94%, color-mix(in srgb, var(--jf-aurora-3, transparent) calc(var(--jf-glow) * 88%), transparent) 0%, transparent 70%),
+    radial-gradient(38% 40% at 88% 9%, color-mix(in srgb, var(--jf-aurora-1, transparent) calc(var(--jf-glow) * 61%), transparent) 0%, transparent 70%);
+  pointer-events: none;
+  animation: jf-aurora-drift 120s ease-in-out infinite alternate paused;
+}
+:root[data-playing] body::before {
+  animation-play-state: running;
+}
+:root[data-motion='reduced'] body::before,
+:root[data-ambient='still'] body::before {
+  animation: none;
+}
+@keyframes jf-aurora-drift {
+  from {
+    transform: translate3d(-2.5%, -1.5%, 0) scale(1.01);
+  }
+  to {
+    transform: translate3d(2.5%, 2%, 0) scale(1.05);
+  }
+}
+
+/* Press feedback: pill buttons sink to 97 % while pressed (dur-0); reduced motion: none. */
+:where(button.primary, button.secondary, .nav-item, .tabs button, .back):active:not(:disabled) {
+  scale: 0.97;
+}
+:where(button.primary, button.secondary, .nav-item, .tabs button, .back) {
+  transition: scale var(--jf-motion-dur-0) var(--jf-motion-ease-fluid);
+}
+:root[data-motion='reduced'] :where(button.primary, button.secondary, .nav-item, .tabs button, .back):active {
+  scale: none;
 }
 
 #app {
@@ -123,6 +161,19 @@ select {
 :root[data-view-transition='now-playing']::view-transition-new(*) {
   animation-duration: var(--jf-motion-dur-3);
   animation-timing-function: var(--jf-motion-ease-fluid);
+}
+
+/* An album, artist or playlist opened from its cover: the cover grows into the page's artwork
+ * (item-art, src/lib/state/nav.svelte.ts) while the page crossfades, dur-3 Fluid; the page's own
+ * rise waits for another time. */
+:root[data-view-transition='open-item']::view-transition-group(*),
+:root[data-view-transition='open-item']::view-transition-old(*),
+:root[data-view-transition='open-item']::view-transition-new(*) {
+  animation-duration: var(--jf-motion-dur-3);
+  animation-timing-function: var(--jf-motion-ease-fluid);
+}
+:root[data-view-transition='open-item'] .route {
+  animation: none;
 }
 
 @media (min-width: 900px) {

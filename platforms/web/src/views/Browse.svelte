@@ -8,6 +8,7 @@
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
   import Menu from '../components/Menu.svelte';
+  import Skeleton from '../components/Skeleton.svelte';
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t, tn } from '../lib/i18n/index.svelte';
@@ -91,7 +92,7 @@
 
 <section class="page" class:collection aria-labelledby="browse-title">
   <header class="head">
-    <span class="art"><Art {plugin} {item} size={collection ? 360 : 160} radius="grid" /></span>
+    <span class="art hero-art"><Art {plugin} {item} size={collection ? 360 : 160} radius="grid" /></span>
     <div class="text">
       <p class="kind">{t(item.kind === 'Track' ? 'Song' : item.kind)}</p>
       <h1 id="browse-title">{item.title}</h1>
@@ -145,7 +146,7 @@
     onmore={() => !loading && next && load(next)}
   />
   {#if loading && items.length === 0}
-    <p class="loading" aria-live="polite">{t('Loading…')}</p>
+    <Skeleton kind={item.kind === 'Album' || item.kind === 'Playlist' ? 'rows' : 'cards'} count={item.kind === 'Album' ? 8 : 6} />
   {/if}
   {#if complete && tracks.length > 0}
     <p class="footer">{summary(tracks)}</p>
@@ -286,9 +287,6 @@
     font-weight: 700;
   }
   .empty,
-  .loading {
-    color: var(--jf-ink-70);
-  }
   .footer {
     margin: var(--jf-space-s4) var(--jf-space-s2) 0;
     font-size: 13px;

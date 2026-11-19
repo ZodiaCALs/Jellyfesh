@@ -83,14 +83,14 @@ export function runningViewTransition(): string | undefined {
 
 /**
  * Runs `update` as a view transition called `name` (on the root as data-view-transition while it
- * runs, for the CSS that names what morphs), where the browser has them and motion is allowed;
- * else runs it straight away. The browser runs the transition on the compositor.
+ * runs, for the CSS that names what morphs), where the browser has them (same-document view
+ * transitions: Chrome and Edge 111, Safari 18, Firefox 144) and motion is allowed; else runs it
+ * straight away. The browser runs the transition on the compositor. Resolves when it is over.
  */
-export function viewTransition(name: string, update: () => Promise<void>): void {
+export function viewTransition(name: string, update: () => Promise<void>): Promise<void> {
   const doc = document as ViewTransitionDocument;
   if (typeof doc.startViewTransition !== 'function' || reducedMotion()) {
-    void update();
-    return;
+    return update();
   }
   const root = document.documentElement;
   root.dataset.viewTransition = name;
@@ -98,11 +98,34 @@ export function viewTransition(name: string, update: () => Promise<void>): void 
   // A transition the browser skips (another one started, or it could not capture the page)
   // still runs the update: the change happens without the morph. Its `ready` then rejects.
   transition.ready.catch(() => undefined);
-  transition.finished
+  return transition.finished
     .catch(() => undefined)
     .finally(() => {
       if (root.dataset.viewTransition === name) delete root.dataset.viewTransition;
     });
+}
+
+/** Waits until `element`'s pictures have loaded, at most `ms` (polled: a view transition holds the frames). */
+export async function picturesReady(element: Element | null, ms = 160): Promise<void> {
+  const until = performance.now() + ms;
+  while (element && performance.now() < until) {
+    const images = [...element.querySelectorAll('img')];
+    if (images.length > 0 && images.every((img) => img.complete)) return;
+    await new Promise((resolve) => setTimeout(resolve, 16));
+  }
+}
+
+/**
+ * A new picture fades in over the last one, which fades out under it (artwork changes: dur-3
+ * Fluid; reduced motion: a short fade). Opacity only.
+ */
+export function crossfade(_node: Element): TransitionConfig {
+  if (reducedMotion()) return fade();
+  return {
+    duration: durationOf(token('--jf-motion-dur-3'), 380),
+    easing: easingOf(token('--jf-motion-ease-fluid'), [0.22, 1, 0.36, 1]),
+    css: (t) => `opacity: ${t}`,
+  };
 }
 
 /**

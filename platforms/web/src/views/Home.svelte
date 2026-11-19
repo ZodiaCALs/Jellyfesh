@@ -4,6 +4,7 @@
   // connect a server (or drop files, which play without being kept).
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
+  import Skeleton from '../components/Skeleton.svelte';
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t, tn } from '../lib/i18n/index.svelte';
@@ -91,7 +92,7 @@
       {#if shelf.error}
         <p class="problem" role="alert"><Icon name="alert" size={18} />{shelf.error}</p>
       {:else if shelf.loading}
-        <p class="muted">{t('Loading…')}</p>
+        <Skeleton kind="tiles" count={4} />
       {:else}
         <ItemList plugin={shelf.plugin} items={shelf.items} />
       {/if}
@@ -169,8 +170,5 @@
   .problem :global(svg) {
     flex: none;
     color: var(--jf-warning);
-  }
-  .muted {
-    color: var(--jf-ink-70);
   }
 </style>

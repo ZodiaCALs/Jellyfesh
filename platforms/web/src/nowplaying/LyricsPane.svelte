@@ -349,12 +349,17 @@
     outline: none;
     box-shadow: var(--jf-elevation-focus);
   }
+  /* The sung part of a word is ink-90 over ink-70, its leading edge feathered over 0.3 em, so the
+     sweep reads as light moving through the word rather than a hard cut. The sung layer is 0.3 em
+     wider than the progress, so a whole word ends fully lit. */
   .word {
     color: transparent;
-    background-image: linear-gradient(var(--jf-ink-90), var(--jf-ink-90)), linear-gradient(var(--jf-ink-70), var(--jf-ink-70));
+    background-image:
+      linear-gradient(90deg, var(--jf-ink-90) calc(100% - 0.3em), transparent),
+      linear-gradient(var(--jf-ink-70), var(--jf-ink-70));
     background-repeat: no-repeat;
     background-size:
-      var(--from) 100%,
+      calc(var(--from) + 0.3em) 100%,
       100% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -363,12 +368,12 @@
   }
   .word.sung {
     background-size:
-      100% 100%,
+      calc(100% + 0.3em) 100%,
       100% 100%;
   }
   .reduced .word.current {
     background-size:
-      100% 100%,
+      calc(100% + 0.3em) 100%,
       100% 100%;
   }
   .word.sweeping {
@@ -379,24 +384,24 @@
   @keyframes sweep-0 {
     from {
       background-size:
-        var(--from) 100%,
+        calc(var(--from) + 0.3em) 100%,
         100% 100%;
     }
     to {
       background-size:
-        100% 100%,
+        calc(100% + 0.3em) 100%,
         100% 100%;
     }
   }
   @keyframes sweep-1 {
     from {
       background-size:
-        var(--from) 100%,
+        calc(var(--from) + 0.3em) 100%,
         100% 100%;
     }
     to {
       background-size:
-        100% 100%,
+        calc(100% + 0.3em) 100%,
         100% 100%;
     }
   }

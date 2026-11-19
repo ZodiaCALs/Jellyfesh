@@ -80,8 +80,10 @@ export async function createApp(): Promise<App> {
   player.restore(() => library.restoreQueue());
   const app: App = { jf, core, store, settings, theme, nav, sources, files, library, artworks, player, search };
   if (new URLSearchParams(location.search).has('e2e')) {
-    // A handle for the end-to-end tests (gap measurement, state checks); only with ?e2e.
+    // A handle for the end-to-end tests (gap measurement, state checks); only with ?e2e. The
+    // aurora's drift stands still there, so screenshots and motion counts do not depend on time.
     (globalThis as unknown as { jellyfesh: App }).jellyfesh = app;
+    document.documentElement.dataset.ambient = 'still';
   }
   return app;
 }

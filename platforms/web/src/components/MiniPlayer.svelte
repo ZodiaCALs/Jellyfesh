@@ -6,6 +6,7 @@
   // redraws only when it moves by a device pixel, never per frame, never while paused or inactive.
   import { untrack } from 'svelte';
   import { useApp } from '../lib/app';
+  import { crossfade } from '../lib/motion';
   import { nextDrawUs } from '../lib/drawing/steps';
   import { Ticker } from '../lib/drawing/ticker';
   import { t } from '../lib/i18n/index.svelte';
@@ -67,7 +68,9 @@
   <div class="mini glass-veil" role="region" aria-label={t('Now Playing')}>
     <button class="open" onclick={() => nav.openNowPlaying()} aria-label={t('Open Now Playing')}>
       <span class="art">
-        {#if theme.artwork}<img src={theme.artwork} alt="" referrerpolicy="no-referrer" />{/if}
+        {#each theme.artwork ? [theme.artwork] : [] as url (url)}
+          <img src={url} alt="" referrerpolicy="no-referrer" transition:crossfade />
+        {/each}
       </span>
       <span class="text">
         <span class="title">{row.title}</span>
@@ -125,7 +128,13 @@
     overflow: hidden;
     background: linear-gradient(135deg, var(--jf-aurora-1), var(--jf-aurora-2));
   }
+  .art {
+    position: relative;
+  }
+  /* A new song's artwork fades in over the last (dur-3 Fluid). */
   .art img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;

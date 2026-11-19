@@ -20,7 +20,7 @@
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
   import { nowPlayingMenu } from '../lib/items';
-  import { back, deeper } from '../lib/motion';
+  import { back, crossfade, deeper } from '../lib/motion';
   import type { Pane } from '../lib/state/nav.svelte';
   import InfoPane from './InfoPane.svelte';
   import LyricsPane from './LyricsPane.svelte';
@@ -114,11 +114,17 @@
   <main class="stage">
     <section class="player" aria-label={t('Player')}>
       <div class="hero" class:paused={!player.playing}>
-        {#if theme.artwork}
-          <img class="cover" src={theme.artwork} alt={t('Artwork of {title}', { title: row?.title ?? '' })} referrerpolicy="no-referrer" />
+        {#each theme.artwork ? [theme.artwork] : [] as url (url)}
+          <img
+            class="cover"
+            src={url}
+            alt={t('Artwork of {title}', { title: row?.title ?? '' })}
+            referrerpolicy="no-referrer"
+            transition:crossfade
+          />
         {:else}
           <Art kind="Album" size={380} radius="hero" />
-        {/if}
+        {/each}
       </div>
       <div class="titles">
         <h1 class="title">{row?.title ?? t('Nothing Playing')}</h1>
@@ -309,6 +315,10 @@
     display: grid;
     place-items: center;
     container-type: size;
+  }
+  /* Two covers share the place while a new song's crossfades in over the last. */
+  .hero > :global(*) {
+    grid-area: 1 / 1;
   }
   /* Square, as large as the space allows (on a phone the space is taller than wide or the
      other way round). */

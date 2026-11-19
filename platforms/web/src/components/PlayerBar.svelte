@@ -6,6 +6,7 @@
   // control) on purpose, for desktop use; play stays its only accent fill. The seek bar's clock
   // sleeps while inactive.
   import { useApp } from '../lib/app';
+  import { crossfade } from '../lib/motion';
   import { t } from '../lib/i18n/index.svelte';
   import Icon from './Icon.svelte';
   import SeekBar from './SeekBar.svelte';
@@ -27,7 +28,9 @@
     <div class="inner glass-veil">
       <button class="open" onclick={() => nav.openNowPlaying()} aria-label={t('Open Now Playing')}>
         <span class="art">
-          {#if theme.artwork}<img src={theme.artwork} alt="" referrerpolicy="no-referrer" />{/if}
+          {#each theme.artwork ? [theme.artwork] : [] as url (url)}
+            <img src={url} alt="" referrerpolicy="no-referrer" transition:crossfade />
+          {/each}
         </span>
         <span class="text">
           <span class="title">{row.title}</span>
@@ -95,7 +98,13 @@
       inset 0 0 0 1px var(--jf-line-soft),
       var(--jf-elevation-shadow-1);
   }
+  .art {
+    position: relative;
+  }
+  /* A new song's artwork fades in over the last (dur-3 Fluid). */
   .art img {
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;

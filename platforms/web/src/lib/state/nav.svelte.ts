@@ -4,7 +4,7 @@
 
 import { tick } from 'svelte';
 import type { Item } from '../core/types';
-import { viewTransition } from '../motion';
+import { picturesReady, viewTransition } from '../motion';
 
 export type Tab = 'home' | 'albums' | 'artists' | 'songs' | 'search' | 'sources' | 'settings';
 /** The sections of Settings, in their order. */
@@ -90,12 +90,34 @@ export class Nav {
     }
   }
 
-  /** Opens a page on top of the current one. */
-  open(route: Route) {
-    this.motion = 'forward';
-    this.stack = [...this.stack, route];
-    this.nowPlaying = false;
-    history.pushState({ jf: true, depth: this.stack.length - 1, nowPlaying: false } satisfies HistoryState, '');
+  /**
+   * Opens a page on top of the current one. From a cover (`origin`), where browsers have view
+   * transitions, the cover grows into the new page's artwork while the rest crossfades.
+   */
+  open(route: Route, origin: HTMLElement | null = null) {
+    const go = () => {
+      this.motion = 'forward';
+      this.stack = [...this.stack, route];
+      this.nowPlaying = false;
+      history.pushState({ jf: true, depth: this.stack.length - 1, nowPlaying: false } satisfies HistoryState, '');
+    };
+    if (!origin) {
+      go();
+      return;
+    }
+    let target: HTMLElement | null = null;
+    origin.style.viewTransitionName = 'item-art';
+    void viewTransition('open-item', async () => {
+      origin.style.viewTransitionName = '';
+      go();
+      await tick();
+      target = document.querySelector<HTMLElement>('.route .hero-art');
+      if (target) target.style.viewTransitionName = 'item-art';
+      await picturesReady(target);
+    }).finally(() => {
+      origin.style.viewTransitionName = '';
+      if (target) target.style.viewTransitionName = '';
+    });
   }
 
   back() {
@@ -106,7 +128,7 @@ export class Nav {
   openNowPlaying(pane?: Pane) {
     if (pane) this.pane = pane;
     if (this.nowPlaying) return;
-    viewTransition('now-playing', async () => {
+    void viewTransition('now-playing', async () => {
       // Twice in one frame opens once.
       if (this.nowPlaying) return;
       this.nowPlaying = true;
