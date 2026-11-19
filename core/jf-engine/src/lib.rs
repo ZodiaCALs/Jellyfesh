@@ -79,6 +79,7 @@ mod decode;
 pub mod dsp;
 mod engine;
 mod http;
+mod mono;
 mod mp4;
 mod pipeline;
 mod resample;
@@ -89,6 +90,7 @@ mod worker;
 pub use anchor::{PlaybackAnchor, monotonic_now_ns};
 pub use dsp::{BandKind, EqBand, EqSettings};
 pub use engine::Engine;
+pub use mono::{AudioInput, MonoAudio, SPEECH_RATE, decode_mono};
 pub use sink::{DeviceInfo, NullSink, Sink, WavSink};
 #[cfg(feature = "device")]
 pub use sink::{DeviceSink, list_devices};

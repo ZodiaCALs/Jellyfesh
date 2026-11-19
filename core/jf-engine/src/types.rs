@@ -349,6 +349,9 @@ pub enum EngineError {
     Resample(String),
     #[error("the engine thread is not running")]
     Disconnected,
+    /// The caller stopped the work (decoding a song for AI Lyrics).
+    #[error("cancelled")]
+    Cancelled,
 }
 
 impl From<hound::Error> for EngineError {
