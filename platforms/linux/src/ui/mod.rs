@@ -92,6 +92,9 @@ fn config() -> Option<Config> {
         config.output = OutputKind::Null { realtime: true };
     }
     config.bundled_plugins = bundled_plugins();
+    // How this build reached the person (the release workflow's flag):
+    // which stores sell Pro and whether the core checks for updates.
+    config.distribution = crate::logic::build::distribution(option_env!("JF_DISTRIBUTION"));
     Some(config)
 }
 
@@ -168,10 +171,8 @@ fn startup(application: &adw::Application) {
     window::listen();
     mpris::start();
     devices::watch();
-    // Resume where the person left off, when they asked for it.
-    if state.settings.borrow().resume_on_launch && state.queue.borrow().current.is_some() {
-        state.send(Command::Play);
-    }
+    // Resume Playback is the core's: it plays the restored queue at its
+    // saved position when it starts (docs/core-api.md, "Settings").
 }
 
 fn present(application: &adw::Application) {
