@@ -2536,7 +2536,7 @@ dependencies = [
 
 [[package]]
 name = "jf-jellyfin"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "jf-plugin-host",
  "jf-plugin-sdk",
