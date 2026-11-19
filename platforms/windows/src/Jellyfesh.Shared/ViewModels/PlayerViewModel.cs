@@ -88,6 +88,12 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private string? _artworkUri;
 
+    /// <summary>The size source pictures of what plays are asked for: Now Playing's large artwork.</summary>
+    private const uint PlayerArtworkPixels = 1024;
+
+    private ArtworkRef? _artworkShown;
+    private CancellationTokenSource? _artworkRequest;
+
     [ObservableProperty]
     private string? _artworkPath;
 
@@ -393,8 +399,7 @@ public sealed partial class PlayerViewModel : ObservableObject
         Subtitle = item is null ? string.Empty
             : item.Album is null ? Artist
             : _s.L.Format("Player_ArtistAlbum", Artist, item.Album);
-        ArtworkUri = item?.Artwork?.ToUriString();
-        ArtworkPath = item?.Artwork is ArtworkRef.File f ? f.Path : null;
+        ShowArtwork(item?.Artwork);
         FormatText = string.Empty;
         FilePath = string.Empty;
         Year = string.Empty;
@@ -664,8 +669,7 @@ public sealed partial class PlayerViewModel : ObservableObject
         Subtitle = np is null ? string.Empty
             : np.Album is null ? Artist
             : _s.L.Format("Player_ArtistAlbum", Artist, np.Album);
-        ArtworkUri = np?.Artwork?.ToUriString();
-        ArtworkPath = np?.Artwork is ArtworkRef.File f ? f.Path : null;
+        ShowArtwork(np?.Artwork);
         FormatText = np?.Format is { } fmt ? Describe(fmt) : string.Empty;
         FilePath = np?.Path ?? string.Empty;
         LengthText = np is null ? string.Empty
@@ -687,6 +691,48 @@ public sealed partial class PlayerViewModel : ObservableObject
             OnPropertyChanged(nameof(TrackKey));
             _ = RefreshFavoriteAsync(key, np?.Track);
             _ = RefreshYearAsync(np);
+        }
+    }
+
+    /// <summary>
+    /// The picture of what plays: a file as it is; a source picture once the core has it in its
+    /// cache (docs/core-api.md, "Covers"), at the size Now Playing draws, with no picture meanwhile.
+    /// The same picture again (a NowPlaying event for the same song) changes nothing.
+    /// </summary>
+    private void ShowArtwork(ArtworkRef? artwork)
+    {
+        if (artwork == _artworkShown)
+        {
+            return;
+        }
+
+        _artworkShown = artwork;
+        _artworkRequest?.Cancel();
+        _artworkRequest = null;
+        ArtworkPath = artwork is ArtworkRef.File f ? f.Path : null;
+        ArtworkUri = ArtworkPath is { } path ? FileUris.From(path) : null;
+        if (artwork is ArtworkRef.Url url)
+        {
+            _ = LoadSourceArtworkAsync(artwork, url.Address);
+        }
+    }
+
+    private async Task LoadSourceArtworkAsync(ArtworkRef artwork, string url)
+    {
+        var cts = new CancellationTokenSource();
+        _artworkRequest = cts;
+        try
+        {
+            var path = await _s.Thumbnails.GetSourceAsync(url, PlayerArtworkPixels, cts.Token);
+            if (!cts.IsCancellationRequested && path is not null && artwork == _artworkShown)
+            {
+                ArtworkPath = path;
+                ArtworkUri = FileUris.From(path);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Another song started.
         }
     }
 

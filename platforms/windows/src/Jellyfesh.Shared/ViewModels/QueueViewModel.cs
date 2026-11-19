@@ -36,9 +36,9 @@ public sealed partial class QueueEntryItem : ArtworkItem
         Subtitle = subtitle ?? string.Empty;
         Duration = TimeFormat.Duration(durationMs);
         ArtworkHash = artworkHash;
-        if (artworkUrl is not null)
+        if (artworkHash is null && artworkUrl is not null)
         {
-            ArtworkUri = artworkUrl;
+            SourceArtworkUrl = artworkUrl; // the core fetches it when the row is shown
         }
 
         Resolved = true;

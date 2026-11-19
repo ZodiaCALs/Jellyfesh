@@ -14,7 +14,7 @@ tested on any OS.
   shows why and opens its link when chosen. Links open with `Launcher.LaunchUriAsync`, web
   addresses only (`ItemLinks`, `ShellPlatform.OpenUrl`).
 * **Remote playback** (ADR-0018): while the `Remote` slice has a source, `PlayerViewModel` shows its
-  track (title, artist, artwork URL, progress from its anchor through the same `DisplayClock`),
+  track (title, artist, artwork, progress from its anchor through the same `DisplayClock`),
   **Playing on {Device}** under the title and the session's error in a quieter line (the mini and
   compact players show the device line instead of the artist). The transport sends the usual
   commands; the volume sets the device's volume (`Remote { SetVolume }`) and hides when it has none;
@@ -395,6 +395,13 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   artists, songs and favourites `ListView`s; every row is a placeholder until its
   page of the core's query arrives, and thumbnails are requested at the drawn
   size, two at a time, off the UI thread, and cancelled when a row scrolls away.
+* **Covers from sources** ([`core-api.md`](core-api.md), "Covers"): the app
+  never fetches a picture itself. Rows, page headers, Now Playing (at 1024 px)
+  and the system media controls ask `SourceArtwork(url, size)` through
+  `ThumbnailService.GetSourceAsync`: a cached file loads at once; otherwise the
+  placeholder stays until the core's `Artwork` event brings the file (at most a
+  minute). A picture the core cannot have is not asked for again for ten
+  minutes.
 * **Look.** Colours come from the core's Theme slice into shared brushes
   (Misty PLT-03), crossfaded over 600 ms on a new hue; sizes from the
   generated tokens through `{th:Token}`. Mica on Windows 11, the solid field

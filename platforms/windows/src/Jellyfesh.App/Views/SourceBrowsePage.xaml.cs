@@ -37,6 +37,9 @@ public sealed partial class SourceBrowsePage : JfPage
             PageModel = ViewModel;
             RowList.ItemTemplateSelector = new SourceRowTemplates(ViewModel.IsNumbered);
             Bindings.Update();
+
+            // The header's cover comes through the core, at the size it is drawn.
+            ViewModel.Header?.RequestArtwork(AppHost.Services.Thumbnails, 240 * (XamlRoot?.RasterizationScale ?? 1.5));
         }
 
         base.OnNavigatedTo(e);

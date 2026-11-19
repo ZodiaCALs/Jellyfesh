@@ -15,6 +15,7 @@ public abstract partial class ArtworkItem : ObservableObject
     private CancellationTokenSource? _artwork;
     private (ThumbnailService Service, double Pixels)? _wanted;
     private string? _artworkHash;
+    private string? _sourceUrl;
 
     [ObservableProperty]
     private string? _artworkUri;
@@ -36,11 +37,31 @@ public abstract partial class ArtworkItem : ObservableObject
         }
     }
 
-    /// <summary>Loads the thumbnail at about <paramref name="pixels"/> device pixels (now, or once the hash is known).</summary>
+    /// <summary>
+    /// A source picture's URL, which only the core fetches (docs/core-api.md, "Covers"): the row
+    /// shows its placeholder until the core has the file.
+    /// </summary>
+    public string? SourceArtworkUrl
+    {
+        get => _sourceUrl;
+        protected set
+        {
+            _sourceUrl = value;
+            if (_wanted is { } wanted && value is not null && ArtworkUri is null)
+            {
+                RequestArtwork(wanted.Service, wanted.Pixels);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Loads the picture at about <paramref name="pixels"/> device pixels (now, or once the hash or
+    /// the source URL is known): a library thumbnail by hash, else a source picture by URL.
+    /// </summary>
     public async void RequestArtwork(ThumbnailService thumbnails, double pixels)
     {
         _wanted = (thumbnails, pixels);
-        if (ArtworkUri is not null || ArtworkHash is null || _artwork is not null)
+        if (ArtworkUri is not null || (ArtworkHash is null && SourceArtworkUrl is null) || _artwork is not null)
         {
             return;
         }
@@ -49,7 +70,10 @@ public abstract partial class ArtworkItem : ObservableObject
         _artwork = cts;
         try
         {
-            var path = await thumbnails.GetAsync(ArtworkHash, ThumbnailService.SizeFor(pixels), cts.Token);
+            var size = ThumbnailService.SizeFor(pixels);
+            var path = ArtworkHash is { } hash
+                ? await thumbnails.GetAsync(hash, size, cts.Token)
+                : await thumbnails.GetSourceAsync(SourceArtworkUrl, size, cts.Token);
             if (!cts.IsCancellationRequested && path is not null && FileUris.From(path) is { } uri)
             {
                 ArtworkUri = uri;
@@ -62,7 +86,7 @@ public abstract partial class ArtworkItem : ObservableObject
         catch (Exception e)
         {
             // async void: an exception would end the app. The row keeps its placeholder.
-            System.Diagnostics.Debug.WriteLine($"thumbnail {ArtworkHash}: {e.Message}");
+            System.Diagnostics.Debug.WriteLine($"artwork {ArtworkHash ?? SourceArtworkUrl}: {e.Message}");
         }
         finally
         {
@@ -83,10 +107,15 @@ public abstract partial class ArtworkItem : ObservableObject
         _artwork = null;
     }
 
+    /// <summary>
+    /// The row's picture: a library hash (thumbnails), a file to show as it is, or a source URL the
+    /// core fetches when the row is shown.
+    /// </summary>
     protected void SetArtwork(ArtworkRef? artwork, string? hash)
     {
-        ArtworkUri = artwork?.ToUriString();
+        ArtworkUri = artwork is ArtworkRef.File f ? FileUris.From(f.Path) : null;
         ArtworkHash = hash;
+        SourceArtworkUrl = hash is null && artwork is ArtworkRef.Url u ? u.Address : null;
     }
 }
 

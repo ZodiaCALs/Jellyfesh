@@ -30,7 +30,7 @@ public class RemoteAndLinksTests
         Assert.True(p.IsRemote);
         Assert.True(p.HasTrack);
         Assert.Equal(("Lantern", "Sample Artist", "Night Swim"), (p.Title, p.Artist, p.Album));
-        Assert.Equal("https://art.example/7.jpg", p.ArtworkUri);
+        Assert.Null(p.ArtworkUri); // until the core has the picture (CoversTests)
         Assert.Equal("Remote_PlayingOn", p.RemoteDeviceText);
         Assert.Equal("the service asked to slow down", p.RemoteError);
         Assert.Equal(("Remote_Lyrics", "Remote_Queue"), (p.RemoteLyricsText, p.RemoteQueueText));

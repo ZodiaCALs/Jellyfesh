@@ -26,6 +26,13 @@ public sealed class ShellServices
         Ticker = ticker;
         Thumbnails = new ThumbnailService(hub.Core);
         Notifications = new NotificationsViewModel(localizer);
+        hub.Notification += e =>
+        {
+            if (e is CoreEvent.Artwork artwork)
+            {
+                Thumbnails.OnArtwork(artwork.Ready);
+            }
+        };
     }
 
     public CoreHub Hub { get; }

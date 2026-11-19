@@ -151,11 +151,8 @@ internal sealed class MediaTransport : IDisposable
                     return; // the track changed while the file opened
                 }
 
+                // Source pictures are files too: the core fetched them (docs/core-api.md, "Covers").
                 updater.Thumbnail = RandomAccessStreamReference.CreateFromFile(file);
-            }
-            else if (_player.ArtworkUri is { } uri && uri.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                updater.Thumbnail = RandomAccessStreamReference.CreateFromUri(new Uri(uri));
             }
         }
         catch (Exception)
