@@ -557,7 +557,7 @@ impl Lyrics {
         if !line.words || !style::animations_enabled() {
             return false;
         }
-        let sung = style::style().rgba("ink.ink-90");
+        let sung = style::lyrics_sung();
         line.text
             .set_sweep(cursor.word.map(|w| (w, cursor.word_progress)), &sung);
         let lyrics = self.lyrics.borrow();

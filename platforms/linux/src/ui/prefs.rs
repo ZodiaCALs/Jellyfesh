@@ -370,10 +370,20 @@ fn appearance_page() -> adw::PreferencesPage {
             "How each line reads in Latin letters, when the lyrics have it.",
         ))
         .build();
+    let lyrics_bar = adw::SwitchRow::builder()
+        .title(tr("Show Lyrics Bar"))
+        .subtitle(tr("The line being sung, under the title in the player bar."))
+        .build();
+    let desktop_lyrics = adw::SwitchRow::builder()
+        .title(tr("Desktop Lyrics"))
+        .subtitle(tr("The current and next line in a small window of their own."))
+        .build();
     lyrics_group.add(&size_row);
     lyrics_group.add(&align_row);
     lyrics_group.add(&translation);
     lyrics_group.add(&romanization);
+    lyrics_group.add(&lyrics_bar);
+    lyrics_group.add(&desktop_lyrics);
     p.add(&lyrics_group);
 
     let icon = group(
@@ -505,6 +515,22 @@ fn appearance_page() -> adw::PreferencesPage {
         let on = r.is_active();
         app().update_settings(|s| s.show_romanization = on);
     });
+    let g = guard.clone();
+    lyrics_bar.connect_active_notify(move |r| {
+        if g.get() {
+            return;
+        }
+        let on = r.is_active();
+        app().update_settings(|s| s.show_lyrics_bar = on);
+    });
+    let g = guard.clone();
+    desktop_lyrics.connect_active_notify(move |r| {
+        if g.get() {
+            return;
+        }
+        let on = r.is_active();
+        app().update_settings(|s| s.desktop_lyrics = on);
+    });
 
     // The controls show the settings; the previews follow theme changes.
     let previews: Vec<Preview> = theme_previews
@@ -555,6 +581,8 @@ fn appearance_page() -> adw::PreferencesPage {
         reduce.downgrade(),
         translation.downgrade(),
         romanization.downgrade(),
+        lyrics_bar.downgrade(),
+        desktop_lyrics.downgrade(),
     );
     follow_settings(&p, guard, move |s| {
         let (
@@ -568,6 +596,8 @@ fn appearance_page() -> adw::PreferencesPage {
             Some(reduce),
             Some(translation),
             Some(romanization),
+            Some(lyrics_bar),
+            Some(desktop_lyrics),
         ) = (
             weak.0.upgrade(),
             weak.1.upgrade(),
@@ -579,6 +609,8 @@ fn appearance_page() -> adw::PreferencesPage {
             weak.7.upgrade(),
             weak.8.upgrade(),
             weak.9.upgrade(),
+            weak.10.upgrade(),
+            weak.11.upgrade(),
         )
         else {
             return;
@@ -619,6 +651,8 @@ fn appearance_page() -> adw::PreferencesPage {
         }
         translation.set_active(s.show_translation);
         romanization.set_active(s.show_romanization);
+        lyrics_bar.set_active(s.show_lyrics_bar);
+        desktop_lyrics.set_active(s.desktop_lyrics);
     });
     p
 }

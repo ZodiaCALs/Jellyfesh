@@ -253,6 +253,23 @@ pub fn apply_glass() {
     s.glass_on.set(on);
 }
 
+/// The colour of sung lyrics: the lyrics' sung ink, the accent or the
+/// person's colour, as the look says (ADR-0020).
+pub fn lyrics_sung() -> gdk::RGBA {
+    use crate::logic::look::{self, Sung};
+    let sung = try_app().map_or(Sung::Ink, |a| look::sung(&a.look.borrow()));
+    match sung {
+        Sung::Ink => style().rgba("ink.ink-90"),
+        Sung::Accent => style().rgba("accent.accent-text"),
+        Sung::Rgb(rgb) => gdk::RGBA::new(
+            ((rgb >> 16) & 0xFF) as f32 / 255.0,
+            ((rgb >> 8) & 0xFF) as f32 / 255.0,
+            (rgb & 0xFF) as f32 / 255.0,
+            1.0,
+        ),
+    }
+}
+
 impl Style {
     /// The colour shown now for a theme colour name (`ink.ink-90`).
     pub fn rgba(&self, name: &str) -> gdk::RGBA {

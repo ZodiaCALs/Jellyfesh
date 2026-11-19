@@ -30,6 +30,8 @@ mod imp {
         pub sung: RefCell<Option<gdk::RGBA>>,
         pub rtl: Cell<bool>,
         pub centred: Cell<bool>,
+        /// One row, cut with an ellipsis (the lyrics bar, Desktop Lyrics).
+        pub single: Cell<bool>,
     }
 
     impl std::fmt::Debug for LyricLine {
@@ -63,7 +65,8 @@ mod imp {
                 gtk::Orientation::Horizontal => {
                     let layout = obj.make_layout(-1);
                     let (w, _) = layout.pixel_size();
-                    (w.min(120), w, -1, -1)
+                    let min = if self.single.get() { 0 } else { w.min(120) };
+                    (min, w, -1, -1)
                 }
                 _ => {
                     let layout = obj.make_layout(for_size);
@@ -111,6 +114,16 @@ impl LyricLine {
         l
     }
 
+    /// Keeps the line on one row, cut with an ellipsis when it does not fit
+    /// (the lyrics bar and Desktop Lyrics).
+    pub fn set_single_line(&self, single: bool) {
+        let imp = self.imp();
+        if imp.single.replace(single) != single {
+            imp.layout.borrow_mut().take();
+            self.queue_resize();
+        }
+    }
+
     /// Centres the line (the Lyrics alignment setting) instead of starting
     /// it at the start edge.
     pub fn set_centred(&self, centred: bool) {
@@ -136,6 +149,9 @@ impl LyricLine {
         let text = text.as_ref().map_or("", |t| t.text.as_str());
         let layout = self.create_pango_layout(Some(text));
         layout.set_wrap(pango::WrapMode::WordChar);
+        if self.imp().single.get() {
+            layout.set_ellipsize(pango::EllipsizeMode::End);
+        }
         if width > 0 {
             layout.set_width(width * pango::SCALE);
         }

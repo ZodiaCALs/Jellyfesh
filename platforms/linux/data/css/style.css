@@ -691,6 +691,25 @@ button.np-back:hover {
   font-weight: 600;
 }
 
+/* The lyrics bar (ADR-0022 §6): the line being sung under the title, its
+ * unsung words in lyrics.ink-unsung and the sweep in the highlight colour;
+ * a line without word timing shows whole in the sung ink. */
+.lyrics-bar-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: {{ink.ink-70}};
+}
+
+.lyrics-bar-text.sung {
+  color: {{ink.ink-90}};
+}
+
+.lyrics-bar-translation {
+  {{type-roles.list-secondary}};
+  font-size: 11px;
+  color: {{ink.ink-70}};
+}
+
 /* Open in {Service}, under About This Song. */
 button.np-open-link {
   margin-top: {{space.s2}};

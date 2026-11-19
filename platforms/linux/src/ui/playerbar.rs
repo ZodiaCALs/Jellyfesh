@@ -4,7 +4,8 @@
 //! side the artwork and two lines of type open Now Playing; in the middle
 //! the transport capsule (shuffle, previous, play, next, repeat; play is
 //! the only accent fill) sits above the seek bar and its times; on the end
-//! side Lyrics, Queue and the volume. This bends CMP-02 (one control) on
+//! side Lyrics, Queue and the volume. With Show Lyrics Bar on, the line
+//! being sung fills word by word under the title (ADR-0022 §6). This bends CMP-02 (one control) on
 //! purpose, for desktop use; narrow windows keep the mini-player.
 //!
 //! While a remote session runs (ADR-0018) the bar shows its track with
@@ -16,6 +17,7 @@ use adw::prelude::*;
 use crate::logic::seek::Times;
 use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
+use crate::ui::lyricsbar::{LyricsBarView, Mode};
 use crate::ui::outputs::DeviceButton;
 use crate::ui::state::{Change, app};
 use crate::ui::transport::{self, Volume};
@@ -65,10 +67,20 @@ pub fn build() -> PlayerBar {
         .visible(false)
         .build();
     error.add_css_class("bar-error");
+    // The lyrics bar: the line being sung under the title, instead of the
+    // artist, while Show Lyrics Bar is on and the lyrics are timed.
+    let lyrics_bar = LyricsBarView::new(Mode::Line);
+    let shown_artist = artist.downgrade();
+    lyrics_bar.connect_showing(move |showing| {
+        if let Some(a) = shown_artist.upgrade() {
+            a.set_visible(!showing);
+        }
+    });
     let texts = gtk::Box::new(gtk::Orientation::Vertical, 2);
     texts.set_valign(gtk::Align::Center);
     texts.append(&title);
     texts.append(&artist);
+    texts.append(&lyrics_bar.root);
     texts.append(&error);
     let open_box = gtk::Box::new(gtk::Orientation::Horizontal, 12);
     open_box.append(&art);
@@ -260,6 +272,7 @@ pub fn build() -> PlayerBar {
     let line = volume.bar.clone();
     crate::ui::pages::keep_alive(&holder, volume);
     crate::ui::pages::keep_alive(&holder, devices);
+    crate::ui::pages::keep_alive(&holder, lyrics_bar);
     a.scheduler.add(
         &seek,
         |bar, pos, running| bar.set_position(pos, app().duration_us(), running),

@@ -9,6 +9,7 @@ mod devices;
 mod dnd;
 pub mod i18n;
 mod keys;
+mod lyricsbar;
 mod miniplayer;
 mod models;
 mod mpris;
