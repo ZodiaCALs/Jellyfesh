@@ -429,4 +429,10 @@
     <string name="update_check">檢查更新</string>
     <string name="update_checking">正在檢查…</string>
     <string name="update_auto">自動檢查更新</string>
+    <!-- v0.0.7: plugin settings, schema profile 1.2 -->
+    <string name="action_reset_defaults">回復預設值</string>
+    <string name="colour_code">顏色代碼</string>
+    <string name="colour_saturation">飽和度</string>
+    <string name="colour_brightness">亮度</string>
+    <string name="field_not_colour">請以 #RRGGBB 的形式輸入顏色</string>
 </resources>

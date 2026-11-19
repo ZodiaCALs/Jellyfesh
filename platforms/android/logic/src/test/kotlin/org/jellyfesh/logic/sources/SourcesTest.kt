@@ -214,3 +214,156 @@ class SettingsSchemaTest {
         assertTrue(SettingsSchema.parse("{}").isEmpty())
     }
 }
+
+/** Settings schema profile 1.2 (docs/plugins/authoring.md), as the Customize and AI Lyrics plugins use it. */
+class SettingsSchemaProfile12Test {
+    private val schema = """
+        {
+          "type": "object",
+          "properties": {
+            "corners": {"type": "number", "title": "Corners", "minimum": 0, "maximum": 2, "multipleOf": 0.05, "default": 1, "x-jf-group": "Look"},
+            "typeface": {"type": "string", "title": "Typeface", "oneOf": [
+              {"const": "system", "title": "System"}, {"const": "rounded", "title": "Rounded"},
+              {"const": "serif", "title": "Serif"}, {"const": "mono", "title": "Monospaced"}], "default": "system", "x-jf-group": "Look"},
+            "density": {"type": "string", "title": "Density", "oneOf": [
+              {"const": "compact", "title": "Compact"}, {"const": "standard", "title": "Standard"}, {"const": "roomy", "title": "Roomy"}],
+              "default": "standard", "x-jf-group": "Look"},
+            "highlight_colour": {"type": "string", "format": "color", "title": "Highlight Colour", "default": "#ff8a3d", "x-jf-group": "Lyrics"},
+            "home": {"type": "array", "title": "Home", "uniqueItems": true, "x-jf-group": "Layout",
+              "items": {"type": "string", "oneOf": [
+                {"const": "summary", "title": "Library Summary"}, {"const": "recently-added", "title": "Recently Added"},
+                {"const": "favourites", "title": "Favourites"}]},
+              "default": ["summary", "recently-added"]},
+            "port": {"type": "integer", "title": "Port", "minimum": 1, "maximum": 65535},
+            "automatic": {"type": "boolean", "title": "Create Automatically"}
+          }
+        }
+    """.trimIndent()
+
+    @Test
+    fun readsTheNewKeywords() {
+        val fields = SettingsSchema.parse(schema).associateBy { it.key }
+        val corners = fields.getValue("corners") as SchemaField.Number
+        assertTrue(corners.slider)
+        assertEquals(0.05, corners.multipleOf)
+        assertEquals("Look", corners.group)
+        val typeface = fields.getValue("typeface") as SchemaField.Choice
+        assertEquals(listOf("System", "Rounded", "Serif", "Monospaced"), typeface.options.map { it.label })
+        // Four choices open a list; three fit a segmented control.
+        assertFalse(typeface.segmented)
+        assertTrue((fields.getValue("density") as SchemaField.Choice).segmented)
+        assertEquals("#FF8A3D", (fields.getValue("highlight_colour") as SchemaField.Colour).default)
+        val home = fields.getValue("home") as SchemaField.Checklist
+        assertEquals(listOf("Library Summary", "Recently Added", "Favourites"), home.options.map { it.label })
+        assertEquals(listOf("summary", "recently-added"), home.default)
+        // A port's range is too wide for a slider.
+        assertFalse((fields.getValue("port") as SchemaField.Number).slider)
+    }
+
+    @Test
+    fun consecutiveFieldsOfAGroupShareItsHeading() {
+        val groups = SettingsSchema.groups(SettingsSchema.parse(schema))
+        assertEquals(listOf("Look", "Lyrics", "Layout", null), groups.map { it.title })
+        assertEquals(listOf("corners", "typeface", "density"), groups[0].fields.map { it.key })
+        assertEquals(listOf("port", "automatic"), groups[3].fields.map { it.key })
+    }
+
+    @Test
+    fun valuesValidationAndJsonOfColoursChecklistsAndSliders() {
+        val fields = SettingsSchema.parse(schema)
+        val values = SettingsSchema.values(fields, """{"home": ["favourites", "summary"], "highlight_colour": "#00aaff"}""")
+        assertEquals(listOf("favourites", "summary"), SettingsSchema.checklist(values["home"]))
+        assertEquals("#00AAFF", values["highlight_colour"])
+        assertEquals("1", values["corners"])
+        // Defaults when the plugin has none stored.
+        assertEquals(listOf("summary", "recently-added"), SettingsSchema.checklist(SettingsSchema.values(fields, "{}")["home"]))
+        assertEquals("#FF8A3D", SettingsSchema.values(fields, "{}")["highlight_colour"])
+
+        val bad = values + ("highlight_colour" to "orange") + ("home" to SettingsSchema.checklistText(listOf("summary", "summary")))
+        assertEquals(mapOf("highlight_colour" to FieldError.NotAColour, "home" to FieldError.NotAnOption), SettingsSchema.validate(fields, bad))
+        assertEquals(FieldError.NotAnOption, SettingsSchema.validate(fields, values + ("home" to "[\"charts\"]"))["home"])
+        // Hiding every item of a checklist is allowed: the plugin decides what an empty list means.
+        assertTrue(SettingsSchema.validate(fields, values + ("home" to "[]")).isEmpty())
+
+        val json = Json.parseToJsonElement(
+            SettingsSchema.toJson(fields, values + ("corners" to "1.25") + ("highlight_colour" to "ff8a3d"), "{}"),
+        ).jsonObject
+        assertEquals("[\"favourites\",\"summary\"]", json["home"].toString())
+        assertEquals(JsonPrimitive("#FF8A3D"), json["highlight_colour"])
+        assertEquals(JsonPrimitive(1.25), json["corners"])
+    }
+
+    @Test
+    fun slidersSnapToTheirStepWithinTheirRange() {
+        val corners = SettingsSchema.parse(schema).first() as SchemaField.Number
+        assertEquals(0.75, SettingsSchema.snap(corners, 0.7712))
+        assertEquals(2.0, SettingsSchema.snap(corners, 7.0))
+        assertEquals(0.0, SettingsSchema.snap(corners, -1.0))
+        assertEquals(0.3, SettingsSchema.snap(corners, 0.1 + 0.2))
+        val textSize = corners.copy(minimum = 0.85, maximum = 1.3)
+        assertEquals(1.05, SettingsSchema.snap(textSize, 1.06))
+        assertEquals("0.75", SettingsSchema.numberText(0.75))
+        assertEquals("1", SettingsSchema.numberText(1.0))
+        assertEquals("1.05", SettingsSchema.numberText(1.05))
+    }
+
+    @Test
+    fun everyLanguageButEnglishAsksForTheTranslatedSchema() {
+        assertFalse(SettingsSchema.wantsTranslation("en"))
+        assertFalse(SettingsSchema.wantsTranslation("en-GB"))
+        assertFalse(SettingsSchema.wantsTranslation("und"))
+        assertTrue(SettingsSchema.wantsTranslation("zh-Hans-CN"))
+        assertTrue(SettingsSchema.wantsTranslation("zh-TW"))
+        assertTrue(SettingsSchema.wantsTranslation("ja_JP"))
+    }
+}
+
+class FormControlsTest {
+    @Test
+    fun colourWellsReadAndWriteHexAndHsv() {
+        assertEquals(0xFF8A3D, ColourWell.parse("#ff8a3d"))
+        assertEquals(0xFF8A3D, ColourWell.parse("FF8A3D"))
+        assertNull(ColourWell.parse("#FF8A3"))
+        assertNull(ColourWell.parse("orange"))
+        assertEquals("#00AAFF", ColourWell.hex(0x00AAFF))
+        for (rgb in listOf(0xFF8A3D, 0x000000, 0xFFFFFF, 0x3366CC, 0x12AB34, 0xFF0000)) {
+            assertEquals(rgb, ColourWell.rgb(ColourWell.hsv(rgb)), ColourWell.hex(rgb))
+        }
+        val red = ColourWell.hsv(0xFF0000)
+        assertEquals(0f, red.hue)
+        assertEquals(1f, red.saturation)
+        assertEquals(1f, red.value)
+        assertEquals(0x0000FF, ColourWell.rgb(ColourWell.Hsv(240f, 1f, 1f)))
+    }
+
+    @Test
+    fun checklistsShowTheShownItemsFirstAndMoveThem() {
+        val field = SettingsSchema.parse(
+            """{"properties": {"home": {"type": "array", "uniqueItems": true, "items": {"type": "string",
+              "oneOf": [{"const": "a", "title": "A"}, {"const": "b", "title": "B"}, {"const": "c", "title": "C"}]}}}}""",
+        ).single() as SchemaField.Checklist
+        val rows = Checklists.rows(field, listOf("c", "a"))
+        assertEquals(listOf("c", "a", "b"), rows.map { it.value })
+        assertEquals(listOf(true, true, false), rows.map { it.shown })
+        assertEquals(listOf("c", "a", "b"), Checklists.toggle(listOf("c", "a"), "b", on = true))
+        assertEquals(listOf("a"), Checklists.toggle(listOf("c", "a"), "c", on = false))
+        assertEquals(listOf("a", "c"), Checklists.move(listOf("c", "a"), 0, 1))
+        assertEquals(listOf("c", "a"), Checklists.move(listOf("c", "a"), 0, 5))
+    }
+
+    @Test
+    fun draggingAShownItemMovesTheOthersAsideAndDropsItWhereItLands() {
+        val shown = listOf("a", "b", "c", "d")
+        val drag = Checklists.Drag(from = 0, offsetPx = 110f)
+        // Two rows of 52 px down (110 / 52 rounds to 2): b and c move up a row.
+        assertEquals(2, Checklists.target(drag, 52f, 4))
+        assertEquals(110f, Checklists.shift(0, drag, 52f, 4))
+        assertEquals(-52f, Checklists.shift(1, drag, 52f, 4))
+        assertEquals(-52f, Checklists.shift(2, drag, 52f, 4))
+        assertEquals(0f, Checklists.shift(3, drag, 52f, 4))
+        assertEquals(listOf("b", "c", "a", "d"), Checklists.drop(shown, drag, 52f))
+        assertEquals(listOf("a", "d", "b", "c"), Checklists.drop(shown, Checklists.Drag(3, -100f), 52f))
+        assertEquals(shown, Checklists.drop(shown, Checklists.Drag(1, 10f), 52f))
+    }
+}
+

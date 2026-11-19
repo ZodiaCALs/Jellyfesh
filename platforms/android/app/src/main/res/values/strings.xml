@@ -472,4 +472,10 @@
     <string name="update_check">Check for Updates</string>
     <string name="update_checking">Checking…</string>
     <string name="update_auto">Check for Updates Automatically</string>
+    <!-- v0.0.7: plugin settings, schema profile 1.2 -->
+    <string name="action_reset_defaults">Reset to Defaults</string>
+    <string name="colour_code">Colour Code</string>
+    <string name="colour_saturation">Saturation</string>
+    <string name="colour_brightness">Brightness</string>
+    <string name="field_not_colour">Enter a colour as #RRGGBB</string>
 </resources>

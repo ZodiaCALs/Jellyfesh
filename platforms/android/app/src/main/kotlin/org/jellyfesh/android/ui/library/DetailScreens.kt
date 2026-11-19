@@ -441,7 +441,7 @@ private val PLAYLIST_ROW = (Tokens.Player.rowHeight + 8).dp
  * after a move while its key stays).
  */
 @Composable
-private fun DragHandle(key: Long, onStart: () -> Unit, onDrag: (Float) -> Unit, onEnd: () -> Unit) {
+internal fun DragHandle(key: Long, onStart: () -> Unit, onDrag: (Float) -> Unit, onEnd: () -> Unit) {
     val label = stringResource(R.string.a11y_drag)
     val start by rememberUpdatedState(onStart)
     val move by rememberUpdatedState(onDrag)
