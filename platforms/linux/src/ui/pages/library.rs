@@ -185,7 +185,7 @@ fn reorder(model: &glib::WeakRef<PagedModel>) {
 }
 
 pub fn albums() -> adw::NavigationPage {
-    let sort: SortState = Rc::new(Cell::new(("title", false)));
+    let sort: SortState = Rc::new(Cell::new((library::ALBUMS_START, false)));
     let current = sort.clone();
     let model = PagedModel::new(move |model, offset, limit, generation| {
         let weak = model.downgrade();
@@ -297,7 +297,7 @@ fn song_query(sort: (&'static str, bool), offset: usize, limit: usize) -> TrackQ
 /// Songs (docs/ui.md, "Songs"): Play and Shuffle, then the list, in the
 /// order of its sort menu.
 pub fn songs() -> adw::NavigationPage {
-    let sort: SortState = Rc::new(Cell::new(("title", false)));
+    let sort: SortState = Rc::new(Cell::new((library::SONGS_START, false)));
     let current = sort.clone();
     let model = PagedModel::new(move |model, offset, limit, generation| {
         let weak = model.downgrade();

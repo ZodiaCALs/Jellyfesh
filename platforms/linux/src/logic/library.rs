@@ -27,6 +27,13 @@ pub const SONG_SORTS: [(&str, TrackSort); 5] = [
     ("added", TrackSort::Added),
 ];
 
+/// The order Albums starts in, as in every app.
+pub const ALBUMS_START: &str = "title";
+
+/// The order Songs starts in: by artist, as in every app (docs/parity.md,
+/// V6).
+pub const SONGS_START: &str = "artist";
+
 /// The core's album order for a menu key (Title for an unknown one).
 pub fn album_sort(key: &str) -> AlbumSort {
     ALBUM_SORTS
@@ -114,6 +121,14 @@ mod tests {
         assert_eq!(keys, ["title", "artist", "album", "year", "added"]);
         let keys: Vec<&str> = ALBUM_SORTS.iter().map(|(k, _)| *k).collect();
         assert_eq!(keys, ["title", "artist", "year", "added"]);
+    }
+
+    #[test]
+    fn albums_start_by_title_and_songs_by_artist() {
+        assert_eq!(album_sort(ALBUMS_START), AlbumSort::Title);
+        assert_eq!(song_sort(SONGS_START), TrackSort::Artist);
+        assert!(!starts_descending(ALBUMS_START));
+        assert!(!starts_descending(SONGS_START));
     }
 
     #[test]
