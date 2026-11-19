@@ -33,6 +33,9 @@ public interface ILyricsCursor
 
     /// <summary>The next time (ms) the line or word changes or the current word finishes; null when nothing changes.</summary>
     uint? NextChange(uint tMs);
+
+    /// <summary>What the lyrics bar shows at <paramref name="tMs"/> (<see cref="LyricsBars.At"/> with this cursor's line).</summary>
+    LyricsBarState Bar(uint tMs);
 }
 
 /// <summary>

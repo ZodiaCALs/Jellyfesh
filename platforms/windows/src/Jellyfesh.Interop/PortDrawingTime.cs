@@ -1,5 +1,6 @@
 // IDrawingTime over the C# ports in platforms/shared/csharp (namespace Jellyfesh.Shared), which
-// replay tests/contract/lyrics-cursor.json and display-clock.json.
+// replay tests/contract/lyrics-cursor.json and display-clock.json, and the lyrics bar's port
+// (Jellyfesh.Drawing.LyricsBars, tests/contract/lyrics-bar.json).
 
 using System;
 using Jellyfesh.Drawing;
@@ -15,7 +16,7 @@ public sealed class PortDrawingTime : IDrawingTime
 
     public IDisplayClock CreateClock() => new PortClock();
 
-    public ILyricsCursor CreateCursor(M.LyricTimelineData timeline) => new PortCursor(FfiMapping.ToFfi(timeline));
+    public ILyricsCursor CreateCursor(M.LyricTimelineData timeline) => new PortCursor(timeline, FfiMapping.ToFfi(timeline));
 
     public long NextSecondUs(long positionUs) => DrawingTime.NextSecond(positionUs);
 
@@ -36,7 +37,7 @@ public sealed class PortDrawingTime : IDrawingTime
         public TimeSpan? WaitUntil(long targetUs, ulong nowNs) => _clock.WaitUntil(targetUs, nowNs);
     }
 
-    private sealed class PortCursor(F.LyricTimeline timeline) : ILyricsCursor
+    private sealed class PortCursor(M.LyricTimelineData model, F.LyricTimeline timeline) : ILyricsCursor
     {
         public bool IsEmpty => timeline.SegmentStarts.Count == 0;
 
@@ -47,5 +48,7 @@ public sealed class PortDrawingTime : IDrawingTime
         }
 
         public uint? NextChange(uint tMs) => timeline.NextChange(tMs);
+
+        public LyricsBarState Bar(uint tMs) => LyricsBars.At(model, timeline.Cursor(tMs).Line, tMs);
     }
 }

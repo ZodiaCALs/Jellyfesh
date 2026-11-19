@@ -42,6 +42,41 @@ public class DrawingTests
     }
 
     [Fact]
+    public void Lyrics_bar_contract_through_the_adapter()
+    {
+        using var contract = Contract.Read("lyrics-bar.json");
+        var queries = 0;
+        foreach (var c in contract.RootElement.GetProperty("cases").EnumerateArray())
+        {
+            var t = c.GetProperty("timeline");
+            uint[] A(string name) => t.GetProperty(name).EnumerateArray().Select(e => e.GetUInt32()).ToArray();
+            var cursor = Time.CreateCursor(new LyricTimelineData(
+                A("line_starts"), A("line_ends"), A("segment_starts"), A("segment_lines"),
+                A("word_offsets"), A("word_starts"), A("word_ends")));
+            foreach (var q in c.GetProperty("queries").EnumerateArray())
+            {
+                var at = q.GetProperty("t").GetUInt32();
+                var bar = cursor.Bar(at);
+                var what = $"{c.GetProperty("name").GetString()} at {at}";
+                Assert.True(Nullable(q, "line") == bar.Line, $"line, {what}");
+                Assert.True(Nullable(q, "next") == bar.Next, $"next, {what}");
+                var words = q.GetProperty("words").EnumerateArray().Select(e => e.GetSingle()).ToArray();
+                Assert.Equal(words.Length, bar.Words.Count);
+                for (var i = 0; i < words.Length; i++)
+                {
+                    Assert.True(Math.Abs(words[i] - bar.Words[i]) <= 1e-6, $"word {i}, {what}: {bar.Words[i]} vs {words[i]}");
+                }
+
+                var progress = q.GetProperty("line_progress").GetSingle();
+                Assert.True(Math.Abs(progress - bar.LineProgress) <= 1e-6, $"line progress, {what}: {bar.LineProgress} vs {progress}");
+                queries++;
+            }
+        }
+
+        Assert.Equal(66, queries);
+    }
+
+    [Fact]
     public void Display_clock_contract_through_the_adapter()
     {
         using var contract = Contract.Read("display-clock.json");
