@@ -344,25 +344,25 @@ final class LibraryStoreTests: XCTestCase {
 
 @MainActor
 final class SongsPageTests: XCTestCase {
-    func testPlayAndShuffleTakeEverySongInTheOrderShown() async {
+    func testPlayShuffleAndARowTakeEverySongInTheOrderShown() async {
         let client = FakeCoreClient()
         client.songsResult = (1...2_500).map { Fixture.song(Int64($0)) }
         let model = SongsModel(client: client)
         let playback = PlaybackStore(client: client, tracker: CommandTracker())
-        await model.playAll(shuffle: true, on: playback)
-        guard case .playCollection(.tracks(let tracks), let start, let shuffle)? = client.sent.last else {
-            return XCTFail("expected PlayCollection")
-        }
-        XCTAssertEqual(tracks.count, 2_500, "every song, not only the rows loaded")
-        XCTAssertEqual(tracks.first, .library(id: 1))
-        XCTAssertEqual(start, 0)
-        XCTAssertTrue(shuffle)
+        await model.list.load(revision: 1)
+        await model.choose(.year, revision: 1)
+        model.playAll(shuffle: true, on: playback)
+        XCTAssertEqual(client.sent.last, .playCollection(.songs(sort: .year, descending: true), start: 0, shuffle: true),
+                       "every song in the library, not only the rows loaded")
+        model.play(from: 1_234, on: playback)
+        XCTAssertEqual(client.sent.last, .playCollection(.songs(sort: .year, descending: true), start: 1_234,
+                                                         shuffle: false))
     }
 
     func testAnEmptyLibraryPlaysNothing() async {
         let client = FakeCoreClient()
         let model = SongsModel(client: client)
-        await model.playAll(shuffle: false, on: PlaybackStore(client: client, tracker: CommandTracker()))
+        model.playAll(shuffle: false, on: PlaybackStore(client: client, tracker: CommandTracker()))
         XCTAssertTrue(client.sent.isEmpty)
     }
 

@@ -1,6 +1,6 @@
-// Songs: Play and Shuffle for every song, then every track, sorted by the core, a page at a time.
-// Playing from a row queues the rows loaded so far, from that row; more load as the list scrolls.
-// And Favourites: the songs marked with the heart.
+// Songs: Play and Shuffle for every song, then every track, sorted by the core, a page at a time
+// as the list scrolls. Play, Shuffle and a row play every song in the library in the page's order
+// (`Collection::Songs`), not only the rows loaded. And Favourites: the songs marked with the heart.
 
 import SwiftUI
 
@@ -19,9 +19,7 @@ struct SongsView: View {
         List(selection: $selection) {
             PageHeader(title: String(localized: "Songs"), subtitle: subtitle) {
                 PlayShuffleButtons(disabled: list.items.isEmpty) { shuffle in
-                    Task { @MainActor in
-                        await songs.playAll(shuffle: shuffle, on: playback)
-                    }
+                    songs.playAll(shuffle: shuffle, on: playback)
                 }
             }
             .padding(.vertical, Tokens.Space.s4)
@@ -37,7 +35,7 @@ struct SongsView: View {
         }
         .fieldList()
         .trackListActions(items) { index in
-            playback.play(tracks: items.compactMap(\.track), from: index)
+            songs.play(from: index, on: playback)
         }
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
