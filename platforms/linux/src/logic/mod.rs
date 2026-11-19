@@ -31,6 +31,7 @@ pub mod schedule;
 pub mod schema;
 pub mod search;
 pub mod seek;
+pub mod signin;
 pub mod sweep;
 pub mod theme;
 pub mod tokens_css;
