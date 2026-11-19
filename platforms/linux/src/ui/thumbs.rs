@@ -10,6 +10,12 @@
 //! yet"), the worker scales the original cached artwork
 //! (`<cache>/artwork/<hash>.<ext>`, the content-addressed path the core
 //! writes) itself.
+//!
+//! A source's pictures (`ArtworkRef::Url`) come through the core too, never
+//! from the app (ADR-0022 §5, docs/core-api.md "Covers"): the worker asks
+//! `Core::source_artwork`; a path is the cached picture, `None` means the
+//! core is fetching it, and the request waits for `Event::Artwork`, which
+//! [`Thumbs::artwork_ready`] answers.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -36,14 +42,25 @@ pub enum ArtKey {
     Hash(String),
     /// An image file (Now Playing artwork, baked backdrops).
     File(PathBuf),
+    /// A source's picture, which the core fetches and caches.
+    Url(String),
 }
 
 type Request = (ArtKey, u32);
 type Waiter = Box<dyn FnOnce(Option<&gdk::Texture>)>;
 
+/// What the worker made of a request.
+enum Loaded {
+    Done(Option<gdk::Texture>),
+    /// The core is fetching the source's picture: wait for `Event::Artwork`.
+    Fetching,
+}
+
 pub struct Thumbs {
     cache: RefCell<Lru<Request, gdk::Texture>>,
     waiting: RefCell<HashMap<Request, Vec<Waiter>>>,
+    /// Source pictures the core could not get: not asked for again.
+    missing: RefCell<std::collections::HashSet<Request>>,
     tx: RefCell<Option<crossbeam_channel::Sender<Request>>>,
     thread: RefCell<Option<JoinHandle<()>>>,
 }
@@ -66,7 +83,7 @@ pub fn size_for(px: i32) -> u32 {
 impl Thumbs {
     pub fn start(core: Arc<Core>, cache_dir: PathBuf) -> std::io::Result<Thumbs> {
         let (tx, rx) = crossbeam_channel::unbounded::<Request>();
-        let (done_tx, done_rx) = async_channel::unbounded::<(Request, Option<gdk::Texture>)>();
+        let (done_tx, done_rx) = async_channel::unbounded::<(Request, Loaded)>();
         let dir = cache_dir.clone();
         let thread = std::thread::Builder::new()
             .name("jf-gtk-artwork".into())
@@ -93,8 +110,8 @@ impl Thumbs {
                 }
             })?;
         glib::spawn_future_local(async move {
-            while let Ok((req, texture)) = done_rx.recv().await {
-                if let Some(app) = try_app() {
+            while let Ok((req, loaded)) = done_rx.recv().await {
+                if let (Some(app), Loaded::Done(texture)) = (try_app(), loaded) {
                     app.thumbs.deliver(req, texture);
                 }
             }
@@ -102,9 +119,26 @@ impl Thumbs {
         Ok(Thumbs {
             cache: RefCell::new(Lru::new(CACHE_BYTES)),
             waiting: RefCell::new(HashMap::new()),
+            missing: RefCell::new(std::collections::HashSet::new()),
             tx: RefCell::new(Some(tx)),
             thread: RefCell::new(Some(thread)),
         })
+    }
+
+    /// The core cached a source's picture (or cannot get it): the views
+    /// waiting for it load it now, or keep their placeholder.
+    pub fn artwork_ready(&self, ready: &jf_core::ArtworkReady) {
+        let req = (ArtKey::Url(ready.url.clone()), ready.size_px);
+        if ready.path.is_none() {
+            self.missing.borrow_mut().insert(req.clone());
+            self.deliver(req, None);
+            return;
+        }
+        if self.waiting.borrow().contains_key(&req)
+            && let Some(tx) = self.tx.borrow().as_ref()
+        {
+            let _ = tx.send(req);
+        }
     }
 
     /// The texture if it is decoded already.
@@ -117,6 +151,10 @@ impl Thumbs {
         let req = (key, size);
         if let Some(t) = self.cache.borrow_mut().get(&req) {
             done(Some(&t));
+            return;
+        }
+        if self.missing.borrow().contains(&req) {
+            done(None);
             return;
         }
         let mut waiting = self.waiting.borrow_mut();
@@ -149,16 +187,24 @@ impl Thumbs {
     }
 }
 
-fn load(core: &Core, cache_dir: &Path, (key, size): &Request) -> Option<gdk::Texture> {
+fn load(core: &Core, cache_dir: &Path, (key, size): &Request) -> Loaded {
     let path = match key {
         ArtKey::Hash(hash) => match core.artwork_thumbnail(hash, *size) {
-            Ok(Some(path)) => path,
-            _ => original_artwork(cache_dir, hash)?,
+            Ok(Some(path)) => Some(path),
+            _ => original_artwork(cache_dir, hash),
         },
-        ArtKey::File(path) => path.clone(),
+        ArtKey::File(path) => Some(path.clone()),
+        ArtKey::Url(url) => match core.source_artwork(url, *size) {
+            Some(path) => Some(path),
+            None => return Loaded::Fetching,
+        },
     };
-    let side = i32::try_from(*size).unwrap_or(1024);
-    let pixbuf = gdk_pixbuf::Pixbuf::from_file_at_scale(&path, side, side, true).ok()?;
+    Loaded::Done(path.and_then(|path| decode(&path, *size)))
+}
+
+fn decode(path: &Path, size: u32) -> Option<gdk::Texture> {
+    let side = i32::try_from(size).unwrap_or(1024);
+    let pixbuf = gdk_pixbuf::Pixbuf::from_file_at_scale(path, side, side, true).ok()?;
     Some(gdk::Texture::for_pixbuf(&pixbuf))
 }
 

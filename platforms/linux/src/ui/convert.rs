@@ -36,10 +36,12 @@ fn source_name(id: &str) -> String {
     crate::ui::state::try_app().map_or_else(|| id.to_owned(), |a| a.source_name(id))
 }
 
+/// The artwork to load for a core `ArtworkRef`: a file, or a source's
+/// picture the core fetches (never the app).
 pub fn art_of(artwork: Option<&ArtworkRef>) -> Option<ArtKey> {
     match artwork? {
         ArtworkRef::File(path) => Some(ArtKey::File(path.clone())),
-        ArtworkRef::Url(_) => None,
+        ArtworkRef::Url(url) => Some(ArtKey::Url(url.clone())),
     }
 }
 

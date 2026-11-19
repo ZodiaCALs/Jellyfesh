@@ -17,9 +17,10 @@ use std::sync::Arc;
 use adw::prelude::*;
 use gtk::glib;
 use jf_core::{
-    AuthUpdate, BrowseUpdate, Command, CommandId, DevicesSnapshot, DisplayClock, Event, LyricsSnapshot,
-    NowPlaying, PlaybackSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate,
-    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, monotonic_now_ns,
+    AiLyricsSnapshot, AuthUpdate, BrowseUpdate, Command, CommandId, DevicesSnapshot, DisplayClock, Event,
+    LookSnapshot, LyricsSnapshot, NowPlaying,
+    PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate,
+    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot, monotonic_now_ns,
 };
 
 use crate::logic::remote::{self, RemoteView};
@@ -51,6 +52,14 @@ pub enum Change<'a> {
     PlaylistCreated(CommandId, i64),
     Failed(CommandId, &'a str),
     Error,
+    /// The AI Lyrics slice changed.
+    AiLyrics,
+    /// The look changed.
+    Look,
+    /// Jellyfesh Pro changed.
+    Pro,
+    /// The update check changed.
+    Update,
 }
 
 type Listener = Rc<dyn Fn(&Change)>;
@@ -73,6 +82,10 @@ pub struct App {
     pub devices: RefCell<Arc<DevicesSnapshot>>,
     pub sources: RefCell<Arc<SourcesSnapshot>>,
     pub remote: RefCell<Arc<RemoteSnapshot>>,
+    pub ai_lyrics: RefCell<Arc<AiLyricsSnapshot>>,
+    pub look: RefCell<Arc<LookSnapshot>>,
+    pub pro: RefCell<Arc<ProSnapshot>>,
+    pub update: RefCell<Arc<UpdateSnapshot>>,
     pub muted: Cell<bool>,
     pub library_revision: Cell<u64>,
     pub scanning: Cell<bool>,
@@ -123,6 +136,10 @@ struct Dirty {
     remote: bool,
     library: bool,
     muted: bool,
+    ai_lyrics: bool,
+    look: bool,
+    pro: bool,
+    update: bool,
 }
 
 impl App {
@@ -147,6 +164,10 @@ impl App {
             devices: RefCell::new(snapshot.devices),
             sources: RefCell::new(snapshot.sources),
             remote: RefCell::new(snapshot.remote),
+            ai_lyrics: RefCell::new(snapshot.ai_lyrics),
+            look: RefCell::new(snapshot.look),
+            pro: RefCell::new(snapshot.pro),
+            update: RefCell::new(snapshot.update),
             muted: Cell::new(snapshot.muted),
             library_revision: Cell::new(snapshot.library_revision),
             scanning: Cell::new(snapshot.scanning),
@@ -247,9 +268,19 @@ impl App {
             remote,
             library,
             muted,
+            ai_lyrics,
+            look,
+            pro,
+            update,
         } = dirty;
         if settings {
             self.emit(&Change::Settings);
+        }
+        if pro {
+            self.emit(&Change::Pro);
+        }
+        if look {
+            self.emit(&Change::Look);
         }
         if theme {
             self.emit(&Change::Theme);
@@ -280,6 +311,12 @@ impl App {
         }
         if library {
             self.emit(&Change::Library);
+        }
+        if ai_lyrics {
+            self.emit(&Change::AiLyrics);
+        }
+        if update {
+            self.emit(&Change::Update);
         }
         if playback || now || lyrics || remote {
             self.scheduler.refresh();
@@ -366,16 +403,26 @@ impl App {
                 self.emit(&Change::Error);
                 self.toast(&message);
             }
-            // v0.0.7 (AI Lyrics, Customize, Pro, updates, Discover, details,
-            // comments, source covers): not shown yet.
-            Event::AiLyrics(_)
-            | Event::Look(_)
-            | Event::Pro(_)
-            | Event::Update(_)
-            | Event::Discover(_)
-            | Event::Details(_)
-            | Event::Comments(_)
-            | Event::Artwork(_) => {}
+            Event::AiLyrics(a) => {
+                *self.ai_lyrics.borrow_mut() = a;
+                dirty.ai_lyrics = true;
+            }
+            Event::Look(l) => {
+                *self.look.borrow_mut() = l;
+                dirty.look = true;
+            }
+            Event::Pro(p) => {
+                *self.pro.borrow_mut() = p;
+                dirty.pro = true;
+            }
+            Event::Update(u) => {
+                *self.update.borrow_mut() = u;
+                dirty.update = true;
+            }
+            // Discover, details and comments: not shown yet.
+            Event::Discover(_) | Event::Details(_) | Event::Comments(_) => {}
+            // A source's picture is in the cache: the views waiting load it.
+            Event::Artwork(ready) => self.thumbs.artwork_ready(&ready),
         }
         // Muted is part of the snapshot; it only changes with SetMuted, which
         // republishes the playback slice.
