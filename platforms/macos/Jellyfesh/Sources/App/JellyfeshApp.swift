@@ -56,6 +56,7 @@ extension View {
             .environment(model.updates)
             .environment(model.aiLyrics)
             .environment(model.look)
+            .environment(model.desktopLyrics)
             .environment(\.artworkLoader, model.artwork)
     }
 }

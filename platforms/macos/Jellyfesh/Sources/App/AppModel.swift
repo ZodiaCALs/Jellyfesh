@@ -42,6 +42,8 @@ final class AppModel {
     let updates: UpdatesStore
     let aiLyrics: AiLyricsStore
     let look: LookStore
+    /// Desktop Lyrics' window (ADR-0022 §6).
+    let desktopLyrics: DesktopLyricsStore
     /// Discover, details and comments answers, to whoever asked.
     let answers: CoreAnswers
     /// How this build reached the person (the build flags).
@@ -83,6 +85,7 @@ final class AppModel {
         updates = UpdatesStore(client: client, tracker: tracker)
         aiLyrics = AiLyricsStore(client: client, tracker: tracker, toasts: toasts)
         look = LookStore()
+        desktopLyrics = DesktopLyricsStore()
         answers = CoreAnswers(client: client, tracker: tracker)
         self.distribution = distribution
         nowPlayingCenter = NowPlayingCenter(playback: playback, artwork: artwork)
@@ -103,7 +106,11 @@ final class AppModel {
             let client = try FFICoreClient(dataDirectory: folders.data, cacheDirectory: folders.cache,
                                            bundledPlugins: FFICoreClient.bundledPluginPaths(),
                                            distribution: distribution)
-            return AppModel(client: client, distribution: distribution)
+            let model = AppModel(client: client, distribution: distribution)
+            model.desktopLyrics.attach(DesktopLyricsWindow { [unowned model] in
+                AnyView(DesktopLyricsView().stores(model))
+            })
+            return model
         } catch {
             let reason = CoreClientError.describe(error)
             return AppModel(client: OfflineCoreClient(reason: reason), startupError: reason,
@@ -268,7 +275,8 @@ final class AppModel {
 
     // MARK: Settings the app applies
 
-    /// Appearance and the Dock icon are the shell's to apply (docs/core-api.md, "Settings").
+    /// Appearance, the Dock icon and Desktop Lyrics are the shell's to apply (docs/core-api.md,
+    /// "Settings").
     private func applyAppSettings(_ value: AppSettings) {
         if value.appearance != appliedAppearance {
             appliedAppearance = value.appearance
@@ -279,6 +287,7 @@ final class AppModel {
             }
         }
         dockIcon.apply(value.appIcon)
+        desktopLyrics.apply(enabled: value.desktopLyrics)
     }
 
     // MARK: Navigation helpers

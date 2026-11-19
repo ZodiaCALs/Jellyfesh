@@ -333,9 +333,11 @@ private struct DockControls: View {
 }
 
 /// More, at the end of the dock: the song's menu without the queue's actions (it is playing), or
-/// for a remote session Open in {Service} and Stop Controlling.
+/// for a remote session Open in {Service} and Stop Controlling; then Desktop Lyrics.
 struct NowPlayingMoreMenu: View {
     @Environment(PlaybackStore.self) private var playback
+    @Environment(SettingsStore.self) private var settings
+    @Environment(DesktopLyricsStore.self) private var desktopLyrics
     @Environment(\.palette) private var palette
 
     var body: some View {
@@ -345,6 +347,8 @@ struct NowPlayingMoreMenu: View {
             } else if let now = playback.nowPlaying {
                 TrackActionsMenu(items: [TrackItem(nowPlaying: now)], queueActions: false)
             }
+            Divider()
+            DesktopLyricsMenuItems(settings: settings, desktop: desktopLyrics)
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 17, weight: .semibold))

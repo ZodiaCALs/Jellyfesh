@@ -1843,6 +1843,28 @@
         }
       }
     },
+    "Close Desktop Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクトップ歌詞を閉じる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭桌面歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉桌面歌詞"
+          }
+        }
+      }
+    },
     "Code %@": {
       "localizations": {
         "ja": {
@@ -2323,6 +2345,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "採用 Misty 設計語言設計。"
+          }
+        }
+      }
+    },
+    "Desktop Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクトップ歌詞"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桌面歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "桌面歌詞"
           }
         }
       }
@@ -3863,6 +3907,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在載入…"
+          }
+        }
+      }
+    },
+    "Lock Desktop Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクトップ歌詞をロック"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "锁定桌面歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鎖定桌面歌詞"
           }
         }
       }
@@ -6353,6 +6419,28 @@
         }
       }
     },
+    "Show Lyrics Bar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌詞バーを表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示歌词栏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示歌詞列"
+          }
+        }
+      }
+    },
     "Show Now Playing": {
       "localizations": {
         "ja": {
@@ -7409,6 +7497,50 @@
         }
       }
     },
+    "The line being sung and the next one, in a window that stays above other apps.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いま歌われている行と次の行を、ほかのアプリより手前に表示されるウインドウに表示します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在一个始终位于其他应用上方的窗口中，显示正在唱的那一行和下一行。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在一個永遠位於其他 App 上方的視窗中，顯示正在唱的那一行和下一行。"
+          }
+        }
+      }
+    },
+    "The line being sung, under the song's title in the player bar.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレーヤーバーの曲名の下に、いま歌われている行を表示します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在播放栏的歌曲标题下方显示正在唱的那一行。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在播放列的歌曲標題下方顯示正在唱的那一行。"
+          }
+        }
+      }
+    },
     "The player has stopped.": {
       "localizations": {
         "ja": {
@@ -8065,6 +8197,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "未知標題"
+          }
+        }
+      }
+    },
+    "Unlock Desktop Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクトップ歌詞のロックを解除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁桌面歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖桌面歌詞"
           }
         }
       }

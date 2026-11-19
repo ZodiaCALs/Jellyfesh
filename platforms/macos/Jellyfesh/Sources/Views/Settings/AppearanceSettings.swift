@@ -2,8 +2,9 @@
 // theme with small previews; the accent colour (follow the artwork, ten swatches or a custom hue
 // on a hue track); transparency from Solid to Clear with a live preview; Reduce motion and
 // transparency; the Now Playing background with previews; the lyrics' size, alignment,
-// translation and romanization; and the app icon (ADR-0017). Every change applies at once and the
-// core keeps it (SetSettings); sliders send their value when they are let go.
+// translation and romanization, the lyrics bar and Desktop Lyrics (ADR-0022 §6); and the app icon
+// (ADR-0017). Every change applies at once and the core keeps it (SetSettings); sliders send their
+// value when they are let go.
 
 import SwiftUI
 
@@ -122,6 +123,14 @@ struct AppearanceSettings: View {
                 Toggle(isOn: Binding(get: { current.showRomanization }, set: { settings.setShowRomanization($0) })) {
                     Text("Show Romanization")
                     Text("How each line reads in Latin letters, when the lyrics have it.")
+                }
+                Toggle(isOn: Binding(get: { current.showLyricsBar }, set: { settings.setShowLyricsBar($0) })) {
+                    Text("Show Lyrics Bar")
+                    Text("The line being sung, under the song's title in the player bar.")
+                }
+                Toggle(isOn: Binding(get: { current.desktopLyrics }, set: { settings.setDesktopLyrics($0) })) {
+                    Text("Desktop Lyrics")
+                    Text("The line being sung and the next one, in a window that stays above other apps.")
                 }
             } header: {
                 Text("Lyrics")

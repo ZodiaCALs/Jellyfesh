@@ -1,5 +1,5 @@
-// The menu bar: File (playlists, folders, plugins), View (sections, search, Now Playing) and
-// Controls (transport, volume, shuffle and repeat), with the keys every Jellyfesh shares
+// The menu bar: File (playlists, folders, plugins), View (sections, search, Now Playing, Desktop
+// Lyrics) and Controls (transport, volume, shuffle and repeat), with the keys every Jellyfesh shares
 // (docs/ui.md, "Keyboard"). Space (play and pause), Shift-Right and Shift-Left (skip 5 seconds)
 // and Esc (back) go through SharedKeyMonitor instead of key equivalents, so text fields keep them;
 // the skip items also answer Option-Command-arrows, as before.
@@ -125,6 +125,11 @@ private struct ViewMenuItems: View {
         }
         .keyboardShortcut("u", modifiers: [.command, .option])
         .disabled(!model.playback.hasTrack)
+
+        Divider()
+
+        DesktopLyricsMenuItems(settings: model.settings, desktop: model.desktopLyrics)
+            .disabled(model.startupError != nil)
     }
 }
 
@@ -215,5 +220,24 @@ private struct ControlsMenuItems: View {
         }
         .keyboardShortcut("j")
         .disabled(!playback.hasTrack)
+    }
+}
+
+/// Desktop Lyrics on or off, and while it shows, its lock (a locked window lets clicks through,
+/// so it is unlocked from here). In the View menu and Now Playing's More menu.
+struct DesktopLyricsMenuItems: View {
+    let settings: SettingsStore
+    let desktop: DesktopLyricsStore
+
+    var body: some View {
+        Toggle("Desktop Lyrics", isOn: Binding(
+            get: { settings.current.desktopLyrics },
+            set: { settings.setDesktopLyrics($0) }
+        ))
+        if desktop.shown {
+            Button(desktop.locked ? LocalizedStringKey("Unlock Desktop Lyrics") : LocalizedStringKey("Lock Desktop Lyrics")) {
+                desktop.setLocked(!desktop.locked)
+            }
+        }
     }
 }
