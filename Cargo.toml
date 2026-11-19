@@ -108,7 +108,7 @@ walkdir = "2.5.0"
 
 # Plugin system (ADR-0003, ADR-0004): versions checked against crates.io on 2026-11-07.
 # wasmtime stays on the 48.x LTS line; no WASI, no async components, no cache/pooling.
-wasmtime = { version = "48.0.8", default-features = false, features = ["runtime", "component-model", "cranelift", "std"] }
+wasmtime = { version = "48.0.10", default-features = false, features = ["runtime", "component-model", "cranelift", "std"] }
 # Guest bindings; wit-component matches the version wit-bindgen itself embeds with.
 wit-bindgen = { version = "0.63.0", default-features = false, features = ["macros", "realloc", "std"] }
 wit-component = "0.262.0"
