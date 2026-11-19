@@ -20,20 +20,27 @@ extension Font.Weight {
     }
 }
 
-extension Font {
-    /// A token type role (`Tokens.TypeRoles.listTitle`).
-    static func token(_ role: Typography, size: CGFloat? = nil) -> Font {
-        .system(size: size ?? role.size, weight: Font.Weight(cssWeight: role.weight))
+extension View {
+    /// A type role with its line height: SwiftUI spaces lines at about 1.2 × the size, so the rest
+    /// of the token's line height goes between lines. In the look's face and at its text scale.
+    func typography(_ role: Typography, size: CGFloat? = nil, lineHeight: Double? = nil) -> some View {
+        modifier(TypeRole(role: role, size: size, lineHeight: lineHeight))
     }
 }
 
-extension View {
-    /// A type role with its line height: SwiftUI spaces lines at about 1.2 × the size, so the rest
-    /// of the token's line height goes between lines.
-    func typography(_ role: Typography, size: CGFloat? = nil, lineHeight: Double? = nil) -> some View {
-        let points = size ?? role.size
+/// A type role in the look (Design/Look.swift).
+private struct TypeRole: ViewModifier {
+    var role: Typography
+    var size: CGFloat?
+    var lineHeight: Double?
+    @Environment(\.look) private var look
+
+    func body(content: Content) -> some View {
+        let points = look.size(size ?? role.size)
         let extra = points * CGFloat((lineHeight ?? role.lineHeight) - 1.2)
-        return font(.token(role, size: points)).lineSpacing(max(0, extra))
+        return content
+            .font(.system(size: points, weight: Font.Weight(cssWeight: role.weight), design: look.fontDesign))
+            .lineSpacing(max(0, extra))
     }
 }
 

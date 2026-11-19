@@ -67,18 +67,18 @@ struct NowPlayingLines: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(item.title)
-                .font(.system(size: 14, weight: .semibold))
+                .lookFont(size: 14, weight: .semibold)
                 .foregroundStyle(palette[Tokens.Ink.ink90])
                 .lineLimit(1)
             if let second = Self.secondLine(item) {
                 Text(second)
-                    .font(.system(size: 12))
+                    .lookFont(size: 12)
                     .foregroundStyle(palette[Tokens.Ink.ink70])
                     .lineLimit(1)
             }
             if let error = item.remote?.error {
                 Text(error)
-                    .font(.system(size: 11))
+                    .lookFont(size: 11)
                     .foregroundStyle(palette[Tokens.Ink.ink50])
                     .lineLimit(1)
                     .help(error)

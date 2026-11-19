@@ -39,7 +39,7 @@ private struct LocalQueuePanel: View {
                         .selectionDisabled()
                 } header: {
                     Text("Now Playing")
-                        .font(.system(size: 12, weight: .semibold))
+                        .lookFont(size: 12, weight: .semibold)
                         .foregroundStyle(palette[Tokens.Ink.ink70])
                 }
             }
@@ -71,7 +71,7 @@ private struct LocalQueuePanel: View {
             } header: {
                 HStack {
                     Text("Up Next")
-                        .font(.system(size: 12, weight: .semibold))
+                        .lookFont(size: 12, weight: .semibold)
                         .foregroundStyle(palette[Tokens.Ink.ink70])
                     Spacer()
                     if queue.current != nil || !rows.isEmpty {
@@ -79,7 +79,7 @@ private struct LocalQueuePanel: View {
                             confirmClear = true
                         }
                         .buttonStyle(.plain)
-                        .font(.system(size: 12, weight: .semibold))
+                        .lookFont(size: 12, weight: .semibold)
                         .foregroundStyle(palette[Tokens.Accent.accentText])
                     }
                 }
@@ -124,10 +124,10 @@ private struct NothingUpNext: View {
     var body: some View {
         VStack(spacing: Tokens.Space.s1) {
             Text("Nothing Up Next")
-                .font(.system(size: 13, weight: .semibold))
+                .lookFont(size: 13, weight: .semibold)
                 .foregroundStyle(palette[Tokens.Ink.ink70])
             Text("Use Play Next or Play Last on any song, album or playlist.")
-                .font(.system(size: 12))
+                .lookFont(size: 12)
                 .foregroundStyle(palette[Tokens.Ink.ink50])
                 .multilineTextAlignment(.center)
         }
@@ -180,7 +180,7 @@ private struct RemoteInfoPanel: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                     Text("About This Song")
-                        .font(.system(size: 12, weight: .semibold))
+                        .lookFont(size: 12, weight: .semibold)
                         .foregroundStyle(palette[Tokens.Ink.ink50])
                         .accessibilityAddTraits(.isHeader)
                     VStack(alignment: .leading, spacing: Tokens.Space.s2) {
@@ -193,10 +193,10 @@ private struct RemoteInfoPanel: View {
                     }
                     .padding(Tokens.Space.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                    .surfaceCard()
                     OpenInServiceButton(link: item.link, source: remote.source)
                         .buttonStyle(.link)
-                        .font(.system(size: 13))
+                        .lookFont(size: 13)
                         .padding(.top, Tokens.Space.s1)
                 }
                 .padding(.vertical, Tokens.Space.s4)
@@ -226,7 +226,7 @@ private struct InfoRow: View {
                 Text(label)
                     .foregroundStyle(palette[Tokens.Ink.ink70])
             }
-            .font(.system(size: 13))
+            .lookFont(size: 13)
         }
     }
 }
@@ -246,7 +246,7 @@ private struct LocalInfoPanel: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                     Text("About This Song")
-                        .font(.system(size: 12, weight: .semibold))
+                        .lookFont(size: 12, weight: .semibold)
                         .foregroundStyle(palette[Tokens.Ink.ink50])
                         .accessibilityAddTraits(.isHeader)
                     VStack(alignment: .leading, spacing: Tokens.Space.s2) {
@@ -261,11 +261,11 @@ private struct LocalInfoPanel: View {
                     }
                     .padding(Tokens.Space.s4)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                    .surfaceCard()
                     if case .source(let song) = now.track {
                         OpenInServiceButton(link: now.link, source: song.plugin)
                             .buttonStyle(.link)
-                            .font(.system(size: 13))
+                            .lookFont(size: 13)
                             .padding(.top, Tokens.Space.s1)
                     }
                 }
@@ -303,7 +303,7 @@ private struct LocalInfoPanel: View {
                 Text("File")
                     .foregroundStyle(palette[Tokens.Ink.ink70])
             }
-            .font(.system(size: 13))
+            .lookFont(size: 13)
         } else if case .source(let source) = now.track {
             row("Source", sources.name(of: source.plugin))
         }
@@ -320,7 +320,7 @@ private struct LocalInfoPanel: View {
                 Text(label)
                     .foregroundStyle(palette[Tokens.Ink.ink70])
             }
-            .font(.system(size: 13))
+            .lookFont(size: 13)
         }
     }
 

@@ -44,13 +44,13 @@ private struct DevicesList: View {
         let rows = playback.remoteDeviceRows
         VStack(alignment: .leading, spacing: Tokens.Space.s2) {
             Text("Devices")
-                .font(.system(size: 13, weight: .semibold))
+                .lookFont(size: 13, weight: .semibold)
                 .accessibilityAddTraits(.isHeader)
             if rows.isEmpty {
                 HStack(spacing: Tokens.Space.s2) {
                     ProgressView().controlSize(.small)
                     Text("Looking for Devices…")
-                        .font(.system(size: 13))
+                        .lookFont(size: 13)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -74,7 +74,7 @@ private struct DevicesList: View {
                                 .accessibilityHidden(true)
                         }
                     }
-                    .font(.system(size: 13))
+                    .lookFont(size: 13)
                     .frame(minHeight: 28)
                     .contentShape(Rectangle())
                 }

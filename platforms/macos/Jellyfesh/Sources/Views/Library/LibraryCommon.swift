@@ -113,12 +113,12 @@ struct CollectionHeader<Actions: View>: View {
             VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                 if let kind {
                     Text(kind.uppercased())
-                        .font(.system(size: 11, weight: .bold))
+                        .lookFont(size: 11, weight: .bold)
                         .tracking(0.6)
                         .foregroundStyle(palette[Tokens.Ink.ink70])
                 }
                 Text(title)
-                    .font(.system(size: 30, weight: .bold))
+                    .lookFont(size: 30, weight: .bold)
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                     .lineLimit(2)
                     .accessibilityAddTraits(.isHeader)

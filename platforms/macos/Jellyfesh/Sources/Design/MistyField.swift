@@ -1,12 +1,14 @@
 // The lit field behind every view: the sky, the aurora and a fine grain (Misty MAT-02), at the
 // theme hue. Luminous (v0.0.6, docs/ui.md) turns the aurora up to `field.aurora-strength` with four
 // larger glows (LuminousField), on every screen, light and dark; the colours crossfade with the
-// theme on every song change. Only Now Playing in the Artwork style draws the baked backdrop over it.
+// theme on every song change. A customized look sets the aurora's strength (ADR-0020). Only Now
+// Playing in the Artwork style draws the baked backdrop over it.
 
 import SwiftUI
 
 struct MistyField: View {
     @Environment(\.palette) private var palette
+    @Environment(\.look) private var look
 
     var body: some View {
         ZStack {
@@ -24,7 +26,7 @@ struct MistyField: View {
         let color = palette[glow.color]
         return EllipticalGradient(
             stops: [
-                .init(color: color.opacity(glow.alpha(strength: Tokens.Field.auroraStrength)), location: 0),
+                .init(color: color.opacity(glow.alpha(strength: look.aurora)), location: 0),
                 .init(color: color.opacity(0), location: glow.fadeEnd),
             ],
             center: UnitPoint(x: glow.x, y: glow.y),

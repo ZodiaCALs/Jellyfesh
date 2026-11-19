@@ -22,7 +22,7 @@ struct SearchView: View {
                         .foregroundStyle(palette[Tokens.Ink.ink50])
                     TextField("Songs, albums and artists", text: $search.text)
                         .textFieldStyle(.plain)
-                        .font(.system(size: 17))
+                        .lookFont(size: 17)
                         .focused($fieldFocused)
                         .onSubmit { search.search(search.text) }
                         .accessibilityLabel(Text("Search"))
@@ -62,7 +62,7 @@ struct SearchView: View {
                     if !fromSources.isEmpty {
                         VStack(alignment: .leading, spacing: Tokens.Space.s5) {
                             Text("From Your Sources")
-                                .font(.system(size: 22, weight: .bold))
+                                .lookFont(size: 22, weight: .bold)
                                 .foregroundStyle(palette[Tokens.Ink.ink90])
                                 .accessibilityAddTraits(.isHeader)
                             ForEach(fromSources) { section in
@@ -75,8 +75,7 @@ struct SearchView: View {
                     }
                 }
             }
-            .padding(.horizontal, Tokens.Space.s7)
-            .padding(.vertical, Tokens.Space.s6)
+            .pagePadding()
             .frame(maxWidth: 1100, alignment: .leading)
         }
         .navigationTitle(Text("Search"))
@@ -133,7 +132,7 @@ private struct SearchSectionView: View {
                 }
                 if let error = section.error {
                     Text(error)
-                        .font(.system(size: 13))
+                        .lookFont(size: 13)
                         .foregroundStyle(palette[Tokens.Semantic.danger])
                 }
                 ForEach(section.kinds, id: \.self) { kind in
@@ -147,7 +146,7 @@ private struct SearchSectionView: View {
         let items = section.items(of: kind)
         VStack(alignment: .leading, spacing: Tokens.Space.s2) {
             Text(Self.title(of: kind))
-                .font(.system(size: 13, weight: .semibold))
+                .lookFont(size: 13, weight: .semibold)
                 .foregroundStyle(palette[Tokens.Ink.ink70])
             switch kind {
             case .track:
@@ -161,7 +160,7 @@ private struct SearchSectionView: View {
                     guard let start = playable.firstIndex(where: { $0.id == rows[index].id }) else { return }
                     playback.play(tracks: playable.compactMap(\.track), from: start)
                 }
-                .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                .surfaceCard()
             case .album:
                 LazyVGrid(columns: columns, alignment: .leading, spacing: Tokens.Space.s5) {
                     ForEach(items) { item in
@@ -181,7 +180,7 @@ private struct SearchSectionView: View {
                     }
                 }
                 .padding(.horizontal, Tokens.Space.s2)
-                .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                .surfaceCard()
             }
         }
     }

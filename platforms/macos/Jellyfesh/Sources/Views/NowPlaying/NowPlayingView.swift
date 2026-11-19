@@ -131,7 +131,7 @@ struct NowPlayingBar: View {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 14, weight: .semibold))
                         Text("Library")
-                            .font(.system(size: 13, weight: .semibold))
+                            .lookFont(size: 13, weight: .semibold)
                     }
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                     .padding(.horizontal, 14)
@@ -161,6 +161,7 @@ struct StageArtwork: View {
     @Environment(LibraryStore.self) private var library
     @Environment(\.palette) private var palette
     @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
     @State private var favorite: Bool?
 
     var body: some View {
@@ -185,12 +186,12 @@ struct StageArtwork: View {
                         .lineLimit(2)
                     if let remote = item?.remote {
                         Text(RemoteText.playingOn(remote))
-                            .font(.system(size: 13, weight: .semibold))
+                            .lookFont(size: 13, weight: .semibold)
                             .foregroundStyle(palette[Tokens.Ink.ink70])
                             .lineLimit(1)
                         if let error = remote.error {
                             Text(error)
-                                .font(.system(size: 12))
+                                .lookFont(size: 12)
                                 .foregroundStyle(palette[Tokens.Ink.ink50])
                                 .lineLimit(2)
                         }
@@ -229,7 +230,7 @@ struct StageArtwork: View {
             // Misty style: the artwork is hero media on a Clear frame.
             ArtworkView(source: source, size: side - 2 * Tokens.Space.s3, cornerRadius: Tokens.Artwork.radiusHero)
                 .padding(Tokens.Space.s3)
-                .glass(.clear, in: RoundedRectangle(cornerRadius: Tokens.Artwork.radiusHero + Tokens.Space.s3,
+                .glass(.clear, in: RoundedRectangle(cornerRadius: look.radius(Tokens.Artwork.radiusHero + Tokens.Space.s3),
                                                     style: .continuous))
                 .elevation(Tokens.Elevation.shadow1)
         } else {

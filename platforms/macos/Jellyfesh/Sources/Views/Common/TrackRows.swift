@@ -92,6 +92,7 @@ struct TrackRowView: View {
 
     @Environment(\.palette) private var palette
     @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
     @State private var hovering = false
 
     var body: some View {
@@ -140,10 +141,11 @@ struct TrackRowView: View {
                 .foregroundStyle(palette[Tokens.Ink.ink50])
                 .frame(minWidth: 40, alignment: .trailing)
         }
-        .frame(height: Tokens.Player.rowHeight)
+        // The look's density, never shorter than the artwork with a little room.
+        .frame(height: max(look.spacing(Tokens.Player.rowHeight), 44))
         .opacity(item.canPlay || item.track == nil ? 1 : 0.45)
         .background {
-            RoundedRectangle(cornerRadius: Tokens.Radius.rMd, style: .continuous)
+            RoundedRectangle(cornerRadius: look.radius(Tokens.Radius.rMd), style: .continuous)
                 .fill(rowFill)
                 .padding(.horizontal, -Tokens.Space.s2)
         }
@@ -193,7 +195,7 @@ struct TrackRowView: View {
             ArtworkView(source: item.artwork, size: 40, cornerRadius: Tokens.Artwork.radiusList)
                 .overlay {
                     if isCurrent {
-                        RoundedRectangle(cornerRadius: Tokens.Artwork.radiusList, style: .continuous)
+                        RoundedRectangle(cornerRadius: look.radius(Tokens.Artwork.radiusList), style: .continuous)
                             .fill(.black.opacity(0.35))
                         LevelGlyph(playing: isPlaying, color: .white)
                     }
@@ -476,7 +478,7 @@ struct PageHeader<Actions: View>: View {
             VStack(alignment: .leading, spacing: Tokens.Space.s1) {
                 // A large title (Luminous: `type.text-h1`, 48 pt bold) that scrolls with the page.
                 Text(title)
-                    .font(.system(size: Tokens.TypeScale.textH1.rounded(), weight: .bold))
+                    .lookFont(size: Tokens.TypeScale.textH1.rounded(), weight: .bold)
                     .lineLimit(2)
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                     .accessibilityAddTraits(.isHeader)
@@ -565,7 +567,7 @@ private struct PillButtonBody: View {
     var body: some View {
         let shape = Capsule()
         let label = configuration.label
-            .font(.system(size: 13, weight: .semibold))
+            .lookFont(size: 13, weight: .semibold)
             .padding(.horizontal, 18)
             .frame(minWidth: 96, minHeight: 36)
             .contentShape(shape)

@@ -5,28 +5,28 @@ import SwiftUI
 struct AlbumsView: View {
     @Environment(AppModel.self) private var model
     @Environment(LibraryStore.self) private var library
+    @Environment(\.look) private var look
 
     private var albums: AlbumsModel { model.pages.albums }
 
-    /// Luminous: large covers, four to a row in a wide window.
-    private let columns = [
-        GridItem(.adaptive(minimum: 190, maximum: 260), spacing: 28, alignment: .top),
-    ]
+    /// Luminous: large covers, four to a row in a wide window; spaced by the look's density.
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: 190, maximum: 260), spacing: look.spacing(28), alignment: .top)]
+    }
 
     var body: some View {
         let list = albums.list
         ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.s5) {
                 PageHeader(title: String(localized: "Albums"), subtitle: subtitle)
-                LazyVGrid(columns: columns, alignment: .leading, spacing: Tokens.Space.s7) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: look.spacing(Tokens.Space.s7)) {
                     ForEach(list.items) { album in
                         AlbumCard(album: album)
                             .onAppear { list.rowAppeared(album) }
                     }
                 }
             }
-            .padding(.horizontal, Tokens.Space.s7)
-            .padding(.vertical, Tokens.Space.s6)
+            .pagePadding()
         }
         .overlay {
             if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {

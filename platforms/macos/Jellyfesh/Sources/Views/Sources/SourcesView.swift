@@ -121,7 +121,7 @@ struct SourceRow: View {
             Spacer(minLength: 0)
             if !plugin.enabled {
                 Text("Off")
-                    .font(.system(size: 12, weight: .semibold))
+                    .lookFont(size: 12, weight: .semibold)
                     .foregroundStyle(palette[Tokens.Ink.ink50])
             }
         }
@@ -192,17 +192,17 @@ struct SourcesUnavailableNotice: View {
                 .foregroundStyle(palette[Tokens.Semantic.info])
             VStack(alignment: .leading, spacing: Tokens.Space.s1) {
                 Text("Sources Are on Their Way")
-                    .font(.system(size: 13, weight: .semibold))
+                    .lookFont(size: 13, weight: .semibold)
                     .foregroundStyle(palette[Tokens.Ink.ink90])
                 Text("This build of the player cannot install, sign in to or browse sources yet. They arrive in an update.")
-                    .font(.system(size: 12))
+                    .lookFont(size: 12)
                     .foregroundStyle(palette[Tokens.Ink.ink70])
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(Tokens.Space.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+        .surfaceCard()
         .accessibilityElement(children: .combine)
     }
 }

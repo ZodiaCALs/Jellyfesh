@@ -112,7 +112,7 @@ struct AppleMusicView: View {
                             .foregroundStyle(palette[Tokens.Ink.ink50])
                         TextField("Songs and albums", text: $text)
                             .textFieldStyle(.plain)
-                            .font(.system(size: 17))
+                            .lookFont(size: 17)
                             .focused($fieldFocused)
                             .onSubmit { Task { await search.run(text, using: appleMusic.catalog) } }
                             .accessibilityLabel(Text("Search Apple Music"))
@@ -148,8 +148,7 @@ struct AppleMusicView: View {
                         .frame(maxWidth: .infinity, minHeight: 280)
                 }
             }
-            .padding(.horizontal, Tokens.Space.s7)
-            .padding(.vertical, Tokens.Space.s6)
+            .pagePadding()
             .frame(maxWidth: 1100, alignment: .leading)
         }
         .navigationTitle(Text(verbatim: AppleMusicStore.name))
@@ -183,13 +182,13 @@ struct AppleMusicResultsView: View {
             VStack(alignment: .leading, spacing: Tokens.Space.s4) {
                 if showsTitle && (!results.isEmpty || search.error != nil) {
                     Text(verbatim: AppleMusicStore.name)
-                        .font(.system(size: 22, weight: .bold))
+                        .lookFont(size: 22, weight: .bold)
                         .foregroundStyle(palette[Tokens.Ink.ink90])
                         .accessibilityAddTraits(.isHeader)
                 }
                 if let error = search.error {
                     Text(error)
-                        .font(.system(size: 13))
+                        .lookFont(size: 13)
                         .foregroundStyle(palette[Tokens.Semantic.danger])
                 } else if results.isEmpty && !search.isSearching && !showsTitle {
                     EmptyState(title: "No Results", symbol: "magnifyingglass",
@@ -199,19 +198,19 @@ struct AppleMusicResultsView: View {
                 if !results.songs.isEmpty {
                     VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                         Text("Songs")
-                            .font(.system(size: 13, weight: .semibold))
+                            .lookFont(size: 13, weight: .semibold)
                             .foregroundStyle(palette[Tokens.Ink.ink70])
                         let items = results.songs.map(Self.item)
                         TrackStack(items: items) { index in
                             playback.play(tracks: results.songs.map(\.track), from: index)
                         }
-                        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                        .surfaceCard()
                     }
                 }
                 if !results.albums.isEmpty {
                     VStack(alignment: .leading, spacing: Tokens.Space.s2) {
                         Text("Albums")
-                            .font(.system(size: 13, weight: .semibold))
+                            .lookFont(size: 13, weight: .semibold)
                             .foregroundStyle(palette[Tokens.Ink.ink70])
                         LazyVGrid(columns: columns, alignment: .leading, spacing: Tokens.Space.s5) {
                             ForEach(results.albums) { album in

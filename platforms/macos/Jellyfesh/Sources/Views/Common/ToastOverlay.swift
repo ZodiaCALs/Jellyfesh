@@ -15,7 +15,7 @@ struct ToastOverlay: View {
                     Image(systemName: "exclamationmark.circle")
                         .foregroundStyle(palette[Tokens.Semantic.warning])
                     Text(message)
-                        .font(.system(size: 13, weight: .medium))
+                        .lookFont(size: 13, weight: .medium)
                         .foregroundStyle(palette[Tokens.Ink.ink90])
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)

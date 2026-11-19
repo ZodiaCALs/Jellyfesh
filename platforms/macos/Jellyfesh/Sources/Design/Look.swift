@@ -3,7 +3,8 @@
 // Transparency still overrule, the aurora's strength, the platform's own faces (SF, SF Rounded,
 // New York, SF Mono) at the text scale, spacing for the density, the lyrics' weight, glow and
 // highlight, and the order of the sidebar and Home. With `customized` false every value is the
-// Luminous default and the app draws exactly as in v0.0.6. The rules are pure, for tests.
+// Luminous default, whatever the slice holds, and the app draws exactly as in v0.0.6. The rules
+// are pure, for tests.
 
 import SwiftUI
 
@@ -17,13 +18,17 @@ struct LookStyle: Equatable {
     // MARK: Shapes, glass and the field
 
     /// Radii ×, 0–2 (1 is Luminous).
-    var cornerScale: CGFloat { CGFloat(Self.clamp(state.cornerScale, 0, 2, otherwise: 1)) }
+    var cornerScale: CGFloat {
+        customized ? CGFloat(Self.clamp(state.cornerScale, 0, 2, otherwise: 1)) : 1
+    }
 
     /// A radius in this look.
     func radius(_ base: CGFloat) -> CGFloat { base * cornerScale }
 
     /// How much glass shows what is behind it, 0 (solid panels) to 1 (Luminous).
-    var glass: Double { Double(Self.clamp(state.glass, 0, 1, otherwise: 1)) }
+    var glass: Double {
+        customized ? Double(Self.clamp(state.glass, 0, 1, otherwise: 1)) : 1
+    }
 
     /// The Transparency the glass is drawn with: the setting's, times the look's glass, so the
     /// setting and Reduce Transparency still win (ADR-0020).
@@ -41,6 +46,7 @@ struct LookStyle: Equatable {
 
     /// The platform's own face for the typeface: SF, SF Rounded, New York or SF Mono.
     var fontDesign: Font.Design {
+        guard customized else { return .default }
         switch state.typeface {
         case .system: return .default
         case .rounded: return .rounded
@@ -50,7 +56,9 @@ struct LookStyle: Equatable {
     }
 
     /// Every type size ×, 0.85–1.30.
-    var textScale: CGFloat { CGFloat(Self.clamp(state.textScale, 0.85, 1.3, otherwise: 1)) }
+    var textScale: CGFloat {
+        customized ? CGFloat(Self.clamp(state.textScale, 0.85, 1.3, otherwise: 1)) : 1
+    }
 
     /// A type size in this look.
     func size(_ base: CGFloat) -> CGFloat { base * textScale }
@@ -62,6 +70,7 @@ struct LookStyle: Equatable {
 
     /// Spacing × 0.8, 1 or 1.2 for the density.
     var densityScale: CGFloat {
+        guard customized else { return 1 }
         switch state.density {
         case .compact: return 0.8
         case .standard: return 1
@@ -113,6 +122,7 @@ struct LookStyle: Equatable {
     /// The sidebar's places, in order: the look's, each once; Luminous's when none of the
     /// library's places would be left (the core keeps one, so this only guards a bad answer).
     var sidebar: [LookPlace] {
+        guard customized else { return LookState.luminous.sidebar }
         var seen = Set<LookPlace>()
         let places = state.sidebar.filter { seen.insert($0).inserted }
         let library: Set<LookPlace> = [.home, .albums, .artists, .songs, .playlists, .favourites]
@@ -121,6 +131,7 @@ struct LookStyle: Equatable {
 
     /// Home's sections, in order, each once.
     var home: [LookHomeSection] {
+        guard customized else { return LookState.luminous.home }
         var seen = Set<LookHomeSection>()
         return state.home.filter { seen.insert($0).inserted }
     }
@@ -166,6 +177,17 @@ private struct LyricsGlow: ViewModifier {
     }
 }
 
+/// A page's margins (Luminous: s7 at the sides, s6 above and below) at the look's density.
+private struct PagePadding: ViewModifier {
+    @Environment(\.look) private var look
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, look.spacing(Tokens.Space.s7))
+            .padding(.vertical, look.spacing(Tokens.Space.s6))
+    }
+}
+
 /// A grouped surface (Luminous's lists and cards) with the look's corners.
 private struct SurfaceCard: ViewModifier {
     @Environment(\.look) private var look
@@ -184,6 +206,11 @@ extension View {
     /// A grouped surface with Luminous's corner radius, scaled by the look.
     func surfaceCard() -> some View {
         modifier(SurfaceCard())
+    }
+
+    /// A page's margins at the look's density.
+    func pagePadding() -> some View {
+        modifier(PagePadding())
     }
 
     /// The look's glow around sung lyrics drawn at `size` points (none while not customized).

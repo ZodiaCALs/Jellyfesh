@@ -116,9 +116,10 @@ struct FloatingGlass<Content: View>: View {
     var cornerRadius: CGFloat
     @ViewBuilder var content: Content
     @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
 
     private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        RoundedRectangle(cornerRadius: look.radius(cornerRadius), style: .continuous)
     }
 
     var body: some View {

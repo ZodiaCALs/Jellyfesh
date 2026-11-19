@@ -50,7 +50,7 @@ struct SeekBar: View {
             Text(total > 0 ? TimeText.remaining(positionUs: shown, durationUs: total) : "–:––")
                 .frame(minWidth: 44, alignment: .leading)
         }
-        .font(.system(size: 12, weight: .semibold))
+        .lookFont(size: 12, weight: .semibold)
         .monospacedDigit()
         .foregroundStyle(palette[Tokens.Ink.ink70])
         .accessibilityElement(children: .ignore)

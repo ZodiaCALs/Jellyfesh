@@ -119,7 +119,7 @@ struct ArtistDetailView: View {
                             // The rows as shown, so the queue matches the page.
                             playback.play(.tracks(items.compactMap(\.track)), from: index)
                         }
-                        .surface(in: RoundedRectangle(cornerRadius: surfaceRadius, style: .continuous))
+                        .surfaceCard()
                     }
                 }
                 if let error {
@@ -127,8 +127,7 @@ struct ArtistDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, Tokens.Space.s7)
-            .padding(.vertical, Tokens.Space.s6)
+            .pagePadding()
         }
         .navigationTitle(Text(artist.name))
         .task(id: library.revision) {

@@ -112,12 +112,14 @@ private struct LyricsScroller: View {
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.effects) private var effects
+    @Environment(\.look) private var style
     @State private var width: CGFloat = 600
     @State private var height: CGFloat = 600
     @State private var cascade = LyricsCascade()
 
     var body: some View {
-        let size = (LyricsLayout.lineSize(forWidth: width) * look.scale).rounded()
+        // The Lyrics Size setting and the look's text scale.
+        let size = (LyricsLayout.lineSize(forWidth: width) * look.scale * style.textScale).rounded()
         let anchor = Tokens.Lyrics.anchorPosition
         ScrollViewReader { proxy in
             ScrollView {
@@ -224,7 +226,7 @@ private struct LyricsScroller: View {
             for extra in LyricsLayout.auxLines(in: document, for: line, translation: translation,
                                                romanization: romanization) {
                 let role = extra.kind == .translation ? Tokens.Lyrics.translation : Tokens.Lyrics.romanization
-                distance += look.size(role) * CGFloat(role.lineHeight) + Tokens.Space.s1
+                distance += style.size(look.size(role)) * CGFloat(role.lineHeight) + Tokens.Space.s1
             }
             distance += Tokens.Lyrics.lineGap
         }
@@ -348,8 +350,8 @@ private struct LyricLineView: View, Equatable {
             mainLine(lineHeight: lineHeight)
             if !line.background.isEmpty {
                 Text(Self.joined(line.background))
-                    .font(.system(size: look.size(Tokens.Lyrics.translation),
-                                  weight: Font.Weight(cssWeight: Tokens.Lyrics.translation.weight)))
+                    .lookFont(size: look.size(Tokens.Lyrics.translation),
+                              weight: Font.Weight(cssWeight: Tokens.Lyrics.translation.weight))
                     .foregroundStyle(auxInk)
                     .multilineTextAlignment(textAlignment)
             }
@@ -533,7 +535,7 @@ private struct UnsyncedLyrics: View {
                 ForEach(Array(document.lines.enumerated()), id: \.offset) { _, line in
                     VStack(alignment: alignment, spacing: Tokens.Space.s1) {
                         Text(line.text)
-                            .font(.system(size: (22 * look.scale).rounded(), weight: .semibold))
+                            .lookFont(size: (22 * look.scale).rounded(), weight: .semibold)
                             .foregroundStyle(palette[Tokens.Ink.ink90])
                         ForEach(LyricsLayout.auxLines(in: document, for: line, translation: translation,
                                                       romanization: romanization), id: \.self) { extra in

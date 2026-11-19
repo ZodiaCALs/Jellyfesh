@@ -21,6 +21,7 @@ struct RootView: View {
     var body: some View {
         let effects = currentEffects
         let palette = theme.palette(for: colorScheme)
+        let style = LookStyle(state: look.state)
         ZStack {
             if let error = model.startupError {
                 StartupErrorView(message: error)
@@ -65,7 +66,9 @@ struct RootView: View {
         .toolbar(router.nowPlayingShown ? .hidden : .visible, for: .windowToolbar)
         .environment(\.palette, palette)
         .environment(\.effects, effects)
-        .environment(\.look, LookStyle(state: look.state))
+        .environment(\.look, style)
+        // Text without a face of its own (controls, menus) in the look's typeface.
+        .fontDesign(style.customized ? style.fontDesign : nil)
         .tint(palette[Tokens.Accent.accent])
         .onChange(of: effects.reduceMotion || effects.reduceEffects, initial: true) { _, value in
             theme.reduceMotion = value
@@ -89,12 +92,14 @@ struct RootView: View {
 
     private var currentEffects: Effects {
         let reduceEffects = settings.current.reduceEffects
-        let transparency = Double(settings.current.transparency)
+        // The look's glass scales the setting's transparency: a look without glass is solid, and
+        // the setting and Reduce Transparency still win (ADR-0020).
+        let transparency = LookStyle(state: look.state).transparency(setting: Double(settings.current.transparency))
         return Effects(
             reduceMotion: reduceMotion,
             // Misty MAT-08: Reduce Transparency, Increase Contrast, Low Power Mode and the app's
             // Reduce motion and transparency all turn glass into solid Cloud, as does a
-            // Transparency of 0 %.
+            // Transparency of 0 % (or a look without glass).
             solidGlass: reduceTransparency || contrast == .increased || system.lowPower || reduceEffects
                 || transparency <= 0.001,
             reduceEffects: reduceEffects,

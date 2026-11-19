@@ -26,6 +26,7 @@ struct ArtworkView: View {
     @Environment(\.artworkLoader) private var loader
     @Environment(\.displayScale) private var displayScale
     @Environment(\.palette) private var palette
+    @Environment(\.look) private var look
     @State private var loaded: NSImage?
     @State private var loadedFor: ArtworkSource?
 
@@ -53,7 +54,7 @@ struct ArtworkView: View {
             }
             .frame(width: size, height: size)
             .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: look.radius(cornerRadius), style: .continuous))
             .accessibilityHidden(true)
             .task(id: TaskKey(source: source, pixels: pixels)) {
                 await load()
