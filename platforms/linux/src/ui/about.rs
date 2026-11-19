@@ -126,12 +126,16 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         }));
     }
     match licences {
-        Some(Licences::Page(page)) => places.append(&link_row(&tr("Third-Party Licences"), None, move || {
-            crate::ui::actions::open_link(&page);
-        })),
-        Some(Licences::File(file)) => places.append(&link_row(&tr("Third-Party Licences"), None, move || {
-            open_file(&file);
-        })),
+        Some(Licences::Page(page)) => {
+            places.append(&link_row(&tr("Third-Party Licences"), None, move || {
+                crate::ui::actions::open_link(&page);
+            }))
+        }
+        Some(Licences::File(file)) => {
+            places.append(&link_row(&tr("Third-Party Licences"), None, move || {
+                open_file(&file);
+            }))
+        }
         None => {}
     }
     places.set_visible(places.first_child().is_some());

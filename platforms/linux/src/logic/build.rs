@@ -29,7 +29,10 @@ mod tests {
         assert_eq!(distribution(Some("direct")), Distribution::Direct);
         assert_eq!(distribution(Some(" Direct ")), Distribution::Direct);
         assert_eq!(distribution(Some("app-store")), Distribution::AppStore);
-        assert_eq!(distribution(Some("microsoft-store")), Distribution::MicrosoftStore);
+        assert_eq!(
+            distribution(Some("microsoft-store")),
+            Distribution::MicrosoftStore
+        );
         assert_eq!(distribution(Some("google-play")), Distribution::GooglePlay);
         assert_eq!(distribution(Some("web")), Distribution::Web);
     }

@@ -354,7 +354,13 @@ fn connect_dialog(from: &adw::ActionRow, preset: &SourcePreset) {
         address.set_placeholder_text(Some(example));
     }
     if preset.needs_address {
-        body.append(&field_block(&tr("Server Address"), true, None, &address, &address));
+        body.append(&field_block(
+            &tr("Server Address"),
+            true,
+            None,
+            &address,
+            &address,
+        ));
     }
     let buttons = gtk::Box::new(gtk::Orientation::Vertical, 8);
     let mut all = Vec::new();
@@ -879,7 +885,10 @@ fn render_step(flow: &Rc<Flow>, step: &AuthStep, id: u64) {
         }
         AuthStep::Done { account } => {
             flow.over.set(true);
-            body.append(&sentence(&trf("Signed in as {account}.", &[("account", account)])));
+            body.append(&sentence(&trf(
+                "Signed in as {account}.",
+                &[("account", account)],
+            )));
             let close = gtk::Button::with_label(&tr("Done"));
             close.add_css_class("pill");
             close.add_css_class("suggested-action");
@@ -948,10 +957,7 @@ fn ask_fields(flow: &Rc<Flow>, body: &gtk::Box, fields: &[AuthField], id: u64) {
     check();
     let plugin = flow.plugin.clone();
     submit.connect_clicked(move |b| {
-        let fields = answers
-            .iter()
-            .map(|(f, a)| (f.name.clone(), a.text()))
-            .collect();
+        let fields = answers.iter().map(|(f, a)| (f.name.clone(), a.text())).collect();
         // Until the next step arrives.
         b.set_sensitive(false);
         b.set_label(&tr("Signing in…"));

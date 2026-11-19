@@ -202,7 +202,11 @@ struct Browse {
 pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::NavigationPage {
     let facts = item.as_ref().map(page_facts);
     let numbered = facts.is_some_and(|f| f.numbered);
-    let style = if numbered { RowStyle::ALBUM_TRACK } else { RowStyle::TRACK };
+    let style = if numbered {
+        RowStyle::ALBUM_TRACK
+    } else {
+        RowStyle::TRACK
+    };
     let browse_items: Rc<RefCell<Vec<ItemData>>> = Rc::new(RefCell::new(Vec::new()));
     let opened = browse_items.clone();
     // Songs play with the playable songs listed; containers open; items
@@ -393,7 +397,9 @@ fn container_header(item: &SourceItem, facts: browse::PageFacts) -> Header {
         collection,
         move |_| actions::play(collection.clone(), 0, false)
     ));
-    header.shuffle.connect_clicked(move |_| actions::play(collection.clone(), 0, true));
+    header
+        .shuffle
+        .connect_clicked(move |_| actions::play(collection.clone(), 0, true));
     // More: Play Next and Play Last (not for a remote source), Open in
     // {Service}.
     let menu = actions::more_menu_for(&convert::source_item(item));
@@ -468,13 +474,13 @@ fn show_listed(browse: &Browse, next_page: Option<u32>) {
     }
     browse.footer.set_visible(songs.is_some());
     if let Some(row) = &browse.play_row {
-        row.set_visible(browse::lists_playable(listed.iter().map(|i| (i.kind, i.playable))));
+        row.set_visible(browse::lists_playable(
+            listed.iter().map(|i| (i.kind, i.playable)),
+        ));
     }
-    browse.stack.set_visible_child_name(if listed.is_empty() {
-        "empty"
-    } else {
-        "list"
-    });
+    browse
+        .stack
+        .set_visible_child_name(if listed.is_empty() { "empty" } else { "list" });
 }
 
 fn request(browse: &Browse, page: u32) {

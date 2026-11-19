@@ -207,9 +207,13 @@ mod tests {
             "org.example.jellyfin" | "org.example.jellyfin2" => "Jellyfin".to_owned(),
             other => other.to_owned(),
         };
-        let ids: Vec<String> = ["org.example.navidrome", "org.example.jellyfin", "org.example.jellyfin2"]
-            .map(String::from)
-            .to_vec();
+        let ids: Vec<String> = [
+            "org.example.navidrome",
+            "org.example.jellyfin",
+            "org.example.jellyfin2",
+        ]
+        .map(String::from)
+        .to_vec();
         assert_eq!(also_in(&ids, name, ", ").as_deref(), Some("Navidrome, Jellyfin"));
         assert_eq!(also_in(&ids[1..2], name, "、").as_deref(), Some("Jellyfin"));
         assert_eq!(also_in(&[], name, ", "), None);

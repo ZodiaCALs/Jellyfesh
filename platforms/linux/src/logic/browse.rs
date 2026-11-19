@@ -60,7 +60,10 @@ pub fn various_artists<'a>(artists: impl IntoIterator<Item = Option<&'a str>>) -
 /// The songs a page lists (each item's kind and length), as their lengths,
 /// for "12 songs" and the "12 songs, 48 minutes" footer. `None` until every
 /// page is loaded, so the count never shows a part of the list.
-pub fn songs(items: impl IntoIterator<Item = (ItemKind, Option<u64>)>, complete: bool) -> Option<Vec<Option<u64>>> {
+pub fn songs(
+    items: impl IntoIterator<Item = (ItemKind, Option<u64>)>,
+    complete: bool,
+) -> Option<Vec<Option<u64>>> {
     let songs: Vec<Option<u64>> = items
         .into_iter()
         .filter(|(kind, _)| *kind == ItemKind::Track)

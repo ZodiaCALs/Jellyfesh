@@ -18,9 +18,9 @@ use adw::prelude::*;
 use gtk::glib;
 use jf_core::{
     AiLyricsSnapshot, AuthUpdate, BrowseUpdate, Command, CommandId, DevicesSnapshot, DisplayClock, Event,
-    LookSnapshot, LyricsSnapshot, NowPlaying,
-    PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate,
-    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot, monotonic_now_ns,
+    LookSnapshot, LyricsSnapshot, NowPlaying, PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot,
+    RepeatMode, ScanStatus, SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot,
+    UpdateSnapshot, monotonic_now_ns,
 };
 
 use crate::logic::remote::{self, RemoteView};

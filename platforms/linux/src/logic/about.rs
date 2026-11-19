@@ -54,7 +54,11 @@ pub fn links(website: Option<&str>) -> Option<Links> {
 /// Where the notices file is installed for the app at `exe`
 /// (`<prefix>/bin/jellyfesh` → `<prefix>/share/doc/jellyfesh/…`).
 pub fn notices_file(exe: &Path) -> Option<PathBuf> {
-    Some(exe.parent()?.parent()?.join("share/doc/jellyfesh/THIRD_PARTY_NOTICES.md"))
+    Some(
+        exe.parent()?
+            .parent()?
+            .join("share/doc/jellyfesh/THIRD_PARTY_NOTICES.md"),
+    )
 }
 
 #[cfg(test)]
