@@ -80,12 +80,12 @@ A changed English string needs its three translations in every app.
 
 **Linux**
 1. Source covers never load: `linux/ui/convert.rs:36` maps `ArtworkRef::Url` to nothing [N29].
-2. About has no website and no third-party licences, and still says "No licence has been chosen yet: all rights reserved." [N28].
-3. Sign-in fields show only label and secret (no placeholder, help, required or kind) [N11].
+2. Fixed: About has the website and the third-party licences when the build knows the website (`JF_WEBSITE`, else GitHub Pages), else the notices file installed next to the app; the licence line is gone [N28].
+3. Fixed: sign-in fields show their label, placeholder, help, Optional and an input for their kind; Server Address has the core's example as its placeholder; a QR code keeps the plugin's sentence [N7, N11].
 4. Songs › Play queues the first 500 songs, a row the next 500, Shuffle 5,000 [N2].
-5. Source album, artist and playlist pages have no Play or Shuffle [N18].
-6. Search never shows "Also in …" [N5].
-7. Words: "Speakers", the "Rescan" button ([3](#3-the-words)).
+5. Fixed: source album, artist and playlist pages have the library's header with artwork, Play, Shuffle and More, numbered songs and the footer; folders a large title [N18].
+6. Fixed: merged search results say "Also in …" [N5].
+7. Fixed: the words of [3](#3-the-words) (System Default, Rescan Library, Remove from Queue, Playlists (M3U8)) and V3–V7, V10, V15, V19–V21.
 
 **Android**
 1. Source covers never load: `and/images/ArtworkLoader.kt:35` maps URLs to nothing [N29].
@@ -169,7 +169,7 @@ under the table: where the code is, or where the missing part belongs.
 | Library first: Songs, Albums, Artists | ✓ | ✓ | ✓ | ✓ | ✓ |
 | From Your Sources, one group per source | ✓ | ✓ | ✓ | ✓ | ✓ |
 | "No Results" | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Merged items name the other sources ("Also in …") | ✓ | partial: names without "Also in" [N5] | ✗ [N5] | ✓ | ✓ |
+| Merged items name the other sources ("Also in …") | ✓ | partial: names without "Also in" [N5] | ✓ | ✓ | ✓ |
 | A source album, artist or playlist opens its page | ✓ | ✗ plays at once [N6] | ✓ | ✓ | ✓ |
 
 * **N5** `also_in`: macOS `mac/Views/Search/SearchView.swift` ("Also in %@"), Android `search_also_in`, web `web/components/ItemRow.svelte` ("Also in {sources}"). Windows `win/Jellyfesh.Shared/ViewModels/SearchViewModel.cs:216` writes the source names as `Origin` without the words. Linux never reads `also_in`: add it to the second line in `linux/ui/pages/search.rs` `render_section` (and `linux/ui/convert.rs` `source_item`).
@@ -181,13 +181,13 @@ under the table: where the code is, or where the missing part belongs.
 |---|---|---|---|---|---|
 | Sources page: intro, Add a Source, Your Sources, Sources Settings… | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Add a Source from the core's presets, with the five descriptions | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Connect: Server Address (the core's example as placeholder), one button per method | ✓ | ✓ | partial: example as a note [N7] | ✓ | partial: the whole settings form [N8] |
+| Connect: Server Address (the core's example as placeholder), one button per method | ✓ | ✓ | ✓ | ✓ | partial: the whole settings form [N8] |
 | Sign in with user name and password | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Sign in with an API key | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Sign in with a QR code (`ShowQr`) | ✓ | ✓ (plugin's hint dropped, N11) | ✓ (plugin's hint dropped, N11) | ✓ | ✓ |
+| Sign in with a QR code (`ShowQr`) | ✓ | ✓ (plugin's hint dropped, N11) | ✓ | ✓ | ✓ |
 | Sign in with a code shown large (`ShowCode`: Jellyfin Quick Connect) | ✓ | ✗ fails [N10] | ✓ | ✓ | ✓ |
 | Sign in in the browser (OAuth, `OpenUrl`) | ✓ | ✓ | ✓ | ✓ | ✗ [N13] |
-| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | partial [N11] | partial [N11] | ✓ | ✓ |
+| Fields as the plugin asks (label, secret, placeholder, help, required, kind) | ✓ | partial [N11] | ✓ | ✓ | ✓ |
 | Paste Cookies (cookie import) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✓ (untested, N14) | ✗ [N13] |
 | Sign Out | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Your Sources: each with its badge and sign-in state, or Off | ✓ | ✓ | ✓ | ✓ | partial: no badge [N15] |
@@ -195,7 +195,7 @@ under the table: where the code is, or where the missing part belongs.
 | Settings › Sources › Installed: a button per sign-in method, or Sign Out | ✓ | ✓ | ✓ | ✓ | partial: one Sign In [N16] |
 | Browse: pages, Load More, folders and artists drill in | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Browse: an album or playlist opens its songs | ✓ | ✗ plays at once [N17] | ✓ | ✓ | ✓ |
-| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✗ [N17] | partial [N18] | partial: albums and playlists ✓; an artist has no header yet (Play and Shuffle in More) [N18] | ✓ |
+| Source album, artist, playlist page: artwork, Play, Shuffle, More | ✓ | ✗ [N17] | ✓ | partial: albums and playlists ✓; an artist has no header yet (Play and Shuffle in More) [N18] | ✓ |
 | Open in {Service}: song menu, More menus, Now Playing More and Info | ✓ | ✓ | ✓ | ✓ | ✓ |
 | An unplayable item with a link opens it as its main action | ✓ | ✓ | ✓ | ✓ | ✓ |
 | "Content from {Service}" for sources with `attribution` | ✓ | ✗ [N19] | ✓ | ✓ | ✗ [N19] |
@@ -317,8 +317,8 @@ under the table: where the code is, or where the missing part belongs.
 |---|---|---|---|---|---|
 | Where About lives (app menu; Settings; main menu; Settings; Settings) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | The version, from the build | ✓ | ✓ | ✓ | ✓ | ✓ |
-| The website, where the build knows it | ✓ | ✗ [N28] | ✗ [N28] | ✓ | ✗ [N28] |
-| Third-party licences | ✓ | ✓ | ✗ [N28] | ✓ | ✓ |
+| The website, where the build knows it | ✓ | ✗ [N28] | ✓ | ✓ | ✗ [N28] |
+| Third-party licences | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 * **N28** macOS `mac/App/AppDelegate.swift` `showAbout()`: the standard panel with the tagline, the Misty credit and the core version. Windows `win/Jellyfesh.App/Views/SettingsPage.xaml` About: version, Third-Party Licences (the notices file next to the app), Open Log Folder. Linux `linux/ui/about.rs`: version, Design, Design Tokens and "Licence: No licence has been chosen yet: all rights reserved." (check against the licence work under way). Android `and/ui/settings/SettingsScreen.kt` `about()`: version, Website and Third-Party Licences when the build knows the website (`jellyfesh.website` or `GITHUB_REPOSITORY`). Web `web/views/Settings.svelte:548`: "Third-party notices" (`THIRD_PARTY_NOTICES.txt`), no website. Give macOS, Windows, Linux and the web the website and licences the way Android derives them.
 
@@ -462,7 +462,8 @@ parity pass (docs/macos.md), as listed here.
 * `Sources_More` "Show More": **Load More** as the others.
 * Unused or legacy: `Action_Clear` "Clear" (a word ui.md rules out; no code uses it), `Search_SourcesNotAvailable` and `Common_NotAvailable` ("Coming in a later build."), shown only when the core answers NotAvailable.
 
-**Linux** (`platforms/linux/po/jellyfesh.pot`)
+**Linux** (`platforms/linux/po/jellyfesh.pot`): all fixed in the parity pass, as
+listed here.
 * "Speakers" in "Output Device: {device}" at System Default (`linux/ui/outputs.rs:141`): **System Default**.
 * The Rescan Library row's button is "Rescan" (`linux/ui/prefs.rs:1017`): **Rescan Library**.
 * "Remove" for an Up Next entry (`linux/ui/rows.rs:290`): **Remove from Queue** (macOS, Windows).
