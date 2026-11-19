@@ -261,9 +261,7 @@ fn appearance_page() -> adw::PreferencesPage {
     let accent_group = group(&tr("Accent Colour"), None);
     let follow = adw::SwitchRow::builder()
         .title(tr("Follow the Artwork"))
-        .subtitle(tr(
-            "The accent and the Misty field take the hue of the album cover.",
-        ))
+        .subtitle(tr("The colour of buttons, selections and the Misty field."))
         .build();
     let swatch_box = gtk::FlowBox::builder()
         .selection_mode(gtk::SelectionMode::None)
@@ -300,7 +298,10 @@ fn appearance_page() -> adw::PreferencesPage {
     p.add(&accent_group);
 
     // Transparency: Solid … Clear, and reduced motion and transparency.
-    let glass_group = group(&tr("Transparency"), None);
+    let glass_group = group(
+        &tr("Transparency"),
+        Some(&tr("How much of the background shows through the glass.")),
+    );
     let transparency = gtk::Scale::with_range(gtk::Orientation::Horizontal, 0.0, 100.0, 1.0);
     transparency.set_hexpand(true);
     transparency.set_draw_value(false);
@@ -326,7 +327,7 @@ fn appearance_page() -> adw::PreferencesPage {
     let reduce = adw::SwitchRow::builder()
         .title(tr("Reduce Motion and Transparency"))
         .subtitle(tr(
-            "Solid surfaces instead of glass, and short fades instead of motion.",
+            "Solid surfaces instead of glass, and short fades instead of movement.",
         ))
         .build();
     glass_group.add(&transparency_row);
@@ -334,7 +335,10 @@ fn appearance_page() -> adw::PreferencesPage {
     p.add(&glass_group);
 
     // Now Playing Backdrop: Artwork or Misty, with previews.
-    let backdrop_group = group(&tr("Now Playing Backdrop"), None);
+    let backdrop_group = group(
+        &tr("Now Playing Backdrop"),
+        Some(&tr("The artwork, blurred, or the Misty field in its colour.")),
+    );
     let (style_box, styles, style_previews) = picture_choices(
         &[(Picture::Artwork, tr("Artwork")), (Picture::Misty, tr("Misty"))],
         &tr("Now Playing Backdrop"),
@@ -1009,12 +1013,12 @@ fn library_page() -> adw::PreferencesPage {
     watch_group.add(&watch);
     p.add(&watch_group);
 
+    // The sentence beside the Rescan Library button, as in every app.
     let scan = adw::PreferencesGroup::new();
     let rescan_row = adw::ActionRow::builder()
-        .title(tr("Rescan Library"))
-        .subtitle(tr("Look for new, changed and removed files."))
+        .title(tr("Look for new, changed and removed files."))
         .build();
-    let rescan = gtk::Button::with_label(&tr("Rescan"));
+    let rescan = gtk::Button::with_label(&tr("Rescan Library"));
     rescan.set_valign(gtk::Align::Center);
     rescan.connect_clicked(|_| {
         app().send(Command::Rescan);
@@ -1068,10 +1072,8 @@ fn library_page() -> adw::PreferencesPage {
                     _ => Vec::new(),
                 };
                 if roots.is_empty() {
-                    let row = adw::ActionRow::builder()
-                        .title(tr("No Folders Yet"))
-                        .subtitle(tr("Add a folder with music."))
-                        .build();
+                    let row = adw::ActionRow::builder().title(tr("No Folders Yet")).build();
+                    row.add_css_class("dim-label");
                     list.append(&row);
                 }
                 for root in roots {

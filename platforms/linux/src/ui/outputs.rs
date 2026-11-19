@@ -138,7 +138,7 @@ impl DeviceButton {
                 self.button.remove_css_class("remote");
                 let devices = a.devices.borrow().clone();
                 let selected = devices.selected.clone();
-                let shown = selected.clone().unwrap_or_else(|| tr("Speakers"));
+                let shown = selected.clone().unwrap_or_else(|| tr("System Default"));
                 self.face(&trf("Output Device: {device}", &[("device", &shown)]), &shown);
                 std::iter::once((
                     Choice::Output(None),

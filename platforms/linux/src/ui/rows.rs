@@ -37,13 +37,23 @@ pub enum Leading {
     Avatar,
 }
 
+/// What a row's remove button takes the row out of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Removal {
+    None,
+    /// Up Next: "Remove from Queue".
+    Queue,
+    /// A playlist's page: "Remove from Playlist".
+    Playlist,
+}
+
 /// Which parts a row has.
 #[derive(Debug, Clone, Copy)]
 pub struct RowStyle {
     pub leading: Leading,
     pub heart: bool,
     pub more: bool,
-    pub remove: bool,
+    pub remove: Removal,
     pub drag: bool,
 }
 
@@ -52,42 +62,42 @@ impl RowStyle {
         leading: Leading::Art,
         heart: true,
         more: true,
-        remove: false,
+        remove: Removal::None,
         drag: false,
     };
     pub const ALBUM_TRACK: RowStyle = RowStyle {
         leading: Leading::Number,
         heart: true,
         more: true,
-        remove: false,
+        remove: Removal::None,
         drag: false,
     };
     pub const ARTIST: RowStyle = RowStyle {
         leading: Leading::Avatar,
         heart: false,
         more: true,
-        remove: false,
+        remove: Removal::None,
         drag: false,
     };
     pub const PLAYLIST: RowStyle = RowStyle {
         leading: Leading::Art,
         heart: false,
         more: true,
-        remove: false,
+        remove: Removal::None,
         drag: false,
     };
     pub const QUEUE: RowStyle = RowStyle {
         leading: Leading::Art,
         heart: false,
         more: false,
-        remove: true,
+        remove: Removal::Queue,
         drag: true,
     };
     pub const PLAYLIST_ENTRY: RowStyle = RowStyle {
         leading: Leading::Art,
         heart: true,
         more: true,
-        remove: true,
+        remove: Removal::Playlist,
         drag: true,
     };
 }
@@ -286,8 +296,13 @@ impl ListRow {
             ));
             row.append(&more);
         }
-        if style.remove {
-            let remove = glyph::button("close", 16, &tr("Remove"));
+        let remove_label = match style.remove {
+            Removal::None => None,
+            Removal::Queue => Some(tr("Remove from Queue")),
+            Removal::Playlist => Some(tr("Remove from Playlist")),
+        };
+        if let Some(label) = remove_label {
+            let remove = glyph::button("close", 16, &label);
             remove.add_css_class("row-button");
             remove.set_valign(gtk::Align::Center);
             remove.connect_clicked(glib::clone!(
