@@ -460,10 +460,10 @@ pub fn show_playlist(id: i64, known: Option<ItemData>) {
     push(pages::playlists::playlist_page(id, known));
 }
 
-/// Browses a source's catalogue: its root (`node` `None`), or a container
-/// it listed, with the container's link for Open in {Service}.
-pub fn show_source(plugin: &str, node: Option<String>, title: &str, link: Option<String>) {
-    push(pages::sources::browse_page(plugin, node, title, link));
+/// Browses a source's catalogue: its root (`item` `None`, titled `title`),
+/// or the page of an album, artist, playlist or folder it listed.
+pub fn show_source(plugin: &str, item: Option<jf_core::SourceItem>, title: &str) {
+    push(pages::sources::browse_page(plugin, item, title));
 }
 
 /// The capsule under 900 px, the bar from 900 px, while something is queued;

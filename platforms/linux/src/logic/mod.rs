@@ -9,6 +9,7 @@
 //! slice and the items' links offer.
 
 pub mod appearance;
+pub mod browse;
 // WCAG checks of the Luminous field and glass, run by the tests.
 #[cfg(test)]
 pub mod contrast;

@@ -485,7 +485,7 @@ pub fn open_page(data: &ItemData) {
         Kind::Playlist => window::show_playlist(data.id, Some(data.clone())),
         _ => {
             if let Some(s) = &data.source {
-                window::show_source(&s.source, Some(s.id.clone()), &s.title, s.link.clone());
+                window::show_source(&s.source, Some((**s).clone()), &s.title);
             }
         }
     }
@@ -548,6 +548,15 @@ async fn tracks_of(collection: Collection) -> Result<Vec<TrackRef>, String> {
                 Collection::Favorites => core
                     .favorites(0, usize::MAX)
                     .map(|r| r.into_iter().map(|r| r.track).collect())
+                    .map_err(|e| e.to_string()),
+                Collection::Songs { sort, descending } => core
+                    .tracks(&TrackQuery {
+                        sort,
+                        descending,
+                        limit: usize::MAX,
+                        ..TrackQuery::default()
+                    })
+                    .map(refs)
                     .map_err(|e| e.to_string()),
                 Collection::Source { .. } => Err(tr("Add the songs from the source's own page.")),
             }
