@@ -217,7 +217,7 @@ final class RemoteConversionTests: XCTestCase {
         let item = SourceItem(source: "org.example.spotify", kind: .track, id: "t1", title: "Song", subtitle: "Artist",
                               album: "Album", durationMs: 200_000, artwork: .url(url: "https://img.example.com/a.jpg"),
                               playable: true, unplayableReason: nil, track: nil, alsoIn: [],
-                              link: "https://open.example.com/track/t1")
+                              link: "https://open.example.com/track/t1", artistId: "ar1", albumId: "al1")
         let kitchen = RemoteDevice(id: "k", name: "Kitchen", kind: .speaker, active: true, volumePercent: 30)
         return RemoteSnapshot(version: 7, source: "org.example.spotify", sourceName: "Spotify", status: .paused,
                               item: item, context: nil,
@@ -237,6 +237,8 @@ final class RemoteConversionTests: XCTestCase {
         XCTAssertEqual(session.status, .paused)
         XCTAssertEqual(session.item?.link, "https://open.example.com/track/t1")
         XCTAssertEqual(session.item?.artwork, .url("https://img.example.com/a.jpg"))
+        XCTAssertEqual(session.item?.artistID, "ar1")
+        XCTAssertEqual(session.item?.albumID, "al1")
         XCTAssertEqual(session.anchor.trackGeneration, 3)
         XCTAssertEqual(session.repeatMode, .all)
         XCTAssertEqual(session.device, ServiceDevice(id: "k", name: "Kitchen", kind: .speaker, active: true,
