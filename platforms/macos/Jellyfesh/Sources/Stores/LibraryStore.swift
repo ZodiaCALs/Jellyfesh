@@ -203,6 +203,11 @@ final class LibraryStore {
                 try await client.favorites(offset: offset, limit: limit)
             }
             return rows.map(\.track)
+        case .songs(let sort, let descending):
+            let songs: [Song] = try await Self.everyPage { offset, limit in
+                try await client.songs(SongQuery(offset: offset, limit: limit, sort: sort, descending: descending))
+            }
+            return songs.map(\.reference)
         case .source:
             return []
         }

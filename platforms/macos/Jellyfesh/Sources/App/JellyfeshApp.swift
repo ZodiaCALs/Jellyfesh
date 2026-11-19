@@ -52,6 +52,10 @@ extension View {
             .environment(model.appleMusic)
             .environment(model.toasts)
             .environment(model.system)
+            .environment(model.pro)
+            .environment(model.updates)
+            .environment(model.aiLyrics)
+            .environment(model.look)
             .environment(\.artworkLoader, model.artwork)
     }
 }

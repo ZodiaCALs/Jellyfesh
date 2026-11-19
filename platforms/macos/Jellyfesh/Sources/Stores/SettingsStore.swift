@@ -91,6 +91,8 @@ final class SettingsStore {
     func setShowRomanization(_ value: Bool) { update { $0.showRomanization = value } }
     func setLyricsSize(_ value: LyricsSizeOption) { update { $0.lyricsSize = value } }
     func setLyricsAlign(_ value: LyricsAlignOption) { update { $0.lyricsAlign = value } }
+    func setShowLyricsBar(_ value: Bool) { update { $0.showLyricsBar = value } }
+    func setDesktopLyrics(_ value: Bool) { update { $0.desktopLyrics = value } }
 
     // MARK: Playback
 
@@ -126,6 +128,10 @@ final class SettingsStore {
 
     func setWatchFolders(_ value: Bool) { update { $0.watchFolders = value } }
     func setAllowCommunityPlugins(_ value: Bool) { update { $0.allowCommunityPlugins = value } }
+
+    // MARK: Updates
+
+    func setCheckForUpdates(_ value: Bool) { update { $0.checkForUpdates = value } }
 }
 
 /// The ten app icons (ADR-0017), after Automatic, in the picker's order.

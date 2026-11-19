@@ -44,8 +44,40 @@ extension CollectionReference {
         case .artist(let id): return .artist(id: id)
         case .playlist(let id): return .playlist(id: id)
         case .favorites: return .favorites
+        case .songs(let sort, let descending): return .songs(sort: sort.ffi, descending: descending)
         case .tracks(let tracks): return .tracks(tracks: tracks.map(\.ffi))
         case .source(let plugin, let id): return .source(plugin: plugin, id: id)
+        }
+    }
+}
+
+extension SongReference {
+    var ffi: SongRef {
+        switch self {
+        case .current: return .current
+        case .library(let id): return .library(id: id)
+        }
+    }
+}
+
+extension ItemReference {
+    init(_ ref: ItemRef) {
+        switch ref {
+        case .track(let id): self = .track(id: id)
+        case .album(let id): self = .album(id: id)
+        case .artist(let id): self = .artist(id: id)
+        case .file(let path): self = .file(path: path)
+        case .source(let plugin, let itemKind, let id): self = .source(plugin: plugin, kind: ResultKind(itemKind), id: id)
+        }
+    }
+
+    var ffi: ItemRef {
+        switch self {
+        case .track(let id): return .track(id: id)
+        case .album(let id): return .album(id: id)
+        case .artist(let id): return .artist(id: id)
+        case .file(let path): return .file(path: path)
+        case .source(let plugin, let kind, let id): return .source(plugin: plugin, itemKind: kind.ffi, id: id)
         }
     }
 }
@@ -289,14 +321,32 @@ extension NowPlayingInfo {
         self.init(uid: n.uid, track: TrackReference(n.track), path: n.path, title: n.title,
                   artist: n.artist, album: n.album, durationMs: n.durationMs,
                   artwork: n.artwork.map(ArtworkLocation.init), format: n.format.map(StreamFormat.init),
-                  link: n.link)
+                  link: n.link, quality: n.quality.map(AudioQuality.init))
     }
 }
 
 extension StreamFormat {
     init(_ f: TrackInfo) {
         self.init(codec: f.codec, sampleRate: f.sampleRate, channels: f.channels,
-                  durationUs: f.durationUs, gapless: f.gapless, bitrate: f.bitrate)
+                  durationUs: f.durationUs, gapless: f.gapless, bitrate: f.bitrate, bitsPerSample: f.bitsPerSample)
+    }
+}
+
+extension AudioQualityLabel {
+    init(_ q: QualityLabel) {
+        switch q {
+        case .hiResLossless: self = .hiResLossless
+        case .lossless: self = .lossless
+        case .high: self = .high
+        case .standard: self = .standard
+        }
+    }
+}
+
+extension AudioQuality {
+    init(_ f: AudioFormat) {
+        self.init(codec: f.codec, sampleRateHz: f.sampleRateHz, bitDepth: f.bitDepth, channels: f.channels,
+                  bitrateKbps: f.bitrateKbps, lossless: f.lossless, label: f.quality.map(AudioQualityLabel.init))
     }
 }
 
@@ -375,6 +425,7 @@ extension LyricsState {
         case .embedded?: origin = .embedded
         // Lyrics from a plugin: its attribution is in the document's origin.
         case .plugin?: origin = nil
+        case .made(let plugin, let engine)?: origin = .made(plugin: plugin, engine: engine)
         case nil: origin = nil
         }
         self.init(uid: l.uid, document: l.doc.map(LyricsDocument.init),
@@ -447,7 +498,10 @@ extension AppSettings {
             outputDevice: s.outputDevice,
             resumeOnLaunch: s.resumeOnLaunch,
             watchFolders: s.watchFolders,
-            allowCommunityPlugins: s.allowCommunityPlugins
+            allowCommunityPlugins: s.allowCommunityPlugins,
+            checkForUpdates: s.checkForUpdates,
+            showLyricsBar: s.showLyricsBar,
+            desktopLyrics: s.desktopLyrics
         )
     }
 
@@ -492,7 +546,10 @@ extension AppSettings {
             outputDevice: outputDevice,
             resumeOnLaunch: resumeOnLaunch,
             watchFolders: watchFolders,
-            allowCommunityPlugins: allowCommunityPlugins
+            allowCommunityPlugins: allowCommunityPlugins,
+            checkForUpdates: checkForUpdates,
+            showLyricsBar: showLyricsBar,
+            desktopLyrics: desktopLyrics
         )
     }
 }
@@ -534,7 +591,9 @@ extension SourcePlugin {
                   capabilities: p.capabilities, signInMethods: p.authMethods.map(SignInMethod.init),
                   enabled: p.enabled, account: p.account, needsDisclosure: p.needsDisclosure,
                   settingsSchemaJSON: p.settingsSchemaJson, settingsJSON: p.settingsJson, iconPath: p.icon,
-                  remotePlayback: p.remotePlayback, attribution: p.attribution)
+                  remotePlayback: p.remotePlayback, attribution: p.attribution, isExtension: p.kind == .`extension`,
+                  requiresPro: p.requiresPro, permissions: p.permissions, hasDiscover: p.discover,
+                  hasDetails: p.details, hasComments: p.comments, summary: p.description)
     }
 }
 
@@ -550,7 +609,8 @@ extension SourcePreset {
 extension SourcesState {
     init(_ s: SourcesSnapshot) {
         self.init(version: s.version, plugins: s.plugins.map(SourcePlugin.init),
-                  presets: s.presets.map(SourcePreset.init), allowCommunity: s.allowCommunity)
+                  presets: s.presets.map(SourcePreset.init), allowCommunity: s.allowCommunity,
+                  canInstallPlugins: s.canInstallPlugins)
     }
 }
 
@@ -619,7 +679,7 @@ extension SourceResult {
                   subtitle: i.subtitle, album: i.album, durationMs: i.durationMs,
                   artwork: i.artwork.map(ArtworkLocation.init), playable: i.playable,
                   unplayableReason: i.unplayableReason, track: i.track.map(TrackReference.init),
-                  alsoIn: i.alsoIn, link: i.link)
+                  alsoIn: i.alsoIn, link: i.link, artistID: i.artistId, albumID: i.albumId)
     }
 }
 
@@ -724,6 +784,300 @@ extension SearchArea {
     }
 }
 
+// MARK: - Distribution and Pro
+
+extension AppDistribution {
+    var ffi: Distribution {
+        switch self {
+        case .direct: return .direct
+        case .appStore: return .appStore
+        case .source: return .source
+        }
+    }
+}
+
+extension ProShop {
+    init(_ s: Store) {
+        switch s {
+        case .appStore: self = .appStore
+        case .microsoftStore: self = .microsoftStore
+        case .googlePlay: self = .googlePlay
+        }
+    }
+
+    var ffi: Store {
+        switch self {
+        case .appStore: return .appStore
+        case .microsoftStore: return .microsoftStore
+        case .googlePlay: return .googlePlay
+        }
+    }
+}
+
+extension ProEntitlement {
+    var ffi: StoreEntitlement {
+        StoreEntitlement(store: store.ffi, product: product, active: active, transaction: transaction)
+    }
+}
+
+extension ProState {
+    init(_ p: ProSnapshot) {
+        let origin: ProOrigin
+        switch p.source {
+        case .none: origin = .none
+        case .preview: origin = .preview
+        case .store(let store): origin = .store(ProShop(store))
+        case .licence(let idSuffix, let issuedAtMs): origin = .licence(idSuffix: idSuffix, issuedAtMs: issuedAtMs)
+        }
+        let problem: LicenceProblem?
+        switch p.licenceError {
+        case .malformed?: problem = .malformed
+        case .unknownKey?: problem = .unknownKey
+        case .badSignature?: problem = .badSignature
+        case .wrongProduct?: problem = .wrongProduct
+        case .revoked?: problem = .revoked
+        case nil: problem = nil
+        }
+        self.init(version: p.version, active: p.active, origin: origin, preview: p.preview, licenceProblem: problem,
+                  stores: p.stores.map(ProShop.init), licenceKeys: p.licenceKeys)
+    }
+}
+
+extension UpdateState {
+    init(_ u: UpdateSnapshot) {
+        self.init(version: u.version, supported: u.supported, checking: u.checking,
+                  available: u.available.map { ReleaseInfo(version: $0.version, url: $0.url) },
+                  lastCheckedMs: u.lastCheckedMs, auto: u.auto, error: u.error)
+    }
+}
+
+// MARK: - AI Lyrics
+
+extension AiLyricsState {
+    init(_ a: AiLyricsSnapshot) {
+        self.init(
+            version: a.version,
+            available: a.available,
+            plugin: a.plugin,
+            plan: a.plan.map { plan in
+                LyricsMakingPlan(mode: plan.mode == .online ? .online : .onDevice, engine: plan.engine,
+                                 uploadTo: plan.uploadTo, automatic: plan.automatic)
+            },
+            need: LyricsMakingNeed(a.need),
+            jobs: a.jobs.map { job in
+                LyricsMakingJob(id: job.id, title: job.title, artist: job.artist, uid: job.uid,
+                                libraryID: job.libraryId, step: LyricsJobStep(job.stage))
+            },
+            models: a.models.map { model in
+                SpeechModelInfo(id: model.id, name: model.name, bytes: model.bytes,
+                                progress: SpeechModelProgress(model.state))
+            },
+            consents: a.consents.map { AudioUploadConsent(plugin: $0.plugin, origin: $0.origin) }
+        )
+    }
+}
+
+extension LyricsMakingNeed {
+    init(_ n: AiLyricsNeed) {
+        switch n {
+        case .nothing: self = .nothing
+        case .pro: self = .pro
+        case .signIn: self = .signIn
+        case .consent(let origin): self = .consent(origin: origin)
+        case .model(let id, let name, let bytes): self = .model(id: id, name: name, bytes: bytes)
+        case .unavailable(let reason): self = .unavailable(reason: reason)
+        }
+    }
+}
+
+extension LyricsJobStep {
+    init(_ s: LyricsJobStage) {
+        switch s {
+        case .waiting: self = .waiting
+        case .readingAudio: self = .readingAudio
+        case .sending(let origin): self = .sending(origin: origin)
+        case .recognising(let fraction): self = .recognising(fraction: fraction)
+        case .timingWords: self = .timingWords
+        case .done: self = .done
+        case .failed(let message): self = .failed(message: message)
+        case .cancelled: self = .cancelled
+        }
+    }
+}
+
+extension SpeechModelProgress {
+    init(_ s: SpeechModelStatus) {
+        switch s {
+        case .notDownloaded: self = .notDownloaded
+        case .downloading(let fraction): self = .downloading(fraction: fraction)
+        case .ready: self = .ready
+        case .failed(let message): self = .failed(message: message)
+        }
+    }
+}
+
+// MARK: - The look
+
+extension LookPlace {
+    init(_ p: Place) {
+        switch p {
+        case .home: self = .home
+        case .albums: self = .albums
+        case .artists: self = .artists
+        case .songs: self = .songs
+        case .playlists: self = .playlists
+        case .favourites: self = .favourites
+        case .search: self = .search
+        case .sources: self = .sources
+        }
+    }
+}
+
+extension LookHomeSection {
+    init(_ s: HomeSection) {
+        switch s {
+        case .summary: self = .summary
+        case .recentlyAdded: self = .recentlyAdded
+        case .recentlyPlayed: self = .recentlyPlayed
+        case .mostPlayed: self = .mostPlayed
+        case .favourites: self = .favourites
+        }
+    }
+}
+
+extension LookState {
+    init(_ l: LookSnapshot) {
+        let typeface: LookTypeface
+        switch l.typeface {
+        case .system: typeface = .system
+        case .rounded: typeface = .rounded
+        case .serif: typeface = .serif
+        case .mono: typeface = .mono
+        }
+        let density: LookDensity
+        switch l.density {
+        case .compact: density = .compact
+        case .standard: density = .standard
+        case .roomy: density = .roomy
+        }
+        let weight: LookLyricsWeight
+        switch l.lyricsWeight {
+        case .regular: weight = .regular
+        case .medium: weight = .medium
+        case .semibold: weight = .semibold
+        case .bold: weight = .bold
+        case .heavy: weight = .heavy
+        }
+        let highlight: LookHighlight
+        switch l.lyricsHighlight {
+        case .artwork: highlight = .artwork
+        case .accent: highlight = .accent
+        case .custom(let rgb): highlight = .custom(rgb: rgb)
+        }
+        let layout: LookNowPlayingLayout
+        switch l.nowPlaying {
+        case .stage: layout = .stage
+        case .artwork: layout = .artwork
+        case .lyrics: layout = .lyrics
+        }
+        let mini: LookMiniPlayerStyle
+        switch l.miniPlayer {
+        case .bar: mini = .bar
+        case .compact: mini = .compact
+        case .floating: mini = .floating
+        }
+        self.init(version: l.version, cornerScale: l.cornerScale, glass: l.glass, aurora: l.aurora,
+                  typeface: typeface, textScale: l.textScale, density: density, lyricsWeight: weight,
+                  lyricsGlow: l.lyricsGlow, lyricsHighlight: highlight, sidebar: l.sidebar.map(LookPlace.init),
+                  home: l.home.map(LookHomeSection.init), nowPlaying: layout, miniPlayer: mini,
+                  customized: l.customized, plugin: l.plugin)
+    }
+}
+
+// MARK: - Discover, details, comments, covers
+
+extension DiscoverAnswer {
+    init(_ d: DiscoverPage) {
+        self.init(request: d.request, source: d.source, shelves: d.shelves.map { shelf -> DiscoverShelf in
+            let layout: ShelfLayout
+            switch shelf.style {
+            case .row: layout = .row
+            case .grid: layout = .grid
+            case .chart: layout = .chart
+            }
+            return DiscoverShelf(id: shelf.id, title: shelf.title, layout: layout,
+                                 items: shelf.items.map(SourceResult.init), more: shelf.more)
+        }, error: d.error)
+    }
+}
+
+extension DetailFactKey {
+    init(_ k: FactKey) {
+        switch k {
+        case .version: self = .version
+        case .genre: self = .genre
+        case .language: self = .language
+        case .released: self = .released
+        case .label: self = .label
+        case .composer: self = .composer
+        case .lyricist: self = .lyricist
+        case .arranger: self = .arranger
+        case .producer: self = .producer
+        case .popularity: self = .popularity
+        case .quality: self = .quality
+        case .isrc: self = .isrc
+        case .disc: self = .disc
+        case .track: self = .track
+        case .other(let label): self = .other(label: label)
+        }
+    }
+}
+
+extension DetailsAnswer {
+    init(_ d: DetailsPage) {
+        self.init(
+            request: d.request,
+            item: ItemReference(d.item),
+            title: d.title,
+            subtitle: d.subtitle,
+            notes: d.description,
+            image: d.image.map(ArtworkLocation.init),
+            facts: d.facts.map { DetailFact(key: DetailFactKey($0.key), value: $0.value) },
+            technical: d.technical.map { t in
+                TechnicalFacts(
+                    format: AudioQuality(t.format),
+                    container: t.container,
+                    fileSizeBytes: t.fileSizeBytes,
+                    durationMs: t.durationMs,
+                    replayGain: t.replaygain.map {
+                        ReplayGainInfo(trackGainDb: $0.trackGainDb, trackPeak: $0.trackPeak,
+                                       albumGainDb: $0.albumGainDb, albumPeak: $0.albumPeak)
+                    },
+                    path: t.path
+                )
+            },
+            commentCount: d.commentCount,
+            attribution: d.attribution,
+            error: d.error
+        )
+    }
+}
+
+extension SourceComment {
+    init(_ c: CommentEntry) {
+        self.init(id: c.id, author: c.author, avatar: c.avatar.map(ArtworkLocation.init), text: c.text,
+                  likes: c.likes, timeMs: c.timeMs, replies: c.replies)
+    }
+}
+
+extension CommentsAnswer {
+    init(_ c: CommentsPage) {
+        self.init(request: c.request, item: ItemReference(c.item), hot: c.hot.map(SourceComment.init),
+                  comments: c.comments.map(SourceComment.init), total: c.total, next: c.next,
+                  attribution: c.attribution, error: c.error)
+    }
+}
+
 // MARK: - Snapshot, events, commands
 
 extension CoreState {
@@ -732,7 +1086,9 @@ extension CoreState {
                   nowPlaying: s.nowPlaying.map(NowPlayingInfo.init), lyrics: s.lyrics.map(LyricsState.init),
                   theme: s.theme.map(ThemeState.init), libraryRevision: s.libraryRevision,
                   scanning: s.scanning, settings: AppSettings(s.settings), devices: DevicesState(s.devices),
-                  sources: SourcesState(s.sources), muted: s.muted, remote: RemoteSession(s.remote))
+                  sources: SourcesState(s.sources), muted: s.muted, remote: RemoteSession(s.remote),
+                  aiLyrics: AiLyricsState(s.aiLyrics), look: LookState(s.look), pro: ProState(s.pro),
+                  update: UpdateState(s.update))
     }
 }
 
@@ -757,6 +1113,14 @@ extension CoreEvent {
         case .buffering(let uid, let buffering): self = .buffering(uid: uid, buffering: buffering)
         case .commandFailed(let id, let error): self = .commandFailed(id: id, message: error)
         case .error(let message): self = .error(message)
+        case .aiLyrics(let snapshot): self = .aiLyrics(AiLyricsState(snapshot))
+        case .look(let snapshot): self = .look(LookState(snapshot))
+        case .pro(let snapshot): self = .pro(ProState(snapshot))
+        case .update(let snapshot): self = .update(UpdateState(snapshot))
+        case .discover(let page): self = .discover(DiscoverAnswer(page))
+        case .details(let page): self = .details(DetailsAnswer(page))
+        case .comments(let page): self = .comments(CommentsAnswer(page))
+        case .artwork(let ready): self = .artwork(ArtworkFetched(url: ready.url, sizePx: ready.sizePx, path: ready.path))
         }
     }
 }
@@ -816,6 +1180,21 @@ extension CoreCommand {
         case .search(let query, let area): return .search(query: query, scope: area.ffi)
         case .browse(let plugin, let node, let page): return .browse(plugin: plugin, node: node, page: page)
         case .remote(let request): return .remote(action: request.ffi)
+        case .resetPluginSettings(let plugin): return .resetPluginSettings(plugin: plugin)
+        case .makeLyrics(let song): return .makeLyrics(song: song.ffi)
+        case .cancelLyrics(let job): return .cancelLyrics(job: job)
+        case .deleteMadeLyrics(let song): return .deleteMadeLyrics(song: song.ffi)
+        case .allowAudioUpload(let plugin, let origin): return .allowAudioUpload(plugin: plugin, origin: origin)
+        case .revokeAudioUpload(let plugin, let origin): return .revokeAudioUpload(plugin: plugin, origin: origin)
+        case .downloadSpeechModel(let id): return .downloadSpeechModel(id: id)
+        case .cancelSpeechModelDownload(let id): return .cancelSpeechModelDownload(id: id)
+        case .deleteSpeechModel(let id): return .deleteSpeechModel(id: id)
+        case .activateLicence(let key): return .activateLicence(key: key)
+        case .removeLicence: return .removeLicence
+        case .checkForUpdates: return .checkForUpdates
+        case .discover(let source): return .discover(source: source)
+        case .details(let item): return .details(item: item.ffi)
+        case .comments(let item, let page): return .comments(item: item.ffi, page: page)
         }
     }
 }

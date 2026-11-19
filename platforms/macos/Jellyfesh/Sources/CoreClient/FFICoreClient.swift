@@ -15,9 +15,12 @@ final class FFICoreClient: CoreClient, @unchecked Sendable {
 
     /// Opens the library and session in `dataDirectory` and starts the core; audio opens on first
     /// playback. `bundledPlugins` are the official `.jfpkg` packages inside the app, which the core
-    /// installs on first start and updates with the app.
-    init(dataDirectory: String, cacheDirectory: String, bundledPlugins: [String] = []) throws {
-        var config = CoreConfig(dataDir: dataDirectory, cacheDir: cacheDirectory, output: .device(name: nil))
+    /// installs on first start and updates with the app; `distribution` is how this build reached
+    /// the person (it decides where Pro is sold, licence keys, updates and installing plugins).
+    init(dataDirectory: String, cacheDirectory: String, bundledPlugins: [String] = [],
+         distribution: AppDistribution = .source) throws {
+        var config = CoreConfig(dataDir: dataDirectory, cacheDir: cacheDirectory, output: .device(name: nil),
+                                distribution: distribution.ffi)
         // `CoreConfig.bundledPlugins` arrives with the sources work in the core (Config::bundled_plugins).
         // scripts/build.sh defines JF_BUNDLED_PLUGINS when the generated bindings have the field, so
         // this builds against bindings from before and after it.
@@ -229,6 +232,19 @@ final class FFICoreClient: CoreClient, @unchecked Sendable {
 
     func isMuted() async -> Bool {
         (try? await query { $0.snapshot().muted }) ?? false
+    }
+
+    func sourceArtwork(url: String, sizePx: Int) async throws -> String? {
+        try await query { try $0.sourceArtwork(url: url, sizePx: UInt32(clamping: sizePx)) }
+    }
+
+    func localizedSettingsSchema(plugin: String, language: String) async throws -> String? {
+        try await query { try $0.localizedSettingsSchema(plugin: plugin, language: language) }
+    }
+
+    func setStoreEntitlement(_ entitlement: ProEntitlement) async throws {
+        let ffi = entitlement.ffi
+        try await query { try $0.setStoreEntitlement(entitlement: ffi) }
     }
 }
 

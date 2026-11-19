@@ -35,8 +35,28 @@ enum CollectionReference: Hashable, Sendable {
     case artist(id: Int64)
     case playlist(id: Int64)
     case favorites
+    /// Every song in the library, in the Songs page's order (`Collection::Songs`).
+    case songs(sort: SongSort, descending: Bool)
     case tracks([TrackReference])
     case source(plugin: String, id: String)
+}
+
+/// A song to make lyrics for (`SongRef`).
+enum SongReference: Hashable, Sendable {
+    /// The song playing now.
+    case current
+    case library(id: Int64)
+}
+
+/// An item to show details or comments for (`ItemRef`).
+enum ItemReference: Hashable, Sendable {
+    case track(id: Int64)
+    case album(id: Int64)
+    case artist(id: Int64)
+    /// An audio file that is not in the library.
+    case file(path: String)
+    /// An item a source listed: its `SourceItem.source`, kind and id.
+    case source(plugin: String, kind: ResultKind, id: String)
 }
 
 /// Artwork a view can load: a local file or a URL (`ArtworkRef`).
@@ -290,6 +310,30 @@ struct StreamFormat: Hashable, Sendable {
     var durationUs: Int64?
     var gapless: Bool
     var bitrate: UInt32?
+    /// Bits per sample of the source (PCM, FLAC, ALAC); none for lossy codecs.
+    var bitsPerSample: UInt32? = nil
+}
+
+/// How good what plays is, as the core judges it (`QualityLabel`): the apps word it, never
+/// compute it.
+enum AudioQualityLabel: Hashable, Sendable {
+    /// Lossless above 16-bit or above 48 kHz.
+    case hiResLossless
+    case lossless
+    /// Lossy at 256 kbit/s or more.
+    case high
+    case standard
+}
+
+/// The format of what plays or of a file (`AudioFormat`).
+struct AudioQuality: Hashable, Sendable {
+    var codec: String?
+    var sampleRateHz: UInt32?
+    var bitDepth: UInt32?
+    var channels: UInt32?
+    var bitrateKbps: UInt32?
+    var lossless: Bool?
+    var label: AudioQualityLabel?
 }
 
 /// What is playing (`NowPlaying`).
@@ -305,6 +349,8 @@ struct NowPlayingInfo: Hashable, Sendable {
     var format: StreamFormat?
     /// Opens a source track in its service (Open in {Service}).
     var link: String? = nil
+    /// What plays as decoded, with the core's quality label, once the engine has opened it.
+    var quality: AudioQuality? = nil
 }
 
 /// A sound output (`DeviceInfo`).
@@ -381,6 +427,8 @@ struct LyricsDocument: Hashable, Sendable {
 enum LyricsOrigin: Hashable, Sendable {
     case sidecar(path: String)
     case embedded
+    /// Made by AI Lyrics: "Made by AI Lyrics · {engine}".
+    case made(plugin: String, engine: String)
 }
 
 /// The `Lyrics` slice for the current track.
@@ -469,6 +517,12 @@ struct AppSettings: Hashable, Sendable {
     var resumeOnLaunch: Bool
     var watchFolders: Bool
     var allowCommunityPlugins: Bool
+    /// Check for Updates Automatically (direct downloads only): at most once a day.
+    var checkForUpdates: Bool = true
+    /// Show Lyrics Bar: the current line under the player bar's title.
+    var showLyricsBar: Bool = true
+    /// Desktop Lyrics: the current and next line in a floating panel above other apps.
+    var desktopLyrics: Bool = false
 }
 
 // MARK: - Sources
@@ -503,10 +557,26 @@ struct SourcePlugin: Identifiable, Hashable, Sendable {
     var remotePlayback = false
     /// What its views must credit ("Content from {Service}"), when it asks for that.
     var attribution: String? = nil
+    /// An extension (`PluginKind::Extension`: AI Lyrics, Customize; Settings › Extensions) rather
+    /// than a music source (Settings › Sources).
+    var isExtension = false
+    /// It has a Jellyfesh Pro capability (AI Lyrics, Customize).
+    var requiresPro = false
+    /// The host imports the manifest declares (`audio`, `speech`).
+    var permissions: [String] = []
+    /// It has a Discover page of its own.
+    var hasDiscover = false
+    /// It describes items (biography, notes, facts).
+    var hasDetails = false
+    /// It shows comments: Now Playing offers a Comments pane.
+    var hasComments = false
+    /// One line from its manifest.
+    var summary: String? = nil
 
     var canBrowse: Bool { capabilities.contains("browse") }
     var canSearch: Bool { capabilities.contains("search") }
 }
+
 
 /// A music service offered in Add a Source while its official plugin is installed
 /// (`SourcePreset`). `.connectSource` connects to it.
@@ -537,8 +607,16 @@ struct SourcesState: Hashable, Sendable {
     /// plugins alone (tests, the frames before the core's snapshot) needs no services.
     var presets: [SourcePreset] = []
     var allowCommunity: Bool
+    /// Plugins may be installed from files and community plugins allowed: false in store builds,
+    /// which hide Install from File… and Allow Community Plugins (ADR-0021 §4).
+    var canInstallPlugins = true
 
     static let empty = SourcesState(version: 0, plugins: [], allowCommunity: false)
+
+    /// The music sources (Settings › Sources, the Sources page).
+    var sourcePlugins: [SourcePlugin] { plugins.filter { !$0.isExtension } }
+    /// The extensions (Settings › Extensions).
+    var extensionPlugins: [SourcePlugin] { plugins.filter(\.isExtension) }
 }
 
 /// What a sign-in field holds (`AuthFieldKind`): it picks the field and what the system offers to
@@ -606,8 +684,25 @@ struct SourceResult: Identifiable, Hashable, Sendable {
     /// An `https` link that opens the item in its service (Open in {Service}); the main action
     /// of an item that cannot play here.
     var link: String? = nil
+    /// Go to Artist for a source's track or album: the source's id of its artist.
+    var artistID: String? = nil
+    /// Go to Album for a source's track: the source's id of its album.
+    var albumID: String? = nil
 
     var id: String { "\(source)\u{1F}\(kind)\u{1F}\(itemID)" }
+
+    /// What `Details` and `Comments` name it by.
+    var itemReference: ItemReference? {
+        if source == "library", let id = Int64(itemID) {
+            switch kind {
+            case .track: return .track(id: id)
+            case .album: return .album(id: id)
+            case .artist: return .artist(id: id)
+            case .playlist, .folder: return nil
+            }
+        }
+        return .source(plugin: source, kind: kind, id: itemID)
+    }
 }
 
 /// Results from one source for one search (`SearchUpdate`).
@@ -695,6 +790,381 @@ enum RemoteRequest: Hashable, Sendable {
     case end
 }
 
+// MARK: - Distribution and Pro (ADR-0021)
+
+/// How this build reached the person (`Distribution`): the macOS app is a direct download, a Mac
+/// App Store build or built from source.
+enum AppDistribution: Hashable, Sendable {
+    case direct, appStore, source
+}
+
+/// A store that sells Jellyfesh Pro (`Store`).
+enum ProShop: Hashable, Sendable {
+    case appStore, microsoftStore, googlePlay
+}
+
+/// What a store says about Jellyfesh Pro, as the app verified it with the platform
+/// (`StoreEntitlement`).
+struct ProEntitlement: Hashable, Sendable {
+    var store: ProShop
+    /// The store's product id (`org.jellyfesh.pro`).
+    var product: String
+    /// The person owns it now (false after a refund or revocation).
+    var active: Bool
+    /// The store's transaction id.
+    var transaction: String?
+}
+
+/// Where Pro comes from (`ProSource`).
+enum ProOrigin: Hashable, Sendable {
+    case none
+    /// A Pro Preview build: "Pro features are free during the public beta."
+    case preview
+    /// "Jellyfesh Pro · Purchased".
+    case store(ProShop)
+    /// "Jellyfesh Pro · Licence …ABCD".
+    case licence(idSuffix: String, issuedAtMs: Int64)
+}
+
+/// Why a licence key was not accepted (`LicenceError`).
+enum LicenceProblem: Hashable, Sendable {
+    case malformed, unknownKey, badSignature, wrongProduct, revoked
+}
+
+/// The `Pro` slice.
+struct ProState: Hashable, Sendable {
+    var version: UInt64
+    var active: Bool
+    var origin: ProOrigin
+    var preview: Bool
+    var licenceProblem: LicenceProblem?
+    /// The stores this build can sell Pro in: Buy and Restore Purchases only for these.
+    var stores: [ProShop]
+    /// Enter Licence Key… works in this build (false in App Store builds).
+    var licenceKeys: Bool
+
+    static let inactive = ProState(version: 0, active: false, origin: .none, preview: false, licenceProblem: nil,
+                                   stores: [], licenceKeys: true)
+}
+
+// MARK: - Updates (ADR-0021 §5)
+
+/// A newer release (`UpdateInfo`).
+struct ReleaseInfo: Hashable, Sendable {
+    var version: String
+    /// Its release page.
+    var url: String
+}
+
+/// The `Update` slice.
+struct UpdateState: Hashable, Sendable {
+    var version: UInt64
+    /// Direct downloads: show Check for Updates and its setting.
+    var supported: Bool
+    var checking: Bool
+    var available: ReleaseInfo?
+    var lastCheckedMs: Int64?
+    var auto: Bool
+    var error: String?
+
+    static let unsupported = UpdateState(version: 0, supported: false, checking: false, available: nil,
+                                         lastCheckedMs: nil, auto: false, error: nil)
+}
+
+// MARK: - AI Lyrics (ADR-0019)
+
+/// Where AI Lyrics recognises the words (`AiLyricsMode`).
+enum LyricsMakingMode: Hashable, Sendable {
+    case onDevice, online
+}
+
+/// What making lyrics would do now (`AiLyricsPlan`).
+struct LyricsMakingPlan: Hashable, Sendable {
+    var mode: LyricsMakingMode
+    /// In the plugin's words: "Whisper Base on this device".
+    var engine: String
+    /// The origin the online mode sends audio to.
+    var uploadTo: String?
+    var automatic: Bool
+}
+
+/// What must happen before lyrics can be made (`AiLyricsNeed`).
+enum LyricsMakingNeed: Hashable, Sendable {
+    case nothing
+    /// Jellyfesh Pro is inactive: the Pro sheet.
+    case pro
+    /// The online mode needs the person's API key.
+    case signIn
+    /// "Send This Song to {origin}?", answered with `AllowAudioUpload`.
+    case consent(origin: String)
+    /// Download this model first.
+    case model(id: String, name: String, bytes: UInt64)
+    case unavailable(reason: String)
+}
+
+/// Where a lyrics job is (`LyricsJobStage`).
+enum LyricsJobStep: Hashable, Sendable {
+    case waiting
+    case readingAudio
+    case sending(origin: String)
+    /// 0–1.
+    case recognising(fraction: Float)
+    case timingWords
+    case done
+    case failed(message: String)
+    case cancelled
+
+    /// Still to finish: waiting or running.
+    var isActive: Bool {
+        switch self {
+        case .done, .failed, .cancelled: return false
+        default: return true
+        }
+    }
+}
+
+/// A lyrics job (`LyricsJob`).
+struct LyricsMakingJob: Identifiable, Hashable, Sendable {
+    var id: UInt64
+    var title: String
+    var artist: String?
+    /// The queue entry it is for, when it was made for the song playing.
+    var uid: UInt64?
+    /// The library track it is for.
+    var libraryID: Int64?
+    var step: LyricsJobStep
+}
+
+/// Where an on-device speech model is (`SpeechModelStatus`).
+enum SpeechModelProgress: Hashable, Sendable {
+    case notDownloaded
+    /// 0–1.
+    case downloading(fraction: Float)
+    case ready
+    case failed(message: String)
+}
+
+/// An on-device speech model (`SpeechModelState`).
+struct SpeechModelInfo: Identifiable, Hashable, Sendable {
+    var id: String
+    var name: String
+    var bytes: UInt64
+    var progress: SpeechModelProgress
+}
+
+/// An origin the person allowed a plugin to send audio to (`AudioConsent`).
+struct AudioUploadConsent: Hashable, Sendable {
+    var plugin: String
+    var origin: String
+}
+
+/// The `AiLyrics` slice.
+struct AiLyricsState: Hashable, Sendable {
+    var version: UInt64
+    /// Offer Create Synced Lyrics (Pro may still be needed: see `need`).
+    var available: Bool
+    var plugin: String?
+    var plan: LyricsMakingPlan?
+    var need: LyricsMakingNeed
+    var jobs: [LyricsMakingJob]
+    var models: [SpeechModelInfo]
+    var consents: [AudioUploadConsent]
+
+    static let idle = AiLyricsState(version: 0, available: false, plugin: nil, plan: nil,
+                                    need: .unavailable(reason: ""), jobs: [], models: [], consents: [])
+}
+
+// MARK: - The look (ADR-0020)
+
+enum LookTypeface: Hashable, Sendable {
+    case system, rounded, serif, mono
+}
+
+enum LookDensity: Hashable, Sendable {
+    case compact, standard, roomy
+}
+
+enum LookLyricsWeight: Hashable, Sendable {
+    case regular, medium, semibold, bold, heavy
+}
+
+/// The colour of the sung part of lyrics (`LyricsHighlight`).
+enum LookHighlight: Hashable, Sendable {
+    case artwork, accent
+    /// `0xRRGGBB`.
+    case custom(rgb: UInt32)
+}
+
+/// A place of the sidebar (`Place`).
+enum LookPlace: Hashable, Sendable, CaseIterable {
+    case home, albums, artists, songs, playlists, favourites, search, sources
+}
+
+/// A section of Home (`HomeSection`).
+enum LookHomeSection: Hashable, Sendable, CaseIterable {
+    case summary, recentlyAdded, recentlyPlayed, mostPlayed, favourites
+}
+
+/// How Now Playing is laid out (`NowPlayingLayout`).
+enum LookNowPlayingLayout: Hashable, Sendable {
+    /// The v0.0.6 stage.
+    case stage
+    /// A large cover with the line being sung below it.
+    case artwork
+    /// Lyrics full width, a small cover in the corner.
+    case lyrics
+}
+
+/// The player at the bottom of the window (`MiniPlayerStyle`).
+enum LookMiniPlayerStyle: Hashable, Sendable {
+    case bar, compact, floating
+}
+
+/// The `Look` slice: every value resolved, so the app applies one thing (ADR-0020).
+struct LookState: Hashable, Sendable {
+    var version: UInt64
+    /// Radii ×, 0–2.
+    var cornerScale: Float
+    /// Glass alpha and blur ×, 0–1.
+    var glass: Float
+    /// The field's strength, 0–1.
+    var aurora: Float
+    var typeface: LookTypeface
+    /// Every type size ×, 0.85–1.30.
+    var textScale: Float
+    var density: LookDensity
+    var lyricsWeight: LookLyricsWeight
+    /// 0–1.
+    var lyricsGlow: Float
+    var lyricsHighlight: LookHighlight
+    /// The places shown, in order; Settings is never listed and always shown.
+    var sidebar: [LookPlace]
+    var home: [LookHomeSection]
+    var nowPlaying: LookNowPlayingLayout
+    var miniPlayer: LookMiniPlayerStyle
+    /// An appearance plugin sets the look; false: every value is the Luminous default.
+    var customized: Bool
+    var plugin: String?
+
+    /// The Luminous look (`LookSnapshot::defaults`).
+    static let luminous = LookState(
+        version: 0, cornerScale: 1, glass: 1, aurora: 0.75, typeface: .system, textScale: 1,
+        density: .standard, lyricsWeight: .bold, lyricsGlow: 0.6, lyricsHighlight: .artwork,
+        sidebar: LookPlace.allCases, home: [.summary, .recentlyAdded, .recentlyPlayed, .mostPlayed],
+        nowPlaying: .stage, miniPlayer: .bar, customized: false, plugin: nil
+    )
+}
+
+// MARK: - Discover, details, comments, covers (ADR-0022)
+
+/// How a shelf lays out its items (`ShelfStyle`).
+enum ShelfLayout: Hashable, Sendable {
+    /// One row of covers that scrolls sideways.
+    case row
+    /// Covers that wrap.
+    case grid
+    /// A numbered list.
+    case chart
+}
+
+/// One shelf of a Discover page (`Shelf`).
+struct DiscoverShelf: Identifiable, Hashable, Sendable {
+    var id: String
+    var title: String
+    var layout: ShelfLayout
+    var items: [SourceResult]
+    /// A node to browse for See All.
+    var more: String?
+}
+
+/// A Discover page (`DiscoverPage`).
+struct DiscoverAnswer: Hashable, Sendable {
+    var request: CommandID
+    var source: String
+    var shelves: [DiscoverShelf]
+    var error: String?
+}
+
+/// What a fact is (`FactKey`).
+enum DetailFactKey: Hashable, Sendable {
+    case version, genre, language, released, label, composer, lyricist, arranger, producer, popularity,
+         quality, isrc, disc, track
+    /// The service's own label.
+    case other(label: String)
+}
+
+/// One fact about an item (`Fact`).
+struct DetailFact: Hashable, Sendable {
+    var key: DetailFactKey
+    var value: String
+}
+
+/// ReplayGain values (`ReplayGainValues`): gains in dB, peaks as linear amplitude.
+struct ReplayGainInfo: Hashable, Sendable {
+    var trackGainDb: Float?
+    var trackPeak: Float?
+    var albumGainDb: Float?
+    var albumPeak: Float?
+}
+
+/// Technical information about a file or a stream (`TechnicalInfo`).
+struct TechnicalFacts: Hashable, Sendable {
+    var format: AudioQuality
+    var container: String?
+    var fileSizeBytes: UInt64?
+    var durationMs: UInt64?
+    var replayGain: ReplayGainInfo?
+    var path: String?
+}
+
+/// An item's details (`DetailsPage`).
+struct DetailsAnswer: Hashable, Sendable {
+    var request: CommandID
+    var item: ItemReference
+    var title: String
+    var subtitle: String?
+    /// Album notes, an artist's biography.
+    var notes: String?
+    var image: ArtworkLocation?
+    var facts: [DetailFact]
+    var technical: TechnicalFacts?
+    var commentCount: UInt64?
+    var attribution: String?
+    var error: String?
+}
+
+/// A comment on a source item (`CommentEntry`).
+struct SourceComment: Identifiable, Hashable, Sendable {
+    var id: String
+    var author: String
+    var avatar: ArtworkLocation?
+    var text: String
+    var likes: UInt64?
+    var timeMs: Int64?
+    var replies: UInt64?
+}
+
+/// A page of comments (`CommentsPage`).
+struct CommentsAnswer: Hashable, Sendable {
+    var request: CommandID
+    var item: ItemReference
+    /// The hot comments, on the first page only.
+    var hot: [SourceComment]
+    var comments: [SourceComment]
+    var total: UInt64?
+    /// The page to ask for next.
+    var next: String?
+    var attribution: String?
+    var error: String?
+}
+
+/// A source picture is in the artwork cache, or cannot be had (`ArtworkReady`).
+struct ArtworkFetched: Hashable, Sendable {
+    var url: String
+    var sizePx: UInt32
+    var path: String?
+}
+
 // MARK: - Players the app provides (ADR-0018 item 5)
 
 /// An item a player the app provides plays or reports (`ExternalItem`).
@@ -769,6 +1239,10 @@ struct CoreState: Equatable, Sendable {
     var muted: Bool
     /// The remote session, if one runs.
     var remote: RemoteSession = .idle
+    var aiLyrics: AiLyricsState = .idle
+    var look: LookState = .luminous
+    var pro: ProState = .inactive
+    var update: UpdateState = .unsupported
 }
 
 /// What the core reports (`Event`).
@@ -792,6 +1266,16 @@ enum CoreEvent: Equatable, Sendable {
     case buffering(uid: UInt64, buffering: Bool)
     case commandFailed(id: CommandID, message: String)
     case error(String)
+    case aiLyrics(AiLyricsState)
+    case look(LookState)
+    case pro(ProState)
+    case update(UpdateState)
+    /// Answers to `.discover`, `.details` and `.comments`.
+    case discover(DiscoverAnswer)
+    case details(DetailsAnswer)
+    case comments(CommentsAnswer)
+    /// A source picture asked for with `sourceArtwork` is cached, or cannot be had.
+    case artwork(ArtworkFetched)
 }
 
 /// What a view can ask the core to do (`Command`). Failures come back as `.commandFailed`.
@@ -848,4 +1332,24 @@ enum CoreCommand: Equatable, Sendable {
     case browse(plugin: String, node: String?, page: UInt32)
     /// What the transport commands cannot say to a remote session (they reach it by themselves).
     case remote(RemoteRequest)
+    /// Restores a plugin's settings to its schema's defaults (Reset to Defaults).
+    case resetPluginSettings(plugin: String)
+    // AI Lyrics
+    case makeLyrics(SongReference)
+    case cancelLyrics(job: UInt64)
+    case deleteMadeLyrics(SongReference)
+    case allowAudioUpload(plugin: String, origin: String)
+    case revokeAudioUpload(plugin: String, origin: String)
+    case downloadSpeechModel(id: String)
+    case cancelSpeechModelDownload(id: String)
+    case deleteSpeechModel(id: String)
+    // Pro and updates
+    case activateLicence(key: String)
+    case removeLicence
+    case checkForUpdates
+    // Discover, details, comments
+    case discover(source: String)
+    case details(ItemReference)
+    /// `page` nil is the first page, else the previous page's `next`.
+    case comments(ItemReference, page: String?)
 }

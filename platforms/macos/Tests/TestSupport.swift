@@ -27,6 +27,13 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     var playlistEntriesResult: [Int64: [PlaylistRow]] = [:]
     var equalizerPresetsResult: [EqualizerPreset] = []
     var mutedResult = false
+    /// Source pictures the core has cached, by URL (others answer nil: the core is fetching).
+    var cachedSourceArtwork: [String: String] = [:]
+    /// Plugins' settings schemas by plugin id and language.
+    var localizedSchemas: [String: String] = [:]
+    /// Entitlements reported with `setStoreEntitlement`, in order.
+    private(set) var storeEntitlements: [ProEntitlement] = []
+    private(set) var sourceArtworkRequests: [(url: String, sizePx: Int)] = []
     /// When set, every query throws it.
     var failure: CoreClientError?
 
@@ -148,6 +155,22 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
     func stats() async throws -> LibraryStatistics { try check(); return statsResult }
     func outputDevices() async throws -> [OutputDevice] { try check(); return [] }
     func isMuted() async -> Bool { mutedResult }
+
+    func sourceArtwork(url: String, sizePx: Int) async throws -> String? {
+        try check()
+        sourceArtworkRequests.append((url, sizePx))
+        return cachedSourceArtwork[url]
+    }
+
+    func localizedSettingsSchema(plugin: String, language: String) async throws -> String? {
+        try check()
+        return localizedSchemas["\(plugin)|\(language)"]
+    }
+
+    func setStoreEntitlement(_ entitlement: ProEntitlement) async throws {
+        try check()
+        storeEntitlements.append(entitlement)
+    }
 }
 
 /// Waits (at most about two seconds) for work started on the main actor to finish.

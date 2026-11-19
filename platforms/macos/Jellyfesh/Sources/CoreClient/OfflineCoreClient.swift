@@ -61,6 +61,9 @@ final class OfflineCoreClient: CoreClient {
     func stats() async throws -> LibraryStatistics { try fail() }
     func outputDevices() async throws -> [OutputDevice] { try fail() }
     func isMuted() async -> Bool { false }
+    func sourceArtwork(url: String, sizePx: Int) async throws -> String? { try fail() }
+    func localizedSettingsSchema(plugin: String, language: String) async throws -> String? { try fail() }
+    func setStoreEntitlement(_ entitlement: ProEntitlement) async throws { throw CoreClientError.core(reason) }
 }
 
 extension CoreState {

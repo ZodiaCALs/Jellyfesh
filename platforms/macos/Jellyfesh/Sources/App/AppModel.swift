@@ -6,9 +6,9 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// The tabs of the Settings window.
+/// The tabs of the Settings window, in docs/ui.md's order.
 enum SettingsTab: Hashable {
-    case appearance, playback, library, sources
+    case appearance, playback, library, sources, extensions
 }
 
 @MainActor
@@ -37,6 +37,15 @@ final class AppModel {
     let appleMusic: AppleMusicStore
     let pages: LibraryPages
     let artwork: ArtworkLoader
+    /// Jellyfesh Pro (ADR-0021), updates, AI Lyrics (ADR-0019) and the look (ADR-0020).
+    let pro: ProStore
+    let updates: UpdatesStore
+    let aiLyrics: AiLyricsStore
+    let look: LookStore
+    /// Discover, details and comments answers, to whoever asked.
+    let answers: CoreAnswers
+    /// How this build reached the person (the build flags).
+    let distribution: AppDistribution
     /// The Settings tab to show when the window opens.
     var settingsTab: SettingsTab = .appearance
 
@@ -47,7 +56,7 @@ final class AppModel {
     @ObservationIgnored private var started = false
     @ObservationIgnored private var appliedAppearance: AppearanceOption?
 
-    init(client: CoreClient, startupError: String? = nil) {
+    init(client: CoreClient, startupError: String? = nil, distribution: AppDistribution = .source) {
         let tracker = CommandTracker()
         let toasts = ToastCenter()
         let playback = PlaybackStore(client: client, tracker: tracker)
@@ -70,25 +79,35 @@ final class AppModel {
         self.sources = sources
         appleMusic = AppleMusicStore(client: client, sources: sources, toasts: toasts, service: { MusicKitService() })
         pages = LibraryPages(client: client)
+        pro = ProStore(client: client, tracker: tracker)
+        updates = UpdatesStore(client: client, tracker: tracker)
+        aiLyrics = AiLyricsStore(client: client, tracker: tracker, toasts: toasts)
+        look = LookStore()
+        answers = CoreAnswers(client: client, tracker: tracker)
+        self.distribution = distribution
         nowPlayingCenter = NowPlayingCenter(playback: playback, artwork: artwork)
         dockIcon = DockIcon()
         keys = SharedKeyMonitor()
     }
 
-    /// Starts the core in the default folders with the plugins bundled in the app. When it
-    /// cannot start, the app runs on an offline client and the window says why.
+    /// Starts the core in the default folders with the plugins bundled in the app and this
+    /// build's distribution. When it cannot start, the app runs on an offline client and the
+    /// window says why.
     static func launch() -> AppModel {
         let folders = FFICoreClient.defaultDirectories()
+        let distribution = AppDistribution.current()
         do {
             let files = FileManager.default
             try files.createDirectory(atPath: folders.data, withIntermediateDirectories: true)
             try files.createDirectory(atPath: folders.cache, withIntermediateDirectories: true)
             let client = try FFICoreClient(dataDirectory: folders.data, cacheDirectory: folders.cache,
-                                           bundledPlugins: FFICoreClient.bundledPluginPaths())
-            return AppModel(client: client)
+                                           bundledPlugins: FFICoreClient.bundledPluginPaths(),
+                                           distribution: distribution)
+            return AppModel(client: client, distribution: distribution)
         } catch {
             let reason = CoreClientError.describe(error)
-            return AppModel(client: OfflineCoreClient(reason: reason), startupError: reason)
+            return AppModel(client: OfflineCoreClient(reason: reason), startupError: reason,
+                            distribution: distribution)
         }
     }
 
@@ -165,6 +184,10 @@ final class AppModel {
         playback.apply(remote: state.remote)
         library.apply(scanning: state.scanning)
         library.apply(revision: state.libraryRevision)
+        aiLyrics.apply(state.aiLyrics)
+        look.apply(state.look)
+        pro.apply(state.pro)
+        updates.apply(state.update)
     }
 
     func handle(_ events: [CoreEvent]) {
@@ -220,6 +243,22 @@ final class AppModel {
                 }
             case .error(let message):
                 toasts.show(message)
+            case .aiLyrics(let state):
+                aiLyrics.apply(state)
+            case .look(let state):
+                look.apply(state)
+            case .pro(let state):
+                pro.apply(state)
+            case .update(let state):
+                updates.apply(state)
+            case .discover(let answer):
+                answers.apply(discover: answer)
+            case .details(let answer):
+                answers.apply(details: answer)
+            case .comments(let answer):
+                answers.apply(comments: answer)
+            case .artwork(let fetched):
+                artwork.artworkFetched(fetched)
             }
         }
         if mediaChanged {

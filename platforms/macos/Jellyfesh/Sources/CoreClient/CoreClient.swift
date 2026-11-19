@@ -97,4 +97,14 @@ protocol CoreClient: AnyObject {
     /// Whether output is muted. The playback slice does not carry it: `SetMuted` republishes the
     /// slice, and the state is read from the snapshot then (as the Linux app does).
     func isMuted() async -> Bool
+
+    /// A source picture (an `ArtworkRef::Url`) as a cached file fitted to about `sizePx`: its path
+    /// when the core has it, else nil while the core fetches it through the plugin host, and an
+    /// `.artwork` event follows (docs/core-api.md, "Covers").
+    func sourceArtwork(url: String, sizePx: Int) async throws -> String?
+    /// A plugin's settings schema in a language (a BCP 47 tag), English where it has no word; nil
+    /// when the plugin is not installed.
+    func localizedSettingsSchema(plugin: String, language: String) async throws -> String?
+    /// What the App Store says about Jellyfesh Pro, after the app verified it with StoreKit.
+    func setStoreEntitlement(_ entitlement: ProEntitlement) async throws
 }

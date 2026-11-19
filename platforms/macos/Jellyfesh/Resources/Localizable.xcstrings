@@ -627,6 +627,28 @@
         }
       }
     },
+    "AI Lyrics and Customize are part of Jellyfesh Pro.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞とカスタマイズは Jellyfesh Pro の機能です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌词和自定义是 Jellyfesh Pro 的功能。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞和自訂是 Jellyfesh Pro 的功能。"
+          }
+        }
+      }
+    },
     "About Jellyfesh": {
       "localizations": {
         "ja": {
@@ -2019,6 +2041,28 @@
         }
       }
     },
+    "Couldn't make lyrics: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌詞を作成できませんでした：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法生成歌词：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法產生歌詞：%@"
+          }
+        }
+      }
+    },
     "Create": {
       "localizations": {
         "ja": {
@@ -2389,6 +2433,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成"
+          }
+        }
+      }
+    },
+    "Download the %@ model (%@) to make lyrics on this device.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスで歌詞を作成するには、%1$@ モデル（%2$@）をダウンロードしてください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载 %1$@ 模型（%2$@）即可在本机生成歌词。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載 %1$@ 模型（%2$@）即可在本機產生歌詞。"
+          }
+        }
+      }
+    },
+    "Downloading %@… %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ をダウンロードしています… %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载 %1$@… %2$@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載 %1$@… %2$@"
           }
         }
       }
@@ -3383,6 +3471,28 @@
         }
       }
     },
+    "Jellyfesh %@ Is Available": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh %@ が利用可能です"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh %@ 已推出"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh %@ 已推出"
+          }
+        }
+      }
+    },
     "Jellyfesh Could Not Start": {
       "localizations": {
         "ja": {
@@ -3401,6 +3511,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jellyfesh 無法啟動"
+          }
+        }
+      }
+    },
+    "Jellyfesh Pro · Licence …%@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro · ライセンス …%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro · 许可证 …%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro · 授權 …%@"
+          }
+        }
+      }
+    },
+    "Jellyfesh Pro · Purchased": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro · 購入済み"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro · 已购买"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro · 已購買"
           }
         }
       }
@@ -3863,6 +4017,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "歌詞來自歌曲的標籤，或旁邊同名的 .lrc、.ttml、.vtt 檔案。Jellyfesh 不會自行轉寫：只有歌詞本身帶有羅馬拼音時才會顯示。"
+          }
+        }
+      }
+    },
+    "Made by AI Lyrics · %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞で作成 · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 AI 歌词生成 · %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 AI 歌詞產生 · %@"
           }
         }
       }
@@ -5407,6 +5583,28 @@
         }
       }
     },
+    "Pro features are free during the public beta.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パブリックベータ期間中は、Pro の機能を無料でお使いいただけます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公开测试期间，Pro 功能免费使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公開測試期間，Pro 功能免費使用。"
+          }
+        }
+      }
+    },
     "Queue": {
       "localizations": {
         "ja": {
@@ -5451,6 +5649,28 @@
         }
       }
     },
+    "Reading Audio…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーディオを読み込んでいます…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读取音频…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在讀取音訊…"
+          }
+        }
+      }
+    },
     "Recently Added": {
       "localizations": {
         "ja": {
@@ -5491,6 +5711,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近播放"
+          }
+        }
+      }
+    },
+    "Recognising… %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認識しています… %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在识别… %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在辨識… %@"
           }
         }
       }
@@ -6063,6 +6305,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜尋你的音樂"
+          }
+        }
+      }
+    },
+    "Sending to %@…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に送信しています…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在发送到 %@…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在傳送到 %@…"
           }
         }
       }
@@ -7057,6 +7321,28 @@
         }
       }
     },
+    "That doesn't look like a Jellyfesh licence key.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh のライセンスキーではないようです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这看起来不像 Jellyfesh 许可证密钥。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這看起來不像 Jellyfesh 授權金鑰。"
+          }
+        }
+      }
+    },
     "The artwork, blurred, or the Misty field in its colour.": {
       "localizations": {
         "ja": {
@@ -7299,6 +7585,72 @@
         }
       }
     },
+    "This key is for another product.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このキーは別の製品用です。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此密钥属于其他产品。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此金鑰屬於其他產品。"
+          }
+        }
+      }
+    },
+    "This licence key has been withdrawn.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このライセンスキーは取り消されています。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此许可证密钥已被撤销。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此授權金鑰已被撤銷。"
+          }
+        }
+      }
+    },
+    "This licence key isn't valid.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このライセンスキーは有効ではありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此许可证密钥无效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此授權金鑰無效。"
+          }
+        }
+      }
+    },
     "This plugin's settings could not be read: %@": {
       "localizations": {
         "ja": {
@@ -7339,6 +7691,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "這首歌無法播放。"
+          }
+        }
+      }
+    },
+    "Timing Words…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "単語のタイミングを合わせています…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在为字词计时…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在為字詞計時…"
           }
         }
       }
@@ -7977,6 +8351,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "等待核准…"
+          }
+        }
+      }
+    },
+    "Waiting…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待…"
           }
         }
       }
