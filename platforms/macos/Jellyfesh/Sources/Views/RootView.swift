@@ -10,6 +10,7 @@ struct RootView: View {
     @Environment(ThemeStore.self) private var theme
     @Environment(SettingsStore.self) private var settings
     @Environment(SystemState.self) private var system
+    @Environment(LookStore.self) private var look
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -64,6 +65,7 @@ struct RootView: View {
         .toolbar(router.nowPlayingShown ? .hidden : .visible, for: .windowToolbar)
         .environment(\.palette, palette)
         .environment(\.effects, effects)
+        .environment(\.look, LookStyle(state: look.state))
         .tint(palette[Tokens.Accent.accent])
         .onChange(of: effects.reduceMotion || effects.reduceEffects, initial: true) { _, value in
             theme.reduceMotion = value

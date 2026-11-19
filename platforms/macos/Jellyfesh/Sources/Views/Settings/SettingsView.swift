@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(ThemeStore.self) private var theme
     @Environment(SettingsStore.self) private var settings
     @Environment(SystemState.self) private var system
+    @Environment(LookStore.self) private var look
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -39,5 +40,6 @@ struct SettingsView: View {
             windowVisible: true,
             transparency: Double(settings.current.transparency)
         ))
+        .environment(\.look, LookStyle(state: look.state))
     }
 }
