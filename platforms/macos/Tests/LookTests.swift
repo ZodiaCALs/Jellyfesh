@@ -136,4 +136,35 @@ final class LookStyleTests: XCTestCase {
         XCTAssertEqual(custom.discover, [.sources])
         XCTAssertTrue(SidebarItem.sections(for: [.albums]).discover.isEmpty)
     }
+
+    func testTheLayoutStaysLuminousUntilCustomized() {
+        var state = LookState.luminous
+        state.nowPlaying = .lyrics
+        state.miniPlayer = .floating
+        XCTAssertEqual(LookStyle(state: state).nowPlaying, .stage)
+        XCTAssertEqual(LookStyle(state: state).miniPlayer, .bar)
+        XCTAssertEqual(customized { $0.nowPlaying = .lyrics }.nowPlaying, .lyrics)
+        XCTAssertEqual(customized { $0.miniPlayer = .compact }.miniPlayer, .compact)
+    }
+
+    func testThePlayerAtTheBottom() {
+        XCTAssertEqual(LuminousGeometry.bottomPlayer(style: .bar, wide: true), .bar)
+        XCTAssertEqual(LuminousGeometry.bottomPlayer(style: .bar, wide: false), .mini)
+        XCTAssertEqual(LuminousGeometry.bottomPlayer(style: .compact, wide: true), .mini)
+        XCTAssertEqual(LuminousGeometry.bottomPlayer(style: .floating, wide: true), .floating)
+        XCTAssertEqual(LuminousGeometry.bottomPlayer(style: .floating, wide: false), .floating)
+    }
+
+    func testNowPlayingsLayouts() {
+        for panel in NowPlayingPanel.allCases {
+            XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.stage, panel: panel), .stage)
+            XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.lyrics, panel: panel), .widePane)
+        }
+        XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .lyrics), .cover)
+        XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .queue), .stage)
+        XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .info), .stage)
+        XCTAssertEqual(LuminousGeometry.coverArtworkSide(width: 1600, height: 1000), 520)
+        XCTAssertEqual(LuminousGeometry.coverArtworkSide(width: 1180, height: 760), 340)
+        XCTAssertEqual(LuminousGeometry.coverArtworkSide(width: 300, height: 300), 180, "never smaller than 180")
+    }
 }

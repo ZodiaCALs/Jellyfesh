@@ -117,6 +117,14 @@ struct LookStyle: Equatable {
         customized ? sungInk(palette).opacity(0.5) : .clear
     }
 
+    // MARK: Layout
+
+    /// Now Playing's layout: Stage (v0.0.6), Artwork or Lyrics.
+    var nowPlaying: LookNowPlayingLayout { customized ? state.nowPlaying : .stage }
+
+    /// The player at the bottom of the window: Bar (v0.0.6), Compact or Floating.
+    var miniPlayer: LookMiniPlayerStyle { customized ? state.miniPlayer : .bar }
+
     // MARK: Places
 
     /// The sidebar's places, in order: the look's, each once; Luminous's when none of the

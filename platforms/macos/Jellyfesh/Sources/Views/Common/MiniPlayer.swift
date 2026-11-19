@@ -3,11 +3,15 @@
 // play and pause (Misty CMP-02: art, two lines, one progress indicator, one control; never
 // accent-filled, COL-04). Its progress is a straight 2 pt line along the bottom edge, inset by the
 // corners, redrawn only when it grows by a pixel. Clicking it opens Now Playing. While a remote
-// session runs it shows the session's track with "Playing on {Device}" (ADR-0018).
+// session runs it shows the session's track with "Playing on {Device}" (ADR-0018). The look's
+// Floating style makes it a smaller capsule (ADR-0020).
 
 import SwiftUI
 
 struct MiniPlayer: View {
+    /// A smaller capsule, for the look's Floating style.
+    var floating = false
+
     @Environment(PlaybackStore.self) private var playback
     @Environment(Router.self) private var router
     @Environment(\.palette) private var palette
@@ -15,7 +19,7 @@ struct MiniPlayer: View {
 
     var body: some View {
         if let item = playback.playing {
-            FloatingGlass(cornerRadius: SeekGeometry.miniRadius) {
+            FloatingGlass(cornerRadius: radius) {
                 HStack(spacing: Tokens.Space.s3) {
                     Button {
                         router.showNowPlaying(true, reduceMotion: !effects.animates)
@@ -35,11 +39,12 @@ struct MiniPlayer: View {
                     PlayPauseButton(size: 44, glyph: 16, prominent: false)
                 }
                 .padding(10)
+                .padding(.horizontal, floating ? Tokens.Space.s2 : 0)
                 .frame(height: Tokens.Player.miniHeight)
-                .frame(maxWidth: 560)
+                .frame(maxWidth: floating ? 400 : 560)
                 .overlay(alignment: .bottom) {
                     MiniProgressLine()
-                        .padding(.horizontal, SeekGeometry.miniRadius)
+                        .padding(.horizontal, radius)
                         .padding(.bottom, 1)
                 }
             }
@@ -48,6 +53,11 @@ struct MiniPlayer: View {
             .padding(.bottom, LuminousGeometry.playerMargin)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
+    }
+
+    /// The capsule's corners: `player.mini-radius`, or round ends when floating.
+    private var radius: CGFloat {
+        floating ? Tokens.Player.miniHeight / 2 : SeekGeometry.miniRadius
     }
 
     static func label(for item: PlayingItem) -> String {

@@ -53,6 +53,32 @@ struct PlayerBarLines: View {
     }
 }
 
+/// The line being sung under the cover in the look's Artwork layout, filling word by word; nothing
+/// without timed lyrics or while another device plays.
+struct NowPlayingSungLine: View {
+    var fontSize: CGFloat
+
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(LyricsStore.self) private var lyrics
+    @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
+
+    var body: some View {
+        let uid = playback.nowPlaying?.uid
+        if !playback.isRemote, let document = lyrics.document(for: uid), let timeline = lyrics.timeline(for: uid) {
+            TimelineView(LyricsSchedule(timeline: timeline, start: playback.scheduleStart(),
+                                        active: effects.windowVisible)) { _ in
+                let bar = timeline.bar(atMs: lyricMilliseconds(playback.positionUs()))
+                if let index = bar.line, index < document.lines.count {
+                    LyricsBarLine(line: document.lines[index], index: index, bar: bar, timeline: timeline,
+                                  fontSize: fontSize, weight: look.lyricsWeight(token: Tokens.Lyrics.line.weight),
+                                  centred: true)
+                }
+            }
+        }
+    }
+}
+
 /// One lyric line in one row, its words filling from the start edge as they are sung (the
 /// highlight colour over the unsung ink). A line without word timing, a right-to-left line, and
 /// any line under Reduce Motion show whole in the sung colour. A line too long for the row fades

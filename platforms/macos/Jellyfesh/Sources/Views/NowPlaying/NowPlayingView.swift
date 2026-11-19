@@ -4,7 +4,9 @@
 // the right, and every control in one floating Veil dock: shuffle, previous, play, next, repeat,
 // the scrubber with its times, the volume, and on the right the device button and More. Library
 // and the Lyrics/Queue/Info control float at the top. The artwork shrinks to 88 % while paused and
-// springs back on play. While a remote session runs it shows the session's track (ADR-0018).
+// springs back on play. While a remote session runs it shows the session's track (ADR-0018). A
+// customized look may lay it out as a large cover with the line being sung below it (Artwork) or
+// as the pane across the window with a small cover in the corner (Lyrics; ADR-0020).
 
 import SwiftUI
 
@@ -12,6 +14,7 @@ struct NowPlayingView: View {
     @Environment(SettingsStore.self) private var settings
     @Environment(Router.self) private var router
     @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
 
     var body: some View {
         let style = settings.current.style
@@ -19,19 +22,45 @@ struct NowPlayingView: View {
             NowPlayingBackdrop(style: style)
             GeometryReader { geometry in
                 let width = geometry.size.width
+                let height = geometry.size.height
                 let wide = width >= 1100
-                let side = LuminousGeometry.stageArtworkSide(width: width, height: geometry.size.height)
                 VStack(spacing: 0) {
                     NowPlayingBar()
-                    HStack(alignment: .center, spacing: wide ? 64 : 40) {
-                        StageArtwork(style: style, side: side)
-                            .frame(width: side)
-                        panel
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    switch LuminousGeometry.nowPlayingArrangement(look.nowPlaying, panel: router.panel) {
+                    case .stage:
+                        let side = LuminousGeometry.stageArtworkSide(width: width, height: height)
+                        HStack(alignment: .center, spacing: wide ? 64 : 40) {
+                            StageArtwork(style: style, side: side)
+                                .frame(width: side)
+                            panel
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .padding(.horizontal, wide ? 96 : 40)
+                        .padding(.top, Tokens.Space.s2)
+                        .padding(.bottom, Tokens.Space.s5)
+                    case .cover:
+                        let side = LuminousGeometry.coverArtworkSide(width: width, height: height)
+                        VStack(spacing: Tokens.Space.s5) {
+                            Spacer(minLength: 0)
+                            StageArtwork(style: style, side: side)
+                                .frame(width: side)
+                            NowPlayingSungLine(fontSize: 26)
+                                .frame(maxWidth: 900)
+                            Spacer(minLength: 0)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, Tokens.Space.s5)
+                    case .widePane:
+                        HStack(alignment: .top, spacing: wide ? 48 : 32) {
+                            CornerCover()
+                            panel
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        .padding(.horizontal, wide ? 64 : 32)
+                        .padding(.top, Tokens.Space.s2)
+                        .padding(.bottom, Tokens.Space.s5)
                     }
-                    .padding(.horizontal, wide ? 96 : 40)
-                    .padding(.top, Tokens.Space.s2)
-                    .padding(.bottom, Tokens.Space.s5)
                     NowPlayingDock()
                         .padding(.horizontal, wide ? 96 : 32)
                         .padding(.bottom, 28)
@@ -149,6 +178,31 @@ struct NowPlayingBar: View {
         }
         .padding(.horizontal, 28)
         .frame(height: 78)
+    }
+}
+
+/// The Lyrics layout's small cover in the corner, with the title and the artist under it.
+private struct CornerCover: View {
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        let item = playback.playing
+        VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+            ArtworkView(source: item?.artwork, size: 120, cornerRadius: Tokens.Artwork.radiusGrid)
+                .elevation(Tokens.Elevation.shadow2)
+            Text(item?.title ?? "")
+                .typography(Tokens.TypeRoles.listTitle)
+                .foregroundStyle(palette[Tokens.Ink.ink90])
+                .lineLimit(2)
+                .accessibilityAddTraits(.isHeader)
+            Text(CountText.joined([item?.artist, item?.album]))
+                .typography(Tokens.TypeRoles.listSecondary)
+                .foregroundStyle(palette[Tokens.Ink.ink70])
+                .lineLimit(2)
+        }
+        .frame(width: 140, alignment: .leading)
+        .padding(.top, Tokens.Space.s4)
     }
 }
 

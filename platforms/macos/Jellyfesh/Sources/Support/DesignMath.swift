@@ -247,6 +247,54 @@ enum LuminousGeometry {
     /// Grid covers lift this much on hover or focus.
     static let coverLift: CGFloat = 4
 
+    /// The player at the bottom of the window for the look's style (ADR-0020).
+    enum BottomPlayer: Equatable {
+        /// The player bar (art, transport, seek bar, utilities).
+        case bar
+        /// The mini player: art, two lines and Play.
+        case mini
+        /// The mini player as a smaller capsule at the trailing corner.
+        case floating
+    }
+
+    /// Bar is v0.0.6: the player bar in wide columns, the mini player in narrow ones. Compact is
+    /// the mini player at every width; Floating, the smaller capsule.
+    static func bottomPlayer(style: LookMiniPlayerStyle, wide: Bool) -> BottomPlayer {
+        switch style {
+        case .bar: return wide ? .bar : .mini
+        case .compact: return .mini
+        case .floating: return .floating
+        }
+    }
+
+    /// How Now Playing arranges itself for the look's layout and the chosen pane (ADR-0020).
+    enum NowPlayingArrangement: Equatable {
+        /// The v0.0.6 stage: the artwork beside the pane.
+        case stage
+        /// A large cover with the line being sung below it.
+        case cover
+        /// The pane across the window, a small cover in the corner.
+        case widePane
+    }
+
+    /// Stage is v0.0.6. Artwork shows the cover and the sung line in place of the Lyrics pane, and
+    /// Queue and Info beside the cover as on the stage. Lyrics puts any pane across the window.
+    static func nowPlayingArrangement(_ layout: LookNowPlayingLayout, panel: NowPlayingPanel) -> NowPlayingArrangement {
+        switch layout {
+        case .stage: return .stage
+        case .artwork: return panel == .lyrics ? .cover : .stage
+        case .lyrics: return .widePane
+        }
+    }
+
+    /// The cover in the Artwork layout: up to 520 pt, as the window allows (the top bar, the dock,
+    /// the title and the sung line take about 420 pt of the height), never under 180.
+    static func coverArtworkSide(width: CGFloat, height: CGFloat) -> CGFloat {
+        let side = min(520, width * 0.5, height - 420)
+        guard side.isFinite else { return 380 }
+        return max(side, 180).rounded()
+    }
+
     /// The height the floating player takes at the bottom of the content, its margin included;
     /// 0 without a player.
     static func playerZone(hasPlayer: Bool, wide: Bool) -> CGFloat {

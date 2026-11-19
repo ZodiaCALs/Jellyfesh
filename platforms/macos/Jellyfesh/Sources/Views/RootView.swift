@@ -125,17 +125,20 @@ struct LibraryWindow: View {
 
 /// The selected section, its pushed pages, and the mini player (columns under 900 pt) or the
 /// player bar (900 pt and wider) floating over them as Veil capsules; the pages fade out just
-/// above the player (Luminous). Under Now Playing the bar stays in place but stops redrawing its
-/// progress.
+/// above the player (Luminous). A customized look may ask for the mini player at every width, or
+/// a smaller floating capsule at the trailing corner (ADR-0020). Under Now Playing the bar stays
+/// in place but stops redrawing its progress.
 struct DetailColumn: View {
     @Environment(Router.self) private var router
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
     @State private var width: CGFloat = 0
 
     var body: some View {
         @Bindable var router = router
-        let wide = SeekGeometry.usesPlayerBar(width: width)
+        let player = LuminousGeometry.bottomPlayer(style: look.miniPlayer, wide: SeekGeometry.usesPlayerBar(width: width))
+        let wide = player == .bar
         NavigationStack(path: $router.path) {
             SectionPage(item: router.selection)
                 .pageEntrance()
@@ -159,16 +162,17 @@ struct DetailColumn: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ZStack(alignment: .bottom) {
-                if wide {
-                    PlayerBar()
-                } else {
-                    MiniPlayer()
+            ZStack(alignment: player == .floating ? .bottomTrailing : .bottom) {
+                switch player {
+                case .bar: PlayerBar()
+                case .mini: MiniPlayer()
+                case .floating: MiniPlayer(floating: true)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: player == .floating ? .trailing : .center)
             .environment(\.effects, barEffects)
             .animation(Motion.unless(effects.reduceMotion, Motion.move), value: playback.hasTrack)
-            .animation(Motion.unless(effects.reduceMotion, Motion.move), value: wide)
+            .animation(Motion.unless(effects.reduceMotion, Motion.move), value: player)
         }
         .softScrollEdges()
     }
