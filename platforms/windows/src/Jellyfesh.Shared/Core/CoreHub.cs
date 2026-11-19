@@ -26,7 +26,11 @@ public enum SliceChange
     Sources = 1 << 9,
     Muted = 1 << 10,
     Remote = 1 << 11,
-    All = (1 << 12) - 1,
+    AiLyrics = 1 << 12,
+    Look = 1 << 13,
+    Pro = 1 << 14,
+    Update = 1 << 15,
+    All = (1 << 16) - 1,
 }
 
 /// <summary>
@@ -65,8 +69,9 @@ public sealed class CoreHub : IDisposable
     public event Action<SliceChange>? Changed;
 
     /// <summary>
-    /// Raised on the UI thread, in order, for events that are not slices: sign-in steps, search and
-    /// browse results, buffering, command failures, errors, and a scan's end.
+    /// Raised on the UI thread, in order, for events that are not slices: sign-in steps, search,
+    /// browse, Discover, details and comments answers, source pictures, buffering, command
+    /// failures, errors, and a scan's end.
     /// </summary>
     public event Action<CoreEvent>? Notification;
 
@@ -207,6 +212,10 @@ public sealed class CoreHub : IDisposable
         public DevicesState? Devices;
         public SourcesState? Sources;
         public RemoteState? Remote;
+        public AiLyricsState? AiLyrics;
+        public LookState? Look;
+        public ProState? Pro;
+        public UpdateState? Update;
         public readonly List<CoreEvent> Notifications = [];
 
         public void Add(CoreEvent e)
@@ -253,7 +262,20 @@ public sealed class CoreHub : IDisposable
                 case CoreEvent.Remote r when Remote is null || r.State.Version >= Remote.Version:
                     Remote = r.State;
                     break;
-                case CoreEvent.Playback or CoreEvent.Queue or CoreEvent.Devices or CoreEvent.Sources or CoreEvent.Remote:
+                case CoreEvent.AiLyrics a when AiLyrics is null || a.State.Version >= AiLyrics.Version:
+                    AiLyrics = a.State;
+                    break;
+                case CoreEvent.Look lk when Look is null || lk.State.Version >= Look.Version:
+                    Look = lk.State;
+                    break;
+                case CoreEvent.Pro pr when Pro is null || pr.State.Version >= Pro.Version:
+                    Pro = pr.State;
+                    break;
+                case CoreEvent.UpdateStatus u when Update is null || u.State.Version >= Update.Version:
+                    Update = u.State;
+                    break;
+                case CoreEvent.Playback or CoreEvent.Queue or CoreEvent.Devices or CoreEvent.Sources or CoreEvent.Remote
+                    or CoreEvent.AiLyrics or CoreEvent.Look or CoreEvent.Pro or CoreEvent.UpdateStatus:
                     break; // an older version than one already pending
                 default:
                     Notifications.Add(e);
@@ -337,6 +359,30 @@ public sealed class CoreHub : IDisposable
             {
                 s = s with { Remote = r };
                 changes |= SliceChange.Remote;
+            }
+
+            if (AiLyrics is { } ai && ai.Version >= s.AiLyrics.Version)
+            {
+                s = s with { AiLyrics = ai };
+                changes |= SliceChange.AiLyrics;
+            }
+
+            if (Look is { } look && look.Version >= s.Look.Version)
+            {
+                s = s with { Look = look };
+                changes |= SliceChange.Look;
+            }
+
+            if (Pro is { } pro && pro.Version >= s.Pro.Version)
+            {
+                s = s with { Pro = pro };
+                changes |= SliceChange.Pro;
+            }
+
+            if (Update is { } up && up.Version >= s.Update.Version)
+            {
+                s = s with { Update = up };
+                changes |= SliceChange.Update;
             }
 
             return (s, changes);

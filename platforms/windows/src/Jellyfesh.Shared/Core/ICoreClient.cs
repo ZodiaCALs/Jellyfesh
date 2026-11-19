@@ -79,6 +79,22 @@ public interface ICoreClient : IDisposable
     /// </summary>
     IReadOnlyList<EqPreset> EqPresets();
 
+    /// <summary>
+    /// A source picture through the core (docs/core-api.md, "Covers"): the cached file's path, or
+    /// null while the core fetches it; <see cref="CoreEvent.Artwork"/> follows for that URL.
+    /// <paramref name="sizePx"/> is about the size drawn: 64, 128, 256, 512 or 1024.
+    /// </summary>
+    string? SourceArtwork(string url, uint sizePx);
+
+    /// <summary>
+    /// The plugin's settings schema with its translations for a BCP 47 tag (zh-Hans, ja-JP;
+    /// English where a word is missing), or null when the plugin has none.
+    /// </summary>
+    string? LocalizedSettingsSchema(string plugin, string language);
+
+    /// <summary>Reports what the store says about Jellyfesh Pro (store builds, at start and on every change).</summary>
+    void SetStoreEntitlement(StoreEntitlement entitlement);
+
     /// <summary>The clock anchors are stamped with, in nanoseconds. Not for per-frame use: see CoreClock.</summary>
     ulong MonotonicNowNs();
 

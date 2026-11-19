@@ -82,9 +82,23 @@ public sealed class FfiCoreClient : ICoreClient
         false;
 #endif
 
+    /// <summary>
+    /// How this build reached the person (ADR-0021 §4), from the MSBuild constants that
+    /// JfDistribution (JF_DISTRIBUTION) sets: the release page's downloads check for updates, the
+    /// Microsoft Store build sells Pro through the Store and installs no plugins from files.
+    /// </summary>
+    public static F.Distribution Distribution =>
+#if JF_DISTRIBUTION_DIRECT
+        F.Distribution.Direct;
+#elif JF_DISTRIBUTION_MICROSOFT_STORE
+        F.Distribution.MicrosoftStore;
+#else
+        F.Distribution.Source;
+#endif
+
     internal static F.CoreConfig Config(string dataDir, string cacheDir, IReadOnlyList<string> bundledPlugins)
     {
-        var config = new F.CoreConfig(dataDir, cacheDir, new F.OutputKind.Device(null));
+        var config = new F.CoreConfig(dataDir, cacheDir, new F.OutputKind.Device(null), Distribution: Distribution);
 #if JF_FFI_BUNDLED_PLUGINS
         config = config with { BundledPlugins = [.. bundledPlugins] };
 #else
@@ -175,6 +189,17 @@ public sealed class FfiCoreClient : ICoreClient
 
     public IReadOnlyList<EqPreset> EqPresets() =>
         Query(() => F.JellyfeshMethods.EqPresets().Select(FfiMapping.ToModel).ToArray());
+
+    public string? SourceArtwork(string url, uint sizePx) => Query(() => _core.SourceArtwork(url, sizePx));
+
+    public string? LocalizedSettingsSchema(string plugin, string language) =>
+        Query(() => _core.LocalizedSettingsSchema(plugin, language));
+
+    public void SetStoreEntitlement(StoreEntitlement entitlement) => Query(() =>
+    {
+        _core.SetStoreEntitlement(FfiMapping.ToFfi(entitlement));
+        return true;
+    });
 
     public ulong MonotonicNowNs() => F.JellyfeshMethods.MonotonicNowNs();
 

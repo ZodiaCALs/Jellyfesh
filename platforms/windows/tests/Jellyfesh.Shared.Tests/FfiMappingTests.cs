@@ -315,6 +315,21 @@ public class FfiMappingTests
             F.RemoteAction.End => new M.RemoteAction.End(),
             _ => throw new Xunit.Sdk.XunitException("unknown remote action"),
         }),
+        F.Command.ResetPluginSettings r => new M.CoreCommand.ResetPluginSettings(r.Plugin),
+        F.Command.MakeLyrics m => new M.CoreCommand.MakeLyrics(ToModel(m.Song)),
+        F.Command.CancelLyrics x => new M.CoreCommand.CancelLyrics(x.Job),
+        F.Command.DeleteMadeLyrics d => new M.CoreCommand.DeleteMadeLyrics(ToModel(d.Song)),
+        F.Command.AllowAudioUpload a => new M.CoreCommand.AllowAudioUpload(a.Plugin, a.Origin),
+        F.Command.RevokeAudioUpload r => new M.CoreCommand.RevokeAudioUpload(r.Plugin, r.Origin),
+        F.Command.DownloadSpeechModel d => new M.CoreCommand.DownloadSpeechModel(d.Id),
+        F.Command.CancelSpeechModelDownload x => new M.CoreCommand.CancelSpeechModelDownload(x.Id),
+        F.Command.DeleteSpeechModel d => new M.CoreCommand.DeleteSpeechModel(d.Id),
+        F.Command.ActivateLicence a => new M.CoreCommand.ActivateLicence(a.Key),
+        F.Command.RemoveLicence => new M.CoreCommand.RemoveLicence(),
+        F.Command.CheckForUpdates => new M.CoreCommand.CheckForUpdates(),
+        F.Command.Discover d => new M.CoreCommand.Discover(d.Source),
+        F.Command.Details d => new M.CoreCommand.Details(FfiMapping.ToModel(d.Item)),
+        F.Command.Comments x => new M.CoreCommand.Comments(FfiMapping.ToModel(x.Item), x.Page),
         _ => throw new Xunit.Sdk.XunitException($"no model command for {c.GetType().Name}"),
     };
 
@@ -324,9 +339,17 @@ public class FfiMappingTests
         F.Collection.Artist a => new M.Collection.Artist(a.Id),
         F.Collection.Playlist p => new M.Collection.Playlist(p.Id),
         F.Collection.Favorites => new M.Collection.Favorites(),
+        F.Collection.Songs s => new M.Collection.Songs(FfiMapping.ToModel(s.Sort), s.Descending),
         F.Collection.Tracks t => new M.Collection.Tracks(t.Value.Select(FfiMapping.ToModel).ToArray()),
         F.Collection.Source s => new M.Collection.Source(s.Plugin, s.Id),
         _ => throw new Xunit.Sdk.XunitException("unknown collection"),
+    };
+
+    private static M.SongRef ToModel(F.SongRef s) => s switch
+    {
+        F.SongRef.Library l => new M.SongRef.Library(l.Id),
+        F.SongRef.Current => new M.SongRef.Current(),
+        _ => throw new Xunit.Sdk.XunitException("unknown song"),
     };
 
     /// <summary>JSON equality that ignores property order and number formatting.</summary>

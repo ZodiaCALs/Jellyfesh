@@ -102,8 +102,9 @@ public enum ReplayGainMode
     Album,
 }
 
-/// <summary>Facts about an opened track.</summary>
-public sealed record TrackFormat(string Codec, uint SampleRate, ushort Channels, long? DurationUs, bool Gapless, uint? Bitrate);
+/// <summary>Facts about an opened track; <see cref="Bitrate"/> in bits per second.</summary>
+/// <param name="BitsPerSample">PCM, FLAC and ALAC.</param>
+public sealed record TrackFormat(string Codec, uint SampleRate, ushort Channels, long? DurationUs, bool Gapless, uint? Bitrate, uint? BitsPerSample = null);
 
 /// <summary>Artwork a UI can load: a cached file, or a URL for online items.</summary>
 public abstract record ArtworkRef
@@ -283,12 +284,28 @@ public enum PluginBadge
     Community,
 }
 
-/// <summary>One installed source.</summary>
+/// <summary>Where Settings lists a plugin: Sources, or Extensions (AI Lyrics, Customize).</summary>
+public enum PluginKind
+{
+    Source,
+
+    /// <summary>Makes lyrics or changes the look, and offers no music.</summary>
+    Extension,
+}
+
+/// <summary>One installed source or extension.</summary>
 /// <param name="RemotePlayback">The service plays on the person's own devices and Jellyfesh is its
 /// remote control (ADR-0018): its songs start a remote session and never join the queue, so Play
 /// Next, Play Last and Add to Playlist are not offered for them.</param>
 /// <param name="Attribution">Set when the service's terms ask for credit: its views then say
 /// "Content from {Service}" (docs/ui.md, "Links and remote playback").</param>
+/// <param name="Kind">Sources, or Settings › Extensions.</param>
+/// <param name="RequiresPro">Its features need Jellyfesh Pro (it stays installed and its settings work without).</param>
+/// <param name="Permissions">The host imports the manifest declares (audio, speech).</param>
+/// <param name="Discover">It makes its own Discover shelves.</param>
+/// <param name="Details">It answers Details for its items.</param>
+/// <param name="Comments">It has comments: Now Playing shows the Comments pane for its songs.</param>
+/// <param name="Description">One line from the manifest.</param>
 public sealed record PluginInfo(
     string Id,
     string Name,
@@ -305,7 +322,14 @@ public sealed record PluginInfo(
     string SettingsJson,
     string? Icon,
     bool RemotePlayback = false,
-    string? Attribution = null);
+    string? Attribution = null,
+    PluginKind Kind = PluginKind.Source,
+    bool RequiresPro = false,
+    IReadOnlyList<string>? Permissions = null,
+    bool Discover = false,
+    bool Details = false,
+    bool Comments = false,
+    string? Description = null);
 
 /// <summary>
 /// A music service offered in Settings → Sources → Add a Source, listed while its official plugin
@@ -387,6 +411,8 @@ public enum ItemKind
 /// <summary>A search or browse result from the library or a source.</summary>
 /// <param name="Link">An https link that opens the item in its service (Open in {Service}), when
 /// its source declares one; the main action for an item that cannot play here.</param>
+/// <param name="ArtistId">The source's id of a track's or album's artist: Go to Artist.</param>
+/// <param name="AlbumId">The source's id of a track's album: Go to Album.</param>
 public sealed record SourceItem(
     string Source,
     ItemKind Kind,
@@ -400,7 +426,9 @@ public sealed record SourceItem(
     string? UnplayableReason,
     TrackRef? Track,
     IReadOnlyList<string> AlsoIn,
-    string? Link = null);
+    string? Link = null,
+    string? ArtistId = null,
+    string? AlbumId = null);
 
 /// <summary>Results from one source for one search.</summary>
 public sealed record SearchUpdate(
@@ -432,6 +460,9 @@ public abstract record Collection
     public sealed record Playlist(long Id) : Collection;
 
     public sealed record Favorites : Collection;
+
+    /// <summary>Every song in the library, in the Songs page's order: Play and Shuffle with no paging.</summary>
+    public sealed record Songs(TrackSort Sort, bool Descending) : Collection;
 
     public sealed record Tracks(IReadOnlyList<TrackRef> Items) : Collection;
 

@@ -184,6 +184,40 @@ internal sealed class FakeCore : ICoreClient
         return EqPresetRows.ToArray();
     }
 
+    /// <summary>What SourceArtwork answers: a cached path, or null while "fetching".</summary>
+    public Func<string, uint, string?> SourceArtworkPath { get; set; } = (url, size) => null;
+
+    /// <summary>Every SourceArtwork call, in order.</summary>
+    public List<(string Url, uint SizePx)> ArtworkRequests { get; } = [];
+
+    /// <summary>What LocalizedSettingsSchema answers, by plugin id.</summary>
+    public Dictionary<string, string> LocalizedSchemas { get; } = [];
+
+    /// <summary>The languages LocalizedSettingsSchema was asked for.</summary>
+    public List<string> SchemaLanguages { get; } = [];
+
+    public List<StoreEntitlement> Entitlements { get; } = [];
+
+    public string? SourceArtwork(string url, uint sizePx)
+    {
+        Count();
+        ArtworkRequests.Add((url, sizePx));
+        return SourceArtworkPath(url, sizePx);
+    }
+
+    public string? LocalizedSettingsSchema(string plugin, string language)
+    {
+        Count();
+        SchemaLanguages.Add(language);
+        return LocalizedSchemas.GetValueOrDefault(plugin);
+    }
+
+    public void SetStoreEntitlement(StoreEntitlement entitlement)
+    {
+        Count();
+        Entitlements.Add(entitlement);
+    }
+
     public ulong MonotonicNowNs() => NowNs;
 
     public void Shutdown()

@@ -74,6 +74,41 @@ public class CoreHubTests
     }
 
     [Fact]
+    public void The_v007_slices_apply_by_version_and_their_answers_are_notifications()
+    {
+        var core = new FakeCore();
+        var ui = new QueueDispatcher();
+        using var hub = new CoreHub(core, ui);
+        hub.Start();
+        var changes = new List<SliceChange>();
+        var seen = new List<CoreEvent>();
+        hub.Changed += c => changes.Add(c);
+        hub.Notification += e => seen.Add(e);
+
+        core.Emit(new CoreEvent.AiLyrics(AiLyricsState.Initial with { Version = 3, Available = true }));
+        core.Emit(new CoreEvent.AiLyrics(AiLyricsState.Initial with { Version = 2 })); // older: dropped
+        core.Emit(new CoreEvent.Look(LookState.Default with { Version = 1, Customized = true }));
+        core.Emit(new CoreEvent.Pro(ProState.Initial with { Version = 4, Active = true }));
+        core.Emit(new CoreEvent.UpdateStatus(UpdateState.Initial with { Version = 2, Supported = true }));
+        core.Emit(new CoreEvent.Discover(new DiscoverPage(7, "library", [], null)));
+        core.Emit(new CoreEvent.Artwork(new ArtworkReady("https://example.org/a.jpg", 256, "/cache/a.jpg")));
+        ui.RunAll();
+
+        Assert.Equal(SliceChange.AiLyrics | SliceChange.Look | SliceChange.Pro | SliceChange.Update, Assert.Single(changes));
+        Assert.True(hub.State.AiLyrics.Available);
+        Assert.True(hub.State.Look.Customized);
+        Assert.True(hub.State.Pro.Active);
+        Assert.True(hub.State.Update.Supported);
+        Assert.Collection(seen, e => Assert.IsType<CoreEvent.Discover>(e), e => Assert.IsType<CoreEvent.Artwork>(e));
+
+        // A slice older than the one applied changes nothing.
+        core.Emit(new CoreEvent.Pro(ProState.Initial with { Version = 3 }));
+        ui.RunAll();
+        Assert.True(hub.State.Pro.Active);
+        Assert.Single(changes);
+    }
+
+    [Fact]
     public void Library_revisions_only_move_forward()
     {
         var core = new FakeCore();

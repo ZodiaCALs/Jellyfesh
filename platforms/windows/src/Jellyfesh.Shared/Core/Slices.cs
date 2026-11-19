@@ -30,6 +30,8 @@ public sealed record QueueState(
 /// <summary>What is playing, with display metadata.</summary>
 /// <param name="Link">Opens the song in its service (Open in {Service}), for songs from a source
 /// that declares links.</param>
+/// <param name="Quality">What plays as decoded, with the core's quality label; null until the
+/// engine opened the track.</param>
 public sealed record NowPlayingInfo(
     ulong Uid,
     TrackRef Track,
@@ -40,7 +42,8 @@ public sealed record NowPlayingInfo(
     ulong? DurationMs,
     ArtworkRef? Artwork,
     TrackFormat? Format,
-    string? Link = null);
+    string? Link = null,
+    AudioFormat? Quality = null);
 
 public enum LyricTiming
 {
@@ -115,6 +118,12 @@ public abstract record LyricsOrigin
     public sealed record Sidecar(string Path) : LyricsOrigin;
 
     public sealed record Embedded : LyricsOrigin;
+
+    /// <summary>The plugin with this id (its credit is in <see cref="LyricDocument.Origin"/>).</summary>
+    public sealed record Plugin(string Id) : LyricsOrigin;
+
+    /// <summary>Made by AI Lyrics: "Made by AI Lyrics · {Engine}".</summary>
+    public sealed record Made(string PluginId, string Engine) : LyricsOrigin;
 }
 
 /// <summary>The <c>Lyrics</c> slice for the track with <see cref="Uid"/>.</summary>
@@ -174,9 +183,23 @@ public sealed record DevicesState(ulong Version, IReadOnlyList<DeviceInfo> Devic
 }
 
 /// <summary>The <c>Sources</c> slice: the installed plugins and the services Add a Source offers, in order.</summary>
-public sealed record SourcesState(ulong Version, IReadOnlyList<PluginInfo> Plugins, IReadOnlyList<SourcePreset> Presets, bool AllowCommunity)
+/// <param name="CanInstallPlugins">False in store builds: no Install from File… and no Allow Community Plugins.</param>
+public sealed record SourcesState(
+    ulong Version,
+    IReadOnlyList<PluginInfo> Plugins,
+    IReadOnlyList<SourcePreset> Presets,
+    bool AllowCommunity,
+    bool CanInstallPlugins = true)
 {
     public static SourcesState Initial { get; } = new(0, [], [], false);
+
+    /// <summary>The installed music sources (Settings › Sources, the Sources page).</summary>
+    public IEnumerable<PluginInfo> Sources => Plugins.Where(p => p.Kind == PluginKind.Source);
+
+    /// <summary>The installed extensions (Settings › Extensions).</summary>
+    public IEnumerable<PluginInfo> Extensions => Plugins.Where(p => p.Kind == PluginKind.Extension);
+
+    public PluginInfo? Find(string? id) => id is null ? null : Plugins.FirstOrDefault(p => p.Id == id);
 }
 
 /// <summary>
@@ -225,9 +248,14 @@ public sealed record CoreSnapshot(
     DevicesState Devices,
     SourcesState Sources,
     bool Muted,
-    RemoteState Remote)
+    RemoteState Remote,
+    AiLyricsState AiLyrics,
+    LookState Look,
+    ProState Pro,
+    UpdateState Update)
 {
     public static CoreSnapshot Initial { get; } = new(
         PlaybackState.Initial, QueueState.Initial, null, null, null, 0, false,
-        AppSettings.Default, DevicesState.Initial, SourcesState.Initial, false, RemoteState.Initial);
+        AppSettings.Default, DevicesState.Initial, SourcesState.Initial, false, RemoteState.Initial,
+        AiLyricsState.Initial, LookState.Default, ProState.Initial, UpdateState.Initial);
 }

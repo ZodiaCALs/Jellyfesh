@@ -131,6 +131,54 @@ public abstract record CoreCommand
     /// service's player instead of the engine.
     /// </summary>
     public sealed record Remote(RemoteAction Action) : CoreCommand;
+
+    /// <summary>Restores a plugin's settings to its schema's defaults (Reset to Defaults).</summary>
+    public sealed record ResetPluginSettings(string Plugin) : CoreCommand;
+
+    // ---- AI Lyrics (ADR-0019) ----
+
+    /// <summary>Makes synced lyrics for a song: a job in the AiLyrics slice.</summary>
+    public sealed record MakeLyrics(SongRef Song) : CoreCommand;
+
+    /// <summary>Stops a waiting or running lyrics job.</summary>
+    public sealed record CancelLyrics(ulong Job) : CoreCommand;
+
+    /// <summary>Deletes the lyrics AI Lyrics made for a song (asks first).</summary>
+    public sealed record DeleteMadeLyrics(SongRef Song) : CoreCommand;
+
+    /// <summary>The person allowed sending songs' audio to <paramref name="Origin"/> for this plugin.</summary>
+    public sealed record AllowAudioUpload(string Plugin, string Origin) : CoreCommand;
+
+    /// <summary>Stop Allowing: no more audio goes to <paramref name="Origin"/>.</summary>
+    public sealed record RevokeAudioUpload(string Plugin, string Origin) : CoreCommand;
+
+    public sealed record DownloadSpeechModel(string Id) : CoreCommand;
+
+    /// <summary>Stops a model download; what came so far is kept to resume.</summary>
+    public sealed record CancelSpeechModelDownload(string Id) : CoreCommand;
+
+    public sealed record DeleteSpeechModel(string Id) : CoreCommand;
+
+    // ---- Pro and updates (ADR-0021) ----
+
+    /// <summary>Activates Jellyfesh Pro with a licence key (JFP1-…); a bad one leaves Pro.LicenceError.</summary>
+    public sealed record ActivateLicence(string Key) : CoreCommand;
+
+    public sealed record RemoveLicence : CoreCommand;
+
+    /// <summary>Checks for a newer release now (direct downloads only).</summary>
+    public sealed record CheckForUpdates : CoreCommand;
+
+    // ---- Discover, details and comments (ADR-0022) ----
+
+    /// <summary>A source's Discover page ("library" for the library's), answered by <see cref="CoreEvent.Discover"/>.</summary>
+    public sealed record Discover(string Source) : CoreCommand;
+
+    /// <summary>More about an item, answered by <see cref="CoreEvent.Details"/>.</summary>
+    public sealed record Details(ItemRef Item) : CoreCommand;
+
+    /// <summary>A page of comments (null <paramref name="Page"/> is the first), answered by <see cref="CoreEvent.Comments"/>.</summary>
+    public sealed record Comments(ItemRef Item, string? Page) : CoreCommand;
 }
 
 /// <summary>What <see cref="CoreCommand.Remote"/> asks of the remote session.</summary>

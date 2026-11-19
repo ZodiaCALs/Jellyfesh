@@ -51,9 +51,12 @@ public sealed record CrossfadeSettings(bool Enabled, uint DurationMs, bool Album
 
 /// <summary>
 /// The core's <c>Settings</c> slice. The core stores it and applies playback, library and source
-/// settings; the shell applies the appearance ones. Change it by sending back a modified copy
-/// (<see cref="CoreCommand.SetSettings"/>).
+/// settings; the shell applies the appearance ones, the lyrics bar and Desktop Lyrics among them.
+/// Change it by sending back a modified copy (<see cref="CoreCommand.SetSettings"/>).
 /// </summary>
+/// <param name="CheckForUpdates">Direct downloads: check at most once a day.</param>
+/// <param name="ShowLyricsBar">The one-line lyrics bar in the player bar.</param>
+/// <param name="DesktopLyrics">The current line in a window of its own above other apps.</param>
 public sealed record AppSettings(
     AppearancePreference Appearance,
     BackdropStyle Style,
@@ -72,7 +75,10 @@ public sealed record AppSettings(
     string? OutputDevice,
     bool ResumeOnLaunch,
     bool WatchFolders,
-    bool AllowCommunityPlugins)
+    bool AllowCommunityPlugins,
+    bool CheckForUpdates = true,
+    bool ShowLyricsBar = true,
+    bool DesktopLyrics = false)
 {
     /// <summary>How see-through glass is by default: the tokens' own alphas (0 solid … 1 clearest).</summary>
     public const float DefaultTransparency = 0.5f;
@@ -95,5 +101,8 @@ public sealed record AppSettings(
         OutputDevice: null,
         ResumeOnLaunch: false,
         WatchFolders: true,
-        AllowCommunityPlugins: false);
+        AllowCommunityPlugins: false,
+        CheckForUpdates: true,
+        ShowLyricsBar: true,
+        DesktopLyrics: false);
 }

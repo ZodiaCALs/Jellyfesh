@@ -26,7 +26,11 @@ public static class FfiMapping
         ToModel(s.Devices),
         ToModel(s.Sources),
         s.Muted,
-        s.Remote is null ? M.RemoteState.Initial : ToModel(s.Remote));
+        s.Remote is null ? M.RemoteState.Initial : ToModel(s.Remote),
+        s.AiLyrics is null ? M.AiLyricsState.Initial : ToModel(s.AiLyrics),
+        s.Look is null ? M.LookState.Default : ToModel(s.Look),
+        s.Pro is null ? M.ProState.Initial : ToModel(s.Pro),
+        s.Update is null ? M.UpdateState.Initial : ToModel(s.Update));
 
     public static M.CoreEvent ToModel(F.Event e) => e switch
     {
@@ -48,6 +52,14 @@ public static class FfiMapping
         F.Event.Buffering b => new M.CoreEvent.Buffering(b.Uid, b.Value),
         F.Event.CommandFailed cf => new M.CoreEvent.CommandFailed(cf.Id, cf.Message),
         F.Event.Error err => new M.CoreEvent.Error(err.Message),
+        F.Event.AiLyrics ai => new M.CoreEvent.AiLyrics(ToModel(ai.Snapshot)),
+        F.Event.Look lk => new M.CoreEvent.Look(ToModel(lk.Snapshot)),
+        F.Event.Pro pr => new M.CoreEvent.Pro(ToModel(pr.Snapshot)),
+        F.Event.UpdateStatus up => new M.CoreEvent.UpdateStatus(ToModel(up.Snapshot)),
+        F.Event.Discover dp => new M.CoreEvent.Discover(ToModel(dp.Page)),
+        F.Event.Details dt => new M.CoreEvent.Details(ToModel(dt.Page)),
+        F.Event.Comments cm => new M.CoreEvent.Comments(ToModel(cm.Page)),
+        F.Event.Artwork aw => new M.CoreEvent.Artwork(new M.ArtworkReady(aw.Ready.Url, aw.Ready.SizePx, aw.Ready.Path)),
         _ => new M.CoreEvent.Error($"unknown core event {e.GetType().Name}"),
     };
 
@@ -114,8 +126,11 @@ public static class FfiMapping
     public static M.NowPlayingInfo ToModel(F.NowPlaying n) => new(
         n.Uid, ToModel(n.Track), n.Path, n.Title, n.Artist, n.Album, n.DurationMs,
         n.Artwork is null ? null : ToModel(n.Artwork),
-        n.Format is null ? null : new M.TrackFormat(n.Format.Codec, n.Format.SampleRate, n.Format.Channels, n.Format.DurationUs, n.Format.Gapless, n.Format.Bitrate),
-        n.Link);
+        n.Format is null ? null : new M.TrackFormat(
+            n.Format.Codec, n.Format.SampleRate, n.Format.Channels, n.Format.DurationUs, n.Format.Gapless, n.Format.Bitrate,
+            n.Format.BitsPerSample),
+        n.Link,
+        n.Quality is null ? null : ToModel(n.Quality));
 
     public static M.ArtworkRef ToModel(F.ArtworkRef a) => a switch
     {
@@ -132,6 +147,8 @@ public static class FfiMapping
         {
             F.LyricsSource.Sidecar s => new M.LyricsOrigin.Sidecar(s.Path),
             F.LyricsSource.Embedded => new M.LyricsOrigin.Embedded(),
+            F.LyricsSource.Plugin p => new M.LyricsOrigin.Plugin(p.Id),
+            F.LyricsSource.Made m => new M.LyricsOrigin.Made(m.PluginId, m.Engine),
             _ => null,
         });
 
@@ -211,14 +228,17 @@ public static class FfiMapping
         s.OutputDevice,
         s.ResumeOnLaunch,
         s.WatchFolders,
-        s.AllowCommunityPlugins);
+        s.AllowCommunityPlugins,
+        s.CheckForUpdates,
+        s.ShowLyricsBar,
+        s.DesktopLyrics);
 
     public static M.DevicesState ToModel(F.DevicesSnapshot d) => new(d.Version, List(d.Devices, ToModel), d.Selected);
 
     public static M.DeviceInfo ToModel(F.DeviceInfo d) => new(d.Id, d.Name, d.IsDefault, d.SampleRates.ToArray());
 
     public static M.SourcesState ToModel(F.SourcesSnapshot s) =>
-        new(s.Version, List(s.Plugins, ToModel), List(s.Presets, ToModel), s.AllowCommunity);
+        new(s.Version, List(s.Plugins, ToModel), List(s.Presets, ToModel), s.AllowCommunity, s.CanInstallPlugins);
 
     public static M.SourcePreset ToModel(F.SourcePreset p) => new(
         p.Id, p.Name, p.Plugin, List(p.AuthMethods, ToModel), p.NeedsAddress, p.Address, p.AddressExample, p.Account);
@@ -228,7 +248,14 @@ public static class FfiMapping
         p.Badge == F.PluginBadge.Official ? M.PluginBadge.Official : M.PluginBadge.Community,
         p.VendorPlayback, p.Capabilities.ToArray(), List(p.AuthMethods, ToModel), p.Enabled, p.Account,
         p.NeedsDisclosure, p.SettingsSchemaJson, p.SettingsJson, p.Icon, p.RemotePlayback,
-        string.IsNullOrWhiteSpace(p.Attribution) ? null : p.Attribution);
+        string.IsNullOrWhiteSpace(p.Attribution) ? null : p.Attribution,
+        p.Kind == F.PluginKind.Extension ? M.PluginKind.Extension : M.PluginKind.Source,
+        p.RequiresPro,
+        p.Permissions?.ToArray() ?? [],
+        p.Discover,
+        p.Details,
+        p.Comments,
+        string.IsNullOrWhiteSpace(p.Description) ? null : p.Description);
 
     public static M.AuthMethod ToModel(F.AuthMethod a) => a switch
     {
@@ -275,20 +302,24 @@ public static class FfiMapping
 
     public static M.SourceItem ToModel(F.SourceItem i) => new(
         i.Source,
-        i.Kind switch
-        {
-            F.ItemKind.Album => M.ItemKind.Album,
-            F.ItemKind.Artist => M.ItemKind.Artist,
-            F.ItemKind.Playlist => M.ItemKind.Playlist,
-            F.ItemKind.Folder => M.ItemKind.Folder,
-            _ => M.ItemKind.Track,
-        },
+        ToModel(i.Kind),
         i.Id, i.Title, i.Subtitle, i.Album, i.DurationMs,
         i.Artwork is null ? null : ToModel(i.Artwork),
         i.Playable, i.UnplayableReason,
         i.Track is null ? null : ToModel(i.Track),
         i.AlsoIn.ToArray(),
-        i.Link);
+        i.Link,
+        string.IsNullOrEmpty(i.ArtistId) ? null : i.ArtistId,
+        string.IsNullOrEmpty(i.AlbumId) ? null : i.AlbumId);
+
+    public static M.ItemKind ToModel(F.ItemKind k) => k switch
+    {
+        F.ItemKind.Album => M.ItemKind.Album,
+        F.ItemKind.Artist => M.ItemKind.Artist,
+        F.ItemKind.Playlist => M.ItemKind.Playlist,
+        F.ItemKind.Folder => M.ItemKind.Folder,
+        _ => M.ItemKind.Track,
+    };
 
     public static M.RemoteState ToModel(F.RemoteSnapshot r) => new(
         r.Version,
@@ -352,6 +383,224 @@ public static class FfiMapping
     public static M.LibraryStats ToModel(F.LibraryStats s) =>
         new(s.Roots, s.Tracks, s.Albums, s.Artists, s.Artwork, s.TotalDurationMs, s.TotalBytes);
 
+    // ---- v0.0.7: AI Lyrics, the look, Pro, updates ---------------------------------------------
+
+    public static M.AiLyricsState ToModel(F.AiLyricsSnapshot a) => new(
+        a.Version,
+        a.Available,
+        a.Plugin,
+        a.Plan is null ? null : new M.AiLyricsPlan(
+            a.Plan.Mode == F.AiLyricsMode.Online ? M.AiLyricsMode.Online : M.AiLyricsMode.OnDevice,
+            a.Plan.Engine, a.Plan.UploadTo, a.Plan.Automatic),
+        a.Need switch
+        {
+            F.AiLyricsNeed.Nothing => new M.AiLyricsNeed.Nothing(),
+            F.AiLyricsNeed.Pro => new M.AiLyricsNeed.Pro(),
+            F.AiLyricsNeed.SignIn => new M.AiLyricsNeed.SignIn(),
+            F.AiLyricsNeed.Consent c => new M.AiLyricsNeed.Consent(c.Origin),
+            F.AiLyricsNeed.Model m => new M.AiLyricsNeed.Model(m.Id, m.Name, m.Bytes),
+            F.AiLyricsNeed.Unavailable u => new M.AiLyricsNeed.Unavailable(u.Reason),
+            _ => new M.AiLyricsNeed.Unavailable(string.Empty),
+        },
+        List(a.Jobs, ToModel),
+        List(a.Models, m => new M.SpeechModel(m.Id, m.Name, m.Bytes, m.State switch
+        {
+            F.SpeechModelStatus.Downloading d => new M.SpeechModelStatus.Downloading(d.Fraction),
+            F.SpeechModelStatus.Ready => new M.SpeechModelStatus.Ready(),
+            F.SpeechModelStatus.Failed f => new M.SpeechModelStatus.Failed(f.Message),
+            _ => new M.SpeechModelStatus.NotDownloaded(),
+        })),
+        List(a.Consents, c => new M.AudioConsent(c.Plugin, c.Origin)));
+
+    public static M.LyricsJob ToModel(F.LyricsJob j) => new(j.Id, j.Title, j.Artist, j.Uid, j.LibraryId, j.Stage switch
+    {
+        F.LyricsJobStage.ReadingAudio => new M.LyricsJobStage.ReadingAudio(),
+        F.LyricsJobStage.Sending s => new M.LyricsJobStage.Sending(s.Origin),
+        F.LyricsJobStage.Recognising r => new M.LyricsJobStage.Recognising(r.Fraction),
+        F.LyricsJobStage.TimingWords => new M.LyricsJobStage.TimingWords(),
+        F.LyricsJobStage.Done => new M.LyricsJobStage.Done(),
+        F.LyricsJobStage.Failed f => new M.LyricsJobStage.Failed(f.Message),
+        F.LyricsJobStage.Cancelled => new M.LyricsJobStage.Cancelled(),
+        _ => new M.LyricsJobStage.Waiting(),
+    });
+
+    public static M.LookState ToModel(F.LookSnapshot l) => new(
+        l.Version,
+        l.CornerScale,
+        l.Glass,
+        l.Aurora,
+        l.Typeface switch
+        {
+            F.Typeface.Rounded => M.Typeface.Rounded,
+            F.Typeface.Serif => M.Typeface.Serif,
+            F.Typeface.Mono => M.Typeface.Mono,
+            _ => M.Typeface.System,
+        },
+        l.TextScale,
+        l.Density switch
+        {
+            F.Density.Compact => M.Density.Compact,
+            F.Density.Roomy => M.Density.Roomy,
+            _ => M.Density.Standard,
+        },
+        l.LyricsWeight switch
+        {
+            F.LyricsWeight.Regular => M.LyricsWeight.Regular,
+            F.LyricsWeight.Medium => M.LyricsWeight.Medium,
+            F.LyricsWeight.Semibold => M.LyricsWeight.Semibold,
+            F.LyricsWeight.Heavy => M.LyricsWeight.Heavy,
+            _ => M.LyricsWeight.Bold,
+        },
+        l.LyricsGlow,
+        l.LyricsHighlight switch
+        {
+            F.LyricsHighlight.Accent => new M.LyricsHighlight.Accent(),
+            F.LyricsHighlight.Custom c => new M.LyricsHighlight.Custom(c.Rgb & 0xFF_FFFF),
+            _ => new M.LyricsHighlight.Artwork(),
+        },
+        List(l.Sidebar, p => p switch
+        {
+            F.Place.Albums => M.Place.Albums,
+            F.Place.Artists => M.Place.Artists,
+            F.Place.Songs => M.Place.Songs,
+            F.Place.Playlists => M.Place.Playlists,
+            F.Place.Favourites => M.Place.Favourites,
+            F.Place.Search => M.Place.Search,
+            F.Place.Sources => M.Place.Sources,
+            _ => M.Place.Home,
+        }),
+        List(l.Home, h => h switch
+        {
+            F.HomeSection.RecentlyAdded => M.HomeSection.RecentlyAdded,
+            F.HomeSection.RecentlyPlayed => M.HomeSection.RecentlyPlayed,
+            F.HomeSection.MostPlayed => M.HomeSection.MostPlayed,
+            F.HomeSection.Favourites => M.HomeSection.Favourites,
+            _ => M.HomeSection.Summary,
+        }),
+        l.NowPlaying switch
+        {
+            F.NowPlayingLayout.Artwork => M.NowPlayingLayout.Artwork,
+            F.NowPlayingLayout.Lyrics => M.NowPlayingLayout.Lyrics,
+            _ => M.NowPlayingLayout.Stage,
+        },
+        l.MiniPlayer switch
+        {
+            F.MiniPlayerStyle.Compact => M.MiniPlayerStyle.Compact,
+            F.MiniPlayerStyle.Floating => M.MiniPlayerStyle.Floating,
+            _ => M.MiniPlayerStyle.Bar,
+        },
+        l.Customized,
+        l.Plugin);
+
+    public static M.ProState ToModel(F.ProSnapshot p) => new(
+        p.Version,
+        p.Active,
+        p.Source switch
+        {
+            F.ProSource.Preview => new M.ProSource.Preview(),
+            F.ProSource.Store s => new M.ProSource.Purchased(ToModel(s.Value)),
+            F.ProSource.Licence l => new M.ProSource.Licence(l.IdSuffix, l.IssuedAtMs),
+            _ => new M.ProSource.None(),
+        },
+        p.Preview,
+        p.LicenceError switch
+        {
+            null => null,
+            F.LicenceError.Malformed => M.LicenceError.Malformed,
+            F.LicenceError.UnknownKey => M.LicenceError.UnknownKey,
+            F.LicenceError.BadSignature => M.LicenceError.BadSignature,
+            F.LicenceError.WrongProduct => M.LicenceError.WrongProduct,
+            _ => M.LicenceError.Revoked,
+        },
+        List(p.Stores, ToModel),
+        p.LicenceKeys);
+
+    public static M.ProStore ToModel(F.Store s) => s switch
+    {
+        F.Store.AppStore => M.ProStore.AppStore,
+        F.Store.GooglePlay => M.ProStore.GooglePlay,
+        _ => M.ProStore.MicrosoftStore,
+    };
+
+    public static M.UpdateState ToModel(F.UpdateSnapshot u) => new(
+        u.Version, u.Supported, u.Checking,
+        u.Available is null ? null : new M.UpdateInfo(u.Available.Version, u.Available.Url),
+        u.LastCheckedMs, u.Auto, u.Error);
+
+    // ---- v0.0.7: Discover, details, comments ------------------------------------------------
+
+    public static M.DiscoverPage ToModel(F.DiscoverPage d) => new(
+        d.Request, d.Source,
+        List(d.Shelves, s => new M.Shelf(
+            s.Id, s.Title,
+            s.Style switch
+            {
+                F.ShelfStyle.Grid => M.ShelfStyle.Grid,
+                F.ShelfStyle.Chart => M.ShelfStyle.Chart,
+                _ => M.ShelfStyle.Row,
+            },
+            List(s.Items, ToModel), s.More)),
+        d.Error);
+
+    public static M.DetailsPage ToModel(F.DetailsPage d) => new(
+        d.Request, ToModel(d.Item), d.Title, d.Subtitle, d.Description,
+        d.Image is null ? null : ToModel(d.Image),
+        List(d.Facts, ToModel),
+        d.Technical is null ? null : new M.TechnicalInfo(
+            ToModel(d.Technical.Format), d.Technical.Container, d.Technical.FileSizeBytes, d.Technical.DurationMs,
+            d.Technical.Replaygain is null ? null : new M.ReplayGainValues(
+                d.Technical.Replaygain.TrackGainDb, d.Technical.Replaygain.TrackPeak,
+                d.Technical.Replaygain.AlbumGainDb, d.Technical.Replaygain.AlbumPeak),
+            d.Technical.Path),
+        d.CommentCount, d.Attribution, d.Error);
+
+    public static M.Fact ToModel(F.Fact f) => f.Key switch
+    {
+        F.FactKey.Version => new M.Fact(M.FactKind.Version, f.Value),
+        F.FactKey.Genre => new M.Fact(M.FactKind.Genre, f.Value),
+        F.FactKey.Language => new M.Fact(M.FactKind.Language, f.Value),
+        F.FactKey.Released => new M.Fact(M.FactKind.Released, f.Value),
+        F.FactKey.Label => new M.Fact(M.FactKind.Label, f.Value),
+        F.FactKey.Composer => new M.Fact(M.FactKind.Composer, f.Value),
+        F.FactKey.Lyricist => new M.Fact(M.FactKind.Lyricist, f.Value),
+        F.FactKey.Arranger => new M.Fact(M.FactKind.Arranger, f.Value),
+        F.FactKey.Producer => new M.Fact(M.FactKind.Producer, f.Value),
+        F.FactKey.Popularity => new M.Fact(M.FactKind.Popularity, f.Value),
+        F.FactKey.Quality => new M.Fact(M.FactKind.Quality, f.Value),
+        F.FactKey.Isrc => new M.Fact(M.FactKind.Isrc, f.Value),
+        F.FactKey.Disc => new M.Fact(M.FactKind.Disc, f.Value),
+        F.FactKey.Track => new M.Fact(M.FactKind.Track, f.Value),
+        F.FactKey.Other o => new M.Fact(M.FactKind.Other, f.Value, o.Text),
+        _ => new M.Fact(M.FactKind.Other, f.Value, string.Empty),
+    };
+
+    public static M.AudioFormat ToModel(F.AudioFormat a) => new(
+        a.Codec, a.SampleRateHz, a.BitDepth, a.Channels, a.BitrateKbps, a.Lossless,
+        a.Quality switch
+        {
+            null => null,
+            F.QualityLabel.HiResLossless => M.QualityLabel.HiResLossless,
+            F.QualityLabel.Lossless => M.QualityLabel.Lossless,
+            F.QualityLabel.High => M.QualityLabel.High,
+            _ => M.QualityLabel.Standard,
+        });
+
+    public static M.CommentsPage ToModel(F.CommentsPage c) => new(
+        c.Request, ToModel(c.Item), List(c.Hot, ToModel), List(c.Comments, ToModel), c.Total, c.Next, c.Attribution, c.Error);
+
+    public static M.CommentEntry ToModel(F.CommentEntry c) =>
+        new(c.Id, c.Author, c.Avatar is null ? null : ToModel(c.Avatar), c.Text, c.Likes, c.TimeMs, c.Replies);
+
+    public static M.ItemRef ToModel(F.ItemRef i) => i switch
+    {
+        F.ItemRef.Track t => new M.ItemRef.Track(t.Id),
+        F.ItemRef.Album a => new M.ItemRef.Album(a.Id),
+        F.ItemRef.Artist a => new M.ItemRef.Artist(a.Id),
+        F.ItemRef.File f => new M.ItemRef.File(f.Path),
+        F.ItemRef.Source s => new M.ItemRef.Source(s.Plugin, ToModel(s.ItemKind), s.Id),
+        _ => throw new ArgumentOutOfRangeException(nameof(i), i, "unknown item reference"),
+    };
+
     // ---- to the core --------------------------------------------------------------------------
 
     public static F.Command ToFfi(M.CoreCommand c) => c switch
@@ -406,6 +655,21 @@ public static class FfiMapping
         M.CoreCommand.Search s => new F.Command.Search(s.Query, ToFfi(s.Scope)),
         M.CoreCommand.Browse b => new F.Command.Browse(b.Plugin, b.Node, b.Page),
         M.CoreCommand.Remote r => new F.Command.Remote(ToFfi(r.Action)),
+        M.CoreCommand.ResetPluginSettings r => new F.Command.ResetPluginSettings(r.Plugin),
+        M.CoreCommand.MakeLyrics m => new F.Command.MakeLyrics(ToFfi(m.Song)),
+        M.CoreCommand.CancelLyrics x => new F.Command.CancelLyrics(x.Job),
+        M.CoreCommand.DeleteMadeLyrics d => new F.Command.DeleteMadeLyrics(ToFfi(d.Song)),
+        M.CoreCommand.AllowAudioUpload a => new F.Command.AllowAudioUpload(a.Plugin, a.Origin),
+        M.CoreCommand.RevokeAudioUpload r => new F.Command.RevokeAudioUpload(r.Plugin, r.Origin),
+        M.CoreCommand.DownloadSpeechModel d => new F.Command.DownloadSpeechModel(d.Id),
+        M.CoreCommand.CancelSpeechModelDownload x => new F.Command.CancelSpeechModelDownload(x.Id),
+        M.CoreCommand.DeleteSpeechModel d => new F.Command.DeleteSpeechModel(d.Id),
+        M.CoreCommand.ActivateLicence a => new F.Command.ActivateLicence(a.Key),
+        M.CoreCommand.RemoveLicence => new F.Command.RemoveLicence(),
+        M.CoreCommand.CheckForUpdates => new F.Command.CheckForUpdates(),
+        M.CoreCommand.Discover d => new F.Command.Discover(d.Source),
+        M.CoreCommand.Details d => new F.Command.Details(ToFfi(d.Item)),
+        M.CoreCommand.Comments x => new F.Command.Comments(ToFfi(x.Item), x.Page),
         _ => throw new ArgumentOutOfRangeException(nameof(c), c, "unknown command"),
     };
 
@@ -417,6 +681,40 @@ public static class FfiMapping
         M.RemoteAction.End => new F.RemoteAction.End(),
         _ => throw new ArgumentOutOfRangeException(nameof(a), a, "unknown remote action"),
     };
+
+    public static F.SongRef ToFfi(M.SongRef s) => s switch
+    {
+        M.SongRef.Library l => new F.SongRef.Library(l.Id),
+        _ => new F.SongRef.Current(),
+    };
+
+    public static F.ItemRef ToFfi(M.ItemRef i) => i switch
+    {
+        M.ItemRef.Track t => new F.ItemRef.Track(t.Id),
+        M.ItemRef.Album a => new F.ItemRef.Album(a.Id),
+        M.ItemRef.Artist a => new F.ItemRef.Artist(a.Id),
+        M.ItemRef.File f => new F.ItemRef.File(f.Path),
+        M.ItemRef.Source s => new F.ItemRef.Source(s.Plugin, ToFfi(s.Kind), s.Id),
+        _ => throw new ArgumentOutOfRangeException(nameof(i), i, "unknown item reference"),
+    };
+
+    public static F.ItemKind ToFfi(M.ItemKind k) => k switch
+    {
+        M.ItemKind.Album => F.ItemKind.Album,
+        M.ItemKind.Artist => F.ItemKind.Artist,
+        M.ItemKind.Playlist => F.ItemKind.Playlist,
+        M.ItemKind.Folder => F.ItemKind.Folder,
+        _ => F.ItemKind.Track,
+    };
+
+    public static F.StoreEntitlement ToFfi(M.StoreEntitlement e) => new(
+        e.Store switch
+        {
+            M.ProStore.AppStore => F.Store.AppStore,
+            M.ProStore.GooglePlay => F.Store.GooglePlay,
+            _ => F.Store.MicrosoftStore,
+        },
+        e.Product, e.Active, e.Transaction);
 
     public static F.TrackRef ToFfi(M.TrackRef t) => t switch
     {
@@ -434,6 +732,7 @@ public static class FfiMapping
         M.Collection.Artist a => new F.Collection.Artist(a.Id),
         M.Collection.Playlist p => new F.Collection.Playlist(p.Id),
         M.Collection.Favorites => new F.Collection.Favorites(),
+        M.Collection.Songs s => new F.Collection.Songs(ToFfi(s.Sort), s.Descending),
         M.Collection.Tracks t => new F.Collection.Tracks(List(t.Items, ToFfi)),
         M.Collection.Source s => new F.Collection.Source(s.Plugin, s.Id),
         _ => throw new ArgumentOutOfRangeException(nameof(c), c, "unknown collection"),
@@ -509,21 +808,34 @@ public static class FfiMapping
         s.OutputDevice,
         s.ResumeOnLaunch,
         s.WatchFolders,
-        s.AllowCommunityPlugins);
+        s.AllowCommunityPlugins,
+        s.CheckForUpdates,
+        s.ShowLyricsBar,
+        s.DesktopLyrics);
 
-    public static F.TrackQuery ToFfi(M.TrackQuery q) => new(
-        q.Offset, q.Limit,
-        q.Sort switch
-        {
-            M.TrackSort.Title => F.TrackSort.Title,
-            M.TrackSort.Album => F.TrackSort.Album,
-            M.TrackSort.Year => F.TrackSort.Year,
-            M.TrackSort.Duration => F.TrackSort.Duration,
-            M.TrackSort.Path => F.TrackSort.Path,
-            M.TrackSort.Added => F.TrackSort.Added,
-            _ => F.TrackSort.Artist,
-        },
-        q.Descending, q.AlbumId, q.ArtistId);
+    public static F.TrackQuery ToFfi(M.TrackQuery q) => new(q.Offset, q.Limit, ToFfi(q.Sort), q.Descending, q.AlbumId, q.ArtistId);
+
+    public static F.TrackSort ToFfi(M.TrackSort s) => s switch
+    {
+        M.TrackSort.Title => F.TrackSort.Title,
+        M.TrackSort.Album => F.TrackSort.Album,
+        M.TrackSort.Year => F.TrackSort.Year,
+        M.TrackSort.Duration => F.TrackSort.Duration,
+        M.TrackSort.Path => F.TrackSort.Path,
+        M.TrackSort.Added => F.TrackSort.Added,
+        _ => F.TrackSort.Artist,
+    };
+
+    public static M.TrackSort ToModel(F.TrackSort s) => s switch
+    {
+        F.TrackSort.Title => M.TrackSort.Title,
+        F.TrackSort.Album => M.TrackSort.Album,
+        F.TrackSort.Year => M.TrackSort.Year,
+        F.TrackSort.Duration => M.TrackSort.Duration,
+        F.TrackSort.Path => M.TrackSort.Path,
+        F.TrackSort.Added => M.TrackSort.Added,
+        _ => M.TrackSort.Artist,
+    };
 
     public static F.AlbumSort ToFfi(M.AlbumSort s) => s switch
     {

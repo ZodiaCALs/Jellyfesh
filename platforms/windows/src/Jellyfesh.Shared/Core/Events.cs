@@ -45,4 +45,25 @@ public abstract record CoreEvent
 
     /// <summary>A problem not tied to a command.</summary>
     public sealed record Error(string Message) : CoreEvent;
+
+    public sealed record AiLyrics(AiLyricsState State) : CoreEvent;
+
+    public sealed record Look(LookState State) : CoreEvent;
+
+    public sealed record Pro(ProState State) : CoreEvent;
+
+    /// <summary>The Update slice changed (the core's <c>Update</c>; Update is a member of Auth and others here).</summary>
+    public sealed record UpdateStatus(UpdateState State) : CoreEvent;
+
+    /// <summary>A Discover page, for the <see cref="CoreCommand.Discover"/> with its request id.</summary>
+    public sealed record Discover(DiscoverPage Page) : CoreEvent;
+
+    /// <summary>An item's details, for the <see cref="CoreCommand.Details"/> with its request id.</summary>
+    public sealed record Details(DetailsPage Page) : CoreEvent;
+
+    /// <summary>A page of comments, for the <see cref="CoreCommand.Comments"/> with its request id.</summary>
+    public sealed record Comments(CommentsPage Page) : CoreEvent;
+
+    /// <summary>A source picture asked for with <see cref="ICoreClient.SourceArtwork"/> is cached, or cannot be had.</summary>
+    public sealed record Artwork(ArtworkReady Ready) : CoreEvent;
 }
