@@ -1371,3 +1371,45 @@ fn a_logout_sent_just_before_quitting_still_deletes_the_secrets() {
             .any(|e| plugin_in(e, ECHO).is_some_and(|p| p.account.is_none()))
     );
 }
+
+#[test]
+fn pictures_of_items_listed_without_one_come_from_the_plugins_artwork() {
+    // The catalog lists its songs without pictures and answers `artwork` with a URL that needs
+    // a header, as Subsonic's covers do.
+    let server = catalog_server(Service {
+        hits: vec![hit("t1", "Tone", "A", 1_000)],
+        ..Service::default()
+    });
+    let env = Env::new();
+    env.plugin("catalog", &catalog_manifest(), CATALOG, &server.url());
+    let results = searched(&env, "x", SearchScope::Plugin { id: CATALOG.into() });
+    let row = find(&results[0].items, "Tone");
+    let Some(ArtworkRef::Url(reference)) = row.artwork.clone() else {
+        panic!("a picture reference: {row:?}");
+    };
+    assert!(reference.starts_with("jellyfesh-artwork://"), "{reference}");
+    assert_eq!(env.core.source_artwork(&reference, 64), None);
+    let events = wait_for(
+        &env.events,
+        Duration::from_secs(30),
+        |e| matches!(e, Event::Artwork(a) if a.url == reference),
+    );
+    let path = events
+        .iter()
+        .find_map(|e| match e {
+            Event::Artwork(a) if a.url == reference => a.path.clone(),
+            _ => None,
+        })
+        .expect("the plugin's picture");
+    assert!(path.is_file());
+    let asked = server.with_path("/artwork");
+    assert_eq!(asked.len(), 1);
+    assert_eq!(asked[0].query("id").as_deref(), Some("t1"));
+    assert_eq!(server.with_path("/art/t1.png")[0].header("x-art"), Some("1"));
+    // From the cache from now on.
+    assert_eq!(
+        env.core.source_artwork(&reference, 64).as_deref(),
+        Some(path.as_path())
+    );
+    assert_eq!(server.count("/artwork"), 1);
+}

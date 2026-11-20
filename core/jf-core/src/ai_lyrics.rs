@@ -238,6 +238,10 @@ impl AiLyrics {
         if !force && found == self.plugin && pro == self.pro {
             return false;
         }
+        if self.pro && !pro {
+            // Turning Pro off stops lyrics jobs; nothing made is deleted.
+            self.stop_all();
+        }
         self.plugin = found;
         self.pro = pro;
         self.refresh_plan();
@@ -347,6 +351,17 @@ impl AiLyrics {
             self.finish(job.info);
         }
         Ok(())
+    }
+
+    /// Stops every waiting and running job.
+    fn stop_all(&mut self) {
+        while let Some(mut job) = self.waiting.pop_front() {
+            job.info.stage = LyricsJobStage::Cancelled;
+            self.finish(job.info);
+        }
+        if let Some(job) = &self.running {
+            job.cancel.store(true, Ordering::Relaxed);
+        }
     }
 
     /// Deletes a song's made lyrics.

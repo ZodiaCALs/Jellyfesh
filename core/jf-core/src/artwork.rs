@@ -11,17 +11,24 @@
 //! oldest pictures go when the folder grows past its limit.
 //!
 //! Only pictures a plugin gave can be fetched: the URLs are remembered, with
-//! their headers, as plugin items become rows.
+//! their headers, as plugin items become rows. Items listed without a
+//! picture, from a plugin that answers `artwork` (Subsonic's covers, whose
+//! URLs would hold the sign-in, come only that way), get a reference of the
+//! core's own instead, `jellyfesh-artwork://item?plugin=…&kind=…&id=…`: the
+//! core asks the plugin's `artwork` for it and fetches what that gives, with
+//! its headers, into the same cache.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Condvar, Mutex, Weak};
+use std::time::{Duration, SystemTime};
 
-use crossbeam_channel::{Sender, unbounded};
-use jf_plugin_host::{Header, ImageRef};
+use crossbeam_channel::Sender;
+use jf_plugin_host::{CallError, Header, ImageRef, ItemKind as HostKind};
 
 use crate::actor::Msg;
+use crate::sources::Ctx;
 use crate::types::ArtworkReady;
 
 /// Pictures fetched at once.
@@ -34,10 +41,107 @@ const MAX_BYTES: u64 = 256 * 1024 * 1024;
 const CHECK_EVERY: u32 = 64;
 /// The size of Now Playing's picture.
 const NOW_PLAYING_PX: u32 = 1024;
+/// How long a plugin's `artwork` may take.
+const ARTWORK_WAIT: Duration = Duration::from_secs(25);
+/// A picture served from the cache is marked as used again after this long,
+/// so the least recently used ones go first.
+const TOUCH_AFTER: Duration = Duration::from_secs(60 * 60);
+/// The scheme of the core's references to an item's picture.
+const ITEM_SCHEME: &str = "jellyfesh-artwork";
 
 /// The URLs plugins gave pictures under, with the headers to send. Shared
 /// by the whole process: rows are made on many threads.
 static KNOWN_IMAGES: Mutex<Option<Known>> = Mutex::new(None);
+
+/// The plugins that answer `artwork`, as their rows are made.
+static COVERS: Mutex<Option<HashSet<String>>> = Mutex::new(None);
+
+/// Notes whether a plugin answers `artwork` (the plugins as last published).
+pub(crate) fn note_covers(plugin: &str, answers: bool) {
+    let mut guard = COVERS.lock().unwrap_or_else(|e| e.into_inner());
+    let covers = guard.get_or_insert_with(HashSet::new);
+    if answers {
+        covers.insert(plugin.to_owned());
+    } else {
+        covers.remove(plugin);
+    }
+}
+
+/// Whether a plugin answers `artwork`.
+pub(crate) fn covers(plugin: &str) -> bool {
+    COVERS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()
+        .is_some_and(|c| c.contains(plugin))
+}
+
+fn kind_name(kind: HostKind) -> &'static str {
+    match kind {
+        HostKind::Track => "track",
+        HostKind::Album => "album",
+        HostKind::Artist => "artist",
+        HostKind::Playlist => "playlist",
+        HostKind::Folder => "folder",
+    }
+}
+
+fn kind_of(name: &str) -> Option<HostKind> {
+    Some(match name {
+        "track" => HostKind::Track,
+        "album" => HostKind::Album,
+        "artist" => HostKind::Artist,
+        "playlist" => HostKind::Playlist,
+        "folder" => HostKind::Folder,
+        _ => return None,
+    })
+}
+
+/// The core's reference to an item's picture, which its plugin's `artwork`
+/// gives.
+pub(crate) fn item_ref(plugin: &str, kind: HostKind, id: &str) -> String {
+    let mut url = url::Url::parse(&format!("{ITEM_SCHEME}://item")).expect("a valid base");
+    url.query_pairs_mut()
+        .append_pair("plugin", plugin)
+        .append_pair("kind", kind_name(kind))
+        .append_pair("id", id);
+    url.into()
+}
+
+/// The plugin, kind and id of an item reference.
+fn parse_item_ref(text: &str) -> Option<(String, HostKind, String)> {
+    let url = url::Url::parse(text).ok()?;
+    if url.scheme() != ITEM_SCHEME {
+        return None;
+    }
+    let (mut plugin, mut kind, mut id) = (None, None, None);
+    for (key, value) in url.query_pairs() {
+        match &*key {
+            "plugin" => plugin = Some(value.into_owned()),
+            "kind" => kind = kind_of(&value),
+            "id" => id = Some(value.into_owned()),
+            _ => {}
+        }
+    }
+    Some((plugin?, kind?, id?))
+}
+
+/// The picture for a row: the one the plugin listed, or, when it listed none
+/// and answers `artwork`, the core's reference for the item.
+pub(crate) fn row_picture(
+    plugin: &str,
+    kind: HostKind,
+    id: &str,
+    listed: Option<&ImageRef>,
+) -> Option<String> {
+    match listed {
+        Some(image) => {
+            remember(image);
+            Some(image.url.clone())
+        }
+        None => covers(plugin).then(|| item_ref(plugin, kind, id)),
+    }
+}
 
 #[derive(Debug, Default)]
 struct Known {
@@ -101,8 +205,27 @@ pub(crate) fn store_now_playing(dir: &Path, url: &str, bytes: &[u8]) -> Result<P
     Ok(path)
 }
 
+/// The picture to fetch for an item reference: what the plugin's `artwork`
+/// answers for the item (passed back whole when it was listed).
+fn image_from_plugin(ctx: Option<&Ctx>, reference: &str, size_px: u32) -> Result<ImageRef, String> {
+    let (plugin, kind, id) = parse_item_ref(reference).ok_or("not a picture a source gave")?;
+    let ctx = ctx.ok_or("online sources are off")?;
+    let item = ctx.item(&plugin, &id, kind);
+    let size = jf_library::thumbnail_size(size_px);
+    let answer = ctx
+        .host
+        .artwork(&plugin, item, size)
+        .recv_timeout(ARTWORK_WAIT)
+        .unwrap_or(Err(CallError::Timeout));
+    match answer {
+        Ok(Some(image)) => Ok(image),
+        Ok(None) => Err("the source has no picture for it".into()),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 /// Fetches (or reads the kept original of) a picture and makes its JPEG.
-fn make(dir: &Path, url: &str, size_px: u32) -> Result<PathBuf, String> {
+fn make(dir: &Path, ctx: Option<&Ctx>, url: &str, size_px: u32) -> Result<PathBuf, String> {
     let path = thumbnail_path(dir, url, size_px);
     if path.is_file() {
         return Ok(path);
@@ -111,7 +234,10 @@ fn make(dir: &Path, url: &str, size_px: u32) -> Result<PathBuf, String> {
     let bytes = match std::fs::read(&original) {
         Ok(bytes) => bytes,
         Err(_) => {
-            let image = image_for(url).ok_or("not a picture a source gave")?;
+            let image = match image_for(url) {
+                Some(image) => image,
+                None => image_from_plugin(ctx, url, size_px)?,
+            };
             let bytes = crate::sources::fetch_image(&image)?;
             crate::sources::write_atomic(&original, &bytes).map_err(|e| e.to_string())?;
             bytes
@@ -119,6 +245,50 @@ fn make(dir: &Path, url: &str, size_px: u32) -> Result<PathBuf, String> {
     };
     jf_library::make_thumbnail(&bytes, size_px, &path).map_err(|e| e.to_string())?;
     Ok(path)
+}
+
+/// Marks a cached picture as used now, at most once in [`TOUCH_AFTER`].
+fn touch(path: &Path) {
+    let now = SystemTime::now();
+    let stale = std::fs::metadata(path)
+        .and_then(|m| m.modified())
+        .is_ok_and(|at| now.duration_since(at).is_ok_and(|age| age > TOUCH_AFTER));
+    if stale && let Ok(file) = std::fs::File::options().write(true).open(path) {
+        let _ = file.set_modified(now);
+    }
+}
+
+/// Requests waiting for a fetcher; the newest go first (the rows on screen).
+#[derive(Debug, Default)]
+struct Waiting {
+    jobs: Mutex<(Vec<(String, u32)>, bool)>,
+    ready: Condvar,
+}
+
+impl Waiting {
+    fn push(&self, job: (String, u32)) {
+        self.jobs.lock().unwrap_or_else(|e| e.into_inner()).0.push(job);
+        self.ready.notify_one();
+    }
+
+    /// The newest request, or `None` once the cache is gone.
+    fn pop(&self) -> Option<(String, u32)> {
+        let mut jobs = self.jobs.lock().unwrap_or_else(|e| e.into_inner());
+        loop {
+            if jobs.1 {
+                return None;
+            }
+            if let Some(job) = jobs.0.pop() {
+                return Some(job);
+            }
+            jobs = self.ready.wait(jobs).unwrap_or_else(|e| e.into_inner());
+        }
+    }
+
+    fn close(&self) {
+        self.jobs.lock().unwrap_or_else(|e| e.into_inner()).1 = true;
+        self.ready.notify_all();
+    }
 }
 
 /// Deletes the least recently made pictures while the folder is over its
@@ -166,34 +336,41 @@ fn trim(dir: &Path, max_bytes: u64) {
 pub(crate) struct Artwork {
     dir: PathBuf,
     pending: Arc<Mutex<HashSet<(String, u32)>>>,
-    jobs: Sender<(String, u32)>,
+    waiting: Arc<Waiting>,
+}
+
+impl Drop for Artwork {
+    fn drop(&mut self) {
+        self.waiting.close();
+    }
 }
 
 impl Artwork {
     /// The cache in `<cache_dir>/source-artwork`, with its fetchers, which
-    /// tell the actor when a picture is ready.
-    pub(crate) fn new(cache_dir: &Path, actor: Sender<Msg>) -> Artwork {
-        Artwork::with_limit(cache_dir, actor, MAX_BYTES)
-    }
-
-    fn with_limit(cache_dir: &Path, actor: Sender<Msg>, max_bytes: u64) -> Artwork {
+    /// ask `ctx`'s plugins for item pictures and tell the actor when a
+    /// picture is ready.
+    pub(crate) fn new(cache_dir: &Path, ctx: Option<Arc<Ctx>>, actor: Sender<Msg>) -> Artwork {
         let dir = cache_dir.join("source-artwork");
         let pending: Arc<Mutex<HashSet<(String, u32)>>> = Arc::default();
-        let (jobs, rx) = unbounded::<(String, u32)>();
+        let waiting = Arc::new(Waiting::default());
         let stored = Arc::new(AtomicU32::new(0));
+        // Weak: the context holds the shared state that holds this cache.
+        let ctx: Option<Weak<Ctx>> = ctx.as_ref().map(Arc::downgrade);
         for n in 0..WORKERS {
-            let (rx, dir, pending, actor, stored) = (
-                rx.clone(),
+            let (waiting, dir, pending, actor, stored, ctx) = (
+                waiting.clone(),
                 dir.clone(),
                 pending.clone(),
                 actor.clone(),
                 stored.clone(),
+                ctx.clone(),
             );
             let spawned = std::thread::Builder::new()
                 .name(format!("jf-artwork-{n}"))
                 .spawn(move || {
-                    for (url, size_px) in rx.iter() {
-                        let result = make(&dir, &url, size_px);
+                    while let Some((url, size_px)) = waiting.pop() {
+                        let ctx = ctx.as_ref().and_then(Weak::upgrade);
+                        let result = make(&dir, ctx.as_deref(), &url, size_px);
                         if let Err(error) = &result {
                             tracing::info!(%error, "a source picture could not be had");
                         }
@@ -208,7 +385,7 @@ impl Artwork {
                         };
                         let _ = actor.send(Msg::Artwork(ready));
                         if stored.fetch_add(1, Ordering::Relaxed) % CHECK_EVERY == CHECK_EVERY - 1 {
-                            trim(&dir, max_bytes);
+                            trim(&dir, MAX_BYTES);
                         }
                     }
                 });
@@ -216,7 +393,11 @@ impl Artwork {
                 tracing::warn!("could not start an artwork fetcher: {e}");
             }
         }
-        Artwork { dir, pending, jobs }
+        Artwork {
+            dir,
+            pending,
+            waiting,
+        }
     }
 
     /// The folder pictures are kept in.
@@ -225,11 +406,12 @@ impl Artwork {
     }
 
     /// The picture's file when it is ready; otherwise starts making it (once
-    /// for any number of requests) and returns `None`: `Event::Artwork`
-    /// follows.
+    /// for any number of requests, the newest requests first) and returns
+    /// `None`: `Event::Artwork` follows.
     pub(crate) fn get(&self, url: &str, size_px: u32) -> Option<PathBuf> {
         let path = thumbnail_path(&self.dir, url, size_px);
         if path.is_file() {
+            touch(&path);
             return Some(path);
         }
         let key = (url.to_owned(), size_px);
@@ -239,7 +421,7 @@ impl Artwork {
             .unwrap_or_else(|e| e.into_inner())
             .insert(key.clone())
         {
-            let _ = self.jobs.send(key);
+            self.waiting.push(key);
         }
         None
     }
@@ -265,6 +447,56 @@ mod tests {
         let image = image_for(url).unwrap();
         assert_eq!(image.headers[0].name, "referer");
         assert!(image_for("https://img.example.com/other.jpg").is_none());
+    }
+
+    #[test]
+    fn item_references_round_trip_and_follow_the_plugins() {
+        let reference = item_ref("org.example.covers", HostKind::Album, "al:1/2 & 3");
+        assert!(reference.starts_with("jellyfesh-artwork://item?"), "{reference}");
+        assert_eq!(
+            parse_item_ref(&reference),
+            Some(("org.example.covers".into(), HostKind::Album, "al:1/2 & 3".into()))
+        );
+        assert_eq!(parse_item_ref("https://img.example.com/a.jpg"), None);
+        assert_eq!(
+            parse_item_ref("jellyfesh-artwork://item?plugin=x&kind=nope&id=1"),
+            None
+        );
+        let listed = ImageRef {
+            url: "https://img.example.com/listed.jpg".into(),
+            headers: Vec::new(),
+            width: None,
+            height: None,
+        };
+        assert_eq!(
+            row_picture("org.example.nocovers", HostKind::Track, "t1", Some(&listed)).as_deref(),
+            Some("https://img.example.com/listed.jpg")
+        );
+        assert_eq!(
+            row_picture("org.example.nocovers", HostKind::Track, "t1", None),
+            None
+        );
+        note_covers("org.example.covers", true);
+        assert!(
+            row_picture("org.example.covers", HostKind::Track, "t1", None)
+                .is_some_and(|r| r.starts_with("jellyfesh-artwork:"))
+        );
+        note_covers("org.example.covers", false);
+        assert_eq!(
+            row_picture("org.example.covers", HostKind::Track, "t1", None),
+            None
+        );
+    }
+
+    #[test]
+    fn the_newest_request_goes_first() {
+        let waiting = Waiting::default();
+        waiting.push(("a".into(), 1));
+        waiting.push(("b".into(), 1));
+        assert_eq!(waiting.pop(), Some(("b".into(), 1)));
+        assert_eq!(waiting.pop(), Some(("a".into(), 1)));
+        waiting.close();
+        assert_eq!(waiting.pop(), None);
     }
 
     #[test]

@@ -458,9 +458,11 @@ impl Actor {
         if let Some(host) = shared.host() {
             host.set_pro(pro.active());
         }
-        let _ = shared
-            .artwork
-            .set(crate::artwork::Artwork::new(&config.cache_dir, tx.clone()));
+        let _ = shared.artwork.set(crate::artwork::Artwork::new(
+            &config.cache_dir,
+            sources.ctx(),
+            tx.clone(),
+        ));
         let speech_store = config.speech_store.clone().unwrap_or_else(|| {
             let dir = config.data_dir.join("speech-models");
             match &config.speech_model_url {

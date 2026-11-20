@@ -760,6 +760,7 @@ impl Sources {
         let mut plugins = Vec::new();
         if let Some(ctx) = &self.ctx {
             for info in ctx.host.plugins() {
+                crate::artwork::note_covers(&info.id, info.capabilities.contains(&Capability::Artwork));
                 let icon = self.icons.path(&ctx.host, &info.id, &info.version, info.has_icon);
                 plugins.push(convert::summary(
                     &info,

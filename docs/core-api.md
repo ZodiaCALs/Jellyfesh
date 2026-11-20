@@ -401,6 +401,14 @@ while scrolling; the cache (`<cache>/source-artwork/`) is bounded and evicts
 the least recently used files. Library rows keep `artwork_hash` and
 `artwork_thumbnail`.
 
+Items a source lists without a picture, from a plugin that answers
+`artwork`, carry a reference of the core's own instead,
+`jellyfesh-artwork://item?plugin=…&kind=…&id=…` (Subsonic's covers come only
+this way: their URLs would hold the sign-in). Treat it like any other source
+picture URL: `source_artwork` asks the plugin's `artwork` for the item and
+fetches what it gives, with its headers, into the same cache. Never load
+these URLs yourself.
+
 Now Playing for a source track starts with the picture it was listed with
 (`ArtworkRef::Url`, or none); once the core has fetched the song's picture
 through its plugin (its `artwork` answer, else the listed one), `NowPlaying`

@@ -469,3 +469,55 @@ fn songs_without_synced_lyrics_get_them_by_themselves() {
     assert!(until(Duration::from_secs(10), || need(&env) == AiLyricsNeed::Pro));
     assert!(env.core.snapshot().ai_lyrics.plan.is_none());
 }
+
+#[test]
+fn turning_pro_off_stops_the_jobs() {
+    let server = model_server();
+    let hears = Arc::new(Hears::default());
+    let (secret, public) = jf_licence::generate_keypair_with_id(5);
+    let key = jf_licence::issue(&secret, 5, &jf_licence::new_licence(20_409));
+    let base = format!("{}/models", server.url());
+    let recogniser = hears.clone();
+    let env = Env::with(move |c: &mut Config| {
+        c.pro = ProConfig {
+            preview: false,
+            licence_keys: vec![public],
+        };
+        c.speech = Some(recogniser as Arc<dyn Recognizer>);
+        c.speech_store = Some(ModelStore::with_models(
+            c.data_dir.join("speech-models"),
+            &base,
+            models(),
+        ));
+        c.update_url = "http://127.0.0.1:9/releases".into();
+    });
+    env.run(
+        Command::ActivateLicence { key },
+        |e| matches!(e, Event::Pro(p) if p.active),
+    );
+    env.install_with_schema("maker", &maker_manifest(), MAKER, MAKER_SCHEMA);
+    env.settings(MAKER, json!({ "mode": "on-device", "model": "base" }));
+    env.run(Command::DownloadSpeechModel { id: "base".into() }, |e| {
+        matches!(e, Event::AiLyrics(a) if a.models.iter().any(|m| m.id == "base" && m.state == SpeechModelStatus::Ready))
+    });
+    assert!(until(Duration::from_secs(20), || need(&env) == AiLyricsNeed::Nothing));
+    let music = env.dir.path().join("music");
+    std::fs::create_dir_all(&music).unwrap();
+    sine_wav(&music.join("one.wav"), 440.0, 3.0);
+    env.run(Command::AddRoot { path: music }, |e| {
+        matches!(e, Event::Scan(jf_core::ScanStatus::Finished(_)))
+    });
+    let id = env.core.tracks(&jf_core::TrackQuery::default()).unwrap()[0].id;
+    hears.stall.store(true, Ordering::SeqCst);
+    env.run(
+        Command::MakeLyrics {
+            song: SongRef::Library { id },
+        },
+        |e| matches!(e, Event::AiLyrics(a) if a.jobs.iter().any(|j| matches!(j.stage, LyricsJobStage::Recognising { .. }))),
+    );
+    env.run(
+        Command::RemoveLicence,
+        |e| matches!(e, Event::AiLyrics(a) if a.jobs.iter().all(|j| j.stage == LyricsJobStage::Cancelled)),
+    );
+    assert_eq!(need(&env), AiLyricsNeed::Pro);
+}

@@ -274,19 +274,14 @@ pub(crate) fn source_page(
     answer: Result<host::ItemDetails, CallError>,
 ) -> DetailsPage {
     let item = &source.host_item;
-    if let Some(image) = &item.artwork {
-        crate::artwork::remember(image);
-    }
+    let listed = crate::artwork::row_picture(&source.plugin, item.kind, &item.id, item.artwork.as_ref());
     let mut page = DetailsPage {
         request,
         item: source.item.clone(),
         title: item.title.clone(),
         subtitle: item.artist.clone(),
         description: None,
-        image: item
-            .artwork
-            .as_ref()
-            .map(|image| ArtworkRef::Url(image.url.clone())),
+        image: listed.map(ArtworkRef::Url),
         facts: Vec::new(),
         technical: source.technical.clone(),
         comment_count: None,
