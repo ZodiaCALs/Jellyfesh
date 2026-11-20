@@ -179,6 +179,14 @@ public sealed partial class SettingsViewModel : PageViewModel
     [ObservableProperty]
     private bool _showRomanization;
 
+    /// <summary>Show Lyrics Bar: the line being sung in the player bar.</summary>
+    [ObservableProperty]
+    private bool _showLyricsBar = true;
+
+    /// <summary>Desktop Lyrics: the line being sung in a window above other apps.</summary>
+    [ObservableProperty]
+    private bool _desktopLyrics;
+
     [ObservableProperty]
     private AppIconChoice? _selectedIcon;
 
@@ -235,10 +243,16 @@ public sealed partial class SettingsViewModel : PageViewModel
     [ObservableProperty]
     private bool _allowCommunity;
 
-    public SettingsViewModel(ShellServices services, PlayerViewModel player, Func<string, string?> iconPreview)
+    /// <summary>False in store builds: no Install from File… and no Allow Community Plugins.</summary>
+    [ObservableProperty]
+    private bool _canInstallPlugins = true;
+
+    public SettingsViewModel(ShellServices services, PlayerViewModel player, Func<string, string?> iconPreview, ProViewModel? pro = null)
         : base(services)
     {
         Player = player;
+        Pro = pro ?? new ProViewModel(services, null, null);
+        Updates = new UpdatesViewModel(services);
         SignIns = new SourceSignIns(services);
         SignIns.Requested += flow => SignInRequested?.Invoke(flow);
         Icons.Add(new AppIconChoice(AppIcons.Automatic, services.L.Get("Icon_Automatic"), iconPreview(AppIcons.Automatic), true));
@@ -287,7 +301,23 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     public ObservableCollection<FolderItem> Folders { get; } = [];
 
+    /// <summary>The installed sources (Settings › Sources › Installed).</summary>
     public ObservableCollection<PluginViewModel> Plugins { get; } = [];
+
+    /// <summary>The installed extensions (Settings › Extensions): AI Lyrics, Customize and others.</summary>
+    public ObservableCollection<ExtensionViewModel> Extensions { get; } = [];
+
+    /// <summary>Jellyfesh Pro (Settings › Extensions, and the Pro sheet).</summary>
+    public ProViewModel Pro { get; }
+
+    /// <summary>Check for Updates (About, direct downloads).</summary>
+    public UpdatesViewModel Updates { get; }
+
+    /// <summary>The Customize… row's Pro badge: Customize is part of Pro.</summary>
+    public bool CustomizeNeedsPro => !Pro.IsActive;
+
+    /// <summary>Raised by Customize… to show Settings › Extensions.</summary>
+    public event Action? ExtensionsRequested;
 
     /// <summary>The services Add a Source offers (SourcesState.Presets), in the core's order; empty hides the section.</summary>
     public ObservableCollection<SourcePresetViewModel> SourcePresets { get; } = [];
@@ -340,6 +370,12 @@ public sealed partial class SettingsViewModel : PageViewModel
         if (changes.HasFlag(SliceChange.Settings) || changes.HasFlag(SliceChange.Sources) || changes.HasFlag(SliceChange.Scan))
         {
             Apply(state);
+        }
+        else if ((changes & (SliceChange.Pro | SliceChange.AiLyrics | SliceChange.Update)) != 0)
+        {
+            SyncPlugins(state);
+            Updates.Update(state.Update, state.Settings);
+            OnPropertyChanged(nameof(CustomizeNeedsPro));
         }
 
         if (changes.HasFlag(SliceChange.Scan) && !state.Scanning)
@@ -442,6 +478,14 @@ public sealed partial class SettingsViewModel : PageViewModel
     partial void OnShowTranslationChanged(bool value) => Change(s => s with { ShowTranslation = value });
 
     partial void OnShowRomanizationChanged(bool value) => Change(s => s with { ShowRomanization = value });
+
+    partial void OnShowLyricsBarChanged(bool value) => Change(s => s with { ShowLyricsBar = value });
+
+    partial void OnDesktopLyricsChanged(bool value) => Change(s => s with { DesktopLyrics = value });
+
+    /// <summary>Customize…: Settings › Extensions, where Customize's settings are.</summary>
+    [RelayCommand]
+    private void OpenCustomize() => ExtensionsRequested?.Invoke();
 
     partial void OnSelectedIconChanged(AppIconChoice? value)
     {
@@ -764,6 +808,9 @@ public sealed partial class SettingsViewModel : PageViewModel
             SelectedIcon = Icons.FirstOrDefault(i => i.Id == s.AppIcon) ?? Icons[0];
             ShowTranslation = s.ShowTranslation;
             ShowRomanization = s.ShowRomanization;
+            ShowLyricsBar = s.ShowLyricsBar;
+            DesktopLyrics = s.DesktopLyrics;
+            CanInstallPlugins = state.Sources.CanInstallPlugins;
             ResumeOnLaunch = s.ResumeOnLaunch;
             WatchFolders = s.WatchFolders;
             AllowCommunity = s.AllowCommunityPlugins;
@@ -785,8 +832,9 @@ public sealed partial class SettingsViewModel : PageViewModel
             }
 
             UpdatePresetChoice();
-            SyncPlugins(state.Sources);
+            SyncPlugins(state);
             SourceSignIns.Sync(SourcePresets, state.Sources, S.L);
+            Updates.Update(state.Update, s);
         }
         finally
         {
@@ -796,15 +844,25 @@ public sealed partial class SettingsViewModel : PageViewModel
         UpdateScan(S.Hub.ScanProgress);
     }
 
-    private void SyncPlugins(SourcesState sources)
+    /// <summary>Sources under Sources, extensions (AI Lyrics, Customize) under Extensions, each in the core's order.</summary>
+    private void SyncPlugins(CoreSnapshot state)
     {
         var byId = Plugins.ToDictionary(p => p.Id);
         Plugins.Clear();
-        foreach (var info in sources.Plugins)
+        foreach (var info in state.Sources.Sources)
         {
             var vm = byId.TryGetValue(info.Id, out var existing) ? existing : new PluginViewModel(S, this);
             vm.Update(info);
             Plugins.Add(vm);
+        }
+
+        var extensions = Extensions.ToDictionary(e => e.Plugin.Id);
+        Extensions.Clear();
+        foreach (var info in state.Sources.Extensions)
+        {
+            var vm = extensions.TryGetValue(info.Id, out var existing) ? existing : new ExtensionViewModel(S, new PluginViewModel(S, this));
+            vm.Update(info, state);
+            Extensions.Add(vm);
         }
     }
 }
@@ -829,6 +887,10 @@ public sealed class SignInAction(SignInMethodChoice choice, Action start)
 public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel owner) : ObservableObject
 {
     private bool _syncing;
+
+    /// <summary>The plugin and version the schema in the app's language was asked for, and the answer.</summary>
+    private (string Id, string Version, string Language)? _localizedFor;
+    private string? _localizedSchema;
 
     [ObservableProperty]
     private bool _isEnabled;
@@ -879,10 +941,34 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
         _syncing = true;
         Info = info;
         IsEnabled = info.Enabled;
-        Form = PluginSettingsForm.Create(info.SettingsSchemaJson, info.SettingsJson);
+        var language = s.L.LanguageTag();
+        var key = (info.Id, info.Version, language);
+        var localized = _localizedFor == key ? _localizedSchema : null;
+        Form = PluginSettingsForm.Create(localized ?? info.SettingsSchemaJson, info.SettingsJson);
         SignInActions = info.AuthMethods.Select(m => new SignInAction(SignInMethodChoice.For(m, s.L), () => SignIn(m))).ToArray();
         _syncing = false;
         OnPropertyChanged(string.Empty);
+        if (_localizedFor != key && language != "en")
+        {
+            _ = LocalizeAsync(key);
+        }
+    }
+
+    /// <summary>
+    /// The settings in the app's language (localized_settings_schema, API 1.2), English where the
+    /// plugin has no word: asked once per plugin version, then the form is built from it.
+    /// </summary>
+    private async Task LocalizeAsync((string Id, string Version, string Language) key)
+    {
+        _localizedFor = key;
+        _localizedSchema = null;
+        var schema = await s.QueryAsync(c => c.LocalizedSettingsSchema(key.Id, key.Language));
+        if (schema.IsOk && schema.Value is { Length: > 0 } text && _localizedFor == key && Info is { } info && info.Id == key.Id)
+        {
+            _localizedSchema = text;
+            Form = PluginSettingsForm.Create(text, info.SettingsJson);
+            OnPropertyChanged(nameof(HasSettings));
+        }
     }
 
     partial void OnIsEnabledChanged(bool value)

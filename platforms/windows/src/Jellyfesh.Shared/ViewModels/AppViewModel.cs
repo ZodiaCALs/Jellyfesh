@@ -49,7 +49,9 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         IShellPlatform platform,
         IDrawingTime time,
         IMonotonicClock clock,
-        IOneShotTimer timer)
+        IOneShotTimer timer,
+        IProStore? store = null,
+        AboutInfo.Links? links = null)
     {
         var hub = new CoreHub(core, ui);
         var ticker = new PlaybackTicker(time.CreateClock(), clock, timer);
@@ -57,6 +59,8 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         Player = new PlayerViewModel(Services);
         Queue = new QueueViewModel(Services);
         Lyrics = new LyricsPresenter(time);
+        Pro = new ProViewModel(Services, store, links);
+        Links = links;
         ticker.Attach(Lyrics);
     }
 
@@ -67,6 +71,12 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
     public QueueViewModel Queue { get; }
 
     public LyricsPresenter Lyrics { get; }
+
+    /// <summary>Jellyfesh Pro: the Pro sheet and Settings › Extensions show it.</summary>
+    public ProViewModel Pro { get; }
+
+    /// <summary>The website's pages (About, the legal links), when the build knows the website.</summary>
+    public AboutInfo.Links? Links { get; }
 
     public NotificationsViewModel Notifications => Services.Notifications;
 
@@ -113,12 +123,17 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
     /// <summary>A page of a source's catalogue: its top level, a folder, an artist, an album or a playlist.</summary>
     public SourceBrowseViewModel CreateSourceBrowse(SourceTarget target) => new(Services, target);
 
-    public SettingsViewModel CreateSettings(Func<string, string?> iconPreview) => new(Services, Player, iconPreview);
+    public SettingsViewModel CreateSettings(Func<string, string?> iconPreview) => new(Services, Player, iconPreview, Pro);
 
     private void OnChanged(SliceChange changes)
     {
         var state = Services.Hub.State;
         Player.OnSlices(changes, state);
+        if (changes.HasFlag(SliceChange.Pro))
+        {
+            Pro.Update(state.Pro);
+        }
+
         if (changes.HasFlag(SliceChange.Queue))
         {
             Queue.OnQueue(state.Queue);

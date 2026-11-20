@@ -71,6 +71,9 @@
   <data name="Action_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
+  <data name="Action_CancelButton.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
   <data name="Action_Close" xml:space="preserve">
     <value>Close</value>
   </data>
@@ -94,6 +97,9 @@
   </data>
   <data name="Action_Uninstall" xml:space="preserve">
     <value>Uninstall</value>
+  </data>
+  <data name="AiLyrics_KeyAdded" xml:space="preserve">
+    <value>API Key Added</value>
   </data>
   <data name="Album_ArtistYear" xml:space="preserve">
     <value>{0} · {1}</value>
@@ -134,11 +140,23 @@
   <data name="Appearance_CustomHue.Text" xml:space="preserve">
     <value>Custom</value>
   </data>
+  <data name="Appearance_Customize.Text" xml:space="preserve">
+    <value>Customize…</value>
+  </data>
+  <data name="Appearance_CustomizeHint.Text" xml:space="preserve">
+    <value>Corners, glass, type, lyrics style and layout.</value>
+  </data>
   <data name="Appearance_Dark.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Dark</value>
   </data>
   <data name="Appearance_DarkLabel.Text" xml:space="preserve">
     <value>Dark</value>
+  </data>
+  <data name="Appearance_DesktopLyrics.Header" xml:space="preserve">
+    <value>Desktop Lyrics</value>
+  </data>
+  <data name="Appearance_DesktopLyricsHint.Text" xml:space="preserve">
+    <value>The line being sung and the next one, in a window that stays above other apps.</value>
   </data>
   <data name="Appearance_Hue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Hue</value>
@@ -178,6 +196,12 @@
   </data>
   <data name="Appearance_LyricsAlignChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Lyrics Alignment</value>
+  </data>
+  <data name="Appearance_LyricsBar.Header" xml:space="preserve">
+    <value>Show Lyrics Bar</value>
+  </data>
+  <data name="Appearance_LyricsBarHint.Text" xml:space="preserve">
+    <value>The line being sung, under the song's title in the player bar.</value>
   </data>
   <data name="Appearance_LyricsCentre.Content" xml:space="preserve">
     <value>Centre</value>
@@ -347,6 +371,12 @@
   <data name="Connect_Title" xml:space="preserve">
     <value>Connect to {0}</value>
   </data>
+  <data name="Consents_StopAllowing.Content" xml:space="preserve">
+    <value>Stop Allowing</value>
+  </data>
+  <data name="Consents_Title.Text" xml:space="preserve">
+    <value>Sending Audio</value>
+  </data>
   <data name="Count_Albums_One" xml:space="preserve">
     <value>{0} album</value>
   </data>
@@ -403,6 +433,21 @@
   </data>
   <data name="Error_Query" xml:space="preserve">
     <value>Couldn't Load This</value>
+  </data>
+  <data name="Extensions_Install.Content" xml:space="preserve">
+    <value>Install from File…</value>
+  </data>
+  <data name="Extensions_Installed.Text" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="Extensions_None.Text" xml:space="preserve">
+    <value>No Extensions Installed</value>
+  </data>
+  <data name="Extensions_NoneHint.Text" xml:space="preserve">
+    <value>AI Lyrics and Customize come with Jellyfesh; others install from a .jfpkg file.</value>
+  </data>
+  <data name="Extensions_Reset.Content" xml:space="preserve">
+    <value>Reset to Defaults</value>
   </data>
   <data name="Favorites_Empty.Text" xml:space="preserve">
     <value>Songs you mark with the heart appear here.</value>
@@ -506,6 +551,30 @@
   <data name="Kind_Track" xml:space="preserve">
     <value>Song</value>
   </data>
+  <data name="Language_Tag" xml:space="preserve">
+    <value>en</value>
+  </data>
+  <data name="Legal_LicenceAgreement.Content" xml:space="preserve">
+    <value>Licence Agreement</value>
+  </data>
+  <data name="Legal_LicenceAgreementAbout.Content" xml:space="preserve">
+    <value>Licence Agreement</value>
+  </data>
+  <data name="Legal_LicenceAgreementLabel" xml:space="preserve">
+    <value>Licence Agreement</value>
+  </data>
+  <data name="Legal_PrivacyPolicy.Content" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="Legal_PrivacyPolicyAbout.Content" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="Legal_PrivacyPolicyLabel" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="Legal_TermsOfSale.Content" xml:space="preserve">
+    <value>Terms of Sale</value>
+  </data>
   <data name="Library_AddFolder.Content" xml:space="preserve">
     <value>Add Folder…</value>
   </data>
@@ -556,6 +625,27 @@
   </data>
   <data name="Library_WatchTitle.Text" xml:space="preserve">
     <value>Watch Folders</value>
+  </data>
+  <data name="Licence_Activate" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="Licence_Invalid" xml:space="preserve">
+    <value>This licence key isn't valid.</value>
+  </data>
+  <data name="Licence_Malformed" xml:space="preserve">
+    <value>That doesn't look like a Jellyfesh licence key.</value>
+  </data>
+  <data name="Licence_Placeholder" xml:space="preserve">
+    <value>JFP1-…</value>
+  </data>
+  <data name="Licence_Revoked" xml:space="preserve">
+    <value>This licence key has been withdrawn.</value>
+  </data>
+  <data name="Licence_Title" xml:space="preserve">
+    <value>Enter Licence Key</value>
+  </data>
+  <data name="Licence_WrongProduct" xml:space="preserve">
+    <value>This key is for another product.</value>
   </data>
   <data name="Link_OpenIn" xml:space="preserve">
     <value>Open in {0}</value>
@@ -637,6 +727,30 @@
   </data>
   <data name="Mini_Open.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Open Now Playing</value>
+  </data>
+  <data name="Models_Delete.Content" xml:space="preserve">
+    <value>Delete…</value>
+  </data>
+  <data name="Models_DeleteBody" xml:space="preserve">
+    <value>You can download it again.</value>
+  </data>
+  <data name="Models_DeleteTitle" xml:space="preserve">
+    <value>Delete the {0} Model?</value>
+  </data>
+  <data name="Models_Download.Content" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="Models_Downloading" xml:space="preserve">
+    <value>Downloading… {0}</value>
+  </data>
+  <data name="Models_NameSize" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Models_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Models_Title.Text" xml:space="preserve">
+    <value>On-Device Models</value>
   </data>
   <data name="More_AddToPlaylist.Text" xml:space="preserve">
     <value>Add to Playlist…</value>
@@ -956,6 +1070,66 @@
   <data name="Playlists_Title.Text" xml:space="preserve">
     <value>Playlists</value>
   </data>
+  <data name="Pro_Badge.Text" xml:space="preserve">
+    <value>Pro</value>
+  </data>
+  <data name="Pro_Buy" xml:space="preserve">
+    <value>Buy Jellyfesh Pro – {0}</value>
+  </data>
+  <data name="Pro_BuyNoPrice" xml:space="preserve">
+    <value>Buy Jellyfesh Pro</value>
+  </data>
+  <data name="Pro_EnterKey.Content" xml:space="preserve">
+    <value>Enter Licence Key…</value>
+  </data>
+  <data name="Pro_EnterKeyLabel" xml:space="preserve">
+    <value>Enter Licence Key…</value>
+  </data>
+  <data name="Pro_Inactive" xml:space="preserve">
+    <value>AI Lyrics and Customize are part of Jellyfesh Pro.</value>
+  </data>
+  <data name="Pro_Licence" xml:space="preserve">
+    <value>Jellyfesh Pro · Licence …{0}</value>
+  </data>
+  <data name="Pro_NotNow" xml:space="preserve">
+    <value>Not Now</value>
+  </data>
+  <data name="Pro_Pitch" xml:space="preserve">
+    <value>AI Lyrics makes synced lyrics for any song. Customize makes Jellyfesh yours: corners, glass, type, lyrics and layout.</value>
+  </data>
+  <data name="Pro_Preview" xml:space="preserve">
+    <value>Pro features are free during the public beta.</value>
+  </data>
+  <data name="Pro_Purchased" xml:space="preserve">
+    <value>Jellyfesh Pro · Purchased</value>
+  </data>
+  <data name="Pro_RemoveAction" xml:space="preserve">
+    <value>Remove Licence</value>
+  </data>
+  <data name="Pro_RemoveBody" xml:space="preserve">
+    <value>Pro features stop until you enter a key or buy Jellyfesh Pro.</value>
+  </data>
+  <data name="Pro_RemoveLicence.Content" xml:space="preserve">
+    <value>Remove Licence…</value>
+  </data>
+  <data name="Pro_RemoveTitle" xml:space="preserve">
+    <value>Remove the Licence Key?</value>
+  </data>
+  <data name="Pro_Restore.Content" xml:space="preserve">
+    <value>Restore Purchases</value>
+  </data>
+  <data name="Pro_RestoreLabel" xml:space="preserve">
+    <value>Restore Purchases</value>
+  </data>
+  <data name="Pro_StoreFailed" xml:space="preserve">
+    <value>The Microsoft Store could not complete the purchase. Try again later.</value>
+  </data>
+  <data name="Pro_Title" xml:space="preserve">
+    <value>Jellyfesh Pro</value>
+  </data>
+  <data name="Pro_Title.Text" xml:space="preserve">
+    <value>Jellyfesh Pro</value>
+  </data>
   <data name="Queue_Clear.Content" xml:space="preserve">
     <value>Clear Queue</value>
   </data>
@@ -1070,8 +1244,26 @@
   <data name="Settings_Appearance.Text" xml:space="preserve">
     <value>Appearance</value>
   </data>
+  <data name="Settings_Extensions.Text" xml:space="preserve">
+    <value>Extensions</value>
+  </data>
   <data name="Settings_Library.Text" xml:space="preserve">
     <value>Library</value>
+  </data>
+  <data name="Settings_MoveDown.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Move Down</value>
+  </data>
+  <data name="Settings_MoveDown.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Move Down</value>
+  </data>
+  <data name="Settings_MoveUp.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Move Up</value>
+  </data>
+  <data name="Settings_MoveUp.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Move Up</value>
+  </data>
+  <data name="Settings_NotAColour" xml:space="preserve">
+    <value>Enter a colour as #RRGGBB.</value>
   </data>
   <data name="Settings_NotANumber" xml:space="preserve">
     <value>Enter a number.</value>
@@ -1150,6 +1342,12 @@
   </data>
   <data name="SignIn_WaitingApproval.Text" xml:space="preserve">
     <value>Waiting for approval…</value>
+  </data>
+  <data name="Size_GB" xml:space="preserve">
+    <value>{0} GB</value>
+  </data>
+  <data name="Size_MB" xml:space="preserve">
+    <value>{0} MB</value>
   </data>
   <data name="Songs_Empty.Text" xml:space="preserve">
     <value>Add a music folder to see your songs here.</value>
@@ -1330,5 +1528,20 @@
   </data>
   <data name="Track_Unplayable" xml:space="preserve">
     <value>Not available here</value>
+  </data>
+  <data name="Update_Auto.Header" xml:space="preserve">
+    <value>Check for Updates Automatically</value>
+  </data>
+  <data name="Update_Available" xml:space="preserve">
+    <value>Jellyfesh {0} Is Available</value>
+  </data>
+  <data name="Update_Check.Content" xml:space="preserve">
+    <value>Check for Updates</value>
+  </data>
+  <data name="Update_Title.Text" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="Update_ViewRelease.Content" xml:space="preserve">
+    <value>View Release</value>
   </data>
 </root>

@@ -27,6 +27,13 @@ public static class LocalizerExtensions
     /// </summary>
     public static string Plural(this ILocalizer l, string key, long count) =>
         string.Format(l.Culture, l.Get(count == 1 ? key + "_One" : key + "_Other"), count.ToString("N0", l.Culture));
+
+    /// <summary>
+    /// The language the app's words are in, as a BCP 47 tag (en, zh-Hans, zh-Hant, ja): the
+    /// strings' own Language_Tag, so plugins' settings follow the language the app shows.
+    /// </summary>
+    public static string LanguageTag(this ILocalizer l) =>
+        l.Get("Language_Tag") is { Length: > 0 } tag && tag != "Language_Tag" ? tag : "en";
 }
 
 /// <summary>Returns keys (and arguments) as they are: for tests and before resources load.</summary>

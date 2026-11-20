@@ -13,8 +13,18 @@ public static class AboutInfo
     /// <summary>The page the website publishes the third-party licences on (tools/release/build_site.py).</summary>
     public const string NoticesPage = "THIRD_PARTY_NOTICES.html";
 
-    /// <summary>The website and its licences page.</summary>
-    public sealed record Links(Uri Website, Uri Licences);
+    /// <summary>
+    /// The website, its third-party licences page, and the legal pages it publishes (legal/README.md):
+    /// the Licence Agreement, the Privacy Policy and the Terms of Sale.
+    /// </summary>
+    public sealed record Links(Uri Website, Uri Licences)
+    {
+        public Uri LicenceAgreement => new(Website, "legal/eula.html");
+
+        public Uri PrivacyPolicy => new(Website, "legal/privacy.html");
+
+        public Uri TermsOfSale => new(Website, "legal/terms-of-sale.html");
+    }
 
     /// <summary>
     /// The links for the address the build gave (the JfWebsite assembly metadata), with a slash added at
