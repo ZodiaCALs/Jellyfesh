@@ -1,14 +1,99 @@
-# The macOS app (v0.0.6)
+# The macOS app (v0.0.7)
 
 SwiftUI on macOS 14.2 and later, over the Rust core through the UniFFI bindings
 ([`ffi.md`](ffi.md)). The app holds no business logic (ADR-0001): it shows the
 core's slices and sends commands; sorting, filtering, matching, persistence and
 networking stay in the core.
 
-**Status: written without a Swift toolchain.** Nothing in `platforms/macos` has
-been compiled yet; the first CI build on a `macos-15` runner is its first
-compile. The names it assumes from the generated bindings are listed below so
-they can be checked quickly.
+**Status: written without a Swift toolchain.** CI's "macOS app" job on a
+`macos-15` runner is where it compiles and its tests run. The names it assumes
+from the generated bindings are listed below so they can be checked quickly.
+
+## v0.0.7: Pro, AI Lyrics, Customize, Discover and the lyrics bar
+
+Built on the core's v0.0.7 contract ([`core-api.md`](core-api.md)); the app
+decides nothing the core decides.
+
+* **Distribution.** `JF_DISTRIBUTION` reaches the app as the Info.plist key
+  `JFDistribution` and the core as `CoreConfig.distribution`
+  (`Support/Distribution.swift`). Builds that may not install plugins (the Mac
+  App Store's, `SourcesSnapshot.canInstallPlugins` false) show neither Install
+  from File… (Settings and the File menu) nor Allow Community Plugins. The App
+  Store build is sandboxed: a music folder chosen in the open panel gets a
+  security-scoped bookmark, resolved and held open at launch before the core
+  opens the library; a folder that moved is passed to the core at its new path
+  (`Platform/FolderAccess.swift`, behind `FolderBookmarks`).
+* **Covers through the core.** Every source picture goes through
+  `source_artwork(url, size_px)`: a path is loaded, `nil` waits for
+  `Event::Artwork` (at most a minute), a picture that cannot be had stops being
+  asked for (`Support/ArtworkLoader.swift`).
+* **Songs** plays and shuffles `Collection::Songs` in the page's order.
+* **Lyrics, word by word.** `LyricsTimeline.bar(atMs:)` ports the core's timing
+  helper and replays `tests/contract/lyrics-bar.json` within 1e-6. The player
+  bar shows the line being sung under the title (Show Lyrics Bar), its words
+  filling in the highlight colour, with its translation when Show Translations
+  is on; Now Playing's sweep takes each word's progress from the same helper.
+  **Desktop Lyrics** is a borderless non-activating `NSPanel` at the floating
+  level, on every Space and beside full-screen apps: the line being sung and
+  the next one, Lock and Close on hover; locked, it ignores mouse events and
+  View › Unlock Desktop Lyrics (or Now Playing's More menu) unlocks it
+  (`Platform/DesktopLyricsWindow.swift`, `Stores/DesktopLyricsStore.swift`
+  behind `DesktopLyricsHost`). The panel keeps its frame; the lock is kept in
+  the defaults.
+* **The look (ADR-0020).** `Design/Look.swift` turns the `Look` slice into
+  `\.look`: radii × the corner scale (artwork, floating glass, surfaces,
+  rows), the glass scaling the Transparency setting (a look without glass is
+  solid), the aurora's strength, the typeface (SF, SF Rounded, New York, SF
+  Mono) and text scale for type roles and the main window's text, density for
+  page margins, grids and rows, the lyrics' weight, glow and highlight, the
+  sidebar's places and Home's sections in order (Home gains Favourites), Now
+  Playing's Stage, Artwork and Lyrics layouts, and the mini-player as Bar,
+  Compact or Floating. While the look is not customized every value is
+  Luminous's, so the app draws as in v0.0.6.
+* **Settings › Extensions.** Jellyfesh Pro (where it comes from; Buy Jellyfesh
+  Pro – {price} and Restore Purchases in the App Store build; Enter Licence
+  Key… where keys work; Remove Licence… asked first; the Licence Agreement,
+  Privacy Policy and Terms of Sale), then each extension with its switch,
+  account ("API Key Added"), settings and version. AI Lyrics adds its
+  On-Device Models (Download, Cancel, Delete… asked first) and Sending Audio
+  (Stop Allowing); appearance plugins add Reset to Defaults. Plugin settings
+  come from the core's localised schema in the app's language and render
+  schema profile 1.2: sliders, colour wells, ordered checklists (with Move Up
+  and Move Down) and `x-jf-group` headings (`Support/SchemaForm.swift`,
+  `Views/Settings/PluginSettingsForm.swift`). Appearance ends with Customize….
+* **Jellyfesh Pro (ADR-0021).** Any Pro action while Pro is inactive opens the
+  Pro sheet in the window that asked; Enter Licence Key shows the core's
+  reason for a refused key. In the App Store build StoreKit 2 loads and buys
+  `org.jellyfesh.pro`, restores with `AppStore.sync()`, and reports verified
+  transactions from `Transaction.currentEntitlements` and
+  `Transaction.updates` with `setStoreEntitlement`
+  (`Platform/StoreKitPurchases.swift`, behind `ProPurchasing`).
+* **AI Lyrics (ADR-0019).** The Lyrics pane offers Create Synced Lyrics (Time
+  These Lyrics under plain lyrics) and what comes first: the model to
+  download, the API key to add, or the reason. A job shows its stage, a
+  progress bar and Cancel; a failed one says why with Try Again. Made lyrics
+  end with "Made by AI Lyrics · {engine}"; Now Playing's More menu has Make
+  Again and Delete Made Lyrics (asked first); the song menu has Create Synced
+  Lyrics for library songs; audio leaves only after "Send This Song to
+  {origin}?" is allowed (`Views/NowPlaying/LyricsMaking.swift`).
+* **Discover.** Choosing a source opens its Discover page: the core's shelves
+  as rows, grids or numbered charts, See All, Browse in the header, grey
+  shelves while loading and Try Again after a failure
+  (`Views/Sources/DiscoverView.swift`). The library's Discover is Home.
+* **A source's albums and artists.** Go to Album and Go to Artist for a
+  source's song open the source's pages (Browse with the item, Play and
+  Shuffle through `Collection::Source`), with the source's picture and its
+  notes or biography from `Details` where the plugin describes items.
+* **Get Info** from the song menu and the album and artist More menus: About
+  This Song and Audio (Quality, Format, Bitrate, Size, ReplayGain, File or
+  Source), or an album's or artist's picture, notes and facts
+  (`Support/DetailsRows.swift`, `Views/Common/GetInfoSheet.swift`). Now
+  Playing's Info pane shows the same rows with the format being decoded.
+* **Comments.** For sources that show comments, Now Playing has a Comments
+  pane: "Comments from {Service}", Popular, then Latest a page at a time.
+* **About** adds the Licence Agreement and Privacy Policy, and in direct
+  downloads Check for Updates, Check for Updates Automatically and
+  "Jellyfesh {version} Is Available" with View Release.
 
 ## The parity pass (v0.0.7, on the v0.0.6 core API)
 
@@ -401,7 +486,12 @@ code and QR steps, credits and "Also in …"), browse (song numbers, when every
 page is in, when a container plays) and queue stores on `FakeCoreClient`; the
 sort menus' starting direction; JSON, schema forms, sign-in forms, About's links
 and version, lyric layout, schedules, event batching, the Dock icon and
-formatting; the swatch names; the v0.0.4 design math
+formatting; the swatch names; v0.0.7's stores and rules (Pro and its App Store side,
+licence keys, AI Lyrics' steps, updates, answers by request, Discover, comments,
+covers through the core, Get Info's rows, schema profile 1.2, extensions and
+localised schemas, the look and its layouts, Desktop Lyrics' store and window
+frame, folder bookmarks, the build flags, and `tests/contract/lyrics-bar.json`);
+the v0.0.4 design math
 (`DesignTests.swift`: seek geometry, Now Playing motion and the cascade, swatches
 and the OKLCH port against `design/tokens.json`, the transparency look, the new
 settings); and the shared contract tests (`platforms/shared/swift/Tests`, which replay
@@ -466,6 +556,15 @@ message instead; `import JellyfeshFFIFFI` is behind `#if canImport`, so a wrong
 include path shows up as missing `RustBuffer` declarations rather than a
 missing module.
 
+**v0.0.7 additions** (checked against `Generated/JellyfeshFFI.swift` generated after the core's
+M3, 432d68f): `CoreConfig(dataDir:cacheDir:output:distribution:)` and `Distribution`;
+`JellyfeshCore.sourceArtwork(url:sizePx:)`, `localizedSettingsSchema(plugin:language:)`,
+`setStoreEntitlement(entitlement:)`; the free function `lyricsBar(timeline:tMs:)` (ported,
+not called); `Snapshot.aiLyrics`/`look`/`pro`/`update` and their events, `Event.discover`,
+`.details`, `.comments`, `.artwork`; `ItemRef.source(plugin:itemKind:id:)`; `PluginKind.` `` `extension` ``;
+`SourcesSnapshot.canInstallPlugins`, `ProSnapshot.licenceKeys`, `SourceItem.artistId`/`albumId`;
+`Settings.checkForUpdates`/`showLyricsBar`/`desktopLyrics`; `NowPlaying.quality`.
+
 **v0.0.6 additions** (checked against `Generated/JellyfeshFFI.swift` from this revision):
 `SourceItem.link`, `NowPlaying.link`, `PluginSummary.remotePlayback`/`attribution`,
 `Snapshot.remote`, `Event.remote(snapshot:)`, `Command.remote(action:)` with
@@ -481,9 +580,12 @@ missing module.
 
 ## Known gaps
 
-* Artwork URLs from sources are not fetched (networking stays in the core);
-  those rows show a placeholder until the core hands out file paths. That
-  includes a remote session's track and Apple Music's results.
+* Apple Music's results show placeholders: their pictures do not come
+  through the core's cache.
+* v0.0.7: StoreKit has not met App Store Connect yet (the product, the
+  sandbox and Ask to Buy are untested); Desktop Lyrics is not resizable;
+  ordered checklists reorder with buttons, not by dragging; the Settings
+  window's own forms keep the system's type rather than the look's.
 * Apple Music needs a paid team, an App ID with the MusicKit App Service and a
   provisioning profile; whether a Developer ID build can use MusicKit is open
   (ADR-0010). Until then it stays hidden.
