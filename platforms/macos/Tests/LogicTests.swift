@@ -408,6 +408,13 @@ final class AboutInfoTests: XCTestCase {
                        "https://jellyfesh.example/", "a slash is not doubled")
     }
 
+    func testTheLegalPages() {
+        let links = AboutInfo.links(website: "https://example.github.io/jellyfesh")
+        XCTAssertEqual(links?.licenceAgreement.absoluteString, "https://example.github.io/jellyfesh/legal/eula.html")
+        XCTAssertEqual(links?.privacyPolicy.absoluteString, "https://example.github.io/jellyfesh/legal/privacy.html")
+        XCTAssertEqual(links?.termsOfSale.absoluteString, "https://example.github.io/jellyfesh/legal/terms-of-sale.html")
+    }
+
     func testNoWebsiteMeansNoLinks() {
         XCTAssertNil(AboutInfo.links(website: nil))
         XCTAssertNil(AboutInfo.links(website: ""))

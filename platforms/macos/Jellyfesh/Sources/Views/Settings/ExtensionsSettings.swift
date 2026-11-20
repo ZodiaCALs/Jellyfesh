@@ -1,8 +1,10 @@
-// Settings › Extensions (docs/ui.md "Settings"; ADR-0019, ADR-0020, ADR-0021): every extension
-// (AI Lyrics, Customize and others: plugins that only make lyrics or set the look) with its switch,
-// its account, its settings in the app's language under their headings, and its version. Customize
-// and other appearance plugins add Reset to Defaults. A Pro extension says so while Pro is
-// inactive. Install from File… is in the heading where the build may install plugins.
+// Settings › Extensions (docs/ui.md "Settings"; ADR-0019, ADR-0020, ADR-0021): Jellyfesh Pro (where
+// it comes from, Buy and Restore Purchases in the App Store build, Enter Licence Key… where keys
+// work, Remove Licence… for a key, and the legal pages), then every extension (AI Lyrics, Customize
+// and others: plugins that only make lyrics or set the look) with its switch, its account, its
+// settings in the app's language under their headings, and its version. Customize and other
+// appearance plugins add Reset to Defaults. A Pro extension says so while Pro is inactive. Install
+// from File… is in the heading where the build may install plugins.
 
 import SwiftUI
 
@@ -14,6 +16,8 @@ struct ExtensionsSettings: View {
 
     var body: some View {
         Form {
+            ProSection()
+
             Section {
                 ForEach(sources.extensions) { plugin in
                     ExtensionRow(plugin: plugin, expanded: Binding(
@@ -52,6 +56,76 @@ struct ExtensionsSettings: View {
     }
 }
 
+/// Jellyfesh Pro: where it comes from, and what can be done about it here.
+private struct ProSection: View {
+    @Environment(ProStore.self) private var pro
+    @Environment(\.palette) private var palette
+    @State private var confirmRemove = false
+
+    private let links = AboutInfo.links(website: AboutInfo.buildWebsite())
+
+    var body: some View {
+        Section {
+            LabeledContent {
+                if ProText.hasLicence(pro.state) {
+                    Button("Remove Licence…") {
+                        confirmRemove = true
+                    }
+                }
+            } label: {
+                Text(verbatim: "Jellyfesh Pro")
+                Text(ProText.status(pro.state))
+            }
+            if !pro.isActive {
+                if pro.sellsInAppStore {
+                    HStack {
+                        Button {
+                            pro.buy()
+                        } label: {
+                            if let price = pro.price {
+                                Text("Buy Jellyfesh Pro – \(price)")
+                            } else {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                        .disabled(pro.buying || pro.price == nil)
+                        Button("Restore Purchases") {
+                            pro.restorePurchases()
+                        }
+                        .disabled(pro.buying)
+                    }
+                }
+                if pro.state.licenceKeys {
+                    Button("Enter Licence Key…") {
+                        pro.startLicenceEntry(in: .settings)
+                    }
+                }
+                if let failure = pro.storeFailure {
+                    Text(failure)
+                        .font(.footnote)
+                        .foregroundStyle(palette[Tokens.Semantic.danger])
+                }
+            }
+            if let links {
+                HStack(spacing: Tokens.Space.s4) {
+                    Link("Licence Agreement", destination: links.licenceAgreement)
+                    Link("Privacy Policy", destination: links.privacyPolicy)
+                    Link("Terms of Sale", destination: links.termsOfSale)
+                }
+                .font(.footnote)
+            }
+        }
+        .confirmationDialog(Text("Remove the Licence Key?"), isPresented: $confirmRemove, titleVisibility: .visible) {
+            Button("Remove Licence", role: .destructive) {
+                pro.removeLicence()
+            }
+        } message: {
+            Text("Pro features stop until you enter a key or buy Jellyfesh Pro.")
+        }
+    }
+}
+
 /// One extension: its name and summary, and when open its switch, account, settings and version.
 private struct ExtensionRow: View {
     var plugin: SourcePlugin
@@ -70,7 +144,7 @@ private struct ExtensionRow: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button("Learn More…") {
-                        pro.sheetShown = true
+                        pro.require(in: .settings)
                     }
                 }
             }

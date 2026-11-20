@@ -649,6 +649,28 @@
         }
       }
     },
+    "AI Lyrics makes synced lyrics for any song. Customize makes Jellyfesh yours: corners, glass, type, lyrics and layout.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞はどの曲にも同期歌詞を作成します。カスタマイズで Jellyfesh を自分好みに：角の丸み、ガラス、文字、歌詞、レイアウト。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌词可为任何歌曲生成同步歌词。自定义让 Jellyfesh 成为你的风格：圆角、玻璃、字体、歌词和布局。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞可為任何歌曲產生同步歌詞。自訂讓 Jellyfesh 成為你的風格：圓角、玻璃、字體、歌詞和版面配置。"
+          }
+        }
+      }
+    },
     "API Key Added": {
       "localizations": {
         "ja": {
@@ -777,6 +799,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "帳號"
+          }
+        }
+      }
+    },
+    "Activate": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効にする"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "激活"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟用"
           }
         }
       }
@@ -1733,6 +1777,28 @@
         }
       }
     },
+    "Buy Jellyfesh Pro – %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jellyfesh Pro を購入 – %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "购买 Jellyfesh Pro – %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購買 Jellyfesh Pro – %@"
+          }
+        }
+      }
+    },
     "Cancel": {
       "localizations": {
         "ja": {
@@ -2653,6 +2719,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "輸入 API 金鑰"
+          }
+        }
+      }
+    },
+    "Enter Licence Key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスキーを入力"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入许可证密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入授權金鑰"
+          }
+        }
+      }
+    },
+    "Enter Licence Key…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスキーを入力…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入许可证密钥…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入授權金鑰…"
           }
         }
       }
@@ -3647,6 +3757,28 @@
         }
       }
     },
+    "Jellyfesh Pro isn't available from the App Store right now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在、App Store から Jellyfesh Pro を入手できません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前无法从 App Store 获取 Jellyfesh Pro。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前無法從 App Store 取得 Jellyfesh Pro。"
+          }
+        }
+      }
+    },
     "Jellyfesh Pro · Licence …%@": {
       "localizations": {
         "ja": {
@@ -3907,6 +4039,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "資料庫"
+          }
+        }
+      }
+    },
+    "Licence Agreement": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用許諾契約"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许可协议"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授權合約"
+          }
+        }
+      }
+    },
+    "Licence Key": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスキー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许可证密钥"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授權金鑰"
           }
         }
       }
@@ -4787,6 +4963,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "不需要登入"
+          }
+        }
+      }
+    },
+    "Not Now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今はしない"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以后再说"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "稍後再說"
           }
         }
       }
@@ -5825,6 +6023,28 @@
         }
       }
     },
+    "Privacy Policy": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーポリシー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私政策"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隱私權政策"
+          }
+        }
+      }
+    },
     "Pro features are free during the public beta.": {
       "localizations": {
         "ja": {
@@ -5843,6 +6063,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "公開測試期間，Pro 功能免費使用。"
+          }
+        }
+      }
+    },
+    "Pro features stop until you enter a key or buy Jellyfesh Pro.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーを入力するか Jellyfesh Pro を購入するまで、Pro の機能は使えなくなります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在你输入密钥或购买 Jellyfesh Pro 之前，Pro 功能将无法使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在你輸入金鑰或購買 Jellyfesh Pro 之前，Pro 功能將無法使用。"
           }
         }
       }
@@ -6089,6 +6331,50 @@
         }
       }
     },
+    "Remove Licence": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスを削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除许可证"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除授權"
+          }
+        }
+      }
+    },
+    "Remove Licence…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスを削除…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除许可证…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除授權…"
+          }
+        }
+      }
+    },
     "Remove from Favourites": {
       "localizations": {
         "ja": {
@@ -6129,6 +6415,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "從播放佇列中移除"
+          }
+        }
+      }
+    },
+    "Remove the Licence Key?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンスキーを削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除许可证密钥？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除授權金鑰？"
           }
         }
       }
@@ -6349,6 +6657,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "恢復平坦"
+          }
+        }
+      }
+    },
+    "Restore Purchases": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購入を復元"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复购买"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回復購買項目"
           }
         }
       }
@@ -7607,6 +7937,28 @@
         }
       }
     },
+    "Terms of Sale": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "販売条件"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "销售条款"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "銷售條款"
+          }
+        }
+      }
+    },
     "That doesn't look like a Jellyfesh licence key.": {
       "localizations": {
         "ja": {
@@ -7625,6 +7977,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "這看起來不像 Jellyfesh 授權金鑰。"
+          }
+        }
+      }
+    },
+    "The App Store couldn't confirm this purchase.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store でこの購入を確認できませんでした。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 无法确认此次购买。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App Store 無法確認此次購買。"
           }
         }
       }

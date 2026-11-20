@@ -288,3 +288,105 @@ final class ExtensionsStoreTests: XCTestCase {
         XCTAssertEqual(client.sent.last, .resetPluginSettings(plugin: LookStore.customizeID))
     }
 }
+
+/// The App Store, as calls and canned answers.
+@MainActor
+private final class FakePurchasing: ProPurchasing {
+    var priceText: String? = "$9.99"
+    var owned = ProEntitlement(store: .appStore, product: "org.jellyfesh.pro", active: false, transaction: nil)
+    var nextPurchase: Result<ProEntitlement?, Error> = .success(nil)
+    var syncFailure: Error?
+    private(set) var syncs = 0
+    private(set) var onChange: (@MainActor (ProEntitlement) -> Void)?
+
+    func price() async -> String? { priceText }
+    func purchase() async throws -> ProEntitlement? { try nextPurchase.get() }
+    func currentEntitlement() async -> ProEntitlement { owned }
+
+    func sync() async throws {
+        syncs += 1
+        if let syncFailure { throw syncFailure }
+    }
+
+    func listen(_ onChange: @escaping @MainActor (ProEntitlement) -> Void) {
+        self.onChange = onChange
+    }
+}
+
+@MainActor
+final class ProPurchaseTests: XCTestCase {
+    private let bought = ProEntitlement(store: .appStore, product: "org.jellyfesh.pro", active: true, transaction: "2000")
+
+    private func appStoreState() -> ProState {
+        var state = ProState.inactive
+        state.version = 1
+        state.stores = [.appStore]
+        state.licenceKeys = false
+        return state
+    }
+
+    func testTheAppStoreSaysWhatThePersonOwnsAtStartAndAfter() async {
+        let client = FakeCoreClient()
+        let store = ProStore(client: client, tracker: CommandTracker())
+        let purchasing = FakePurchasing()
+        store.apply(appStoreState())
+        XCTAssertFalse(store.sellsInAppStore, "not before the App Store is reached")
+        await store.attach(purchasing)
+        XCTAssertTrue(store.sellsInAppStore)
+        XCTAssertEqual(store.price, "$9.99")
+        await eventually { client.storeEntitlements.count == 1 }
+        XCTAssertEqual(client.storeEntitlements.first?.active, false)
+        purchasing.onChange?(bought)
+        await eventually { client.storeEntitlements.count == 2 }
+        XCTAssertEqual(client.storeEntitlements.last, bought)
+    }
+
+    func testBuyingReportsThePurchaseAndClosesTheSheet() async {
+        let client = FakeCoreClient()
+        let store = ProStore(client: client, tracker: CommandTracker())
+        let purchasing = FakePurchasing()
+        store.apply(appStoreState())
+        await store.attach(purchasing)
+        await eventually { client.storeEntitlements.count == 1 }
+        XCTAssertFalse(store.require())
+
+        purchasing.nextPurchase = .success(nil)
+        store.buy()
+        await eventually { !store.buying }
+        XCTAssertTrue(store.sheetShown, "cancelled: the sheet stays")
+        XCTAssertEqual(client.storeEntitlements.count, 1)
+
+        purchasing.nextPurchase = .failure(PurchaseFailure.unverified)
+        store.buy()
+        await eventually { !store.buying }
+        XCTAssertEqual(store.storeFailure, PurchaseFailure.unverified.errorDescription)
+
+        purchasing.nextPurchase = .success(bought)
+        store.buy()
+        await eventually { !store.buying }
+        XCTAssertFalse(store.sheetShown)
+        XCTAssertNil(store.storeFailure)
+        await eventually { client.storeEntitlements.count == 2 }
+        XCTAssertEqual(client.storeEntitlements.last, bought)
+    }
+
+    func testRestorePurchasesSyncsThenReports() async {
+        let client = FakeCoreClient()
+        let store = ProStore(client: client, tracker: CommandTracker())
+        let purchasing = FakePurchasing()
+        store.apply(appStoreState())
+        await store.attach(purchasing)
+        await eventually { client.storeEntitlements.count == 1 }
+        purchasing.owned = bought
+        store.restorePurchases()
+        await eventually { !store.buying }
+        XCTAssertEqual(purchasing.syncs, 1)
+        await eventually { client.storeEntitlements.count == 2 }
+        XCTAssertEqual(client.storeEntitlements.last, bought)
+
+        purchasing.syncFailure = PurchaseFailure.unavailable
+        store.restorePurchases()
+        await eventually { !store.buying }
+        XCTAssertEqual(store.storeFailure, PurchaseFailure.unavailable.errorDescription)
+    }
+}

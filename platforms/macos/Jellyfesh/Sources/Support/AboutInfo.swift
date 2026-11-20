@@ -1,5 +1,6 @@
 // What About Jellyfesh shows (docs/ui.md, "About"): the version from the build, never typed in, and
-// the website with the third-party licences it publishes, where the build knows the website. The
+// the website with the third-party licences and the legal pages it publishes (Licence Agreement,
+// Privacy Policy, Terms of Sale: docs/store-release.md), where the build knows the website. The
 // same rules as the Android app's (AboutInfo in platforms/android/logic).
 
 import Foundation
@@ -8,10 +9,13 @@ enum AboutInfo {
     /// The page the website publishes the third-party licences on (tools/release/build_site.py).
     static let noticesPage = "THIRD_PARTY_NOTICES.html"
 
-    /// The website and its licences page.
+    /// The website and its pages.
     struct Links: Equatable {
         var website: URL
         var licences: URL
+        var licenceAgreement: URL
+        var privacyPolicy: URL
+        var termsOfSale: URL
     }
 
     /// The links for the address the build gave (`JFWebsite`), with a slash added at its end; nil
@@ -21,9 +25,12 @@ enum AboutInfo {
         let lowered = site.lowercased()
         guard lowered.hasPrefix("https://") || lowered.hasPrefix("http://") else { return nil }
         let base = site.hasSuffix("/") ? site : site + "/"
-        guard let home = URL(string: base), home.host != nil, let licences = URL(string: base + noticesPage)
+        guard let home = URL(string: base), home.host != nil, let licences = URL(string: base + noticesPage),
+              let eula = URL(string: base + "legal/eula.html"), let privacy = URL(string: base + "legal/privacy.html"),
+              let terms = URL(string: base + "legal/terms-of-sale.html")
         else { return nil }
-        return Links(website: home, licences: licences)
+        return Links(website: home, licences: licences, licenceAgreement: eula, privacyPolicy: privacy,
+                     termsOfSale: terms)
     }
 
     /// The version line: the app's version, with the core's after it only when they differ (they

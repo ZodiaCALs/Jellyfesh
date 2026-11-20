@@ -34,6 +34,7 @@ struct SettingsView: View {
                 .tabItem { Label("Extensions", systemImage: "puzzlepiece.extension") }
                 .tag(SettingsTab.extensions)
         }
+        .proSheet(in: .settings)
         .frame(width: 640, height: 560)
         .environment(\.palette, theme.palette(for: colorScheme))
         .environment(\.effects, Effects(

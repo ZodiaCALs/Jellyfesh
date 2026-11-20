@@ -64,6 +64,7 @@ struct RootView: View {
         }
         .frame(minWidth: 900, minHeight: 600)
         .toolbar(router.nowPlayingShown ? .hidden : .visible, for: .windowToolbar)
+        .proSheet(in: .main)
         .environment(\.palette, palette)
         .environment(\.effects, effects)
         .environment(\.look, style)

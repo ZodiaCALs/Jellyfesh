@@ -152,6 +152,12 @@ final class AppModel {
         Task { [appleMusic] in
             await appleMusic.start()
         }
+        if distribution.isAppStore {
+            // Pro is sold through the App Store here; the core hears what the person owns.
+            Task { [pro] in
+                await pro.attach(StoreKitPurchases())
+            }
+        }
         let watcher = DeviceWatcher { [weak self] in
             self?.playback.refreshDevices()
         }
