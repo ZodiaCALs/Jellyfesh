@@ -59,9 +59,11 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         Player = new PlayerViewModel(Services);
         Queue = new QueueViewModel(Services);
         Lyrics = new LyricsPresenter(time);
+        LyricsBar = new LyricsBarPresenter(time);
         Pro = new ProViewModel(Services, store, links);
         Links = links;
         ticker.Attach(Lyrics);
+        ticker.Attach(LyricsBar);
     }
 
     public ShellServices Services { get; }
@@ -71,6 +73,9 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
     public QueueViewModel Queue { get; }
 
     public LyricsPresenter Lyrics { get; }
+
+    /// <summary>The lyrics bar (the player bar's line, Desktop Lyrics).</summary>
+    public LyricsBarPresenter LyricsBar { get; }
 
     /// <summary>Jellyfesh Pro: the Pro sheet and Settings › Extensions show it.</summary>
     public ProViewModel Pro { get; }
@@ -145,6 +150,7 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
             // A remote session's service plays its own lyrics, if any: none are shown meanwhile.
             _lyricsHidden = remote;
             Lyrics.Load(remote ? null : state.Lyrics, remote ? null : state.NowPlaying?.Uid);
+            LyricsBar.Load(remote ? null : state.Lyrics, remote ? null : state.NowPlaying?.Uid);
             Services.Ticker.Invalidate();
         }
 
@@ -152,6 +158,7 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         {
             Settings = state.Settings;
             Lyrics.ShowTranslation = state.Settings.ShowTranslation;
+            LyricsBar.ShowTranslation = state.Settings.ShowTranslation;
             Lyrics.ShowRomanization = state.Settings.ShowRomanization;
         }
 
@@ -193,6 +200,7 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         var appearance = AppearanceResolver.Effective(state.Settings.Appearance, _systemIsDark);
         var reduce = state.Settings.ReduceEffects || _systemReducesMotion;
         Lyrics.ReduceMotion = reduce;
+        LyricsBar.ReduceMotion = reduce;
         ReduceMotion = reduce;
         Appearance = appearance;
         Palette = AppearanceResolver.Palette(state.Theme, appearance);

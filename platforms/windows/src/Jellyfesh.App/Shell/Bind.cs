@@ -22,6 +22,9 @@ public static class Bind
 
     public static Visibility VisibleIfAll(bool a, bool b) => a && b ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>Collapsed when both hold (what something else replaces then).</summary>
+    public static Visibility CollapsedIfAll(bool a, bool b) => a && b ? Visibility.Collapsed : Visibility.Visible;
+
     /// <summary>Visible when neither <paramref name="a"/> nor <paramref name="b"/> holds.</summary>
     public static Visibility VisibleIfNeither(bool a, bool b) => !a && !b ? Visibility.Visible : Visibility.Collapsed;
 

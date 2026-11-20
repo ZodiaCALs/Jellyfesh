@@ -47,7 +47,9 @@
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
                         <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        <!-- The lyrics bar (Show Lyrics Bar): the line being sung, filling word by word, in place of the artist. -->
+                        <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" Visibility="{x:Bind shell:Bind.CollapsedIfAll(Shell.Settings.ShowLyricsBar, Shell.LyricsBar.HasLine), Mode=OneWay}" />
+                        <controls:LyricsBarLine x:Name="BarLine" LineFontSize="13" Visibility="{x:Bind shell:Bind.VisibleIfAll(Shell.Settings.ShowLyricsBar, Shell.LyricsBar.HasLine), Mode=OneWay}" />
                         <!-- A remote session: Playing on {Device}, and its error quieter after it. -->
                         <TextBlock Style="{StaticResource JfRemoteLineText}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}">
                             <Run Text="{x:Bind Player.RemoteDeviceText, Mode=OneWay}" /><Run Foreground="{ThemeResource JfInk50}" FontWeight="Normal" Text="{x:Bind shell:Bind.After(Player.RemoteError), Mode=OneWay}" />

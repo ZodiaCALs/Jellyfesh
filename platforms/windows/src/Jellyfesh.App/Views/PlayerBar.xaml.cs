@@ -27,6 +27,20 @@ public sealed partial class PlayerBar : UserControl
         Seek.SeekRequested += OnSeekRequested;
         Seek.ScrubMoved += OnScrubMoved;
         Seek.StepsChanged += (_, steps) => Player.BarProgress.Steps = steps;
+
+        // The lyrics bar: its line, and the sweep of the word being sung.
+        var bar = Shell.LyricsBar;
+        bar.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LyricsBarPresenter.Line))
+            {
+                BarLine.Line = bar.Line;
+                BarLine.ApplySweep(bar.Sweep);
+            }
+        };
+        bar.SweepChanged += BarLine.ApplySweep;
+        Loaded += (_, _) => bar.Show(true);
+        Unloaded += (_, _) => bar.Show(false);
     }
 
     public AppViewModel Shell { get; }
