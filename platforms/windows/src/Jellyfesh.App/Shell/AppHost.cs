@@ -1,3 +1,4 @@
+using Jellyfesh.Services;
 using Jellyfesh.App.Platform;
 using Jellyfesh.Formatting;
 using Jellyfesh.ViewModels;
@@ -18,6 +19,11 @@ internal static class AppHost
     public static ShellPlatform Platform { get; private set; } = null!;
 
     public static MainWindow Window { get; private set; } = null!;
+
+    /// <summary>The website and its pages (About, the legal links), when the build knows the website (JfWebsite).</summary>
+    public static AboutInfo.Links? Website { get; } = AboutInfo.LinksFor(
+        System.Reflection.CustomAttributeExtensions.GetCustomAttributes<System.Reflection.AssemblyMetadataAttribute>(typeof(AppHost).Assembly)
+            .FirstOrDefault(a => a.Key == "JfWebsite")?.Value);
 
     public static void Set(AppViewModel app, ShellPlatform platform, MainWindow window)
     {

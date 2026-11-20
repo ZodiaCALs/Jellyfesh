@@ -84,6 +84,11 @@ public sealed partial class MainWindow : Window
         var queue = DispatcherQueue.GetForCurrentThread();
         var l = new ResourceLocalizer();
         _platform = new ShellPlatform(this, l);
+        IProStore? store = null;
+#if JF_DISTRIBUTION_MICROSOFT_STORE
+        // The Store build sells Pro through the Store and reports its licence to the core.
+        store = Optional("the Microsoft Store", () => StorePurchases.Create(WindowNative.GetWindowHandle(this), core));
+#endif
         _vm = new AppViewModel(
             core,
             new WinUiDispatcher(queue),
@@ -91,10 +96,16 @@ public sealed partial class MainWindow : Window
             _platform,
             PortDrawingTime.Instance,
             CoreClock.Calibrate(core.MonotonicNowNs),
-            new DispatcherOneShotTimer(queue));
+            new DispatcherOneShotTimer(queue),
+            store,
+            AppHost.Website);
         AppHost.Set(_vm, _platform, this);
 
         InitializeComponent();
+
+        // The Pro sheet and Enter Licence Key, from any Pro action (docs/ui.md).
+        _vm.Pro.SheetRequested += () => _ = ProDialogs.ShowSheetAsync(_platform, _vm.Pro, l);
+        _vm.Pro.LicenceKeyRequested += key => _ = ProDialogs.ShowLicenceKeyAsync(_platform, key, l);
 
         // The keyboard's Back key. In code because WinUI's XAML parser has no name for it: its table
         // of VirtualKey values (EnumValueTable) stops at the original keys, so Key="GoBack" fails to load.

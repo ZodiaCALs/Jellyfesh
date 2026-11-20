@@ -40,6 +40,7 @@ public sealed partial class SettingsPage : JfPage
         ViewModel.PropertyChanged += OnViewModelChanged;
         ViewModel.Player.PropertyChanged += OnPlayerChanged;
         ViewModel.SignInRequested += OnSignInRequested;
+        ViewModel.ExtensionsRequested += () => Sections.SelectedItem = ExtensionsItem; // Customize…
         Loaded += (_, _) =>
         {
             AppHost.App.ThemeChanged += OnThemeChanged;
@@ -60,8 +61,7 @@ public sealed partial class SettingsPage : JfPage
     private static string NoticesPath => Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.md");
 
     /// <summary>The website and its licences page, when the build knows the website (JfWebsite).</summary>
-    private static AboutInfo.Links? Links { get; } = AboutInfo.LinksFor(
-        Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "JfWebsite")?.Value);
+    private static AboutInfo.Links? Links => AppHost.Website;
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -108,6 +108,7 @@ public sealed partial class SettingsPage : JfPage
         PlaybackPanel.Visibility = Bind.Visible(selected == PlaybackItem);
         LibraryPanel.Visibility = Bind.Visible(selected == LibraryItem);
         SourcesPanel.Visibility = Bind.Visible(selected == SourcesItem);
+        ExtensionsPanel.Visibility = Bind.Visible(selected == ExtensionsItem);
         AboutPanel.Visibility = Bind.Visible(selected == AboutItem);
         Scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
@@ -293,11 +294,20 @@ public sealed partial class SettingsPage : JfPage
 
     private void OnRemoveFolderClick(object sender, RoutedEventArgs e) => ViewModel.RemoveFolderCommand.Execute((sender as FrameworkElement)?.Tag as FolderItem);
 
-    private void OnFieldChoiceChanged(object sender, SelectionChangedEventArgs e)
+    /// <summary>A colour well opens on the field's colour.</summary>
+    private void OnColorFlyoutOpening(object sender, object e)
     {
-        if (sender is ComboBox { DataContext: SettingField field, SelectedItem: string choice })
+        if (sender is Flyout { Content: ColorPicker { Tag: SettingField field } picker } && Bind.ColorOf(field.Text) is { } color)
         {
-            field.Choice = choice;
+            picker.Color = color;
+        }
+    }
+
+    private void OnFieldColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (sender.Tag is SettingField field)
+        {
+            field.Text = $"#{args.NewColor.R:X2}{args.NewColor.G:X2}{args.NewColor.B:X2}";
         }
     }
 

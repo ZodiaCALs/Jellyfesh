@@ -97,8 +97,10 @@ the app only draws them.
   hue-gradient track with a preview), Transparency from Solid to Clear with a
   live preview and Reduce Motion and Transparency, Now Playing Backdrop
   (Artwork, Misty, with previews), Lyrics (Lyrics Size, Lyrics Alignment, Show
-  Translations, Show Romanization: the only place they live) and App Icon.
-  Each change is one `SetSettings` and applies at once.
+  Translations, Show Romanization, Show Lyrics Bar, Desktop Lyrics: the only
+  place they live), App Icon and **Customize…** ("Corners, glass, type, lyrics
+  style and layout.", with a Pro badge while Pro is inactive), which opens
+  Settings › Extensions. Each change is one `SetSettings` and applies at once.
 * **Transparency on Acrylic:** the glass brushes' `TintOpacity` comes from
   the shared glass-alpha port (`platforms/shared/csharp/.../Glass.cs`): the
   tokens' alphas at 50 %, opaque toward Solid, halved toward Clear; at 0 %,
@@ -169,7 +171,7 @@ plugin settings applied with **Save**.
   "Nothing Up Next"; Info is "About This Song" with Title, Artist, Album, Year
   (library songs), Length, Format, Lyrics (timing and file, or "None found")
   and File.
-* **Settings:** Appearance, Playback, Library, Sources and About; no separate
+* **Settings:** Appearance, Playback, Library, Sources, Extensions and About; no separate
   Lyrics section. Playback: Output (Output Device), Crossfade (Crossfade,
   Length, Album Continuity), Volume Levelling (ReplayGain, Preamp), Equalizer
   (Equalizer, Preset from the core's `EqPresets()` with Custom once a band
@@ -182,8 +184,46 @@ plugin settings applied with **Save**.
   method it offers or Sign Out, its settings, "Version · Author" and
   **Uninstall…**, which asks first; "No Sources Installed" when empty) and
   Community Plugins (Allow Community Plugins shows the disclosure first).
-  About: the version from the build, Third-Party Licences (the notices file
-  next to the app) and the log folder.
+  Store builds have no Install from File… and no Community Plugins
+  (`SourcesState.CanInstallPlugins`). About: the version from the build,
+  Third-Party Licences (the notices file next to the app), the log folder,
+  Licence Agreement and Privacy Policy (`<website>/legal/…`), and where the
+  `Update` slice is supported (direct downloads) **Check for Updates**, **Check
+  for Updates Automatically** and "Jellyfesh {version} Is Available" with
+  **View Release**.
+* **Settings › Extensions** (v0.0.7): Jellyfesh Pro (the Pro slice in words:
+  "Pro features are free during the public beta.", "Jellyfesh Pro ·
+  Purchased", "Jellyfesh Pro · Licence …ABCD" with **Remove Licence…**, which
+  asks first, or "AI Lyrics and Customize are part of Jellyfesh Pro."; **Buy
+  Jellyfesh Pro – {price}** and **Restore Purchases** where the build's store
+  sells Pro; **Enter Licence Key…** where `licence_keys`; Licence Agreement,
+  Privacy Policy, Terms of Sale), then each extension (plugins of kind
+  `Extension`) as a card: its Pro badge while Pro is inactive, Enabled, AI
+  Lyrics' API key ("API Key Added", Sign In or Sign Out), its settings in the
+  app's language (`LocalizedSettingsSchema` with the strings' own language
+  tag) by group with **Save**, Customize's **Reset to Defaults**, AI Lyrics'
+  **On-Device Models** ("Name · Size", Download, "Downloading… 35%" with a
+  bar and Cancel, "Ready" with **Delete…**, which asks first) and **Sending
+  Audio** (each allowed origin with **Stop Allowing**), "Version · Author"
+  and Uninstall…; **Install from File…** in the heading. Settings forms read
+  schema profile 1.2: sliders for numbers with both bounds (`multipleOf` the
+  step), colour wells (`format: color`, a colour picker), ordered checklists
+  (ticked items in order, Move Up and Move Down), `oneOf` choices with their
+  titles and `x-jf-group` headings.
+* **The Pro sheet** opens from any Pro action while Pro is inactive: "Jellyfesh
+  Pro", what Pro brings, Buy and Restore Purchases (store builds), Enter
+  Licence Key…, Not Now, and the legal links. **Enter Licence Key** stays open
+  until the core accepted the key and words its refusal ("That doesn't look
+  like a Jellyfesh licence key.", "This licence key isn't valid.", "This key
+  is for another product.", "This licence key has been withdrawn."), or shows
+  the core's own message. The Microsoft Store build's glue
+  (`Platform/StorePurchases.cs`, `JF_DISTRIBUTION_MICROSOFT_STORE` only) uses
+  `Windows.Services.Store.StoreContext` with the window (`InitializeWithWindow`),
+  finds the durable add-on whose product ID is `org.jellyfesh.pro`
+  (`GetAssociatedStoreProductsAsync`, its formatted price), buys it with
+  `RequestPurchaseAsync`, and reports its licence (`AddOnLicenses`) to the core
+  with `SetStoreEntitlement` at start, after a purchase or Restore, and on
+  `OfflineLicensesChanged`.
 
 **Checked here, not built (this alignment):** the portable tests pass (105);
 the view models carry the behaviour above and are tested with the fake core

@@ -74,26 +74,113 @@
 
         <DataTemplate x:Key="FieldText" x:DataType="settings:SettingField">
             <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
                 <TextBox Description="{x:Bind Description}" Header="{x:Bind Label}" PlaceholderText="{x:Bind Placeholder}" Text="{x:Bind Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBlock FontSize="12" Foreground="{ThemeResource JfDanger}" Text="{x:Bind shell:Bind.Text(Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(Error), Mode=OneWay}" />
             </StackPanel>
         </DataTemplate>
         <DataTemplate x:Key="FieldSecret" x:DataType="settings:SettingField">
             <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
                 <PasswordBox Description="{x:Bind Description}" Header="{x:Bind Label}" Password="{x:Bind Text, Mode=TwoWay}" PlaceholderText="{x:Bind Placeholder}" />
                 <TextBlock FontSize="12" Foreground="{ThemeResource JfDanger}" Text="{x:Bind shell:Bind.Text(Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(Error), Mode=OneWay}" />
             </StackPanel>
         </DataTemplate>
         <DataTemplate x:Key="FieldToggle" x:DataType="settings:SettingField">
-            <ToggleSwitch Header="{x:Bind Label}" IsOn="{x:Bind IsOn, Mode=TwoWay}" />
+            <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
+                <ToggleSwitch Header="{x:Bind Label}" IsOn="{x:Bind IsOn, Mode=TwoWay}" />
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Description}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Description)}" />
+            </StackPanel>
         </DataTemplate>
         <DataTemplate x:Key="FieldChoice" x:DataType="settings:SettingField">
-            <ComboBox MinWidth="200" Header="{x:Bind Label}" ItemsSource="{x:Bind Choices}" SelectedItem="{x:Bind Choice, Mode=OneWay}" SelectionChanged="OnFieldChoiceChanged" />
+            <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
+                <ComboBox MinWidth="200" DisplayMemberPath="Title" Header="{x:Bind Label}" ItemsSource="{x:Bind Options}" SelectedItem="{x:Bind SelectedOption, Mode=TwoWay}" />
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Description}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Description)}" />
+            </StackPanel>
+        </DataTemplate>
+        <!-- Profile 1.2: a number between two bounds is a slider, multipleOf its step. -->
+        <DataTemplate x:Key="FieldSlider" x:DataType="settings:SettingField">
+            <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="56" />
+                    </Grid.ColumnDefinitions>
+                    <Slider
+                        MaxWidth="360"
+                        HorizontalAlignment="Left"
+                        AutomationProperties.Name="{x:Bind Label}"
+                        Header="{x:Bind Label}"
+                        Maximum="{x:Bind SliderMaximum}"
+                        Minimum="{x:Bind SliderMinimum}"
+                        StepFrequency="{x:Bind SliderStep}"
+                        Value="{x:Bind Value, Mode=TwoWay}" />
+                    <TextBlock Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,0,8" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ValueText, Mode=OneWay}" />
+                </Grid>
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Description}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Description)}" />
+            </StackPanel>
+        </DataTemplate>
+        <!-- Profile 1.2: "format": "color", a colour well that opens a colour picker. -->
+        <DataTemplate x:Key="FieldColor" x:DataType="settings:SettingField">
+            <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
+                <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Label}" />
+                <Button Padding="4" AutomationProperties.Name="{x:Bind Label}" Style="{StaticResource JfChipButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Border Width="28" Height="20" Background="{x:Bind shell:Bind.ColorBrush(Text), Mode=OneWay}" BorderBrush="{ThemeResource JfLineSoft}" BorderThickness="1" CornerRadius="4" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Bind Text, Mode=OneWay}" />
+                    </StackPanel>
+                    <Button.Flyout>
+                        <Flyout Opening="OnColorFlyoutOpening">
+                            <ColorPicker ColorChanged="OnFieldColorChanged" IsAlphaEnabled="False" IsMoreButtonVisible="False" Tag="{x:Bind}" />
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Description}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Description)}" />
+                <TextBlock FontSize="12" Foreground="{ThemeResource JfDanger}" Text="{x:Bind shell:Bind.Text(Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(Error), Mode=OneWay}" />
+            </StackPanel>
+        </DataTemplate>
+        <!-- Profile 1.2: an ordered checklist; what is ticked is shown, in this order. -->
+        <DataTemplate x:Key="FieldChecklist" x:DataType="settings:SettingField">
+            <StackPanel Spacing="4">
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
+                <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Label}" />
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Description}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Description)}" />
+                <ItemsRepeater ItemsSource="{x:Bind Items}">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Spacing="2" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="settings:ChecklistItem">
+                            <Grid ColumnSpacing="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <CheckBox Content="{x:Bind Title}" IsChecked="{x:Bind IsChecked, Mode=TwoWay}" />
+                                <Button x:Uid="Settings_MoveUp" Grid.Column="1" AutomationProperties.Name="Move Up" Command="{x:Bind MoveUpCommand}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Move Up">
+                                    <FontIcon FontSize="12" Glyph="&#xE70E;" />
+                                </Button>
+                                <Button x:Uid="Settings_MoveDown" Grid.Column="2" AutomationProperties.Name="Move Down" Command="{x:Bind MoveDownCommand}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Move Down">
+                                    <FontIcon FontSize="12" Glyph="&#xE70D;" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
         </DataTemplate>
         <shell:SettingFieldTemplates
             x:Key="FieldTemplates"
+            Checklist="{StaticResource FieldChecklist}"
             Choice="{StaticResource FieldChoice}"
+            Color="{StaticResource FieldColor}"
             Secret="{StaticResource FieldSecret}"
+            Slider="{StaticResource FieldSlider}"
             Text="{StaticResource FieldText}"
             Toggle="{StaticResource FieldToggle}" />
     </Page.Resources>
@@ -110,6 +197,7 @@
             <SelectorBarItem x:Name="PlaybackItem" x:Uid="Settings_Playback" Text="Playback" />
             <SelectorBarItem x:Name="LibraryItem" x:Uid="Settings_Library" Text="Library" />
             <SelectorBarItem x:Name="SourcesItem" x:Uid="Settings_Sources" Text="Sources" />
+            <SelectorBarItem x:Name="ExtensionsItem" x:Uid="Settings_Extensions" Text="Extensions" />
             <SelectorBarItem x:Name="AboutItem" x:Uid="Settings_About" Text="About" />
         </SelectorBar>
 
@@ -310,6 +398,14 @@
                             </Grid>
                             <ToggleSwitch x:Uid="Appearance_Translation" Header="Show Translations" IsOn="{x:Bind ViewModel.ShowTranslation, Mode=TwoWay}" />
                             <ToggleSwitch x:Uid="Appearance_Romanization" Header="Show Romanization" IsOn="{x:Bind ViewModel.ShowRomanization, Mode=TwoWay}" />
+                            <StackPanel Spacing="2">
+                                <ToggleSwitch x:Uid="Appearance_LyricsBar" Header="Show Lyrics Bar" IsOn="{x:Bind ViewModel.ShowLyricsBar, Mode=TwoWay}" />
+                                <TextBlock x:Uid="Appearance_LyricsBarHint" Style="{StaticResource JfSecondaryBodyText}" Text="The line being sung, under the song's title in the player bar." TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Spacing="2">
+                                <ToggleSwitch x:Uid="Appearance_DesktopLyrics" Header="Desktop Lyrics" IsOn="{x:Bind ViewModel.DesktopLyrics, Mode=TwoWay}" />
+                                <TextBlock x:Uid="Appearance_DesktopLyricsHint" Style="{StaticResource JfSecondaryBodyText}" Text="The line being sung and the next one, in a window that stays above other apps." TextWrapping="Wrap" />
+                            </StackPanel>
                             <TextBlock x:Uid="Appearance_LyricsHint" Style="{StaticResource JfSecondaryBodyText}" Text="Lyrics come from the song's tags and from .lrc, .ttml and .vtt files next to it. Translations and romanizations appear when the lyrics include them." />
                         </StackPanel>
                     </Border>
@@ -340,6 +436,30 @@
                             <TextBlock x:Uid="Appearance_IconLimits" Style="{StaticResource JfSecondaryBodyText}" Text="Automatic uses Ice in light appearance and Steel in dark. A taskbar pin may keep the old icon until Explorer refreshes." />
                         </StackPanel>
                     </Border>
+
+                    <!-- Customize…: opens Settings › Extensions, where Customize's settings are (a Pro badge while Pro is inactive). -->
+                    <Button
+                        Padding="20,16"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch"
+                        Command="{x:Bind ViewModel.OpenCustomizeCommand}"
+                        Style="{StaticResource JfBareButtonStyle}">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="Appearance_Customize" Style="{StaticResource CardHeading}" Text="Customize…" />
+                                <TextBlock x:Uid="Appearance_CustomizeHint" Style="{StaticResource JfSecondaryBodyText}" Text="Corners, glass, type, lyrics style and layout." />
+                            </StackPanel>
+                            <Border Grid.Column="1" Padding="8,1" VerticalAlignment="Center" Background="{ThemeResource JfAccentSoft}" CornerRadius="{StaticResource JfFullRadius}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CustomizeNeedsPro), Mode=OneWay}">
+                                <TextBlock x:Uid="Pro_Badge" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource JfAccentText}" Text="Pro" />
+                            </Border>
+                            <FontIcon Grid.Column="2" FontSize="12" Foreground="{ThemeResource JfInk70}" Glyph="&#xE76C;" />
+                        </Grid>
+                    </Button>
                 </StackPanel>
 
                 <!-- ===== Playback: Output, Crossfade, Volume Levelling, Equalizer, Startup ===== -->
@@ -616,7 +736,7 @@
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Uid="Sources_Installed" VerticalAlignment="Center" Style="{StaticResource CardHeading}" Text="Installed" />
-                                <Button x:Uid="Sources_Install" Grid.Column="1" Command="{x:Bind ViewModel.InstallPluginCommand}" Content="Install from File…" Style="{StaticResource JfChipButtonStyle}" />
+                                <Button x:Uid="Sources_Install" Grid.Column="1" Command="{x:Bind ViewModel.InstallPluginCommand}" Content="Install from File…" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanInstallPlugins), Mode=OneWay}" />
                             </Grid>
                             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Plugins}">
                                 <ItemsRepeater.Layout>
@@ -674,8 +794,8 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Community Plugins: Allow Community Plugins shows the disclosure first. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <!-- Community Plugins: Allow Community Plugins shows the disclosure first. Not in store builds. -->
+                    <Border Style="{StaticResource JfCardStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanInstallPlugins), Mode=OneWay}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Uid="Sources_Community" Style="{StaticResource CardHeading}" Text="Community Plugins" />
@@ -684,6 +804,155 @@
                             <ToggleSwitch x:Uid="Sources_AllowCommunity" Header="Allow Community Plugins" IsOn="{x:Bind ViewModel.AllowCommunity, Mode=TwoWay}" />
                         </StackPanel>
                     </Border>
+                </StackPanel>
+
+
+                <!-- ===== Extensions (v0.0.7): Jellyfesh Pro, then AI Lyrics, Customize and any other extension,
+                     with Install from File… in the heading (not in store builds). ===== -->
+                <StackPanel x:Name="ExtensionsPanel" Spacing="16" Visibility="Collapsed">
+                    <!-- Jellyfesh Pro: where Pro comes from; Remove Licence… (asks first); Buy and Restore Purchases
+                         where this build's store sells it; Enter Licence Key… where keys are taken; the legal pages. -->
+                    <Border Style="{StaticResource JfCardStyle}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="Pro_Title" Style="{StaticResource CardHeading}" Text="Jellyfesh Pro" />
+                                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Pro.Status, Mode=OneWay}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Command="{x:Bind ViewModel.Pro.BuyCommand}" Content="{x:Bind ViewModel.Pro.BuyLabel, Mode=OneWay}" Style="{StaticResource JfAccentPillStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Pro.CanBuy), Mode=OneWay}" />
+                                <Button x:Uid="Pro_Restore" Command="{x:Bind ViewModel.Pro.RestoreCommand}" Content="Restore Purchases" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Pro.CanBuy), Mode=OneWay}" />
+                                <Button x:Uid="Pro_EnterKey" Command="{x:Bind ViewModel.Pro.EnterLicenceKeyCommand}" Content="Enter Licence Key…" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Pro.CanEnterKey), Mode=OneWay}" />
+                                <Button x:Uid="Pro_RemoveLicence" Command="{x:Bind ViewModel.Pro.RemoveLicenceCommand}" Content="Remove Licence…" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Pro.CanRemoveLicence), Mode=OneWay}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Pro.HasLinks)}">
+                                <HyperlinkButton x:Uid="Legal_LicenceAgreement" Command="{x:Bind ViewModel.Pro.OpenLicenceAgreementCommand}" Content="Licence Agreement" />
+                                <HyperlinkButton x:Uid="Legal_PrivacyPolicy" Command="{x:Bind ViewModel.Pro.OpenPrivacyPolicyCommand}" Content="Privacy Policy" />
+                                <HyperlinkButton x:Uid="Legal_TermsOfSale" Command="{x:Bind ViewModel.Pro.OpenTermsOfSaleCommand}" Content="Terms of Sale" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Uid="Extensions_Installed" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource CardHeading}" Text="Installed" />
+                        <Button x:Uid="Extensions_Install" Grid.Column="1" Command="{x:Bind ViewModel.InstallPluginCommand}" Content="Install from File…" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanInstallPlugins), Mode=OneWay}" />
+                    </Grid>
+
+                    <ItemsRepeater ItemsSource="{x:Bind ViewModel.Extensions}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="16" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExtensionViewModel">
+                                <Border Style="{StaticResource JfCardStyle}">
+                                    <StackPanel Spacing="12">
+                                        <StackPanel Spacing="2">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock AutomationProperties.HeadingLevel="Level3" Style="{StaticResource CardHeading}" Text="{x:Bind Plugin.Name, Mode=OneWay}" />
+                                                <Border Padding="8,1" VerticalAlignment="Center" Background="{ThemeResource JfAccentSoft}" CornerRadius="{StaticResource JfFullRadius}" Visibility="{x:Bind shell:Bind.Visible(ShowsProBadge), Mode=OneWay}">
+                                                    <TextBlock x:Uid="Pro_Badge" FontSize="11" FontWeight="Bold" Foreground="{ThemeResource JfAccentText}" Text="Pro" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Info.Description, Mode=OneWay}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <ToggleSwitch x:Uid="Source_Enabled" Header="Enabled" IsOn="{x:Bind Plugin.IsEnabled, Mode=TwoWay}" />
+
+                                        <!-- AI Lyrics: the online mode's API key. -->
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(Plugin.AuthMethods.Count), Mode=OneWay}">
+                                            <TextBlock VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind KeyStatus, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(KeyStatus), Mode=OneWay}" />
+                                            <ItemsRepeater ItemTemplate="{StaticResource SignInActionTemplate}" ItemsSource="{x:Bind Plugin.SignInActions, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(Plugin.CanSignIn), Mode=OneWay}">
+                                                <ItemsRepeater.Layout>
+                                                    <StackLayout Orientation="Horizontal" Spacing="8" />
+                                                </ItemsRepeater.Layout>
+                                            </ItemsRepeater>
+                                            <Button x:Uid="Source_SignOut" Command="{x:Bind Plugin.SignOutCommand}" Content="Sign Out" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(Plugin.IsSignedIn), Mode=OneWay}" />
+                                        </StackPanel>
+
+                                        <!-- Its settings in the app's language, by group, applied with Save. -->
+                                        <StackPanel Spacing="12" Visibility="{x:Bind shell:Bind.Visible(Plugin.HasSettings), Mode=OneWay}">
+                                            <ItemsRepeater ItemTemplate="{StaticResource FieldTemplates}" ItemsSource="{x:Bind Plugin.Form.Fields, Mode=OneWay}">
+                                                <ItemsRepeater.Layout>
+                                                    <StackLayout Spacing="12" />
+                                                </ItemsRepeater.Layout>
+                                            </ItemsRepeater>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button x:Uid="Source_SaveSettings" Command="{x:Bind Plugin.SaveSettingsCommand}" Content="Save" Style="{StaticResource JfAccentPillStyle}" />
+                                                <Button x:Uid="Extensions_Reset" Command="{x:Bind ResetToDefaultsCommand}" Content="Reset to Defaults" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(IsCustomize), Mode=OneWay}" />
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <!-- AI Lyrics: On-Device Models. -->
+                                        <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.Visible(HasModels), Mode=OneWay}">
+                                            <TextBlock x:Uid="Models_Title" Style="{StaticResource RowTitle}" Text="On-Device Models" />
+                                            <ItemsRepeater ItemsSource="{x:Bind Models}">
+                                                <ItemsRepeater.Layout>
+                                                    <StackLayout Spacing="8" />
+                                                </ItemsRepeater.Layout>
+                                                <ItemsRepeater.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:SpeechModelItem">
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                                <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Title, Mode=OneWay}" />
+                                                                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Status, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Status), Mode=OneWay}" />
+                                                                <ProgressBar MaxWidth="240" HorizontalAlignment="Left" Maximum="100" Value="{x:Bind Progress, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(IsDownloading), Mode=OneWay}" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                                                                <Button x:Uid="Models_Download" Command="{x:Bind DownloadCommand}" Content="Download" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(CanDownload), Mode=OneWay}" />
+                                                                <Button x:Uid="Action_CancelButton" Command="{x:Bind CancelCommand}" Content="Cancel" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(IsDownloading), Mode=OneWay}" />
+                                                                <Button x:Uid="Models_Delete" Command="{x:Bind DeleteCommand}" Content="Delete…" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(CanDelete), Mode=OneWay}" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsRepeater.ItemTemplate>
+                                            </ItemsRepeater>
+                                        </StackPanel>
+
+                                        <!-- AI Lyrics: Sending Audio, each allowed origin with Stop Allowing. -->
+                                        <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.Visible(HasConsents), Mode=OneWay}">
+                                            <TextBlock x:Uid="Consents_Title" Style="{StaticResource RowTitle}" Text="Sending Audio" />
+                                            <ItemsRepeater ItemsSource="{x:Bind Consents}">
+                                                <ItemsRepeater.Layout>
+                                                    <StackLayout Spacing="8" />
+                                                </ItemsRepeater.Layout>
+                                                <ItemsRepeater.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:AudioConsentItem">
+                                                        <Grid ColumnSpacing="12">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock VerticalAlignment="Center" Style="{StaticResource JfBodyText}" Text="{x:Bind Origin}" TextTrimming="CharacterEllipsis" />
+                                                            <Button x:Uid="Consents_StopAllowing" Grid.Column="1" Command="{x:Bind StopAllowingCommand}" Content="Stop Allowing" Style="{StaticResource JfChipButtonStyle}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsRepeater.ItemTemplate>
+                                            </ItemsRepeater>
+                                        </StackPanel>
+
+                                        <Grid ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock VerticalAlignment="Center" Style="{StaticResource JfCaptionText}" Text="{x:Bind Plugin.Details, Mode=OneWay}" />
+                                            <Button x:Uid="Source_Uninstall" Grid.Column="1" Command="{x:Bind Plugin.UninstallCommand}" Content="Uninstall…" Style="{StaticResource JfChipButtonStyle}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                    <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.VisibleIfNone(ViewModel.Extensions.Count), Mode=OneWay}">
+                        <TextBlock x:Uid="Extensions_None" Style="{StaticResource RowTitle}" Text="No Extensions Installed" />
+                        <TextBlock x:Uid="Extensions_NoneHint" Style="{StaticResource JfSecondaryBodyText}" Text="AI Lyrics and Customize come with Jellyfesh; others install from a .jfpkg file." TextWrapping="Wrap" />
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- ===== About: the version (from the build), the website and the licences where the build knows them, the log folder ===== -->
@@ -705,6 +974,33 @@
                                 <Button x:Name="LicencesButton" x:Uid="About_Licences" Click="OnLicencesClick" Content="Third-Party Licences" Style="{StaticResource JfChipButtonStyle}" />
                                 <Button x:Uid="About_Logs" Click="OnOpenLogsClick" Content="Open Log Folder" Style="{StaticResource JfChipButtonStyle}" />
                             </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Pro.HasLinks)}">
+                                <HyperlinkButton x:Uid="Legal_LicenceAgreementAbout" Command="{x:Bind ViewModel.Pro.OpenLicenceAgreementCommand}" Content="Licence Agreement" />
+                                <HyperlinkButton x:Uid="Legal_PrivacyPolicyAbout" Command="{x:Bind ViewModel.Pro.OpenPrivacyPolicyCommand}" Content="Privacy Policy" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Updates (direct downloads only: the store updates store builds). -->
+                    <Border Style="{StaticResource JfCardStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Updates.IsSupported), Mode=OneWay}">
+                        <StackPanel Spacing="12">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Update_Title" Style="{StaticResource CardHeading}" Text="Updates" />
+                                    <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind ViewModel.Updates.AvailableText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Updates.HasUpdate), Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Updates.ErrorText, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.Updates.ErrorText), Mode=OneWay}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                                    <ProgressRing Width="20" Height="20" IsActive="{x:Bind ViewModel.Updates.IsChecking, Mode=OneWay}" />
+                                    <Button x:Uid="Update_ViewRelease" Command="{x:Bind ViewModel.Updates.ViewReleaseCommand}" Content="View Release" Style="{StaticResource JfAccentPillStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Updates.HasUpdate), Mode=OneWay}" />
+                                    <Button x:Uid="Update_Check" Command="{x:Bind ViewModel.Updates.CheckCommand}" Content="Check for Updates" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.Updates.IsChecking), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
+                                </StackPanel>
+                            </Grid>
+                            <ToggleSwitch x:Uid="Update_Auto" Header="Check for Updates Automatically" IsOn="{x:Bind ViewModel.Updates.CheckAutomatically, Mode=TwoWay}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -15,6 +15,15 @@ public sealed partial class SettingFieldTemplates : DataTemplateSelector
 
     public DataTemplate? Choice { get; set; }
 
+    /// <summary>Profile 1.2: a number between two bounds.</summary>
+    public DataTemplate? Slider { get; set; }
+
+    /// <summary>Profile 1.2: "#RRGGBB".</summary>
+    public DataTemplate? Color { get; set; }
+
+    /// <summary>Profile 1.2: an ordered checklist.</summary>
+    public DataTemplate? Checklist { get; set; }
+
     protected override DataTemplate? SelectTemplateCore(object item) => Pick(item);
 
     protected override DataTemplate? SelectTemplateCore(object item, DependencyObject container) => Pick(item);
@@ -25,6 +34,9 @@ public sealed partial class SettingFieldTemplates : DataTemplateSelector
             SettingFieldKind.Secret => Secret,
             SettingFieldKind.Toggle => Toggle,
             SettingFieldKind.Choice => Choice,
+            SettingFieldKind.Slider => Slider,
+            SettingFieldKind.Color => Color,
+            SettingFieldKind.Checklist => Checklist,
             _ => Text, // text, URL and numbers: a text box the form validates
         }
         : Text;

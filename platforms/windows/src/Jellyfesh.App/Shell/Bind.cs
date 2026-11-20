@@ -50,6 +50,15 @@ public static class Bind
 
     public static TextWrapping Wrap(bool wrap) => wrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
 
+    /// <summary>A colour well's fill from "#RRGGBB" (a settings field); transparent for anything else.</summary>
+    public static Brush ColorBrush(string? hex) => new SolidColorBrush(ColorOf(hex) ?? Microsoft.UI.Colors.Transparent);
+
+    /// <summary>The colour "#RRGGBB" names, or null.</summary>
+    public static Windows.UI.Color? ColorOf(string? hex) =>
+        hex is { Length: 7 } && hex[0] == '#' && uint.TryParse(hex.AsSpan(1), System.Globalization.NumberStyles.HexNumber, null, out var rgb)
+            ? Windows.UI.Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb)
+            : null;
+
     /// <summary>The touch keyboard for a sign-in field's kind (e-mail, web address, digits).</summary>
     public static InputScope InputScopeFor(AuthFieldKind kind)
     {
