@@ -28,12 +28,14 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
       - uses: actions/checkout@v7
-      - name: ALSA, GTK 4 and libadwaita headers
+      - name: ALSA, GTK 4 and libadwaita headers, CMake and libclang
         if: runner.os == 'Linux'
         # The Linux app (platforms/linux) targets GTK 4.14 and libadwaita 1.5, as on 24.04.
+        # jf-ffi builds whisper.cpp (core/jf-speech, feature whisper): CMake, and libclang for
+        # bindgen. macOS and Windows runners have both.
         run: >-
           sudo apt-get update && sudo apt-get install -y libasound2-dev
-          libgtk-4-dev libadwaita-1-dev gettext
+          libgtk-4-dev libadwaita-1-dev gettext cmake libclang-dev
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           components: rustfmt, clippy
@@ -193,8 +195,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - name: ALSA headers
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: ALSA headers, CMake and libclang (whisper.cpp in jf-ffi)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev cmake libclang-dev
       - uses: dtolnay/rust-toolchain@1.97.0
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-java@v6
@@ -298,8 +300,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - name: ALSA headers (host build of the bindings)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
+      - name: ALSA headers (host build of the bindings), CMake and libclang (whisper.cpp in jf-ffi)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev cmake libclang-dev
       - uses: dtolnay/rust-toolchain@1.97.0
         with:
           targets: aarch64-linux-android, x86_64-linux-android

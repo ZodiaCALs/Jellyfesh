@@ -46,6 +46,16 @@ the core compiles libopus with CMake (`opusic-sys`), SQLite and ring with
 `cc`; Android needs the NDK (for example through `cargo-ndk`, from crates.io).
 Packaging (XCFramework, AAR with `jniLibs/`, MSIX) is not part of xtask yet.
 
+Since v0.0.7 `jf-ffi` also builds whisper.cpp for AI Lyrics on this device
+(`core/jf-speech`, feature `whisper`) on every target except Windows on Arm
+(`aarch64-pc-windows-msvc`), and hands its recogniser to the core
+(`Config::speech`). That needs CMake and libclang (bindgen) on the build
+machine; on Windows the static C runtime flags of `.cargo/config.toml` and
+CI's `CMAKE_*` variables apply. On Android whisper.cpp links the NDK's
+`libc++_shared.so`, which the app packages next to `libjf_ffi.so`. Without
+whisper (Windows on Arm), AI Lyrics offers its online mode only: the
+on-device `need` is `Unavailable`.
+
 ## Names
 
 The shells code against these names; they follow the Rust ones.

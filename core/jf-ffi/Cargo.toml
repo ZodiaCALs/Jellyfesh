@@ -30,6 +30,15 @@ uniffi.workspace = true
 # every platform (both are small and pure Rust) so the JVM tests exercise the same code.
 jni-sys.workspace = true
 ndk-context.workspace = true
+# On-device recognition for AI Lyrics (ADR-0019 §5): the apps get whisper.cpp's recogniser as
+# `Config::speech`. Without the feature (below), `jf_speech::recognizer()` is `None` and AI
+# Lyrics offers only its online mode.
+jf-speech = { path = "../jf-speech", default-features = false }
+
+# whisper.cpp is built (CMake, and bindgen with libclang) for every target the apps ship except
+# Windows on Arm, where its build is not supported yet.
+[target.'cfg(not(all(target_os = "windows", target_arch = "aarch64")))'.dependencies]
+jf-speech = { path = "../jf-speech", default-features = false, features = ["whisper"] }
 
 [dev-dependencies]
 hound.workspace = true

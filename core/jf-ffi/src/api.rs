@@ -309,6 +309,8 @@ impl JellyfeshCore {
         after_shutdown: Option<Box<dyn FnOnce() + Send>>,
     ) -> Result<Self, CoreFfiError> {
         let mut config = jf::Config::from(config);
+        // whisper.cpp where this library was built with it (AI Lyrics on this device).
+        config.speech = jf_speech::recognizer();
         if let Some(store) = secrets {
             config.sources.secrets = Some(Arc::new(Foreign(store)));
         }
