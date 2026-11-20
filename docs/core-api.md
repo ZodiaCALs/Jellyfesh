@@ -368,11 +368,16 @@ source, shelves, error })`. Each `Shelf` has an `id`, a `title`, a `style`
 { plugin: source, node: Some(more) }`). A plugin with `PluginSummary::discover`
 makes its own shelves (at most 12, in its words); for other sources the core
 makes them from the service's suggestions ("For You", id `for_you`, while
-signed in) and the top level of `Browse` (each root node a shelf of its first
-page), keeping to the source's content policy. `source: "library"` gives the
-library's page: Recently Added (`recently_added`), Most Played
-(`most_played`) and Rediscover (`rediscover`: albums not played for a long
-time). Shelves the core makes have stable ids; word their titles by id.
+signed in) and the top level of `Browse`: each of the first six folders and
+playlists there becomes a shelf of its first items (its id is the node's, and
+`more` browses it), and the other items at the top level share one grid
+(`browse`, titled with the source's name). Each page holds only its source's
+items, as content policies ask, and its items are remembered, so playing them
+and See All pass them back whole. `source: "library"` gives the library's
+page: Recently Added (`recently_added`: the albums of the newest songs),
+Most Played (`most_played`, a chart by plays) and Rediscover (`rediscover`:
+songs played at least twice, but not in the last two months). Shelves the
+core makes have stable ids; word their titles by id.
 
 ## Covers (ADR-0022 §5)
 
@@ -392,8 +397,14 @@ is allowed. For each one shown:
 
 Calling it for every list row as it appears is fine: requests for the same
 picture are made once, a few run at a time, and the newest requests go first
-while scrolling; the cache is bounded and evicts the least recently used
-files. Library rows keep `artwork_hash` and `artwork_thumbnail`.
+while scrolling; the cache (`<cache>/source-artwork/`) is bounded and evicts
+the least recently used files. Library rows keep `artwork_hash` and
+`artwork_thumbnail`.
+
+Now Playing for a source track starts with the picture it was listed with
+(`ArtworkRef::Url`, or none); once the core has fetched the song's picture
+through its plugin (its `artwork` answer, else the listed one), `NowPlaying`
+comes again with `ArtworkRef::File` of a large JPEG in the cache.
 
 ## AI Lyrics (ADR-0019)
 
@@ -414,6 +425,15 @@ plugin's settings, its sign-in, Pro, the consents or the models change:
 | `Consent { origin }` | "Send This Song to {origin}?" (ui.md); Allow sends `AllowAudioUpload { plugin, origin }` |
 | `Model { id, name, bytes }` | "Download the {name} model ({bytes}) to make lyrics on this device." and Download (`DownloadSpeechModel { id }`) |
 | `Unavailable { reason }` | the reason |
+
+The plugin's plan is asked for again whenever the plugin, its settings or its
+sign-in change, Pro starts or stops, or a model arrives or goes. Recognition
+on this device uses `Config::speech` (`jf_speech::recognizer()` in apps built
+with Whisper; without one the on-device mode is `Unavailable`), with models
+in `<data>/speech-models/` (`Config::speech_store` replaces the store). The
+consents are kept in `<data>/ai-lyrics-consents.json`. When the plan says
+`automatic`, each song that starts without synced lyrics of its own (and
+without made ones) gets a job, once per queue entry.
 
 `MakeLyrics { song: SongRef::Current | SongRef::Library { id } }` queues a job
 (it fails with the reason while `need` is not `Nothing`, and for songs that
@@ -491,8 +511,12 @@ Install from File… and Allow Community Plugins; the core refuses
 update). They have no update check (`UpdateSnapshot::supported` is false).
 
 * `ActivateLicence { key }` checks a key offline (`JFP1-…`; dashes, spaces and
-  case do not matter) and keeps it; a bad one leaves `licence_error`.
-  `RemoveLicence` removes it.
+  case do not matter) and keeps it with the settings, where the next start
+  checks it again (a key withdrawn in a later release, or signed by a key the
+  build does not know, then shows its `licence_error`); a bad one leaves
+  `licence_error`. `RemoveLicence` removes it. `Config::pro` (Rust) holds
+  Preview and the public keys; `ProConfig::for_this_build()` is what the
+  release was built with (`JF_PRO_PREVIEW=1`, `JF_LICENCE_PUBLIC_KEYS`).
 * Store builds report what their store says with
   `Core::set_store_entitlement(StoreEntitlement { store, product, active,
   transaction })` (product `org.jellyfesh.pro`, `pro` on Google Play) at
@@ -515,14 +539,17 @@ and its setting), `checking`, `available` (`UpdateInfo { version, url }`:
 "Jellyfesh {version} Is Available" and View Release opening `url`),
 `last_checked_ms`, `auto` (checks run by themselves: supported and
 `Settings::check_for_updates` on) and `error`. The core checks GitHub's
-releases at most once a day while `auto`, and on `CheckForUpdates`;
-pre-releases count while Jellyfesh is in beta. Nothing is installed.
+releases at most once a day while `auto` (the time of the last check is kept
+in `<data>/update.json`, so restarts do not check again within the day; a
+failed check counts too), and on `CheckForUpdates`, which other builds refuse.
+Pre-releases count while Jellyfesh is in beta; drafts never. Nothing is
+downloaded or installed, and the request carries nothing about the person.
 
 ## Status in this release's development
 
-v0.0.7: the types above are final. While the v0.0.7 core is built, commands
-it does not run yet answer `CommandFailed` with "not yet" and the new slices
-keep their defaults.
+New in v0.0.7: AI Lyrics, the look, Jellyfesh Pro and store builds, the
+update check, Discover, details and comments, source pictures through the
+core, the quality label and resuming playback on launch, as described above.
 
 Available since v0.0.6: everything from v0.0.2, `PlayCollection`/`EnqueueCollection`
 for albums, artists, playlists, favourites, track lists and source

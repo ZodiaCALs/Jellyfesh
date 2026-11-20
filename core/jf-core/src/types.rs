@@ -58,6 +58,32 @@ pub struct Config {
     /// GitHub's list for the project by default; tests point it at a local
     /// server.
     pub update_url: String,
+    /// Jellyfesh Pro in this build: Preview, and the public keys licence
+    /// keys are checked against ([`ProConfig::for_this_build`] by default).
+    pub pro: ProConfig,
+    /// The speech-model store to use instead of `<data_dir>/speech-models`
+    /// with the catalogue's models (tests bring their own models).
+    pub speech_store: Option<jf_speech::ModelStore>,
+}
+
+/// Jellyfesh Pro in this build (ADR-0021).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProConfig {
+    /// Pro features work for everyone (a Pro Preview build).
+    pub preview: bool,
+    /// The public keys licence keys are checked against.
+    pub licence_keys: Vec<jf_licence::PublicKey>,
+}
+
+impl ProConfig {
+    /// What this build was made with: Preview when `JF_PRO_PREVIEW=1` and
+    /// the keys from `JF_LICENCE_PUBLIC_KEYS` at build time.
+    pub fn for_this_build() -> ProConfig {
+        ProConfig {
+            preview: crate::pro::preview_build(),
+            licence_keys: jf_licence::release_keys(),
+        }
+    }
 }
 
 /// The releases the update check reads (ADR-0021 §5).
@@ -79,6 +105,8 @@ impl std::fmt::Debug for Config {
             .field("speech", &self.speech.is_some())
             .field("speech_model_url", &self.speech_model_url)
             .field("update_url", &self.update_url)
+            .field("pro", &self.pro)
+            .field("speech_store", &self.speech_store)
             .finish()
     }
 }
@@ -102,6 +130,8 @@ impl Config {
             speech: None,
             speech_model_url: None,
             update_url: RELEASES_URL.to_owned(),
+            pro: ProConfig::for_this_build(),
+            speech_store: None,
         }
     }
 }
@@ -1510,7 +1540,7 @@ pub struct SpeechModelState {
 }
 
 /// An origin the person allowed a plugin to send audio to.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct AudioConsent {
     pub plugin: String,
     pub origin: String,

@@ -227,7 +227,7 @@ impl Backend for ExternalBackend {
     }
 }
 
-fn host_kind(kind: ItemKind) -> jf_plugin_host::ItemKind {
+pub(crate) fn host_kind(kind: ItemKind) -> jf_plugin_host::ItemKind {
     match kind {
         ItemKind::Track => jf_plugin_host::ItemKind::Track,
         ItemKind::Album => jf_plugin_host::ItemKind::Album,

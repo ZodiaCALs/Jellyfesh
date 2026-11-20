@@ -589,13 +589,15 @@ fn source_tracks_join_gaplessly_and_refused_urls_are_resolved_again() {
     ];
 
     let events = play_to_end(&env, tracks);
-    let titles: Vec<_> = events
+    let mut titles: Vec<_> = events
         .iter()
         .filter_map(|e| match e {
             Event::NowPlaying(Some(n)) => Some(n.title.clone()),
             _ => None,
         })
         .collect();
+    // Now Playing comes again when its picture is in the cache.
+    titles.dedup();
     assert_eq!(titles, vec!["First", "Second"]);
     assert!(
         !events.iter().any(|e| matches!(e, Event::Error { .. })),

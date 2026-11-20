@@ -47,8 +47,10 @@ use jf_plugin_host::{
 use jf_session::{SourceTrack, TrackRef};
 
 pub(crate) use convert::{
-    Answer, LIBRARY, library_answer, source_item, source_track, track_item, unplayable_reason,
+    Answer, LIBRARY, http_source, library_answer, lyrics_format, source_item, source_track, track_item,
+    unplayable_reason,
 };
+pub(crate) use fetch::{agent as http_agent, image as fetch_image};
 
 /// The core's kind for a plugin item's kind.
 pub(crate) fn item_kind(kind: HostKind) -> crate::types::ItemKind {
@@ -226,7 +228,7 @@ impl std::fmt::Debug for Ctx {
 
 impl Ctx {
     /// Remembers listed items so they can be passed back whole.
-    fn remember(&self, plugin: &str, items: &[Item]) {
+    pub(crate) fn remember(&self, plugin: &str, items: &[Item]) {
         lock(&self.items).insert(plugin, items);
     }
 
@@ -235,6 +237,11 @@ impl Ctx {
         lock(&self.items)
             .get(plugin, id, prefer)
             .unwrap_or_else(|| convert::bare(id, fallback, id))
+    }
+
+    /// A listed item of `kind` by id, or a bare one.
+    pub(crate) fn item(&self, plugin: &str, id: &str, kind: HostKind) -> Item {
+        self.node(plugin, id, &[kind], kind)
     }
 
     /// The item to pass back for a source track.
@@ -1615,7 +1622,7 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 /// Writes a file through a temporary file in the same folder.
-fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     std::fs::create_dir_all(dir)?;
     let tmp = dir.join(format!(

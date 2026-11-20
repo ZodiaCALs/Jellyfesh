@@ -50,6 +50,10 @@ const PLAY_COUNTS_AFTER_MS: u64 = 4 * 60 * 1_000;
 const WATCH_DEBOUNCE: Duration = Duration::from_secs(2);
 /// The settings key of the bundled plugins the person uninstalled.
 const DECLINED_BUNDLED_KEY: &str = "uninstalled_bundled_plugins";
+/// The settings key of the Jellyfesh Pro licence key the person entered.
+const LICENCE_KEY: &str = "pro_licence_key";
+/// How long the appearance plugin may take to give its look.
+const LOOK_WAIT: Duration = Duration::from_secs(25);
 /// Longest the core waits at shutdown for installs, uninstalls and logouts in flight (a logout
 /// may take 45 s when the service is slow to revoke its tokens).
 const JOB_DRAIN: Duration = Duration::from_secs(60);
@@ -61,6 +65,16 @@ pub(crate) enum Msg {
     Sources(SourcesMsg),
     /// What the app's store says about Jellyfesh Pro.
     StoreEntitlement(crate::types::StoreEntitlement),
+    /// AI Lyrics helpers: plans, job stages and ends, model downloads.
+    AiLyrics(crate::ai_lyrics::AiMsg),
+    /// The appearance plugin's look, for the request `generation`.
+    Look {
+        generation: u64,
+        plugin: String,
+        result: Result<jf_plugin_host::Look, String>,
+    },
+    /// A source picture is ready, or cannot be had.
+    Artwork(crate::types::ArtworkReady),
     Shutdown,
 }
 
@@ -110,6 +124,8 @@ enum MediaJob {
         item: Box<Item>,
         /// The picture it was listed with, when the plugin has no `artwork`.
         listed: Option<ImageRef>,
+        /// Now Playing's picture URL, which the fetched picture is kept under.
+        artwork_url: Option<String>,
     },
 }
 
@@ -124,6 +140,11 @@ impl MediaJob {
 pub(crate) enum MediaMsg {
     Lyrics(Box<LyricsSnapshot>),
     Theme(Box<ThemeSnapshot>),
+    /// A source track's picture, fetched through its plugin and kept as a file.
+    NowPlayingArtwork {
+        uid: u64,
+        path: PathBuf,
+    },
 }
 
 /// State shared with [`crate::Core`] handles on other threads.
@@ -137,6 +158,8 @@ pub(crate) struct Shared {
     pub(crate) external: RwLock<HashMap<String, External>>,
     /// The plugin host, for queries the actor need not answer.
     pub(crate) host: RwLock<Option<jf_plugin_host::PluginHost>>,
+    /// Source pictures fetched through the core (set once at start).
+    pub(crate) artwork: std::sync::OnceLock<crate::artwork::Artwork>,
 }
 
 /// A player the app registered, with the name its source shows.
@@ -192,6 +215,27 @@ pub(crate) struct Actor {
     buffering_uid: Option<u64>,
     /// The remote session, while Jellyfesh controls a service's player.
     remote: Option<remote::Session>,
+    /// Jellyfesh Pro: where it comes from (ADR-0021).
+    pro: crate::pro::Pro,
+    /// The appearance plugin the `Look` slice comes from.
+    look: LookState,
+    /// AI Lyrics: jobs, consents and speech models (ADR-0019).
+    ai: crate::ai_lyrics::AiLyrics,
+    /// The update thread (it publishes the `Update` slice itself).
+    update: Option<Sender<crate::update::UpdateMsg>>,
+    /// The queue entry automatic AI Lyrics last considered.
+    auto_lyrics: Option<u64>,
+    /// For helper threads the actor starts (the look).
+    tx: Sender<Msg>,
+}
+
+/// What the `Look` slice is made from.
+#[derive(Debug, Default)]
+struct LookState {
+    version: u64,
+    /// The appearance plugin and its version, while Pro is active.
+    plugin: Option<(String, String)>,
+    generation: u64,
 }
 
 impl Shared {
@@ -275,6 +319,7 @@ impl Shared {
             remote_session: AtomicU64::new(0),
             external: RwLock::new(HashMap::new()),
             host: RwLock::new(None),
+            artwork: std::sync::OnceLock::new(),
         }
     }
 
@@ -286,8 +331,7 @@ impl Shared {
     /// A cached source picture, or `None` while it is fetched (see
     /// [`crate::Core::source_artwork`]).
     pub(crate) fn source_artwork(&self, url: &str, size_px: u32) -> Option<PathBuf> {
-        let _ = (url, size_px);
-        None
+        self.artwork.get()?.get(url, size_px)
     }
 
     pub(crate) fn read_queue(&self) -> RwLockReadGuard<'_, Queue> {
@@ -405,7 +449,50 @@ impl Actor {
         let mut sources = Sources::new(&config, settings.allow_community_plugins, &shared, &tx);
         sources.install_bundled(config.bundled_plugins.clone(), declined_bundled);
         *shared.host.write().unwrap_or_else(|e| e.into_inner()) = sources.ctx().map(|ctx| ctx.host.clone());
-        let media_jobs = spawn_media_worker(db, config.cache_dir.clone(), sources.ctx(), tx)?;
+
+        // Jellyfesh Pro: a licence key kept from an earlier run is checked again.
+        let licence: Option<String> = store
+            .as_ref()
+            .and_then(|s| s.setting::<String>(LICENCE_KEY).ok().flatten());
+        let pro = crate::pro::Pro::new(&config.pro, config.distribution, licence.as_deref());
+        if let Some(host) = shared.host() {
+            host.set_pro(pro.active());
+        }
+        let _ = shared
+            .artwork
+            .set(crate::artwork::Artwork::new(&config.cache_dir, tx.clone()));
+        let speech_store = config.speech_store.clone().unwrap_or_else(|| {
+            let dir = config.data_dir.join("speech-models");
+            match &config.speech_model_url {
+                Some(url) => jf_speech::ModelStore::with_base_url(dir, url),
+                None => jf_speech::ModelStore::new(dir),
+            }
+        });
+        let ai = crate::ai_lyrics::AiLyrics::new(
+            tx.clone(),
+            &config.data_dir,
+            speech_store,
+            config.speech.clone(),
+            shared.host(),
+        );
+        let update = crate::update::spawn(
+            shared.clone(),
+            config.update_url.clone(),
+            &config.data_dir,
+            config.distribution == crate::types::Distribution::Direct,
+            settings.check_for_updates,
+        )
+        .map_err(|e| tracing::warn!("could not start the update check: {e}"))
+        .ok();
+        let actor_tx = tx.clone();
+        let media_jobs = spawn_media_worker(
+            db,
+            config.cache_dir.clone(),
+            sources.ctx(),
+            ai.made().clone(),
+            shared.artwork.get().map(|a| a.dir().to_owned()),
+            tx,
+        )?;
 
         let mut actor = Actor {
             config,
@@ -441,6 +528,12 @@ impl Actor {
             pending_start: None,
             buffering_uid: None,
             remote: None,
+            pro,
+            look: LookState::default(),
+            ai,
+            update,
+            auto_lyrics: None,
+            tx: actor_tx,
         };
         let revision = actor.library.revision().unwrap_or(0);
         actor.library_revision = revision;
@@ -454,11 +547,14 @@ impl Actor {
         });
         actor.publish_playback();
         actor.publish_queue();
+        actor.publish_pro();
         actor.publish_sources(true);
+        actor.ai.publish(&actor.shared);
         Ok((actor, shared))
     }
 
     pub(crate) fn run(mut self, rx: Receiver<Msg>) {
+        self.resume_on_launch();
         loop {
             let save_timer = match self.save_due {
                 Some(due) => after(due.saturating_duration_since(Instant::now())),
@@ -482,6 +578,9 @@ impl Actor {
                     Ok(Msg::Media(msg)) => self.on_media(msg),
                     Ok(Msg::Sources(msg)) => self.on_sources(msg),
                     Ok(Msg::StoreEntitlement(entitlement)) => self.on_store_entitlement(entitlement),
+                    Ok(Msg::AiLyrics(msg)) => self.on_ai_lyrics(msg),
+                    Ok(Msg::Look { generation, plugin, result }) => self.on_look(generation, &plugin, result),
+                    Ok(Msg::Artwork(ready)) => self.shared.emit(Event::Artwork(Arc::new(ready))),
                     Ok(Msg::Shutdown) | Err(_) => break,
                 },
                 recv(engine_events) -> ev => match ev {
@@ -866,6 +965,7 @@ impl Actor {
             } => {
                 self.sources.set_settings(&plugin, &settings_json)?;
                 self.publish_sources(true);
+                self.plugin_settings_changed(&plugin);
             }
             Command::AcknowledgeUnofficial { id: plugin } => {
                 if self.sources.store_build() {
@@ -906,21 +1006,51 @@ impl Actor {
             Command::ResetPluginSettings { plugin } => {
                 self.sources.reset_settings(&plugin)?;
                 self.publish_sources(true);
+                self.plugin_settings_changed(&plugin);
             }
-            Command::MakeLyrics { .. }
-            | Command::CancelLyrics { .. }
-            | Command::DeleteMadeLyrics { .. }
-            | Command::AllowAudioUpload { .. }
-            | Command::RevokeAudioUpload { .. }
-            | Command::DownloadSpeechModel { .. }
-            | Command::CancelSpeechModelDownload { .. }
-            | Command::DeleteSpeechModel { .. }
-            | Command::ActivateLicence { .. }
-            | Command::RemoveLicence
-            | Command::CheckForUpdates
-            | Command::Discover { .. }
-            | Command::Details { .. }
-            | Command::Comments { .. } => return Err(CoreError::Other("not yet".into())),
+            Command::MakeLyrics { song } => {
+                let song = self.lyrics_song(&song)?;
+                self.ai.make(song).map_err(CoreError::Other)?;
+                self.ai.publish(&self.shared);
+            }
+            Command::CancelLyrics { job } => {
+                self.ai.cancel(job).map_err(CoreError::Other)?;
+                self.ai.publish(&self.shared);
+            }
+            Command::DeleteMadeLyrics { song } => {
+                let song = self.lyrics_song(&song)?;
+                let outcome = self.ai.delete_made(&song.identity).map_err(CoreError::Other)?;
+                self.made_lyrics_changed(outcome);
+            }
+            Command::AllowAudioUpload { plugin, origin } => {
+                self.ai
+                    .set_consent(&plugin, &origin, true)
+                    .map_err(CoreError::Other)?;
+                self.ai.publish(&self.shared);
+            }
+            Command::RevokeAudioUpload { plugin, origin } => {
+                self.ai
+                    .set_consent(&plugin, &origin, false)
+                    .map_err(CoreError::Other)?;
+                self.ai.publish(&self.shared);
+            }
+            Command::DownloadSpeechModel { id: model } => {
+                self.ai.download(&model).map_err(CoreError::Other)?;
+                self.ai.publish(&self.shared);
+            }
+            Command::CancelSpeechModelDownload { id: model } => {
+                self.ai.cancel_download(&model).map_err(CoreError::Other)?;
+            }
+            Command::DeleteSpeechModel { id: model } => {
+                self.ai.delete_model(&model).map_err(CoreError::Other)?;
+                self.ai.publish(&self.shared);
+            }
+            Command::ActivateLicence { key } => self.activate_licence(&key)?,
+            Command::RemoveLicence => self.remove_licence(),
+            Command::CheckForUpdates => self.check_for_updates()?,
+            Command::Discover { source } => self.discover(id, source)?,
+            Command::Details { item } => self.details(id, item)?,
+            Command::Comments { item, page } => self.comments(id, item, page)?,
         }
         Ok(())
     }
@@ -1199,6 +1329,7 @@ impl Actor {
         let devices_changed = settings.output_device != self.settings.output_device;
         let hue_changed = settings.hue_source != self.settings.hue_source;
         let community_changed = settings.allow_community_plugins != self.settings.allow_community_plugins;
+        let updates_changed = settings.check_for_updates != self.settings.check_for_updates;
         let switch_output = devices_changed
             && matches!(self.config.output, OutputKind::Device { name: None })
             && self.engine.is_some();
@@ -1216,6 +1347,9 @@ impl Actor {
         self.shared.emit(Event::Settings(snapshot));
         if hue_changed {
             self.publish_theme(true);
+        }
+        if updates_changed && let Some(update) = &self.update {
+            let _ = update.send(crate::update::UpdateMsg::Auto(self.settings.check_for_updates));
         }
         if community_changed {
             self.sources
@@ -1737,6 +1871,7 @@ impl Actor {
                 return;
             }
         };
+        now.quality = Some(crate::details::engine_format(&info));
         now.format = Some(info);
         self.play = Some(PlayRecord {
             track: item.track.clone(),
@@ -1744,7 +1879,21 @@ impl Actor {
             duration_ms: now.duration_ms,
         });
         let changed = self.media_uid != Some(item.uid);
-        let job = match &item.track {
+        let job = self.media_job(&item, &now);
+        self.set_now_playing(Some(now));
+        if changed && let Some(job) = job {
+            self.media_uid = Some(item.uid);
+            let _ = self.media_jobs.send(job);
+        }
+        self.armed_next = None;
+        self.rearm();
+        self.publish_playback();
+        self.save_playback();
+    }
+
+    /// The lyrics, artwork and theme to find for a queue entry.
+    fn media_job(&self, item: &QueueItem, now: &NowPlaying) -> Option<MediaJob> {
+        match &item.track {
             TrackRef::Source(track) => self.sources.ctx().map(|ctx| {
                 let item_record = ctx.track_item(track);
                 let listed = item_record.artwork.clone();
@@ -1753,6 +1902,7 @@ impl Actor {
                     plugin: track.plugin.clone(),
                     item: Box::new(item_record),
                     listed,
+                    artwork_url: track.artwork_url.clone(),
                 }
             }),
             TrackRef::Library(_) | TrackRef::File(_) => now.path.clone().map(|audio| MediaJob::Local {
@@ -1767,16 +1917,7 @@ impl Actor {
                     _ => None,
                 },
             }),
-        };
-        self.set_now_playing(Some(now));
-        if changed && let Some(job) = job {
-            self.media_uid = Some(item.uid);
-            let _ = self.media_jobs.send(job);
         }
-        self.armed_next = None;
-        self.rearm();
-        self.publish_playback();
-        self.save_playback();
     }
 
     /// Resolves a queue entry to the engine's play item and display data. A
@@ -1922,6 +2063,9 @@ impl Actor {
 
     fn on_store_entitlement(&mut self, entitlement: crate::types::StoreEntitlement) {
         tracing::debug!(?entitlement.store, entitlement.active, "store entitlement");
+        if self.pro.set_entitlement(&entitlement) {
+            self.pro_changed();
+        }
     }
 
     fn on_media(&mut self, msg: MediaMsg) {
@@ -1930,7 +2074,16 @@ impl Actor {
             MediaMsg::Lyrics(l) if Some(l.uid) == current => {
                 let l: Arc<LyricsSnapshot> = Arc::from(l);
                 self.shared.update(|s| s.lyrics = Some(l.clone()));
-                self.shared.emit(Event::Lyrics(l));
+                self.shared.emit(Event::Lyrics(l.clone()));
+                self.consider_automatic_lyrics(&l);
+            }
+            MediaMsg::NowPlayingArtwork { uid, path } if Some(uid) == current => {
+                let now = self.shared.snapshot().now_playing.clone();
+                if let Some(now) = now.filter(|n| n.uid == uid) {
+                    let mut now = (*now).clone();
+                    now.artwork = Some(ArtworkRef::File(path));
+                    self.set_now_playing(Some(now));
+                }
             }
             MediaMsg::Theme(t) if t.uid == current => {
                 self.artwork_theme = Some(Arc::from(t));
@@ -2089,6 +2242,11 @@ impl Actor {
     fn publish_sources(&mut self, force: bool) {
         self.sources
             .publish(self.settings.allow_community_plugins, &self.shared, force);
+        // Plugins came, went, were turned on or off, signed in or out.
+        if self.ai.plugins_changed(self.pro.active(), false) {
+            self.ai.publish(&self.shared);
+        }
+        self.refresh_look(false);
     }
 
     fn publish_playback(&mut self) {
@@ -2310,6 +2468,523 @@ fn source_play_item(uid: u64, track: &SourceTrack, source: HttpSource) -> PlayIt
     }
 }
 
+// ---- v0.0.7: Pro, the look, AI Lyrics, updates, Discover and details ---
+
+impl Actor {
+    fn publish_pro(&mut self) {
+        let snapshot = Arc::new(self.pro.snapshot());
+        self.shared.update(|s| s.pro = snapshot.clone());
+        self.shared.emit(Event::Pro(snapshot));
+    }
+
+    /// Pro started or stopped: the plugin host, AI Lyrics and the look follow.
+    fn pro_changed(&mut self) {
+        let active = self.pro.active();
+        if let Some(host) = self.shared.host() {
+            host.set_pro(active);
+        }
+        self.publish_pro();
+        if self.ai.plugins_changed(active, false) {
+            self.ai.publish(&self.shared);
+        }
+        self.refresh_look(false);
+    }
+
+    fn activate_licence(&mut self, key: &str) -> Result<(), CoreError> {
+        if !self.pro.licence_keys() {
+            return Err(CoreError::Other(
+                "licence keys are not used in this edition of Jellyfesh: Jellyfesh Pro comes from its store"
+                    .into(),
+            ));
+        }
+        let result = self.pro.activate(key);
+        if let Ok(text) = &result {
+            self.save_setting(LICENCE_KEY, text);
+        }
+        self.pro_changed();
+        result
+            .map(|_| ())
+            .map_err(|e| CoreError::Other(crate::pro::licence_error_text(e).into()))
+    }
+
+    fn remove_licence(&mut self) {
+        self.pro.remove_licence();
+        if self.config.persist_session
+            && let Some(store) = &self.store
+            && let Err(e) = store.remove_setting(LICENCE_KEY)
+        {
+            tracing::warn!("could not forget the licence key: {e}");
+        }
+        self.pro_changed();
+    }
+
+    fn check_for_updates(&mut self) -> Result<(), CoreError> {
+        if self.config.distribution != crate::types::Distribution::Direct {
+            return Err(CoreError::Other(
+                "this edition of Jellyfesh is updated by its store or package manager".into(),
+            ));
+        }
+        match &self.update {
+            Some(update) => {
+                let _ = update.send(crate::update::UpdateMsg::CheckNow);
+                Ok(())
+            }
+            None => Err(CoreError::Other("the update check is not running".into())),
+        }
+    }
+
+    /// Asks the appearance plugin for its look when it, its version or Pro
+    /// changed (`force`: its settings changed); without one, or without Pro,
+    /// the look goes back to the defaults.
+    fn refresh_look(&mut self, force: bool) {
+        let host = self.shared.host();
+        let found = if self.pro.active() {
+            host.as_ref().and_then(|host| {
+                host.plugins()
+                    .into_iter()
+                    .find(|p| p.enabled && p.capabilities.contains(&jf_plugin_host::Capability::Appearance))
+                    .map(|p| (p.id, p.version))
+            })
+        } else {
+            None
+        };
+        if !force && found == self.look.plugin {
+            return;
+        }
+        self.look.plugin.clone_from(&found);
+        self.look.generation += 1;
+        let (Some((plugin, _)), Some(host)) = (found, host) else {
+            self.publish_look(None, None);
+            return;
+        };
+        let (generation, tx) = (self.look.generation, self.tx.clone());
+        let spawned = thread::Builder::new().name("jf-look".into()).spawn(move || {
+            let result = match host.appearance_look(&plugin).recv_timeout(LOOK_WAIT) {
+                Ok(Ok(look)) => Ok(look),
+                Ok(Err(e)) => Err(e.to_string()),
+                Err(_) => Err("the plugin did not answer in time".into()),
+            };
+            let _ = tx.send(Msg::Look {
+                generation,
+                plugin,
+                result,
+            });
+        });
+        if spawned.is_err() {
+            self.publish_look(None, None);
+        }
+    }
+
+    fn on_look(&mut self, generation: u64, plugin: &str, result: Result<jf_plugin_host::Look, String>) {
+        if generation != self.look.generation {
+            return;
+        }
+        match result {
+            Ok(look) => self.publish_look(Some(&look), Some(plugin)),
+            Err(error) => {
+                tracing::warn!(%plugin, %error, "no look from the appearance plugin");
+                self.publish_look(None, None);
+            }
+        }
+    }
+
+    fn publish_look(&mut self, look: Option<&jf_plugin_host::Look>, plugin: Option<&str>) {
+        self.look.version += 1;
+        let snapshot = Arc::new(crate::look::resolve(look, plugin, self.look.version));
+        self.shared.update(|s| s.look = snapshot.clone());
+        self.shared.emit(Event::Look(snapshot));
+    }
+
+    /// A plugin's settings changed: AI Lyrics asks for its plan again, the
+    /// look for the look.
+    fn plugin_settings_changed(&mut self, plugin: &str) {
+        if self.ai.plugin() == Some(plugin) {
+            self.ai.refresh_plan();
+            self.ai.publish(&self.shared);
+        }
+        if self.look.plugin.as_ref().is_some_and(|(id, _)| id == plugin) {
+            self.refresh_look(true);
+        }
+    }
+
+    fn on_ai_lyrics(&mut self, msg: crate::ai_lyrics::AiMsg) {
+        let outcome = self.ai.on_message(msg);
+        self.ai.publish(&self.shared);
+        self.made_lyrics_changed(outcome);
+    }
+
+    /// Made lyrics came or went for a song: when it plays, its lyrics are
+    /// looked up again.
+    fn made_lyrics_changed(&mut self, outcome: crate::ai_lyrics::Outcome) {
+        let Some(identity) = outcome.made else {
+            return;
+        };
+        let Some(item) = self.shared.read_queue().current() else {
+            return;
+        };
+        if self.song_identity(&item.track).as_deref() != Some(identity.as_str()) {
+            return;
+        }
+        let now = self.shared.snapshot().now_playing.clone();
+        if let Some(now) = now.filter(|n| n.uid == item.uid)
+            && let Some(job) = self.media_job(&item, &now)
+        {
+            self.media_uid = Some(item.uid);
+            let _ = self.media_jobs.send(job);
+        }
+    }
+
+    /// What identifies a song's made lyrics.
+    fn song_identity(&self, track: &TrackRef) -> Option<String> {
+        let path = match track {
+            TrackRef::Library(id) => self.library.track(*id).ok().flatten().map(|t| t.path),
+            TrackRef::File(_) | TrackRef::Source(_) => None,
+        };
+        crate::made::identity(track, path.as_deref())
+    }
+
+    /// A song to make lyrics for: the one playing, or a library song.
+    fn lyrics_song(&self, song: &crate::types::SongRef) -> Result<crate::ai_lyrics::Song, CoreError> {
+        use crate::ai_lyrics::{Song, SongAudio};
+        let other = |text: &str| CoreError::Other(text.into());
+        let (uid, track, text) = match song {
+            crate::types::SongRef::Current => {
+                if self.remote.is_some() {
+                    return Err(other(
+                        "AI Lyrics cannot make lyrics for a song playing on another device",
+                    ));
+                }
+                let item = self
+                    .shared
+                    .read_queue()
+                    .current()
+                    .ok_or_else(|| other("nothing is playing"))?;
+                // Plain lyrics the song has are the plugin's to time.
+                let text = self.shared.snapshot().lyrics.as_ref().and_then(|l| {
+                    let doc = l.doc.as_ref().filter(|_| l.uid == item.uid)?;
+                    let made = matches!(l.source, Some(LyricsSource::Made { .. }));
+                    (doc.timing == jf_lyrics::Timing::Unsynced && !made).then(|| {
+                        doc.lines
+                            .iter()
+                            .map(|line| line.text.as_str())
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    })
+                });
+                (Some(item.uid), item.track.clone(), text)
+            }
+            crate::types::SongRef::Library { id } => (None, TrackRef::Library(*id), None),
+        };
+        let song = match &track {
+            TrackRef::Library(id) => {
+                let found = self
+                    .library
+                    .track(*id)?
+                    .ok_or_else(|| other("that song is not in the library"))?;
+                Song {
+                    identity: crate::made::identity(&track, Some(&found.path)).unwrap_or_default(),
+                    title: found.title,
+                    artist: found.artist,
+                    album: found.album,
+                    duration_ms: found.duration_ms,
+                    text,
+                    language: None,
+                    audio: SongAudio::File(found.path),
+                    uid,
+                    library_id: Some(*id),
+                }
+            }
+            TrackRef::File(path) => {
+                let tags = jf_library::read_file_tags(path, false).ok();
+                Song {
+                    identity: crate::made::identity(&track, None).unwrap_or_default(),
+                    title: tags
+                        .as_ref()
+                        .and_then(|t| t.title.clone())
+                        .unwrap_or_else(|| items::file_title(path)),
+                    artist: tags.as_ref().and_then(|t| t.artist.clone()),
+                    album: tags.as_ref().and_then(|t| t.album.clone()),
+                    duration_ms: tags.as_ref().and_then(|t| t.duration_ms),
+                    text,
+                    language: None,
+                    audio: SongAudio::File(path.clone()),
+                    uid,
+                    library_id: None,
+                }
+            }
+            TrackRef::Source(source) => {
+                let ctx = self
+                    .sources
+                    .ctx()
+                    .ok_or_else(|| other("online sources are off"))?;
+                let info = ctx
+                    .host
+                    .plugin(&source.plugin)
+                    .ok_or_else(|| other("the song's source is not installed"))?;
+                if info.playback_mode != jf_plugin_host::PlaybackMode::Stream
+                    || !info
+                        .capabilities
+                        .contains(&jf_plugin_host::Capability::ResolveStream)
+                {
+                    return Err(CoreError::Other(format!(
+                        "AI Lyrics cannot read the songs {} plays in its own app",
+                        info.name
+                    )));
+                }
+                Song {
+                    identity: crate::made::identity(&track, None).unwrap_or_default(),
+                    title: source.title.clone(),
+                    artist: source.artist.clone(),
+                    album: source.album.clone(),
+                    duration_ms: source.duration_ms,
+                    text,
+                    language: None,
+                    audio: SongAudio::Source {
+                        plugin: source.plugin.clone(),
+                        item: Box::new(ctx.track_item(source)),
+                    },
+                    uid,
+                    library_id: None,
+                }
+            }
+        };
+        Ok(song)
+    }
+
+    /// When the AI Lyrics plugin makes lyrics by itself: a song that started
+    /// without synced lyrics (and without made ones) gets a job, once.
+    fn consider_automatic_lyrics(&mut self, lyrics: &LyricsSnapshot) {
+        if self.auto_lyrics == Some(lyrics.uid) || !self.ai.automatic() {
+            return;
+        }
+        let synced = lyrics
+            .doc
+            .as_ref()
+            .is_some_and(|d| d.timing != jf_lyrics::Timing::Unsynced);
+        let made = matches!(lyrics.source, Some(LyricsSource::Made { .. }));
+        if synced || made {
+            return;
+        }
+        self.auto_lyrics = Some(lyrics.uid);
+        let Ok(song) = self.lyrics_song(&crate::types::SongRef::Current) else {
+            return;
+        };
+        if self.ai.made().has(&song.identity) || self.ai.busy_with(&song.identity) {
+            return;
+        }
+        match self.ai.make(song) {
+            Ok(_) => self.ai.publish(&self.shared),
+            Err(error) => tracing::debug!(%error, "no automatic lyrics"),
+        }
+    }
+
+    /// Starts the restored queue where it was, when the person asked for that
+    /// (Settings: resume on launch) and the session was restored.
+    fn resume_on_launch(&mut self) {
+        if !(self.config.restore_session && self.settings.resume_on_launch) || self.resume_at.is_none() {
+            return;
+        }
+        let Some(item) = self.shared.read_queue().current() else {
+            return;
+        };
+        // A service's own player is not started by itself.
+        if let TrackRef::Source(track) = &item.track
+            && self.sources.is_remote(&track.plugin)
+        {
+            return;
+        }
+        if let Err(e) = self.play() {
+            tracing::warn!("could not resume playback: {e}");
+        }
+    }
+
+    fn discover(&mut self, id: CommandId, source: String) -> Result<(), CoreError> {
+        if source == sources::LIBRARY {
+            let page = crate::discover::library_page(&self.library, id, unix_ms());
+            self.shared.emit(Event::Discover(Arc::new(page)));
+            return Ok(());
+        }
+        let ctx = self
+            .sources
+            .ctx()
+            .ok_or_else(|| CoreError::Other("online sources are off".into()))?;
+        if ctx.host.plugin(&source).is_none() {
+            return Err(CoreError::Other(format!("the source {source} is not installed")));
+        }
+        let shared = self.shared.clone();
+        thread::Builder::new().name("jf-discover".into()).spawn(move || {
+            let page = crate::discover::source_page(&ctx, &source, id);
+            shared.emit(Event::Discover(Arc::new(page)));
+        })?;
+        Ok(())
+    }
+
+    fn details(&mut self, id: CommandId, item: crate::types::ItemRef) -> Result<(), CoreError> {
+        use crate::details::{LocalSong, SourceRequest};
+        use crate::types::{DetailsPage, Fact, FactKey, ItemRef};
+        let not_found = || CoreError::Other("that is not in the library".into());
+        let large = |hash: Option<&str>| {
+            hash.and_then(|h| self.library.artwork_thumbnail(h, 1024).ok().flatten())
+                .map(ArtworkRef::File)
+        };
+        match &item {
+            ItemRef::Track { id: track } => {
+                let found = self.library.track(*track)?.ok_or_else(not_found)?;
+                let image = large(found.artwork_hash.as_deref()).and_then(|a| match a {
+                    ArtworkRef::File(path) => Some(path),
+                    ArtworkRef::Url(_) => None,
+                });
+                crate::details::local_song(
+                    self.shared.clone(),
+                    id,
+                    LocalSong {
+                        item: item.clone(),
+                        path: found.path,
+                        title: Some(found.title),
+                        artist: found.artist,
+                        image,
+                    },
+                )?;
+            }
+            ItemRef::File { path } => crate::details::local_song(
+                self.shared.clone(),
+                id,
+                LocalSong {
+                    item: item.clone(),
+                    path: path.clone(),
+                    title: None,
+                    artist: None,
+                    image: None,
+                },
+            )?,
+            ItemRef::Album { id: album } => {
+                let found = self.library.album(*album)?.ok_or_else(not_found)?;
+                let tracks = self.library.album_tracks(*album)?;
+                let genre = tracks.iter().find_map(|t| t.genre.clone());
+                let mut facts = Vec::new();
+                if let Some(year) = found.year {
+                    facts.push(Fact {
+                        key: FactKey::Released,
+                        value: year.to_string(),
+                    });
+                }
+                if let Some(genre) = genre {
+                    facts.push(Fact {
+                        key: FactKey::Genre,
+                        value: genre,
+                    });
+                }
+                let page = DetailsPage {
+                    request: id,
+                    item: item.clone(),
+                    title: found.title,
+                    subtitle: found.album_artist,
+                    description: None,
+                    image: large(found.artwork_hash.as_deref()),
+                    facts,
+                    technical: None,
+                    comment_count: None,
+                    attribution: None,
+                    error: None,
+                };
+                self.shared.emit(Event::Details(Arc::new(page)));
+            }
+            ItemRef::Artist { id: artist } => {
+                let found = self.library.artist(*artist)?.ok_or_else(not_found)?;
+                let page = DetailsPage {
+                    request: id,
+                    item: item.clone(),
+                    title: found.name,
+                    subtitle: None,
+                    description: None,
+                    image: None,
+                    facts: Vec::new(),
+                    technical: None,
+                    comment_count: None,
+                    attribution: None,
+                    error: None,
+                };
+                self.shared.emit(Event::Details(Arc::new(page)));
+            }
+            ItemRef::Source {
+                plugin,
+                item_kind,
+                id: item_id,
+            } => {
+                let ctx = self
+                    .sources
+                    .ctx()
+                    .ok_or_else(|| CoreError::Other("online sources are off".into()))?;
+                let host_item = ctx.item(plugin, item_id, crate::remote::host_kind(*item_kind));
+                // The song playing: what the engine decoded.
+                let now = self.shared.snapshot().now_playing.clone();
+                let technical = now.as_ref().and_then(|now| match &now.track {
+                    TrackRef::Source(t) if &t.plugin == plugin && &t.id == item_id => {
+                        now.quality.clone().map(|format| crate::types::TechnicalInfo {
+                            format,
+                            container: None,
+                            file_size_bytes: None,
+                            duration_ms: now.duration_ms,
+                            replaygain: None,
+                            path: None,
+                        })
+                    }
+                    _ => None,
+                });
+                let attribution = ctx.host.plugin(plugin).and_then(|i| i.content_policy.attribution);
+                crate::details::source_details(
+                    self.shared.clone(),
+                    ctx.host.clone(),
+                    id,
+                    SourceRequest {
+                        item: item.clone(),
+                        plugin: plugin.clone(),
+                        host_item,
+                        attribution,
+                        technical,
+                    },
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    fn comments(
+        &mut self,
+        id: CommandId,
+        item: crate::types::ItemRef,
+        page: Option<String>,
+    ) -> Result<(), CoreError> {
+        let crate::types::ItemRef::Source {
+            plugin,
+            item_kind,
+            id: item_id,
+        } = &item
+        else {
+            let page = crate::details::no_comments(id, item);
+            self.shared.emit(Event::Comments(Arc::new(page)));
+            return Ok(());
+        };
+        let ctx = self
+            .sources
+            .ctx()
+            .ok_or_else(|| CoreError::Other("online sources are off".into()))?;
+        let host_item = ctx.item(plugin, item_id, crate::remote::host_kind(*item_kind));
+        let attribution = ctx.host.plugin(plugin).and_then(|i| i.content_policy.attribution);
+        crate::details::source_comments(
+            self.shared.clone(),
+            ctx.host.clone(),
+            id,
+            item.clone(),
+            plugin.clone(),
+            host_item,
+            page,
+            attribution,
+        )?;
+        Ok(())
+    }
+}
+
 /// What to show for a source track: the metadata it was listed with.
 fn source_now_playing(item: &QueueItem, track: &SourceTrack, link: Option<String>) -> NowPlaying {
     NowPlaying {
@@ -2327,7 +3002,7 @@ fn source_now_playing(item: &QueueItem, track: &SourceTrack, link: Option<String
     }
 }
 
-fn unix_ms() -> i64 {
+pub(crate) fn unix_ms() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| i64::try_from(d.as_millis()).unwrap_or(i64::MAX))
@@ -2514,6 +3189,8 @@ fn spawn_media_worker(
     db: PathBuf,
     cache: PathBuf,
     sources: Option<Arc<Ctx>>,
+    made: crate::made::MadeLyrics,
+    artwork_dir: Option<PathBuf>,
     tx: Sender<Msg>,
 ) -> Result<Sender<MediaJob>, CoreError> {
     let (jobs, rx) = unbounded::<MediaJob>();
@@ -2542,10 +3219,22 @@ fn spawn_media_worker(
                         Some(id) => library.as_ref()?.embedded_lyrics(id).ok().flatten(),
                         None => file_tags.as_ref()?.lyrics.clone(),
                     });
-                    let (doc, source) = match found {
+                    let (mut doc, mut source) = match found {
                         Some((doc, source)) => (Some(doc), Some(source)),
                         None => (None, None),
                     };
+                    // No synced lyrics of its own: the ones AI Lyrics made, if any.
+                    if doc
+                        .as_ref()
+                        .is_none_or(|d| d.timing == jf_lyrics::Timing::Unsynced)
+                        && let Some((made_doc, meta)) = made.get(&crate::made::file_identity(&audio))
+                    {
+                        doc = Some(made_doc);
+                        source = Some(LyricsSource::Made {
+                            plugin: meta.plugin,
+                            engine: meta.engine,
+                        });
+                    }
                     let timeline = doc.as_ref().map(|d| d.timeline());
                     let lyrics = LyricsSnapshot {
                         uid,
@@ -2563,17 +3252,38 @@ fn spawn_media_worker(
                     plugin,
                     item,
                     listed,
+                    artwork_url,
                 } => {
                     let found = sources.as_ref().and_then(|ctx| ctx.lyrics(&plugin, &item));
-                    let lyrics = match found {
-                        Some((doc, synced)) => LyricsSnapshot {
+                    // Made lyrics show synced only where the source's content policy allows it.
+                    let sync_allowed = sources
+                        .as_ref()
+                        .and_then(|ctx| ctx.host.plugin(&plugin))
+                        .is_none_or(|info| info.content_policy.lyrics_sync);
+                    let own_synced = found
+                        .as_ref()
+                        .is_some_and(|(doc, synced)| *synced && doc.timing != jf_lyrics::Timing::Unsynced);
+                    let made_lyrics = (sync_allowed && !own_synced)
+                        .then(|| made.get(&crate::made::source_identity(&plugin, &item.id)))
+                        .flatten();
+                    let lyrics = match (found, made_lyrics) {
+                        (_, Some((doc, meta))) => LyricsSnapshot {
+                            uid,
+                            timeline: Some(doc.timeline()),
+                            doc: Some(doc),
+                            source: Some(LyricsSource::Made {
+                                plugin: meta.plugin,
+                                engine: meta.engine,
+                            }),
+                        },
+                        (Some((doc, synced)), None) => LyricsSnapshot {
                             uid,
                             // Unsynced (content policy): no timeline to follow.
                             timeline: synced.then(|| doc.timeline()),
                             doc: Some(doc),
                             source: Some(LyricsSource::Plugin(plugin.clone())),
                         },
-                        None => LyricsSnapshot {
+                        (None, None) => LyricsSnapshot {
                             uid,
                             doc: None,
                             timeline: None,
@@ -2584,9 +3294,21 @@ fn spawn_media_worker(
                     if !rx.is_empty() {
                         continue; // another track already: its artwork matters
                     }
-                    sources
+                    let bytes = sources
                         .as_ref()
-                        .and_then(|ctx| ctx.artwork(&plugin, &item, listed))
+                        .and_then(|ctx| ctx.artwork(&plugin, &item, listed));
+                    // Now Playing shows the picture from the cache, fetched with the plugin's headers.
+                    if let (Some(bytes), Some(dir)) = (&bytes, &artwork_dir) {
+                        let key =
+                            artwork_url.unwrap_or_else(|| format!("jellyfesh-track:{plugin}:{}", item.id));
+                        match crate::artwork::store_now_playing(dir, &key, bytes) {
+                            Ok(path) => {
+                                let _ = tx.send(Msg::Media(MediaMsg::NowPlayingArtwork { uid, path }));
+                            }
+                            Err(error) => tracing::info!(%error, "could not keep the Now Playing picture"),
+                        }
+                    }
+                    bytes
                 }
             };
             let t = theme::theme_for_artwork(bytes.as_deref());

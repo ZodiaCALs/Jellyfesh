@@ -19,9 +19,16 @@
 //! the app passes in.
 
 mod actor;
+mod ai_lyrics;
+mod artwork;
+mod details;
+mod discover;
 mod items;
+mod look;
 pub mod lyrics;
+mod made;
 pub mod paths;
+mod pro;
 mod remote;
 mod secrets;
 mod sources;
@@ -29,6 +36,7 @@ pub mod targets;
 pub mod theme;
 pub mod timing;
 mod types;
+mod update;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};

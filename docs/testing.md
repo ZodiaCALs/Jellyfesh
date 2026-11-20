@@ -30,6 +30,23 @@ Jellyfesh Web's build needs `wasm-bindgen-cli` and the plugin packages from
 `plugins/release.sh` first; its end-to-end tests run the built app against
 mock Subsonic and Jellyfin servers (`docs/web.md`, "Building and testing").
 
+The core's v0.0.7 tests (`cargo test -p jf-core`) need nothing online either:
+`tests/pro.rs` makes a licence key pair in the test and checks keys signed
+with it, store entitlements, Preview, store builds, the look from the
+appearance test plugin, the update check against a local releases list and
+resuming on launch; `tests/ai_lyrics.rs` makes lyrics with the maker test
+plugin, on this device (a recogniser in the test hears the same invented
+words in any generated tone; the "speech model" is a few invented bytes,
+downloaded from a local server and verified by their SHA-1) and online (a
+local server answers with invented words, after consent); `tests/discover.rs`
+covers Discover pages, details, comments, the library's page and quality
+labels (tones written with tags in the test, 16-bit and 24-bit/96 kHz) and
+source pictures that need a header. `cargo test -p jf-licence -p
+jf-licence-tool` checks licence keys and the owner's tool with key pairs the
+tests make; no release key is in the repository. `cargo test -p jf-speech
+--features whisper` needs CMake and libclang, as does building `jf-ffi`,
+which includes whisper.cpp (except on Windows on Arm).
+
 The official plugins' tests (`cargo test -p jf-subsonic -p jf-jellyfin
 -p jf-qqmusic -p jf-spotify -p jf-netease`) run each plugin in the real host
 against a mock server; the online services' mocks are written from their

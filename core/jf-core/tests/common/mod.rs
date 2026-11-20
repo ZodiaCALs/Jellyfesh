@@ -35,6 +35,9 @@ const PLUGINS: &[(&str, &str)] = &[
     ("spin", "jf-test-spin"),
     ("catalog", "jf-core-test-catalog"),
     ("remote", "jf-test-remote"),
+    ("maker", "jf-test-maker"),
+    ("appearance", "jf-test-appearance"),
+    ("discover", "jf-test-discover"),
 ];
 
 /// The cargo target directory this test binary was built in.
@@ -202,6 +205,18 @@ pub fn package(dir: &Path, name: &str, manifest: &str, signed: bool, icon: Optio
         "{name}-{}.jfpkg",
         if signed { "signed" } else { "unsigned" }
     ));
+    std::fs::write(&path, builder.build().unwrap()).unwrap();
+    path
+}
+
+/// Writes a signed `.jfpkg` with its own settings schema.
+pub fn package_with_schema(dir: &Path, name: &str, manifest: &str, schema: &str) -> PathBuf {
+    let builder = PackageBuilder::new()
+        .manifest(manifest)
+        .wasm(component(name))
+        .file("settings.schema.json", schema.as_bytes().to_vec())
+        .sign(test_key_seed());
+    let path = dir.join(format!("{name}-own-schema.jfpkg"));
     std::fs::write(&path, builder.build().unwrap()).unwrap();
     path
 }
@@ -395,6 +410,30 @@ impl Env {
         plugin_in(events.last().unwrap(), id).unwrap()
     }
 
+    /// Installs a signed test plugin with its own settings schema.
+    pub fn install_with_schema(&self, name: &str, manifest: &str, id: &str, schema: &str) -> PluginSummary {
+        let path = package_with_schema(&self.incoming(), name, manifest, schema);
+        let events = self.run(Command::InstallPlugin { path }, |e| has_plugin(e, id));
+        plugin_in(events.last().unwrap(), id).unwrap()
+    }
+
+    /// Replaces a plugin's settings and waits for the slice to show them.
+    pub fn settings(&self, id: &str, value: serde_json::Value) {
+        let settings_json = value.to_string();
+        let expected: serde_json::Value = value;
+        self.run(
+            Command::SetPluginSettings {
+                id: id.into(),
+                settings_json,
+            },
+            |e| {
+                matches!(e, Event::Sources(s) if s.plugins.iter().any(|p| p.id == id
+                    && serde_json::from_str::<serde_json::Value>(&p.settings_json)
+                        .is_ok_and(|v| expected.as_object().into_iter().flatten().all(|(k, x)| v.get(k) == Some(x)))))
+            },
+        );
+    }
+
     /// Points a plugin at a server.
     pub fn set_server(&self, id: &str, server: &str) {
         let settings_json = serde_json::json!({ "server_url": server }).to_string();
@@ -463,6 +502,19 @@ pub fn plugin_in(event: &Event, id: &str) -> Option<PluginSummary> {
         Event::Sources(s) => s.plugins.iter().find(|p| p.id == id).cloned(),
         _ => None,
     }
+}
+
+/// Waits until `check` holds (looking every 20 ms), for state that may have
+/// changed before the test subscribed; says whether it did.
+pub fn until(timeout: Duration, mut check: impl FnMut() -> bool) -> bool {
+    let end = Instant::now() + timeout;
+    while Instant::now() < end {
+        if check() {
+            return true;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    check()
 }
 
 /// Collects events until `done` returns true or the timeout passes.

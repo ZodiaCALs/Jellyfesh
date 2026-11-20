@@ -58,7 +58,9 @@ pub(crate) fn image(image: &ImageRef) -> Result<Vec<u8>, String> {
     Err("the artwork server redirected too often".into())
 }
 
-fn agent() -> &'static ureq::Agent {
+/// The core's HTTP agent: rustls with the OS roots, no redirects followed,
+/// statuses as answers rather than errors, timeouts.
+pub(crate) fn agent() -> &'static ureq::Agent {
     static AGENT: OnceLock<ureq::Agent> = OnceLock::new();
     AGENT.get_or_init(|| {
         use ureq::tls::{Certificate, RootCerts, TlsConfig, TlsProvider};

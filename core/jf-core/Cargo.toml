@@ -22,10 +22,14 @@ jf-plugin-host.workspace = true
 # On-device recognition for AI Lyrics (ADR-0019 §5): the model catalogue and downloads; the
 # recogniser itself comes from the app (`Config::speech`), so whisper stays off here.
 jf-speech = { path = "../jf-speech", default-features = false }
+# Jellyfesh Pro licence keys, checked offline (ADR-0021).
+jf-licence = { path = "../jf-licence" }
 blake3.workspace = true
 crossbeam-channel.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# Release versions for the update check.
+semver.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 # Fetching a source track's artwork for theme colours and backdrops (the engine streams
@@ -42,6 +46,9 @@ keyring.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+# Licence keys and speech models made in the tests.
+jf-licence = { path = "../jf-licence", features = ["issue"] }
+jf-speech = { path = "../jf-speech", default-features = false, features = ["test-support"] }
 hound.workspace = true
 image.workspace = true
 # The source tests build the test plugins into components, as the plugin host's tests do.

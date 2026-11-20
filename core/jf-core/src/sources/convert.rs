@@ -87,6 +87,9 @@ pub(crate) fn source_track(plugin: &str, item: &Item) -> SourceTrack {
 
 /// A plugin's item as a list row; `links` are the plugin's (ADR-0018).
 pub(crate) fn source_item(plugin: &str, item: &Item, links: &Links) -> SourceItem {
+    if let Some(image) = &item.artwork {
+        crate::artwork::remember(image);
+    }
     let track =
         (item.kind == HostKind::Track && item.playable).then(|| TrackRef::Source(source_track(plugin, item)));
     SourceItem {
