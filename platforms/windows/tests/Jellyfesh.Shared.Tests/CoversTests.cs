@@ -115,4 +115,22 @@ public class CoversTests
         Assert.Equal(FileUris.From("/cache/source-artwork/7-1024.jpg"), player.ArtworkUri);
         Assert.Single(h.Core.ArtworkRequests);
     }
+
+    [Fact]
+    public async Task A_picture_a_plugin_serves_goes_through_the_core_like_any_other()
+    {
+        // Items listed without a picture (Subsonic) carry a jellyfesh-artwork:// reference.
+        const string reference = "jellyfesh-artwork://item?plugin=org.jellyfesh.subsonic&kind=album&id=al-1";
+        using var h = new AppHarness().Started();
+        var item = new SourceItem("org.jellyfesh.subsonic", ItemKind.Album, "al-1", "Night Swim", null, null, null,
+            new ArtworkRef.Url(reference), false, null, null, []);
+        var row = new SourceEntryItem(item, h.S.L);
+        Assert.Null(row.ArtworkUri);
+        row.RequestArtwork(h.S.Thumbnails, 128);
+        await Poll(() => h.Core.ArtworkRequests.Count == 1);
+        Assert.Equal((reference, 128u), h.Core.ArtworkRequests[0]);
+        h.Emit(new CoreEvent.Artwork(new ArtworkReady(reference, 128, "/cache/source-artwork/al-1-128.jpg")));
+        await Poll(() => row.ArtworkUri is not null);
+        Assert.Equal(FileUris.From("/cache/source-artwork/al-1-128.jpg"), row.ArtworkUri);
+    }
 }

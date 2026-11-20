@@ -106,7 +106,11 @@ public enum ReplayGainMode
 /// <param name="BitsPerSample">PCM, FLAC and ALAC.</param>
 public sealed record TrackFormat(string Codec, uint SampleRate, ushort Channels, long? DurationUs, bool Gapless, uint? Bitrate, uint? BitsPerSample = null);
 
-/// <summary>Artwork a UI can load: a cached file, or a URL for online items.</summary>
+/// <summary>
+/// Artwork: a cached file to load, or a source picture's URL, which only the core fetches
+/// (docs/core-api.md, "Covers"; ThumbnailService.GetSourceAsync). A URL is never loaded directly:
+/// it may be a web address, or a jellyfesh-artwork:// reference the core resolves through the plugin.
+/// </summary>
 public abstract record ArtworkRef
 {
     private ArtworkRef() { }
@@ -114,14 +118,6 @@ public abstract record ArtworkRef
     public sealed record File(string Path) : ArtworkRef;
 
     public sealed record Url(string Address) : ArtworkRef;
-
-    /// <summary>A URI an image control can load.</summary>
-    public string ToUriString() => this switch
-    {
-        File f => FileUris.From(f.Path) ?? string.Empty,
-        Url u => u.Address,
-        _ => string.Empty,
-    };
 }
 
 /// <summary>Local paths as file URIs an image control can load.</summary>
