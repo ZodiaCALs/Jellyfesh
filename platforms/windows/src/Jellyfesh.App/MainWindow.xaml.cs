@@ -355,7 +355,10 @@ public sealed partial class MainWindow : Window
         where T : class
     {
         T? made = null;
-        Optional(what, () => made = create());
+        // A statement lambda, so this calls Optional(string, Action): the expression
+        // lambda `() => made = create()` is a Func<T> and called this method again,
+        // forever (the stack overflow CI's smoke test found).
+        Optional(what, () => { made = create(); });
         return made;
     }
 
