@@ -84,6 +84,8 @@ import org.jellyfesh.android.ui.theme.jfShadow
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.TimeDemandEffect
 import org.jellyfesh.android.ui.time.rememberPositionSeconds
+import org.jellyfesh.logic.lyrics.LyricsMakingModel
+import org.jellyfesh.logic.core.SongRef
 import org.jellyfesh.logic.core.BackdropStyle
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.RepeatMode
@@ -279,13 +281,18 @@ private fun PanelContent(panel: NowPlayingPanel, state: CoreState, track: Player
         NowPlayingPanel.Lyrics -> if (remote != null) {
             RemoteNote(R.drawable.ic_lyrics, stringResource(R.string.remote_lyrics, remote.service))
         } else {
+            val lyrics = state.currentLyrics
+            // AI Lyrics: the song's job, or what making lyrics would take (ADR-0019).
+            val step = LyricsMakingModel.step(LyricsMakingModel.jobFor(state.aiLyrics, state.nowPlaying?.uid), state.aiLyrics)
             LyricsView(
-                state.currentLyrics,
+                lyrics,
                 state.settings.showTranslation,
                 state.settings.showRomanization,
                 playing = PlayerModel.isPlaying(PlayerModel.status(state)),
                 size = state.settings.lyricsSize,
                 align = state.settings.lyricsAlign,
+                making = if (LyricsMakingModel.shows(step, lyrics)) ({ LyricsMakingCard(step, lyrics) }) else null,
+                madeBy = LyricsMakingModel.madeWith(lyrics),
             )
         }
         NowPlayingPanel.Queue -> if (remote != null) {
@@ -475,6 +482,9 @@ private fun MoreButton(state: CoreState, track: PlayerTrack) {
     val stop = stringResource(R.string.remote_stop)
     val playingOn = remote?.device?.let { stringResource(R.string.remote_playing_on, it.name) }
     val openIn = remote?.let { stringResource(R.string.action_open_in, it.service) }
+    val maker = rememberLyricsMaker()
+    val makeAgain = stringResource(R.string.ai_make_again)
+    val deleteMade = stringResource(R.string.ai_delete_made)
     JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
         val local = track.local
         val link = track.link
@@ -489,6 +499,15 @@ private fun MoreButton(state: CoreState, track: PlayerTrack) {
             )
             local != null -> actions.showFor(
                 TrackTarget(local.track, track.title, track.subtitle, artist = track.artist, link = track.link, source = track.source),
+                // Lyrics AI Lyrics made: Make Again, and Delete Made Lyrics (which asks first).
+                extra = if (LyricsMakingModel.madeWith(state.currentLyrics) != null) {
+                    listOfNotNull(
+                        SheetAction(makeAgain, R.drawable.ic_sparkle) { maker.make(SongRef.Current) }.takeIf { state.aiLyrics.available },
+                        SheetAction(deleteMade, R.drawable.ic_trash, destructive = true) { maker.deleteMade(SongRef.Current) },
+                    )
+                } else {
+                    emptyList()
+                },
             )
         }
     }, tint = Jf.colors.ink90)

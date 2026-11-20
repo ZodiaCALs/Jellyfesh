@@ -526,4 +526,23 @@
     <string name="pro_pending">Your purchase is pending. Jellyfesh Pro turns on once Google Play completes it.</string>
     <string name="pro_nothing_to_restore">Google Play has no purchase of Jellyfesh Pro for this account.</string>
     <string name="pro_store_failed">Google Play couldn’t do that now. Try again later.</string>
+    <!-- v0.0.7: AI Lyrics in Now Playing and the song menu -->
+    <string name="ai_create">Create Synced Lyrics</string>
+    <string name="ai_time">Time These Lyrics</string>
+    <string name="ai_stage_waiting">Waiting…</string>
+    <string name="ai_stage_reading">Reading Audio…</string>
+    <string name="ai_stage_sending">Sending to %1$s…</string>
+    <string name="ai_stage_recognising">Recognising… %1$d%%</string>
+    <string name="ai_stage_timing">Timing Words…</string>
+    <string name="ai_failed">Couldn’t make lyrics: %1$s</string>
+    <string name="ai_need_model">Download the %1$s model (%2$s) to make lyrics on this device.</string>
+    <string name="ai_downloading_model">Downloading %1$s… %2$d%%</string>
+    <string name="ai_need_key">Add your API key to make lyrics online.</string>
+    <string name="ai_open_settings">Open AI Lyrics Settings</string>
+    <string name="ai_consent_title">Send This Song to %1$s?</string>
+    <string name="ai_consent_body">AI Lyrics will send the song’s audio to %1$s to make its lyrics. The provider’s terms and privacy policy apply, and it may charge your account.</string>
+    <string name="ai_make_again">Make Again</string>
+    <string name="ai_delete_made">Delete Made Lyrics</string>
+    <string name="ai_delete_made_title">Delete These Lyrics?</string>
+    <string name="ai_delete_made_body">You can make them again.</string>
 </resources>

@@ -9,11 +9,13 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -102,10 +104,12 @@ fun LyricsView(
     modifier: Modifier = Modifier,
     size: LyricsSize = LyricsSize.Medium,
     align: LyricsAlign = LyricsAlign.Start,
+    making: (@Composable () -> Unit)? = null,
+    madeBy: String? = null,
 ) {
     val doc = lyrics?.doc
     if (doc == null || doc.lines.isEmpty()) {
-        EmptyState(R.drawable.ic_lyrics, stringResource(R.string.lyrics_none_title), stringResource(R.string.lyrics_none_body), modifier)
+        EmptyState(R.drawable.ic_lyrics, stringResource(R.string.lyrics_none_title), stringResource(R.string.lyrics_none_body), modifier, action = making)
         return
     }
     val graph = LocalGraph.current
@@ -173,6 +177,18 @@ fun LyricsView(
                     onClick = row.startMs?.takeIf { timeline != null }?.let { start -> { graph.send(Command.Seek(start)) } },
                 )
             }
+            // "Made by AI Lyrics · {engine}" under the last line.
+            if (madeBy != null) {
+                item(key = "made-by") {
+                    JfText(stringResource(R.string.lyrics_made_by, madeBy), style = JfType.caption, color = Jf.colors.ink50)
+                }
+            }
+            // Below plain lyrics: Time These Lyrics, or the job making them.
+            if (making != null && timeline == null) item(key = "making") { making() }
+        }
+        // Over synced lyrics: the job making new ones, at the foot of the pane.
+        if (making != null && timeline != null) {
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 8.dp)) { making() }
         }
     }
 }

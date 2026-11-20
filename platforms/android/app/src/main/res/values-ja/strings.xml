@@ -483,4 +483,23 @@
     <string name="pro_pending">購入は保留中です。Google Play で完了すると Jellyfesh Pro がオンになります。</string>
     <string name="pro_nothing_to_restore">このアカウントの Jellyfesh Pro の購入は Google Play に見つかりません。</string>
     <string name="pro_store_failed">Google Play で今は完了できませんでした。後でもう一度お試しください。</string>
+    <!-- v0.0.7: AI Lyrics in Now Playing and the song menu -->
+    <string name="ai_create">同期歌詞を作成</string>
+    <string name="ai_time">この歌詞にタイミングを付ける</string>
+    <string name="ai_stage_waiting">待機中…</string>
+    <string name="ai_stage_reading">音声を読み込んでいます…</string>
+    <string name="ai_stage_sending">%1$s に送信しています…</string>
+    <string name="ai_stage_recognising">認識しています… %1$d%%</string>
+    <string name="ai_stage_timing">単語のタイミングを合わせています…</string>
+    <string name="ai_failed">歌詞を作成できませんでした：%1$s</string>
+    <string name="ai_need_model">このデバイスで歌詞を作成するには、%1$s モデル（%2$s）をダウンロードしてください。</string>
+    <string name="ai_downloading_model">%1$s をダウンロード中… %2$d%%</string>
+    <string name="ai_need_key">オンラインで歌詞を作成するには、API キーを追加してください。</string>
+    <string name="ai_open_settings">AI 歌詞の設定を開く</string>
+    <string name="ai_consent_title">この曲を %1$s に送信しますか？</string>
+    <string name="ai_consent_body">AI 歌詞は、歌詞を作成するためにこの曲の音声を %1$s に送信します。プロバイダの規約とプライバシーポリシーが適用され、アカウントに料金が発生する場合があります。</string>
+    <string name="ai_make_again">もう一度作成</string>
+    <string name="ai_delete_made">作成した歌詞を削除</string>
+    <string name="ai_delete_made_title">この歌詞を削除しますか？</string>
+    <string name="ai_delete_made_body">もう一度作成できます。</string>
 </resources>

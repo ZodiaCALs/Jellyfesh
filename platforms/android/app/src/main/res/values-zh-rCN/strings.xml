@@ -483,4 +483,23 @@
     <string name="pro_pending">你的购买正在处理中。Google Play 完成后，Jellyfesh Pro 就会开启。</string>
     <string name="pro_nothing_to_restore">Google Play 上此账号没有购买 Jellyfesh Pro 的记录。</string>
     <string name="pro_store_failed">Google Play 现在无法完成此操作。请稍后再试。</string>
+    <!-- v0.0.7: AI Lyrics in Now Playing and the song menu -->
+    <string name="ai_create">生成同步歌词</string>
+    <string name="ai_time">为这些歌词计时</string>
+    <string name="ai_stage_waiting">正在等待…</string>
+    <string name="ai_stage_reading">正在读取音频…</string>
+    <string name="ai_stage_sending">正在发送到 %1$s…</string>
+    <string name="ai_stage_recognising">正在识别… %1$d%%</string>
+    <string name="ai_stage_timing">正在为字词计时…</string>
+    <string name="ai_failed">无法生成歌词：%1$s</string>
+    <string name="ai_need_model">下载 %1$s 模型（%2$s）即可在此设备上生成歌词。</string>
+    <string name="ai_downloading_model">正在下载 %1$s… %2$d%%</string>
+    <string name="ai_need_key">添加你的 API 密钥即可在线生成歌词。</string>
+    <string name="ai_open_settings">打开 AI 歌词设置</string>
+    <string name="ai_consent_title">要将这首歌发送到 %1$s 吗？</string>
+    <string name="ai_consent_body">AI 歌词会将这首歌的音频发送到 %1$s 来生成歌词。服务商的条款和隐私政策适用，并且可能会向你的账户收费。</string>
+    <string name="ai_make_again">重新生成</string>
+    <string name="ai_delete_made">删除生成的歌词</string>
+    <string name="ai_delete_made_title">要删除这些歌词吗？</string>
+    <string name="ai_delete_made_body">你可以重新生成。</string>
 </resources>

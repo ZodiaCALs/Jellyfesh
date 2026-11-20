@@ -205,6 +205,13 @@ class LibraryModelTest {
     }
 
     @Test
+    fun createSyncedLyricsFollowsGoToArtist() {
+        val items = TrackMenu.items(TrackRef.Library(1), favourite = false, hasAlbum = true, hasArtist = true, hasLink = true, makesLyrics = true)
+        assertEquals(listOf(TrackMenuItem.GoToArtist, TrackMenuItem.CreateSyncedLyrics, TrackMenuItem.OpenLink), items.takeLast(3))
+        assertFalse(TrackMenuItem.CreateSyncedLyrics in TrackMenu.items(TrackRef.Library(1), favourite = false, hasAlbum = true, hasArtist = true))
+    }
+
+    @Test
     fun aRemoteSourcesSongNeverOffersTheQueue() {
         val song = TrackRef.Source(SourceTrack("spotify", "7", "Song"))
         assertEquals(listOf(TrackMenuItem.OpenLink), TrackMenu.items(song, favourite = null, hasAlbum = false, hasArtist = false, remote = true, hasLink = true))

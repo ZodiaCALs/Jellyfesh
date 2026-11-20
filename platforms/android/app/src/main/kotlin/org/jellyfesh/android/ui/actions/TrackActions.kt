@@ -25,10 +25,13 @@ import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.data.rememberQuery
 import org.jellyfesh.android.ui.nav.LocalNav
 import org.jellyfesh.android.ui.nav.NavController
+import org.jellyfesh.android.ui.player.LyricsMaker
+import org.jellyfesh.android.ui.player.rememberLyricsMaker
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
+import org.jellyfesh.logic.core.SongRef
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.library.ArtistMatch
 import org.jellyfesh.logic.library.CollectionMenu
@@ -36,6 +39,7 @@ import org.jellyfesh.logic.library.CollectionTracks
 import org.jellyfesh.logic.library.CollectionMenuItem
 import org.jellyfesh.logic.library.TrackMenu
 import org.jellyfesh.logic.library.TrackMenuItem
+import org.jellyfesh.logic.lyrics.LyricsMakingModel
 import org.jellyfesh.logic.player.RemoteModel
 import org.jellyfesh.logic.sources.Links
 
@@ -65,6 +69,7 @@ class TrackActions internal constructor(
     private val nav: NavController,
     private val overlays: Overlays,
     private val context: android.content.Context,
+    private val lyricsMaker: LyricsMaker,
 ) {
     private fun s(id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -142,6 +147,7 @@ class TrackActions internal constructor(
             hasArtist = artist != null,
             remote = RemoteModel.isRemote(sources, target.track),
             hasLink = linkAction != null,
+            makesLyrics = LyricsMakingModel.offersFor(graph.store.state.value.aiLyrics, target.track),
         )
         val actions = items.mapNotNull { item ->
             when (item) {
@@ -152,6 +158,9 @@ class TrackActions internal constructor(
                 TrackMenuItem.RemoveFromFavourites -> SheetAction(s(R.string.action_unfavourite), R.drawable.ic_heart_filled) { graph.send(Command.SetFavorite(target.track, false)) }
                 TrackMenuItem.GoToAlbum -> SheetAction(s(R.string.action_go_to_album), R.drawable.ic_album) { albumId?.let { nav.openAlbum(it, target.albumTitle ?: target.title) } }
                 TrackMenuItem.GoToArtist -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) { artist?.let(::goToArtist) }
+                TrackMenuItem.CreateSyncedLyrics -> (target.track as? TrackRef.Library)?.let { song ->
+                    SheetAction(s(R.string.ai_create), R.drawable.ic_sparkle) { lyricsMaker.make(SongRef.Library(song.id)) }
+                }
                 TrackMenuItem.OpenLink -> linkAction
             }
         }
@@ -254,5 +263,6 @@ fun rememberTrackActions(): TrackActions {
     val nav = LocalNav.current
     val overlays = LocalOverlays.current
     val context = LocalContext.current
-    return remember(graph, nav, overlays, context) { TrackActions(graph, nav, overlays, context) }
+    val lyricsMaker = rememberLyricsMaker()
+    return remember(graph, nav, overlays, context, lyricsMaker) { TrackActions(graph, nav, overlays, context, lyricsMaker) }
 }

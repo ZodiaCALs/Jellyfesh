@@ -109,15 +109,16 @@ object HomeModel {
 }
 
 /** The items of a song's menu (long press or More), in the order every app lists them. */
-enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist, OpenLink }
+enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist, CreateSyncedLyrics, OpenLink }
 
 object TrackMenu {
     /**
      * The song menu (docs/ui.md, "Song menu" and "Links and remote playback"): Play Next, Play
      * Last and Add to Playlist… (songs a playlist can hold), none of them for a remote source's
      * songs, which never join the queue; Add to or Remove from Favourites (when the favourite
-     * state is known); Go to Album and Go to Artist (when the library has them); then Open in
-     * {Service} when the song has a link.
+     * state is known); Go to Album and Go to Artist (when the library has them); Create Synced
+     * Lyrics while AI Lyrics makes them for it ([makesLyrics], v0.0.7); then Open in {Service}
+     * when the song has a link.
      */
     fun items(
         track: TrackRef,
@@ -126,6 +127,7 @@ object TrackMenu {
         hasArtist: Boolean,
         remote: Boolean = false,
         hasLink: Boolean = false,
+        makesLyrics: Boolean = false,
     ): List<TrackMenuItem> = buildList {
         if (!remote) {
             add(TrackMenuItem.PlayNext)
@@ -139,6 +141,7 @@ object TrackMenu {
         }
         if (hasAlbum) add(TrackMenuItem.GoToAlbum)
         if (hasArtist) add(TrackMenuItem.GoToArtist)
+        if (makesLyrics) add(TrackMenuItem.CreateSyncedLyrics)
         if (hasLink) add(TrackMenuItem.OpenLink)
     }
 }
