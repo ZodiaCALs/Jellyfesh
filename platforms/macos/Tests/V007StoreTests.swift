@@ -390,3 +390,70 @@ final class ProPurchaseTests: XCTestCase {
         XCTAssertEqual(store.storeFailure, PurchaseFailure.unavailable.errorDescription)
     }
 }
+
+final class LyricsMakingStepTests: XCTestCase {
+    private func state(_ need: LyricsMakingNeed, available: Bool = true,
+                       models: [SpeechModelInfo] = []) -> AiLyricsState {
+        var state = AiLyricsState.idle
+        state.version = 1
+        state.available = available
+        state.plugin = "org.jellyfesh.ai-lyrics"
+        state.need = need
+        state.models = models
+        return state
+    }
+
+    private func job(_ step: LyricsJobStep) -> LyricsMakingJob {
+        LyricsMakingJob(id: 9, title: "Song", artist: nil, uid: 3, libraryID: 7, step: step)
+    }
+
+    func testTheSongsJobComesFirst() {
+        let running = AiLyricsText.step(job: job(.recognising(fraction: 0.42)), state: state(.nothing))
+        guard case .running(let id, _, let progress) = running else { return XCTFail("a running job") }
+        XCTAssertEqual(id, 9)
+        XCTAssertEqual(progress ?? 0, 0.42, accuracy: 1e-6)
+        if case .running(_, _, let none) = AiLyricsText.step(job: job(.readingAudio), state: state(.nothing)) {
+            XCTAssertNil(none, "reading audio has no measure")
+        } else {
+            XCTFail("a running job")
+        }
+        XCTAssertEqual(AiLyricsText.step(job: job(.failed(message: "No speech")), state: state(.nothing)),
+                       .failed(message: "No speech"))
+        XCTAssertTrue(AiLyricsText.step(job: job(.waiting), state: state(.nothing, available: false)).isJob,
+                      "a job shows even after AI Lyrics went off")
+        XCTAssertEqual(AiLyricsText.step(job: job(.done), state: state(.nothing)), .create)
+        XCTAssertEqual(AiLyricsText.step(job: job(.cancelled), state: state(.nothing)), .create)
+    }
+
+    func testWhatMakingLyricsNeeds() {
+        XCTAssertEqual(AiLyricsText.step(job: nil, state: state(.nothing, available: false)), .none)
+        XCTAssertEqual(AiLyricsText.step(job: nil, state: state(.pro)), .create, "the Pro sheet comes when chosen")
+        XCTAssertEqual(AiLyricsText.step(job: nil, state: state(.consent(origin: "api.groq.com"))), .create)
+        XCTAssertEqual(AiLyricsText.step(job: nil, state: state(.signIn)), .signIn)
+        XCTAssertEqual(AiLyricsText.step(job: nil, state: state(.unavailable(reason: " "))), .none)
+        XCTAssertEqual(AiLyricsText.step(job: nil, state: state(.unavailable(reason: "No recogniser"))),
+                       .unavailable(reason: "No recogniser"))
+        let need = LyricsMakingNeed.model(id: "base", name: "Base", bytes: 147_951_465)
+        guard case .downloadModel(let id, _) = AiLyricsText.step(job: nil, state: state(need)) else {
+            return XCTFail("download first")
+        }
+        XCTAssertEqual(id, "base")
+        let downloading = SpeechModelInfo(id: "base", name: "Base", bytes: 147_951_465,
+                                          progress: .downloading(fraction: 0.35))
+        guard case .downloadingModel(_, _, let fraction) = AiLyricsText.step(job: nil, state: state(need, models: [downloading]))
+        else { return XCTFail("downloading") }
+        XCTAssertEqual(fraction, 0.35, accuracy: 1e-6)
+    }
+
+    @MainActor
+    func testMadeLyricsSayWhoMadeThem() {
+        let lyrics = LyricsStore()
+        let document = LyricsDocument(language: "en", timing: .word, lines: [], tracks: [], format: "made", origin: nil)
+        lyrics.apply(LyricsState(uid: 3, document: document, timeline: nil,
+                                 origin: .made(plugin: "org.jellyfesh.ai-lyrics", engine: "Whisper Base")))
+        XCTAssertEqual(lyrics.madeBy(for: 3), "Whisper Base")
+        XCTAssertNil(lyrics.madeBy(for: 4), "another song's")
+        lyrics.apply(LyricsState(uid: 3, document: document, timeline: nil, origin: .embedded))
+        XCTAssertNil(lyrics.madeBy(for: 3))
+    }
+}

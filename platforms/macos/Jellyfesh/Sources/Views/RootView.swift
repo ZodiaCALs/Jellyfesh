@@ -58,6 +58,7 @@ struct RootView: View {
                 model.library.cancelNewPlaylist()
             }
         }
+        .audioConsentQuestion(model.aiLyrics)
         .onChange(of: model.library.newPlaylist?.id) { _, _ in
             // Every New Playlist… starts with an empty name.
             playlistName = ""

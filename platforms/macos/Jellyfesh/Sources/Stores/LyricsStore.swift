@@ -19,6 +19,14 @@ final class LyricsStore {
         return state.document
     }
 
+    /// The engine that made the lyrics of the queue entry `uid`, when AI Lyrics made them.
+    func madeBy(for uid: UInt64?) -> String? {
+        guard let state, let uid, state.uid == uid, state.document != nil,
+              case .made(_, let engine)? = state.origin
+        else { return nil }
+        return engine
+    }
+
     /// The timeline for the queue entry `uid`, when its lyrics are timed.
     func timeline(for uid: UInt64?) -> LyricsTimeline? {
         guard let state, let uid, state.uid == uid, let document = state.document,

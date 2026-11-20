@@ -269,7 +269,8 @@ private struct LevelBars: View {
 }
 
 /// A song's menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to or Remove from
-/// Favourites, Go to Album, Go to Artist, Open in {Service} and Show in Finder. A remote source's
+/// Favourites, Go to Album, Go to Artist, Create Synced Lyrics (library songs, while AI Lyrics is
+/// offered), Open in {Service} and Show in Finder. A remote source's
 /// songs never join the queue, playlists or favourites (ADR-0018), so they offer only what opens
 /// elsewhere. Rows that do not carry a library song's album or file look them up when chosen.
 struct TrackActionsMenu: View {
@@ -283,6 +284,8 @@ struct TrackActionsMenu: View {
     @Environment(LibraryStore.self) private var library
     @Environment(SourcesStore.self) private var sources
     @Environment(Router.self) private var router
+    @Environment(AiLyricsStore.self) private var aiLyrics
+    @Environment(ProStore.self) private var pro
 
     /// The rows' tracks that can join the queue and playlists: playable, not a remote source's.
     private var tracks: [TrackReference] {
@@ -325,6 +328,11 @@ struct TrackActionsMenu: View {
             }
             if Self.hasArtist(item) {
                 Button("Go to Artist") { goToArtist(item) }
+            }
+            if aiLyrics.isOffered, let id = Self.songID(item) {
+                Button("Create Synced Lyrics") {
+                    aiLyrics.make(.library(id: id), pro: pro)
+                }
             }
             OpenInServiceButton(link: item.link, source: item.source)
             if Self.hasFile(item) {

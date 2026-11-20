@@ -9,7 +9,9 @@
 // and the lines below follow 40 ms apart (the cascade); manual scrolling pauses that for 4 s.
 // Under reduced motion there is no cascade and the view jumps; under the system's Reduce Motion
 // there is no sweep. While a remote session plays, no lyrics show: the service plays its own
-// track.
+// track. AI Lyrics (LyricsMaking.swift) offers Create Synced Lyrics with no lyrics and Time These
+// Lyrics under plain ones, shows a job's stage over the pane, and credits made lyrics under their
+// last line.
 
 import AppKit
 import SwiftUI
@@ -18,6 +20,7 @@ struct LyricsPanel: View {
     @Environment(PlaybackStore.self) private var playback
     @Environment(LyricsStore.self) private var lyrics
     @Environment(SettingsStore.self) private var settings
+    @Environment(AiLyricsStore.self) private var aiLyrics
 
     var body: some View {
         let uid = playback.nowPlaying?.uid
@@ -34,14 +37,25 @@ struct LyricsPanel: View {
         } else if let document = lyrics.document(for: uid), !document.lines.isEmpty {
             if let timeline = lyrics.timeline(for: uid) {
                 SyncedLyrics(document: document, timeline: timeline, translation: shown.showTranslation,
-                             romanization: shown.showRomanization, look: look)
+                             romanization: shown.showRomanization, look: look, madeBy: lyrics.madeBy(for: uid))
+                    .overlay(alignment: .bottom) {
+                        // Make Again's job, over the lyrics it replaces.
+                        if AiLyricsText.step(job: aiLyrics.job(forEntry: uid), state: aiLyrics.state).isJob {
+                            LyricsMakingActions(jobsOnly: true)
+                                .padding(Tokens.Space.s4)
+                                .glass(.veil, in: RoundedRectangle(cornerRadius: Tokens.Radius.rXl, style: .continuous))
+                                .padding(.bottom, Tokens.Space.s4)
+                        }
+                    }
             } else {
                 UnsyncedLyrics(document: document, translation: shown.showTranslation,
                                romanization: shown.showRomanization, look: look)
             }
         } else {
             EmptyState(title: "No Lyrics", symbol: "quote.bubble",
-                       message: "Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.")
+                       message: "Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.") {
+                LyricsMakingActions()
+            }
         }
     }
 }
@@ -63,6 +77,8 @@ private struct SyncedLyrics: View {
     var translation: Bool
     var romanization: Bool
     var look: LyricsLook
+    /// The engine that made these lyrics, when AI Lyrics did.
+    var madeBy: String?
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(\.effects) private var effects
@@ -83,6 +99,7 @@ private struct SyncedLyrics: View {
                 translation: translation,
                 romanization: romanization,
                 look: look,
+                madeBy: madeBy,
                 following: following(at: context.date),
                 onUserScroll: { userScrolledAt = Date() }
             )
@@ -107,6 +124,7 @@ private struct LyricsScroller: View {
     var translation: Bool
     var romanization: Bool
     var look: LyricsLook
+    var madeBy: String?
     var following: Bool
     var onUserScroll: () -> Void
 
@@ -148,6 +166,9 @@ private struct LyricsScroller: View {
                         .id(index)
                         .onTapGesture { seek(to: line) }
                         .accessibilityAction { seek(to: line) }
+                    }
+                    if let madeBy {
+                        MadeByLine(engine: madeBy)
                     }
                 }
                 .padding(.top, height * anchor)
@@ -548,6 +569,10 @@ private struct UnsyncedLyrics: View {
                     .multilineTextAlignment(look.centred ? .center : .leading)
                     .frame(maxWidth: .infinity, alignment: Alignment(horizontal: alignment, vertical: .center))
                 }
+                // Time These Lyrics, or the job timing them.
+                LyricsMakingActions(timing: true)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, Tokens.Space.s4)
             }
             .padding(.vertical, Tokens.Space.s6)
             .textSelection(.enabled)

@@ -388,12 +388,15 @@ private struct DockControls: View {
 }
 
 /// More, at the end of the dock: the song's menu without the queue's actions (it is playing), or
-/// for a remote session Open in {Service} and Stop Controlling; then Desktop Lyrics.
+/// for a remote session Open in {Service} and Stop Controlling; Make Again and Delete Made Lyrics
+/// for lyrics AI Lyrics made; then Desktop Lyrics.
 struct NowPlayingMoreMenu: View {
     @Environment(PlaybackStore.self) private var playback
     @Environment(SettingsStore.self) private var settings
     @Environment(DesktopLyricsStore.self) private var desktopLyrics
+    @Environment(AiLyricsStore.self) private var aiLyrics
     @Environment(\.palette) private var palette
+    @State private var confirmDelete = false
 
     var body: some View {
         Menu {
@@ -402,6 +405,7 @@ struct NowPlayingMoreMenu: View {
             } else if let now = playback.nowPlaying {
                 TrackActionsMenu(items: [TrackItem(nowPlaying: now)], queueActions: false)
             }
+            MadeLyricsMenuItems(confirmDelete: $confirmDelete)
             Divider()
             DesktopLyricsMenuItems(settings: settings, desktop: desktopLyrics)
         } label: {
@@ -417,5 +421,6 @@ struct NowPlayingMoreMenu: View {
         .fixedSize()
         .accessibilityLabel(Text("More Actions"))
         .help(Text("More Actions"))
+        .confirmDeletingMadeLyrics($confirmDelete, aiLyrics: aiLyrics)
     }
 }

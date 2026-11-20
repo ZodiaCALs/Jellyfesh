@@ -671,6 +671,28 @@
         }
       }
     },
+    "AI Lyrics will send the song's audio to %@ to make its lyrics. The provider's terms and privacy policy apply, and it may charge your account.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞は、歌詞を作成するためにこの曲のオーディオを %@ に送信します。プロバイダの利用規約とプライバシーポリシーが適用され、アカウントに料金が請求される場合があります。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌词将把这首歌曲的音频发送到 %@ 以生成歌词。服务提供方的条款和隐私政策适用，且可能会向你的账号收费。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞將把這首歌曲的音訊傳送到 %@ 以產生歌詞。服務提供者的條款和隱私權政策適用，且可能會向你的帳號收費。"
+          }
+        }
+      }
+    },
     "API Key Added": {
       "localizations": {
         "ja": {
@@ -1067,6 +1089,28 @@
         }
       }
     },
+    "Add your API key to make lyrics online.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンラインで歌詞を作成するには API キーを追加してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加你的 API 密钥即可在线生成歌词。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入你的 API 金鑰即可在線上產生歌詞。"
+          }
+        }
+      }
+    },
     "Add your music folders, or connect a server in Sources.": {
       "localizations": {
         "ja": {
@@ -1217,6 +1261,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部"
+          }
+        }
+      }
+    },
+    "Allow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許"
           }
         }
       }
@@ -2283,6 +2349,28 @@
         }
       }
     },
+    "Create Synced Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期歌詞を作成"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "生成同步歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "產生同步歌詞"
+          }
+        }
+      }
+    },
     "Crossfade": {
       "localizations": {
         "ja": {
@@ -2415,6 +2503,50 @@
         }
       }
     },
+    "Delete": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除"
+          }
+        }
+      }
+    },
+    "Delete Made Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成した歌詞を削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除生成的歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除產生的歌詞"
+          }
+        }
+      }
+    },
     "Delete Playlist": {
       "localizations": {
         "ja": {
@@ -2459,6 +2591,50 @@
         }
       }
     },
+    "Delete These Lyrics?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この歌詞を削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除这些歌词？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除這些歌詞？"
+          }
+        }
+      }
+    },
+    "Delete the %@ Model?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ モデルを削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除 %@ 模型？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除 %@ 模型？"
+          }
+        }
+      }
+    },
     "Delete “%@”?": {
       "localizations": {
         "ja": {
@@ -2477,6 +2653,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除「%@」？"
+          }
+        }
+      }
+    },
+    "Delete…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除…"
           }
         }
       }
@@ -2679,6 +2877,28 @@
         }
       }
     },
+    "Download": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載"
+          }
+        }
+      }
+    },
     "Download the %@ model (%@) to make lyrics on this device.": {
       "localizations": {
         "ja": {
@@ -2719,6 +2939,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在下載 %1$@… %2$@"
+          }
+        }
+      }
+    },
+    "Downloading… %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中… %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载… %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載… %@"
           }
         }
       }
@@ -4483,6 +4725,28 @@
         }
       }
     },
+    "Make Again": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度作成"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新生成"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新產生"
+          }
+        }
+      }
+    },
     "Make a playlist to keep songs together.": {
       "localizations": {
         "ja": {
@@ -5363,6 +5627,28 @@
         }
       }
     },
+    "On-Device Models": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス上のモデル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设备端模型"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "裝置端模型"
+          }
+        }
+      }
+    },
     "One": {
       "localizations": {
         "ja": {
@@ -5381,6 +5667,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "單曲"
+          }
+        }
+      }
+    },
+    "Open AI Lyrics Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 歌詞の設定を開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 AI 歌词设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開 AI 歌詞設定"
           }
         }
       }
@@ -6221,6 +6529,28 @@
         }
       }
     },
+    "Ready": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備完了"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就绪"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就緒"
+          }
+        }
+      }
+    },
     "Recently Added": {
       "localizations": {
         "ja": {
@@ -6965,6 +7295,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜尋你的音樂"
+          }
+        }
+      }
+    },
+    "Send This Song to %@?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この曲を %@ に送信しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将这首歌曲发送到 %@？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將這首歌曲傳送到 %@？"
+          }
+        }
+      }
+    },
+    "Sending Audio": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーディオの送信"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发送音频"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "傳送音訊"
           }
         }
       }
@@ -7893,6 +8267,28 @@
         }
       }
     },
+    "Stop Allowing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可を取り消す"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止允许"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止允許"
+          }
+        }
+      }
+    },
     "Stop Controlling": {
       "localizations": {
         "ja": {
@@ -8465,6 +8861,28 @@
         }
       }
     },
+    "Time These Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この歌詞にタイミングを付ける"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为这些歌词加上时间"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為這些歌詞加上時間"
+          }
+        }
+      }
+    },
     "Timing Words…": {
       "localizations": {
         "ja": {
@@ -8571,6 +8989,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "高音"
+          }
+        }
+      }
+    },
+    "Try Again": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試行"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試一次"
           }
         }
       }
@@ -9319,6 +9759,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "年份"
+          }
+        }
+      }
+    },
+    "You can download it again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度ダウンロードできます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你可以再次下载。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你可以再次下載。"
+          }
+        }
+      }
+    },
+    "You can make them again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度作成できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你可以再次生成。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你可以再次產生。"
           }
         }
       }

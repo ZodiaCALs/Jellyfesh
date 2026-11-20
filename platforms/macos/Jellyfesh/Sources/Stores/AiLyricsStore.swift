@@ -102,8 +102,67 @@ struct AudioConsentQuestion: Identifiable, Equatable {
     var id: String { "\(plugin)\u{1F}\(origin)" }
 }
 
+/// What the Lyrics pane offers for the song playing (docs/ui.md "AI Lyrics, Customize and Pro").
+enum LyricsMakingStep: Equatable {
+    /// Nothing: AI Lyrics is off or not installed, or its job is done.
+    case none
+    /// Create Synced Lyrics (Time These Lyrics over plain lyrics). Pro or the question about
+    /// sending audio come when it is chosen.
+    case create
+    /// The job's stage, with its progress when it can be measured, and Cancel.
+    case running(job: UInt64, stage: String, progress: Double?)
+    /// "Couldn't make lyrics: {message}" and Try Again.
+    case failed(message: String)
+    /// "Download the {Model} model ({size})…" and Download.
+    case downloadModel(id: String, text: String)
+    /// "Downloading {Model}… 35%" and Cancel.
+    case downloadingModel(id: String, text: String, fraction: Double)
+    /// "Add your API key to make lyrics online." and Open AI Lyrics Settings.
+    case signIn
+    /// Why lyrics cannot be made.
+    case unavailable(reason: String)
+
+    /// A job runs or failed: shown even over lyrics the song has.
+    var isJob: Bool {
+        switch self {
+        case .running, .failed: return true
+        default: return false
+        }
+    }
+}
+
 /// AI Lyrics' words (docs/ui.md).
 enum AiLyricsText {
+    /// What the Lyrics pane offers: the song's job first (running, or failed), then, while AI
+    /// Lyrics is offered, what making lyrics needs.
+    static func step(job: LyricsMakingJob?, state: AiLyricsState) -> LyricsMakingStep {
+        if let job {
+            if job.step.isActive {
+                return .running(job: job.id, stage: stage(job.step) ?? "", progress: progress(job.step))
+            }
+            if case .failed(let message) = job.step {
+                return .failed(message: message)
+            }
+        }
+        guard state.available else { return .none }
+        switch state.need {
+        case .nothing, .pro, .consent:
+            return .create
+        case .signIn:
+            return .signIn
+        case .model(let id, let name, let bytes):
+            if let model = state.models.first(where: { $0.id == id }),
+               case .downloading(let fraction) = model.progress {
+                return .downloadingModel(id: id, text: downloading(name: name, fraction: fraction),
+                                         fraction: clamp(Double(fraction)))
+            }
+            return .downloadModel(id: id, text: downloadModel(name: name, bytes: bytes))
+        case .unavailable(let reason):
+            let trimmed = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? .none : .unavailable(reason: trimmed)
+        }
+    }
+
     /// A job's stage while it runs: "Reading Audio…", "Sending to {origin}…", "Recognising… 42%",
     /// "Timing Words…".
     static func stage(_ step: LyricsJobStep) -> String? {
