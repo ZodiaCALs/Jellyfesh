@@ -247,14 +247,14 @@ private struct LocalInfoPanel: View {
 
     var body: some View {
         if let now = playback.nowPlaying {
-            let known = known(now)
+            let facts = known(now)
             ScrollView {
                 VStack(alignment: .leading, spacing: Tokens.Space.s4) {
                     InfoSection(title: String(localized: "About This Song"),
-                                lines: DetailsRows.song(details, known: known)
+                                lines: DetailsRows.song(details, known: facts)
                                     + [InfoLine(key: .lyrics, value: lyricsText(now))])
                     InfoSection(title: String(localized: "Audio"),
-                                lines: DetailsRows.audio(details, known: known,
+                                lines: DetailsRows.audio(details, known: facts,
                                                          decoded: now.quality ?? now.format.map(AudioQuality.init(stream:))))
                     if let attribution = details?.attribution?.nilIfEmpty {
                         Text(attribution)

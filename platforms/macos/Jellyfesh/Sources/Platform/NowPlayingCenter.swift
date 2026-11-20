@@ -135,14 +135,16 @@ final class NowPlayingCenter {
         commands.changeShuffleModeCommand.currentShuffleType = playback.shuffle ? .items : .off
     }
 
+    /// A file, or a source's picture through the core's cache (`source_artwork`) until the core
+    /// publishes the song again with the file it fetched.
     private func loadArtwork(_ location: ArtworkLocation?) {
         artworkTask?.cancel()
         artworkFor = location
         artworkImage = nil
-        guard case .file(let path)? = location else { return }
+        guard let source = ArtworkSource(hash: nil, location: location) else { return }
         artworkTask = Task { [weak self] in
             guard let self else { return }
-            let image = await self.artwork.image(.file(path), pixels: 512)
+            let image = await self.artwork.image(source, pixels: 512)
             guard !Task.isCancelled, self.artworkFor == location else { return }
             self.artworkImage = image
             if image != nil { self.update() }
