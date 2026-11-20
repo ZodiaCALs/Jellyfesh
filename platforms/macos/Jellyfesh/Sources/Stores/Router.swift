@@ -87,6 +87,8 @@ final class Router {
     var panel: NowPlayingPanel = .lyrics
     /// Bumped to move keyboard focus into the search field.
     private(set) var searchFocusRequest = 0
+    /// Get Info's sheet, while it is open.
+    var infoRequest: InfoRequest?
 
     func select(_ item: SidebarItem) {
         guard item != selection || !path.isEmpty else { return }

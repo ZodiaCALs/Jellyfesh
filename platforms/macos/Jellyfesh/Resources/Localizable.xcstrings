@@ -605,6 +605,28 @@
         }
       }
     },
+    "%lld-bit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ビット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 位"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 位元"
+          }
+        }
+      }
+    },
     "A line in another language under each lyric line, when the lyrics have one.": {
       "localizations": {
         "ja": {
@@ -733,6 +755,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "關於 Jellyfesh"
+          }
+        }
+      }
+    },
+    "About This Album": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアルバムについて"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于这张专辑"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於這張專輯"
+          }
+        }
+      }
+    },
+    "About This Artist": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアーティストについて"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于这位艺人"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於這位藝人"
           }
         }
       }
@@ -1199,6 +1265,28 @@
         }
       }
     },
+    "Album %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アルバム %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "专辑 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "專輯 %@"
+          }
+        }
+      }
+    },
     "Album Continuity": {
       "localizations": {
         "ja": {
@@ -1645,6 +1733,28 @@
         }
       }
     },
+    "Arranger": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編曲者"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編曲者"
+          }
+        }
+      }
+    },
     "Artist": {
       "localizations": {
         "ja": {
@@ -1707,6 +1817,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "封面"
+          }
+        }
+      }
+    },
+    "Audio": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーディオ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音频"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音訊"
           }
         }
       }
@@ -1795,6 +1927,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "低音增強"
+          }
+        }
+      }
+    },
+    "Bitrate": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビットレート"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比特率"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位元率"
           }
         }
       }
@@ -2213,6 +2367,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "社群 · 非官方"
+          }
+        }
+      }
+    },
+    "Composer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作曲者"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作曲"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作曲者"
           }
         }
       }
@@ -2829,6 +3005,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "裝置"
+          }
+        }
+      }
+    },
+    "Disc": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスク"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "光盘"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "光碟"
           }
         }
       }
@@ -3537,6 +3735,50 @@
         }
       }
     },
+    "Genre": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ジャンル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "风格"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "類型"
+          }
+        }
+      }
+    },
+    "Get Info": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "情報を見る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示简介"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得資訊"
+          }
+        }
+      }
+    },
     "Go to Album": {
       "localizations": {
         "ja": {
@@ -3625,6 +3867,28 @@
         }
       }
     },
+    "Hi-Res Lossless": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ハイレゾロスレス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高解析度无损"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高解析度無損"
+          }
+        }
+      }
+    },
     "Hide Now Playing": {
       "localizations": {
         "ja": {
@@ -3643,6 +3907,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "隱藏正在播放"
+          }
+        }
+      }
+    },
+    "High": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高音質"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高品质"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高品質"
           }
         }
       }
@@ -3753,6 +4039,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "我了解，允許"
+          }
+        }
+      }
+    },
+    "ISRC": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ISRC"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ISRC"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ISRC"
           }
         }
       }
@@ -4263,6 +4571,28 @@
         }
       }
     },
+    "Label": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レーベル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "唱片公司"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "唱片公司"
+          }
+        }
+      }
+    },
     "Lagoon": {
       "localizations": {
         "ja": {
@@ -4281,6 +4611,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "潟湖"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語言"
           }
         }
       }
@@ -4615,6 +4967,50 @@
         }
       }
     },
+    "Lossless": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロスレス"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无损"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無損"
+          }
+        }
+      }
+    },
+    "Lyricist": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作詞者"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作詞者"
+          }
+        }
+      }
+    },
     "Lyrics": {
       "localizations": {
         "ja": {
@@ -4853,6 +5249,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Misty"
+          }
+        }
+      }
+    },
+    "Mono": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モノラル"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单声道"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "單聲道"
           }
         }
       }
@@ -6353,6 +6771,28 @@
         }
       }
     },
+    "Popularity": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人気度"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "热度"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "熱門度"
+          }
+        }
+      }
+    },
     "Position": {
       "localizations": {
         "ja": {
@@ -6503,6 +6943,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "在你輸入金鑰或購買 Jellyfesh Pro 之前，Pro 功能將無法使用。"
+          }
+        }
+      }
+    },
+    "Producer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロデューサー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制作人"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製作人"
+          }
+        }
+      }
+    },
+    "Quality": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音質"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音质"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音質"
           }
         }
       }
@@ -6745,6 +7229,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新整理裝置"
+          }
+        }
+      }
+    },
+    "Released": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リリース"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發行"
           }
         }
       }
@@ -7805,6 +8311,28 @@
         }
       }
     },
+    "Size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイズ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大小"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大小"
+          }
+        }
+      }
+    },
     "Skip Back 5 Seconds": {
       "localizations": {
         "ja": {
@@ -8245,6 +8773,28 @@
         }
       }
     },
+    "Standard": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标准"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準"
+          }
+        }
+      }
+    },
     "Start": {
       "localizations": {
         "ja": {
@@ -8329,6 +8879,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "鋼"
+          }
+        }
+      }
+    },
+    "Stereo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ステレオ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立体声"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立體聲"
           }
         }
       }
@@ -9037,6 +9609,28 @@
         }
       }
     },
+    "Track %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トラック %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音轨 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音軌 %@"
+          }
+        }
+      }
+    },
     "Transparency": {
       "localizations": {
         "ja": {
@@ -9539,6 +10133,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "由服務方播放"
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バージョン"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "版本"
           }
         }
       }

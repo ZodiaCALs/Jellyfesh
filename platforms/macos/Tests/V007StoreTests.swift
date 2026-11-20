@@ -547,3 +547,73 @@ final class SourceArtistAndAlbumTests: XCTestCase {
         XCTAssertFalse(SourcePage.album(plugin: "p", id: "x", title: "", artist: nil).title.isEmpty)
     }
 }
+
+final class DetailsRowsTests: XCTestCase {
+    private func answer(facts: [DetailFact] = [], technical: TechnicalFacts? = nil) -> DetailsAnswer {
+        DetailsAnswer(request: 1, item: .track(id: 4), title: "Harbour", subtitle: "The Tides", notes: nil, image: nil,
+                      facts: facts, technical: technical, commentCount: nil, attribution: nil, error: nil)
+    }
+
+    private let flac = AudioQuality(codec: "flac", sampleRateHz: 96_000, bitDepth: 24, channels: 2, bitrateKbps: 2_400,
+                                    lossless: true, label: .hiResLossless)
+
+    func testAboutThisSongInItsOrderWithoutEmptyRows() {
+        let known = KnownDetails(title: "Harbour (row)", artist: nil, album: "Coast", year: "2019", durationMs: 185_000,
+                                 path: nil, source: nil)
+        let rows = DetailsRows.song(answer(facts: [DetailFact(key: .genre, value: "Folk"),
+                                                   DetailFact(key: .composer, value: " "),
+                                                   DetailFact(key: .version, value: "Live")]), known: known)
+        XCTAssertEqual(rows.map(\.key), [.title, .artist, .album, .version, .year, .genre, .length])
+        XCTAssertEqual(rows.first?.value, "Harbour", "the core's title over the row's")
+        XCTAssertEqual(rows.first { $0.key == .year }?.value, "2019")
+        XCTAssertEqual(DetailsRows.song(nil, known: known).map(\.key), [.title, .album, .year, .length],
+                       "what the row knows shows before the core answers")
+    }
+
+    func testAudioPrefersWhatIsDecoded() {
+        let file = TechnicalFacts(format: AudioQuality(codec: "mp3", sampleRateHz: 44_100, bitDepth: nil, channels: 2,
+                                                       bitrateKbps: 320, lossless: false, label: .high),
+                                  container: "mp3", fileSizeBytes: 7_340_032, durationMs: 185_000,
+                                  replayGain: ReplayGainInfo(trackGainDb: -6.2, trackPeak: nil, albumGainDb: nil,
+                                                             albumPeak: nil),
+                                  path: "/Music/harbour.mp3")
+        let known = KnownDetails(title: nil, artist: nil, album: nil, year: nil, durationMs: nil, path: nil, source: nil)
+        let rows = DetailsRows.audio(answer(technical: file), known: known, decoded: flac)
+        XCTAssertEqual(rows.map(\.key), [.quality, .format, .bitrate, .size, .replayGain, .file])
+        XCTAssertEqual(rows.first { $0.key == .format }?.value, DetailsRows.formatLine(flac))
+        XCTAssertEqual(rows.last?.value, "/Music/harbour.mp3")
+        let source = KnownDetails(title: nil, artist: nil, album: nil, year: nil, durationMs: nil, path: nil,
+                                  source: "Jellyfin")
+        XCTAssertEqual(DetailsRows.audio(nil, known: source).map(\.key), [.source], "a source's song names its source")
+    }
+
+    func testFormatAndReplayGainLines() {
+        let line = DetailsRows.formatLine(flac) ?? ""
+        XCTAssertTrue(line.hasPrefix("FLAC · "), line)
+        XCTAssertEqual(line.components(separatedBy: " · ").count, 4)
+        XCTAssertNil(DetailsRows.formatLine(AudioQuality(codec: nil, sampleRateHz: nil, bitDepth: nil, channels: nil,
+                                                         bitrateKbps: nil, lossless: nil, label: nil)))
+        XCTAssertEqual(DetailsRows.codecName("opus"), "Opus")
+        XCTAssertEqual(DetailsRows.codecName("alac"), "ALAC")
+        XCTAssertNil(DetailsRows.replayGainLine(ReplayGainInfo(trackGainDb: nil, trackPeak: 1, albumGainDb: nil,
+                                                               albumPeak: nil)))
+        XCTAssertEqual(DetailsRows.replayGainLine(ReplayGainInfo(trackGainDb: -6.2, trackPeak: nil, albumGainDb: 1.5,
+                                                                 albumPeak: nil))?.components(separatedBy: " · ").count, 2)
+    }
+
+    func testGetInfoNamesWhatItAsksAbout() {
+        var row = TrackItem(id: "r", track: .file(path: "/tmp/a.flac"), title: "A")
+        XCTAssertEqual(InfoRequest.song(row, sourceName: nil)?.item, .file(path: "/tmp/a.flac"))
+        XCTAssertEqual(InfoRequest.song(row, sourceName: nil)?.known.path, "/tmp/a.flac")
+        row.track = .source(SourceSong(plugin: "org.jellyfesh.jellyfin", id: "s1", title: "A"))
+        let source = InfoRequest.song(row, sourceName: "Jellyfin")
+        XCTAssertEqual(source?.item, .source(plugin: "org.jellyfesh.jellyfin", kind: .track, id: "s1"))
+        XCTAssertEqual(source?.known.source, "Jellyfin")
+        row.track = nil
+        XCTAssertNil(InfoRequest.song(row, sourceName: nil))
+        XCTAssertEqual(ItemReference(track: .library(id: 9)), .track(id: 9))
+        let album = Fixture.result("al", source: "org.jellyfesh.jellyfin", kind: .album)
+        XCTAssertEqual(InfoRequest.container(album, sourceName: "Jellyfin")?.kind, .album)
+        XCTAssertNil(InfoRequest.container(Fixture.result("f", source: "p", kind: .folder), sourceName: nil))
+    }
+}

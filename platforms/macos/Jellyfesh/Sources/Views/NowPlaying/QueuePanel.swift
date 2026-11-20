@@ -231,8 +231,10 @@ private struct InfoRow: View {
     }
 }
 
-/// About This Song for the engine's track.
+/// About This Song and Audio for the engine's track (Get Info's rows), with the format actually
+/// being decoded and where the lyrics come from.
 private struct LocalInfoPanel: View {
+    @Environment(AppModel.self) private var app
     @Environment(PlaybackStore.self) private var playback
     @Environment(LyricsStore.self) private var lyrics
     @Environment(LibraryStore.self) private var library
@@ -240,33 +242,36 @@ private struct LocalInfoPanel: View {
     @Environment(\.palette) private var palette
     /// The library song playing, for what Now Playing does not carry (its year).
     @State private var song: Song?
+    /// The core's details of the song playing.
+    @State private var details: DetailsAnswer?
 
     var body: some View {
         if let now = playback.nowPlaying {
+            let known = known(now)
             ScrollView {
-                VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                    Text("About This Song")
-                        .lookFont(size: 12, weight: .semibold)
-                        .foregroundStyle(palette[Tokens.Ink.ink50])
-                        .accessibilityAddTraits(.isHeader)
-                    VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                        row("Title", now.title)
-                        row("Artist", now.artist)
-                        row("Album", now.album)
-                        row("Year", (song?.year).map { String($0) })
-                        row("Length", playback.durationUs.map { TimeText.from(microseconds: $0) })
-                        row("Format", now.format.map { Self.formatText($0) })
-                        row("Lyrics", lyricsText(now))
-                        place(now)
+                VStack(alignment: .leading, spacing: Tokens.Space.s4) {
+                    InfoSection(title: String(localized: "About This Song"),
+                                lines: DetailsRows.song(details, known: known)
+                                    + [InfoLine(key: .lyrics, value: lyricsText(now))])
+                    InfoSection(title: String(localized: "Audio"),
+                                lines: DetailsRows.audio(details, known: known,
+                                                         decoded: now.quality ?? now.format.map(AudioQuality.init(stream:))))
+                    if let attribution = details?.attribution?.nilIfEmpty {
+                        Text(attribution)
+                            .lookFont(size: 12)
+                            .foregroundStyle(palette[Tokens.Ink.ink50])
                     }
-                    .padding(Tokens.Space.s4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .surfaceCard()
+                    if let path = now.path {
+                        Button("Show in Finder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+                        }
+                        .buttonStyle(.link)
+                        .lookFont(size: 13)
+                    }
                     if case .source(let song) = now.track {
                         OpenInServiceButton(link: now.link, source: song.plugin)
                             .buttonStyle(.link)
                             .lookFont(size: 13)
-                            .padding(.top, Tokens.Space.s1)
                     }
                 }
                 .padding(.vertical, Tokens.Space.s4)
@@ -275,6 +280,11 @@ private struct LocalInfoPanel: View {
             .scrollIndicators(.automatic)
             .task(id: now.uid) {
                 song = nil
+                details = nil
+                let asked = now.uid
+                app.answers.details(ItemReference(track: now.track), onAnswer: { answer in
+                    if playback.nowPlaying?.uid == asked, answer.error == nil { details = answer }
+                }, onFailure: { _ in })
                 if case .library(let id) = now.track {
                     song = await library.song(id: id)
                 }
@@ -284,65 +294,23 @@ private struct LocalInfoPanel: View {
         }
     }
 
-    /// The file, with Show in Finder; a source's song names its source.
-    @ViewBuilder private func place(_ now: NowPlayingInfo) -> some View {
-        if let path = now.path {
-            LabeledContent {
-                VStack(alignment: .trailing, spacing: Tokens.Space.s1) {
-                    Text(path)
-                        .foregroundStyle(palette[Tokens.Ink.ink90])
-                        .textSelection(.enabled)
-                        .multilineTextAlignment(.trailing)
-                        .lineLimit(4)
-                    Button("Show in Finder") {
-                        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
-                    }
-                    .buttonStyle(.link)
-                }
-            } label: {
-                Text("File")
-                    .foregroundStyle(palette[Tokens.Ink.ink70])
-            }
-            .lookFont(size: 13)
-        } else if case .source(let source) = now.track {
-            row("Source", sources.name(of: source.plugin))
-        }
+    /// What Now Playing and the library already say about the song.
+    private func known(_ now: NowPlayingInfo) -> KnownDetails {
+        var source: String?
+        if case .source(let song) = now.track { source = sources.name(of: song.plugin) }
+        return KnownDetails(title: now.title, artist: now.artist, album: now.album, year: (song?.year).map { String($0) },
+                            durationMs: playback.durationUs.map { UInt64(clamping: max($0, 0) / 1_000) } ?? now.durationMs,
+                            path: now.path, source: source)
     }
 
-    @ViewBuilder private func row(_ label: LocalizedStringKey, _ value: String?) -> some View {
-        if let value, !value.isEmpty {
-            LabeledContent {
-                Text(value)
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .textSelection(.enabled)
-                    .multilineTextAlignment(.trailing)
-            } label: {
-                Text(label)
-                    .foregroundStyle(palette[Tokens.Ink.ink70])
-            }
-            .lookFont(size: 13)
-        }
-    }
-
-    /// "FLAC · 44.1 kHz · 2 channels · 1,411 kbps": the stream as the engine opened it.
-    private static func formatText(_ format: StreamFormat) -> String {
-        CountText.joined([
-            format.codec,
-            String(localized: "\(kilohertz(format.sampleRate)) kHz"),
-            String(localized: "\(Int(format.channels)) channels"),
-            format.bitrate.map { String(localized: "\(Int($0 / 1000)) kbps") },
-        ])
-    }
-
-    /// "LRC · Line by line · en": where the lyrics are and how they are timed; "No Lyrics" without.
+    /// "LRC · Line by line · en": where the lyrics are and how they are timed, and who made them
+    /// when AI Lyrics did; "No Lyrics" without.
     private func lyricsText(_ now: NowPlayingInfo) -> String {
         guard let document = lyrics.document(for: now.uid) else { return String(localized: "No Lyrics") }
+        if let engine = lyrics.madeBy(for: now.uid) {
+            return CountText.joined([AiLyricsText.madeBy(engine: engine), timingText(document.timing)])
+        }
         return CountText.joined([document.format, timingText(document.timing), document.language])
-    }
-
-    /// 44.1, 48, 96: kilohertz with at most one decimal.
-    private static func kilohertz(_ hertz: UInt32) -> String {
-        (Double(hertz) / 1000).formatted(.number.precision(.fractionLength(0...1)))
     }
 
     private func timingText(_ timing: LyricsTiming) -> String {

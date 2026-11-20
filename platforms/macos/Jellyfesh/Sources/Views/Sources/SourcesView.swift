@@ -357,8 +357,11 @@ struct BrowseView: View {
             }
             .buttonStyle(PillButtonStyle(prominent: true))
         }
-        if SourcePageMoreMenu.hasItems(remote: sources.isRemote(plugin), playable: playable, link: link) {
-            SourcePageMoreMenu(plugin: plugin, collection: playable ? collection : nil, tracks: tracks, link: link)
+        let info = sources.plugin(plugin)?.hasDetails == true
+            ? InfoRequest.container(item, sourceName: sources.name(of: plugin)) : nil
+        if SourcePageMoreMenu.hasItems(remote: sources.isRemote(plugin), playable: playable, link: link) || info != nil {
+            SourcePageMoreMenu(plugin: plugin, collection: playable ? collection : nil, tracks: tracks, link: link,
+                               info: info)
         }
     }
 
@@ -474,9 +477,12 @@ private struct SourcePageMoreMenu: View {
     /// Its playable songs, when every page is in.
     var tracks: [TrackReference]
     var link: String?
+    /// Get Info, for an album or an artist of a source that describes its items.
+    var info: InfoRequest? = nil
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(SourcesStore.self) private var sources
+    @Environment(Router.self) private var router
 
     /// Whether the menu has anything to offer.
     static func hasItems(remote: Bool, playable: Bool, link: String?) -> Bool {
@@ -496,6 +502,12 @@ private struct SourcePageMoreMenu: View {
                 }
             }
             OpenInServiceButton(link: link, source: plugin)
+            if let info {
+                Divider()
+                Button("Get Info") {
+                    router.infoRequest = info
+                }
+            }
         } label: {
             Label("More", systemImage: "ellipsis")
         }

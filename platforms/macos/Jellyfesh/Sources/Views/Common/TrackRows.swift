@@ -275,8 +275,8 @@ private struct LevelBars: View {
 
 /// A song's menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to or Remove from
 /// Favourites, Go to Album, Go to Artist (a source's songs open the source's album and artist
-/// pages), Create Synced Lyrics (library songs, while AI Lyrics is offered), Open in {Service} and
-/// Show in Finder. A remote source's
+/// pages), Create Synced Lyrics (library songs, while AI Lyrics is offered), Open in {Service}, Show
+/// in Finder and Get Info. A remote source's
 /// songs never join the queue, playlists or favourites (ADR-0018), so they offer only what opens
 /// elsewhere. Rows that do not carry a library song's album or file look them up when chosen.
 struct TrackActionsMenu: View {
@@ -343,6 +343,11 @@ struct TrackActionsMenu: View {
             OpenInServiceButton(link: item.link, source: item.source)
             if Self.hasFile(item) {
                 Button("Show in Finder") { showInFinder(item) }
+            }
+            if item.track != nil {
+                Button("Get Info") {
+                    router.infoRequest = InfoRequest.song(item, sourceName: item.source.map { sources.name(of: $0) })
+                }
             }
         }
     }
@@ -464,6 +469,7 @@ struct CollectionMoreMenu<Extra: View>: View {
     var playlistID: Int64?
     @ViewBuilder var extra: Extra
     @Environment(PlaybackStore.self) private var playback
+    @Environment(Router.self) private var router
 
     var body: some View {
         Menu {
@@ -475,6 +481,12 @@ struct CollectionMoreMenu<Extra: View>: View {
             }
             AddToPlaylistMenu(collection: collection, excluding: playlistID)
             extra
+            if let request = Self.info(for: collection) {
+                Divider()
+                Button("Get Info") {
+                    router.infoRequest = request
+                }
+            }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
@@ -489,6 +501,17 @@ struct CollectionMoreMenu<Extra: View>: View {
 extension CollectionMoreMenu where Extra == EmptyView {
     init(collection: CollectionReference) {
         self.init(collection: collection, playlistID: nil) { EmptyView() }
+    }
+}
+
+extension CollectionMoreMenu {
+    /// Get Info for an album's or an artist's page.
+    static func info(for collection: CollectionReference) -> InfoRequest? {
+        switch collection {
+        case .album(let id): return InfoRequest(item: .album(id: id), kind: .album, known: KnownDetails())
+        case .artist(let id): return InfoRequest(item: .artist(id: id), kind: .artist, known: KnownDetails())
+        default: return nil
+        }
     }
 }
 
