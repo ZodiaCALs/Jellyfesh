@@ -212,9 +212,11 @@ struct SourcesUnavailableNotice: View {
 /// library's pages (CollectionHeader): its artwork, kind, title and artist, the song count once
 /// every page is in, Play and Shuffle (the core plays the whole container), and More (Play Next,
 /// Play Last and Add to Playlist… where its songs may join the queue, then Open in {Service}). An
-/// album's songs are numbered, and the songs end with "12 songs, 48 minutes". The source's top
-/// level and its folders have their title and the source's line. A source whose terms ask for it is
-/// credited ("Content from {Service}").
+/// album's songs are numbered, and the songs end with "12 songs, 48 minutes". An album's or
+/// artist's page from a source that describes its items (ADR-0022) adds the source's picture and
+/// its notes or biography, which More expands. The source's top level and its folders have their
+/// title and the source's line. A source whose terms ask for it is credited ("Content from
+/// {Service}").
 struct BrowseView: View {
     var plugin: String
     var node: String?
@@ -225,8 +227,11 @@ struct BrowseView: View {
 
     @Environment(SourcesStore.self) private var sources
     @Environment(PlaybackStore.self) private var playback
+    @Environment(AppModel.self) private var app
     @Environment(\.palette) private var palette
     @State private var model: BrowseModel?
+    /// What the source says about the album or artist.
+    @State private var details: DetailsAnswer?
 
     var body: some View {
         let items = model?.items ?? []
@@ -236,6 +241,11 @@ struct BrowseView: View {
             header(songs: songs)
                 .padding(.vertical, collectionKind == nil ? Tokens.Space.s4 : Tokens.Space.s5)
                 .trackListRow()
+            if let notes = details?.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
+                ExpandableNotes(text: notes)
+                    .padding(.bottom, Tokens.Space.s4)
+                    .trackListRow()
+            }
             if let model {
                 if model.unavailable {
                     SourcesUnavailableNotice()
@@ -290,6 +300,15 @@ struct BrowseView: View {
             model = browse
             browse.start(sources)
         }
+        .task(id: item?.id) {
+            details = nil
+            guard let item, item.kind == .album || item.kind == .artist,
+                  sources.plugin(plugin)?.hasDetails == true, let reference = item.itemReference
+            else { return }
+            app.answers.details(reference, onAnswer: { answer in
+                if answer.error == nil { details = answer }
+            }, onFailure: { _ in })
+        }
     }
 
     /// An album, playlist or artist (they get the collection header); nil for a folder or the
@@ -302,7 +321,7 @@ struct BrowseView: View {
     @ViewBuilder private func header(songs: [SourceResult]) -> some View {
         if let item, let kind = collectionKind {
             CollectionHeader(
-                artwork: item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) },
+                artwork: (item.artwork ?? details?.image).flatMap { ArtworkSource(hash: nil, location: $0) },
                 placeholder: SourcePage.placeholder(kind),
                 round: kind == .artist,
                 kind: SourcePage.kindName(kind),
@@ -423,6 +442,20 @@ enum SourcePage {
         }
     }
 
+    /// A source song's album (Go to Album), for its page's header until the source says more.
+    static func album(plugin: String, id: String, title: String?, artist: String?) -> SourceResult {
+        SourceResult(source: plugin, kind: .album, itemID: id, title: title?.nilIfEmpty ?? String(localized: "Album"),
+                     subtitle: artist, album: nil, durationMs: nil, artwork: nil, playable: true,
+                     unplayableReason: nil, track: nil, alsoIn: [])
+    }
+
+    /// A source song's artist (Go to Artist).
+    static func artist(plugin: String, id: String, name: String?) -> SourceResult {
+        SourceResult(source: plugin, kind: .artist, itemID: id, title: name?.nilIfEmpty ?? String(localized: "Artist"),
+                     subtitle: nil, album: nil, durationMs: nil, artwork: nil, playable: true,
+                     unplayableReason: nil, track: nil, alsoIn: [])
+    }
+
     /// A song of the page as its row shows it; numbered on an album.
     static func trackItem(_ entry: SourceResult, artwork: ArtworkSource?, number: UInt32?) -> TrackItem {
         var shown = TrackItem(result: entry, artwork: artwork)
@@ -471,5 +504,30 @@ private struct SourcePageMoreMenu: View {
         .controlSize(.large)
         .fixedSize()
         .accessibilityLabel(Text("More Actions"))
+    }
+}
+
+/// An album's notes or an artist's biography: three lines, and More shows the rest.
+struct ExpandableNotes: View {
+    var text: String
+    @Environment(\.palette) private var palette
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s1) {
+            Text(text)
+                .typography(Tokens.TypeRoles.listSecondary)
+                .foregroundStyle(palette[Tokens.Ink.ink70])
+                .lineLimit(expanded ? nil : 3)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+            if !expanded {
+                Button("More") {
+                    expanded = true
+                }
+                .buttonStyle(.link)
+            }
+        }
+        .frame(maxWidth: 720, alignment: .leading)
     }
 }

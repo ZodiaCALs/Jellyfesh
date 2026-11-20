@@ -34,6 +34,9 @@ struct TrackItem: Identifiable, Hashable {
     var source: String?
     /// "Also in …": the other sources that have it, in unified search.
     var alsoIn: String? = nil
+    /// A source song's artist and album, as the source names them (Go to Artist, Go to Album).
+    var sourceArtistID: String? = nil
+    var sourceAlbumID: String? = nil
 
     var canPlay: Bool { playable && !missing && track != nil }
 
@@ -61,6 +64,8 @@ extension TrackItem {
                   album: result.album, durationMs: result.durationMs, artwork: artwork,
                   playable: result.playable, unplayableReason: result.unplayableReason, link: result.link,
                   source: result.source == SearchStore.library ? nil : result.source)
+        sourceArtistID = result.artistID
+        sourceAlbumID = result.albumID
     }
 
     /// The song the engine plays (Now Playing's More).
@@ -269,8 +274,9 @@ private struct LevelBars: View {
 }
 
 /// A song's menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to or Remove from
-/// Favourites, Go to Album, Go to Artist, Create Synced Lyrics (library songs, while AI Lyrics is
-/// offered), Open in {Service} and Show in Finder. A remote source's
+/// Favourites, Go to Album, Go to Artist (a source's songs open the source's album and artist
+/// pages), Create Synced Lyrics (library songs, while AI Lyrics is offered), Open in {Service} and
+/// Show in Finder. A remote source's
 /// songs never join the queue, playlists or favourites (ADR-0018), so they offer only what opens
 /// elsewhere. Rows that do not carry a library song's album or file look them up when chosen.
 struct TrackActionsMenu: View {
@@ -355,10 +361,11 @@ struct TrackActionsMenu: View {
 
     private static func hasAlbum(_ item: TrackItem) -> Bool {
         item.albumID != nil || (songID(item) != nil && !(item.album ?? "").isEmpty)
+            || (item.source != nil && item.sourceAlbumID != nil)
     }
 
     private static func hasArtist(_ item: TrackItem) -> Bool {
-        songID(item) != nil && !(item.artist ?? "").isEmpty
+        (songID(item) != nil && !(item.artist ?? "").isEmpty) || (item.source != nil && item.sourceArtistID != nil)
     }
 
     private static func hasFile(_ item: TrackItem) -> Bool {
@@ -367,6 +374,11 @@ struct TrackActionsMenu: View {
 
     private func goToAlbum(_ item: TrackItem) {
         router.showNowPlaying(false, reduceMotion: true)
+        if let plugin = item.source, let albumID = item.sourceAlbumID {
+            let album = SourcePage.album(plugin: plugin, id: albumID, title: item.album, artist: item.artist)
+            router.open(.browse(plugin: plugin, node: albumID, title: album.title, item: album))
+            return
+        }
         if let albumID = item.albumID {
             router.open(.album(AlbumSummary(id: albumID, title: item.album ?? "", albumArtist: item.artist,
                                             year: nil, trackCount: 0, artworkHash: nil)))
@@ -382,6 +394,12 @@ struct TrackActionsMenu: View {
     }
 
     private func goToArtist(_ item: TrackItem) {
+        if let plugin = item.source, let artistID = item.sourceArtistID {
+            router.showNowPlaying(false, reduceMotion: true)
+            let artist = SourcePage.artist(plugin: plugin, id: artistID, name: item.artist)
+            router.open(.browse(plugin: plugin, node: artistID, title: artist.title, item: artist))
+            return
+        }
         guard let name = item.artist else { return }
         router.showNowPlaying(false, reduceMotion: true)
         Task { @MainActor in

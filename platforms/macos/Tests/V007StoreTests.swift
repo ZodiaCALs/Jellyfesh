@@ -519,3 +519,31 @@ final class DiscoverTests: XCTestCase {
         XCTAssertNil(DiscoverText.queue(of: row, from: album))
     }
 }
+
+final class SourceArtistAndAlbumTests: XCTestCase {
+    func testASourceSongKnowsItsArtistAndAlbum() {
+        var song = Fixture.result("t1", source: "org.jellyfesh.subsonic",
+                                  track: .source(SourceSong(plugin: "org.jellyfesh.subsonic", id: "t1", title: "Song")))
+        song.subtitle = "Artist"
+        song.album = "Album"
+        song.artistID = "ar-1"
+        song.albumID = "al-1"
+        let row = TrackItem(result: song, artwork: nil)
+        XCTAssertEqual(row.sourceArtistID, "ar-1")
+        XCTAssertEqual(row.sourceAlbumID, "al-1")
+        XCTAssertEqual(row.source, "org.jellyfesh.subsonic")
+    }
+
+    func testTheirPagesAreTheSourcesAlbumAndArtist() {
+        let album = SourcePage.album(plugin: "org.jellyfesh.subsonic", id: "al-1", title: "Album", artist: "Artist")
+        XCTAssertEqual(album.kind, .album)
+        XCTAssertEqual(album.itemID, "al-1")
+        XCTAssertEqual(album.subtitle, "Artist")
+        XCTAssertTrue(album.playable, "Play and Shuffle play Collection::Source")
+        XCTAssertEqual(album.itemReference, .source(plugin: "org.jellyfesh.subsonic", kind: .album, id: "al-1"))
+        let artist = SourcePage.artist(plugin: "org.jellyfesh.subsonic", id: "ar-1", name: "Artist")
+        XCTAssertEqual(artist.kind, .artist)
+        XCTAssertEqual(artist.title, "Artist")
+        XCTAssertFalse(SourcePage.album(plugin: "p", id: "x", title: "", artist: nil).title.isEmpty)
+    }
+}
