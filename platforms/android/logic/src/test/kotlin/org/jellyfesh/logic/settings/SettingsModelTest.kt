@@ -103,7 +103,7 @@ class SettingsModelTest {
     @Test
     fun sectionsAreTheSpecsWithAboutAndNoLyricsSection() {
         assertEquals(
-            listOf(SettingsSection.Appearance, SettingsSection.Playback, SettingsSection.Library, SettingsSection.Sources, SettingsSection.About),
+            listOf(SettingsSection.Appearance, SettingsSection.Playback, SettingsSection.Library, SettingsSection.Sources, SettingsSection.Extensions, SettingsSection.About),
             SettingsSection.entries,
         )
     }
@@ -118,6 +118,7 @@ class SettingsModelTest {
                 SettingsGroup.NowPlayingBackdrop,
                 SettingsGroup.Lyrics,
                 SettingsGroup.AppIcon,
+                SettingsGroup.Customize,
             ),
             SettingsLayout.groups(SettingsSection.Appearance),
         )
@@ -134,6 +135,7 @@ class SettingsModelTest {
             listOf(SettingsGroup.AddSource, SettingsGroup.Installed, SettingsGroup.CommunityPlugins),
             SettingsLayout.groups(SettingsSection.Sources),
         )
+        assertEquals(listOf(SettingsGroup.JellyfeshPro, SettingsGroup.InstalledExtensions), SettingsLayout.groups(SettingsSection.Extensions))
         assertEquals(listOf(SettingsGroup.About, SettingsGroup.Updates), SettingsLayout.groups(SettingsSection.About))
     }
 

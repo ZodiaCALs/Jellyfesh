@@ -68,6 +68,7 @@ import org.jellyfesh.android.ui.player.NowPlayingScreen
 import org.jellyfesh.android.ui.player.lyricsBarHeight
 import org.jellyfesh.android.ui.player.lyricsBarTranslates
 import org.jellyfesh.android.ui.search.SearchScreen
+import org.jellyfesh.android.ui.settings.ExtensionScreen
 import org.jellyfesh.android.ui.settings.SettingsScreen
 import org.jellyfesh.android.ui.signals.SignalMessages
 import org.jellyfesh.android.ui.sources.SourceBrowseScreen
@@ -251,6 +252,7 @@ private fun ScreenContent(screen: Screen, state: CoreState) {
         is Screen.Source -> SourceScreen(screen.pluginId, state)
         is Screen.SourceBrowse -> SourceBrowseScreen(screen, state)
         is Screen.Settings -> SettingsScreen(screen.section, state)
+        is Screen.Extension -> ExtensionScreen(screen.pluginId, state)
     }
 }
 
@@ -267,7 +269,8 @@ private fun SystemBars(dark: Boolean) {
     }
 }
 
-private tailrec fun Context.findActivity(): Activity? = when (this) {
+/** The activity a view's context belongs to (the window's, and what Play Billing launches over). */
+internal tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null

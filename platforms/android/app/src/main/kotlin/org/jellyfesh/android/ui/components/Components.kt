@@ -187,6 +187,8 @@ fun NavRow(
     onMore: (() -> Unit)? = null,
     /** The glyph at the end: the chevron of a row that opens a page, or another (Open in {Service}). */
     trailingIcon: Int = R.drawable.ic_chevron_right,
+    /** A short badge before the chevron ("Pro" on what Jellyfesh Pro opens while it is inactive). */
+    badge: String? = null,
 ) {
     val colors = Jf.colors
     Row(
@@ -203,6 +205,7 @@ fun NavRow(
             JfText(title, style = JfType.listTitle, maxLines = 1)
             if (subtitle != null) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
         }
+        if (badge != null) org.jellyfesh.android.ui.theme.Badge(badge, warning = false)
         if (onMore != null) JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), onMore, size = 40.dp, iconSize = 20.dp)
         JfIcon(trailingIcon, colors.ink30, size = 18.dp)
     }

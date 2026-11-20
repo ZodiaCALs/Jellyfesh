@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfesh.android.billing.StorePurchases
 import org.jellyfesh.android.ffi.PortDrawClock
 import org.jellyfesh.android.ffi.UniffiCoreClient
 import org.jellyfesh.android.images.ArtworkLoader
@@ -74,6 +75,12 @@ class AppGraph(private val app: Application) {
 
     /** How this build reached the person (BuildConfig.DISTRIBUTION): the core decides from it where Pro is sold. */
     val distribution: Distribution = BuildFlags.distribution(BuildConfig.DISTRIBUTION)
+
+    /**
+     * Jellyfesh Pro in this build's store: none yet (the Google Play build sells it through Play
+     * Billing). The core decides whether Pro is on.
+     */
+    val purchases: StorePurchases? = null
 
     val images = ArtworkLoader(app, this)
     val icons = IconSwitcher(app)

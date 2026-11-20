@@ -190,6 +190,9 @@ enum class SettingsGroup {
     Lyrics,
     AppIcon,
 
+    /** Customize…, which opens Extensions › Customize (v0.0.7). */
+    Customize,
+
     // Playback
     Output,
     Crossfade,
@@ -209,6 +212,12 @@ enum class SettingsGroup {
     Installed,
     CommunityPlugins,
 
+    // Extensions
+    JellyfeshPro,
+
+    /** The installed extensions, with Install from File… in the heading. */
+    InstalledExtensions,
+
     // About
     About,
 
@@ -226,6 +235,7 @@ object SettingsLayout {
             SettingsGroup.NowPlayingBackdrop,
             SettingsGroup.Lyrics,
             SettingsGroup.AppIcon,
+            SettingsGroup.Customize,
         )
         SettingsSection.Playback -> listOf(
             SettingsGroup.Output,
@@ -241,6 +251,7 @@ object SettingsLayout {
             SettingsGroup.RescanLibrary,
         )
         SettingsSection.Sources -> listOf(SettingsGroup.AddSource, SettingsGroup.Installed, SettingsGroup.CommunityPlugins)
+        SettingsSection.Extensions -> listOf(SettingsGroup.JellyfeshPro, SettingsGroup.InstalledExtensions)
         SettingsSection.About -> listOf(SettingsGroup.About, SettingsGroup.Updates)
     }
 }

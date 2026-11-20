@@ -12,8 +12,9 @@ enum class LibrarySection { Albums, Artists, Songs, Playlists, Favorites }
 /**
  * Settings' sections, in the order every app lists them (docs/ui.md, "Settings"). Android keeps
  * About in Settings; the lyrics settings live in Appearance, with no section of their own.
+ * Extensions (v0.0.7) holds Jellyfesh Pro and the extensions.
  */
-enum class SettingsSection { Appearance, Playback, Library, Sources, About }
+enum class SettingsSection { Appearance, Playback, Library, Sources, Extensions, About }
 
 /** A screen in a tab's back stack. */
 sealed interface Screen {
@@ -41,6 +42,9 @@ sealed interface Screen {
         val artwork: ArtworkRef? = null,
     ) : Screen
     data class Settings(val section: SettingsSection? = null) : Screen
+
+    /** An extension's page in Settings › Extensions (AI Lyrics, Customize). */
+    data class Extension(val pluginId: String) : Screen
 }
 
 /**

@@ -146,6 +146,7 @@ fun sectionTitle(section: SettingsSection): Int = when (section) {
     SettingsSection.Playback -> R.string.settings_playback
     SettingsSection.Library -> R.string.settings_library
     SettingsSection.Sources -> R.string.settings_sources
+    SettingsSection.Extensions -> R.string.settings_extensions
     SettingsSection.About -> R.string.settings_about
 }
 
@@ -154,6 +155,7 @@ private fun sectionDescription(section: SettingsSection): Int = when (section) {
     SettingsSection.Playback -> R.string.settings_playback_desc
     SettingsSection.Library -> R.string.settings_library_desc
     SettingsSection.Sources -> R.string.settings_sources_desc
+    SettingsSection.Extensions -> R.string.settings_extensions_desc
     SettingsSection.About -> R.string.settings_about_desc
 }
 
@@ -162,6 +164,7 @@ private fun sectionIcon(section: SettingsSection): Int = when (section) {
     SettingsSection.Playback -> R.drawable.ic_eq
     SettingsSection.Library -> R.drawable.ic_library
     SettingsSection.Sources -> R.drawable.ic_sources
+    SettingsSection.Extensions -> R.drawable.ic_sparkle
     SettingsSection.About -> R.drawable.ic_info
 }
 
@@ -194,6 +197,7 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
             item(key = "icon-h") { SectionHeader(stringResource(R.string.app_icon)) }
             item(key = "icon") { AppIconPicker(state.settings) }
         }
+        SettingsGroup.Customize -> customize(state)
         SettingsGroup.Output -> output(state)
         SettingsGroup.Crossfade -> crossfade(state.settings)
         SettingsGroup.VolumeLevelling -> volumeLevelling(state.settings)
@@ -209,6 +213,8 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.AddSource -> addSource(state)
         SettingsGroup.Installed -> installed(state)
         SettingsGroup.CommunityPlugins -> communityPlugins(state)
+        SettingsGroup.JellyfeshPro -> jellyfeshPro(state)
+        SettingsGroup.InstalledExtensions -> installedExtensions(state)
         SettingsGroup.About -> about()
         SettingsGroup.Updates -> updates(state)
     }
