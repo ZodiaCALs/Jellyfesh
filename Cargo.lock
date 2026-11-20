@@ -2519,6 +2519,7 @@ dependencies = [
  "jf-library",
  "jf-lyrics",
  "jf-session",
+ "jf-speech",
  "jni-sys 0.4.1",
  "ndk-context",
  "serde",
@@ -2730,7 +2731,7 @@ dependencies = [
 
 [[package]]
 name = "jf-qqmusic"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "jf-plugin-host",
  "jf-plugin-sdk",
