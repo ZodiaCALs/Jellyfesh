@@ -47,5 +47,14 @@ public sealed partial class SourceBrowsePage : JfPage
 
     private void OnRowClick(object sender, ItemClickEventArgs e) => ViewModel.OpenCommand.Execute(e.ClickedItem);
 
+    /// <summary>Get Info for the album or artist this page shows (its source's details).</summary>
+    private void OnGetInfoClick(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        if (ViewModel.DetailsItem is { } item)
+        {
+            InfoDialog.ShowFor(AppHost.Services, item, ViewModel.Target.Kind == Core.ItemKind.Artist ? InfoKind.Artist : InfoKind.Album, ViewModel.Title);
+        }
+    }
+
     private static void OnOpenRequested(SourceTarget target) => AppHost.Window.Navigate(typeof(SourceBrowsePage), target);
 }

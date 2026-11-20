@@ -127,6 +127,10 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private string _formatText = string.Empty;
 
+    /// <summary>The core's quality label for what is decoded ("Hi-Res Lossless"), for the Info pane.</summary>
+    [ObservableProperty]
+    private string _qualityText = string.Empty;
+
     // Now Playing › Info, "About This Song": Title, Artist, Album, Year, Length, Format, Lyrics and File.
 
     /// <summary>The song's year, for library songs that have one.</summary>
@@ -401,6 +405,7 @@ public sealed partial class PlayerViewModel : ObservableObject
             : _s.L.Format("Player_ArtistAlbum", Artist, item.Album);
         ShowArtwork(item?.Artwork);
         FormatText = string.Empty;
+        QualityText = string.Empty;
         FilePath = string.Empty;
         Year = string.Empty;
         LyricsText = string.Empty;
@@ -670,7 +675,11 @@ public sealed partial class PlayerViewModel : ObservableObject
             : np.Album is null ? Artist
             : _s.L.Format("Player_ArtistAlbum", Artist, np.Album);
         ShowArtwork(np?.Artwork);
-        FormatText = np?.Format is { } fmt ? Describe(fmt) : string.Empty;
+        // What is decoded (the core's AudioFormat) once the engine opened the track, else the stream's facts.
+        FormatText = np?.Quality is { } decoded && DetailsRows.FormatLine(decoded, _s.L) is { } line
+            ? decoded.BitrateKbps is > 0 and { } kbps ? $"{line} · {_s.L.Format("Info_Kbps", kbps)}" : line
+            : np?.Format is { } fmt ? Describe(fmt) : string.Empty;
+        QualityText = np?.Quality?.Quality is { } quality ? DetailsRows.Quality(quality, _s.L) : string.Empty;
         FilePath = np?.Path ?? string.Empty;
         LengthText = np is null ? string.Empty
             : np.DurationMs is { } length ? TimeFormat.ClockMs(length)
@@ -770,10 +779,16 @@ public sealed partial class PlayerViewModel : ObservableObject
             LyricTiming.Line => "Lyrics_InfoLine",
             _ => "Lyrics_InfoUnsynced",
         });
+        if (lyrics.Source is LyricsOrigin.Made made)
+        {
+            return _s.L.Format("AiLyrics_MadeBy", made.Engine);
+        }
+
         var source = lyrics.Source switch
         {
             LyricsOrigin.Sidecar sidecar => Path.GetFileName(sidecar.Path),
             LyricsOrigin.Embedded => _s.L.Get("Lyrics_InfoTags"),
+            LyricsOrigin.Plugin plugin => _s.Hub.State.Sources.Find(plugin.Id)?.Name,
             _ => null,
         };
         return string.IsNullOrEmpty(source) ? timing : _s.L.Format("Lyrics_InfoFrom", timing, source);

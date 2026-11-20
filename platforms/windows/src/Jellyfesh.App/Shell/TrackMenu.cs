@@ -26,6 +26,7 @@ internal sealed class TrackMenu
     private readonly MenuFlyoutItem _makeLyrics;
     private readonly MenuFlyoutItem _openLink;
     private readonly MenuFlyoutItem _showFile;
+    private readonly MenuFlyoutItem _getInfo;
     private readonly MenuFlyoutItem? _remove;
     private TrackItem? _item;
 
@@ -49,6 +50,13 @@ internal sealed class TrackMenu
         _makeLyrics = Item(l.Get("AiLyrics_Create"), MakeLyrics);
         _openLink = Item(string.Empty, () => ItemLinks.Open(_s, _item?.Link));
         _showFile = Item(l.Get("Menu_ShowInExplorer"), ShowFile);
+        _getInfo = Item(l.Get("Menu_GetInfo"), () =>
+        {
+            if (_item is not null)
+            {
+                InfoDialog.ShowForTrack(_s, _item);
+            }
+        });
         Flyout.Items.Add(_playNext);
         Flyout.Items.Add(_playLast);
         Flyout.Items.Add(_playlists);
@@ -59,6 +67,7 @@ internal sealed class TrackMenu
         Flyout.Items.Add(_makeLyrics);
         Flyout.Items.Add(_openLink);
         Flyout.Items.Add(_showFile);
+        Flyout.Items.Add(_getInfo);
         if (removeKey is not null && onRemove is not null)
         {
             Flyout.Items.Add(new MenuFlyoutSeparator());
@@ -149,6 +158,7 @@ internal sealed class TrackMenu
         // Library songs, while AI Lyrics is offered (docs/ui.md, "Song menu").
         _makeLyrics.Visibility = _item?.Ref is TrackRef.Library && AppHost.App.AiLyrics.OffersForSongs ? Visibility.Visible : Visibility.Collapsed;
         _showFile.IsEnabled = loaded && TrackPlaces.HasFile(_item!);
+        _getInfo.IsEnabled = loaded && _item?.Ref is not null;
         if (_remove is not null)
         {
             _remove.IsEnabled = loaded;

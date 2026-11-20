@@ -22,6 +22,9 @@ public partial class LocalizationTests
         "Count_Minutes_One", "Count_Minutes_Other", "Count_Hours_One", "Count_Hours_Other",
         "Kind_Track", "Kind_Album", "Kind_Artist", "Kind_Playlist", "Kind_Folder",
         "Sort_Title", "Sort_Artist", "Sort_Album", "Sort_Year", "Sort_Duration", "Sort_Path", "Sort_Added",
+        "Quality_HiResLossless", "Quality_Lossless", "Quality_High", "Quality_Standard",
+        "Fact_Version", "Fact_Genre", "Fact_Language", "Fact_Released", "Fact_Label", "Fact_Composer", "Fact_Lyricist",
+        "Fact_Arranger", "Fact_Producer", "Fact_Popularity", "Fact_Quality", "Fact_Isrc", "Fact_Disc", "Fact_Track",
     ];
 
     [Fact]

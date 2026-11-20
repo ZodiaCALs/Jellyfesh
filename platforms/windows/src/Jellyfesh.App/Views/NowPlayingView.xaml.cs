@@ -413,4 +413,18 @@ public sealed partial class NowPlayingView : UserControl
             args.Handled = true;
         }
     }
+
+    /// <summary>Get Info for what plays: the core's details, with what the player knows meanwhile.</summary>
+    private void OnGetInfoClick(object sender, RoutedEventArgs e)
+    {
+        var services = AppHost.Services;
+        if (services.Hub.State.NowPlaying is not { } np || ItemRef.Of(np.Track) is not { } item)
+        {
+            return;
+        }
+
+        var source = np.Track is TrackRef.Source s ? ItemLinks.ServiceName(services.Hub.State.Sources, s.Track.Plugin) : null;
+        var known = new KnownDetails(np.Title, np.Artist, np.Album, null, np.DurationMs, np.Path, source);
+        _ = InfoDialog.ShowAsync(AppHost.Platform, new DetailsViewModel(services, item, InfoKind.Song, known), services.L);
+    }
 }

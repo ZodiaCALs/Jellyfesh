@@ -17,6 +17,10 @@ public sealed partial class ArtistPage : JfPage
 
     public ArtistDetailViewModel ViewModel { get; private set; } = null!;
 
+    /// <summary>Get Info: the artist's facts and biography from the core.</summary>
+    private void OnGetInfoClick(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) =>
+        InfoDialog.ShowFor(AppHost.Services, new Core.ItemRef.Artist(ViewModel.Artist.Id), InfoKind.Artist, ViewModel.Name);
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         if (e.Parameter is Artist artist && ViewModel?.Artist.Id != artist.Id)

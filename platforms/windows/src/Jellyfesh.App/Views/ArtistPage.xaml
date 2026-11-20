@@ -41,6 +41,7 @@
                                         <MenuFlyoutItem x:Uid="More_PlayNext" Command="{x:Bind ViewModel.PlayNextCommand}" Text="Play Next" />
                                         <MenuFlyoutItem x:Uid="More_PlayLast" Command="{x:Bind ViewModel.PlayLastCommand}" Text="Play Last" />
                                         <MenuFlyoutSubItem x:Name="AddToPlaylistItem" x:Uid="More_AddToPlaylist" Text="Add to Playlist…" />
+                                        <MenuFlyoutItem x:Uid="More_GetInfo" Click="OnGetInfoClick" Text="Get Info" />
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>

@@ -533,6 +533,48 @@
   <data name="Extensions_Reset.Content" xml:space="preserve">
     <value>既定値に戻す</value>
   </data>
+  <data name="Fact_Arranger" xml:space="preserve">
+    <value>編曲</value>
+  </data>
+  <data name="Fact_Composer" xml:space="preserve">
+    <value>作曲</value>
+  </data>
+  <data name="Fact_Disc" xml:space="preserve">
+    <value>ディスク</value>
+  </data>
+  <data name="Fact_Genre" xml:space="preserve">
+    <value>ジャンル</value>
+  </data>
+  <data name="Fact_Isrc" xml:space="preserve">
+    <value>ISRC</value>
+  </data>
+  <data name="Fact_Label" xml:space="preserve">
+    <value>レーベル</value>
+  </data>
+  <data name="Fact_Language" xml:space="preserve">
+    <value>言語</value>
+  </data>
+  <data name="Fact_Lyricist" xml:space="preserve">
+    <value>作詞</value>
+  </data>
+  <data name="Fact_Popularity" xml:space="preserve">
+    <value>人気</value>
+  </data>
+  <data name="Fact_Producer" xml:space="preserve">
+    <value>プロデューサー</value>
+  </data>
+  <data name="Fact_Quality" xml:space="preserve">
+    <value>音質</value>
+  </data>
+  <data name="Fact_Released" xml:space="preserve">
+    <value>リリース</value>
+  </data>
+  <data name="Fact_Track" xml:space="preserve">
+    <value>トラック</value>
+  </data>
+  <data name="Fact_Version" xml:space="preserve">
+    <value>バージョン</value>
+  </data>
   <data name="Favorites_Empty.Text" xml:space="preserve">
     <value>ハートを付けた曲がここに表示されます。</value>
   </data>
@@ -619,6 +661,90 @@
   </data>
   <data name="Icon_TealDeep" xml:space="preserve">
     <value>ティールディープ</value>
+  </data>
+  <data name="Info_About" xml:space="preserve">
+    <value>概要</value>
+  </data>
+  <data name="Info_AboutSong" xml:space="preserve">
+    <value>この曲について</value>
+  </data>
+  <data name="Info_Album" xml:space="preserve">
+    <value>アルバム</value>
+  </data>
+  <data name="Info_AlbumGain" xml:space="preserve">
+    <value>アルバム {0}</value>
+  </data>
+  <data name="Info_Artist" xml:space="preserve">
+    <value>アーティスト</value>
+  </data>
+  <data name="Info_Audio" xml:space="preserve">
+    <value>オーディオ</value>
+  </data>
+  <data name="Info_Bitrate" xml:space="preserve">
+    <value>ビットレート</value>
+  </data>
+  <data name="Info_Bits" xml:space="preserve">
+    <value>{0} ビット</value>
+  </data>
+  <data name="Info_Channels" xml:space="preserve">
+    <value>{0} チャンネル</value>
+  </data>
+  <data name="Info_Composer" xml:space="preserve">
+    <value>作曲</value>
+  </data>
+  <data name="Info_File" xml:space="preserve">
+    <value>ファイル</value>
+  </data>
+  <data name="Info_Format" xml:space="preserve">
+    <value>フォーマット</value>
+  </data>
+  <data name="Info_Genre" xml:space="preserve">
+    <value>ジャンル</value>
+  </data>
+  <data name="Info_Kbps" xml:space="preserve">
+    <value>{0} kbps</value>
+  </data>
+  <data name="Info_KHz" xml:space="preserve">
+    <value>{0} kHz</value>
+  </data>
+  <data name="Info_Label" xml:space="preserve">
+    <value>レーベル</value>
+  </data>
+  <data name="Info_Length" xml:space="preserve">
+    <value>長さ</value>
+  </data>
+  <data name="Info_Lyricist" xml:space="preserve">
+    <value>作詞</value>
+  </data>
+  <data name="Info_Mono" xml:space="preserve">
+    <value>モノラル</value>
+  </data>
+  <data name="Info_Quality" xml:space="preserve">
+    <value>音質</value>
+  </data>
+  <data name="Info_ReplayGain" xml:space="preserve">
+    <value>ReplayGain</value>
+  </data>
+  <data name="Info_Size" xml:space="preserve">
+    <value>サイズ</value>
+  </data>
+  <data name="Info_Source" xml:space="preserve">
+    <value>ソース</value>
+  </data>
+  <data name="Info_Stereo" xml:space="preserve">
+    <value>ステレオ</value>
+  </data>
+  <data name="Info_Title" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="Info_TrackGain" xml:space="preserve">
+    <value>トラック {0}</value>
+  </data>
+  <data name="Info_Version" xml:space="preserve">
+    <value>バージョン</value>
+  </data>
+  <data name="Info_Year" xml:space="preserve">
+    <value>年</value>
   </data>
   <data name="Kind_Album" xml:space="preserve">
     <value>アルバム</value>
@@ -773,6 +899,9 @@
   <data name="Menu_Favorite" xml:space="preserve">
     <value>お気に入りに追加</value>
   </data>
+  <data name="Menu_GetInfo" xml:space="preserve">
+    <value>情報を見る</value>
+  </data>
   <data name="Menu_GoToAlbum" xml:space="preserve">
     <value>アルバムへ移動</value>
   </data>
@@ -851,6 +980,9 @@
   <data name="More_Export.Text" xml:space="preserve">
     <value>プレイリストを書き出す…</value>
   </data>
+  <data name="More_GetInfo.Text" xml:space="preserve">
+    <value>情報を見る</value>
+  </data>
   <data name="More_PlayLast.Text" xml:space="preserve">
     <value>最後に再生</value>
   </data>
@@ -893,6 +1025,9 @@
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>ミニプレーヤー (Ctrl+M)</value>
   </data>
+  <data name="NowPlaying_GetInfo.Content" xml:space="preserve">
+    <value>情報を見る</value>
+  </data>
   <data name="NowPlaying_InfoAlbum.Text" xml:space="preserve">
     <value>アルバム</value>
   </data>
@@ -913,6 +1048,9 @@
   </data>
   <data name="NowPlaying_InfoLyrics.Text" xml:space="preserve">
     <value>歌詞</value>
+  </data>
+  <data name="NowPlaying_InfoQuality.Text" xml:space="preserve">
+    <value>音質</value>
   </data>
   <data name="NowPlaying_InfoTab.Content" xml:space="preserve">
     <value>情報</value>
@@ -1213,6 +1351,18 @@
   </data>
   <data name="Pro_Title.Text" xml:space="preserve">
     <value>Jellyfesh Pro</value>
+  </data>
+  <data name="Quality_High" xml:space="preserve">
+    <value>高音質</value>
+  </data>
+  <data name="Quality_HiResLossless" xml:space="preserve">
+    <value>ハイレゾロスレス</value>
+  </data>
+  <data name="Quality_Lossless" xml:space="preserve">
+    <value>ロスレス</value>
+  </data>
+  <data name="Quality_Standard" xml:space="preserve">
+    <value>標準</value>
   </data>
   <data name="Queue_Clear.Content" xml:space="preserve">
     <value>キューを消去</value>

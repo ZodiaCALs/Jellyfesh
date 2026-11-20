@@ -169,8 +169,20 @@ plugin settings applied with **Save**.
   "Content from {Service}" for a source that asks for credit.
 * **Now Playing:** Queue has "Up Next", **Clear Queue** (it asks first) and
   "Nothing Up Next"; Info is "About This Song" with Title, Artist, Album, Year
-  (library songs), Length, Format, Lyrics (timing and file, or "None found")
-  and File.
+  (library songs), Length, Quality (the core's label for what is decoded:
+  "Hi-Res Lossless", "Lossless", "High", "Standard"), Format (what is decoded,
+  "FLAC · 24-bit · 96 kHz · Stereo · 3100 kbps", once the engine opened the
+  track), Lyrics (timing and file, the plugin, or "Made by AI Lyrics ·
+  {engine}"; "None found") and File, and **Get Info**.
+* **Get Info** (the song menu, the album, artist and source pages' More menus,
+  the Info pane): a dialog that opens with what the row knows and fills in
+  when the core's `Details` answer comes (matched by request id): About This
+  Song (Title, Artist, Album, Version, Year, Genre, Composer, Lyricist, Label,
+  Length) and Audio (Quality, Format, Bitrate, Size, ReplayGain, File or
+  Source), rows without a value left out; for albums and artists the notes and
+  the facts in the core's order, the service's own labels for others, and
+  "Content from {Service}" when it asks for credit (`DetailsRows`,
+  `DetailsViewModel`, `Shell/InfoDialog.cs`).
 * **Settings:** Appearance, Playback, Library, Sources, Extensions and About; no separate
   Lyrics section. Playback: Output (Output Device), Crossfade (Crossfade,
   Length, Album Continuity), Volume Levelling (ReplayGain, Preamp), Equalizer

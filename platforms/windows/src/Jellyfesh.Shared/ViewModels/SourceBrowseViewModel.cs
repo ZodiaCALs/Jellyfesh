@@ -108,6 +108,17 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     /// <summary>The item's artwork (and its link) for the header; null for the source's top level.</summary>
     public SourceEntryItem? Header { get; }
 
+    /// <summary>
+    /// Get Info for this page's album or artist: its source's details (docs/core-api.md, "Details and
+    /// comments"), when the source offers them.
+    /// </summary>
+    public ItemRef? DetailsItem =>
+        Target is { Node: { } id, Kind: ItemKind.Album or ItemKind.Artist } && S.Hub.State.Sources.Find(Target.Plugin) is { Details: true }
+            ? new ItemRef.Source(Target.Plugin, Target.Kind!.Value, id)
+            : null;
+
+    public bool HasDetails => DetailsItem is not null;
+
     /// <summary>An album or a playlist: the large header with the artwork and the footer.</summary>
     public bool IsCollection => Target.Kind is ItemKind.Album or ItemKind.Playlist;
 

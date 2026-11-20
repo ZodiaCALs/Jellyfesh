@@ -16,6 +16,10 @@ public sealed partial class AlbumPage : JfPage
 
     public AlbumDetailViewModel ViewModel { get; private set; } = null!;
 
+    /// <summary>Get Info: the album's facts and notes from the core.</summary>
+    private void OnGetInfoClick(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) =>
+        InfoDialog.ShowFor(AppHost.Services, new Core.ItemRef.Album(ViewModel.Album.Id), InfoKind.Album, ViewModel.Album.Title);
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         if (e.Parameter is Album album && ViewModel?.Album.Id != album.Id)

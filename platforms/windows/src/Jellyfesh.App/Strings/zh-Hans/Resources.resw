@@ -533,6 +533,48 @@
   <data name="Extensions_Reset.Content" xml:space="preserve">
     <value>恢复默认值</value>
   </data>
+  <data name="Fact_Arranger" xml:space="preserve">
+    <value>编曲</value>
+  </data>
+  <data name="Fact_Composer" xml:space="preserve">
+    <value>作曲</value>
+  </data>
+  <data name="Fact_Disc" xml:space="preserve">
+    <value>碟片</value>
+  </data>
+  <data name="Fact_Genre" xml:space="preserve">
+    <value>流派</value>
+  </data>
+  <data name="Fact_Isrc" xml:space="preserve">
+    <value>ISRC</value>
+  </data>
+  <data name="Fact_Label" xml:space="preserve">
+    <value>唱片公司</value>
+  </data>
+  <data name="Fact_Language" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Fact_Lyricist" xml:space="preserve">
+    <value>作词</value>
+  </data>
+  <data name="Fact_Popularity" xml:space="preserve">
+    <value>热度</value>
+  </data>
+  <data name="Fact_Producer" xml:space="preserve">
+    <value>制作人</value>
+  </data>
+  <data name="Fact_Quality" xml:space="preserve">
+    <value>音质</value>
+  </data>
+  <data name="Fact_Released" xml:space="preserve">
+    <value>发行时间</value>
+  </data>
+  <data name="Fact_Track" xml:space="preserve">
+    <value>曲目</value>
+  </data>
+  <data name="Fact_Version" xml:space="preserve">
+    <value>版本</value>
+  </data>
   <data name="Favorites_Empty.Text" xml:space="preserve">
     <value>用心形图标标记的歌曲会显示在这里。</value>
   </data>
@@ -619,6 +661,90 @@
   </data>
   <data name="Icon_TealDeep" xml:space="preserve">
     <value>深青</value>
+  </data>
+  <data name="Info_About" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Info_AboutSong" xml:space="preserve">
+    <value>关于这首歌</value>
+  </data>
+  <data name="Info_Album" xml:space="preserve">
+    <value>专辑</value>
+  </data>
+  <data name="Info_AlbumGain" xml:space="preserve">
+    <value>专辑 {0}</value>
+  </data>
+  <data name="Info_Artist" xml:space="preserve">
+    <value>艺人</value>
+  </data>
+  <data name="Info_Audio" xml:space="preserve">
+    <value>音频</value>
+  </data>
+  <data name="Info_Bitrate" xml:space="preserve">
+    <value>比特率</value>
+  </data>
+  <data name="Info_Bits" xml:space="preserve">
+    <value>{0} 位</value>
+  </data>
+  <data name="Info_Channels" xml:space="preserve">
+    <value>{0} 声道</value>
+  </data>
+  <data name="Info_Composer" xml:space="preserve">
+    <value>作曲</value>
+  </data>
+  <data name="Info_File" xml:space="preserve">
+    <value>文件</value>
+  </data>
+  <data name="Info_Format" xml:space="preserve">
+    <value>格式</value>
+  </data>
+  <data name="Info_Genre" xml:space="preserve">
+    <value>流派</value>
+  </data>
+  <data name="Info_Kbps" xml:space="preserve">
+    <value>{0} kbps</value>
+  </data>
+  <data name="Info_KHz" xml:space="preserve">
+    <value>{0} kHz</value>
+  </data>
+  <data name="Info_Label" xml:space="preserve">
+    <value>唱片公司</value>
+  </data>
+  <data name="Info_Length" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Info_Lyricist" xml:space="preserve">
+    <value>作词</value>
+  </data>
+  <data name="Info_Mono" xml:space="preserve">
+    <value>单声道</value>
+  </data>
+  <data name="Info_Quality" xml:space="preserve">
+    <value>音质</value>
+  </data>
+  <data name="Info_ReplayGain" xml:space="preserve">
+    <value>ReplayGain</value>
+  </data>
+  <data name="Info_Size" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="Info_Source" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="Info_Stereo" xml:space="preserve">
+    <value>立体声</value>
+  </data>
+  <data name="Info_Title" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="Info_TrackGain" xml:space="preserve">
+    <value>单曲 {0}</value>
+  </data>
+  <data name="Info_Version" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="Info_Year" xml:space="preserve">
+    <value>年份</value>
   </data>
   <data name="Kind_Album" xml:space="preserve">
     <value>专辑</value>
@@ -773,6 +899,9 @@
   <data name="Menu_Favorite" xml:space="preserve">
     <value>收藏</value>
   </data>
+  <data name="Menu_GetInfo" xml:space="preserve">
+    <value>显示简介</value>
+  </data>
   <data name="Menu_GoToAlbum" xml:space="preserve">
     <value>前往专辑</value>
   </data>
@@ -851,6 +980,9 @@
   <data name="More_Export.Text" xml:space="preserve">
     <value>导出歌单…</value>
   </data>
+  <data name="More_GetInfo.Text" xml:space="preserve">
+    <value>显示简介</value>
+  </data>
   <data name="More_PlayLast.Text" xml:space="preserve">
     <value>最后播放</value>
   </data>
@@ -893,6 +1025,9 @@
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>迷你播放器 (Ctrl+M)</value>
   </data>
+  <data name="NowPlaying_GetInfo.Content" xml:space="preserve">
+    <value>显示简介</value>
+  </data>
   <data name="NowPlaying_InfoAlbum.Text" xml:space="preserve">
     <value>专辑</value>
   </data>
@@ -913,6 +1048,9 @@
   </data>
   <data name="NowPlaying_InfoLyrics.Text" xml:space="preserve">
     <value>歌词</value>
+  </data>
+  <data name="NowPlaying_InfoQuality.Text" xml:space="preserve">
+    <value>音质</value>
   </data>
   <data name="NowPlaying_InfoTab.Content" xml:space="preserve">
     <value>信息</value>
@@ -1213,6 +1351,18 @@
   </data>
   <data name="Pro_Title.Text" xml:space="preserve">
     <value>Jellyfesh Pro</value>
+  </data>
+  <data name="Quality_High" xml:space="preserve">
+    <value>高品质</value>
+  </data>
+  <data name="Quality_HiResLossless" xml:space="preserve">
+    <value>高解析度无损</value>
+  </data>
+  <data name="Quality_Lossless" xml:space="preserve">
+    <value>无损</value>
+  </data>
+  <data name="Quality_Standard" xml:space="preserve">
+    <value>标准</value>
   </data>
   <data name="Queue_Clear.Content" xml:space="preserve">
     <value>清空播放队列</value>

@@ -79,6 +79,7 @@
                                         <MenuFlyoutItem x:Uid="More_PlayNext" Command="{x:Bind ViewModel.PlayNextCommand}" Text="Play Next" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanQueue), Mode=OneWay}" />
                                         <MenuFlyoutItem x:Uid="More_PlayLast" Command="{x:Bind ViewModel.PlayLastCommand}" Text="Play Last" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanQueue), Mode=OneWay}" />
                                         <MenuFlyoutItem Command="{x:Bind ViewModel.OpenLinkCommand}" Text="{x:Bind ViewModel.OpenInLabel}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasLink)}" />
+                                        <MenuFlyoutItem x:Uid="More_GetInfo" Click="OnGetInfoClick" Text="Get Info" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasDetails)}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
                             </Button>
