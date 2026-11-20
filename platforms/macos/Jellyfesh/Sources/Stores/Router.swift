@@ -75,7 +75,8 @@ enum Route: Hashable {
 }
 
 enum NowPlayingPanel: Hashable, CaseIterable {
-    case lyrics, queue, info
+    /// Comments shows for sources whose plugin shows comments (ADR-0022).
+    case lyrics, queue, info, comments
 }
 
 @MainActor

@@ -617,3 +617,63 @@ final class DetailsRowsTests: XCTestCase {
         XCTAssertNil(InfoRequest.container(Fixture.result("f", source: "p", kind: .folder), sourceName: nil))
     }
 }
+
+@MainActor
+final class CommentsTests: XCTestCase {
+    private let item = ItemReference.source(plugin: "org.jellyfesh.netease", kind: .track, id: "s1")
+
+    private func comment(_ id: String) -> SourceComment {
+        SourceComment(id: id, author: "A\(id)", avatar: nil, text: "Text \(id)", likes: 3, timeMs: 1_700_000_000_000,
+                      replies: nil)
+    }
+
+    func testOnlySourcesThatShowCommentsHaveThem() {
+        let song = TrackReference.source(SourceSong(plugin: "org.jellyfesh.netease", id: "s1", title: "S"))
+        XCTAssertEqual(CommentsModel.item(for: song, remote: false, showsComments: { _ in true }), item)
+        XCTAssertNil(CommentsModel.item(for: song, remote: false, showsComments: { _ in false }))
+        XCTAssertNil(CommentsModel.item(for: song, remote: true, showsComments: { _ in true }))
+        XCTAssertNil(CommentsModel.item(for: .library(id: 1), remote: false, showsComments: { _ in true }))
+    }
+
+    func testPopularThenLatestPageByPage() {
+        let client = FakeCoreClient()
+        let answers = CoreAnswers(client: client, tracker: CommandTracker())
+        let model = CommentsModel(item: item)
+        model.load(answers)
+        XCTAssertEqual(client.sent.last, .comments(item, page: nil))
+        answers.apply(comments: CommentsAnswer(request: client.lastCommandID, item: item, hot: [comment("h")],
+                                               comments: [comment("1"), comment("2")], total: 40, next: "p2",
+                                               attribution: "From NetEase", error: nil))
+        XCTAssertTrue(model.loaded)
+        XCTAssertEqual(model.popular.map(\.id), ["h"])
+        XCTAssertEqual(model.latest.map(\.id), ["1", "2"])
+        XCTAssertEqual(model.attribution, "From NetEase")
+
+        model.loadMore(answers)
+        XCTAssertEqual(client.sent.last, .comments(item, page: "p2"))
+        model.loadMore(answers)
+        XCTAssertEqual(client.sent.filter { $0 == .comments(item, page: "p2") }.count, 1, "one page at a time")
+        answers.apply(comments: CommentsAnswer(request: client.lastCommandID, item: item, hot: [],
+                                               comments: [comment("2"), comment("3")], total: 40, next: nil,
+                                               attribution: nil, error: nil))
+        XCTAssertEqual(model.latest.map(\.id), ["1", "2", "3"], "a comment seen before is not shown twice")
+        XCTAssertEqual(model.popular.map(\.id), ["h"], "Popular stays from the first page")
+        XCTAssertNil(model.next)
+        let sent = client.sent.count
+        model.loadMore(answers)
+        XCTAssertEqual(client.sent.count, sent, "the end")
+    }
+
+    func testAFailedPageSaysWhy() {
+        let client = FakeCoreClient()
+        let answers = CoreAnswers(client: client, tracker: CommandTracker())
+        let model = CommentsModel(item: item)
+        model.load(answers)
+        answers.apply(comments: CommentsAnswer(request: client.lastCommandID, item: item, hot: [], comments: [],
+                                               total: nil, next: nil, attribution: nil, error: "Sign in to read comments."))
+        XCTAssertEqual(model.error, "Sign in to read comments.")
+        XCTAssertFalse(model.loading)
+        XCTAssertNotNil(CommentText.when(1_700_000_000_000))
+        XCTAssertNil(CommentText.when(nil))
+    }
+}

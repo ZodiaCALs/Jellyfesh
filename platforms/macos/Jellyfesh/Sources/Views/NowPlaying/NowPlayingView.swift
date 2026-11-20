@@ -80,6 +80,7 @@ struct NowPlayingView: View {
         case .lyrics: LyricsPanel()
         case .queue: QueuePanel()
         case .info: InfoPanel()
+        case .comments: CommentsPanel()
         }
     }
 }
@@ -133,21 +134,25 @@ struct NowPlayingBackdrop: View {
 /// Library and the Lyrics/Queue/Info control, floating at the top of the stage.
 struct NowPlayingBar: View {
     @Environment(Router.self) private var router
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(SourcesStore.self) private var sources
     @Environment(\.palette) private var palette
     @Environment(\.effects) private var effects
 
     var body: some View {
         @Bindable var router = router
+        let comments = CommentsModel.item(for: playback.nowPlaying?.track, remote: playback.isRemote,
+                                          showsComments: { sources.plugin($0)?.hasComments == true }) != nil
         ZStack {
             SegmentedControl(
                 selection: $router.panel,
-                options: [
-                    .init(value: .lyrics, title: "Lyrics"),
-                    .init(value: .queue, title: "Queue"),
-                    .init(value: .info, title: "Info"),
-                ],
+                options: Self.panes(comments: comments),
                 label: "Now Playing views"
             )
+            .onChange(of: comments) { _, shown in
+                // A song whose source shows no comments goes back to its lyrics.
+                if !shown && router.panel == .comments { router.panel = .lyrics }
+            }
             .padding(3)
             .glass(.veil, in: Capsule())
             .elevation(Tokens.Elevation.shadow1)
@@ -178,6 +183,19 @@ struct NowPlayingBar: View {
         }
         .padding(.horizontal, 28)
         .frame(height: 78)
+    }
+
+    /// Lyrics, Queue and Info, and Comments where the song's source shows them.
+    private static func panes(comments: Bool) -> [SegmentedControl<NowPlayingPanel>.Option] {
+        var panes: [SegmentedControl<NowPlayingPanel>.Option] = [
+            .init(value: .lyrics, title: "Lyrics"),
+            .init(value: .queue, title: "Queue"),
+            .init(value: .info, title: "Info"),
+        ]
+        if comments {
+            panes.append(.init(value: .comments, title: "Comments"))
+        }
+        return panes
     }
 }
 

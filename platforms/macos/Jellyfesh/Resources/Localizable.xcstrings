@@ -387,6 +387,28 @@
         }
       }
     },
+    "%lld likes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いいね %lld 件"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个赞"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個讚"
+          }
+        }
+      }
+    },
     "%lld min": {
       "localizations": {
         "ja": {
@@ -2279,6 +2301,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "代碼 %@"
+          }
+        }
+      }
+    },
+    "Comments": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コメント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评论"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留言"
+          }
+        }
+      }
+    },
+    "Comments from %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のコメント"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@ 的评论"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "來自 %@ 的留言"
           }
         }
       }
@@ -4681,6 +4747,28 @@
         }
       }
     },
+    "Latest": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新着"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新"
+          }
+        }
+      }
+    },
     "Learn More…": {
       "localizations": {
         "ja": {
@@ -5579,6 +5667,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "還沒有藝人"
+          }
+        }
+      }
+    },
+    "No Comments Yet": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コメントはまだありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无评论"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無留言"
           }
         }
       }
@@ -6767,6 +6877,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用你的訂閱在這台 Mac 上播放。Apple Music 的任何內容都不會儲存到你的資料庫。"
+          }
+        }
+      }
+    },
+    "Popular": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人気"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "热门"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "熱門"
           }
         }
       }
