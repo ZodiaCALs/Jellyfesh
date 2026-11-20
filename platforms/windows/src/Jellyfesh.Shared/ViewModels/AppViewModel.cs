@@ -61,6 +61,7 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         Lyrics = new LyricsPresenter(time);
         LyricsBar = new LyricsBarPresenter(time);
         Pro = new ProViewModel(Services, store, links);
+        AiLyrics = new AiLyricsViewModel(Services, Pro);
         Links = links;
         ticker.Attach(Lyrics);
         ticker.Attach(LyricsBar);
@@ -79,6 +80,9 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
 
     /// <summary>Jellyfesh Pro: the Pro sheet and Settings › Extensions show it.</summary>
     public ProViewModel Pro { get; }
+
+    /// <summary>AI Lyrics in the Lyrics pane and the song menu.</summary>
+    public AiLyricsViewModel AiLyrics { get; }
 
     /// <summary>The website's pages (About, the legal links), when the build knows the website.</summary>
     public AboutInfo.Links? Links { get; }
@@ -137,6 +141,11 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         if (changes.HasFlag(SliceChange.Pro))
         {
             Pro.Update(state.Pro);
+        }
+
+        if ((changes & (SliceChange.AiLyrics | SliceChange.Lyrics | SliceChange.NowPlaying | SliceChange.Pro | SliceChange.Remote)) != 0)
+        {
+            AiLyrics.Update(state);
         }
 
         if (changes.HasFlag(SliceChange.Queue))

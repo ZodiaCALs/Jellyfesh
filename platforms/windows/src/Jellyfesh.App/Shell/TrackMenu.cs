@@ -23,6 +23,7 @@ internal sealed class TrackMenu
     private readonly MenuFlyoutItem _favorite;
     private readonly MenuFlyoutItem _goToAlbum;
     private readonly MenuFlyoutItem _goToArtist;
+    private readonly MenuFlyoutItem _makeLyrics;
     private readonly MenuFlyoutItem _openLink;
     private readonly MenuFlyoutItem _showFile;
     private readonly MenuFlyoutItem? _remove;
@@ -45,6 +46,7 @@ internal sealed class TrackMenu
         });
         _goToAlbum = Item(l.Get("Menu_GoToAlbum"), GoToAlbum);
         _goToArtist = Item(l.Get("Menu_GoToArtist"), GoToArtist);
+        _makeLyrics = Item(l.Get("AiLyrics_Create"), MakeLyrics);
         _openLink = Item(string.Empty, () => ItemLinks.Open(_s, _item?.Link));
         _showFile = Item(l.Get("Menu_ShowInExplorer"), ShowFile);
         Flyout.Items.Add(_playNext);
@@ -54,6 +56,7 @@ internal sealed class TrackMenu
         Flyout.Items.Add(new MenuFlyoutSeparator());
         Flyout.Items.Add(_goToAlbum);
         Flyout.Items.Add(_goToArtist);
+        Flyout.Items.Add(_makeLyrics);
         Flyout.Items.Add(_openLink);
         Flyout.Items.Add(_showFile);
         if (removeKey is not null && onRemove is not null)
@@ -99,6 +102,23 @@ internal sealed class TrackMenu
         }
     }
 
+    /// <summary>Create Synced Lyrics for a library song (after what AI Lyrics needs first).</summary>
+    private async void MakeLyrics()
+    {
+        if (_item?.Ref is TrackRef.Library song)
+        {
+            try
+            {
+                await AppHost.App.AiLyrics.CreateFor(new SongRef.Library(song.Id));
+            }
+            catch (Exception e)
+            {
+                // async void: an exception would end the app.
+                AppLog.Write("Create Synced Lyrics failed", e);
+            }
+        }
+    }
+
     private async void ShowFile()
     {
         if (_item is { } item)
@@ -125,6 +145,9 @@ internal sealed class TrackMenu
         _favorite.IsEnabled = loaded && _item?.Ref is TrackRef.Library or TrackRef.Source;
         _goToAlbum.IsEnabled = loaded && TrackPlaces.HasPages(_item!);
         _goToArtist.IsEnabled = _goToAlbum.IsEnabled;
+
+        // Library songs, while AI Lyrics is offered (docs/ui.md, "Song menu").
+        _makeLyrics.Visibility = _item?.Ref is TrackRef.Library && AppHost.App.AiLyrics.OffersForSongs ? Visibility.Visible : Visibility.Collapsed;
         _showFile.IsEnabled = loaded && TrackPlaces.HasFile(_item!);
         if (_remove is not null)
         {

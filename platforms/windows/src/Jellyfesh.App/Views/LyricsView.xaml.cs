@@ -30,6 +30,7 @@ public sealed partial class LyricsView : UserControl
         _app = AppHost.App;
         Presenter = _app.Lyrics;
         Player = _app.Player;
+        AiLyrics = _app.AiLyrics;
         InitializeComponent();
         Presenter.PropertyChanged += OnPresenterChanged;
         Presenter.SweepChanged += OnSweepChanged;
@@ -48,6 +49,9 @@ public sealed partial class LyricsView : UserControl
 
     /// <summary>The player, for the remote session's message.</summary>
     public PlayerViewModel Player { get; }
+
+    /// <summary>AI Lyrics: Create Synced Lyrics, the job, what is needed, who made these lyrics.</summary>
+    public AiLyricsViewModel AiLyrics { get; }
 
     /// <summary>The lyrics came into view: jump to the line being sung once layout has run.</summary>
     public void Refresh()

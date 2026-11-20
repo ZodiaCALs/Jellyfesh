@@ -98,8 +98,80 @@
   <data name="Action_Uninstall" xml:space="preserve">
     <value>卸载</value>
   </data>
+  <data name="AiLyrics_Allow" xml:space="preserve">
+    <value>允许</value>
+  </data>
+  <data name="AiLyrics_CancelDownload.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AiLyrics_CancelJob.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="AiLyrics_ConsentBody" xml:space="preserve">
+    <value>AI 歌词将把这首歌的音频发送到 {0} 以生成歌词。适用该服务商的条款和隐私政策，并且可能会向你的账户收费。</value>
+  </data>
+  <data name="AiLyrics_ConsentTitle" xml:space="preserve">
+    <value>将这首歌发送到 {0}？</value>
+  </data>
+  <data name="AiLyrics_Create" xml:space="preserve">
+    <value>生成同步歌词</value>
+  </data>
+  <data name="AiLyrics_DeleteBody" xml:space="preserve">
+    <value>你可以重新生成它们。</value>
+  </data>
+  <data name="AiLyrics_DeleteMade" xml:space="preserve">
+    <value>删除生成的歌词</value>
+  </data>
+  <data name="AiLyrics_DeleteTitle" xml:space="preserve">
+    <value>删除这些歌词？</value>
+  </data>
+  <data name="AiLyrics_Download" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="AiLyrics_Downloading" xml:space="preserve">
+    <value>正在下载 {0}… {1}</value>
+  </data>
+  <data name="AiLyrics_Failed" xml:space="preserve">
+    <value>无法生成歌词：{0}</value>
+  </data>
   <data name="AiLyrics_KeyAdded" xml:space="preserve">
     <value>已添加 API 密钥</value>
+  </data>
+  <data name="AiLyrics_MadeBy" xml:space="preserve">
+    <value>由 AI 歌词生成 · {0}</value>
+  </data>
+  <data name="AiLyrics_MakeAgainLabel" xml:space="preserve">
+    <value>重新生成</value>
+  </data>
+  <data name="AiLyrics_NeedKey" xml:space="preserve">
+    <value>添加你的 API 密钥即可在线生成歌词。</value>
+  </data>
+  <data name="AiLyrics_NeedModel" xml:space="preserve">
+    <value>下载 {0} 模型（{1}）即可在本机生成歌词。</value>
+  </data>
+  <data name="AiLyrics_OpenSettings" xml:space="preserve">
+    <value>打开 AI 歌词设置</value>
+  </data>
+  <data name="AiLyrics_Reading" xml:space="preserve">
+    <value>正在读取音频…</value>
+  </data>
+  <data name="AiLyrics_Recognising" xml:space="preserve">
+    <value>正在识别… {0}</value>
+  </data>
+  <data name="AiLyrics_Sending" xml:space="preserve">
+    <value>正在发送到 {0}…</value>
+  </data>
+  <data name="AiLyrics_Time" xml:space="preserve">
+    <value>为这些歌词计时</value>
+  </data>
+  <data name="AiLyrics_Timing" xml:space="preserve">
+    <value>正在为字词计时…</value>
+  </data>
+  <data name="AiLyrics_TryAgain.Content" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="AiLyrics_Waiting" xml:space="preserve">
+    <value>正在等待…</value>
   </data>
   <data name="Album_ArtistYear" xml:space="preserve">
     <value>{0} · {1}</value>

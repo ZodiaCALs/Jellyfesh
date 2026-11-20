@@ -107,6 +107,13 @@ public sealed partial class MainWindow : Window
 
         InitializeComponent();
 
+        // Open AI Lyrics Settings (the Lyrics pane): Settings › Extensions.
+        _vm.AiLyrics.SettingsRequested += () =>
+        {
+            CloseNowPlaying();
+            Navigate(typeof(SettingsPage), SettingsSection.Extensions);
+        };
+
         // The Pro sheet and Enter Licence Key, from any Pro action (docs/ui.md).
         _vm.Pro.SheetRequested += () => _ = ProDialogs.ShowSheetAsync(_platform, _vm.Pro, l);
         _vm.Pro.LicenceKeyRequested += key => _ = ProDialogs.ShowLicenceKeyAsync(_platform, key, l);

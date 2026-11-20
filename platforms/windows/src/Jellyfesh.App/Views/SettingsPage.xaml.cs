@@ -25,6 +25,7 @@ public enum SettingsSection
     Playback,
     Library,
     Sources,
+    Extensions,
     About,
 }
 
@@ -72,6 +73,7 @@ public sealed partial class SettingsPage : JfPage
                 SettingsSection.Playback => PlaybackItem,
                 SettingsSection.Library => LibraryItem,
                 SettingsSection.Sources => SourcesItem,
+                SettingsSection.Extensions => ExtensionsItem,
                 SettingsSection.About => AboutItem,
                 _ => AppearanceItem,
             };

@@ -98,8 +98,80 @@
   <data name="Action_Uninstall" xml:space="preserve">
     <value>アンインストール</value>
   </data>
+  <data name="AiLyrics_Allow" xml:space="preserve">
+    <value>許可</value>
+  </data>
+  <data name="AiLyrics_CancelDownload.Content" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="AiLyrics_CancelJob.Content" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="AiLyrics_ConsentBody" xml:space="preserve">
+    <value>AI 歌詞は、歌詞を作成するためにこの曲のオーディオを {0} に送信します。プロバイダの利用規約とプライバシーポリシーが適用され、アカウントに料金が発生する場合があります。</value>
+  </data>
+  <data name="AiLyrics_ConsentTitle" xml:space="preserve">
+    <value>この曲を {0} に送信しますか？</value>
+  </data>
+  <data name="AiLyrics_Create" xml:space="preserve">
+    <value>同期歌詞を作成</value>
+  </data>
+  <data name="AiLyrics_DeleteBody" xml:space="preserve">
+    <value>もう一度作成できます。</value>
+  </data>
+  <data name="AiLyrics_DeleteMade" xml:space="preserve">
+    <value>作成した歌詞を削除</value>
+  </data>
+  <data name="AiLyrics_DeleteTitle" xml:space="preserve">
+    <value>この歌詞を削除しますか？</value>
+  </data>
+  <data name="AiLyrics_Download" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
+  <data name="AiLyrics_Downloading" xml:space="preserve">
+    <value>{0} をダウンロードしています… {1}</value>
+  </data>
+  <data name="AiLyrics_Failed" xml:space="preserve">
+    <value>歌詞を作成できませんでした：{0}</value>
+  </data>
   <data name="AiLyrics_KeyAdded" xml:space="preserve">
     <value>API キーを追加済み</value>
+  </data>
+  <data name="AiLyrics_MadeBy" xml:space="preserve">
+    <value>AI 歌詞で作成 · {0}</value>
+  </data>
+  <data name="AiLyrics_MakeAgainLabel" xml:space="preserve">
+    <value>もう一度作成</value>
+  </data>
+  <data name="AiLyrics_NeedKey" xml:space="preserve">
+    <value>オンラインで歌詞を作成するには、API キーを追加してください。</value>
+  </data>
+  <data name="AiLyrics_NeedModel" xml:space="preserve">
+    <value>このデバイスで歌詞を作成するには、{0} モデル（{1}）をダウンロードしてください。</value>
+  </data>
+  <data name="AiLyrics_OpenSettings" xml:space="preserve">
+    <value>AI 歌詞の設定を開く</value>
+  </data>
+  <data name="AiLyrics_Reading" xml:space="preserve">
+    <value>オーディオを読み込んでいます…</value>
+  </data>
+  <data name="AiLyrics_Recognising" xml:space="preserve">
+    <value>認識しています… {0}</value>
+  </data>
+  <data name="AiLyrics_Sending" xml:space="preserve">
+    <value>{0} に送信しています…</value>
+  </data>
+  <data name="AiLyrics_Time" xml:space="preserve">
+    <value>この歌詞にタイミングを付ける</value>
+  </data>
+  <data name="AiLyrics_Timing" xml:space="preserve">
+    <value>単語のタイミングを合わせています…</value>
+  </data>
+  <data name="AiLyrics_TryAgain.Content" xml:space="preserve">
+    <value>再試行</value>
+  </data>
+  <data name="AiLyrics_Waiting" xml:space="preserve">
+    <value>待機中…</value>
   </data>
   <data name="Album_ArtistYear" xml:space="preserve">
     <value>{0} · {1}</value>

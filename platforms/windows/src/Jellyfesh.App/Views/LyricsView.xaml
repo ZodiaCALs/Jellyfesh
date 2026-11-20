@@ -14,7 +14,33 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Jellyfesh.App.Controls"
     xmlns:drawing="using:Jellyfesh.Drawing"
-    xmlns:shell="using:Jellyfesh.App.Shell">
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:vm="using:Jellyfesh.ViewModels">
+
+    <UserControl.Resources>
+        <!-- AI Lyrics (docs/ui.md): Create Synced Lyrics or Time These Lyrics; the job with its progress
+             and Cancel; what is needed first; a failure with Try Again. -->
+        <DataTemplate x:Key="AiLyricsActions" x:DataType="vm:AiLyricsViewModel">
+            <StackPanel MaxWidth="420" Spacing="8">
+                <Button HorizontalAlignment="Center" Command="{x:Bind CreateCommand}" Content="{x:Bind CreateLabel, Mode=OneWay}" Style="{StaticResource JfAccentPillStyle}" Visibility="{x:Bind shell:Bind.VisibleIfButNot(CanCreate, IsModelDownloading), Mode=OneWay}" />
+                <StackPanel Spacing="6" Visibility="{x:Bind shell:Bind.Visible(HasJob), Mode=OneWay}">
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource JfBodyText}" Text="{x:Bind JobText, Mode=OneWay}" />
+                    <ProgressBar Width="240" IsIndeterminate="{x:Bind JobIsIndeterminate, Mode=OneWay}" Maximum="100" Value="{x:Bind JobProgress, Mode=OneWay}" />
+                    <Button x:Uid="AiLyrics_CancelJob" HorizontalAlignment="Center" Command="{x:Bind CancelJobCommand}" Content="Cancel" Style="{StaticResource JfChipButtonStyle}" />
+                </StackPanel>
+                <StackPanel Spacing="6" Visibility="{x:Bind shell:Bind.VisibleIf(NeedText), Mode=OneWay}">
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind NeedText, Mode=OneWay}" TextAlignment="Center" TextWrapping="Wrap" />
+                    <ProgressBar Width="240" Maximum="100" Value="{x:Bind ModelProgress, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(IsModelDownloading), Mode=OneWay}" />
+                    <Button HorizontalAlignment="Center" Command="{x:Bind ResolveNeedCommand}" Content="{x:Bind NeedAction, Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.VisibleIf(NeedAction), Mode=OneWay}" />
+                    <Button x:Uid="AiLyrics_CancelDownload" HorizontalAlignment="Center" Command="{x:Bind CancelModelDownloadCommand}" Content="Cancel" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(IsModelDownloading), Mode=OneWay}" />
+                </StackPanel>
+                <StackPanel Spacing="6" Visibility="{x:Bind shell:Bind.Visible(HasFailure), Mode=OneWay}">
+                    <TextBlock HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind FailureText, Mode=OneWay}" TextAlignment="Center" TextWrapping="Wrap" />
+                    <Button x:Uid="AiLyrics_TryAgain" HorizontalAlignment="Center" Command="{x:Bind MakeAgainCommand}" Content="Try Again" Style="{StaticResource JfChipButtonStyle}" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
 
     <Grid>
         <ScrollView
@@ -28,20 +54,27 @@
             StateChanged="OnScrollStateChanged"
             VerticalScrollBarVisibility="Auto"
             Visibility="{x:Bind shell:Bind.Visible(Presenter.HasLyrics), Mode=OneWay}">
-            <ItemsRepeater
-                x:Name="Lines"
-                ElementClearing="OnElementClearing"
-                ElementPrepared="OnElementPrepared"
-                ItemsSource="{x:Bind Presenter.Lines}">
-                <ItemsRepeater.Layout>
-                    <StackLayout Spacing="20" />
-                </ItemsRepeater.Layout>
-                <ItemsRepeater.ItemTemplate>
-                    <DataTemplate x:DataType="drawing:LyricLineViewModel">
-                        <controls:LyricLineView Line="{x:Bind}" />
-                    </DataTemplate>
-                </ItemsRepeater.ItemTemplate>
-            </ItemsRepeater>
+            <StackPanel Spacing="20">
+                <ItemsRepeater
+                    x:Name="Lines"
+                    ElementClearing="OnElementClearing"
+                    ElementPrepared="OnElementPrepared"
+                    ItemsSource="{x:Bind Presenter.Lines}">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Spacing="20" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="drawing:LyricLineViewModel">
+                            <controls:LyricLineView Line="{x:Bind}" />
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+                <!-- Under the last line: who made these lyrics (AI Lyrics), and for plain lyrics Time These Lyrics or the job. -->
+                <StackPanel Margin="0,8,0,24" Spacing="10">
+                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind AiLyrics.MadeBy, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(AiLyrics.HasMadeLyrics), Mode=OneWay}" />
+                    <ContentControl Content="{x:Bind AiLyrics, Mode=OneWay}" ContentTemplate="{StaticResource AiLyricsActions}" HorizontalContentAlignment="Left" />
+                </StackPanel>
+            </StackPanel>
         </ScrollView>
         <!-- No lyrics: the other apps' words (docs/parity.md V18). -->
         <StackPanel
@@ -52,6 +85,7 @@
             Visibility="{x:Bind shell:Bind.VisibleIfNeither(Presenter.HasLyrics, Player.IsRemote), Mode=OneWay}">
             <TextBlock x:Uid="Lyrics_None" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="No Lyrics" />
             <TextBlock x:Uid="Lyrics_NoneBody" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags." TextAlignment="Center" />
+            <ContentControl Margin="0,8,0,0" HorizontalAlignment="Center" Content="{x:Bind AiLyrics, Mode=OneWay}" ContentTemplate="{StaticResource AiLyricsActions}" />
         </StackPanel>
         <TextBlock
             MaxWidth="420"

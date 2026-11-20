@@ -98,8 +98,80 @@
   <data name="Action_Uninstall" xml:space="preserve">
     <value>Uninstall</value>
   </data>
+  <data name="AiLyrics_Allow" xml:space="preserve">
+    <value>Allow</value>
+  </data>
+  <data name="AiLyrics_CancelDownload.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AiLyrics_CancelJob.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="AiLyrics_ConsentBody" xml:space="preserve">
+    <value>AI Lyrics will send the song's audio to {0} to make its lyrics. The provider's terms and privacy policy apply, and it may charge your account.</value>
+  </data>
+  <data name="AiLyrics_ConsentTitle" xml:space="preserve">
+    <value>Send This Song to {0}?</value>
+  </data>
+  <data name="AiLyrics_Create" xml:space="preserve">
+    <value>Create Synced Lyrics</value>
+  </data>
+  <data name="AiLyrics_DeleteBody" xml:space="preserve">
+    <value>You can make them again.</value>
+  </data>
+  <data name="AiLyrics_DeleteMade" xml:space="preserve">
+    <value>Delete Made Lyrics</value>
+  </data>
+  <data name="AiLyrics_DeleteTitle" xml:space="preserve">
+    <value>Delete These Lyrics?</value>
+  </data>
+  <data name="AiLyrics_Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="AiLyrics_Downloading" xml:space="preserve">
+    <value>Downloading {0}… {1}</value>
+  </data>
+  <data name="AiLyrics_Failed" xml:space="preserve">
+    <value>Couldn't make lyrics: {0}</value>
+  </data>
   <data name="AiLyrics_KeyAdded" xml:space="preserve">
     <value>API Key Added</value>
+  </data>
+  <data name="AiLyrics_MadeBy" xml:space="preserve">
+    <value>Made by AI Lyrics · {0}</value>
+  </data>
+  <data name="AiLyrics_MakeAgainLabel" xml:space="preserve">
+    <value>Make Again</value>
+  </data>
+  <data name="AiLyrics_NeedKey" xml:space="preserve">
+    <value>Add your API key to make lyrics online.</value>
+  </data>
+  <data name="AiLyrics_NeedModel" xml:space="preserve">
+    <value>Download the {0} model ({1}) to make lyrics on this device.</value>
+  </data>
+  <data name="AiLyrics_OpenSettings" xml:space="preserve">
+    <value>Open AI Lyrics Settings</value>
+  </data>
+  <data name="AiLyrics_Reading" xml:space="preserve">
+    <value>Reading Audio…</value>
+  </data>
+  <data name="AiLyrics_Recognising" xml:space="preserve">
+    <value>Recognising… {0}</value>
+  </data>
+  <data name="AiLyrics_Sending" xml:space="preserve">
+    <value>Sending to {0}…</value>
+  </data>
+  <data name="AiLyrics_Time" xml:space="preserve">
+    <value>Time These Lyrics</value>
+  </data>
+  <data name="AiLyrics_Timing" xml:space="preserve">
+    <value>Timing Words…</value>
+  </data>
+  <data name="AiLyrics_TryAgain.Content" xml:space="preserve">
+    <value>Try Again</value>
+  </data>
+  <data name="AiLyrics_Waiting" xml:space="preserve">
+    <value>Waiting…</value>
   </data>
   <data name="Album_ArtistYear" xml:space="preserve">
     <value>{0} · {1}</value>

@@ -69,6 +69,23 @@ internal static class PlayerMenus
             menu.Items.Add(stop);
         }
 
+        // Lyrics AI Lyrics made: Make Again, Delete Made Lyrics (asks first).
+        var ai = AppHost.App.AiLyrics;
+        if (ai.HasMadeLyrics)
+        {
+            if (menu.Items.Count > 0)
+            {
+                menu.Items.Add(new MenuFlyoutSeparator());
+            }
+
+            var again = new MenuFlyoutItem { Text = s.L.Get("AiLyrics_MakeAgainLabel") };
+            again.Click += (_, _) => ai.MakeAgainCommand.Execute(null);
+            menu.Items.Add(again);
+            var delete = new MenuFlyoutItem { Text = s.L.Get("AiLyrics_DeleteMade") };
+            delete.Click += (_, _) => ai.DeleteMadeCommand.Execute(null);
+            menu.Items.Add(delete);
+        }
+
         // Desktop Lyrics: open or close it, and unlock it while clicks pass through it.
         if (menu.Items.Count > 0)
         {

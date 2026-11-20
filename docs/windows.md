@@ -455,13 +455,29 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   `WS_EX_TRANSPARENT`, fully opaque through `SetLayeredWindowAttributes`), and
   Close, which turns the setting off. More offers **Unlock Desktop Lyrics**
   while it is locked.
+* **AI Lyrics** (`AiLyricsViewModel`, from the `AiLyrics` slice): the Lyrics
+  pane offers **Create Synced Lyrics** under "No Lyrics" and **Time These
+  Lyrics** under plain lyrics while AI Lyrics is offered (or Pro is inactive,
+  when it opens the Pro sheet); the song's job shows its stage ("Reading
+  Audio…", "Sending to {host}…", "Recognising… 42%", "Timing Words…") with a
+  bar and **Cancel**; what is needed first shows in words: a model to
+  download (**Download**, then "Downloading {Model}… 35%" with **Cancel**), an
+  API key (**Open AI Lyrics Settings**, Settings › Extensions), or why it
+  cannot work; a failed job says "Couldn't make lyrics: {message}" with **Try
+  Again**. The first upload to an origin asks "Send This Song to {origin}?"
+  (**Allow** sends `AllowAudioUpload`, then `MakeLyrics`). Lyrics AI Lyrics
+  made say "Made by AI Lyrics · {engine}" under the last line, and More adds
+  **Make Again** and **Delete Made Lyrics** (asks first). The song menu offers
+  **Create Synced Lyrics** after Go to Artist for library songs.
 * **Covers from sources** ([`core-api.md`](core-api.md), "Covers"): the app
   never fetches a picture itself. Rows, page headers, Now Playing (at 1024 px)
   and the system media controls ask `SourceArtwork(url, size)` through
   `ThumbnailService.GetSourceAsync`: a cached file loads at once; otherwise the
   placeholder stays until the core's `Artwork` event brings the file (at most a
   minute). A picture the core cannot have is not asked for again for ten
-  minutes.
+  minutes. Items a source lists without a picture carry a
+  `jellyfesh-artwork://` reference, which goes the same way (the core asks the
+  plugin); no URL is ever loaded by the app itself.
 * **Look.** Colours come from the core's Theme slice into shared brushes
   (Misty PLT-03), crossfaded over 600 ms on a new hue; sizes from the
   generated tokens through `{th:Token}`. Mica on Windows 11, the solid field
