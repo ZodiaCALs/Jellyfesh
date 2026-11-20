@@ -28,6 +28,7 @@ struct JellyfeshApp: App {
         // About Jellyfesh in the app menu opens it; it is not listed in the Window menu.
         Window("About Jellyfesh", id: AboutView.windowID) {
             AboutView()
+                .stores(model)
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
