@@ -64,7 +64,6 @@ import org.jellyfesh.android.ui.nav.BottomChrome
 import org.jellyfesh.android.ui.nav.LocalNav
 import org.jellyfesh.android.ui.nav.NavController
 import org.jellyfesh.android.ui.nav.chromeHeight
-import org.jellyfesh.android.ui.player.NowPlayingPanel
 import org.jellyfesh.android.ui.player.NowPlayingScreen
 import org.jellyfesh.android.ui.player.lyricsBarHeight
 import org.jellyfesh.android.ui.player.lyricsBarTranslates
@@ -85,11 +84,14 @@ import org.jellyfesh.android.ui.theme.MistyField
 import org.jellyfesh.android.ui.theme.fadeOutAbove
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.rememberPlaybackTime
+import org.jellyfesh.logic.player.NowPlayingLayouts
+import org.jellyfesh.logic.player.NowPlayingPanel
 import org.jellyfesh.logic.lyrics.LyricsBars
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.seek.SeekGeometry
 import org.jellyfesh.logic.state.CoreState
+import org.jellyfesh.logic.theme.LookStyle
 import org.jellyfesh.logic.theme.AppearanceRule
 import org.jellyfesh.tokens.Tokens
 
@@ -112,7 +114,9 @@ fun AppRoot(graph: AppGraph, authRedirects: SharedFlow<String>) {
         }
     }
     val reduceEffects = state.settings.reduceEffects
-    val transparency = state.settings.transparency
+    val look = remember(state.look) { LookStyle(state.look) }
+    // The look's glass scales the Transparency setting, which (with Reduce Transparency) still wins.
+    val transparency = look.transparency(state.settings.transparency)
     val effects = remember(reduceEffects, systemReducesMotion, transparency, systemChecks) {
         JfEffects(
             glassTier = DeviceEffects.glassTier(context, reduceEffects),
@@ -128,7 +132,7 @@ fun AppRoot(graph: AppGraph, authRedirects: SharedFlow<String>) {
         LocalOverlays provides overlays,
         LocalAuthRedirects provides authRedirects,
     ) {
-        JfTheme(theme = state.theme, dark = dark, effects = effects) {
+        JfTheme(theme = state.theme, dark = dark, effects = effects, look = look) {
             val time = rememberPlaybackTime(graph)
             CompositionLocalProvider(LocalPlaybackTime provides time) {
                 when (val s = startup) {
@@ -189,7 +193,9 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
             val windowWidth = maxWidth.value
             // The floating chrome above the system navigation bar: the tab bar capsule, and the
             // mini-player pill (or the player bar) when something plays.
-            val chromeHeight: Dp = chromeHeight(hasPlayer, wide, lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar })
+            // The look's mini-player style (ADR-0020): v0.0.6's Bar unless an appearance plugin chose another.
+            val playerKind = NowPlayingLayouts.miniPlayer(Jf.look.miniPlayer, wide)
+            val chromeHeight: Dp = chromeHeight(hasPlayer, playerKind, lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar })
             // Library screens and their chrome. Hidden from accessibility while a layer covers them.
             val covered = navState.nowPlayingOpen || overlays.isOpen
             GlassBackdrop(
@@ -227,7 +233,7 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
                 BottomChrome(
                     state = state,
                     tab = navState.tab,
-                    wide = wide,
+                    kind = playerKind,
                     onSelect = nav::select,
                     lyricsBar = lyricsBar,
                     onOpenNowPlaying = { panel ->

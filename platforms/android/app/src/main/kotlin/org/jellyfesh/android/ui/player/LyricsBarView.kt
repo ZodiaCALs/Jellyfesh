@@ -1,5 +1,7 @@
 package org.jellyfesh.android.ui.player
 
+import org.jellyfesh.android.ui.theme.sungInk
+import org.jellyfesh.android.ui.theme.fontFamily
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +43,8 @@ import org.jellyfesh.logic.lyrics.LyricsLayout
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.time.TimeDemand
+import org.jellyfesh.android.ui.theme.rounded
+import org.jellyfesh.tokens.Tokens
 
 /** The lyrics bar's height: one line, or two with the line's translation. */
 fun lyricsBarHeight(withTranslation: Boolean): Dp = if (withTranslation) 58.dp else 42.dp
@@ -75,7 +79,7 @@ fun LyricsBarStrip(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Mo
     val line by remember(timeline) { derivedStateOf { LyricsBars.shownLine(timeline.bar(Math.floorDiv(time.positionUs, 1_000L))) } }
     val row = line?.let { rows.getOrNull(it) }
     val lyricsLabel = stringResource(R.string.np_lyrics)
-    val shape = RoundedCornerShape(lyricsBarHeight(translates) / 2)
+    val shape = rounded(lyricsBarHeight(translates) / 2)
     GlassSurface(
         modifier
             .fillMaxWidth()
@@ -95,13 +99,21 @@ fun LyricsBarStrip(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Mo
             if (row == null || row.isGap) {
                 BasicText("• • •", style = JfType.listTitle.copy(color = colors.ink50))
             } else {
-                val style = JfType.listTitle.copy(fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, textAlign = TextAlign.Center)
+                // The look's weight and face; its highlight colours the sung words (the accent in Luminous).
+                val look = Jf.look
+                val style = JfType.listTitle.copy(
+                    fontSize = 16.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight(look.lyricsWeight(700)),
+                    fontFamily = look.fontFamily(),
+                    textAlign = TextAlign.Center,
+                )
+                val sung = if (look.sungInk == org.jellyfesh.logic.theme.SungInk.Token) colors.accentText else sungInk()
                 val rtl = row.direction == TextDir.Rtl || LocalLayoutDirection.current == LayoutDirection.Rtl && row.direction == TextDir.Auto
                 SweepText(
                     row,
                     { LyricsLayout.barSweep(row, timeline.bar(Math.floorDiv(time.positionUs, 1_000L)), reduceMotion = reduce || !words) },
                     style,
-                    sung = colors.accentText,
+                    sung = sung,
                     unsung = colors.ink70,
                     rtl = rtl,
                     maxLines = 1,
@@ -109,6 +121,53 @@ fun LyricsBarStrip(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Mo
                 row.translation?.let {
                     BasicText(it, style = JfType.caption.copy(color = colors.ink70, textAlign = TextAlign.Center), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The look's Artwork layout (ADR-0020): the line being sung under the cover, large, filling word
+ * by word in the highlight colour, with its translation when Show Translations is on; nothing
+ * without timed lyrics.
+ */
+@Composable
+fun SungLine(state: CoreState, modifier: Modifier = Modifier) {
+    val lyrics = state.currentLyrics ?: return
+    val doc = lyrics.doc ?: return
+    val timeline = lyrics.timeline?.takeIf { !it.isEmpty && doc.timing != Timing.Unsynced } ?: return
+    val colors = Jf.colors
+    val time = LocalPlaybackTime.current
+    val reduce = Jf.effects.systemReducesMotion
+    val words = doc.timing == Timing.Word
+    val playing = PlayerModel.isPlaying(state.playback.status)
+    TimeDemandEffect(TimeDemand.Lyrics(timeline, sweep = words && playing && !reduce))
+    val translates = state.settings.showTranslation
+    val rows = remember(doc, translates) { LyricsLayout.rows(doc, translates, false) }
+    val line by remember(timeline) { derivedStateOf { LyricsBars.shownLine(timeline.bar(Math.floorDiv(time.positionUs, 1_000L))) } }
+    val row = line?.let { rows.getOrNull(it) } ?: return
+    val look = Jf.look
+    val style = JfType.lyricLine(26.sp, row.cjk).copy(
+        fontWeight = androidx.compose.ui.text.font.FontWeight(look.lyricsWeight(Tokens.Lyrics.line.weight)),
+        fontFamily = look.fontFamily(),
+        textAlign = TextAlign.Center,
+    )
+    Column(modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (row.isGap) {
+            BasicText("• • •", style = style.copy(color = colors.ink50))
+        } else {
+            val rtl = row.direction == TextDir.Rtl || LocalLayoutDirection.current == LayoutDirection.Rtl && row.direction == TextDir.Auto
+            SweepText(
+                row,
+                { LyricsLayout.barSweep(row, timeline.bar(Math.floorDiv(time.positionUs, 1_000L)), reduceMotion = reduce || !words) },
+                style,
+                sung = sungInk(),
+                unsung = colors.ink70,
+                rtl = rtl,
+                maxLines = 2,
+            )
+            row.translation?.let {
+                BasicText(it, style = JfType.small.copy(color = colors.ink70, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }

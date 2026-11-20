@@ -1,5 +1,10 @@
 package org.jellyfesh.android.ui.player
 
+import org.jellyfesh.android.ui.theme.sungInk
+import org.jellyfesh.android.ui.theme.fontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
@@ -254,9 +259,23 @@ private fun LyricLine(
         TextDir.Auto -> TextDirection.Content
     }
     val textAlign = if (centred) TextAlign.Center else TextAlign.Start
-    val base = JfType.lyricLine(fontSize, row.cjk).copy(textDirection = dir, textAlign = textAlign)
+    // The look's weight, face, highlight and glow (ADR-0020); Luminous's while not customized.
+    val look = Jf.look
+    val sung = sungInk()
+    val base = JfType.lyricLine(fontSize, row.cjk).copy(
+        textDirection = dir,
+        textAlign = textAlign,
+        fontWeight = FontWeight(look.lyricsWeight(Tokens.Lyrics.line.weight)),
+        fontFamily = look.fontFamily(),
+    )
+    val glow = with(LocalDensity.current) { look.glowRadius(fontSize.toPx()) }
+    val lit = if (glow > 0f && active && synced) base.copy(shadow = Shadow(sung.copy(alpha = 0.5f), Offset.Zero, glow)) else base
     val inactive = if (role == LyricLineRole.Sung) colors.ink30 else colors.ink50
-    val lineColor = if (!synced || active) colors.ink90 else inactive
+    val lineColor = when {
+        !synced -> colors.ink90
+        active -> sung
+        else -> inactive
+    }
     val lineScale by animateFloatAsState(
         if (synced) NowPlayingMotion.lineScale(role) else 1f,
         JfMotion.fluid(Tokens.Motion.dur3Ms, reduce),
@@ -299,12 +318,12 @@ private fun LyricLine(
                 SweepText(
                     row,
                     { LyricsLayout.sweep(row, cursor.value, reduceMotion = false) },
-                    base,
-                    sung = colors.ink90,
+                    lit,
+                    sung = sung,
                     unsung = colors.ink70,
                     rtl = row.direction == TextDir.Rtl || LocalLayoutDirection.current == LayoutDirection.Rtl && row.direction == TextDir.Auto,
                 )
-            else -> BasicText(row.text, style = base.copy(color = lineColor))
+            else -> BasicText(row.text, style = (if (active) lit else base).copy(color = lineColor))
         }
         val aux = if (active || !synced) colors.ink70 else inactive
         val translation = JfType.lyricTranslation.let { it.copy(fontSize = it.fontSize * scale, color = aux, textDirection = TextDirection.Content, textAlign = textAlign) }

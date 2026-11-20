@@ -88,6 +88,7 @@ import org.jellyfesh.logic.sources.SourceItems
 import org.jellyfesh.logic.sources.YourSources
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
 /**
  * Unified search (SearchModel): the library's fast query as the person types, and every enabled
@@ -321,7 +322,7 @@ fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMo
             leading = {
                 // Its cover (an artist's picture round), else its kind's glyph.
                 if (art != null) {
-                    ArtworkImage(art, item.title, 44.dp, if (item.kind == ItemKind.Artist) CircleShape else RoundedCornerShape(Tokens.Artwork.radiusList.dp))
+                    ArtworkImage(art, item.title, 44.dp, if (item.kind == ItemKind.Artist) CircleShape else rounded(Tokens.Artwork.radiusList.dp))
                 } else {
                     InitialTile(item.title, icon = kindIcon(item.kind))
                 }
@@ -343,7 +344,7 @@ fun kindIcon(kind: ItemKind): Int = when (kind) {
 @Composable
 private fun SearchField(query: String, onQuery: (String) -> Unit, onSubmit: () -> Unit, modifier: Modifier = Modifier) {
     val colors = Jf.colors
-    val shape = RoundedCornerShape(Tokens.Radius.rLg.dp)
+    val shape = rounded(Tokens.Radius.rLg.dp)
     val hint = stringResource(R.string.search_hint)
     Row(
         modifier

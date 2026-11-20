@@ -141,6 +141,10 @@ object Jf {
 
     val effects: JfEffects
         @Composable get() = LocalJfEffects.current
+
+    /** The look (ADR-0020): Luminous unless an appearance plugin customized it. */
+    val look: org.jellyfesh.logic.theme.LookStyle
+        @Composable get() = LocalJfLook.current
 }
 
 /**
@@ -148,7 +152,13 @@ object Jf {
  * on appearance flips and under reduced motion) and the device's effects.
  */
 @Composable
-fun JfTheme(theme: ThemeSnapshot?, dark: Boolean, effects: JfEffects, content: @Composable () -> Unit) {
+fun JfTheme(
+    theme: ThemeSnapshot?,
+    dark: Boolean,
+    effects: JfEffects,
+    look: org.jellyfesh.logic.theme.LookStyle = org.jellyfesh.logic.theme.LookStyle.Luminous,
+    content: @Composable () -> Unit,
+) {
     val target = remember(theme, dark) { Palette.of(theme, dark) }
     var from by remember { mutableStateOf(target) }
     var to by remember { mutableStateOf(target) }
@@ -168,9 +178,16 @@ fun JfTheme(theme: ThemeSnapshot?, dark: Boolean, effects: JfEffects, content: @
     }
     val colors = remember(from, to) { JfColors(from, to, progress.asState()) }
     val indication = remember(colors) { PressFill(colors) }
+    // The look's text size scales every sp (the person's own font size stays under it).
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val scaled = remember(density, look.textScale) {
+        if (look.textScale == 1f) density else androidx.compose.ui.unit.Density(density.density, density.fontScale * look.textScale)
+    }
     CompositionLocalProvider(
         LocalJfColors provides colors,
         LocalJfEffects provides effects,
+        LocalJfLook provides look,
+        androidx.compose.ui.platform.LocalDensity provides scaled,
         LocalIndication provides indication,
         content = content,
     )

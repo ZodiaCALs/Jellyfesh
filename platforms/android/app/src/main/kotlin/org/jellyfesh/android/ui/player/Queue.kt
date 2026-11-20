@@ -63,6 +63,7 @@ import org.jellyfesh.logic.queue.QueueModel
 import org.jellyfesh.logic.queue.UpNextTail
 import org.jellyfesh.logic.queue.UpNextState
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
 private val ROW_HEIGHT = 64.dp
 
@@ -190,7 +191,7 @@ private fun QueueRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ArtworkImage(art, title, 44.dp, RoundedCornerShape(Tokens.Artwork.radiusList.dp))
+        ArtworkImage(art, title, 44.dp, rounded(Tokens.Artwork.radiusList.dp))
         Column(Modifier.weight(1f)) {
             JfText(title, style = JfType.listTitle, maxLines = 1)
             if (subtitle != null) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)

@@ -56,6 +56,8 @@ import org.jellyfesh.android.ui.theme.JfMotion
 import org.jellyfesh.android.ui.theme.JfTextField
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.roundedTop
+import org.jellyfesh.android.ui.theme.rounded
 
 /** A bottom sheet's content; [dismiss] closes it. */
 typealias SheetContent = @Composable ColumnScope.(dismiss: () -> Unit) -> Unit
@@ -144,9 +146,9 @@ fun OverlayHost(overlays: Overlays, bottomInset: androidx.compose.ui.unit.Dp) {
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(bottom = bottomInset + 12.dp, start = 16.dp, end = 16.dp)
                     .widthIn(max = 560.dp)
-                    .shadow(8.dp, RoundedCornerShape(Tokens.Radius.rXl.dp))
-                    .background(colors.cloud, RoundedCornerShape(Tokens.Radius.rXl.dp))
-                    .border(1.dp, colors.line, RoundedCornerShape(Tokens.Radius.rXl.dp))
+                    .shadow(8.dp, rounded(Tokens.Radius.rXl.dp))
+                    .background(colors.cloud, rounded(Tokens.Radius.rXl.dp))
+                    .border(1.dp, colors.line, rounded(Tokens.Radius.rXl.dp))
                     .clickable { overlays.messages.remove(message) }
                     .semantics { liveRegion = LiveRegionMode.Polite }
                     .padding(horizontal = 18.dp, vertical = 12.dp),
@@ -183,9 +185,9 @@ fun OverlayHost(overlays: Overlays, bottomInset: androidx.compose.ui.unit.Dp) {
                 Modifier
                     .widthIn(max = 640.dp)
                     .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .background(colors.cloud, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .border(1.dp, colors.glassEdge, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .shadow(16.dp, roundedTop(24.dp))
+                    .background(colors.cloud, roundedTop(24.dp))
+                    .border(1.dp, colors.glassEdge, roundedTop(24.dp))
                     .clickable(remember { MutableInteractionSource() }, indication = null) {}
                     .semantics { if (title != null) paneTitle = title }
                     .windowInsetsPadding(WindowInsets.navigationBars)
@@ -228,9 +230,9 @@ fun OverlayHost(overlays: Overlays, bottomInset: androidx.compose.ui.unit.Dp) {
                 Modifier
                     .widthIn(max = 420.dp)
                     .fillMaxWidth()
-                    .shadow(16.dp, RoundedCornerShape(Tokens.Radius.r2xl.dp))
-                    .background(colors.cloud, RoundedCornerShape(Tokens.Radius.r2xl.dp))
-                    .border(1.dp, colors.glassEdge, RoundedCornerShape(Tokens.Radius.r2xl.dp))
+                    .shadow(16.dp, rounded(Tokens.Radius.r2xl.dp))
+                    .background(colors.cloud, rounded(Tokens.Radius.r2xl.dp))
+                    .border(1.dp, colors.glassEdge, rounded(Tokens.Radius.r2xl.dp))
                     .clickable(remember { MutableInteractionSource() }, indication = null) {}
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),

@@ -564,9 +564,9 @@ fun <T> SegmentedControl(
     val colors = Jf.colors
     Row(
         modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(colors.ink06, RoundedCornerShape(10.dp))
-            .border(1.dp, colors.lineSoft, RoundedCornerShape(10.dp))
+            .clip(rounded(10.dp))
+            .background(colors.ink06, rounded(10.dp))
+            .border(1.dp, colors.lineSoft, rounded(10.dp))
             .horizontalScroll(rememberScrollState())
             .padding(3.dp)
             .semantics { contentDescription = description },
@@ -577,10 +577,10 @@ fun <T> SegmentedControl(
             Box(
                 Modifier
                     .heightIn(min = 36.dp)
-                    .clip(RoundedCornerShape(7.dp))
+                    .clip(rounded(7.dp))
                     .then(
                         if (isSelected) {
-                            Modifier.background(colors.cloud, RoundedCornerShape(7.dp)).border(1.dp, colors.glassEdgeSoft, RoundedCornerShape(7.dp))
+                            Modifier.background(colors.cloud, rounded(7.dp)).border(1.dp, colors.glassEdgeSoft, rounded(7.dp))
                         } else {
                             Modifier
                         },
@@ -640,7 +640,7 @@ fun JfButton(
         ButtonStyle.Quiet -> (if (pressed) colors.fillPress else Color.Transparent) to colors.accentText
         ButtonStyle.Danger -> (if (pressed) colors.fillPress else colors.fill) to colors.danger
     }
-    val shape = RoundedCornerShape(Tokens.Radius.rMd.dp)
+    val shape = rounded(Tokens.Radius.rMd.dp)
     Row(
         modifier
             .heightIn(min = TouchTarget)
@@ -872,7 +872,7 @@ fun JfTextField(
     val colors = Jf.colors
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    val shape = RoundedCornerShape(Tokens.Radius.rMd.dp)
+    val shape = rounded(Tokens.Radius.rMd.dp)
     val spoken = listOfNotNull(label, labelNote).joinToString(", ")
     androidx.compose.foundation.layout.Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -117,6 +117,7 @@ import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.theme.AccentChoices
 import org.jellyfesh.logic.theme.Palette
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
 /**
  * Settings. The core owns every setting: a change sends a modified copy of the slice
@@ -428,11 +429,11 @@ private fun LazyListScope.lyrics(settings: Settings) {
 @Composable
 private fun PreviewChoice(label: String, selected: Boolean, onClick: () -> Unit, preview: @Composable () -> Unit) {
     val colors = Jf.colors
-    val shape = RoundedCornerShape(Tokens.Radius.rMd.dp)
+    val shape = rounded(Tokens.Radius.rMd.dp)
     Column(
         Modifier
             .width(88.dp)
-            .clip(RoundedCornerShape(Tokens.Radius.rLg.dp))
+            .clip(rounded(Tokens.Radius.rLg.dp))
             .selectable(selected, remember { MutableInteractionSource() }, indication = null, role = Role.RadioButton, onClick = onClick)
             .padding(4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -490,7 +491,7 @@ private fun Swatch(colour: Color, label: String, selected: Boolean, onClick: () 
 @Composable
 private fun TransparencyPreview() {
     val colors = Jf.colors
-    Box(Modifier.fillMaxWidth().height(64.dp).clip(RoundedCornerShape(Tokens.Radius.rMd.dp))) {
+    Box(Modifier.fillMaxWidth().height(64.dp).clip(rounded(Tokens.Radius.rMd.dp))) {
         MistyField(Modifier.fillMaxSize())
         Box(Modifier.padding(start = 16.dp).size(40.dp).align(Alignment.CenterStart).clip(CircleShape).background(colors.accent))
         GlassSurface(Modifier.padding(start = 36.dp, top = 14.dp, bottom = 14.dp, end = 16.dp).fillMaxSize(), grade = GlassGrade.Veil, shape = RoundedCornerShape(Tokens.Radius.rSm.dp)) {}

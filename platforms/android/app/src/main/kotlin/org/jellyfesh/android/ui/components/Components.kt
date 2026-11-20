@@ -73,6 +73,8 @@ import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.format.TimeFormat
 import org.jellyfesh.logic.theme.Luminous
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
+import org.jellyfesh.android.ui.theme.spaced
 
 /**
  * Artwork at [size]: the image once it has loaded off the main thread, else a placeholder tile
@@ -135,11 +137,12 @@ fun TrackRow(
     Row(
         modifier
             .fillMaxWidth()
-            .heightIn(min = Tokens.Player.rowHeight.dp + 8.dp)
-            .then(if (playing) Modifier.padding(horizontal = 6.dp).background(colors.accentSoft, RoundedCornerShape(Tokens.Radius.rMd.dp)) else Modifier)
+            // The look's density spaces the rows (never under the 48 dp touch target).
+            .heightIn(min = maxOf(spaced(Tokens.Player.rowHeight.dp + 8.dp), 48.dp))
+            .then(if (playing) Modifier.padding(horizontal = 6.dp).background(colors.accentSoft, rounded(Tokens.Radius.rMd.dp)) else Modifier)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .semantics { selected = playing }
-            .padding(horizontal = if (playing) 10.dp else 16.dp, vertical = 4.dp),
+            .padding(horizontal = if (playing) 10.dp else 16.dp, vertical = spaced(4.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -151,7 +154,7 @@ fun TrackRow(
                     JfText(number.toString(), style = JfType.time, color = colors.ink50, maxLines = 1)
                 }
             }
-            showArt -> ArtworkImage(art, title, 44.dp, RoundedCornerShape(Tokens.Artwork.radiusList.dp))
+            showArt -> ArtworkImage(art, title, 44.dp, rounded(Tokens.Artwork.radiusList.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             JfText(
@@ -194,9 +197,9 @@ fun NavRow(
     Row(
         modifier
             .fillMaxWidth()
-            .heightIn(min = 60.dp)
+            .heightIn(min = maxOf(spaced(60.dp), 48.dp))
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = spaced(6.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -247,10 +250,10 @@ fun AlbumCard(
     val lift by animateDpAsState(if (raised) 4.dp else 0.dp, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "lift")
     val press by animateFloatAsState(if (pressed) 0.97f else 1f, JfMotion.spring(Tokens.Motion.dur0Ms, reduce), label = "press")
     val playAlpha by animateFloatAsState(if (raised && onPlay != null) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "play")
-    val coverShape = RoundedCornerShape(Tokens.Artwork.radiusGrid.dp)
+    val coverShape = rounded(Tokens.Artwork.radiusGrid.dp)
     Column(
         modifier
-            .clip(RoundedCornerShape(Tokens.Radius.rLg.dp))
+            .clip(rounded(Tokens.Radius.rLg.dp))
             .hoverable(interaction)
             .combinedClickable(interaction, indication = LocalIndication.current, role = Role.Button, onLongClick = onLongClick, onClick = onClick)
             .semantics(mergeDescendants = true) {}
@@ -297,7 +300,7 @@ fun AlbumCard(
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier, action: (@Composable () -> Unit)? = null) {
     Row(
-        modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 8.dp),
+        modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = spaced(20.dp), bottom = spaced(8.dp)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         JfText(text, style = JfType.section, maxLines = 2, modifier = Modifier.weight(1f).semantics { heading() })
@@ -369,9 +372,9 @@ fun Notice(text: String, modifier: Modifier = Modifier, warning: Boolean = false
         modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(Tokens.Radius.rLg.dp))
+            .clip(rounded(Tokens.Radius.rLg.dp))
             .background(colors.fill)
-            .border(1.dp, colors.lineSoft, RoundedCornerShape(Tokens.Radius.rLg.dp))
+            .border(1.dp, colors.lineSoft, rounded(Tokens.Radius.rLg.dp))
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -403,9 +406,9 @@ fun LoadingRow(modifier: Modifier = Modifier) {
  */
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(Tokens.Radius.r2xl.dp)
+    val shape = rounded(Tokens.Radius.r2xl.dp)
     GlassSurface(
-        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = spaced(6.dp)),
         grade = GlassGrade.Mist,
         shape = shape,
         blur = false,
@@ -428,9 +431,9 @@ fun SettingRow(
     Row(
         modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp)
+            .heightIn(min = maxOf(spaced(56.dp), 48.dp))
             .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = spaced(8.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfType
+import org.jellyfesh.android.ui.theme.fontFamily
 
 /** Text in the theme's ink (foundation's BasicText: the app uses no Material components). */
 @Composable
@@ -27,10 +28,12 @@ fun JfText(
     textAlign: TextAlign? = null,
     overflow: TextOverflow = TextOverflow.Ellipsis,
 ) {
+    // The look's face for text that has none of its own (ADR-0020).
+    val family = style.fontFamily ?: Jf.look.fontFamily()
     BasicText(
         text = text,
         modifier = modifier,
-        style = if (textAlign != null) style.copy(color = color, textAlign = textAlign) else style.copy(color = color),
+        style = style.copy(color = color, textAlign = textAlign ?: style.textAlign, fontFamily = family),
         maxLines = maxLines,
         overflow = overflow,
     )

@@ -84,6 +84,9 @@ import org.jellyfesh.android.ui.theme.jfShadow
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.TimeDemandEffect
 import org.jellyfesh.android.ui.time.rememberPositionSeconds
+import org.jellyfesh.logic.player.NowPlayingLayouts
+import org.jellyfesh.logic.player.NowPlayingArrangement
+import org.jellyfesh.logic.player.NowPlayingPanel
 import org.jellyfesh.logic.lyrics.LyricsMakingModel
 import org.jellyfesh.logic.core.SongRef
 import org.jellyfesh.logic.core.BackdropStyle
@@ -103,9 +106,8 @@ import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.theme.Luminous
 import org.jellyfesh.logic.time.TimeDemand
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
-/** The panels next to (or, on phones, instead of) the artwork. */
-enum class NowPlayingPanel { Lyrics, Queue, Info }
 
 /**
  * Now Playing as a stage (Luminous, v0.0.6): the core's baked, contrast-safe artwork backdrop
@@ -136,38 +138,63 @@ fun NowPlayingScreen(state: CoreState, onClose: () -> Unit, requestedPanel: NowP
         GlassBackdrop(Modifier.fillMaxSize(), invalidateKey = state.theme) {
             // The core bakes no backdrop for a remote session's song: the field stands in rather than another song's.
             Backdrop(state.settings.style, state.theme?.backdrop(dark)?.takeIf { !PlayerModel.isRemote(state) })
+            // The look's layout (ADR-0020): Stage (v0.0.6), Artwork or Lyrics.
+            val arrangement = NowPlayingLayouts.arrangement(Jf.look.nowPlaying, wide, panel)
             Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
                 TopControls(
-                    panel = if (wide) panel ?: NowPlayingPanel.Lyrics else panel,
+                    panel = NowPlayingLayouts.chosen(arrangement),
                     compact = width < 600.dp,
                     onPanel = { chosen -> panel = if (!wide && panel == chosen) null else chosen },
                     onClose = onClose,
                 )
                 Box(Modifier.weight(1f).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)) {
-                    when {
-                        track == null -> EmptyState(R.drawable.ic_song, stringResource(R.string.np_nothing_title), stringResource(R.string.np_nothing_body), Modifier.align(Alignment.Center))
-                        wide -> Column(Modifier.fillMaxSize().padding(start = 32.dp, end = 32.dp, top = 8.dp, bottom = 16.dp)) {
-                            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f).widthIn(max = 420.dp).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
-                                    HeroArea(state, track, artMax = 380.dp)
-                                    Spacer(Modifier.size(20.dp))
-                                    TitleBlock(state, track, width.value)
+                    if (track == null) {
+                        EmptyState(R.drawable.ic_song, stringResource(R.string.np_nothing_title), stringResource(R.string.np_nothing_body), Modifier.align(Alignment.Center))
+                    } else {
+                        when (arrangement) {
+                            is NowPlayingArrangement.Side -> Column(Modifier.fillMaxSize().padding(start = 32.dp, end = 32.dp, top = 8.dp, bottom = 16.dp)) {
+                                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(48.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(Modifier.weight(1f).widthIn(max = 420.dp).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                                        HeroArea(state, track, artMax = 380.dp)
+                                        Spacer(Modifier.size(20.dp))
+                                        TitleBlock(state, track, width.value)
+                                    }
+                                    Box(Modifier.weight(1.3f).fillMaxHeight()) { PanelContent(arrangement.panel, state, track) }
                                 }
-                                Box(Modifier.weight(1.3f).fillMaxHeight()) { PanelContent(panel ?: NowPlayingPanel.Lyrics, state, track) }
+                                Spacer(Modifier.size(12.dp))
+                                Dock(state, track, wide = true)
                             }
-                            Spacer(Modifier.size(12.dp))
-                            Dock(state, track, wide = true)
-                        }
-                        panel == null -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                            HeroArea(state, track, artMax = 560.dp, Modifier.padding(horizontal = 8.dp))
-                            Spacer(Modifier.size(18.dp))
-                            TitleBlock(state, track, width.value, Modifier.padding(horizontal = 8.dp))
-                            Spacer(Modifier.size(14.dp))
-                            Dock(state, track, wide = false)
-                        }
-                        else -> Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f).fillMaxWidth()) { PanelContent(panel!!, state, track) }
-                            Dock(state, track, wide = false, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), withTitle = true)
+                            NowPlayingArrangement.Hero -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                HeroArea(state, track, artMax = 560.dp, Modifier.padding(horizontal = 8.dp))
+                                Spacer(Modifier.size(18.dp))
+                                TitleBlock(state, track, width.value, Modifier.padding(horizontal = 8.dp))
+                                Spacer(Modifier.size(14.dp))
+                                Dock(state, track, wide = false)
+                            }
+                            is NowPlayingArrangement.Pane -> Column(Modifier.fillMaxSize()) {
+                                Box(Modifier.weight(1f).fillMaxWidth()) { PanelContent(arrangement.panel, state, track) }
+                                Dock(state, track, wide = false, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), withTitle = true)
+                            }
+                            // A large cover with the line being sung below it.
+                            NowPlayingArrangement.CoverAndLine -> Column(
+                                Modifier.fillMaxSize().padding(horizontal = if (wide) 32.dp else 16.dp, vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Column(Modifier.weight(1f).widthIn(max = 640.dp)) {
+                                    HeroArea(state, track, artMax = if (wide) 480.dp else 560.dp, Modifier.padding(horizontal = 8.dp))
+                                    Spacer(Modifier.size(14.dp))
+                                    TitleBlock(state, track, width.value, Modifier.padding(horizontal = 8.dp))
+                                    if (!PlayerModel.isRemote(state)) SungLine(state, Modifier.padding(top = 12.dp))
+                                }
+                                Spacer(Modifier.size(12.dp))
+                                Dock(state, track, wide = wide)
+                            }
+                            // The pane across the screen, a small cover and the title in its corner.
+                            is NowPlayingArrangement.Across -> Column(Modifier.fillMaxSize().padding(horizontal = if (wide) 32.dp else 0.dp, vertical = 8.dp)) {
+                                CornerCover(state, track, Modifier.padding(horizontal = 16.dp))
+                                Box(Modifier.weight(1f).fillMaxWidth()) { PanelContent(arrangement.panel, state, track) }
+                                Dock(state, track, wide = wide, Modifier.padding(horizontal = if (wide) 0.dp else 16.dp, vertical = 8.dp))
+                            }
                         }
                     }
                 }
@@ -219,7 +246,7 @@ private fun TopControls(panel: NowPlayingPanel?, compact: Boolean, onPanel: (Now
         if (compact) {
             PanelButtons(panel, onPanel)
         } else {
-            GlassSurface(grade = GlassGrade.Veil, shape = RoundedCornerShape(14.dp), blur = false) {
+            GlassSurface(grade = GlassGrade.Veil, shape = rounded(14.dp), blur = false) {
                 SegmentedControl(
                     options = NowPlayingPanel.entries,
                     selected = panel,
@@ -349,7 +376,7 @@ private fun HeroArtwork(key: ArtKey?, title: String, size: Dp, style: BackdropSt
 @Composable
 private fun HeroArtworkImage(key: ArtKey?, title: String, size: Dp, style: BackdropStyle, colors: org.jellyfesh.android.ui.theme.JfColors) {
     if (style == BackdropStyle.Misty) {
-        val frame = RoundedCornerShape(36.dp)
+        val frame = rounded(36.dp)
         // A Clear surface drawn with its tint and edge only: the field behind is a smooth gradient,
         // so a live blur would cost a glass layer for no visible change.
         Box(
@@ -359,10 +386,10 @@ private fun HeroArtworkImage(key: ArtKey?, title: String, size: Dp, style: Backd
                 .border(1.dp, colors.glassEdgeSoft, frame)
                 .padding(12.dp),
         ) {
-            ArtworkImage(key, title, size - 24.dp, RoundedCornerShape(Tokens.Artwork.radiusHero.dp))
+            ArtworkImage(key, title, size - 24.dp, rounded(Tokens.Artwork.radiusHero.dp))
         }
     } else {
-        val shape = RoundedCornerShape(Tokens.Artwork.radiusHero.dp)
+        val shape = rounded(Tokens.Artwork.radiusHero.dp)
         ArtworkImage(key, title, size, shape, Modifier.jfShadow(3, shape))
     }
 }
@@ -384,6 +411,19 @@ private fun TitleBlock(state: CoreState, track: PlayerTrack, widthDp: Float, mod
             track.subtitle?.let { JfText(it, style = JfType.nowPlayingArtist, color = colors.ink70, maxLines = 2) }
             RemoteLines(remote)
             if (remote == null && state.isBuffering) JfText(stringResource(R.string.np_buffering), style = JfType.caption, color = colors.ink50)
+        }
+        Favourite(state, track)
+    }
+}
+
+/** The look's Lyrics layout: a small cover in the corner, with the title and the artist beside it. */
+@Composable
+private fun CornerCover(state: CoreState, track: PlayerTrack, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        ArtworkImage(ArtKey.of(track.artwork), track.title, 56.dp, rounded(Tokens.Radius.rMd.dp))
+        Column(Modifier.weight(1f)) {
+            JfText(track.title, style = JfType.listTitle, maxLines = 1, modifier = Modifier.semantics { heading() })
+            track.subtitle?.let { JfText(it, style = JfType.listSecondary, color = Jf.colors.ink70, maxLines = 1) }
         }
         Favourite(state, track)
     }
@@ -424,7 +464,7 @@ private fun Favourite(state: CoreState, track: PlayerTrack) {
  */
 @Composable
 private fun Dock(state: CoreState, track: PlayerTrack, wide: Boolean, modifier: Modifier = Modifier, withTitle: Boolean = false) {
-    val shape = RoundedCornerShape(if (wide) 40.dp else 32.dp)
+    val shape = rounded(if (wide) 40.dp else 32.dp)
     GlassSurface(modifier.fillMaxWidth(), grade = GlassGrade.Veil, shape = shape, floating = true) {
         if (wide) {
             Row(
@@ -458,7 +498,7 @@ private fun Dock(state: CoreState, track: PlayerTrack, wide: Boolean, modifier: 
 private fun CompactTitle(state: CoreState, track: PlayerTrack) {
     val remote = RemoteModel.session(state)
     Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        ArtworkImage(ArtKey.of(track.artwork), track.title, 48.dp, RoundedCornerShape(Tokens.Radius.rMd.dp))
+        ArtworkImage(ArtKey.of(track.artwork), track.title, 48.dp, rounded(Tokens.Radius.rMd.dp))
         Column(Modifier.weight(1f)) {
             JfText(track.title, style = JfType.listTitle, maxLines = 1)
             val second = remote?.device?.let { stringResource(R.string.remote_playing_on, it.name) } ?: track.subtitle

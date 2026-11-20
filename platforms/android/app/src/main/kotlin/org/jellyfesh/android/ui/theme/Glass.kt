@@ -138,7 +138,8 @@ fun GlassSurface(
             m = m.edgeScrim(colors.sky, edge)
         else -> {
             val density = LocalDensity.current
-            val radius = with(density) { cloudyRadius(grade.token.blur.dp.toPx()) }
+            // The look's glass scales the blur with the tint (ADR-0020).
+            val radius = with(density) { cloudyRadius(grade.token.blur.dp.toPx() * Jf.look.glass) }
             val progressive = when (edge) {
                 GlassEdge.Top -> CloudyProgressive.BottomToTop(start = 1f, end = 0f)
                 GlassEdge.Bottom -> CloudyProgressive.TopToBottom(start = 0f, end = 1f)

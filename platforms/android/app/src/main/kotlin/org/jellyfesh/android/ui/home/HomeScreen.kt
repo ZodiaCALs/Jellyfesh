@@ -1,5 +1,10 @@
 package org.jellyfesh.android.ui.home
 
+import androidx.compose.foundation.layout.padding
+import org.jellyfesh.android.ui.components.JfText
+import org.jellyfesh.android.ui.theme.JfType
+import org.jellyfesh.logic.theme.LookPlaces
+import org.jellyfesh.logic.core.HomeSection
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -69,6 +74,13 @@ fun HomeScreen(state: CoreState) {
     val added by rememberQuery(revision) { it.albumsSorted(AlbumSort.Added, true, 0, SHELF_ALBUMS) }
     val played by rememberQuery(revision) { it.recentlyPlayed(RECENT_ROWS) }
     val most by rememberQuery(revision) { it.mostPlayed(RECENT_ROWS) }
+    // Home's sections in the look's order (ADR-0020); Luminous's while not customized.
+    val look = Jf.look
+    val sections = look.home
+    val summaryUnderTitle = LookPlaces.summaryUnderTitle(look)
+    val favourites by rememberQuery(revision, HomeSection.Favourites in sections) {
+        if (HomeSection.Favourites in sections) it.favorites(0, RECENT_ROWS) else emptyList()
+    }
     val listState = rememberLazyListState()
     val cardPx = with(LocalDensity.current) { 148.dp.roundToPx() }
     val playingUid = state.nowPlaying?.track
@@ -81,18 +93,10 @@ fun HomeScreen(state: CoreState) {
         contentPadding = PaddingValues(bottom = chrome.calculateBottomPadding() + 16.dp),
     ) {
         item(key = "title") {
-            val s = (stats as? QueryResult.Ok)?.value
-            val subtitle = s?.takeIf { it.tracks > 0 }?.let {
-                listOf(
-                    pluralStringResource(R.plurals.count_songs, it.tracks.toInt(), it.tracks.toInt()),
-                    pluralStringResource(R.plurals.count_albums, it.albums.toInt(), it.albums.toInt()),
-                    pluralStringResource(R.plurals.count_artists, it.artists.toInt(), it.artists.toInt()),
-                ).joinToString(" · ")
-            }
             ScreenTitle(
                 stringResource(R.string.tab_home),
                 modifier = Modifier.windowInsetsPadding(statusInset),
-                subtitle = subtitle,
+                subtitle = if (summaryUnderTitle) librarySummary((stats as? QueryResult.Ok)?.value) else null,
             ) {
                 JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
             }
@@ -109,27 +113,52 @@ fun HomeScreen(state: CoreState) {
         if (stats is QueryResult.Failed) {
             item(key = "failed") { Notice(stringResource(R.string.query_failed, (stats as QueryResult.Failed).message), warning = true) }
         }
-        val albums = (added as? QueryResult.Ok)?.value.orEmpty()
-        if (albums.isNotEmpty()) {
-            item(key = "added-h") { SectionHeader(stringResource(R.string.home_recently_added)) }
-            item(key = "added") {
-                LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(albums, key = { it.id }) { album ->
-                        AlbumCard(
-                            title = album.title,
-                            subtitle = album.albumArtist,
-                            art = ArtKey.ofHash(album.artworkHash),
-                            sizePx = ArtworkSizes.bucket(cardPx),
-                            onClick = { nav.openAlbum(album.id, album.title) },
-                            modifier = Modifier.width(148.dp),
-                        )
+        sections.forEach { section ->
+            when (section) {
+                // The library's size, here when the look moves it from under the title.
+                HomeSection.Summary -> if (!summaryUnderTitle) {
+                    item(key = "summary") {
+                        librarySummary((stats as? QueryResult.Ok)?.value)?.let {
+                            JfText(it, style = JfType.small, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
+                        }
                     }
                 }
+                HomeSection.RecentlyAdded -> {
+                    val albums = (added as? QueryResult.Ok)?.value.orEmpty()
+                    if (albums.isNotEmpty()) {
+                        item(key = "added-h") { SectionHeader(stringResource(R.string.home_recently_added)) }
+                        item(key = "added") {
+                            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                items(albums, key = { it.id }) { album ->
+                                    AlbumCard(
+                                        title = album.title,
+                                        subtitle = album.albumArtist,
+                                        art = ArtKey.ofHash(album.artworkHash),
+                                        sizePx = ArtworkSizes.bucket(cardPx),
+                                        onClick = { nav.openAlbum(album.id, album.title) },
+                                        modifier = Modifier.width(148.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                HomeSection.RecentlyPlayed -> trackSection("played", played, R.string.home_recently_played, playingUid, graph::send, actions::showFor)
+                HomeSection.MostPlayed -> trackSection("most", most, R.string.home_most_played, playingUid, graph::send, actions::showFor)
+                HomeSection.Favourites -> trackSection("favourites", favourites, R.string.section_favourites, playingUid, graph::send, actions::showFor)
             }
         }
-        trackSection("played", played, R.string.home_recently_played, playingUid, graph::send, actions::showFor)
-        trackSection("most", most, R.string.home_most_played, playingUid, graph::send, actions::showFor)
     }
+}
+
+/** "1,204 songs · 96 albums · 41 artists", or null for an empty library. */
+@Composable
+private fun librarySummary(stats: org.jellyfesh.logic.core.LibraryStats?): String? = stats?.takeIf { it.tracks > 0 }?.let {
+    listOf(
+        pluralStringResource(R.plurals.count_songs, it.tracks.toInt(), it.tracks.toInt()),
+        pluralStringResource(R.plurals.count_albums, it.albums.toInt(), it.albums.toInt()),
+        pluralStringResource(R.plurals.count_artists, it.artists.toInt(), it.artists.toInt()),
+    ).joinToString(" · ")
 }
 
 /**

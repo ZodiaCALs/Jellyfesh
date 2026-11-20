@@ -62,11 +62,12 @@ import org.jellyfesh.android.ui.theme.PlayPauseGlyph
 import org.jellyfesh.android.ui.theme.TouchTarget
 import org.jellyfesh.android.ui.player.DeviceButton
 import org.jellyfesh.android.ui.player.LyricsBarStrip
-import org.jellyfesh.android.ui.player.NowPlayingPanel
 import org.jellyfesh.android.ui.player.PlayerVolume
 import org.jellyfesh.android.ui.player.SeekWithTimes
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.TimeDemandEffect
+import org.jellyfesh.logic.player.MiniPlayerKind
+import org.jellyfesh.logic.player.NowPlayingPanel
 import org.jellyfesh.logic.nav.LibrarySection
 import org.jellyfesh.logic.nav.NavState
 import org.jellyfesh.logic.nav.Navigator
@@ -83,6 +84,7 @@ import org.jellyfesh.logic.seek.SeekGeometry
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.time.TimeDemand
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
 /** Moves through :logic's [Navigator] over the app's navigation state. Main thread. */
 @Stable
@@ -127,6 +129,17 @@ val TabBarHeight = 68.dp
 /** The player bar's height (player.bar-height), for windows 900 dp and wider. */
 val PlayerBarHeight = Tokens.Player.barHeight.dp
 
+/** The look's Floating mini-player: a smaller capsule at the trailing side (ADR-0020). */
+val FloatingPlayerHeight = 52.dp
+private val FloatingPlayerWidth = 280.dp
+
+/** The player's height for its kind. */
+fun playerHeight(kind: MiniPlayerKind): Dp = when (kind) {
+    MiniPlayerKind.Bar -> PlayerBarHeight
+    MiniPlayerKind.Mini -> MiniPlayerHeight
+    MiniPlayerKind.Floating -> FloatingPlayerHeight
+}
+
 /** Between the floating capsules and the screen's sides, and between the two capsules. */
 private val ChromeSide = 14.dp
 private val ChromeGap = 8.dp
@@ -140,9 +153,9 @@ private val ChromeBottom = 10.dp
  * bar above it when it shows ([lyricsBar], its height). Screens leave this free under their last
  * rows, and their content fades out just above it.
  */
-fun chromeHeight(hasPlayer: Boolean, wide: Boolean, lyricsBar: Dp? = null): Dp =
+fun chromeHeight(hasPlayer: Boolean, kind: MiniPlayerKind, lyricsBar: Dp? = null): Dp =
     ChromeBottom + TabBarHeight +
-        (if (!hasPlayer) 0.dp else ChromeGap + if (wide) PlayerBarHeight else MiniPlayerHeight) +
+        (if (!hasPlayer) 0.dp else ChromeGap + playerHeight(kind)) +
         (if (hasPlayer && lyricsBar != null) ChromeGap + lyricsBar else 0.dp)
 
 /**
@@ -155,7 +168,7 @@ fun chromeHeight(hasPlayer: Boolean, wide: Boolean, lyricsBar: Dp? = null): Dp =
 fun BottomChrome(
     state: CoreState,
     tab: Tab,
-    wide: Boolean,
+    kind: MiniPlayerKind,
     onSelect: (Tab) -> Unit,
     onOpenNowPlaying: (NowPlayingPanel?) -> Unit,
     modifier: Modifier = Modifier,
@@ -172,10 +185,13 @@ fun BottomChrome(
         if (PlayerModel.track(state) != null) {
             // The line being sung, above the player (Show Lyrics Bar).
             if (lyricsBar) LyricsBarStrip(state, { onOpenNowPlaying(NowPlayingPanel.Lyrics) }, Modifier.widthIn(max = 600.dp))
-            if (wide) {
-                PlayerBar(state, onOpenNowPlaying, Modifier.widthIn(max = 1240.dp))
-            } else {
-                MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = 600.dp))
+            // The look's mini-player style: the bar (wide windows), the pill, or a floating capsule.
+            when (kind) {
+                MiniPlayerKind.Bar -> PlayerBar(state, onOpenNowPlaying, Modifier.widthIn(max = 1240.dp))
+                MiniPlayerKind.Mini -> MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = 600.dp))
+                MiniPlayerKind.Floating -> Box(Modifier.fillMaxWidth().widthIn(max = 600.dp), contentAlignment = Alignment.CenterEnd) {
+                    MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = FloatingPlayerWidth), floating = true)
+                }
             }
         }
         TabBar(tab, onSelect, Modifier.widthIn(max = 600.dp))
@@ -189,7 +205,7 @@ private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = 
     GlassSurface(
         modifier.fillMaxWidth().height(TabBarHeight),
         grade = GlassGrade.Veil,
-        shape = RoundedCornerShape(TabBarHeight / 2),
+        shape = rounded(TabBarHeight / 2),
         floating = true,
     ) {
         Row(
@@ -214,7 +230,7 @@ private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = 
                     Box(
                         Modifier
                             .size(width = 54.dp, height = 30.dp)
-                            .background(if (isSelected) colors.accentSoft else Color.Transparent, RoundedCornerShape(15.dp)),
+                            .background(if (isSelected) colors.accentSoft else Color.Transparent, rounded(15.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         JfIcon(tabIcon(tab), if (isSelected) colors.accentText else colors.ink70, size = 21.dp)
@@ -256,7 +272,7 @@ fun playerSecondLine(track: PlayerTrack, remote: RemoteSession?): String? =
  * Tapping or swiping it up opens Now Playing.
  */
 @Composable
-fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifier, floating: Boolean = false) {
     val track = PlayerModel.track(state) ?: return
     val remote = RemoteModel.session(state)
     val graph = LocalGraph.current
@@ -285,11 +301,12 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
         stringResource(if (playing) R.string.a11y_pause else R.string.a11y_play),
         percent,
     )
-    val shape = RoundedCornerShape(MiniPlayerHeight / 2)
+    val height = if (floating) FloatingPlayerHeight else MiniPlayerHeight
+    val shape = rounded(height / 2)
     GlassSurface(
         modifier
             .fillMaxWidth()
-            .height(MiniPlayerHeight)
+            .height(height)
             .onSizeChanged { steps = SeekGeometry.miniSteps(it.width.toFloat(), density.density) }
             .pointerInput(Unit) {
                 detectVerticalDragGestures { _, dragAmount -> if (dragAmount < -12f) onOpen() }
@@ -301,7 +318,7 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(MiniPlayerHeight)
+                .height(height)
                 .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.Button, onClick = onOpen)
                 .semantics(mergeDescendants = false) {
                     contentDescription = openLabel
@@ -314,15 +331,15 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            ArtworkImage(ArtKey.of(track.artwork), track.title, 44.dp, CircleShape)
+            ArtworkImage(ArtKey.of(track.artwork), track.title, if (floating) 36.dp else 44.dp, CircleShape)
             Column(Modifier.weight(1f)) {
                 JfText(track.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
-                if (subtitle != null) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
+                if (subtitle != null && !floating) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
                 remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
             }
             MiniPlayButton(playing, buttonLabel) { graph.send(PlayerModel.playPause(status)) }
         }
-        MiniProgressLine(fraction, Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp), inset = MiniPlayerHeight / 2 + 2.dp)
+        MiniProgressLine(fraction, Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp), inset = height / 2 + 2.dp)
     }
 }
 
@@ -364,7 +381,7 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
     GlassSurface(
         modifier.fillMaxWidth().height(PlayerBarHeight),
         grade = GlassGrade.Veil,
-        shape = RoundedCornerShape(Tokens.Radius.r2xl.dp),
+        shape = rounded(Tokens.Radius.r2xl.dp),
         floating = true,
     ) {
         Row(
@@ -380,7 +397,7 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                ArtworkImage(ArtKey.of(track.artwork), track.title, 48.dp, RoundedCornerShape(Tokens.Radius.rMd.dp))
+                ArtworkImage(ArtKey.of(track.artwork), track.title, 48.dp, rounded(Tokens.Radius.rMd.dp))
                 Column(Modifier.weight(1f)) {
                     JfText(track.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
                     playerSecondLine(track, remote)?.let { JfText(it, style = JfType.listSecondary, color = colors.ink70, maxLines = 1) }

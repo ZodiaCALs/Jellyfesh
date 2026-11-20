@@ -27,7 +27,7 @@ import kotlin.random.Random
  * colours crossfade over dur-4 on a song change), never per frame.
  */
 @Composable
-fun MistyField(modifier: Modifier = Modifier, strength: Float = Tokens.Field.auroraStrength) {
+fun MistyField(modifier: Modifier = Modifier, strength: Float = Jf.look.aurora(Tokens.Field.auroraStrength)) {
     val colors = Jf.colors
     val sky = colors.sky
     val aurora1 = colors[Tokens.Field.aurora1]

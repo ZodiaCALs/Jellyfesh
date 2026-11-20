@@ -84,6 +84,7 @@ import org.jellyfesh.logic.playlist.PlaylistDrag
 import org.jellyfesh.logic.playlist.PlaylistReorder
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
 /** The large artwork, title and facts at the top of a detail screen. */
 @Composable
@@ -93,7 +94,7 @@ private fun DetailHeader(art: ArtKey?, title: String, subtitle: String?, facts: 
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        ArtworkImage(art, title, 220.dp, RoundedCornerShape(Tokens.Artwork.radiusGrid.dp), Modifier.padding(bottom = 10.dp))
+        ArtworkImage(art, title, 220.dp, rounded(Tokens.Artwork.radiusGrid.dp), Modifier.padding(bottom = 10.dp))
         JfText(title, style = JfType.title, textAlign = TextAlign.Center, modifier = Modifier.semantics { heading() })
         if (subtitle != null) JfText(subtitle, style = JfType.nowPlayingArtist, color = Jf.colors.ink70, textAlign = TextAlign.Center)
         if (facts != null) JfText(facts, style = JfType.caption, color = Jf.colors.ink50, textAlign = TextAlign.Center)
@@ -129,9 +130,9 @@ fun AlbumHeader(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (wide) {
-                ArtworkImage(art, title, 240.dp, RoundedCornerShape(Tokens.Artwork.radiusGrid.dp), Modifier.padding(bottom = 12.dp))
+                ArtworkImage(art, title, 240.dp, rounded(Tokens.Artwork.radiusGrid.dp), Modifier.padding(bottom = 12.dp))
             } else {
-                ArtworkFill(art, title, RoundedCornerShape(Tokens.Artwork.radiusGrid.dp), px, Modifier.padding(bottom = 12.dp))
+                ArtworkFill(art, title, rounded(Tokens.Artwork.radiusGrid.dp), px, Modifier.padding(bottom = 12.dp))
             }
             val align = if (wide) TextAlign.Start else TextAlign.Center
             if (kind != null) JfText(kind, style = JfType.caption, color = Jf.colors.ink70, textAlign = align)

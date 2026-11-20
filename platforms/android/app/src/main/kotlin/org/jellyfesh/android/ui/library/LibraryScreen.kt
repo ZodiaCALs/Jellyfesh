@@ -77,19 +77,26 @@ import org.jellyfesh.logic.library.SortOrder
 import org.jellyfesh.logic.nav.LibrarySection
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.state.CoreState
+import org.jellyfesh.logic.theme.LookPlaces
 import org.jellyfesh.tokens.Tokens
+import org.jellyfesh.android.ui.theme.rounded
 
-/** The Library tab: Albums, Artists, Songs, Playlists and Favourites under one segmented control. */
+/**
+ * The Library tab: Albums, Artists, Songs, Playlists and Favourites under one segmented control,
+ * in the look's order and only those the look keeps (ADR-0020; the four tabs stay).
+ */
 @Composable
-fun LibraryScreen(section: LibrarySection, state: CoreState) {
+fun LibraryScreen(chosen: LibrarySection, state: CoreState) {
     val nav = LocalNav.current
+    val sections = LookPlaces.librarySections(Jf.look)
+    val section = LookPlaces.shown(chosen, sections)
     val header: @Composable () -> Unit = {
         Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
             ScreenTitle(stringResource(R.string.tab_library)) {
                 JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
             }
             SegmentedControl(
-                options = LibrarySection.entries,
+                options = sections,
                 selected = section,
                 label = { stringResource(sectionLabel(it)) },
                 onSelect = { nav.replaceTop(Screen.Library(it)) },
@@ -396,7 +403,7 @@ private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
                         onClick = { nav.openPlaylist(playlist.id, playlist.name) },
                         leading = {
                             if (playlist.artworkHash != null) {
-                                ArtworkImage(ArtKey.ofHash(playlist.artworkHash), playlist.name, 44.dp, RoundedCornerShape(Tokens.Artwork.radiusList.dp))
+                                ArtworkImage(ArtKey.ofHash(playlist.artworkHash), playlist.name, 44.dp, rounded(Tokens.Artwork.radiusList.dp))
                             } else {
                                 InitialTile(playlist.name, icon = R.drawable.ic_playlist)
                             }
