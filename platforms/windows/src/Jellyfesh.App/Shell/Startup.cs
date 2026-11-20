@@ -170,7 +170,14 @@ internal static class Startup
         {
             if (Interlocked.Increment(ref _firstChanceCount) <= MaxFirstChance)
             {
-                AppLog.Write($"  first-chance {e.Exception.GetType().FullName} while {Stage}: {e.Exception.Message}");
+                // Where it was thrown: the handler runs on the throwing thread before the stack
+                // unwinds, so the current stack is the throw site's (a COMException's message is
+                // often empty; its HRESULT and the WinRT call it came from name it).
+                var frames = new System.Diagnostics.StackTrace(1, false).GetFrames()
+                    .Select(f => f.GetMethod())
+                    .Where(m => m is not null)
+                    .Select(m => $"{m!.DeclaringType?.FullName}.{m.Name}");
+                AppLog.Write(FailureText.FirstChance(e.Exception, Stage, frames));
             }
         }
         catch (Exception)

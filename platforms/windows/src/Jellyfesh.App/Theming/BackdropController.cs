@@ -92,15 +92,21 @@ internal sealed class BackdropController
         Changed?.Invoke();
     }
 
+    private static int _failures;
+
+    /// <summary>A material setting Windows refuses (an older version): left out, and logged the first few times.</summary>
     private static void Try(Action action)
     {
         try
         {
             action();
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            // Not available on this Windows version.
+            if (Interlocked.Increment(ref _failures) <= 3)
+            {
+                Shell.AppLog.Write("the window material: a setting is not available on this PC", e);
+            }
         }
     }
 }

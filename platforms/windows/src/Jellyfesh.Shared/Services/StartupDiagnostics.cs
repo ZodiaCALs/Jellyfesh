@@ -79,6 +79,36 @@ public static class FailureText
     /// <summary>At most this many exceptions of a chain are described (the log has them all).</summary>
     public const int MaxDepth = 4;
 
+    /// <summary>At most this many frames of where a first-chance exception was thrown are logged.</summary>
+    public const int MaxFrames = 12;
+
+    /// <summary>
+    /// A first-chance exception's log line: its type, HRESULT and message (a COMException's is often
+    /// empty, so the HRESULT names it), then where it was thrown, innermost frame first, without
+    /// the runtime's own frames.
+    /// </summary>
+    public static string FirstChance(Exception error, string stage, IEnumerable<string> frames)
+    {
+        var text = new StringBuilder();
+        text.Append("  first-chance ").Append(error.GetType().FullName)
+            .Append(" (HRESULT 0x").Append(error.HResult.ToString("X8", CultureInfo.InvariantCulture)).Append(')')
+            .Append(" while ").Append(stage).Append(": ").Append(error.Message.Trim());
+        foreach (var frame in frames.Where(f => !IsRuntimeFrame(f)).Take(MaxFrames))
+        {
+            text.AppendLine().Append("      at ").Append(frame);
+        }
+
+        return text.ToString();
+    }
+
+    /// <summary>Frames of the runtime's exception machinery and of the logging itself, which say nothing about the cause.</summary>
+    private static bool IsRuntimeFrame(string frame) =>
+        frame.StartsWith("System.Runtime.ExceptionServices.", StringComparison.Ordinal)
+        || frame.StartsWith("System.AppDomain.", StringComparison.Ordinal)
+        || frame.StartsWith("System.Diagnostics.", StringComparison.Ordinal)
+        || frame.StartsWith("Jellyfesh.App.Shell.Startup.", StringComparison.Ordinal)
+        || frame.StartsWith("Jellyfesh.App.Shell.AppLog.", StringComparison.Ordinal);
+
     public static string Describe(string stage, Exception error)
     {
         var text = new StringBuilder();

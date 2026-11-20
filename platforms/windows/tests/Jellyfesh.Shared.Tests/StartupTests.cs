@@ -83,4 +83,25 @@ public class StartupTests
 
         Assert.Equal(1 + FailureText.MaxDepth, lines.Length);
     }
+
+    [Fact]
+    public void A_first_chance_exception_names_its_hresult_and_where_it_was_thrown()
+    {
+        var error = new System.Runtime.InteropServices.COMException(string.Empty, unchecked((int)0x80070490));
+        var frames = new[]
+        {
+            "Jellyfesh.App.Shell.Startup.OnFirstChance",
+            "System.Runtime.ExceptionServices.InternalCalls.RhpThrowEx",
+            "WinRT.ExceptionHelpers.ThrowExceptionForHR",
+            "ABI.Windows.UI.ViewManagement.IAccessibilitySettingsMethods.add_HighContrastChanged",
+            "Jellyfesh.App.MainWindow..ctor",
+        };
+        var text = FailureText.FirstChance(error, "opening the main window", frames);
+        Assert.StartsWith("  first-chance System.Runtime.InteropServices.COMException (HRESULT 0x80070490) while opening the main window:", text, StringComparison.Ordinal);
+        Assert.Equal(
+            ["WinRT.ExceptionHelpers.ThrowExceptionForHR", "ABI.Windows.UI.ViewManagement.IAccessibilitySettingsMethods.add_HighContrastChanged", "Jellyfesh.App.MainWindow..ctor"],
+            text.Split('\n').Skip(1).Select(l => l.Trim().Replace("at ", string.Empty, StringComparison.Ordinal)));
+        var many = FailureText.FirstChance(error, "x", Enumerable.Range(0, 50).Select(i => $"F.M{i}"));
+        Assert.Equal(FailureText.MaxFrames, many.Split('\n').Length - 1);
+    }
 }

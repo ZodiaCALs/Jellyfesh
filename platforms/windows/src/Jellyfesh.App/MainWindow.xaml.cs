@@ -137,8 +137,10 @@ public sealed partial class MainWindow : Window
         Bar.OpenRequested += (_, panel) => OpenNowPlaying(panel);
 
         _ui.ColorValuesChanged += (_, _) => queue.TryEnqueue(ReadSystemPreferences);
-        TryHook(() => _ui.AnimationsEnabledChanged += (_, _) => queue.TryEnqueue(ReadSystemPreferences));
-        TryHook(() => _accessibility.HighContrastChanged += (_, _) => queue.TryEnqueue(ApplyTheme));
+        // Either may be refused in a desktop app (both are logged): ColorValuesChanged above still
+        // follows high contrast, whose colours change with it, and the next one reads the animation setting.
+        TryHook("live changes of the animation setting", () => _ui.AnimationsEnabledChanged += (_, _) => queue.TryEnqueue(ReadSystemPreferences));
+        TryHook("live changes of high contrast", () => _accessibility.HighContrastChanged += (_, _) => queue.TryEnqueue(ApplyTheme));
         VisibilityChanged += OnVisibilityChanged;
         Closed += OnClosed;
         Root.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnRootPointerPressed), handledEventsToo: true);
@@ -320,15 +322,20 @@ public sealed partial class MainWindow : Window
             area.X + ((area.Width - width) / 2), area.Y + ((area.Height - height) / 2), width, height));
     }
 
-    private static void TryHook(Action hook)
+    /// <summary>
+    /// Subscribes to a system notification the window can do without: one Windows refuses (an older
+    /// version, ADR-0007's minimum is 1809, or a notification a desktop app may not have) is logged
+    /// with its HRESULT, and only live updates are lost.
+    /// </summary>
+    private static void TryHook(string what, Action hook)
     {
         try
         {
             hook();
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            // Not on this Windows version (the minimum is 1809, ADR-0007); live updates are lost only.
+            AppLog.Write($"{what}: not available on this PC", e);
         }
     }
 

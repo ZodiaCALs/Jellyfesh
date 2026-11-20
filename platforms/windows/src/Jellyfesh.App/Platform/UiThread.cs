@@ -1,4 +1,5 @@
 using System.Globalization;
+using Jellyfesh.App.Shell;
 using Jellyfesh.Core;
 using Jellyfesh.Drawing;
 using Jellyfesh.Formatting;
@@ -49,7 +50,11 @@ internal sealed class DispatcherOneShotTimer : IOneShotTimer
 /// <summary>Strings from the .resw files through MRT Core (unpackaged: Jellyfesh.pri next to the executable).</summary>
 internal sealed class ResourceLocalizer : ILocalizer
 {
+    /// <summary>How many missing strings the log names per run.</summary>
+    private const int MissingLogged = 20;
+
     private readonly ResourceLoader? _loader;
+    private int _missing;
 
     public ResourceLocalizer()
     {
@@ -57,9 +62,11 @@ internal sealed class ResourceLocalizer : ILocalizer
         {
             _loader = new ResourceLoader();
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _loader = null; // a missing resource index shows keys rather than failing to start
+            // A missing resource index shows keys rather than failing to start; the log says so.
+            AppLog.Write("the app's strings could not be loaded (MRT Core found no resource index); keys show instead", e);
+            _loader = null;
         }
     }
 
@@ -72,8 +79,14 @@ internal sealed class ResourceLocalizer : ILocalizer
             var value = _loader?.GetString(key);
             return string.IsNullOrEmpty(value) ? key : value;
         }
-        catch (Exception)
+        catch (Exception e)
         {
+            // MRT Core throws for a string it does not have: the key shows, and the log names it.
+            if (Interlocked.Increment(ref _missing) <= MissingLogged)
+            {
+                AppLog.Write($"no string {key}", e);
+            }
+
             return key;
         }
     }

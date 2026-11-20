@@ -38,9 +38,10 @@ internal sealed class AudioDeviceNotifications : IDisposable
             _watcher.EnumerationCompleted += (_, _) => _enumerated = true;
             _watcher.Start();
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _watcher = null; // default-device changes still arrive
+            Shell.AppLog.Write("watching audio devices come and go: not available on this PC (default-device changes still arrive)", e);
+            _watcher = null;
         }
 
         void Changed(DispatcherQueue q)
