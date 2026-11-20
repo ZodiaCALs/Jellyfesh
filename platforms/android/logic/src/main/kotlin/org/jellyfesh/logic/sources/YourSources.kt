@@ -43,11 +43,14 @@ object YourSources {
     fun canBrowse(plugin: PluginSummary): Boolean = plugin.enabled && BROWSE in plugin.capabilities
 
     /**
-     * What choosing a source opens: its catalogue when it is on and can browse (choosing one
-     * browses it), otherwise its page in Settings › Sources (Enabled, sign-in, its settings).
+     * What choosing a source opens: its Discover page while it is on (docs/ui.md, "Discover";
+     * Browse is a button there), otherwise its page in Settings › Sources (Enabled, sign-in, its
+     * settings).
      */
-    fun opens(plugin: PluginSummary): Screen =
-        if (canBrowse(plugin)) Screen.SourceBrowse(plugin.id, null, plugin.name) else Screen.Source(plugin.id)
+    fun opens(plugin: PluginSummary): Screen = if (plugin.enabled) Screen.Discover(plugin.id) else Screen.Source(plugin.id)
+
+    /** Browse in the Discover page's header: the source's own folders, from its top level. */
+    fun browse(plugin: PluginSummary): Screen? = if (canBrowse(plugin)) Screen.SourceBrowse(plugin.id, null, plugin.name) else null
 
     const val BROWSE = "browse"
 }

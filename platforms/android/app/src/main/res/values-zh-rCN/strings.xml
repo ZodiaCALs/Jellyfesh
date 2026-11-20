@@ -502,4 +502,45 @@
     <string name="ai_delete_made">删除生成的歌词</string>
     <string name="ai_delete_made_title">要删除这些歌词吗？</string>
     <string name="ai_delete_made_body">你可以重新生成。</string>
+    <!-- v0.0.7: Discover -->
+    <string name="loading">正在载入…</string>
+    <string name="discover_see_all">查看全部</string>
+    <string name="discover_for_you">为你推荐</string>
+    <string name="discover_rediscover">重新发现</string>
+    <!-- v0.0.7: details, Get Info and comments -->
+    <string name="action_get_info">显示简介</string>
+    <string name="info_version">版本</string>
+    <string name="info_genre">风格</string>
+    <string name="info_language">语言</string>
+    <string name="info_label">唱片公司</string>
+    <string name="info_composer">作曲</string>
+    <string name="info_lyricist">作词</string>
+    <string name="info_arranger">编曲</string>
+    <string name="info_producer">制作人</string>
+    <string name="info_popularity">热度</string>
+    <string name="info_isrc">ISRC</string>
+    <string name="info_disc">碟片</string>
+    <string name="info_track">曲目</string>
+    <string name="info_audio">音频</string>
+    <string name="info_quality">音质</string>
+    <string name="info_bitrate">比特率</string>
+    <string name="info_kbps">%1$d kbps</string>
+    <string name="info_size">大小</string>
+    <string name="info_replaygain">ReplayGain</string>
+    <string name="info_gain_track">%1$s（单曲）</string>
+    <string name="info_gain_album">%1$s（专辑）</string>
+    <string name="info_source">来源</string>
+    <string name="info_bits">%1$d 位</string>
+    <string name="info_mono">单声道</string>
+    <string name="info_stereo">立体声</string>
+    <string name="info_channels">%1$d 声道</string>
+    <string name="quality_hires">高解析度无损</string>
+    <string name="quality_lossless">无损</string>
+    <string name="quality_high">高品质</string>
+    <string name="quality_standard">标准</string>
+    <string name="np_comments">评论</string>
+    <string name="comments_from">来自 %1$s 的评论</string>
+    <string name="comments_popular">热门</string>
+    <string name="comments_latest">最新</string>
+    <string name="comments_none">还没有评论</string>
 </resources>

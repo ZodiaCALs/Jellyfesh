@@ -27,6 +27,9 @@ sealed interface Screen {
     data class Playlist(val id: Long, val name: String) : Screen
     data class Source(val pluginId: String) : Screen
 
+    /** A source's Discover page (v0.0.7): its shelves, with Browse in the header. */
+    data class Discover(val pluginId: String) : Screen
+
     /**
      * A source's catalogue: its root ([node] null) or an album, artist, playlist or folder, with
      * what its row showed: its Open in {Service} [link], its [kind] (an album or playlist gets the

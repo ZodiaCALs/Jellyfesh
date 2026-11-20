@@ -212,6 +212,12 @@ class LibraryModelTest {
     }
 
     @Test
+    fun getInfoComesBeforeOpenInTheService() {
+        val items = TrackMenu.items(TrackRef.Library(1), favourite = false, hasAlbum = true, hasArtist = true, hasLink = true, getInfo = true)
+        assertEquals(listOf(TrackMenuItem.GoToArtist, TrackMenuItem.GetInfo, TrackMenuItem.OpenLink), items.takeLast(3))
+    }
+
+    @Test
     fun aRemoteSourcesSongNeverOffersTheQueue() {
         val song = TrackRef.Source(SourceTrack("spotify", "7", "Song"))
         assertEquals(listOf(TrackMenuItem.OpenLink), TrackMenu.items(song, favourite = null, hasAlbum = false, hasArtist = false, remote = true, hasLink = true))

@@ -502,4 +502,45 @@
     <string name="ai_delete_made">刪除製作的歌詞</string>
     <string name="ai_delete_made_title">要刪除這些歌詞嗎？</string>
     <string name="ai_delete_made_body">你可以重新製作。</string>
+    <!-- v0.0.7: Discover -->
+    <string name="loading">正在載入…</string>
+    <string name="discover_see_all">檢視全部</string>
+    <string name="discover_for_you">為你推薦</string>
+    <string name="discover_rediscover">重新發現</string>
+    <!-- v0.0.7: details, Get Info and comments -->
+    <string name="action_get_info">取得資訊</string>
+    <string name="info_version">版本</string>
+    <string name="info_genre">類型</string>
+    <string name="info_language">語言</string>
+    <string name="info_label">唱片公司</string>
+    <string name="info_composer">作曲</string>
+    <string name="info_lyricist">作詞</string>
+    <string name="info_arranger">編曲</string>
+    <string name="info_producer">製作人</string>
+    <string name="info_popularity">熱門程度</string>
+    <string name="info_isrc">ISRC</string>
+    <string name="info_disc">光碟</string>
+    <string name="info_track">曲目</string>
+    <string name="info_audio">音訊</string>
+    <string name="info_quality">音質</string>
+    <string name="info_bitrate">位元速率</string>
+    <string name="info_kbps">%1$d kbps</string>
+    <string name="info_size">大小</string>
+    <string name="info_replaygain">ReplayGain</string>
+    <string name="info_gain_track">%1$s（單曲）</string>
+    <string name="info_gain_album">%1$s（專輯）</string>
+    <string name="info_source">來源</string>
+    <string name="info_bits">%1$d 位元</string>
+    <string name="info_mono">單聲道</string>
+    <string name="info_stereo">立體聲</string>
+    <string name="info_channels">%1$d 聲道</string>
+    <string name="quality_hires">高解析度無損</string>
+    <string name="quality_lossless">無損</string>
+    <string name="quality_high">高品質</string>
+    <string name="quality_standard">標準</string>
+    <string name="np_comments">留言</string>
+    <string name="comments_from">來自 %1$s 的留言</string>
+    <string name="comments_popular">熱門</string>
+    <string name="comments_latest">最新</string>
+    <string name="comments_none">還沒有留言</string>
 </resources>

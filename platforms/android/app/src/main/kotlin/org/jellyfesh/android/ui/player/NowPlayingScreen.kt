@@ -84,6 +84,8 @@ import org.jellyfesh.android.ui.theme.jfShadow
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.TimeDemandEffect
 import org.jellyfesh.android.ui.time.rememberPositionSeconds
+import org.jellyfesh.logic.sources.CommentsModel
+import org.jellyfesh.logic.library.DetailsModel
 import org.jellyfesh.logic.player.NowPlayingLayouts
 import org.jellyfesh.logic.player.NowPlayingArrangement
 import org.jellyfesh.logic.player.NowPlayingPanel
@@ -138,6 +140,8 @@ fun NowPlayingScreen(state: CoreState, onClose: () -> Unit, requestedPanel: NowP
         GlassBackdrop(Modifier.fillMaxSize(), invalidateKey = state.theme) {
             // The core bakes no backdrop for a remote session's song: the field stands in rather than another song's.
             Backdrop(state.settings.style, state.theme?.backdrop(dark)?.takeIf { !PlayerModel.isRemote(state) })
+            // The next song may show no comments: the pane goes back to the layout's own.
+            if (panel == NowPlayingPanel.Comments && !CommentsModel.offered(state.sources, track?.local?.track)) panel = null
             // The look's layout (ADR-0020): Stage (v0.0.6), Artwork or Lyrics.
             val arrangement = NowPlayingLayouts.arrangement(Jf.look.nowPlaying, wide, panel)
             Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
@@ -146,6 +150,8 @@ fun NowPlayingScreen(state: CoreState, onClose: () -> Unit, requestedPanel: NowP
                     compact = width < 600.dp,
                     onPanel = { chosen -> panel = if (!wide && panel == chosen) null else chosen },
                     onClose = onClose,
+                    // Comments for a song from a source that shows them (docs/ui.md, "Comments").
+                    panels = NowPlayingPanel.entries.filter { it != NowPlayingPanel.Comments || CommentsModel.offered(state.sources, track?.local?.track) },
                 )
                 Box(Modifier.weight(1f).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)) {
                     if (track == null) {
@@ -231,7 +237,7 @@ private fun Backdrop(style: BackdropStyle, path: String?) {
  * nothing.
  */
 @Composable
-private fun TopControls(panel: NowPlayingPanel?, compact: Boolean, onPanel: (NowPlayingPanel) -> Unit, onClose: () -> Unit) {
+private fun TopControls(panel: NowPlayingPanel?, compact: Boolean, onPanel: (NowPlayingPanel) -> Unit, onClose: () -> Unit, panels: List<NowPlayingPanel> = NowPlayingPanel.entries) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -244,11 +250,11 @@ private fun TopControls(panel: NowPlayingPanel?, compact: Boolean, onPanel: (Now
             JfIconButton(R.drawable.ic_chevron_down, stringResource(R.string.np_close), onClose, tint = Jf.colors.ink90)
         }
         if (compact) {
-            PanelButtons(panel, onPanel)
+            PanelButtons(panel, onPanel, panels)
         } else {
             GlassSurface(grade = GlassGrade.Veil, shape = rounded(14.dp), blur = false) {
                 SegmentedControl(
-                    options = NowPlayingPanel.entries,
+                    options = panels,
                     selected = panel,
                     label = { stringResource(panelLabel(it)) },
                     onSelect = onPanel,
@@ -261,12 +267,12 @@ private fun TopControls(panel: NowPlayingPanel?, compact: Boolean, onPanel: (Now
 
 /** Lyrics, Queue and Info as round glyph buttons in one glass capsule; the chosen one on a soft fill. */
 @Composable
-private fun PanelButtons(selected: NowPlayingPanel?, onSelect: (NowPlayingPanel) -> Unit) {
+private fun PanelButtons(selected: NowPlayingPanel?, onSelect: (NowPlayingPanel) -> Unit, panels: List<NowPlayingPanel>) {
     val colors = Jf.colors
     val views = stringResource(R.string.np_views)
     GlassSurface(grade = GlassGrade.Veil, shape = CircleShape, blur = false) {
         Row(Modifier.padding(3.dp).selectableGroup().semantics { contentDescription = views }, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            NowPlayingPanel.entries.forEach { option ->
+            panels.forEach { option ->
                 val on = option == selected
                 val label = stringResource(panelLabel(option))
                 Box(
@@ -289,12 +295,14 @@ private fun panelLabel(panel: NowPlayingPanel): Int = when (panel) {
     NowPlayingPanel.Lyrics -> R.string.np_lyrics
     NowPlayingPanel.Queue -> R.string.np_queue
     NowPlayingPanel.Info -> R.string.np_info
+    NowPlayingPanel.Comments -> R.string.np_comments
 }
 
 private fun panelIcon(panel: NowPlayingPanel): Int = when (panel) {
     NowPlayingPanel.Lyrics -> R.drawable.ic_lyrics
     NowPlayingPanel.Queue -> R.drawable.ic_queue
     NowPlayingPanel.Info -> R.drawable.ic_info
+    NowPlayingPanel.Comments -> R.drawable.ic_comment
 }
 
 /**
@@ -328,6 +336,10 @@ private fun PanelContent(panel: NowPlayingPanel, state: CoreState, track: Player
             QueueView(state.queue)
         }
         NowPlayingPanel.Info -> InfoView(track, state.currentLyrics.takeIf { remote == null }, PlayerModel.durationUs(state))
+        NowPlayingPanel.Comments -> CommentsView(
+            DetailsModel.itemFor(track.local),
+            CommentsModel.plugin(state.sources, track.local?.track)?.name,
+        )
     }
 }
 

@@ -1,5 +1,7 @@
 package org.jellyfesh.android.ui.search
 
+import org.jellyfesh.logic.library.DetailsModel
+import org.jellyfesh.android.ui.player.KnownInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -266,10 +268,30 @@ fun sourceItemMenu(item: SourceItem, actions: TrackActions): (() -> Unit)? {
     val subtitle = Labels.artistAlbum(item.subtitle, item.album)
     return when {
         item.playable && track != null -> {
-            { actions.showFor(TrackTarget(track, item.title, subtitle, artist = item.subtitle, link = item.link, source = item.source)) }
+            {
+                actions.showFor(
+                    TrackTarget(
+                        track, item.title, subtitle,
+                        albumTitle = item.album,
+                        artist = item.subtitle,
+                        link = item.link,
+                        source = item.source,
+                        sourceAlbumId = item.albumId,
+                        sourceArtistId = item.artistId,
+                        durationMs = item.durationMs,
+                    ),
+                )
+            }
         }
         item.playable && (item.kind == ItemKind.Album || item.kind == ItemKind.Playlist || item.kind == ItemKind.Artist) -> {
-            { actions.showForCollection(item.title, subtitle, CollectionRef.Source(item.source, item.id), link = item.link) }
+            {
+                val info = if (item.kind == ItemKind.Playlist) {
+                    emptyList()
+                } else {
+                    listOf(actions.getInfoAction(DetailsModel.itemFor(item), KnownInfo(item.title, item.subtitle, source = item.source)))
+                }
+                actions.showForCollection(item.title, subtitle, CollectionRef.Source(item.source, item.id), link = item.link, extra = info)
+            }
         }
         else -> actions.openLinkAction(item.link, item.source)?.let { open -> { actions.showSheetActions(item.title, item.unplayableReason ?: subtitle, listOf(open)) } }
     }

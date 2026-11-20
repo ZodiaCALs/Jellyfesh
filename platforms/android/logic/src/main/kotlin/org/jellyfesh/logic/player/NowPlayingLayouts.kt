@@ -3,8 +3,11 @@ package org.jellyfesh.logic.player
 import org.jellyfesh.logic.core.MiniPlayerStyle
 import org.jellyfesh.logic.core.NowPlayingLayout
 
-/** The panes of Now Playing: beside the artwork on wide windows, or one at a time on phones. */
-enum class NowPlayingPanel { Lyrics, Queue, Info }
+/**
+ * The panes of Now Playing: beside the artwork on wide windows, or one at a time on phones.
+ * Comments only for a song from a source that shows them (v0.0.7).
+ */
+enum class NowPlayingPanel { Lyrics, Queue, Info, Comments }
 
 /** How Now Playing arranges itself for the look's layout (ADR-0020), the window and the chosen pane. */
 sealed interface NowPlayingArrangement {

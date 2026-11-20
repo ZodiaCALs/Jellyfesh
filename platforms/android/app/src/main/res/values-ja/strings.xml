@@ -502,4 +502,45 @@
     <string name="ai_delete_made">作成した歌詞を削除</string>
     <string name="ai_delete_made_title">この歌詞を削除しますか？</string>
     <string name="ai_delete_made_body">もう一度作成できます。</string>
+    <!-- v0.0.7: Discover -->
+    <string name="loading">読み込み中…</string>
+    <string name="discover_see_all">すべて表示</string>
+    <string name="discover_for_you">あなたへのおすすめ</string>
+    <string name="discover_rediscover">再発見</string>
+    <!-- v0.0.7: details, Get Info and comments -->
+    <string name="action_get_info">情報を見る</string>
+    <string name="info_version">バージョン</string>
+    <string name="info_genre">ジャンル</string>
+    <string name="info_language">言語</string>
+    <string name="info_label">レーベル</string>
+    <string name="info_composer">作曲</string>
+    <string name="info_lyricist">作詞</string>
+    <string name="info_arranger">編曲</string>
+    <string name="info_producer">プロデューサー</string>
+    <string name="info_popularity">人気度</string>
+    <string name="info_isrc">ISRC</string>
+    <string name="info_disc">ディスク</string>
+    <string name="info_track">トラック</string>
+    <string name="info_audio">オーディオ</string>
+    <string name="info_quality">音質</string>
+    <string name="info_bitrate">ビットレート</string>
+    <string name="info_kbps">%1$d kbps</string>
+    <string name="info_size">サイズ</string>
+    <string name="info_replaygain">ReplayGain</string>
+    <string name="info_gain_track">%1$s（トラック）</string>
+    <string name="info_gain_album">%1$s（アルバム）</string>
+    <string name="info_source">ソース</string>
+    <string name="info_bits">%1$d ビット</string>
+    <string name="info_mono">モノラル</string>
+    <string name="info_stereo">ステレオ</string>
+    <string name="info_channels">%1$d チャンネル</string>
+    <string name="quality_hires">ハイレゾロスレス</string>
+    <string name="quality_lossless">ロスレス</string>
+    <string name="quality_high">高音質</string>
+    <string name="quality_standard">標準</string>
+    <string name="np_comments">コメント</string>
+    <string name="comments_from">%1$s のコメント</string>
+    <string name="comments_popular">人気</string>
+    <string name="comments_latest">新着</string>
+    <string name="comments_none">コメントはまだありません</string>
 </resources>

@@ -1,5 +1,12 @@
 package org.jellyfesh.android.ui.actions
 
+import org.jellyfesh.logic.nav.Screen
+import org.jellyfesh.logic.library.DetailsModel
+import org.jellyfesh.logic.core.ItemRef
+import org.jellyfesh.logic.core.ItemKind
+import org.jellyfesh.android.ui.player.rememberInfoSheets
+import org.jellyfesh.android.ui.player.KnownInfo
+import org.jellyfesh.android.ui.player.InfoSheets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -57,6 +64,10 @@ data class TrackTarget(
     val link: String? = null,
     /** The source the link belongs to (a plugin id), for the service's name; else the song's own source. */
     val source: String? = null,
+    /** A source's ids of the song's album and artist: Go to Album and Go to Artist open its pages (v0.0.7). */
+    val sourceAlbumId: String? = null,
+    val sourceArtistId: String? = null,
+    val durationMs: Long? = null,
 )
 
 /**
@@ -70,6 +81,7 @@ class TrackActions internal constructor(
     private val overlays: Overlays,
     private val context: android.content.Context,
     private val lyricsMaker: LyricsMaker,
+    private val infoSheets: InfoSheets,
 ) {
     private fun s(id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -139,15 +151,20 @@ class TrackActions internal constructor(
         val albumId = target.albumId
         val artist = target.artist?.takeIf { it.isNotBlank() && target.track is TrackRef.Library }
         val sources = graph.store.state.value.sources
-        val linkAction = openLinkAction(target.link, target.source ?: (target.track as? TrackRef.Source)?.track?.plugin)
+        // A source's song opens its source's album and artist pages (ADR-0022).
+        val plugin = (target.track as? TrackRef.Source)?.track?.plugin
+        val sourceAlbum = target.sourceAlbumId?.takeIf { plugin != null }
+        val sourceArtist = target.sourceArtistId?.takeIf { plugin != null }
+        val linkAction = openLinkAction(target.link, target.source ?: plugin)
         val items = TrackMenu.items(
             target.track,
             target.favorite,
-            hasAlbum = albumId != null,
-            hasArtist = artist != null,
+            hasAlbum = albumId != null || sourceAlbum != null,
+            hasArtist = artist != null || sourceArtist != null,
             remote = RemoteModel.isRemote(sources, target.track),
             hasLink = linkAction != null,
             makesLyrics = LyricsMakingModel.offersFor(graph.store.state.value.aiLyrics, target.track),
+            getInfo = true,
         )
         val actions = items.mapNotNull { item ->
             when (item) {
@@ -156,8 +173,26 @@ class TrackActions internal constructor(
                 TrackMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(listOf(target.track)) }
                 TrackMenuItem.AddToFavourites -> SheetAction(s(R.string.action_favourite), R.drawable.ic_heart) { graph.send(Command.SetFavorite(target.track, true)) }
                 TrackMenuItem.RemoveFromFavourites -> SheetAction(s(R.string.action_unfavourite), R.drawable.ic_heart_filled) { graph.send(Command.SetFavorite(target.track, false)) }
-                TrackMenuItem.GoToAlbum -> SheetAction(s(R.string.action_go_to_album), R.drawable.ic_album) { albumId?.let { nav.openAlbum(it, target.albumTitle ?: target.title) } }
-                TrackMenuItem.GoToArtist -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) { artist?.let(::goToArtist) }
+                TrackMenuItem.GoToAlbum -> SheetAction(s(R.string.action_go_to_album), R.drawable.ic_album) {
+                    when {
+                        albumId != null -> nav.openAlbum(albumId, target.albumTitle ?: target.title)
+                        plugin != null && sourceAlbum != null ->
+                            nav.push(Screen.SourceBrowse(plugin, sourceAlbum, target.albumTitle ?: target.title, kind = ItemKind.Album, subtitle = target.artist))
+                    }
+                }
+                TrackMenuItem.GoToArtist -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) {
+                    when {
+                        artist != null -> goToArtist(artist)
+                        plugin != null && sourceArtist != null ->
+                            nav.push(Screen.SourceBrowse(plugin, sourceArtist, target.artist ?: target.title, kind = ItemKind.Artist))
+                    }
+                }
+                TrackMenuItem.GetInfo -> SheetAction(s(R.string.action_get_info), R.drawable.ic_info) {
+                    infoSheets.show(
+                        DetailsModel.itemFor(target.track),
+                        KnownInfo(target.title, target.artist, target.albumTitle, target.durationMs, plugin),
+                    )
+                }
                 TrackMenuItem.CreateSyncedLyrics -> (target.track as? TrackRef.Library)?.let { song ->
                     SheetAction(s(R.string.ai_create), R.drawable.ic_sparkle) { lyricsMaker.make(SongRef.Library(song.id)) }
                 }
@@ -166,6 +201,10 @@ class TrackActions internal constructor(
         }
         overlays.showActions(target.title, target.subtitle, actions + extra)
     }
+
+    /** Get Info for an album or an artist (their pages' More menus). */
+    fun getInfoAction(item: ItemRef, known: KnownInfo): SheetAction =
+        SheetAction(s(R.string.action_get_info), R.drawable.ic_info) { infoSheets.show(item, known) }
 
     /** Opens the library's artist of this name (songs and albums carry the name only). */
     fun goToArtist(name: String) {
@@ -264,5 +303,6 @@ fun rememberTrackActions(): TrackActions {
     val overlays = LocalOverlays.current
     val context = LocalContext.current
     val lyricsMaker = rememberLyricsMaker()
-    return remember(graph, nav, overlays, context, lyricsMaker) { TrackActions(graph, nav, overlays, context, lyricsMaker) }
+    val infoSheets = rememberInfoSheets()
+    return remember(graph, nav, overlays, context, lyricsMaker, infoSheets) { TrackActions(graph, nav, overlays, context, lyricsMaker, infoSheets) }
 }

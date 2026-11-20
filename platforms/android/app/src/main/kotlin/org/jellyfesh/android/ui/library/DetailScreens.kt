@@ -1,5 +1,7 @@
 package org.jellyfesh.android.ui.library
 
+import org.jellyfesh.logic.core.ItemRef
+import org.jellyfesh.android.ui.player.KnownInfo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -219,7 +221,10 @@ fun AlbumScreen(id: Long, title: String, state: CoreState) {
                             onShuffle = { graph.send(Command.PlayCollection(CollectionRef.Album(id), 0, true)) },
                         ) {
                             JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
-                                actions.showForCollection(title, artist, CollectionRef.Album(id), withPlay = false)
+                                actions.showForCollection(
+                                    title, artist, CollectionRef.Album(id), withPlay = false,
+                                    extra = listOf(actions.getInfoAction(ItemRef.Album(id), KnownInfo(title, artist))),
+                                )
                             })
                         }
                     }
@@ -283,7 +288,12 @@ fun ArtistScreen(id: Long, name: String, state: CoreState) {
                         onShuffle = { graph.send(Command.PlayCollection(CollectionRef.Artist(id), 0, true)) },
                         modifier = Modifier.widthIn(max = 520.dp),
                     ) {
-                        JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), { actions.showForCollection(name, null, CollectionRef.Artist(id), withPlay = false) })
+                        JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
+                            actions.showForCollection(
+                                name, null, CollectionRef.Artist(id), withPlay = false,
+                                extra = listOf(actions.getInfoAction(ItemRef.Artist(id), KnownInfo(name))),
+                            )
+                        })
                     }
                     SectionHeader(stringResource(R.string.section_albums), Modifier.padding(horizontal = 0.dp))
                 }

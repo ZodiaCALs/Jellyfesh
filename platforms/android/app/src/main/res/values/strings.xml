@@ -545,4 +545,45 @@
     <string name="ai_delete_made">Delete Made Lyrics</string>
     <string name="ai_delete_made_title">Delete These Lyrics?</string>
     <string name="ai_delete_made_body">You can make them again.</string>
+    <!-- v0.0.7: Discover -->
+    <string name="loading">Loading…</string>
+    <string name="discover_see_all">See All</string>
+    <string name="discover_for_you">For You</string>
+    <string name="discover_rediscover">Rediscover</string>
+    <!-- v0.0.7: details, Get Info and comments -->
+    <string name="action_get_info">Get Info</string>
+    <string name="info_version">Version</string>
+    <string name="info_genre">Genre</string>
+    <string name="info_language">Language</string>
+    <string name="info_label">Label</string>
+    <string name="info_composer">Composer</string>
+    <string name="info_lyricist">Lyricist</string>
+    <string name="info_arranger">Arranger</string>
+    <string name="info_producer">Producer</string>
+    <string name="info_popularity">Popularity</string>
+    <string name="info_isrc">ISRC</string>
+    <string name="info_disc">Disc</string>
+    <string name="info_track">Track</string>
+    <string name="info_audio">Audio</string>
+    <string name="info_quality">Quality</string>
+    <string name="info_bitrate">Bitrate</string>
+    <string name="info_kbps">%1$d kbps</string>
+    <string name="info_size">Size</string>
+    <string name="info_replaygain">ReplayGain</string>
+    <string name="info_gain_track">%1$s (track)</string>
+    <string name="info_gain_album">%1$s (album)</string>
+    <string name="info_source">Source</string>
+    <string name="info_bits">%1$d-bit</string>
+    <string name="info_mono">Mono</string>
+    <string name="info_stereo">Stereo</string>
+    <string name="info_channels">%1$d channels</string>
+    <string name="quality_hires">Hi-Res Lossless</string>
+    <string name="quality_lossless">Lossless</string>
+    <string name="quality_high">High</string>
+    <string name="quality_standard">Standard</string>
+    <string name="np_comments">Comments</string>
+    <string name="comments_from">Comments from %1$s</string>
+    <string name="comments_popular">Popular</string>
+    <string name="comments_latest">Latest</string>
+    <string name="comments_none">No Comments Yet</string>
 </resources>

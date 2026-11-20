@@ -1,5 +1,9 @@
 package org.jellyfesh.android.ui.sources
 
+import org.jellyfesh.logic.core.ItemRef
+import org.jellyfesh.android.ui.player.rememberDetails
+import org.jellyfesh.android.ui.player.KnownInfo
+import org.jellyfesh.android.ui.player.Blurb
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -485,6 +489,14 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
     }
     val collection = BrowseModel.isCollection(screen.kind) && node != null
     val container = node?.let { CollectionRef.Source(pluginId, it) }
+    // An album's or artist's page (Go to Album, Go to Artist): its picture and notes or biography
+    // from the source's details (ADR-0022).
+    val kind = screen.kind
+    val describes = state.sources.plugins.firstOrNull { it.id == pluginId }?.details == true
+    val detailsItem = if (node != null && describes && (kind == ItemKind.Album || kind == ItemKind.Artist)) ItemRef.Source(pluginId, kind, node) else null
+    val details = rememberDetails(detailsItem)
+    val picture = ArtKey.of(screen.artwork) ?: ArtKey.of(details.page?.image)
+    val infoAction = detailsItem?.let { actions.getInfoAction(it, KnownInfo(screen.title, screen.subtitle, source = pluginId)) }
     val link = Links.openable(screen.link)
     val credit = Links.attributedService(state.sources, pluginId)?.let { stringResource(R.string.source_attribution, it) }
     val numbers = remember(browse.items, screen.kind) { BrowseModel.numbers(browse, screen.kind) }
@@ -499,7 +511,7 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
                 item(key = "header") {
                     val songs = browse.tracks.size.takeIf { browse.complete && it > 0 }
                     AlbumHeader(
-                        art = ArtKey.of(screen.artwork),
+                        art = picture,
                         title = screen.title,
                         artist = screen.subtitle?.takeIf { it.isNotBlank() },
                         details = songs?.let { pluralStringResource(R.plurals.count_songs, it, it) },
@@ -515,7 +527,7 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
                             onShuffle = { graph.send(Command.PlayCollection(container, 0, true)) },
                         ) {
                             JfIconButton(R.drawable.ic_more, moreLabel, {
-                                actions.showForCollection(screen.title, screen.subtitle, container, withPlay = false, link = screen.link)
+                                actions.showForCollection(screen.title, screen.subtitle, container, withPlay = false, link = screen.link, extra = listOfNotNull(infoAction))
                             })
                         }
                         // None of its songs plays here: its service is where they play.
@@ -530,8 +542,19 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
                     }
                 }
             } else {
+                // An artist's picture above the name.
+                if (kind == ItemKind.Artist && picture != null) {
+                    item(key = "picture") {
+                        Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                            org.jellyfesh.android.ui.components.ArtworkImage(picture, screen.title, 160.dp, androidx.compose.foundation.shape.CircleShape)
+                        }
+                    }
+                }
                 // "Content from {Service}" for a source whose terms ask for the credit.
                 item(key = "title") { ScreenTitle(screen.title, subtitle = credit) }
+            }
+            details.page?.description?.takeIf { it.isNotBlank() }?.let { text ->
+                item(key = "blurb") { Blurb(text, Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
             }
             itemsIndexed(browse.items, key = { i, it -> "$i-${it.id}" }) { i, item ->
                 val action = SourceItems.mainAction(item, browse.items)
@@ -558,7 +581,7 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
         BackBar(onBack = nav::back, title = screen.title.takeIf { collection && headerGone }, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
             if (!collection && container != null) {
                 JfIconButton(R.drawable.ic_more, moreLabel, {
-                    actions.showForCollection(screen.title, null, container, link = screen.link)
+                    actions.showForCollection(screen.title, null, container, link = screen.link, extra = listOfNotNull(infoAction))
                 }, tint = Jf.colors.ink90)
             }
         }

@@ -38,6 +38,7 @@ import org.jellyfesh.android.ui.theme.JfIconButton
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.LyricsSnapshot
+import org.jellyfesh.logic.library.DetailsModel
 import org.jellyfesh.logic.core.LyricsSource
 import org.jellyfesh.logic.core.RemoteDeviceKind
 import org.jellyfesh.logic.core.Timing
@@ -60,50 +61,36 @@ import org.jellyfesh.logic.state.CoreState
 fun InfoView(track: PlayerTrack, lyrics: LyricsSnapshot?, durationUs: Long?, modifier: Modifier = Modifier) {
     val actions = rememberTrackActions()
     val now = track.local
-    val library = now?.track as? TrackRef.Library
-    val year = library?.let { ref -> rememberQuery(ref.id) { it.track(ref.id) }.ok?.year }
     val link = track.link
     val source = track.source
+    // The core's details of what plays (docs/ui.md, "Details"), with the format being decoded.
+    val details = rememberDetails(DetailsModel.itemFor(now))
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         JfText(stringResource(R.string.info_heading), style = JfType.section, modifier = Modifier.semantics { heading() })
         if (link != null && source != null) {
             JfButton(actions.openInLabel(source), { actions.openLink(link) }, style = ButtonStyle.Tonal, icon = R.drawable.ic_external)
         }
-        InfoLine(stringResource(R.string.info_title), track.title)
-        track.artist?.let { InfoLine(stringResource(R.string.info_artist), it) }
-        track.album?.let { InfoLine(stringResource(R.string.info_album), it) }
-        year?.let { InfoLine(stringResource(R.string.info_year), it.toString()) }
-        durationUs?.let { InfoLine(stringResource(R.string.info_length), TimeFormat.clockUs(it)) }
-        if (now == null) return@Column
-        now.format?.let { f ->
-            val text = Labels.format(f) + if (f.gapless) " · " + stringResource(R.string.info_gapless) else ""
-            InfoLine(stringResource(R.string.info_format), text)
+        val known = KnownInfo(track.title, track.artist, track.album, durationUs?.let { it / 1_000 }, source)
+        DetailsRows(details, known, decoded = now?.quality) {
+            if (now != null) {
+                val lyricsSource = when (val s = lyrics?.source) {
+                    is LyricsSource.Sidecar -> stringResource(R.string.lyrics_source_sidecar, s.path.substringAfterLast('/'))
+                    LyricsSource.Embedded -> stringResource(R.string.lyrics_source_embedded)
+                    // A source's lyrics: from its service.
+                    is LyricsSource.Plugin -> stringResource(R.string.lyrics_source_sidecar, Links.serviceName(LocalGraph.current.store.state.value.sources, s.id))
+                    // "Made by AI Lyrics · {engine}" (docs/ui.md).
+                    is LyricsSource.Made -> stringResource(R.string.lyrics_made_by, s.engine)
+                    null -> stringResource(R.string.lyrics_source_none)
+                }
+                val timing = when (lyrics?.doc?.timing) {
+                    Timing.Word -> stringResource(R.string.timing_word)
+                    Timing.Line -> stringResource(R.string.timing_line)
+                    Timing.Unsynced -> stringResource(R.string.timing_unsynced)
+                    null -> null
+                }
+                InfoRow(stringResource(R.string.info_lyrics), listOfNotNull(lyricsSource, timing).joinToString(" · "))
+            }
         }
-        val lyricsSource = when (val s = lyrics?.source) {
-            is LyricsSource.Sidecar -> stringResource(R.string.lyrics_source_sidecar, s.path.substringAfterLast('/'))
-            LyricsSource.Embedded -> stringResource(R.string.lyrics_source_embedded)
-            // A source's lyrics: from its service.
-            is LyricsSource.Plugin -> stringResource(R.string.lyrics_source_sidecar, Links.serviceName(LocalGraph.current.store.state.value.sources, s.id))
-            // "Made by AI Lyrics · {engine}" (docs/ui.md).
-            is LyricsSource.Made -> stringResource(R.string.lyrics_made_by, s.engine)
-            null -> stringResource(R.string.lyrics_source_none)
-        }
-        val timing = when (lyrics?.doc?.timing) {
-            Timing.Word -> stringResource(R.string.timing_word)
-            Timing.Line -> stringResource(R.string.timing_line)
-            Timing.Unsynced -> stringResource(R.string.timing_unsynced)
-            null -> null
-        }
-        InfoLine(stringResource(R.string.info_lyrics), listOfNotNull(lyricsSource, timing).joinToString(" · "))
-        now.path?.let { InfoLine(stringResource(R.string.info_file), it) }
-    }
-}
-
-@Composable
-private fun InfoLine(label: String, value: String) {
-    Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        JfText(label, style = JfType.caption, color = Jf.colors.ink50)
-        JfText(value, style = JfType.small, color = Jf.colors.ink90)
     }
 }
 

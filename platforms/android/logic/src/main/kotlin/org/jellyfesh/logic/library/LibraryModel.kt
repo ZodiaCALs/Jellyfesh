@@ -109,7 +109,7 @@ object HomeModel {
 }
 
 /** The items of a song's menu (long press or More), in the order every app lists them. */
-enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist, CreateSyncedLyrics, OpenLink }
+enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist, CreateSyncedLyrics, GetInfo, OpenLink }
 
 object TrackMenu {
     /**
@@ -128,6 +128,7 @@ object TrackMenu {
         remote: Boolean = false,
         hasLink: Boolean = false,
         makesLyrics: Boolean = false,
+        getInfo: Boolean = false,
     ): List<TrackMenuItem> = buildList {
         if (!remote) {
             add(TrackMenuItem.PlayNext)
@@ -142,6 +143,7 @@ object TrackMenu {
         if (hasAlbum) add(TrackMenuItem.GoToAlbum)
         if (hasArtist) add(TrackMenuItem.GoToArtist)
         if (makesLyrics) add(TrackMenuItem.CreateSyncedLyrics)
+        if (getInfo) add(TrackMenuItem.GetInfo)
         if (hasLink) add(TrackMenuItem.OpenLink)
     }
 }

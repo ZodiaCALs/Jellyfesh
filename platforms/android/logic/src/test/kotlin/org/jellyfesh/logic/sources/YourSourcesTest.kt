@@ -29,17 +29,18 @@ class YourSourcesTest {
     )
 
     @Test
-    fun choosingASourceThatIsOnAndBrowsesOpensItsCatalogue() {
-        assertEquals(Screen.SourceBrowse("org.jellyfesh.subsonic", null, "Subsonic"), YourSources.opens(server))
+    fun choosingASourceThatIsOnOpensItsDiscoverPageWithBrowseInItsHeader() {
+        assertEquals(Screen.Discover("org.jellyfesh.subsonic"), YourSources.opens(server))
         assertTrue(YourSources.canBrowse(server))
+        assertEquals(Screen.SourceBrowse("org.jellyfesh.subsonic", null, "Subsonic"), YourSources.browse(server))
     }
 
     @Test
-    fun aSourceThatIsOffOrCannotBrowseOpensItsPage() {
+    fun aSourceThatIsOffOpensItsPageAndOneThatCannotBrowseHasNoBrowse() {
         assertEquals(Screen.Source("org.jellyfesh.subsonic"), YourSources.opens(server.copy(enabled = false)))
         val lyricsOnly = server.copy(id = "lyrics", capabilities = listOf("lyrics"))
         assertFalse(YourSources.canBrowse(lyricsOnly))
-        assertEquals(Screen.Source("lyrics"), YourSources.opens(lyricsOnly))
+        assertEquals(null, YourSources.browse(lyricsOnly))
     }
 
     @Test
