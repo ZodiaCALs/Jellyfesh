@@ -6,6 +6,8 @@
 #   dist/plugins/org.jellyfesh.qqmusic.jfpkg
 #   dist/plugins/org.jellyfesh.spotify.jfpkg
 #   dist/plugins/org.jellyfesh.netease.jfpkg
+#   dist/plugins/org.jellyfesh.ai-lyrics.jfpkg        (v0.0.7: AI Lyrics and Customize,
+#   dist/plugins/org.jellyfesh.customize.jfpkg         whose features need Jellyfesh Pro)
 #   dist/plugins/community.unofficial.netease.jfpkg   the community plugins of
 #   dist/plugins/community.unofficial.qqmusic.jfpkg   plugins/community, unsigned
 #
@@ -38,7 +40,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 out=dist/plugins
-plugins=(subsonic jellyfin qqmusic spotify netease)
+plugins=(subsonic jellyfin qqmusic spotify netease ai-lyrics customize)
 edition="${JF_EDITION:-community}"
 case "$edition" in
     community) community_out="$out" ;;
