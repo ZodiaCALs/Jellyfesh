@@ -479,4 +479,8 @@
     <string name="ai_model_delete_body">你可以重新下载。</string>
     <string name="ai_sending_audio">发送音频</string>
     <string name="ai_stop_allowing">停止允许</string>
+    <!-- v0.0.7: Jellyfesh Pro on Google Play -->
+    <string name="pro_pending">你的购买正在处理中。Google Play 完成后，Jellyfesh Pro 就会开启。</string>
+    <string name="pro_nothing_to_restore">Google Play 上此账号没有购买 Jellyfesh Pro 的记录。</string>
+    <string name="pro_store_failed">Google Play 现在无法完成此操作。请稍后再试。</string>
 </resources>

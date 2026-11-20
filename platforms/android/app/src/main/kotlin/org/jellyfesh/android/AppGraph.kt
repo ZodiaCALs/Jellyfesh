@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfesh.android.billing.PlayBilling
 import org.jellyfesh.android.billing.StorePurchases
 import org.jellyfesh.android.ffi.PortDrawClock
 import org.jellyfesh.android.ffi.UniffiCoreClient
@@ -77,10 +78,17 @@ class AppGraph(private val app: Application) {
     val distribution: Distribution = BuildFlags.distribution(BuildConfig.DISTRIBUTION)
 
     /**
-     * Jellyfesh Pro in this build's store: none yet (the Google Play build sells it through Play
-     * Billing). The core decides whether Pro is on.
+     * Jellyfesh Pro in this build's store: Google Play Billing in the Google Play build, none in
+     * the others. What the store says goes to the core, which decides whether Pro is on.
      */
-    val purchases: StorePurchases? = null
+    private val play: PlayBilling? = if (BuildFlags.usesPlayBilling(distribution)) {
+        PlayBilling(app, BuildConfig.PLAY_LICENSE_KEY) { entitlement ->
+            scope.launch(Dispatchers.IO) { runCatching { client?.setStoreEntitlement(entitlement) } }
+        }
+    } else {
+        null
+    }
+    val purchases: StorePurchases? get() = play
 
     val images = ArtworkLoader(app, this)
     val icons = IconSwitcher(app)
@@ -114,6 +122,8 @@ class AppGraph(private val app: Application) {
             withContext(Dispatchers.Main) {
                 devices = DeviceWatcher(app) { send(Command.RefreshDevices) }.also { it.start() }
                 followAppIcon()
+                // What Google Play says about Pro, now that the core can hear it.
+                play?.start()
             }
             send(Command.RefreshDevices)
             library.onCoreReady()

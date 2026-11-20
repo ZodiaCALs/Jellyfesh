@@ -34,6 +34,12 @@ class MainActivity : ComponentActivity() {
         controller = MediaController.Builder(this, SessionToken(this, ComponentName(this, PlaybackService::class.java))).buildAsync()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // A purchase may have completed while Jellyfesh was away (Play Billing's guidance).
+        app.graph.purchases?.refresh()
+    }
+
     override fun onStop() {
         controller?.let { MediaController.releaseFuture(it) }
         controller = null

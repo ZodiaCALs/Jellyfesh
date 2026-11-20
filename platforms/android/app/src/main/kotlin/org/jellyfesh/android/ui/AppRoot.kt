@@ -50,6 +50,7 @@ import org.jellyfesh.android.CoreStartup
 import org.jellyfesh.android.R
 import org.jellyfesh.android.system.DeviceEffects
 import org.jellyfesh.android.ui.components.EmptyState
+import org.jellyfesh.android.billing.StoreNotice
 import org.jellyfesh.android.ui.components.LocalOverlays
 import org.jellyfesh.android.ui.components.OverlayHost
 import org.jellyfesh.android.ui.components.Overlays
@@ -155,6 +156,21 @@ private fun StartupFailed(message: String) {
 @Composable
 private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
     val nav = remember { NavController(graph.nav) }
+    // What the store says about a purchase the person asked for (Google Play builds).
+    val context = LocalContext.current
+    LaunchedEffect(graph.purchases) {
+        graph.purchases?.notices?.collect { notice ->
+            overlays.toast(
+                context.getString(
+                    when (notice) {
+                        StoreNotice.Pending -> R.string.pro_pending
+                        StoreNotice.NothingToRestore -> R.string.pro_nothing_to_restore
+                        StoreNotice.Failed -> R.string.pro_store_failed
+                    },
+                ),
+            )
+        }
+    }
     val navState by graph.nav.collectAsStateWithLifecycle()
     val reduce = Jf.effects.reduceMotion
     val hasPlayer = PlayerModel.track(state) != null

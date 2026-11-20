@@ -522,4 +522,8 @@
     <string name="ai_model_delete_body">You can download it again.</string>
     <string name="ai_sending_audio">Sending Audio</string>
     <string name="ai_stop_allowing">Stop Allowing</string>
+    <!-- v0.0.7: Jellyfesh Pro on Google Play -->
+    <string name="pro_pending">Your purchase is pending. Jellyfesh Pro turns on once Google Play completes it.</string>
+    <string name="pro_nothing_to_restore">Google Play has no purchase of Jellyfesh Pro for this account.</string>
+    <string name="pro_store_failed">Google Play couldn’t do that now. Try again later.</string>
 </resources>
