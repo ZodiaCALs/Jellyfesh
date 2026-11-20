@@ -457,3 +457,65 @@ final class LyricsMakingStepTests: XCTestCase {
         XCTAssertNil(lyrics.madeBy(for: 3))
     }
 }
+
+@MainActor
+final class DiscoverTests: XCTestCase {
+    private func shelf(_ id: String, items: [SourceResult], more: String? = nil) -> DiscoverShelf {
+        DiscoverShelf(id: id, title: "Shelf \(id)", layout: .row, items: items, more: more)
+    }
+
+    func testThePageShowsTheCoresShelves() {
+        let client = FakeCoreClient()
+        let answers = CoreAnswers(client: client, tracker: CommandTracker())
+        let page = DiscoverModel(source: "org.jellyfesh.jellyfin")
+        page.load(answers)
+        XCTAssertTrue(page.loading)
+        XCTAssertFalse(page.loaded)
+        guard case .discover(let source)? = client.sent.last else { return XCTFail("asked for the page") }
+        XCTAssertEqual(source, "org.jellyfesh.jellyfin")
+        let items = [Fixture.result("a", source: source), Fixture.result("b", source: source)]
+        answers.apply(discover: DiscoverAnswer(request: client.lastCommandID, source: source,
+                                               shelves: [shelf("for_you", items: items), shelf("empty", items: [])],
+                                               error: nil))
+        XCTAssertTrue(page.loaded)
+        XCTAssertFalse(page.loading)
+        XCTAssertEqual(page.shelves.map(\.id), ["for_you"], "an empty shelf is left out")
+        XCTAssertNil(page.error)
+    }
+
+    func testAFailureCanBeTriedAgain() {
+        let client = FakeCoreClient()
+        let tracker = CommandTracker()
+        let answers = CoreAnswers(client: client, tracker: tracker)
+        let page = DiscoverModel(source: "org.jellyfesh.subsonic")
+        page.load(answers)
+        XCTAssertTrue(tracker.fail(client.lastCommandID, message: "The server did not answer."))
+        XCTAssertEqual(page.error, "The server did not answer.")
+        XCTAssertFalse(page.loading)
+        page.load(answers)
+        XCTAssertNil(page.error)
+        answers.apply(discover: DiscoverAnswer(request: client.lastCommandID, source: "org.jellyfesh.subsonic",
+                                               shelves: [], error: "Sign in first."))
+        XCTAssertEqual(page.error, "Sign in first.")
+        XCTAssertTrue(page.loaded)
+    }
+
+    func testShelfWordsAndPlaying() {
+        let source = "org.jellyfesh.jellyfin"
+        XCTAssertEqual(DiscoverText.title(shelf("browse", items: []), sourceName: "Jellyfin"), "Jellyfin")
+        XCTAssertEqual(DiscoverText.title(shelf("node-17", items: []), sourceName: "Jellyfin"), "Shelf node-17")
+        XCTAssertFalse(DiscoverText.title(shelf("for_you", items: []), sourceName: "Jellyfin").isEmpty)
+
+        var unplayable = Fixture.result("x", source: source, track: .source(SourceSong(plugin: source, id: "x", title: "x")))
+        unplayable.playable = false
+        let album = Fixture.result("al", source: source, kind: .album)
+        let first = Fixture.result("1", source: source, track: .source(SourceSong(plugin: source, id: "1", title: "1")))
+        let second = Fixture.result("2", source: source, track: .source(SourceSong(plugin: source, id: "2", title: "2")))
+        let row = shelf("mix", items: [first, unplayable, album, second])
+        let queue = DiscoverText.queue(of: row, from: second)
+        XCTAssertEqual(queue?.tracks, [first.track, second.track].compactMap { $0 })
+        XCTAssertEqual(queue?.start, 1)
+        XCTAssertNil(DiscoverText.queue(of: row, from: unplayable))
+        XCTAssertNil(DiscoverText.queue(of: row, from: album))
+    }
+}

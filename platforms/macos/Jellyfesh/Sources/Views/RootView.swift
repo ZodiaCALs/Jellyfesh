@@ -217,6 +217,8 @@ struct RoutePage: View {
         case .playlist(let id): PlaylistDetailView(playlistID: id)
         case .browse(let plugin, let node, let title, let link, let item):
             BrowseView(plugin: plugin, node: node, title: title, link: link, item: item)
+        case .discover(let plugin, let title):
+            DiscoverView(plugin: plugin, title: title)
         case .appleMusic: AppleMusicView()
         }
     }

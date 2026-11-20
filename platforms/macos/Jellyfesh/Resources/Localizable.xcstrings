@@ -1843,6 +1843,28 @@
         }
       }
     },
+    "Browse": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウズ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浏览"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瀏覽"
+          }
+        }
+      }
+    },
     "Buy Jellyfesh Pro – %@": {
       "localizations": {
         "ja": {
@@ -3445,6 +3467,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "跟隨封面"
+          }
+        }
+      }
+    },
+    "For You": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたへのおすすめ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为你推荐"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為你推薦"
           }
         }
       }
@@ -6639,6 +6683,28 @@
         }
       }
     },
+    "Rediscover": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再発見"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新发现"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新發現"
+          }
+        }
+      }
+    },
     "Reduce Motion and Transparency": {
       "localizations": {
         "ja": {
@@ -7295,6 +7361,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜尋你的音樂"
+          }
+        }
+      }
+    },
+    "See All": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看全部"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看全部"
           }
         }
       }

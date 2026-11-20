@@ -68,6 +68,8 @@ enum Route: Hashable {
     /// A source's container (`node` nil is its root); `link` opens it in its service. `item` is the
     /// container as the list it was chosen from showed it (its kind, artist and artwork), when known.
     case browse(plugin: String, node: String?, title: String, link: String? = nil, item: SourceResult? = nil)
+    /// A source's Discover page (ADR-0022): its shelves, with Browse for its own folders.
+    case discover(plugin: String, title: String)
     /// Apple Music's catalogue (a player the app provides, ADR-0018 item 5).
     case appleMusic
 }

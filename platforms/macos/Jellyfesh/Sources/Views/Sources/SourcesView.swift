@@ -1,8 +1,8 @@
 // Sources (docs/ui.md): what sources are, Add a Source (the core's services, connected as in
 // Settings, and Apple Music where this copy of the app can use it), Your Sources (the installed
-// plugins with their badges and accounts, and Apple Music once on; choosing one browses its
-// catalogue page by page) and Sources Settings…, where installing, enabling and each source's
-// settings live.
+// plugins with their badges and accounts, and Apple Music once on; choosing one opens its Discover
+// page, which browses its catalogue page by page from Browse) and Sources Settings…, where
+// installing, enabling and each source's settings live.
 
 import SwiftUI
 
@@ -71,8 +71,8 @@ struct SourcesView: View {
                 .trackListRow()
             }
             ForEach(sources.plugins) { plugin in
-                if plugin.enabled && plugin.canBrowse {
-                    NavigationLink(value: Route.browse(plugin: plugin.id, node: nil, title: plugin.name)) {
+                if plugin.enabled && (plugin.canBrowse || plugin.hasDiscover) {
+                    NavigationLink(value: Route.discover(plugin: plugin.id, title: plugin.name)) {
                         SourceRow(plugin: plugin)
                     }
                     .trackListRow()

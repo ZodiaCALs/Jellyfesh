@@ -213,15 +213,20 @@ struct SegmentedControl<Value: Hashable>: View {
 
 /// A section heading on library pages (`type-roles.section`).
 struct SectionTitle: View {
-    var title: LocalizedStringKey
+    private let text: Text
     @Environment(\.palette) private var palette
 
     init(_ title: LocalizedStringKey) {
-        self.title = title
+        text = Text(title)
+    }
+
+    /// A title in a source's own words (a Discover shelf), shown as it is.
+    init(verbatim title: String) {
+        text = Text(verbatim: title)
     }
 
     var body: some View {
-        Text(title)
+        text
             .typography(Tokens.TypeRoles.section)
             .foregroundStyle(palette[Tokens.Ink.ink90])
             .accessibilityAddTraits(.isHeader)
