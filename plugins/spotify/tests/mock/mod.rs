@@ -36,6 +36,9 @@ pub struct State {
     pub no_seat: bool,
     /// Every request answers 429 with this many seconds.
     pub throttle: Option<u32>,
+    /// A sign-in from before the plugin asked for `user-read-recently-played`
+    /// and `user-top-read`: the history and the top lists answer 403.
+    pub old_scopes: bool,
     pub playing: bool,
     pub device: Option<String>,
     pub context: Option<String>,
@@ -183,9 +186,55 @@ fn answer(state: &Mutex<State>, request: &Request) -> Response {
             ok(body)
         }
         ("GET", "/me/playlists") => ok(paging(rest, 3, &query, |i| {
+            // Playlists' pictures: an album cover, an uploaded cover, a mosaic
+            // (invented paths on the hosts Spotify uses for each).
+            let images = match i {
+                1 => {
+                    json!([{ "url": "https://image-cdn-ak.spotifycdn.com/image/ab67706c0000mock", "width": null, "height": null }])
+                }
+                2 => {
+                    json!([{ "url": "https://mosaic.scdn.co/640/ab67616d0000mock", "width": 640, "height": 640 },
+                             { "url": "https://mosaic.scdn.co/300/ab67616d0000mock", "width": 300, "height": 300 }])
+                }
+                _ => image("pl"),
+            };
             json!({ "id": format!("{PLAYLIST}{i}"), "name": format!("Playlist {i}"), "owner": { "display_name": "Mock Listener" },
-                    "images": image("pl"), "items": { "total": 30 }, "tracks": { "total": 30 } })
+                    "images": images, "items": { "total": 30 }, "tracks": { "total": 30 } })
         })),
+        ("GET", "/me/player/recently-played" | "/me/top/tracks" | "/me/top/artists") if s.old_scopes => {
+            api_error(403, "Insufficient client scope", None)
+        }
+        ("GET", "/me/player/recently-played") => {
+            let limit: usize = query.get("limit").and_then(|l| l.parse().ok()).unwrap_or(20);
+            if limit > 50 {
+                return api_error(400, "Invalid limit", None);
+            }
+            // Newest first; track 2 was played twice.
+            let plays: Vec<Value> = [2, 0, 2, 1]
+                .iter()
+                .enumerate()
+                .map(|(i, n)| json!({ "track": track(*n), "played_at": format!("2026-11-19T20:0{i}:00.000Z"), "context": null }))
+                .collect();
+            ok(
+                json!({ "href": rest, "items": plays, "limit": limit, "next": null,
+                       "cursors": { "after": "1780000000000", "before": "1779990000000" } }),
+            )
+        }
+        ("GET", "/me/top/tracks" | "/me/top/artists") => {
+            if query.get("time_range").map(String::as_str) != Some("short_term") {
+                return api_error(400, "time_range short_term expected (mock)", None);
+            }
+            if rest.ends_with("tracks") {
+                ok(paging(rest, 25, &query, |i| track(i + 10)))
+            } else {
+                ok(paging(
+                    rest,
+                    2,
+                    &query,
+                    |i| json!({ "id": format!("{ARTIST}{i}"), "name": format!("Top Artist {i}"), "type": "artist", "images": image("artist") }),
+                ))
+            }
+        }
         ("GET", "/me/albums") => ok(paging(
             rest,
             2,
@@ -223,10 +272,46 @@ fn answer(state: &Mutex<State>, request: &Request) -> Response {
                 album(&format!("{ALBUM}{i:02}"), &format!("Album {i}"))
             }))
         }
-        ("GET", path) if path == format!("/albums/{ALBUM}") => ok(album(ALBUM, "Night Ferry")),
-        ("GET", path) if path == format!("/playlists/{PLAYLIST}") => ok(
-            json!({ "id": PLAYLIST, "name": "Harbour Mix", "owner": { "display_name": "Mock Curator" }, "images": image("pl") }),
-        ),
+        ("GET", path) if path == format!("/albums/{ALBUM}") => {
+            let mut album = album(ALBUM, "Night Ferry");
+            album["album_type"] = json!("album");
+            album["copyrights"] = json!([{ "text": "2021 Mock Records", "type": "C" }, { "text": "(P) 2021 Mock Records", "type": "P" }]);
+            // Deprecated fields still sent to some apps; the plugin ignores them.
+            album["label"] = json!("Mock Records");
+            album["genres"] = json!([]);
+            ok(album)
+        }
+        ("GET", path) if path == format!("/artists/{ARTIST}") => {
+            ok(json!({ "id": ARTIST, "name": "Ada Example", "type": "artist", "images": image("artist") }))
+        }
+        ("GET", path) if path.starts_with("/tracks/") => {
+            let n: usize = path
+                .rsplit('K')
+                .next()
+                .and_then(|n| n.parse().ok())
+                .unwrap_or(usize::MAX);
+            if path != format!("/tracks/{}", track_id(n)) {
+                return api_error(404, "Non existing id", None);
+            }
+            ok(track(n))
+        }
+        ("GET", path) if path == format!("/playlists/{PLAYLIST}") => {
+            let mut playlist = json!({ "id": PLAYLIST, "name": "Harbour Mix", "owner": { "display_name": "Mock Curator" },
+                                       "images": image("pl"),
+                                       "description": "Invented songs for a ferry &amp; a <a href=\"spotify:playlist:x\">harbour</a>&#x27;s lights." });
+            // `fields` picks the fields, as Spotify does.
+            if let Some(fields) = query.get("fields") {
+                let keep: Vec<&str> = fields
+                    .split(',')
+                    .map(|f| f.split('(').next().unwrap_or(f))
+                    .collect();
+                playlist
+                    .as_object_mut()
+                    .unwrap()
+                    .retain(|k, _| keep.contains(&k.as_str()));
+            }
+            ok(playlist)
+        }
         ("GET", "/me/player/devices") => ok(json!({ "devices": [
             { "id": "dev-phone", "is_active": false, "is_private_session": false, "is_restricted": false,
               "name": "Pocket Phone", "type": "Smartphone", "volume_percent": 80, "supports_volume": true },

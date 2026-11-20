@@ -1,21 +1,24 @@
 id = "org.jellyfesh.spotify"
 name = "Spotify"
-version = "0.0.6"
-api_version = "1.1"
+version = "0.0.7"
+api_version = "1.2"
 author = "Jellyfesh"
 description = "Control Spotify on your own devices with the Client ID of your own Spotify app (beta)"
 official = true
-capabilities = ["auth", "search", "browse", "remote"]
+capabilities = ["auth", "search", "browse", "remote", "discover", "details"]
 # Spotify allows only remote control of the person's own players: no stream,
 # and its items never join Jellyfesh's queue (ADR-0011, ADR-0018).
 playback_mode = "remote"
 auth = ["oauth"]
 
 [network]
-# Sign-in and tokens, the Web API, and cover pictures (i.scdn.co is the host in
-# the Web API reference's examples; mosaic.scdn.co serves playlist mosaics and
-# is not confirmed by the documentation).
-allow = ["accounts.spotify.com", "api.spotify.com", "i.scdn.co", "mosaic.scdn.co"]
+# Sign-in and tokens, the Web API, and cover pictures. i.scdn.co is the host in
+# the Web API reference's examples; playlists' pictures come from other hosts
+# of Spotify's picture domains too (mosaic.scdn.co for mosaics,
+# image-cdn-*.spotifycdn.com for uploaded covers; not confirmed by the
+# documentation), so both domains are allowed. The plugin itself calls only
+# the first two hosts; the app loads the pictures.
+allow = ["accounts.spotify.com", "api.spotify.com", "*.scdn.co", "*.spotifycdn.com"]
 max_rps = 5
 
 [oauth]

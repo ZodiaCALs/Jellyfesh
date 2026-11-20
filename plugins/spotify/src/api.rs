@@ -22,7 +22,8 @@ pub const ACCOUNTS: &str = "https://accounts.spotify.com";
 pub const API: &str = "https://api.spotify.com/v1";
 /// What the plugin asks the person to allow.
 pub const SCOPES: &str = "user-read-playback-state user-modify-playback-state user-read-currently-playing \
-                          user-library-read playlist-read-private playlist-read-collaborative user-read-private";
+                          user-library-read playlist-read-private playlist-read-collaborative user-read-private \
+                          user-read-recently-played user-top-read";
 /// The person's own Client ID, when they typed one at sign-in.
 pub const CLIENT_SECRET_NAME: &str = "client-id";
 /// The Client ID of the Spotify app a release build signs in with, from the

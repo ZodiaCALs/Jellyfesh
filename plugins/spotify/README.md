@@ -23,6 +23,10 @@ Spotify stays in its own views in Jellyfesh until they are answered.
 * **Search** tracks, artists, albums and playlists.
 * **Browse** your playlists, saved albums and liked songs, an album's tracks
   and an artist's albums.
+* **Discover** (plugin API 1.2): Recently Played, Your Top Tracks, Your Top
+  Artists, Your Playlists and Saved Albums. **Details**: an album's release
+  date, kind and copyrights, a song's release date and ISRC, a playlist's
+  description and owner, each with the largest picture.
 * **Open in Spotify** on every track, album, artist and playlist.
 
 Spotify items never join Jellyfesh's queue, are not kept in the library,
@@ -77,4 +81,10 @@ Spotify account's apps page or delete the app in the dashboard.
 * Devices that refuse remote commands (Spotify marks them restricted) are
   not listed.
 * Podcasts and local files are not shown.
+* Only what Spotify still offers apps in Development Mode (its Web API
+  reference marks the rest deprecated): no new releases, featured
+  playlists, categories, recommendations, related artists or artist top
+  tracks; no labels, genres, popularity or follower counts. The scopes
+  `user-read-recently-played` and `user-top-read` (new in 0.0.7) need a new
+  sign-in from people who signed in before.
 * A list of tracks is sent 100 at a time around the one you start.

@@ -2,12 +2,14 @@
 //! devices through the Web API, with the Client ID of their own Spotify app
 //! (Development Mode). Search, browse (playlists, saved albums, liked songs,
 //! albums, artists) and the player; Spotify plays the music itself, never
-//! Jellyfesh's engine (ADR-0011, ADR-0018).
+//! Jellyfesh's engine (ADR-0011, ADR-0018). API 1.2: a Discover page of the
+//! person's own listening and lists, and details (see `discover`).
 //!
 //! Tested only against a mock server written from the Web API reference,
 //! not yet against the live service.
 
 mod api;
+mod discover;
 mod items;
 mod login;
 mod remote;
@@ -285,6 +287,14 @@ impl Plugin for Spotify {
             }
             ItemKind::Track => Err(PluginError::invalid_input("a track has nothing to browse")),
         }
+    }
+
+    fn discover() -> Result<Vec<Shelf>> {
+        discover::discover()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        discover::details(item)
     }
 
     fn remote_devices() -> Result<Vec<RemoteDevice>> {

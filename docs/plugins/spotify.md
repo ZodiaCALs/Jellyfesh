@@ -82,6 +82,20 @@ this account yet"), the app has no seat for you: use your own app.
 * **Search** tracks, artists, albums and playlists, ten per type at a time.
 * **Browse** Your Playlists, Saved Albums and Liked Songs, an album's tracks
   and an artist's albums.
+* **Discover** (Jellyfesh v0.0.7): Recently Played, Your Top Tracks and Your
+  Top Artists of the last four weeks, Your Playlists and Saved Albums. These
+  are the lists Spotify still lets apps like yours read: since its 2024 and
+  February 2026 changes, new releases, featured playlists, categories,
+  recommendations and an artist's top tracks are closed to apps in
+  Development Mode. If you signed in before v0.0.7, sign out and in again to
+  allow Recently Played and Top (Spotify asks for two more permissions);
+  until then those shelves are left out.
+* **Get Info** (v0.0.7) on an album shows its release date, kind and
+  copyright lines; on a song its release date and ISRC; on a playlist its
+  description and owner; with the largest picture. Spotify has no artist
+  biographies, labels or genres for these apps, and no comments.
+* **Covers** load from Spotify's picture servers, including uploaded
+  playlist covers and mosaics.
 * **Open in Spotify** on every track, album, artist and playlist.
 
 ## Signing out

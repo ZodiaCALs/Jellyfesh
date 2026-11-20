@@ -134,6 +134,8 @@ fn signs_in_with_pkce_and_the_persons_own_client_id() {
         "user-modify-playback-state",
         "user-library-read",
         "playlist-read-private",
+        "user-read-recently-played",
+        "user-top-read",
     ] {
         assert!(q["scope"].split(' ').any(|s| s == scope), "{scope}");
     }
@@ -505,7 +507,7 @@ fn searches_and_browses_the_library() {
 fn the_published_package_keeps_to_spotify_and_its_terms() {
     let files = PluginFiles::read(crate_dir());
     let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
-    assert_eq!(manifest.api_version.to_string(), "1.1");
+    assert_eq!(manifest.api_version.to_string(), "1.2");
     assert_eq!(manifest.version.to_string(), env!("CARGO_PKG_VERSION"));
     assert_eq!(manifest.playback_mode, PlaybackMode::Remote);
     assert_eq!(manifest.oauth_redirect_port, Some(29817));
@@ -530,4 +532,218 @@ fn the_published_package_keeps_to_spotify_and_its_terms() {
             .is_err(),
         "the real package has no test server setting"
     );
+}
+
+/// The manifest's allowlist covers `url`'s host (https only).
+fn allowed_picture(url: &str) -> bool {
+    let files = PluginFiles::read(crate_dir());
+    let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
+    let Some(rest) = url.strip_prefix("https://") else {
+        return false;
+    };
+    let host = rest.split('/').next().unwrap();
+    manifest.allow.iter().any(|rule| rule.matches_fixed(host, 443))
+}
+
+#[test]
+fn discover_shows_the_persons_listening_and_lists() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(
+        titles,
+        [
+            "Recently Played",
+            "Your Top Tracks",
+            "Your Top Artists",
+            "Your Playlists",
+            "Saved Albums"
+        ]
+    );
+    // Each song once, newest first.
+    let recent: Vec<&str> = shelves[0].items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(recent, [mock::track_id(2), mock::track_id(0), mock::track_id(1)]);
+    assert_eq!(shelves[1].style, jf_plugin_host::ShelfStyle::Chart);
+    assert_eq!(shelves[1].items.len(), 20);
+    assert_eq!(shelves[2].items[0].kind, ItemKind::Artist);
+    assert_eq!(shelves[3].more.as_deref(), Some("playlists"));
+    assert_eq!(shelves[4].more.as_deref(), Some("albums"));
+    let asked: Vec<String> = mock
+        .server
+        .requests()
+        .iter()
+        .filter(|r| r.path().starts_with("/v1"))
+        .map(|r| r.path().to_string())
+        .collect();
+    assert_eq!(
+        asked,
+        [
+            "/v1/me/player/recently-played",
+            "/v1/me/top/tracks",
+            "/v1/me/top/artists",
+            "/v1/me/playlists",
+            "/v1/me/albums"
+        ],
+        "only endpoints Development Mode apps may call"
+    );
+    // Covers: every item has one, on a host the package may load.
+    for item in shelves.iter().flat_map(|s| &s.items) {
+        let url = &item
+            .artwork
+            .as_ref()
+            .unwrap_or_else(|| panic!("{} has no cover", item.title))
+            .url;
+        assert!(allowed_picture(url), "{url}");
+    }
+    // See All opens the library's lists.
+    let more = item(ItemKind::Folder, "playlists", "Your Playlists");
+    assert_eq!(
+        recv(env.host.browse(ID, Some(more), page(50)))
+            .unwrap()
+            .items
+            .len(),
+        3
+    );
+}
+
+#[test]
+fn discover_leaves_out_what_an_older_sign_in_may_not_read() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    mock.state.lock().unwrap().old_scopes = true;
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(titles, ["Your Playlists", "Saved Albums"]);
+    // An account Spotify refuses everything fails the page with its words.
+    mock.state.lock().unwrap().no_seat = true;
+    let Err(CallError::Plugin(PluginError::Service(message))) = recv(env.host.discover(ID)) else {
+        panic!("expected Spotify's refusal");
+    };
+    assert!(message.contains("HTTP 403"), "{message}");
+}
+
+#[test]
+fn details_of_albums_songs_artists_and_playlists() {
+    use jf_plugin_host::FactKey;
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    let facts = |details: &jf_plugin_host::ItemDetails| -> Vec<(FactKey, String)> {
+        details
+            .facts
+            .iter()
+            .map(|f| (f.key.clone(), f.value.clone()))
+            .collect()
+    };
+    let album = recv(
+        env.host
+            .details(ID, item(ItemKind::Album, mock::ALBUM, "Night Ferry")),
+    )
+    .unwrap();
+    assert_eq!(
+        facts(&album),
+        [
+            (FactKey::Released, "2021-05-07".to_string()),
+            (FactKey::Other("Type".into()), "Album".into()),
+            (FactKey::Other("Copyright".into()), "© 2021 Mock Records".into()),
+            (FactKey::Other("Copyright".into()), "(P) 2021 Mock Records".into()),
+        ],
+        "no label: Spotify deprecated it"
+    );
+    assert_eq!(
+        album.image.unwrap().url,
+        format!("https://i.scdn.co/image/{}-640", mock::ALBUM),
+        "the largest picture"
+    );
+    assert_eq!(album.description, None);
+
+    let song = recv(
+        env.host
+            .details(ID, item(ItemKind::Track, &mock::track_id(7), "Harbour Song 7")),
+    )
+    .unwrap();
+    assert_eq!(
+        facts(&song),
+        [
+            (FactKey::Released, "2021-05-07".to_string()),
+            (FactKey::Other("ISRC".into()), "QZMCK2600007".into())
+        ]
+    );
+    assert!(song.image.is_some());
+
+    let artist = recv(
+        env.host
+            .details(ID, item(ItemKind::Artist, mock::ARTIST, "Ada Example")),
+    )
+    .unwrap();
+    assert_eq!(artist.image.unwrap().url, "https://i.scdn.co/image/artist-640");
+    assert!(artist.facts.is_empty() && artist.description.is_none());
+
+    let playlist = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, mock::PLAYLIST, "Harbour Mix")),
+    )
+    .unwrap();
+    assert_eq!(
+        playlist.description.as_deref(),
+        Some("Invented songs for a ferry & a harbour's lights.")
+    );
+    assert_eq!(
+        facts(&playlist),
+        [(FactKey::Other("Owner".into()), "Mock Curator".to_string())]
+    );
+    let asked = mock
+        .server
+        .requests_to(&format!("/v1/playlists/{}", mock::PLAYLIST))
+        .pop()
+        .unwrap();
+    assert_eq!(
+        asked.query("fields").as_deref(),
+        Some("description,images,owner(display_name)"),
+        "not the playlist's songs"
+    );
+    assert_eq!(
+        recv(
+            env.host
+                .details(ID, item(ItemKind::Folder, "tracks", "Liked Songs"))
+        ),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Track, "../me", "x"))),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+    assert_eq!(
+        recv(
+            env.host
+                .details(ID, item(ItemKind::Track, "4uLU6hMCjMI75M1A2tKmissing", "x"))
+        ),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+}
+
+#[test]
+fn signed_in_lists_carry_covers_the_package_may_load() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    for (id, title) in [
+        ("playlists", "Your Playlists"),
+        ("albums", "Saved Albums"),
+        ("tracks", "Liked Songs"),
+    ] {
+        let listed = recv(
+            env.host
+                .browse(ID, Some(item(ItemKind::Folder, id, title)), page(50)),
+        )
+        .unwrap();
+        assert!(!listed.items.is_empty());
+        for entry in &listed.items {
+            let url = &entry
+                .artwork
+                .as_ref()
+                .unwrap_or_else(|| panic!("{} has no cover", entry.title))
+                .url;
+            assert!(allowed_picture(url), "{title}: {url}");
+        }
+    }
 }
