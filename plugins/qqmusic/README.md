@@ -16,6 +16,9 @@ documentation.
 * **Browse** Daily 30, Guess You Like, AI Playlists, and the charts (by
   group, then each chart's songs); open a playlist to see its songs.
 * **For You**: Daily 30, then Guess You Like.
+* **Discover** (plugin API 1.2): Daily 30, Guess You Like, AI Playlists, the
+  first chart's songs and the charts. **Details** of playlists and charts:
+  description, picture, listens and when a chart was updated.
 * **Open in QQ Music** on every song, album, singer and playlist
   (`https://i2.y.qq.com/a/…` pages, which the API documentation gives).
 
@@ -44,8 +47,11 @@ If the key leaks, reset it on the key page and sign in again.
 | Search results and lists | nowhere: QQ Music items are not kept in the library |
 
 The key is sent only to QQ Music's API (`a.y.qq.com`), in the
-`Authorization` header. Signing out deletes it from this device; to make it
-stop working everywhere, delete or reset it on the key page.
+`Authorization` header. The pictures of playlists and charts load from
+`y.gtimg.cn` and `qpic.y.qq.com` (the hosts QQ Music uses for pictures; the
+documentation gives no example URL, so other hosts would not load), without
+the key. Signing out deletes the key from this device; to make it stop
+working everywhere, delete or reset it on the key page.
 
 ## Known limits
 
@@ -53,7 +59,10 @@ stop working everywhere, delete or reset it on the key page.
   your own playlists and favourites; albums and singers open in QQ Music.
 * Songs come without length, album or cover, so they cannot be matched with
   the same songs from other sources, and QQ Music results are not part of
-  searching everything.
+  searching everything. Only a playlist's or a chart's own answer names a
+  picture, so lists show few covers.
+* No details for songs, albums or singers and no comments: the API has
+  neither.
 * QQ Music limits how fast its API may be called but does not say how much;
   the plugin sends at most two requests a second.
 * Not checked against the live service: answers that differ from the

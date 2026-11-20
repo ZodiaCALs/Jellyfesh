@@ -322,16 +322,18 @@ fn service_answers_map_to_the_hosts_errors() {
 fn the_published_package_reaches_only_qq_music() {
     let files = PluginFiles::read(crate_dir());
     let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
-    assert_eq!(manifest.api_version.to_string(), "1.1");
+    assert_eq!(manifest.api_version.to_string(), "1.2");
     assert_eq!(manifest.version.to_string(), env!("CARGO_PKG_VERSION"));
     assert_eq!(manifest.max_rps, 2);
+    let host = |host: &str| jf_plugin_host::manifest::AllowRule::Host {
+        host: host.into(),
+        wildcard: false,
+        port: 443,
+    };
     assert_eq!(
         manifest.allow,
-        [jf_plugin_host::manifest::AllowRule::Host {
-            host: "a.y.qq.com".into(),
-            wildcard: false,
-            port: 443
-        }]
+        [host("a.y.qq.com"), host("y.gtimg.cn"), host("qpic.y.qq.com")],
+        "the API, and its pictures"
     );
     assert!(!manifest.content_policy.unified_search);
     assert_eq!(
@@ -349,5 +351,106 @@ fn the_published_package_reaches_only_qq_music() {
         env.host
             .set_settings(ID, &json!({ "test_server": "http://127.0.0.1:9" }).to_string())
             .is_err()
+    );
+}
+
+#[test]
+fn discover_shows_the_lists_the_api_documents() {
+    let server = mock::start();
+    let env = signed_in(&server);
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(
+        titles,
+        [
+            "Daily 30",
+            "Guess You Like",
+            "AI Playlists",
+            "Hot Songs",
+            "Charts"
+        ]
+    );
+    assert_eq!(shelves[0].items.len(), 30);
+    assert_eq!(shelves[0].more.as_deref(), Some("daily"));
+    assert!(shelves[0].items.iter().all(|i| !i.playable), "nothing plays here");
+    assert_eq!(shelves[3].style, jf_plugin_host::ShelfStyle::Chart);
+    assert_eq!(shelves[3].more.as_deref(), Some("chart:26"));
+    assert_eq!(shelves[3].items.len(), mock::PAGE);
+    let charts: Vec<&str> = shelves[4].items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(charts, ["chart:26", "chart:27", "chart:3"]);
+    let paths: Vec<String> = server.requests().iter().map(|r| r.path().to_string()).collect();
+    assert_eq!(
+        paths,
+        [
+            "/discover/daily-mix",
+            "/discover/radio",
+            "/discover/ai-playlists",
+            "/charts",
+            "/charts/detail"
+        ]
+    );
+    // See All opens the same lists.
+    let daily = recv(
+        env.host
+            .browse(ID, Some(item(ItemKind::Folder, "daily", "Daily 30")), page(50)),
+    )
+    .unwrap();
+    assert_eq!(daily.items.len(), 30);
+}
+
+#[test]
+fn details_of_playlists_and_charts() {
+    use jf_plugin_host::FactKey;
+    let server = mock::start();
+    let env = signed_in(&server);
+    let playlist = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "7100000002", "Rainy Commute (AI)")),
+    )
+    .unwrap();
+    assert_eq!(
+        playlist.description.as_deref(),
+        Some("Invented songs for a rainy commute.")
+    );
+    assert_eq!(
+        playlist.image.map(|i| i.url).as_deref(),
+        Some("https://qpic.y.qq.com/mock/playlist-cover/300"),
+        "the picture host's http link, as https"
+    );
+    let chart = recv(
+        env.host
+            .details(ID, item(ItemKind::Folder, "chart:26", "Hot Songs")),
+    )
+    .unwrap();
+    assert_eq!(chart.description.as_deref(), Some("Invented."));
+    let facts: Vec<(FactKey, String)> = chart
+        .facts
+        .iter()
+        .map(|f| (f.key.clone(), f.value.clone()))
+        .collect();
+    assert_eq!(
+        facts,
+        [
+            (FactKey::Popularity, "1,000 listens".to_string()),
+            (FactKey::Other("Updated".into()), "2026-11-16".into())
+        ]
+    );
+    assert_eq!(
+        chart.image.map(|i| i.url).as_deref(),
+        Some("https://y.gtimg.cn/mock/chart-header.jpg")
+    );
+    let asked = server.requests_to("/charts/detail");
+    assert_eq!(asked.last().unwrap().json().unwrap()["params"]["page"], 0);
+    // The API describes no song, album or singer.
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Track, "0039Daily0000", "x"))),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+    assert_eq!(
+        recv(
+            env.host
+                .details(ID, item(ItemKind::Playlist, "not-a-number", "x"))
+        ),
+        Err(CallError::Plugin(PluginError::NotFound))
     );
 }

@@ -98,6 +98,17 @@ pub fn year(date: &str) -> Option<u32> {
         .filter(|y| (1000..=2999).contains(y))
 }
 
+/// A picture the API names, as https (the hosts' http links upgraded); none
+/// for anything that is not an http(s) URL.
+pub fn picture(url: Option<&str>) -> Option<ImageRef> {
+    let url = url?.trim();
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))?;
+    let host = rest.split(['/', '?', '#']).next().unwrap_or_default();
+    (!host.is_empty() && !host.contains('@')).then(|| ImageRef::new(format!("https://{rest}")))
+}
+
 /// A playlist (`diss`) in search results and AI playlists.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -108,6 +119,9 @@ pub struct Playlist {
     pub diss_name: String,
     #[serde(default)]
     pub creator_name: Option<String>,
+    /// Its cover, where an answer names one.
+    #[serde(default, alias = "logo")]
+    pub pic_url: Option<String>,
 }
 
 impl Playlist {
@@ -118,6 +132,7 @@ impl Playlist {
         }
         let mut item = Item::new(ItemKind::Playlist, self.diss_id, title);
         item.artist = text(self.creator_name);
+        item.artwork = picture(self.pic_url.as_deref());
         Some(not_here(item))
     }
 }
@@ -236,6 +251,22 @@ mod tests {
         assert_eq!(year(""), None);
         let album: Album = parse(json!({ "albumMid": "a1", "albumName": "A", "publicTime": "1999-12-01" }));
         assert_eq!(album.item().unwrap().year, Some(1999));
+    }
+
+    #[test]
+    fn pictures_are_https() {
+        assert_eq!(
+            picture(Some(" http://qpic.y.qq.com/music_cover/x/300?n=1 ")).map(|p| p.url),
+            Some("https://qpic.y.qq.com/music_cover/x/300?n=1".into())
+        );
+        assert_eq!(picture(Some("ftp://x/y")), None);
+        assert_eq!(picture(Some("https://user@host/x")), None);
+        let p: Playlist =
+            parse(json!({ "dissId": 5, "dissName": "With cover", "picUrl": "https://y.gtimg.cn/c.jpg" }));
+        assert_eq!(
+            p.item().unwrap().artwork.map(|a| a.url).as_deref(),
+            Some("https://y.gtimg.cn/c.jpg")
+        );
     }
 
     #[test]

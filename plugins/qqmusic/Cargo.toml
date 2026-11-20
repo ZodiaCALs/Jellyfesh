@@ -2,7 +2,7 @@
 name = "jf-qqmusic"
 description = "Jellyfesh source plugin for QQ Music's open API (qqmusic-skills): search, browse and recommendations with links that open QQ Music."
 # The plugin's own version: keep it equal to `version` in manifest.toml.
-version = "0.0.6"
+version = "0.0.7"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

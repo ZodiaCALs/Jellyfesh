@@ -167,7 +167,7 @@ fn answer(request: &Request) -> Response {
             let (list, more) = paged(&format!("0039Chart{top}x"), total, page);
             ok(json!({
                 "topId": top, "topType": 0, "topName": "Hot Songs", "topDesc": "Invented.",
-                "topHeaderPic": "https://example.invalid/header.jpg", "topBannerPic": "https://example.invalid/banner.jpg",
+                "topHeaderPic": "http://y.gtimg.cn/mock/chart-header.jpg", "topBannerPic": "http://y.gtimg.cn/mock/chart-banner.jpg",
                 "listenNum": 1000, "totalNum": total, "updateTime": "2026-11-16", "hasMore": more, "trackList": list
             }))
         }
@@ -181,7 +181,8 @@ fn answer(request: &Request) -> Response {
             };
             let (list, more) = paged(&format!("0039List{diss}x"), total, page);
             ok(json!({
-                "dissId": diss, "dissName": "Invented playlist", "desc": "", "picUrl": "https://example.invalid/cover.jpg",
+                "dissId": diss, "dissName": "Invented playlist", "desc": if diss == 7_100_000_002 { "Invented songs for a rainy commute." } else { "" },
+                "picUrl": "http://qpic.y.qq.com/mock/playlist-cover/300",
                 "totalNum": total, "hasMore": more, "trackList": list
             }))
         }

@@ -4,6 +4,12 @@
 //! metadata and links: the API has no audio, so nothing plays here and every
 //! item opens in QQ Music (ADR-0018).
 //!
+//! API 1.2: a Discover page from the same documented lists (Daily 30, Guess
+//! You Like, AI Playlists, the first chart's songs and the charts), and
+//! details of playlists and charts (their description, picture, listens and
+//! when a chart was updated). Songs, albums and singers have no details in
+//! the API, and it has no comments.
+//!
 //! Tested only against a mock server written from the API documentation,
 //! not yet against the live service.
 
@@ -97,6 +103,20 @@ struct Charts {
     group_list: Option<Vec<ChartGroup>>,
 }
 
+/// What `/playlists/detail` and `/charts/detail` say about the list itself.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ListInfo {
+    #[serde(default, alias = "topDesc")]
+    desc: Option<String>,
+    #[serde(default, alias = "topHeaderPic")]
+    pic_url: Option<String>,
+    #[serde(default)]
+    listen_num: Option<i64>,
+    #[serde(default)]
+    update_time: Option<String>,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Version {
@@ -175,6 +195,141 @@ fn folder(id: &str, title: &str) -> Item {
 fn charts() -> Result<Vec<ChartGroup>> {
     let answer: Charts = call("/charts", json!({}))?;
     Ok(list(answer.group_list))
+}
+
+/// Items for a shelf, or none when this list failed (the page goes on
+/// without it); a key QQ Music refuses or a network problem fails the page.
+fn optional(result: Result<Vec<Item>>, what: &str) -> Result<Option<Vec<Item>>> {
+    match result {
+        Ok(items) => Ok(Some(items)),
+        Err(error @ (PluginError::AuthRequired | PluginError::RateLimited | PluginError::Network(_))) => {
+            Err(error)
+        }
+        Err(error) => {
+            jf_plugin_sdk::warn!("no {what} for Discover: {error:?}");
+            Ok(None)
+        }
+    }
+}
+
+fn shelf(id: &str, title: &str, style: ShelfStyle, items: Vec<Item>, more: Option<String>) -> Shelf {
+    Shelf {
+        id: id.into(),
+        title: title.into(),
+        style,
+        items,
+        more,
+    }
+}
+
+/// The Discover page: Daily 30, Guess You Like, AI Playlists, the first
+/// chart's songs and every chart, each as the API lists them.
+fn discover_shelves() -> Result<Vec<Shelf>> {
+    let mut shelves = Vec::new();
+    let daily = call::<SongList>("/discover/daily-mix", json!({})).map(|a| songs(a.songlist));
+    if let Some(items) = optional(daily, "Daily 30")?.filter(|i| !i.is_empty()) {
+        shelves.push(shelf(
+            "daily",
+            "Daily 30",
+            ShelfStyle::Row,
+            items,
+            Some("daily".into()),
+        ));
+    }
+    let radio = call::<SongList>("/discover/radio", json!({})).map(|a| songs(a.songlist));
+    if let Some(items) = optional(radio, "Guess You Like")?.filter(|i| !i.is_empty()) {
+        shelves.push(shelf(
+            "radio",
+            "Guess You Like",
+            ShelfStyle::Row,
+            items,
+            Some("radio".into()),
+        ));
+    }
+    let ai = call::<Playlists>("/discover/ai-playlists", json!({ "reqType": "all" }))
+        .map(|a| list(a.playlists).into_iter().filter_map(Playlist::item).collect());
+    if let Some(items) = optional(ai, "AI Playlists")?.filter(|i| !i.is_empty()) {
+        shelves.push(shelf(
+            "ai",
+            "AI Playlists",
+            ShelfStyle::Grid,
+            items,
+            Some("ai".into()),
+        ));
+    }
+    let charts: Vec<Item> = optional(
+        charts().map(|groups| {
+            groups
+                .into_iter()
+                .flat_map(|g| list(g.group_top_list))
+                .filter_map(items::Chart::item)
+                .collect()
+        }),
+        "charts",
+    )?
+    .unwrap_or_default();
+    if let Some(top) = charts.first() {
+        let top_id: i64 = top.id["chart:".len()..].parse().unwrap_or_default();
+        let songs = tracks_page("/charts/detail", json!({ "topId": top_id }), 0).map(|(items, _)| items);
+        if let Some(items) = optional(songs, "the first chart")?.filter(|i| !i.is_empty()) {
+            shelves.push(shelf(
+                "top",
+                &top.title,
+                ShelfStyle::Chart,
+                items,
+                Some(top.id.clone()),
+            ));
+        }
+    }
+    if !charts.is_empty() {
+        shelves.push(shelf(
+            "charts",
+            "Charts",
+            ShelfStyle::Grid,
+            charts,
+            Some("charts".into()),
+        ));
+    }
+    Ok(shelves)
+}
+
+/// `1234567` as `1,234,567`.
+fn thousands(n: i64) -> String {
+    let digits = n.unsigned_abs().to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    if n < 0 { format!("-{out}") } else { out }
+}
+
+/// Details of a playlist or a chart.
+fn list_details(path: &str, params: Value) -> Result<ItemDetails> {
+    let mut params = params;
+    params["page"] = json!(0);
+    let info: ListInfo = call(path, params)?;
+    let facts = [
+        info.listen_num.filter(|n| *n > 0).map(|n| Fact {
+            key: FactKey::Popularity,
+            value: format!("{} listens", thousands(n)),
+        }),
+        info.update_time
+            .map(|t| t.trim().to_owned())
+            .filter(|t| !t.is_empty())
+            .map(|value| Fact {
+                key: FactKey::Other("Updated".into()),
+                value,
+            }),
+    ];
+    Ok(ItemDetails {
+        description: info.desc.map(|d| d.trim().to_owned()).filter(|d| !d.is_empty()),
+        image: items::picture(info.pic_url.as_deref()),
+        facts: facts.into_iter().flatten().collect(),
+        comment_count: None,
+    })
 }
 
 impl Plugin for QqMusic {
@@ -362,6 +517,25 @@ impl Plugin for QqMusic {
         }
     }
 
+    fn discover() -> Result<Vec<Shelf>> {
+        discover_shelves()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        match (item.kind, item.id.as_str()) {
+            (ItemKind::Playlist, id) => {
+                let diss_id: i64 = id.parse().map_err(|_| PluginError::NotFound)?;
+                list_details("/playlists/detail", json!({ "dissId": diss_id }))
+            }
+            (ItemKind::Folder, id) if id.starts_with("chart:") => {
+                let top_id: i64 = id["chart:".len()..].parse().map_err(|_| PluginError::NotFound)?;
+                list_details("/charts/detail", json!({ "topId": top_id }))
+            }
+            // The open API describes no song, album or singer.
+            _ => Err(PluginError::Unsupported),
+        }
+    }
+
     fn recommendations_for_user(page: PageRequest) -> Result<ItemPage> {
         // Daily 30, then Guess You Like, read afresh for every first page.
         let start = match page.cursor.as_deref() {
@@ -386,3 +560,27 @@ impl Plugin for QqMusic {
 }
 
 jf_plugin_sdk::export_plugin!(QqMusic);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn counts_get_thousands_separators() {
+        assert_eq!(thousands(0), "0");
+        assert_eq!(thousands(999), "999");
+        assert_eq!(thousands(1000), "1,000");
+        assert_eq!(thousands(1_234_567), "1,234,567");
+        assert_eq!(thousands(-12_345), "-12,345");
+    }
+
+    #[test]
+    fn manifest_version_matches_the_crate() {
+        let manifest = include_str!("../manifest.toml");
+        let line = format!("version = \"{}\"", env!("CARGO_PKG_VERSION"));
+        assert!(
+            manifest.lines().any(|l| l == line),
+            "manifest.toml must say {line}"
+        );
+    }
+}

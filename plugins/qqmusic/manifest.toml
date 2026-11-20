@@ -1,19 +1,21 @@
 id = "org.jellyfesh.qqmusic"
 name = "QQ Music"
-version = "0.0.6"
-api_version = "1.1"
+version = "0.0.7"
+api_version = "1.2"
 author = "Jellyfesh"
 description = "Find music in QQ Music with your own API key, and open it in QQ Music"
 official = true
-capabilities = ["auth", "search", "browse", "recommendations"]
+capabilities = ["auth", "search", "browse", "recommendations", "discover", "details"]
 # QQ Music's open API (qqmusic-skills) returns metadata and links, never audio:
 # nothing plays here, and every item opens in QQ Music through [links].
 playback_mode = "stream"
 auth = ["api-key"]
 
 [network]
-# The API's gateway. Its rate limit is not published, so stay low.
-allow = ["a.y.qq.com"]
+# The API's gateway; its rate limit is not published, so stay low. Then the
+# hosts of the pictures its answers name for playlists and charts (QQ Music's
+# picture hosts; not confirmed by the documentation, which gives no example).
+allow = ["a.y.qq.com", "y.gtimg.cn", "qpic.y.qq.com"]
 max_rps = 2
 
 [settings]

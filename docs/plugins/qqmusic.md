@@ -41,10 +41,22 @@ There are no settings.
 * **Browse** Daily 30, Guess You Like, AI Playlists and the charts (by
   group); open a chart or a playlist to see its songs.
 * **For You**: Daily 30, then Guess You Like.
+* **Discover** (Jellyfesh v0.0.7): Daily 30, Guess You Like, AI Playlists,
+  the songs of the first chart and all the charts, as the API lists them; a
+  list QQ Music cannot give right now is left out. **See All** opens the
+  whole list.
+* **Get Info** (v0.0.7) on a playlist or a chart shows its description and
+  picture, how many people listened to it and, for a chart, when it was
+  last updated. The API says nothing more about songs, albums and singers,
+  and it has no comments.
 * **Open in QQ Music** on any song, album, singer or playlist.
 
 Albums and singers cannot be opened in Jellyfesh: the API cannot list their
 music, so they open in QQ Music.
+
+**Covers**: the API gives pictures only for a playlist or a chart that you
+open (Get Info), never for songs, albums or singers, or in its lists of
+playlists. So most QQ Music items show no cover.
 
 ## Signing out
 
@@ -65,5 +77,7 @@ until you delete or reset it on the key page.
 ## Privacy
 
 The key goes only to QQ Music's API (`a.y.qq.com`), in a request header.
+Pictures of playlists and charts load from QQ Music's picture servers
+(`y.gtimg.cn`, `qpic.y.qq.com`) without the key.
 Nothing from QQ Music is kept in your library. The plugin does not use the
 API's listening report (`/me/report`).
