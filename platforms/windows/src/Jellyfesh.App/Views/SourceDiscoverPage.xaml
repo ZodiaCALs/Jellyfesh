@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    A source's Discover page (docs/ui.md, "Discover"): the source's name and status with Browse (its
+    own folders) in the header, then its shelves from the core, each with its title and See All when
+    it has more. Row shelves scroll sideways, grid shelves wrap, chart shelves are numbered lists.
+    Placeholders the shape of the shelves while loading; the error and Try Again on failure.
+-->
+<shell:JfPage
+    x:Class="Jellyfesh.App.Views.SourceDiscoverPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:vm="using:Jellyfesh.ViewModels">
+
+    <Page.Resources>
+        <shell:SourceTileTemplates x:Key="Tiles" />
+        <shell:SourceRowTemplates x:Key="ChartRows" />
+    </Page.Resources>
+
+    <Grid Padding="32,24,32,0" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="2">
+                <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="{x:Bind ViewModel.Title}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Status, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.Status), Mode=OneWay}" />
+            </StackPanel>
+            <Button x:Uid="Discover_Browse" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.BrowseCommand}" Content="Browse" Style="{StaticResource JfChipButtonStyle}" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Padding="0,0,0,112" Spacing="28">
+                <!-- While loading: placeholders the shape of two shelves. -->
+                <StackPanel Spacing="12" Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsLoading), Mode=OneWay}" AutomationProperties.AccessibilityView="Raw">
+                    <Border Width="180" Height="22" HorizontalAlignment="Left" Background="{ThemeResource JfFill}" CornerRadius="6" />
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                    </StackPanel>
+                    <Border Width="140" Height="22" Margin="0,16,0,0" HorizontalAlignment="Left" Background="{ThemeResource JfFill}" CornerRadius="6" />
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                        <Border Width="150" Height="150" Background="{ThemeResource JfFill}" CornerRadius="12" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- On failure: the core's words and Try Again. -->
+                <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasError), Mode=OneWay}">
+                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Error, Mode=OneWay}" TextWrapping="Wrap" />
+                    <Button x:Uid="Discover_TryAgain" HorizontalAlignment="Left" Command="{x:Bind ViewModel.TryAgainCommand}" Content="Try Again" Style="{StaticResource JfChipButtonStyle}" />
+                </StackPanel>
+
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.Shelves}">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Spacing="28" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShelfViewModel">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="{x:Bind Title}" />
+                                    <Button x:Uid="Discover_SeeAll" Grid.Column="1" Click="OnSeeAllClick" Content="See All" Style="{StaticResource JfChipButtonStyle}" Tag="{x:Bind}" Visibility="{x:Bind shell:Bind.Visible(HasMore)}" />
+                                </Grid>
+                                <!-- A row: one line of covers that scrolls sideways. -->
+                                <GridView
+                                    Height="232"
+                                    AutomationProperties.Name="{x:Bind Title}"
+                                    IsItemClickEnabled="True"
+                                    ItemClick="OnShelfItemClick"
+                                    ItemTemplateSelector="{StaticResource Tiles}"
+                                    ItemsSource="{x:Bind Items}"
+                                    Loaded="OnShelfListLoaded"
+                                    ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                    ScrollViewer.HorizontalScrollMode="Enabled"
+                                    ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                    ScrollViewer.VerticalScrollMode="Disabled"
+                                    SelectionMode="None"
+                                    Tag="{x:Bind}"
+                                    Visibility="{x:Bind shell:Bind.Visible(IsRow)}">
+                                    <GridView.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <ItemsStackPanel Orientation="Horizontal" />
+                                        </ItemsPanelTemplate>
+                                    </GridView.ItemsPanel>
+                                </GridView>
+                                <!-- A grid: covers that wrap. -->
+                                <GridView
+                                    AutomationProperties.Name="{x:Bind Title}"
+                                    IsItemClickEnabled="True"
+                                    ItemClick="OnShelfItemClick"
+                                    ItemTemplateSelector="{StaticResource Tiles}"
+                                    ItemsSource="{x:Bind Items}"
+                                    Loaded="OnShelfListLoaded"
+                                    ScrollViewer.VerticalScrollMode="Disabled"
+                                    SelectionMode="None"
+                                    Tag="{x:Bind}"
+                                    Visibility="{x:Bind shell:Bind.Visible(IsGrid)}" />
+                                <!-- A chart: a numbered list. -->
+                                <ListView
+                                    AutomationProperties.Name="{x:Bind Title}"
+                                    IsItemClickEnabled="True"
+                                    ItemClick="OnShelfItemClick"
+                                    ItemContainerStyle="{StaticResource JfTrackRowStyle}"
+                                    ItemTemplateSelector="{StaticResource ChartRows}"
+                                    ItemsSource="{x:Bind Items}"
+                                    Loaded="OnShelfListLoaded"
+                                    ScrollViewer.VerticalScrollMode="Disabled"
+                                    SelectionMode="None"
+                                    Tag="{x:Bind}"
+                                    Visibility="{x:Bind shell:Bind.Visible(IsChart)}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+
+                <TextBlock x:Uid="Discover_Empty" Style="{StaticResource JfSecondaryBodyText}" Text="Nothing here yet." Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsEmpty), Mode=OneWay}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</shell:JfPage>

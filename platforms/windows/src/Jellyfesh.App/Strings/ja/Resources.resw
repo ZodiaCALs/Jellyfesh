@@ -494,6 +494,18 @@
   <data name="Device_SystemDefault" xml:space="preserve">
     <value>システムの既定</value>
   </data>
+  <data name="Discover_Browse.Content" xml:space="preserve">
+    <value>ブラウズ</value>
+  </data>
+  <data name="Discover_Empty.Text" xml:space="preserve">
+    <value>まだ何もありません。</value>
+  </data>
+  <data name="Discover_SeeAll.Content" xml:space="preserve">
+    <value>すべて表示</value>
+  </data>
+  <data name="Discover_TryAgain.Content" xml:space="preserve">
+    <value>再試行</value>
+  </data>
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>低音強調</value>
   </data>
@@ -1519,6 +1531,18 @@
   </data>
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>設定</value>
+  </data>
+  <data name="Shelf_for_you" xml:space="preserve">
+    <value>あなたへのおすすめ</value>
+  </data>
+  <data name="Shelf_most_played" xml:space="preserve">
+    <value>よく再生する曲</value>
+  </data>
+  <data name="Shelf_recently_added" xml:space="preserve">
+    <value>最近追加した項目</value>
+  </data>
+  <data name="Shelf_rediscover" xml:space="preserve">
+    <value>再発見</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
     <value>ブラウザで続けてください。終わったらここに戻ってください。</value>

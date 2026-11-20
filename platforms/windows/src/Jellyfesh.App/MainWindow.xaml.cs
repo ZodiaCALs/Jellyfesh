@@ -55,6 +55,7 @@ public sealed partial class MainWindow : Window
         [typeof(ArtistPage)] = "artists",
         [typeof(PlaylistPage)] = "playlists",
         [typeof(SourceBrowsePage)] = "sources",
+        [typeof(SourceDiscoverPage)] = "sources",
     };
 
     private readonly AppViewModel _vm;

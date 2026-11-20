@@ -161,6 +161,26 @@
         </Grid>
     </DataTemplate>
 
+    <!-- Discover's tiles (row and grid shelves): a source's album, artist or playlist, or a song. -->
+    <DataTemplate x:Key="SourceTileTemplate" x:DataType="vm:SourceEntryItem">
+        <StackPanel Width="150" Spacing="6" AutomationProperties.Name="{x:Bind AccessibleName}">
+            <Border Width="150" Height="150" CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}" Background="{ThemeResource JfFill}">
+                <Image controls:Artwork.DecodeSize="300" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+            </Border>
+            <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Title}" />
+            <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle}" />
+        </StackPanel>
+    </DataTemplate>
+    <DataTemplate x:Key="TrackTileTemplate" x:DataType="vm:TrackItem">
+        <StackPanel Width="150" Spacing="6" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
+            <Border Width="150" Height="150" CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}" Background="{ThemeResource JfFill}">
+                <Image controls:Artwork.DecodeSize="300" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+            </Border>
+            <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Title, Mode=OneWay}" />
+            <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
+        </StackPanel>
+    </DataTemplate>
+
     <!-- An album, artist, playlist or folder from an online source (search and browse). -->
     <DataTemplate x:Key="SourceEntryTemplate" x:DataType="vm:SourceEntryItem">
         <Grid Height="{th:Token Key=Player.RowHeight}" ColumnSpacing="12" Background="Transparent"

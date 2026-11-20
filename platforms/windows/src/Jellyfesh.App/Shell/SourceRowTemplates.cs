@@ -8,8 +8,14 @@ namespace Jellyfesh.App.Shell;
 /// The row template for a source page's mixed rows (Templates.xaml): an album, artist, playlist or
 /// folder as an entry row, a song as a track row, numbered on an album.
 /// </summary>
-internal sealed partial class SourceRowTemplates(bool numbered) : DataTemplateSelector
+public sealed partial class SourceRowTemplates(bool numbered) : DataTemplateSelector
 {
+    /// <summary>Numbered rows (a chart shelf in XAML).</summary>
+    public SourceRowTemplates()
+        : this(true)
+    {
+    }
+
     protected override DataTemplate SelectTemplateCore(object item) => Select(item);
 
     protected override DataTemplate SelectTemplateCore(object item, DependencyObject container) => Select(item);

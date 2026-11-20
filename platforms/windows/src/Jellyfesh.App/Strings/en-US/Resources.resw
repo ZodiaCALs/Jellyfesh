@@ -494,6 +494,18 @@
   <data name="Device_SystemDefault" xml:space="preserve">
     <value>System Default</value>
   </data>
+  <data name="Discover_Browse.Content" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="Discover_Empty.Text" xml:space="preserve">
+    <value>Nothing here yet.</value>
+  </data>
+  <data name="Discover_SeeAll.Content" xml:space="preserve">
+    <value>See All</value>
+  </data>
+  <data name="Discover_TryAgain.Content" xml:space="preserve">
+    <value>Try Again</value>
+  </data>
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>Bass Boost</value>
   </data>
@@ -1519,6 +1531,18 @@
   </data>
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>Settings</value>
+  </data>
+  <data name="Shelf_for_you" xml:space="preserve">
+    <value>For You</value>
+  </data>
+  <data name="Shelf_most_played" xml:space="preserve">
+    <value>Most Played</value>
+  </data>
+  <data name="Shelf_recently_added" xml:space="preserve">
+    <value>Recently Added</value>
+  </data>
+  <data name="Shelf_rediscover" xml:space="preserve">
+    <value>Rediscover</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
     <value>Continue in your browser. Come back here when you are done.</value>

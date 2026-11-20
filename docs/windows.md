@@ -467,6 +467,16 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   `WS_EX_TRANSPARENT`, fully opaque through `SetLayeredWindowAttributes`), and
   Close, which turns the setting off. More offers **Unlock Desktop Lyrics**
   while it is locked.
+* **Discover** (`DiscoverViewModel`, `SourceDiscoverPage`): choosing a source on
+  the Sources page opens its Discover page: the source's name and status with
+  **Browse** (its own folders) in the header, then the shelves of the core's
+  `Discover` answer (matched by request id): row shelves scroll sideways as
+  covers, grid shelves wrap, chart shelves are numbered lists, each with **See
+  All** when it has more (browsing its node). Shelves the core makes are worded
+  by their id (For You, Recently Added, Most Played, Rediscover). While
+  loading, placeholders the shape of the shelves; on failure, the core's words
+  and **Try Again**. An album, artist or playlist opens its page; a song plays
+  with its shelf's songs.
 * **AI Lyrics** (`AiLyricsViewModel`, from the `AiLyrics` slice): the Lyrics
   pane offers **Create Synced Lyrics** under "No Lyrics" and **Time These
   Lyrics** under plain lyrics while AI Lyrics is offered (or Pro is inactive,

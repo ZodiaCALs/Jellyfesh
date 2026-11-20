@@ -494,6 +494,18 @@
   <data name="Device_SystemDefault" xml:space="preserve">
     <value>系统默认</value>
   </data>
+  <data name="Discover_Browse.Content" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="Discover_Empty.Text" xml:space="preserve">
+    <value>这里还没有内容。</value>
+  </data>
+  <data name="Discover_SeeAll.Content" xml:space="preserve">
+    <value>查看全部</value>
+  </data>
+  <data name="Discover_TryAgain.Content" xml:space="preserve">
+    <value>重试</value>
+  </data>
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>低音增强</value>
   </data>
@@ -1519,6 +1531,18 @@
   </data>
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>设置</value>
+  </data>
+  <data name="Shelf_for_you" xml:space="preserve">
+    <value>为你推荐</value>
+  </data>
+  <data name="Shelf_most_played" xml:space="preserve">
+    <value>最常播放</value>
+  </data>
+  <data name="Shelf_recently_added" xml:space="preserve">
+    <value>最近添加</value>
+  </data>
+  <data name="Shelf_rediscover" xml:space="preserve">
+    <value>重温</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
     <value>请在浏览器中继续，完成后回到这里。</value>

@@ -25,6 +25,7 @@ public partial class LocalizationTests
         "Quality_HiResLossless", "Quality_Lossless", "Quality_High", "Quality_Standard",
         "Fact_Version", "Fact_Genre", "Fact_Language", "Fact_Released", "Fact_Label", "Fact_Composer", "Fact_Lyricist",
         "Fact_Arranger", "Fact_Producer", "Fact_Popularity", "Fact_Quality", "Fact_Isrc", "Fact_Disc", "Fact_Track",
+        "Shelf_for_you", "Shelf_recently_added", "Shelf_most_played", "Shelf_rediscover",
     ];
 
     [Fact]

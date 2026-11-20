@@ -129,6 +129,9 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
 
     public SourcesViewModel CreateSources() => new(Services);
 
+    /// <summary>A source's Discover page (its shelves from the core).</summary>
+    public DiscoverViewModel CreateDiscover(string source, string title) => new(Services, source, title);
+
     /// <summary>A page of a source's catalogue: its top level, a folder, an artist, an album or a playlist.</summary>
     public SourceBrowseViewModel CreateSourceBrowse(SourceTarget target) => new(Services, target);
 

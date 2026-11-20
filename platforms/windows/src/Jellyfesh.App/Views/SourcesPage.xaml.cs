@@ -12,7 +12,8 @@ public sealed partial class SourcesPage : JfPage
         PageModel = ViewModel;
         InitializeComponent();
         ViewModel.SignInRequested += SourceDialogs.ShowSignIn;
-        ViewModel.BrowseRequested += target => AppHost.Window.Navigate(typeof(SourceBrowsePage), target);
+        // Choosing a source opens its Discover page (Browse there opens its folders).
+        ViewModel.BrowseRequested += target => AppHost.Window.Navigate(typeof(SourceDiscoverPage), target);
     }
 
     public SourcesViewModel ViewModel { get; }
