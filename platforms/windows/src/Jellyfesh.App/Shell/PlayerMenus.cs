@@ -69,10 +69,24 @@ internal static class PlayerMenus
             menu.Items.Add(stop);
         }
 
+        // Desktop Lyrics: open or close it, and unlock it while clicks pass through it.
         if (menu.Items.Count > 0)
         {
-            menu.ShowAt(target);
+            menu.Items.Add(new MenuFlyoutSeparator());
         }
+
+        var settings = s.Hub.State.Settings;
+        var desktop = new ToggleMenuFlyoutItem { Text = s.L.Get("DesktopLyrics_Title"), IsChecked = settings.DesktopLyrics };
+        desktop.Click += (_, _) => s.Send(new Core.CoreCommand.SetSettings(s.Hub.State.Settings with { DesktopLyrics = !settings.DesktopLyrics }));
+        menu.Items.Add(desktop);
+        if (AppHost.Window.DesktopLyrics is { IsLocked: true } window)
+        {
+            var unlock = new MenuFlyoutItem { Text = s.L.Get("DesktopLyrics_Unlock") };
+            unlock.Click += (_, _) => window.Lock(false);
+            menu.Items.Add(unlock);
+        }
+
+        menu.ShowAt(target);
     }
 
     /// <summary>Devices: its title, then each device with its kind's icon, the playing one checked.</summary>

@@ -77,6 +77,10 @@ public sealed partial class MainWindow : Window
     private bool _syncingNav;
     private Notification? _shownNotice;
     private readonly HashSet<string> _failedParts = [];
+    private DesktopLyricsWindow? _desktopLyrics;
+
+    /// <summary>Desktop Lyrics while open (the More menu unlocks it).</summary>
+    internal DesktopLyricsWindow? DesktopLyrics => _desktopLyrics;
 
     public MainWindow(ICoreClient core)
     {
@@ -470,6 +474,32 @@ public sealed partial class MainWindow : Window
             ScanPanel.Visibility = _vm.IsScanning ? Visibility.Visible : Visibility.Collapsed;
             ScanText.Text = _vm.ScanText;
         }
+        else if (e.PropertyName == nameof(AppViewModel.Settings))
+        {
+            SyncDesktopLyrics();
+        }
+    }
+
+    /// <summary>Desktop Lyrics follows its setting: opened when on, closed when off; its close button turns it off.</summary>
+    private void SyncDesktopLyrics()
+    {
+        var wanted = _vm.Settings.DesktopLyrics;
+        if (wanted && _desktopLyrics is null)
+        {
+            _desktopLyrics = Optional("Desktop Lyrics", () =>
+            {
+                var window = new DesktopLyricsWindow(_vm.LyricsBar, _vm.Services.L, () =>
+                    _vm.Services.Send(new CoreCommand.SetSettings(_vm.Services.Hub.State.Settings with { DesktopLyrics = false })));
+                window.Closed += (_, _) => _desktopLyrics = null;
+                window.Activate();
+                return window;
+            });
+        }
+        else if (!wanted && _desktopLyrics is { } open)
+        {
+            _desktopLyrics = null;
+            Optional("closing Desktop Lyrics", open.Close);
+        }
     }
 
     // ---- appearance ----
@@ -797,6 +827,7 @@ public sealed partial class MainWindow : Window
             Startup.ArmWatchdog(TimeSpan.FromMinutes(2), ExitCodes.ShutdownHung, "shutting down");
         }
 
+        Optional("closing Desktop Lyrics", () => _desktopLyrics?.Close());
         Optional("closing the media controls", () => _media?.Dispose());
         Optional("closing the device notifications", () => _devices?.Dispose());
         Optional("closing the taskbar buttons", () => _shell?.Dispose());

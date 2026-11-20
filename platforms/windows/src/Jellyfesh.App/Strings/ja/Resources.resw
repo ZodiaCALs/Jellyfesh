@@ -407,6 +407,18 @@
   <data name="Count_Songs_Other" xml:space="preserve">
     <value>{0} 曲</value>
   </data>
+  <data name="DesktopLyrics_Close" xml:space="preserve">
+    <value>デスクトップ歌詞を閉じる</value>
+  </data>
+  <data name="DesktopLyrics_Lock" xml:space="preserve">
+    <value>デスクトップ歌詞をロック</value>
+  </data>
+  <data name="DesktopLyrics_Title" xml:space="preserve">
+    <value>デスクトップ歌詞</value>
+  </data>
+  <data name="DesktopLyrics_Unlock" xml:space="preserve">
+    <value>デスクトップ歌詞のロックを解除</value>
+  </data>
   <data name="Device_SystemDefault" xml:space="preserve">
     <value>システムの既定</value>
   </data>

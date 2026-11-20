@@ -59,6 +59,29 @@ internal static unsafe partial class Win32
 
     public const int SW_RESTORE = 9;
 
+    // Desktop Lyrics: a layered window with WS_EX_TRANSPARENT lets clicks through (Window Features,
+    // "Layered Windows"); WM_NCLBUTTONDOWN on HTCAPTION drags a window without a title bar.
+    public const int GWL_EXSTYLE = -20;
+    public const nint WS_EX_TRANSPARENT = 0x00000020;
+    public const nint WS_EX_LAYERED = 0x00080000;
+    public const uint LWA_ALPHA = 0x00000002;
+    public const uint WM_NCLBUTTONDOWN = 0x00A1;
+    public const nint HTCAPTION = 2;
+
+    [LibraryImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    public static partial nint GetWindowLongPtr(nint hWnd, int index);
+
+    [LibraryImport("user32.dll", EntryPoint = "SetWindowLongPtrW")]
+    public static partial nint SetWindowLongPtr(nint hWnd, int index, nint value);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetLayeredWindowAttributes(nint hWnd, uint colorKey, byte alpha, uint flags);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ReleaseCapture();
+
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool AllowSetForegroundWindow(uint processId);

@@ -437,6 +437,24 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   artists, songs and favourites `ListView`s; every row is a placeholder until its
   page of the core's query arrives, and thumbnails are requested at the drawn
   size, two at a time, off the UI thread, and cancelled when a row scrolls away.
+* **The lyrics bar** (Show Lyrics Bar, on by default): in the player bar the
+  line being sung takes the artist's place under the title, with its
+  translation when Show Translations is on. `LyricsBarPresenter` follows the
+  core's `lyrics_bar` rule through the ported `LyricsBars.At` (the active
+  line, or in a gap the last one that started; the next line for Desktop
+  Lyrics): a word-timed line fills word by word in the accent (the artwork's
+  highlight) with the same compositor sweep as Now Playing (`SweptWord`), told
+  again only when the word, the line or the anchor changes.
+* **Desktop Lyrics** (Settings › Appearance › Lyrics, or the player's More
+  menu): a window of its own on acrylic at the bottom of the screen, always on
+  top and out of Alt+Tab (`OverlappedPresenter.CreateForToolWindow`,
+  `IsAlwaysOnTop`, `SetBorderAndTitleBar(false, false)`,
+  `AppWindow.IsShownInSwitchers`), with the current line (30 px) and the next
+  (dimmed). It is dragged by its glass; its tools (shown under the pointer)
+  are Lock, which lets clicks pass through it (a layered window with
+  `WS_EX_TRANSPARENT`, fully opaque through `SetLayeredWindowAttributes`), and
+  Close, which turns the setting off. More offers **Unlock Desktop Lyrics**
+  while it is locked.
 * **Covers from sources** ([`core-api.md`](core-api.md), "Covers"): the app
   never fetches a picture itself. Rows, page headers, Now Playing (at 1024 px)
   and the system media controls ask `SourceArtwork(url, size)` through
