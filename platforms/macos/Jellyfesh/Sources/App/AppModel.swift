@@ -58,6 +58,9 @@ final class AppModel {
     private let keys: SharedKeyMonitor
     @ObservationIgnored private var deviceWatcher: DeviceWatcher?
     @ObservationIgnored private var started = false
+    /// Music folders that moved since the last launch (sandboxed builds), passed to the core once
+    /// it has started.
+    @ObservationIgnored private var movedFolders: [FolderAccess.Move] = []
     @ObservationIgnored private var appliedAppearance: AppearanceOption?
 
     init(client: CoreClient, startupError: String? = nil, distribution: AppDistribution = .source) {
@@ -101,6 +104,10 @@ final class AppModel {
     static func launch() -> AppModel {
         let folders = FFICoreClient.defaultDirectories()
         let distribution = AppDistribution.current()
+        // The sandboxed build reaches its music folders through bookmarks, opened before the
+        // core opens the library.
+        let folderAccess = FolderAccess(enabled: distribution.isAppStore)
+        let moved = folderAccess.restore()
         do {
             let files = FileManager.default
             try files.createDirectory(atPath: folders.data, withIntermediateDirectories: true)
@@ -109,6 +116,8 @@ final class AppModel {
                                            bundledPlugins: FFICoreClient.bundledPluginPaths(),
                                            distribution: distribution)
             let model = AppModel(client: client, distribution: distribution)
+            model.library.folderAccess = folderAccess
+            model.movedFolders = moved
             model.desktopLyrics.attach(DesktopLyricsWindow { [unowned model] in
                 AnyView(DesktopLyricsView().stores(model))
             })
@@ -133,6 +142,10 @@ final class AppModel {
         }
         apply(state)
         guard startupError == nil else { return }
+        for move in movedFolders {
+            library.addFolder(move.to)
+        }
+        movedFolders = []
         nowPlayingCenter.start()
         nowPlayingCenter.update()
         system.start()

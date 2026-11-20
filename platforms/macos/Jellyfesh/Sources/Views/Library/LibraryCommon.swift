@@ -276,7 +276,7 @@ struct AddMusicFolderButton: View {
     var body: some View {
         let button = Button {
             FilePanels.chooseMusicFolders { urls in
-                for url in urls { library.addFolder(url.path) }
+                for url in urls { library.addFolder(url) }
             }
         } label: {
             Label("Add Music Folder…", systemImage: "folder.badge.plus")

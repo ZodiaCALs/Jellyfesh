@@ -23,6 +23,8 @@ final class LibraryStore {
     let client: CoreClient
     private let tracker: CommandTracker
     private let toasts: ToastCenter
+    /// Keeps chosen folders reachable in the sandboxed (Mac App Store) build; nil elsewhere.
+    @ObservationIgnored var folderAccess: FolderAccess?
 
     /// Grows whenever the catalogue, a playlist, a favourite or a play count changes.
     private(set) var revision: UInt64 = 0
@@ -100,7 +102,15 @@ final class LibraryStore {
         send(.addRoot(path: path))
     }
 
+    /// A folder chosen in the open panel: kept reachable on later launches where the build is
+    /// sandboxed, and added.
+    func addFolder(_ url: URL) {
+        folderAccess?.remember(url)
+        addFolder(url.path)
+    }
+
     func removeFolder(_ path: String) {
+        folderAccess?.forget(path)
         send(.removeRoot(path: path))
     }
 

@@ -47,7 +47,7 @@ struct LibrarySettings: View {
                     Spacer()
                     Button("Add Folder…") {
                         FilePanels.chooseMusicFolders { urls in
-                            for url in urls { library.addFolder(url.path) }
+                            for url in urls { library.addFolder(url) }
                         }
                     }
                 }

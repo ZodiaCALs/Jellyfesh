@@ -1,7 +1,8 @@
 // Sources, in the order of docs/ui.md: the services to add, each connected from a sheet with its
 // server's address and a sign-in method; every installed plugin with its badge, enabling, account
 // and sign-in flows, settings from its JSON Schema and uninstalling, with installing a `.jfpkg`
-// file in the heading; and the community-plugin switch with ADR-0012's disclosure.
+// file in the heading; and the community-plugin switch with ADR-0012's disclosure. Builds that may
+// not install plugins (the App Store's) show neither Install from File… nor the switch.
 
 import SwiftUI
 
@@ -49,30 +50,17 @@ struct SourcesSettings: View {
                 HStack {
                     Text("Installed")
                     Spacer()
-                    Button("Install from File…") {
-                        FilePanels.choosePlugin { url in sources.install(path: url.path) }
+                    if sources.canInstallPlugins {
+                        Button("Install from File…") {
+                            FilePanels.choosePlugin { url in sources.install(path: url.path) }
+                        }
+                        .buttonStyle(.link)
                     }
-                    .buttonStyle(.link)
                 }
             }
 
-            Section {
-                Toggle(isOn: Binding(
-                    get: { settings.current.allowCommunityPlugins },
-                    set: { allow in
-                        if allow {
-                            // Turning it on needs the disclosure first.
-                            disclosure = CommunityDisclosure(pluginID: nil, pluginName: nil)
-                        } else {
-                            settings.setAllowCommunityPlugins(false)
-                        }
-                    }
-                )) {
-                    Text("Allow Community Plugins")
-                    Text("Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.")
-                }
-            } header: {
-                Text("Community Plugins")
+            if sources.canInstallPlugins {
+                communityPlugins
             }
         }
         .formStyle(.grouped)
@@ -84,6 +72,28 @@ struct SourcesSettings: View {
             }
         }
         .connectSourceFlow($connecting, in: .settings)
+    }
+
+    /// Allow Community Plugins, with ADR-0012's disclosure before it turns on.
+    private var communityPlugins: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { settings.current.allowCommunityPlugins },
+                set: { allow in
+                    if allow {
+                        // Turning it on needs the disclosure first.
+                        disclosure = CommunityDisclosure(pluginID: nil, pluginName: nil)
+                    } else {
+                        settings.setAllowCommunityPlugins(false)
+                    }
+                }
+            )) {
+                Text("Allow Community Plugins")
+                Text("Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.")
+            }
+        } header: {
+            Text("Community Plugins")
+        }
     }
 }
 

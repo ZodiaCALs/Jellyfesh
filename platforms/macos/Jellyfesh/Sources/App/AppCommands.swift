@@ -55,7 +55,7 @@ private struct FileMenuItems: View {
 
         Button("Add Music Folder…") {
             FilePanels.chooseMusicFolders { urls in
-                for url in urls { model.library.addFolder(url.path) }
+                for url in urls { model.library.addFolder(url) }
             }
         }
         .keyboardShortcut("o", modifiers: [.command, .shift])
@@ -68,12 +68,15 @@ private struct FileMenuItems: View {
         }
         .disabled(model.startupError != nil)
 
-        Button("Install from File…") {
-            FilePanels.choosePlugin { url in
-                model.sources.install(path: url.path)
+        // Not in builds that may not install plugins (the App Store's).
+        if model.sources.canInstallPlugins {
+            Button("Install from File…") {
+                FilePanels.choosePlugin { url in
+                    model.sources.install(path: url.path)
+                }
             }
+            .disabled(model.startupError != nil)
         }
-        .disabled(model.startupError != nil)
     }
 }
 
