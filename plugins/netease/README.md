@@ -15,7 +15,13 @@ could read, and may differ.
 
 ## What it does
 
-* **Browse** your created, collected and starred playlists and their songs.
+* **Browse** your created and collected playlists and your liked songs (the
+  red-heart playlist; 0.0.6 listed it as Starred Playlists and, reading the
+  answer as a list, showed nothing), with covers where NetEase names them.
+* **Discover** (plugin API 1.2): Liked Songs, Created Playlists and Collected
+  Playlists. **Details** of a playlist: description, picture, plays, tags
+  and creation date (`playlist/detail/get/v2`, read with the field names the
+  official client reads).
 * **Play** at the quality you choose: 128 kbit/s (Low and Normal),
   320 kbit/s (High) or NetEase's lossless files (Lossless), where your
   account may play them.
@@ -25,7 +31,7 @@ could read, and may differ.
   does not play previews). Free full listens play in full.
 
 Not yet: **search** (it arrives once NetEase's API documentation is available
-to us), liked songs, recommendations and lyrics, whose paths were not
+to us), recommendations, comments and lyrics, whose paths were not
 found. Until it can search, NetEase Cloud Music is not offered in Add a
 Source; install the plugin and sign in from the Sources settings. There is
 no Open in NetEase Cloud Music either: a song has an encrypted id for the

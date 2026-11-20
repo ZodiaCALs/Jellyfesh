@@ -202,6 +202,8 @@ pub fn code_error(code: i64, message: &str) -> PluginError {
     match code {
         -461 => PluginError::service(if message.is_empty() { DAILY_LIMIT } else { message }),
         -444 | -446 | -447 => PluginError::RateLimited,
+        // The official client reads 404 as "no such playlist".
+        404 => PluginError::NotFound,
         _ if message.is_empty() => PluginError::service(format!("NetEase Cloud Music answered code {code}")),
         _ => PluginError::service(message),
     }

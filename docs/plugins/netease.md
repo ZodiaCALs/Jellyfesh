@@ -15,11 +15,16 @@ written. It follows what NetEase's official command-line client
 server built from that, **not yet against the live service**.
 
 * **Yes**: sign-in with your App ID, private key and a QR code; your
-  created, collected and starred playlists; streams by quality; NetEase's
-  rules on what your account may play.
+  created and collected playlists and your liked songs (NetEase's red-heart
+  playlist); streams by quality; NetEase's rules on what your account may
+  play. From Jellyfesh v0.0.7: a **Discover** page of those lists (Liked
+  Songs, Created Playlists, Collected Playlists, with covers) and **Get
+  Info** on a playlist (its description, picture, plays, tags and creation
+  date).
 * **Not yet**: search ("Search arrives once NetEase's API documentation is
-  available to us"), liked songs, recommendations and lyrics: their paths
-  were not in what could be read. Because it cannot search, NetEase Cloud
+  available to us"), recommendations such as the daily picks, comments and
+  lyrics: their paths were not in what could be read (the official client
+  gets them from a list of commands on NetEase's server). Because it cannot search, NetEase Cloud
   Music is **not offered in Add a Source** yet; set it up from the installed
   plugins in Sources.
 * **No Open in NetEase Cloud Music**: a song has an encrypted id for the API

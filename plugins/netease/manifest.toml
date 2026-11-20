@@ -1,13 +1,14 @@
 id = "org.jellyfesh.netease"
 name = "NetEase Cloud Music"
-version = "0.0.6"
-api_version = "1.1"
+version = "0.0.7"
+api_version = "1.2"
 author = "Jellyfesh"
 description = "Your NetEase Cloud Music playlists, with your own open-platform developer credentials"
 official = true
 # No search yet: its path is not in what the open platform's client shows,
-# and NetEase's API documentation was not available to us.
-capabilities = ["auth", "browse", "resolve_stream"]
+# and NetEase's API documentation was not available to us. Discover shows the
+# account's own lists; details are a playlist's.
+capabilities = ["auth", "browse", "resolve_stream", "discover", "details"]
 playback_mode = "stream"
 # A form for your App ID and private key, then a QR code for the app.
 auth = ["qr"]

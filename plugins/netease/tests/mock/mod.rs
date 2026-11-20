@@ -98,9 +98,11 @@ pub fn canonical(query: &[(String, String)]) -> String {
 }
 
 fn song(id: &str, name: &str, flags: Value) -> Value {
+    // `al.picUrl` is the mock's choice: the research saw no cover in lists.
     let mut song = json!({
         "encryptedId": id, "originalId": 1_900_000 + id[29..].parse::<u64>().unwrap_or(0), "name": name,
-        "ar": [{ "name": "Mei Example" }], "al": { "name": "Harbour Lights" }, "dt": 215_000,
+        "ar": [{ "name": "Mei Example" }], "al": { "name": "Harbour Lights", "picUrl": "http://p2.music.126.net/mock/album.jpg" },
+        "dt": 215_000,
         "playFlag": false, "visible": true, "songFee": 0, "freeTrailFlag": false
     });
     for (k, v) in flags.as_object().cloned().unwrap_or_default() {
@@ -225,7 +227,7 @@ fn answer(state: &Mutex<State>, public: &rsa::PublicKey, request: &Request) -> R
         "/user/profile/get/v2" if app == OTHER_APP_ID => code(301, "user mismatch (mock)"),
         // The profile's fields are the mock's choice.
         "/user/profile/get/v2" => data(json!({ "nickname": "Mock Listener", "userId": 42 })),
-        "/playlist/created/get/v2" | "/playlist/subed/get/v2" | "/playlist/star/get/v2" => {
+        "/playlist/created/get/v2" | "/playlist/subed/get/v2" => {
             let (limit, offset) = (
                 biz["limit"].as_u64().unwrap_or(0),
                 biz["offset"].as_u64().unwrap_or(0),
@@ -235,13 +237,31 @@ fn answer(state: &Mutex<State>, public: &rsa::PublicKey, request: &Request) -> R
             let records: Vec<Value> = (offset..total.min(offset + limit))
                 .map(|i| json!({ "id": format!("pl-{kind}-{i}"), "originalId": 7_000 + i, "name": format!("{kind} list {i}"),
                                  "coverImgUrl": "http://p1.music.126.net/mock/cover.jpg", "trackCount": 6,
-                                 "creator": { "nickname": "Mock Listener" } }))
+                                 "creatorNickName": "Mock Listener" }))
                 .collect();
-            // The lists' answer shape is the mock's choice.
-            data(json!({ "records": records, "hasMore": offset + limit < total, "total": total }))
+            // `records` and `recordCount`, as the official client reads them.
+            data(json!({ "records": records, "recordCount": total }))
+        }
+        // One playlist: the liked songs (the official client reads `data` as
+        // a playlist, with these field names).
+        "/playlist/star/get/v2" => data(json!({
+            "id": "pl-liked", "name": "Mock Listener's liked songs", "describe": "",
+            "coverImgUrl": "http://p1.music.126.net/mock/liked.jpg", "creatorNickName": "Mock Listener",
+            "playCount": 0, "subscribedCount": 0, "trackCount": 6, "tags": [], "createTime": 1_600_000_000_000_i64, "subed": false
+        })),
+        "/playlist/detail/get/v2" => {
+            if biz["playlistId"] != "pl-created-0" {
+                return code(404, "no such playlist (mock)");
+            }
+            data(json!({
+                "id": "pl-created-0", "name": "created list 0", "describe": "Invented songs for a slow tide.",
+                "coverImgUrl": "http://p1.music.126.net/mock/cover.jpg", "creatorNickName": "Mock Listener",
+                "playCount": 1234, "subscribedCount": 5, "trackCount": 6, "tags": ["Chill", "华语"],
+                "createTime": 1_700_000_000_000_i64, "subed": false
+            }))
         }
         "/playlist/song/list/get/v3" => {
-            if biz["playlistId"] != "pl-created-0" {
+            if biz["playlistId"] != "pl-created-0" && biz["playlistId"] != "pl-liked" {
                 return code(404, "no such playlist (mock)");
             }
             let (limit, offset) = (

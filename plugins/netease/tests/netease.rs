@@ -198,7 +198,7 @@ fn browses_playlists_and_marks_what_cannot_play() {
     let titles: Vec<&str> = root.items.iter().map(|i| i.title.as_str()).collect();
     assert_eq!(
         titles,
-        ["Created Playlists", "Collected Playlists", "Starred Playlists"]
+        ["Created Playlists", "Collected Playlists", "Liked Songs"]
     );
     let created = recv(env.host.browse(ID, Some(root.items[0].clone()), page(2))).unwrap();
     assert_eq!(created.items.len(), 2);
@@ -362,8 +362,8 @@ fn the_published_package_has_no_search_and_no_links() {
     let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
     assert_eq!(
         manifest.api_version.to_string(),
-        "1.1",
-        "the signing import is API 1.1"
+        "1.2",
+        "the signing import is API 1.1; Discover and details 1.2"
     );
     assert_eq!(manifest.version.to_string(), env!("CARGO_PKG_VERSION"));
     assert!(
@@ -383,5 +383,106 @@ fn the_published_package_has_no_search_and_no_links() {
         env.host
             .set_settings(ID, &json!({ "test_server": "http://127.0.0.1:9" }).to_string())
             .is_err()
+    );
+}
+
+/// Every item has a cover on NetEase's picture servers, over https.
+fn assert_covers(items: &[jf_plugin_host::Item], what: &str) {
+    assert!(!items.is_empty(), "{what}");
+    for entry in items {
+        let url = &entry
+            .artwork
+            .as_ref()
+            .unwrap_or_else(|| panic!("{what}: {} has no cover", entry.title))
+            .url;
+        let host = url
+            .strip_prefix("https://")
+            .and_then(|r| r.split('/').next())
+            .unwrap_or_default();
+        assert!(host.ends_with(".music.126.net"), "{what}: {url}");
+    }
+}
+
+#[test]
+fn liked_songs_and_discover_come_from_the_accounts_lists() {
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let liked = recv(env.host.browse(
+        ID,
+        Some(item(ItemKind::Folder, "starred", "Liked Songs")),
+        page(50),
+    ))
+    .unwrap();
+    assert_eq!(liked.items.len(), 6, "the liked songs' playlist's songs");
+    assert_covers(&liked.items, "Liked Songs");
+    let star = mock
+        .server
+        .requests_to("/openapi/music/basic/playlist/star/get/v2");
+    assert_eq!(star[0].query("bizContent").as_deref(), Some("{}"));
+    let asked = mock
+        .server
+        .requests_to("/openapi/music/basic/playlist/song/list/get/v3");
+    let biz: serde_json::Value = serde_json::from_str(&asked[0].query("bizContent").unwrap()).unwrap();
+    assert_eq!(biz["playlistId"], "pl-liked");
+
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(
+        titles,
+        ["Liked Songs", "Created Playlists", "Collected Playlists"]
+    );
+    assert_eq!(shelves[0].more.as_deref(), Some("starred"));
+    assert_eq!(shelves[1].style, jf_plugin_host::ShelfStyle::Grid);
+    assert_eq!(
+        (shelves[1].items.len(), shelves[1].more.as_deref()),
+        (3, Some("created"))
+    );
+    for shelf in &shelves {
+        assert_covers(&shelf.items, &shelf.title);
+    }
+    assert_eq!(mock.state.lock().unwrap().bad_signatures, 0);
+}
+
+#[test]
+fn details_of_a_playlist() {
+    use jf_plugin_host::FactKey;
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let details = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "pl-created-0", "created list 0")),
+    )
+    .unwrap();
+    assert_eq!(
+        details.description.as_deref(),
+        Some("Invented songs for a slow tide.")
+    );
+    assert_eq!(
+        details.image.unwrap().url,
+        "https://p1.music.126.net/mock/cover.jpg"
+    );
+    let facts: Vec<(FactKey, String)> = details
+        .facts
+        .iter()
+        .map(|f| (f.key.clone(), f.value.clone()))
+        .collect();
+    assert_eq!(
+        facts,
+        [
+            (FactKey::Popularity, "1,234 plays".to_string()),
+            (FactKey::Other("Tags".into()), "Chill, 华语".into()),
+            (FactKey::Other("Created".into()), "2023-11-14".into()),
+        ]
+    );
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Playlist, "pl-gone", "x"))),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+    assert_eq!(
+        recv(
+            env.host
+                .details(ID, item(ItemKind::Track, mock::FULL, "Tidal Clock"))
+        ),
+        Err(CallError::Plugin(PluginError::Unsupported))
     );
 }

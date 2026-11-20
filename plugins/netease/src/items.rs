@@ -35,7 +35,7 @@ fn flag(value: &Value, key: &str) -> Option<bool> {
 }
 
 /// The list in an answer's `data`: the array itself, or the first array
-/// under a likely name.
+/// under a likely name (`records` in the official client's playlist lists).
 pub fn list(data: &Value) -> &[Value] {
     if let Some(items) = data.as_array() {
         return items;
@@ -44,6 +44,16 @@ pub fn list(data: &Value) -> &[Value] {
         .iter()
         .find_map(|k| data.get(*k).and_then(Value::as_array))
         .map_or(&[], Vec::as_slice)
+}
+
+/// The one playlist an answer's `data` describes: the object itself (the
+/// official client reads `playlist/star/get/v2`, the liked songs' playlist,
+/// and `playlist/detail/get/v2` this way), or the first of a list.
+pub fn one(data: &Value) -> Option<&Value> {
+    if data.get("id").is_some() {
+        return Some(data);
+    }
+    list(data).first()
 }
 
 /// Whether the list says it has more (when it says so at all).
@@ -155,6 +165,17 @@ fn names(value: Option<&Value>) -> Option<String> {
     (!names.is_empty()).then(|| names.join(", "))
 }
 
+/// A song's cover where a list names one. The official client's lists were
+/// not seen with one; the song detail calls it `coverImgUrl`, and NetEase's
+/// song objects elsewhere `al.picUrl`, so those spellings are read.
+fn song_cover(value: &Value) -> Option<&str> {
+    value
+        .get("al")
+        .or_else(|| value.get("album"))
+        .and_then(|a| text(a, &["picUrl", "coverImgUrl"]))
+        .or_else(|| text(value, &["coverImgUrl", "picUrl", "albumPicUrl"]))
+}
+
 /// A song from a playlist's list.
 pub fn song(value: &Value) -> Option<Item> {
     let id = id(value, &["encryptedId", "songId", "id"])?;
@@ -168,6 +189,9 @@ pub fn song(value: &Value) -> Option<Item> {
         .or_else(|| text(value, &["albumName"]))
         .map(str::to_owned);
     item.duration_ms = number(value, &["dt", "duration"]).and_then(|d| u32::try_from(d).ok());
+    if let Some(cover) = song_cover(value) {
+        item = item.artwork(secure(cover));
+    }
     if let Some(unplayable) = refusal(access(value)) {
         item.playable = false;
         item.unplayable = Some(unplayable);
@@ -182,13 +206,78 @@ pub fn playlist(value: &Value) -> Option<Item> {
     item.artist = value
         .get("creator")
         .and_then(|c| text(c, &["nickname", "nickName"]))
-        .or_else(|| text(value, &["creatorName"]))
+        .or_else(|| text(value, &["creatorNickName", "creatorName"]))
         .map(str::to_owned);
     item.child_count = number(value, &["trackCount", "songCount"]).and_then(|n| u32::try_from(n).ok());
     if let Some(cover) = text(value, &["coverImgUrl", "coverUrl"]) {
         item = item.artwork(secure(cover));
     }
     Some(item)
+}
+
+/// `1700000000000` (ms) as `2023-11-14` (UTC).
+fn date(ms: u64) -> Option<String> {
+    let days = i64::try_from(ms / 86_400_000).ok()?;
+    // Days to a civil date (proleptic Gregorian), after Howard Hinnant.
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    Some(format!("{year:04}-{month:02}-{day:02}"))
+}
+
+/// `1234567` as `1,234,567`.
+fn thousands(n: u64) -> String {
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// What `playlist/detail/get/v2` says about a playlist, read with the field
+/// names the official client reads from playlists (`describe`,
+/// `coverImgUrl`, `playCount`, `tags`, `createTime`).
+pub fn playlist_details(value: &Value) -> ItemDetails {
+    let tags: Vec<&str> = value
+        .get("tags")
+        .and_then(Value::as_array)
+        .map(|tags| {
+            tags.iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .collect()
+        })
+        .unwrap_or_default();
+    let facts = [
+        number(value, &["playCount"])
+            .filter(|n| *n > 0)
+            .map(|n| (FactKey::Popularity, format!("{} plays", thousands(n)))),
+        (!tags.is_empty()).then(|| (FactKey::Other("Tags".into()), tags.join(", "))),
+        number(value, &["createTime"])
+            .and_then(date)
+            .map(|d| (FactKey::Other("Created".into()), d)),
+    ];
+    ItemDetails {
+        description: text(value, &["describe", "description"]).map(str::to_owned),
+        image: text(value, &["coverImgUrl", "coverUrl"]).map(|url| ImageRef::new(secure(url))),
+        facts: facts
+            .into_iter()
+            .flatten()
+            .map(|(key, value)| Fact { key, value })
+            .collect(),
+        comment_count: None,
+    }
 }
 
 #[cfg(test)]
@@ -257,6 +346,12 @@ mod tests {
         assert_eq!((p.id.as_str(), p.child_count), ("99", Some(3)));
         assert_eq!(p.artwork.unwrap().url, "https://p1.music.126.net/x.jpg");
         assert_eq!(list(&json!({ "records": [1, 2] })).len(), 2);
+        assert_eq!(one(&json!({ "id": 5, "name": "Liked" })).unwrap()["id"], 5);
+        assert_eq!(one(&json!({ "records": [{ "id": 6 }] })).unwrap()["id"], 6);
+        assert!(one(&json!({ "records": [] })).is_none());
+        let s = song(&json!({ "songId": "c1", "name": "Covered", "al": { "name": "A", "picUrl": "http://p2.music.126.net/a.jpg" } }))
+            .unwrap();
+        assert_eq!(s.artwork.unwrap().url, "https://p2.music.126.net/a.jpg");
         assert_eq!(list(&json!([1])).len(), 1);
         assert!(list(&json!({ "x": 1 })).is_empty());
         assert_eq!(secure("http://evil.example/x"), "http://evil.example/x");
@@ -268,5 +363,36 @@ mod tests {
             secure("http://user@x.music.126.net/a"),
             "http://user@x.music.126.net/a"
         );
+    }
+
+    #[test]
+    fn playlist_details_read_the_clients_field_names() {
+        let details = playlist_details(&json!({
+            "id": 99, "name": "Mine", "describe": "Invented songs for a slow tide.",
+            "coverImgUrl": "http://p1.music.126.net/x.jpg", "playCount": 1234567,
+            "tags": ["华语", " ", "Chill"], "createTime": 1_700_000_000_000_u64, "subed": false
+        }));
+        assert_eq!(
+            details.description.as_deref(),
+            Some("Invented songs for a slow tide.")
+        );
+        assert_eq!(details.image.unwrap().url, "https://p1.music.126.net/x.jpg");
+        let facts: Vec<(FactKey, String)> = details.facts.into_iter().map(|f| (f.key, f.value)).collect();
+        assert_eq!(
+            facts,
+            [
+                (FactKey::Popularity, "1,234,567 plays".to_string()),
+                (FactKey::Other("Tags".into()), "华语, Chill".into()),
+                (FactKey::Other("Created".into()), "2023-11-14".into()),
+            ]
+        );
+        assert!(playlist_details(&json!({ "id": 1 })).facts.is_empty());
+    }
+
+    #[test]
+    fn dates_are_civil_dates() {
+        assert_eq!(date(0).as_deref(), Some("1970-01-01"));
+        assert_eq!(date(951_782_400_000).as_deref(), Some("2000-02-29"));
+        assert_eq!(date(1_767_225_599_000).as_deref(), Some("2025-12-31"));
     }
 }

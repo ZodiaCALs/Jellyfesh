@@ -1,12 +1,14 @@
 //! NetEase Cloud Music for Jellyfesh: the open platform with the person's own
 //! individual-developer credentials (App ID and RSA private key) and a QR
 //! sign-in with the NetEase Cloud Music app. The account's playlists
-//! (created, collected, starred), their songs, and streams by quality, with
-//! NetEase's rules on what each account may play: VIP songs and digital
-//! albums are paywalled, previews are not played.
+//! (created, collected) and liked songs, their songs, and streams by
+//! quality, with NetEase's rules on what each account may play: VIP songs
+//! and digital albums are paywalled, previews are not played. API 1.2: a
+//! Discover page of the same lists, and details of playlists.
 //!
-//! Search, liked songs, recommendations and lyrics wait for NetEase's API
-//! documentation: their paths were not in what the research could read.
+//! Search, recommendations, comments and lyrics wait for NetEase's API
+//! documentation: their paths were not in what the research could read (the
+//! official client gets them from a server-side list of commands).
 //! Tested only against a mock server written from the research, not yet
 //! against the live service.
 
@@ -36,8 +38,8 @@ thread_local! {
     static QUALITY: RefCell<String> = RefCell::new("app".to_owned());
 }
 
-/// The three playlist lists of the account, by folder id.
-const LISTS: [(&str, &str, &str); 3] = [
+/// The account's two playlist lists, by folder id.
+const LISTS: [(&str, &str, &str); 2] = [
     (
         "created",
         "Created Playlists",
@@ -48,14 +50,16 @@ const LISTS: [(&str, &str, &str); 3] = [
         "Collected Playlists",
         "/openapi/music/basic/playlist/subed/get/v2",
     ),
-    (
-        "starred",
-        "Starred Playlists",
-        "/openapi/music/basic/playlist/star/get/v2",
-    ),
 ];
+/// The folder of the liked songs (the songs of NetEase's red-heart playlist).
+const LIKED: (&str, &str) = ("starred", "Liked Songs");
+/// The liked songs' playlist: one playlist, not a list of them.
+const STAR: &str = "/openapi/music/basic/playlist/star/get/v2";
+const PLAYLIST: &str = "/openapi/music/basic/playlist/detail/get/v2";
 const SONGS: &str = "/openapi/music/basic/playlist/song/list/get/v3";
 const DETAIL: &str = "/openapi/music/basic/song/detail/get/v2";
+/// Items on a Discover shelf.
+const SHELF: u32 = 20;
 
 /// The `bitrate` NetEase is asked for: 128 and 320 kbit/s, 999 for lossless.
 pub fn bitrate(quality: Quality, setting: &str) -> u32 {
@@ -88,11 +92,76 @@ fn page_of(data: &Value, offset: u32, limit: u32, item: impl Fn(&Value) -> Optio
     ItemPage {
         items: list.iter().filter_map(item).collect(),
         next: (more && !list.is_empty()).then(|| (offset + list.len() as u32).to_string()),
-        total: ["total", "count"]
+        total: ["recordCount", "total", "count"]
             .iter()
             .find_map(|k| data.get(*k).and_then(Value::as_u64))
             .and_then(|n| u32::try_from(n).ok()),
     }
+}
+
+/// The id of the liked songs' playlist, if the account has one.
+fn liked_playlist() -> Result<Option<String>> {
+    let data = api::call(STAR, &json!({}))?;
+    Ok(items::one(&data).and_then(items::playlist).map(|p| p.id))
+}
+
+/// A page of a playlist's songs.
+fn songs(playlist: &str, offset: u32, limit: u32) -> Result<ItemPage> {
+    let data = api::call(
+        SONGS,
+        &json!({ "playlistId": playlist, "limit": limit, "offset": offset }),
+    )?;
+    Ok(page_of(&data, offset, limit, items::song))
+}
+
+/// Items for a shelf, or none when this list failed (the page goes on
+/// without it); the sign-in, the rate limit and the network fail the page.
+fn optional(result: Result<Vec<Item>>, what: &str) -> Result<Vec<Item>> {
+    match result {
+        Ok(items) => Ok(items),
+        Err(error @ (PluginError::AuthRequired | PluginError::RateLimited | PluginError::Network(_))) => {
+            Err(error)
+        }
+        Err(error) => {
+            jf_plugin_sdk::warn!("no {what} for Discover: {error:?}");
+            Ok(Vec::new())
+        }
+    }
+}
+
+/// The Discover page: the liked songs, then the created and collected
+/// playlists, as the open platform lists them.
+fn discover_shelves() -> Result<Vec<Shelf>> {
+    let mut shelves = Vec::new();
+    let liked = liked_playlist().and_then(|id| match id {
+        Some(id) => songs(&id, 0, SHELF).map(|page| page.items),
+        None => Ok(Vec::new()),
+    });
+    let liked = optional(liked, LIKED.1)?;
+    if !liked.is_empty() {
+        shelves.push(Shelf {
+            id: "liked".into(),
+            title: LIKED.1.into(),
+            style: ShelfStyle::Row,
+            items: liked,
+            more: Some(LIKED.0.into()),
+        });
+    }
+    for (id, title, path) in LISTS {
+        let listed = api::call(path, &json!({ "limit": SHELF, "offset": 0 }))
+            .map(|data| page_of(&data, 0, SHELF, items::playlist).items);
+        let listed = optional(listed, title)?;
+        if !listed.is_empty() {
+            shelves.push(Shelf {
+                id: id.into(),
+                title: title.into(),
+                style: ShelfStyle::Grid,
+                items: listed,
+                more: Some(id.into()),
+            });
+        }
+    }
+    Ok(shelves)
 }
 
 /// Codec hint from the stream URL's file extension.
@@ -150,13 +219,19 @@ impl Plugin for NetEase {
             return Ok(ItemPage::new(
                 LISTS
                     .iter()
-                    .map(|(id, title, _)| Item::new(ItemKind::Folder, *id, *title))
+                    .map(|(id, title, _)| (*id, *title))
+                    .chain([LIKED])
+                    .map(|(id, title)| Item::new(ItemKind::Folder, id, title))
                     .collect(),
             ));
         };
         let offset = offset(&page)?;
         let limit = page.limit.clamp(1, PAGE_MAX);
         match node.kind {
+            ItemKind::Folder if node.id == LIKED.0 => match liked_playlist()? {
+                Some(playlist) => songs(&playlist, offset, limit),
+                None => Ok(ItemPage::new(Vec::new())),
+            },
             ItemKind::Folder => {
                 let (_, _, path) = LISTS
                     .iter()
@@ -165,15 +240,25 @@ impl Plugin for NetEase {
                 let data = api::call(path, &json!({ "limit": limit, "offset": offset }))?;
                 Ok(page_of(&data, offset, limit, items::playlist))
             }
-            ItemKind::Playlist => {
-                let data = api::call(
-                    SONGS,
-                    &json!({ "playlistId": node.id, "limit": limit, "offset": offset }),
-                )?;
-                Ok(page_of(&data, offset, limit, items::song))
-            }
+            ItemKind::Playlist => songs(&node.id, offset, limit),
             _ => Err(PluginError::NotFound),
         }
+    }
+
+    fn discover() -> Result<Vec<Shelf>> {
+        discover_shelves()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        if item.kind != ItemKind::Playlist {
+            // The open platform's song detail is for playing; nothing else
+            // about songs, albums or artists is known.
+            return Err(PluginError::Unsupported);
+        }
+        let data = api::call(PLAYLIST, &json!({ "playlistId": item.id }))?;
+        items::one(&data)
+            .map(items::playlist_details)
+            .ok_or(PluginError::NotFound)
     }
 
     fn resolve_stream(item: Item, quality: Quality) -> Result<StreamInfo> {

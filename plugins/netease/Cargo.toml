@@ -2,7 +2,7 @@
 name = "jf-netease"
 description = "Jellyfesh source plugin for NetEase Cloud Music's open platform: your playlists and streams, with your own developer credentials and a signed QR sign-in."
 # The plugin's own version: keep it equal to `version` in manifest.toml.
-version = "0.0.6"
+version = "0.0.7"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
