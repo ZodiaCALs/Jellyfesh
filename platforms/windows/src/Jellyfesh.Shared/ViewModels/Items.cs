@@ -324,9 +324,20 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         UnplayableReason = item.UnplayableReason ?? (item.Playable ? null : l.Get("Track_Unplayable"));
         SourceId = item.Source;
         Link = ItemLinks.Usable(item.Link);
+        SourceAlbumId = item.AlbumId;
+        SourceArtistId = item.ArtistId;
+        SourceAlbum = item.Album;
         SetArtwork(item.Artwork, null);
         Done();
     }
+
+    /// <summary>A source song's album on its source (Go to Album), with its title.</summary>
+    public string? SourceAlbumId { get; private set; }
+
+    public string? SourceAlbum { get; private set; }
+
+    /// <summary>A source song's artist on its source (Go to Artist).</summary>
+    public string? SourceArtistId { get; private set; }
 
     partial void OnOriginChanged(string? value) => OnPropertyChanged(nameof(AccessibleName));
 

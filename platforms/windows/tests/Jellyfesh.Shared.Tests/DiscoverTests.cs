@@ -9,7 +9,7 @@ namespace Jellyfesh.Tests;
 public class DiscoverTests
 {
     private static PluginInfo Source() =>
-        new("org.x", "Example", "1.0.0", "Someone", PluginBadge.Official, false, ["search", "browse"], [], true, "ana", false, "{}", "{}", null, Discover: true);
+        new("org.x", "Example", "1.0.0", "Someone", PluginBadge.Official, false, ["search", "browse"], [], true, "ana", false, "{}", "{}", null, Discover: true, Details: true);
 
     private static SourceItem Item(string id, ItemKind kind, bool playable = true) =>
         new("org.x", kind, id, "Item " + id, "Artist", null, 180_000, new ArtworkRef.Url("https://music.example/" + id + ".jpg"), playable, playable ? null : "not here",
@@ -106,5 +106,43 @@ public class DiscoverTests
         public System.Globalization.CultureInfo Culture => System.Globalization.CultureInfo.InvariantCulture;
 
         public string Get(string key) => table.TryGetValue(key, out var value) ? value : key;
+    }
+
+    [Fact]
+    public void A_source_song_names_its_album_and_artist_pages()
+    {
+        var song = new SourceItem("org.x", ItemKind.Track, "t1", "Lantern", "Sample Artist", "Night Swim", 180_000, null, true, null,
+            new TrackRef.Source(new SourceTrack("org.x", "t1", "Lantern", "Sample Artist", "Night Swim", 180_000, null, null)), [], null, ArtistId: "ar:1", AlbumId: "al:1");
+        var row = new TrackItem(0) { Localizer = Jellyfesh.Formatting.KeyLocalizer.Instance };
+        row.Load(song);
+        Assert.True(TrackPlaces.HasPages(row));
+        Assert.Equal(new SourceTarget("org.x", "al:1", "Night Swim", ItemKind.Album), TrackPlaces.SourceAlbum(row));
+        Assert.Equal(new SourceTarget("org.x", "ar:1", "Sample Artist", ItemKind.Artist), TrackPlaces.SourceArtist(row));
+
+        var plain = new TrackItem(1);
+        plain.Load(song with { ArtistId = null, AlbumId = null });
+        Assert.False(TrackPlaces.HasPages(plain));
+    }
+
+    [Fact]
+    public async Task A_source_album_opened_by_id_gets_its_picture_and_notes_from_its_details()
+    {
+        using var h = Start();
+        var page = h.App.CreateSourceBrowse(new SourceTarget("org.x", "al:1", "Night Swim", ItemKind.Album));
+        Assert.Null(page.Header);
+        Assert.True(page.HasDetails);
+        page.Activate();
+        await page.LoadAsync();
+        Assert.Contains(new CoreCommand.Browse("org.x", "al:1", 0), h.Core.Sent);
+        Assert.Contains(new CoreCommand.Details(new ItemRef.Source("org.x", ItemKind.Album, "al:1")), h.Core.Sent);
+        var request = (ulong)h.Core.Sent.FindIndex(c => c is CoreCommand.Details) + 1;
+        var headers = 0;
+        page.HeaderChanged += () => headers++;
+        h.Emit(new CoreEvent.Details(new DetailsPage(request, new ItemRef.Source("org.x", ItemKind.Album, "al:1"), "Night Swim", "Sample Artist",
+            "  Invented notes.  ", new ArtworkRef.Url("https://music.example/al-1.jpg"), [], null, null, null, null)));
+        Assert.Equal("Invented notes.", page.Description);
+        Assert.True(page.HasDescription);
+        Assert.Equal(1, headers);
+        Assert.Equal("https://music.example/al-1.jpg", page.Header!.SourceArtworkUrl);
     }
 }

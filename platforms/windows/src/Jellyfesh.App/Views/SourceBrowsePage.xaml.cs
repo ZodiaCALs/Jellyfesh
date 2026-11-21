@@ -34,6 +34,7 @@ public sealed partial class SourceBrowsePage : JfPage
 
             ViewModel = AppHost.App.CreateSourceBrowse(target);
             ViewModel.OpenRequested += OnOpenRequested;
+            ViewModel.HeaderChanged += () => ViewModel.Header?.RequestArtwork(AppHost.Services.Thumbnails, 240 * (XamlRoot?.RasterizationScale ?? 1.5));
             PageModel = ViewModel;
             RowList.ItemTemplateSelector = new SourceRowTemplates(ViewModel.IsNumbered);
             Bindings.Update();
@@ -46,6 +47,13 @@ public sealed partial class SourceBrowsePage : JfPage
     }
 
     private void OnRowClick(object sender, ItemClickEventArgs e) => ViewModel.OpenCommand.Execute(e.ClickedItem);
+
+    /// <summary>More: the notes or biography whole.</summary>
+    private void OnDescriptionMoreClick(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        DescriptionText.MaxLines = 0;
+        DescriptionMore.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+    }
 
     /// <summary>Get Info for the album or artist this page shows (its source's details).</summary>
     private void OnGetInfoClick(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

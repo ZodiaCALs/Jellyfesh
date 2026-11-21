@@ -477,6 +477,12 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   loading, placeholders the shape of the shelves; on failure, the core's words
   and **Try Again**. An album, artist or playlist opens its page; a song plays
   with its shelf's songs.
+* **Artist and album pages for source songs:** a source's song with the
+  source's artist and album ids (`SourceItem.artist_id`, `album_id`) offers Go
+  to Artist and Go to Album in its menu; they open the source page of that
+  artist or album (`Browse` of the id), which asks for its `Details` when the
+  source offers them: the picture for the header and the notes or biography
+  (three lines, **More** shows it whole), and Get Info in More.
 * **AI Lyrics** (`AiLyricsViewModel`, from the `AiLyrics` slice): the Lyrics
   pane offers **Create Synced Lyrics** under "No Lyrics" and **Time These
   Lyrics** under plain lyrics while AI Lyrics is offered (or Pro is inactive,

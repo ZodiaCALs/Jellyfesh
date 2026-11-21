@@ -87,6 +87,12 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- An album's notes or an artist's biography (its details); More shows it whole. -->
+                <StackPanel MaxWidth="720" HorizontalAlignment="Left" Spacing="2" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasDescription), Mode=OneWay}">
+                    <TextBlock x:Name="DescriptionText" IsTextSelectionEnabled="True" MaxLines="3" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Description, Mode=OneWay}" TextTrimming="WordEllipsis" TextWrapping="Wrap" />
+                    <HyperlinkButton x:Name="DescriptionMore" x:Uid="Browse_More" Padding="0" Click="OnDescriptionMoreClick" Content="More" />
+                </StackPanel>
+
                 <!-- A page the source could not give: what it said. -->
                 <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasError), Mode=OneWay}">
                     <TextBlock x:Uid="Browse_ErrorTitle" FontWeight="SemiBold" Style="{StaticResource JfBodyText}" Text="This Source Did Not Answer" />

@@ -105,8 +105,18 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
 
     public bool HasAttribution => Attribution is not null;
 
-    /// <summary>The item's artwork (and its link) for the header; null for the source's top level.</summary>
-    public SourceEntryItem? Header { get; }
+    /// <summary>
+    /// The item's artwork (and its link) for the header; null for the source's top level. A page
+    /// opened by id (Go to Album, Go to Artist) gets it from the item's details.
+    /// </summary>
+    public SourceEntryItem? Header { get; private set; }
+
+    /// <summary>An album's notes or an artist's biography, from the details ("More" expands it).</summary>
+    public string Description { get; private set; } = string.Empty;
+
+    public bool HasDescription => Description.Length > 0;
+
+    private ulong _detailsRequest;
 
     /// <summary>
     /// Get Info for this page's album or artist: its source's details (docs/core-api.md, "Details and
@@ -118,6 +128,9 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
             : null;
 
     public bool HasDetails => DetailsItem is not null;
+
+    /// <summary>Raised when the header came with the details (the view loads its picture).</summary>
+    public event Action? HeaderChanged;
 
     /// <summary>An album or a playlist: the large header with the artwork and the footer.</summary>
     public bool IsCollection => Target.Kind is ItemKind.Album or ItemKind.Playlist;
@@ -160,6 +173,11 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
         {
             _started = true;
             Browse(0, clear: true);
+            if (DetailsItem is { } details)
+            {
+                // The picture and the notes or biography (docs/ui.md, "Singer and album").
+                _detailsRequest = S.SendHandled(new CoreCommand.Details(details));
+            }
         }
 
         return Task.CompletedTask;
@@ -178,6 +196,19 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     {
         switch (e)
         {
+            case CoreEvent.Details { Page: var d } when d.Request == _detailsRequest && _detailsRequest != 0:
+                Description = d.Description?.Trim() ?? string.Empty;
+                if (Header is null && d.Image is { } image && Target.Node is { } id && Target.Kind is { } kind)
+                {
+                    Header = new SourceEntryItem(
+                        new SourceItem(Target.Plugin, kind, id, d.Title, d.Subtitle, null, null, image, false, null, null, []), S.L);
+                    OnPropertyChanged(nameof(Header));
+                    HeaderChanged?.Invoke();
+                }
+
+                OnPropertyChanged(nameof(Description));
+                OnPropertyChanged(nameof(HasDescription));
+                break;
             case CoreEvent.BrowsePage { Update: var u } when u.Request == _request:
                 _pending = false;
                 IsBrowsing = false;

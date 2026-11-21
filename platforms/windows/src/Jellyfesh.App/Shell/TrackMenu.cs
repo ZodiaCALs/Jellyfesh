@@ -97,7 +97,11 @@ internal sealed class TrackMenu
 
     private async void GoToAlbum()
     {
-        if (_item is { } item && await TrackPlaces.AlbumAsync(_s, item) is { } album)
+        if (_item is { } item && TrackPlaces.SourceAlbum(item) is { } page)
+        {
+            AppHost.Window.Navigate(typeof(SourceBrowsePage), page);
+        }
+        else if (_item is { } song && await TrackPlaces.AlbumAsync(_s, song) is { } album)
         {
             AppHost.Window.Navigate(typeof(AlbumPage), album);
         }
@@ -105,7 +109,11 @@ internal sealed class TrackMenu
 
     private async void GoToArtist()
     {
-        if (_item is { } item && await TrackPlaces.ArtistAsync(_s, item) is { } artist)
+        if (_item is { } item && TrackPlaces.SourceArtist(item) is { } page)
+        {
+            AppHost.Window.Navigate(typeof(SourceBrowsePage), page);
+        }
+        else if (_item is { } song && await TrackPlaces.ArtistAsync(_s, song) is { } artist)
         {
             AppHost.Window.Navigate(typeof(ArtistPage), artist);
         }
@@ -152,8 +160,9 @@ internal sealed class TrackMenu
         _openLink.Text = ItemLinks.OpenInLabel(_s.L, ItemLinks.ServiceName(_s.Hub.State.Sources, _item?.SourceId));
         _favorite.Text = _s.L.Get(_item?.IsFavorite == true ? "Menu_Unfavorite" : "Menu_Favorite");
         _favorite.IsEnabled = loaded && _item?.Ref is TrackRef.Library or TrackRef.Source;
-        _goToAlbum.IsEnabled = loaded && TrackPlaces.HasPages(_item!);
-        _goToArtist.IsEnabled = _goToAlbum.IsEnabled;
+        var library = _item?.Ref is TrackRef.Library;
+        _goToAlbum.IsEnabled = loaded && (library || TrackPlaces.SourceAlbum(_item!) is not null);
+        _goToArtist.IsEnabled = loaded && (library || TrackPlaces.SourceArtist(_item!) is not null);
 
         // Library songs, while AI Lyrics is offered (docs/ui.md, "Song menu").
         _makeLyrics.Visibility = _item?.Ref is TrackRef.Library && AppHost.App.AiLyrics.OffersForSongs ? Visibility.Visible : Visibility.Collapsed;

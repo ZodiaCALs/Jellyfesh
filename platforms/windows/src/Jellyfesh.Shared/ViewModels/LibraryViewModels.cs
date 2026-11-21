@@ -136,8 +136,23 @@ public static class TrackPlaces
 {
     private const uint SearchLimit = 50;
 
-    /// <summary>Library songs have an album and an artist page.</summary>
-    public static bool HasPages(TrackItem item) => item.Ref is TrackRef.Library;
+    /// <summary>Library songs have an album and an artist page; a source's songs when the source names them.</summary>
+    public static bool HasPages(TrackItem item) => item.Ref is TrackRef.Library || SourceAlbum(item) is not null || SourceArtist(item) is not null;
+
+    /// <summary>
+    /// A source song's album page (docs/core-api.md, "Artist and album pages for source items"): the
+    /// album the source names, browsed, with its details.
+    /// </summary>
+    public static SourceTarget? SourceAlbum(TrackItem item) =>
+        item is { SourceId: { } plugin, SourceAlbumId: { } album }
+            ? new SourceTarget(plugin, album, item.SourceAlbum ?? item.Title, ItemKind.Album)
+            : null;
+
+    /// <summary>A source song's artist page: the artist the source names, browsed, with its details.</summary>
+    public static SourceTarget? SourceArtist(TrackItem item) =>
+        item is { SourceId: { } plugin, SourceArtistId: { } artist }
+            ? new SourceTarget(plugin, artist, item.Subtitle.Length > 0 ? item.Subtitle : item.Title, ItemKind.Artist)
+            : null;
 
     /// <summary>Library songs and plain files have a file to show.</summary>
     public static bool HasFile(TrackItem item) => item.Ref is TrackRef.Library or TrackRef.File;
