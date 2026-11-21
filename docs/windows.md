@@ -489,10 +489,29 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   its order; text uses the platform's face for the typeface (Segoe UI
   Variable, Georgia for serif, Cascadia Mono for mono; Windows has no rounded
   face, so Rounded keeps the system's); the aurora field fades with a weaker
-  aurora (never brighter than the default). Not applied yet on Windows: corner
-  scale, glass, text scale and density (the tokens are read when a view
-  loads), the lyrics' weight, glow and highlight, the Now Playing layouts and
-  the mini-player styles; those stay the Luminous defaults.
+  aurora (never brighter than the default); glass is drawn at the
+  Transparency setting times the look's glass, so a look without glass is
+  solid Cloud and Reduce Transparency still wins (WinUI's acrylic has no blur
+  amount to scale). Lyrics: the lines take the look's weight (Regular 400 to
+  Heavy 800; Bold by default); the current line and its sung words light up in
+  the highlight (ink-90 for Artwork, as before; the accent text colour; or the
+  plugin's colour), and the lyrics bar and Desktop Lyrics, which light words in
+  the accent, take a colour of the look's own; in a customized look the
+  current line glows in that colour (`TextGlow`: a composition drop shadow
+  shaped by the text's alpha mask, behind the text; for word-timed lines it
+  sits inside each word's sweep clip, so it follows the sweep). Now Playing on
+  windows of 760 epx and more: Stage is the v0.0.6 layout; Artwork shows a
+  large cover (520 epx, 440 on medium windows) with the line being sung under
+  it in place of the Lyrics pane (Queue, Info and Comments keep the stage);
+  Lyrics lays the chosen pane across the window under a row with a 72 epx
+  cover and the titles; narrower windows keep one view at a time. The
+  mini-player: Bar is the player bar from 900 epx and the capsule below it
+  (v0.0.6); Compact is the capsule (cover, title, play) stretched into a bar
+  as wide as the player bar; Floating is the capsule at every width. Not
+  applied on Windows: corner scale, text scale and density, because WinUI
+  reads the Misty tokens (`{th:Token}`) once, when a style or view loads, and
+  most spacing in the app's XAML is not a token; applying them live needs the
+  styles to take theme resources that can be swapped, which is left for later.
 * **Comments** (`CommentsViewModel`): for songs from sources whose
   `PluginSummary.comments` is true, Now Playing has a fourth pane: "Comments
   from {Service}", "Popular" (the first page's hot comments) then "Latest",

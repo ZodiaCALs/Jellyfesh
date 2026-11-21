@@ -75,9 +75,9 @@ A changed English string needs its three translations in every app.
 3. Fixed: a source's albums, artists, playlists and folders open pages of their own (artwork, Play, Shuffle, More, the songs and their total), from its catalogue and from Search [N6, N17, N18].
 4. Fixed: "Content from {Service}" on a source's pages and under its group in Search [N19].
 5. Fixed: Songs › Play, Shuffle and a row play the whole list (`Collection::Songs`) [N2].
-8. Fixed: source covers come through the core (`source_artwork` and `Event::Artwork`, `jellyfesh-artwork://` references included; the media controls get the cached file) [N29, N30].
-6. Fixed: About links to the website and its licences when the build knows them [N28].
-7. Fixed: the words of [3](#3-the-words); also Add to Playlist… on tiles (N3), "Also in …" (N5), and the views of V1, V3, V5, V6, V10, V11, V14, V15, V16, V18, V19, V20 and V21 as the other apps have them.
+6. Fixed: source covers come through the core (`source_artwork` and `Event::Artwork`, `jellyfesh-artwork://` references included; the media controls get the cached file) [N29, N30].
+7. Fixed: About links to the website and its licences when the build knows them [N28].
+8. Fixed: the words of [3](#3-the-words); also Add to Playlist… on tiles (N3), "Also in …" (N5), and the views of V1, V3, V5, V6, V10, V11, V14, V15, V16, V18, V19, V20 and V21 as the other apps have them.
 
 **Linux**
 1. Source covers never load: `linux/ui/convert.rs:36` maps `ArtworkRef::Url` to nothing [N29].
@@ -525,4 +525,4 @@ Yet"). They are listed, not audited:
 * **Covers through the core** (ADR-0022 item 5; see N29).
 * **Jellyfesh Web's relay** (Settings › Sources › Relay) and the "{Service} doesn't let browsers connect to it directly" message.
 
-**Windows, as built** (docs/windows.md): all of the above except the relay (web only), with these gaps in the Look slice: corner scale, glass, text scale, density, the lyrics' weight, glow and highlight, the three Now Playing layouts and the three mini-player styles are not applied yet (the sidebar and Home order, the typeface and the aurora are). Get Info has no album or artist picture; the library's Discover is still Home's sections as before.
+**Windows, as built** (docs/windows.md): all of the above except the relay (web only). Of the Look slice, the sidebar and Home order, the typeface, the aurora, glass, the lyrics' weight, glow and highlight, the three Now Playing layouts and the three mini-player styles apply live; corner scale, text scale and density are not applied (WinUI reads the tokens once, when a style or view loads). Get Info has no album or artist picture. The library's Discover page is Home's sections, as ui.md says.
