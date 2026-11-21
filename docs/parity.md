@@ -71,10 +71,11 @@ A changed English string needs its three translations in every app.
 
 **Windows**
 1. Fixed: Jellyfin's Quick Connect code is a step of its own, and fields keep their help, required and kind [N10, N11].
-2. Resume Playback is ignored at launch (`win/Jellyfesh.Shared/ViewModels/AppViewModel.cs` `Start()`) [N26].
+2. Fixed: Resume Playback at launch: the core reads `resume_on_launch` since M3 [N26].
 3. Fixed: a source's albums, artists, playlists and folders open pages of their own (artwork, Play, Shuffle, More, the songs and their total), from its catalogue and from Search [N6, N17, N18].
 4. Fixed: "Content from {Service}" on a source's pages and under its group in Search [N19].
-5. Songs › Play and Shuffle take the first 2,000 songs; a row plays 500 [N2].
+5. Fixed: Songs › Play, Shuffle and a row play the whole list (`Collection::Songs`) [N2].
+8. Fixed: source covers come through the core (`source_artwork` and `Event::Artwork`, `jellyfesh-artwork://` references included; the media controls get the cached file) [N29, N30].
 6. Fixed: About links to the website and its licences when the build knows them [N28].
 7. Fixed: the words of [3](#3-the-words); also Add to Playlist… on tiles (N3), "Also in …" (N5), and the views of V1, V3, V5, V6, V10, V11, V14, V15, V16, V18, V19, V20 and V21 as the other apps have them.
 
@@ -352,8 +353,8 @@ Where: macOS `mac/App/AppCommands.swift` and `mac/Platform/SystemState.swift` (`
 | Function | macOS | Windows | Linux | Android | Web |
 |---|---|---|---|---|---|
 | Library thumbnails | ✓ | ✓ | ✓ | ✓ | ✓ |
-| A source item's cover (search, browse, Home shelves) | ✗ [N29] | ✓ (N30) | ✗ [N29] | ✓ (through the core) | ✓ |
-| Now Playing artwork of a source song | ✗ [N29] | ✓ | ✗ [N29] | ✓ (through the core) | ✓ |
+| A source item's cover (search, browse, Home shelves) | ✗ [N29] | ✓ (through the core) | ✗ [N29] | ✓ (through the core) | ✓ |
+| Now Playing artwork of a source song | ✗ [N29] | ✓ (through the core) | ✗ [N29] | ✓ (through the core) | ✓ |
 | A remote session's track artwork | ✗ [N29] | ✓ | ✗ [N29] | ✓ (through the core) | n/a (no remote sessions) |
 | Plugin icons (Add a Source, Your Sources, Installed) | ✓ | ✓ | ✓ | ✓ | ✗ generic glyph [N31] |
 
@@ -374,7 +375,7 @@ core API has no call that fetches one for the app):
 | Web | The page fetches it. `Art.svelte` waits until the row is within 200 px of the screen, then `Artworks.ref` (`web/lib/state/artwork.ts`) takes the item's own `ImageRef` when it is wide enough (or has no width), else asks the plugin's `artwork(item, size)` in its worker (when it declares `Artwork`), remembered per item and size (4,000). `Artworks.url`: without headers the URL goes straight into `<img loading="lazy">` (the browser's HTTP cache); with headers it is `fetch(url, { headers, mode: 'cors', credentials: 'omit' })` turned into an object URL, 300 kept. No scheme check in the page; on https the browser blocks or upgrades http images (mixed content); CSP `img-src * data: blob:` (`platforms/web/index.html`). Now Playing asks the same at 1,024 px (`web/lib/state/player.svelte.ts` `loadArtwork`). Library covers come from the library's own store (`web/lib/state/library.svelte.ts` `coverUrl`). |
 
 * **N29** ADR-0022 item 5 (v0.0.7): "The core fetches a source item's picture through the plugin host (its allowlist and the picture's headers) into the artwork cache, and the apps show the cached file." When that API lands, macOS (`ArtworkLoader`), Linux (`convert::art_of`, `ArtKey`) and Android (`ArtKey.of`) should load the cached file it gives, and Windows should switch to it (N30). The web already goes through the plugin (`artwork` export, the picture's headers); it needs no change unless jf-web gains the same call.
-* **N30** Windows loads covers, but around the plugin host: no headers (covers that need them fail), http allowed, outside the allowlist. Replace with the core's cached file (N29).
+* **N30** Fixed on Windows: covers come through the core's cache (`ThumbnailService.GetSourceAsync`); the app no longer loads any URL itself.
 * **N31** Android shows plugin icons only for Add a Source (`PresetIcon`); Your Sources (`and/ui/sources/SourcesScreens.kt`) and Settings › Sources › Installed (`and/ui/settings/SettingsScreen.kt` `installed`) draw `InitialTile`. The web shows a globe (`web/components/AddSource.svelte`) or the sources glyph (`web/views/SourcesView.svelte`) and never the package's `icon.png`.
 
 ## 2. View differences
@@ -523,3 +524,5 @@ Yet"). They are listed, not audited:
 * **The lyrics bar** and **Desktop Lyrics**, with Show Lyrics Bar and Desktop Lyrics in Settings › Appearance › Lyrics.
 * **Covers through the core** (ADR-0022 item 5; see N29).
 * **Jellyfesh Web's relay** (Settings › Sources › Relay) and the "{Service} doesn't let browsers connect to it directly" message.
+
+**Windows, as built** (docs/windows.md): all of the above except the relay (web only), with these gaps in the Look slice: corner scale, glass, text scale, density, the lyrics' weight, glow and highlight, the three Now Playing layouts and the three mini-player styles are not applied yet (the sidebar and Home order, the typeface and the aurora are). Get Info has no album or artist picture; the library's Discover is still Home's sections as before.
