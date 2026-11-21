@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { DisplayClock, nextSecond, nextStep, type PlaybackAnchor } from '../../src/lib/drawing/displayClock';
 import { cursor, type LyricTimeline, nextChange } from '../../src/lib/drawing/lyricCursor';
+import { lyricsBar } from '../../src/lib/drawing/lyricsBar';
 
 const contracts = fileURLToPath(new URL('../../../../tests/contract/', import.meta.url));
 
@@ -104,4 +105,27 @@ describe('lyric cursor port (tests/contract/lyrics-cursor.json)', () => {
     }
     expect(checked).toBeGreaterThan(100);
   });
+});
+
+describe('lyrics bar port (tests/contract/lyrics-bar.json)', () => {
+  const contract = read('lyrics-bar.json');
+
+  it('is version 1', () => {
+    expect(contract.version).toBe(1);
+    expect(contract.cases.length).toBeGreaterThan(0);
+  });
+
+  for (const c of contract.cases) {
+    it(c.name, () => {
+      for (const q of c.queries) {
+        const bar = lyricsBar(c.timeline as LyricTimeline, q.t);
+        const where = `${c.name} at ${q.t}`;
+        expect(bar.line, where).toBe(q.line);
+        expect(bar.next, where).toBe(q.next);
+        expect(bar.words.length, where).toBe(q.words.length);
+        bar.words.forEach((w, i) => expect(Math.abs(w - q.words[i]), `${where} word ${i}`).toBeLessThan(1.5e-6));
+        expect(Math.abs(bar.lineProgress - q.line_progress), where).toBeLessThan(1.5e-6);
+      }
+    });
+  }
 });
