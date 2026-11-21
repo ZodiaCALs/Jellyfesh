@@ -109,6 +109,8 @@ fn settings_share_the_cores_names_and_defaults() {
         "preamp_db",
         "eq",
         "resume_on_launch",
+        "show_lyrics_bar",
+        "desktop_lyrics",
     ];
     for key in shared {
         assert_eq!(ours[key], core[key], "{key}");

@@ -25,8 +25,13 @@
 //! `Uint8Array`. Nothing here runs per frame: drawing time is the shell's
 //! port of `DisplayClock` and the lyric cursor.
 
+pub mod ai_lyrics;
+pub mod details;
+pub mod discover;
 pub mod library;
+pub mod look;
 pub mod lyrics;
+pub mod pro;
 pub mod qr;
 pub mod relay;
 pub mod rules;
@@ -78,6 +83,36 @@ pub fn start() {
 #[wasm_bindgen]
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_owned()
+}
+
+/// The website, with a trailing slash, as the apps' About finds it: `JF_WEBSITE` when the build
+/// set it, else the GitHub Pages site of the repository the build ran for; `None` when the build
+/// knows neither, or the address is not `https`.
+pub fn website_from(explicit: Option<&str>, repository: Option<&str>) -> Option<String> {
+    let site = match explicit.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(site) => site.to_owned(),
+        None => {
+            let (owner, name) = repository?.trim().split_once('/')?;
+            if owner.is_empty() || name.is_empty() || name.contains('/') {
+                return None;
+            }
+            format!("https://{}.github.io/{name}/", owner.to_lowercase())
+        }
+    };
+    if !site.starts_with("https://") || site.len() <= "https://".len() {
+        return None;
+    }
+    Some(if site.ends_with('/') {
+        site
+    } else {
+        format!("{site}/")
+    })
+}
+
+/// This build's website (About, the Pro sheet's legal links), or `undefined`.
+#[wasm_bindgen]
+pub fn website() -> Option<String> {
+    website_from(option_env!("JF_WEBSITE"), option_env!("GITHUB_REPOSITORY"))
 }
 
 // ---- the session -----------------------------------------------------------------------------
@@ -587,27 +622,203 @@ pub fn codec_mime(codec: &str) -> Option<String> {
 
 // ---- sources ---------------------------------------------------------------------------------
 
-/// Stored settings made to fit a settings schema, or its defaults.
+/// Stored settings made to fit a settings schema, or its defaults. `api_version` is the
+/// package's ("1.2" reads the schema with profile 1.2's keywords; left out, 1.1's).
 #[wasm_bindgen]
-pub fn effective_settings(schema: &str, stored: Option<String>) -> Result<String, JsError> {
+pub fn effective_settings(
+    schema: &str,
+    stored: Option<String>,
+    api_version: Option<String>,
+) -> Result<String, JsError> {
     let schema: Value = parse(schema, "schema")?;
     let stored: Option<Value> = match stored {
         Some(text) => serde_json::from_str(&text).ok(),
         None => None,
     };
+    let profile = sources::profile(api_version.as_deref());
     Ok(json(
-        &sources::effective_settings(&schema, stored.as_ref()).map_err(error)?,
+        &sources::effective_settings(&schema, stored.as_ref(), profile).map_err(error)?,
     ))
 }
 
-/// New settings checked against the schema, defaults filled in.
+/// New settings checked against the schema, defaults filled in (`api_version` as above).
 #[wasm_bindgen]
-pub fn validate_settings(schema: &str, values: &str) -> Result<String, JsError> {
+pub fn validate_settings(schema: &str, values: &str, api_version: Option<String>) -> Result<String, JsError> {
     let schema: Value = parse(schema, "schema")?;
     let values: Value = parse(values, "settings")?;
+    let profile = sources::profile(api_version.as_deref());
     Ok(json(
-        &sources::validate_settings(&schema, &values).map_err(error)?,
+        &sources::validate_settings(&schema, &values, profile).map_err(error)?,
     ))
+}
+
+/// The best of a package's translations (`["zh-Hans", "ja"]` as JSON) for a language tag
+/// (`zh-TW`, `ja-JP`), or `undefined` for English (API 1.2, `jf_plugin_model::l10n`).
+#[wasm_bindgen]
+pub fn best_language(available: &str, wanted: &str) -> Result<Option<String>, JsError> {
+    let available: Vec<String> = parse(available, "languages")?;
+    Ok(jf_plugin_model::l10n::best_language(&available, wanted).map(str::to_owned))
+}
+
+/// An appearance plugin's look (`jf_plugin_model::Look`), checked: numbers within their ranges,
+/// lists without duplicates (API 1.2).
+#[wasm_bindgen]
+pub fn check_look(look: &str) -> Result<String, JsError> {
+    let look: jf_plugin_model::Look = parse(look, "look")?;
+    Ok(json(&jf_plugin_model::sanitize::look(look)))
+}
+
+/// Discover's limits: `{"call_ms":…,"shelf_items":…,"root_items":…}` (as the core's).
+#[wasm_bindgen]
+pub fn discover_limits() -> String {
+    json(&serde_json::json!({
+        "call_ms": discover::CALL_MS,
+        "shelf_items": discover::SHELF_ITEMS,
+        "root_items": discover::ROOT_ITEMS,
+    }))
+}
+
+/// A plugin's own Discover shelves (checked by `Source::check_shelves`) as a page: `{shelves,
+/// error}`, without empty shelves.
+#[wasm_bindgen]
+pub fn discover_own_page(shelves: &str) -> Result<String, JsError> {
+    let shelves: Vec<jf_plugin_model::Shelf> = parse(shelves, "shelves")?;
+    Ok(json(&discover::own_page(shelves)))
+}
+
+/// The folders of a browse root (`Item` list) that become Discover shelves.
+#[wasm_bindgen]
+pub fn discover_root_folders(root: &str) -> Result<String, JsError> {
+    let root: Vec<Item> = parse(root, "root")?;
+    Ok(json(&discover::root_folders(&root)))
+}
+
+/// A Discover page made from a source's answers (`discover::Answers`: `for_you`, `root` and
+/// `folders`, each answer `{"ok": [Item…]}` or `{"err": "…"}`): `{shelves, error}`.
+#[wasm_bindgen]
+pub fn discover_made_page(name: &str, answers: &str) -> Result<String, JsError> {
+    let answers: discover::Answers = parse(answers, "answers")?;
+    Ok(json(&discover::made_page(name, answers)))
+}
+
+/// An audio format with the core's quality label (`details::AudioFormat`), from what is known.
+#[wasm_bindgen]
+pub fn audio_format(
+    codec: Option<String>,
+    sample_rate_hz: Option<u32>,
+    bit_depth: Option<u32>,
+    channels: Option<u32>,
+    bitrate_kbps: Option<u32>,
+) -> String {
+    json(&details::format(
+        codec.as_deref(),
+        sample_rate_hz,
+        bit_depth,
+        channels,
+        bitrate_kbps,
+    ))
+}
+
+/// Get Info's rows for a song (`{about, audio}`, each a list of `{key, value}`): the plugin's
+/// details (`ItemDetails`, or `undefined`), what the page knows (`details::Known`) and the format
+/// of what plays (`AudioFormat`, or `undefined`).
+#[wasm_bindgen]
+pub fn song_rows(details: Option<String>, known: &str, format: Option<String>) -> Result<String, JsError> {
+    let details: Option<jf_plugin_model::ItemDetails> = match details {
+        Some(text) => Some(parse(&text, "details")?),
+        None => None,
+    };
+    let known: details::Known = parse(known, "known")?;
+    let format: Option<details::AudioFormat> = match format {
+        Some(text) => Some(parse(&text, "format")?),
+        None => None,
+    };
+    Ok(json(&details::song_rows(
+        details.as_ref(),
+        &known,
+        format.as_ref(),
+    )))
+}
+
+/// Get Info's rows for an album or an artist (`{key, value}` list).
+#[wasm_bindgen]
+pub fn item_rows(details: &str) -> Result<String, JsError> {
+    let details: jf_plugin_model::ItemDetails = parse(details, "details")?;
+    Ok(json(&details::item_rows(&details)))
+}
+
+// ---- AI Lyrics -------------------------------------------------------------------------------
+
+/// What making lyrics needs first (`ai_lyrics::AiLyricsNeed`): the AI Lyrics plugin (or
+/// `undefined`), whether Pro is active, its plan (`"asking"`, `{"failed": "…"}` or `{"ready":
+/// MakerPlan}`) and the consents (`[{plugin, origin}]`).
+#[wasm_bindgen]
+pub fn ai_lyrics_need(
+    plugin: Option<String>,
+    pro: bool,
+    plan: &str,
+    consents: &str,
+) -> Result<String, JsError> {
+    let plan: ai_lyrics::PlanState = parse(plan, "plan")?;
+    let consents: Vec<ai_lyrics::AudioConsent> = parse(consents, "consents")?;
+    Ok(json(&ai_lyrics::need(plugin.as_deref(), pro, &plan, &consents)))
+}
+
+// ---- the look --------------------------------------------------------------------------------
+
+/// The look to apply (`look::LookSnapshot` plus `density_scale`): an appearance plugin's answer
+/// (`jf_plugin_model::Look`) checked and with the Luminous defaults filled in, or the defaults
+/// when there is none (no plugin, or Pro off).
+#[wasm_bindgen]
+pub fn resolve_look(look: Option<String>, plugin: Option<String>) -> Result<String, JsError> {
+    let look: Option<jf_plugin_model::Look> = match look {
+        Some(text) => Some(parse(&text, "look")?),
+        None => None,
+    };
+    let resolved = look::resolve(look, plugin.as_deref());
+    let mut value = serde_json::to_value(&resolved).map_err(error)?;
+    value["density_scale"] = serde_json::json!(look::density_scale(resolved.density));
+    Ok(json(&value))
+}
+
+// ---- Jellyfesh Pro ---------------------------------------------------------------------------
+
+/// Jellyfesh Pro for this release (ADR-0021): Pro Preview builds, or a licence key checked offline
+/// against the keys built in. The page keeps the key (`activate` returns the text to keep) and
+/// hands it back at the next visit, when it is checked again.
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct Pro {
+    inner: pro::Pro,
+}
+
+#[wasm_bindgen]
+impl Pro {
+    #[wasm_bindgen(constructor)]
+    pub fn new(stored_key: Option<String>) -> Pro {
+        Pro {
+            inner: pro::Pro::for_release(stored_key.as_deref()),
+        }
+    }
+
+    /// The Pro slice: `{active, source, preview, licence_error, licence_keys}`.
+    pub fn snapshot(&self) -> String {
+        json(&self.inner.snapshot())
+    }
+
+    /// Checks a licence key: `{"ok": "<the key to keep>"}` or `{"err": "Malformed" | "UnknownKey" |
+    /// "BadSignature" | "WrongProduct" | "Revoked"}`.
+    pub fn activate(&mut self, key: &str) -> String {
+        match self.inner.activate(key) {
+            Ok(text) => json(&serde_json::json!({ "ok": text })),
+            Err(error) => json(&serde_json::json!({ "err": error })),
+        }
+    }
+
+    /// Remove Licence….
+    pub fn remove_licence(&mut self) {
+        self.inner.remove_licence();
+    }
 }
 
 /// Unified search sections for `[[source, [Item…]], …]` (`SectionRow` lists).
@@ -679,6 +890,36 @@ impl Source {
     pub fn check_artwork(&self, image: &str) -> Result<String, JsError> {
         let image: ImageRef = parse(image, "image")?;
         Ok(json(&self.inner.check_artwork(image).map_err(error)?))
+    }
+
+    /// A Discover answer (`Shelf` list), checked (API 1.2).
+    pub fn check_shelves(&self, shelves: &str) -> Result<String, JsError> {
+        let shelves: Vec<jf_plugin_model::Shelf> = parse(shelves, "shelves")?;
+        Ok(json(&self.inner.check_shelves(shelves)))
+    }
+
+    /// A details answer (`ItemDetails`), checked (API 1.2).
+    pub fn check_details(&self, details: &str) -> Result<String, JsError> {
+        let details: jf_plugin_model::ItemDetails = parse(details, "details")?;
+        Ok(json(&self.inner.check_details(details)))
+    }
+
+    /// A comments answer (`CommentPage`), checked (API 1.2).
+    pub fn check_comments(&self, page: &str) -> Result<String, JsError> {
+        let page: jf_plugin_model::CommentPage = parse(page, "comments")?;
+        Ok(json(&self.inner.check_comments(page)))
+    }
+
+    /// A maker's plan (`MakerPlan`), checked: where audio goes must be on the allowlist.
+    pub fn check_plan(&self, plan: &str) -> Result<String, JsError> {
+        let plan: jf_plugin_model::MakerPlan = parse(plan, "plan")?;
+        Ok(json(&self.inner.check_plan(plan).map_err(error)?))
+    }
+
+    /// Lyrics a maker made (`Made`), checked.
+    pub fn check_made(&self, made: &str) -> Result<String, JsError> {
+        let made: jf_plugin_model::Made = parse(made, "made")?;
+        Ok(json(&self.inner.check_made(made).map_err(error)?))
     }
 
     /// A `LyricPayload` answer, parsed: `{doc, timeline, synced}`.
@@ -804,4 +1045,29 @@ pub fn qr_svg(data: &str) -> String {
         size: usize,
     }
     json(&qr::svg_path(data).map(|(path, size)| Qr { path, size }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::website_from;
+
+    #[test]
+    fn the_website_comes_from_the_build() {
+        assert_eq!(
+            website_from(Some("https://jellyfesh.example"), Some("o/r")).as_deref(),
+            Some("https://jellyfesh.example/")
+        );
+        assert_eq!(
+            website_from(None, Some("ZodiaCALs/jellyfesh")).as_deref(),
+            Some("https://zodiacals.github.io/jellyfesh/")
+        );
+        assert_eq!(website_from(Some("  "), None), None);
+        assert_eq!(
+            website_from(Some("http://plain.example"), None),
+            None,
+            "https only"
+        );
+        assert_eq!(website_from(None, Some("no-slash")), None);
+        assert_eq!(website_from(None, Some("a/b/c")), None);
+    }
 }

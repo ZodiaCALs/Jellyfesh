@@ -22,6 +22,8 @@ jf-lyrics.workspace = true
 jf-palette.workspace = true
 jf-tokens.workspace = true
 jf-plugin-model.workspace = true
+# Jellyfesh Pro licence keys, checked offline in the browser as the core checks them.
+jf-licence = { path = "../jf-licence" }
 qrcode.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -41,5 +43,7 @@ getrandom = { workspace = true, features = ["wasm_js"] }
 # The mirrored rules are compared with the originals on the host.
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 jf-core.workspace = true
+# The tests issue keys with a key pair of their own.
+jf-licence = { path = "../jf-licence", features = ["issue"] }
 jf-engine.workspace = true
 jf-library.workspace = true

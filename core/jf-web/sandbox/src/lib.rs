@@ -37,8 +37,8 @@ use jf_plugin_model::manifest::AllowRule;
 use jf_plugin_model::package;
 use jf_plugin_model::trust::TrustList;
 use jf_plugin_model::{
-    AesMode, AuthKind, Capability, ContentPolicy, CryptoError, HashAlgorithm, Header, PlaybackMode,
-    RsaPadding, RsaPublicKey, SignatureStatus,
+    AesMode, AuthKind, Capability, ContentPolicy, CryptoError, HashAlgorithm, Header, Permission,
+    PlaybackMode, RsaPadding, RsaPublicKey, SignatureStatus,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -267,6 +267,15 @@ pub struct PackageInfo {
     /// component the page loads.
     pub wasm_sha256: String,
     pub has_icon: bool,
+    /// The host imports the manifest declares (API 1.2: `audio`, `speech`).
+    pub permissions: Vec<Permission>,
+    /// The settings schema in each language the package translates it into
+    /// (API 1.2, `l10n/<language>.json`), the settings in the plugin's order.
+    pub localized_schemas: std::collections::BTreeMap<String, Box<RawValue>>,
+    /// Part of Jellyfesh Pro (makes lyrics or changes the look).
+    pub requires_pro: bool,
+    /// An extension (Settings › Extensions) rather than a source of music.
+    pub extension: bool,
 }
 
 /// Reads and checks a `.jfpkg` against the built-in trust list (the
@@ -296,6 +305,18 @@ pub fn read_package(bytes: &[u8]) -> Result<(PackageInfo, Vec<u8>), String> {
         links: manifest.links.clone(),
         wasm_sha256: sha256_hex(&package.wasm),
         has_icon: package.icon.is_some(),
+        permissions: manifest.permissions.clone(),
+        localized_schemas: package
+            .translations
+            .iter()
+            .map(|translation| {
+                let text = jf_plugin_model::l10n::localize(&package.settings_schema, Some(translation));
+                RawValue::from_string(text).map(|raw| (translation.language.clone(), raw))
+            })
+            .collect::<Result<_, _>>()
+            .map_err(|e| e.to_string())?,
+        requires_pro: jf_plugin_model::requires_pro(&manifest.capabilities),
+        extension: jf_plugin_model::is_extension(&manifest.capabilities),
     };
     Ok((info, package.wasm))
 }

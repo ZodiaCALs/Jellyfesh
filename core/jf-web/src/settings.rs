@@ -85,6 +85,14 @@ pub struct WebSettings {
     /// The interface language (`en`, `zh-Hans`, `zh-Hant`, `ja`); `None`
     /// follows the browser (web only).
     pub language: Option<String>,
+    /// Show Lyrics Bar (Settings › Appearance › Lyrics): the one-line lyrics
+    /// bar under the player. On by default, as in the core.
+    pub show_lyrics_bar: bool,
+    /// Desktop Lyrics (Settings › Appearance › Lyrics): the current line in a
+    /// window of its own above other apps. On the web that window is a
+    /// Document Picture-in-Picture window, where the browser offers one. Off
+    /// by default, as in the core.
+    pub desktop_lyrics: bool,
 }
 
 impl Default for WebSettings {
@@ -106,6 +114,8 @@ impl Default for WebSettings {
             resume_on_launch: false,
             quality: crate::rules::FIRST_QUALITY,
             language: None,
+            show_lyrics_bar: true,
+            desktop_lyrics: false,
         }
     }
 }
@@ -161,5 +171,17 @@ mod tests {
         .normalized();
         assert_eq!(fixed.hue_source, HueSource::Fixed { hue: 330.0 });
         assert_eq!(fixed.language, None);
+    }
+
+    #[test]
+    fn settings_saved_before_the_lyrics_bar_take_its_defaults() {
+        let s: WebSettings = serde_json::from_str(r#"{"show_translation": false}"#).unwrap();
+        assert!(!s.show_translation, "saved fields keep their values");
+        assert!(s.show_lyrics_bar);
+        assert!(!s.desktop_lyrics);
+        let s: WebSettings =
+            serde_json::from_str(r#"{"show_lyrics_bar": false, "desktop_lyrics": true}"#).unwrap();
+        assert!(!s.show_lyrics_bar);
+        assert!(s.desktop_lyrics);
     }
 }

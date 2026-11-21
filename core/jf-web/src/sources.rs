@@ -8,12 +8,13 @@ use jf_plugin_model::allow::Allowlist;
 use jf_plugin_model::auth::{AuthHost, Machine, Next, Request};
 use jf_plugin_model::links::Links;
 use jf_plugin_model::manifest::AllowRule;
+use jf_plugin_model::manifest::ApiVersion;
 use jf_plugin_model::merge::{self, MergedItem};
 use jf_plugin_model::sanitize::{self, Checker};
-use jf_plugin_model::schema::SettingsSchema;
+use jf_plugin_model::schema::{Profile, SettingsSchema};
 use jf_plugin_model::{
-    AuthKind, AuthStep, CallError, ContentPolicy, FieldValue, Flow, FlowStep, ImageRef, Item, ItemKind,
-    ItemPage, LyricPayload, StreamInfo,
+    AuthKind, AuthStep, CallError, CommentPage, ContentPolicy, FieldValue, Flow, FlowStep, ImageRef, Item,
+    ItemDetails, ItemKind, ItemPage, LyricPayload, Made, MakerPlan, Shelf, StreamInfo,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -22,10 +23,23 @@ use zeroize::Zeroizing;
 
 use crate::lyrics::{self, Lyrics};
 
+/// The schema profile of a package's `api_version` ("1.2" allows colours, sliders, ordered
+/// checklists, titled choices and groups; older packages flat scalars).
+pub fn profile(api_version: Option<&str>) -> Profile {
+    let parsed = api_version.and_then(|text| {
+        let (major, minor) = text.split_once('.')?;
+        Some(ApiVersion {
+            major: major.parse().ok()?,
+            minor: minor.parse().ok()?,
+        })
+    });
+    parsed.map_or(Profile::V1_1, Profile::for_api)
+}
+
 /// The settings to use: `stored` made to fit the schema (values that no
 /// longer validate fall back to their defaults), or the defaults.
-pub fn effective_settings(schema: &Value, stored: Option<&Value>) -> Result<Value, String> {
-    let schema = parse_schema(schema)?;
+pub fn effective_settings(schema: &Value, stored: Option<&Value>, profile: Profile) -> Result<Value, String> {
+    let schema = parse_schema(schema, profile)?;
     Ok(match stored {
         Some(value) => schema.fit(value),
         None => schema.defaults(),
@@ -34,15 +48,15 @@ pub fn effective_settings(schema: &Value, stored: Option<&Value>) -> Result<Valu
 
 /// Validates new settings against the schema, as the core does for
 /// `SetPluginSettings`; returns them with defaults filled in.
-pub fn validate_settings(schema: &Value, values: &Value) -> Result<Value, String> {
-    parse_schema(schema)?.validate(values)
+pub fn validate_settings(schema: &Value, values: &Value, profile: Profile) -> Result<Value, String> {
+    parse_schema(schema, profile)?.validate(values)
 }
 
-fn parse_schema(schema: &Value) -> Result<SettingsSchema, String> {
+fn parse_schema(schema: &Value, profile: Profile) -> Result<SettingsSchema, String> {
     if schema.as_object().is_some_and(|o| o.is_empty()) {
         return Ok(SettingsSchema::empty());
     }
-    SettingsSchema::parse(&schema.to_string())
+    SettingsSchema::parse_with(&schema.to_string(), profile)
 }
 
 /// One installed source as the browser's host uses it: its id, name,
@@ -115,6 +129,33 @@ impl Source {
     /// An artwork answer the page may fetch.
     pub fn check_artwork(&self, image: ImageRef) -> Result<ImageRef, CallError> {
         self.with_checker(|c| sanitize::artwork(image, c))
+    }
+
+    /// A Discover page from the plugin (API 1.2), checked: at most 12
+    /// shelves of 50 valid items, pictures only from the allowlist.
+    pub fn check_shelves(&self, shelves: Vec<Shelf>) -> Vec<Shelf> {
+        self.with_checker(|c| sanitize::shelves(shelves, c))
+    }
+
+    /// An item's details (API 1.2), checked.
+    pub fn check_details(&self, details: ItemDetails) -> ItemDetails {
+        self.with_checker(|c| sanitize::details(details, c))
+    }
+
+    /// A page of comments (API 1.2), checked.
+    pub fn check_comments(&self, page: CommentPage) -> CommentPage {
+        self.with_checker(|c| sanitize::comments(page, c))
+    }
+
+    /// What making lyrics would do (API 1.2): the origin audio goes to must
+    /// be on the allowlist.
+    pub fn check_plan(&self, plan: MakerPlan) -> Result<MakerPlan, CallError> {
+        self.with_checker(|c| sanitize::plan(plan, c))
+    }
+
+    /// Lyrics the plugin made, checked.
+    pub fn check_made(&self, made: Made) -> Result<Made, CallError> {
+        sanitize::made(made)
     }
 
     /// The plugin's lyrics, checked and parsed (unsynced when the content
@@ -379,13 +420,42 @@ mod tests {
     #[test]
     fn settings_are_checked_against_the_schema() {
         let schema: Value = serde_json::from_str(SCHEMA).unwrap();
-        let ok = validate_settings(&schema, &json!({"server_url": "http://192.168.1.20:4533"})).unwrap();
+        let v1 = profile(Some("1.0"));
+        let ok = validate_settings(&schema, &json!({"server_url": "http://192.168.1.20:4533"}), v1).unwrap();
         assert_eq!(ok["quality"], "app");
-        assert!(validate_settings(&schema, &json!({"server_url": "ftp://x"})).is_err());
-        assert!(validate_settings(&schema, &json!({})).is_err(), "required");
-        let fitted = effective_settings(&schema, Some(&json!({"quality": "nope", "x": 1}))).unwrap();
+        assert!(validate_settings(&schema, &json!({"server_url": "ftp://x"}), v1).is_err());
+        assert!(validate_settings(&schema, &json!({}), v1).is_err(), "required");
+        let fitted = effective_settings(&schema, Some(&json!({"quality": "nope", "x": 1})), v1).unwrap();
         assert_eq!(fitted, json!({"quality": "app"}));
-        assert_eq!(effective_settings(&json!({}), None).unwrap(), json!({}));
+        assert_eq!(effective_settings(&json!({}), None, v1).unwrap(), json!({}));
+    }
+
+    #[test]
+    fn api_1_2_schemas_have_colours_and_checklists() {
+        let schema = json!({"type": "object", "properties": {
+            "highlight": {"type": "string", "format": "color", "default": "#3366ff"},
+            "places": {"type": "array", "items": {"type": "string", "enum": ["home", "albums", "songs"]},
+                "uniqueItems": true, "default": ["home", "songs"]}}});
+        assert_eq!(profile(Some("1.2")), Profile::V1_2);
+        assert_eq!(profile(Some("1.1")), Profile::V1_1);
+        assert_eq!(profile(None), Profile::V1_1);
+        assert!(
+            effective_settings(&schema, None, Profile::V1_1).is_err(),
+            "1.1 has no colours"
+        );
+        let defaults = effective_settings(&schema, None, Profile::V1_2).unwrap();
+        assert_eq!(
+            defaults,
+            json!({"highlight": "#3366ff", "places": ["home", "songs"]})
+        );
+        let set = validate_settings(
+            &schema,
+            &json!({"highlight": "#000000", "places": ["albums"]}),
+            Profile::V1_2,
+        )
+        .unwrap();
+        assert_eq!(set["places"], json!(["albums"]));
+        assert!(validate_settings(&schema, &json!({"highlight": "red"}), Profile::V1_2).is_err());
     }
 
     fn item(id: &str, title: &str, isrc: Option<&str>) -> Item {
