@@ -15,7 +15,7 @@ public enum SettingFieldKind
     Toggle,
     Choice,
 
-    /// <summary>A number ("type": "number") with a minimum and a maximum (profile 1.2): a slider, multipleOf its step.</summary>
+    /// <summary>A number or integer with a minimum and a maximum (profile 1.2, ADR-0020 §3): a slider, multipleOf its step (1 for integers).</summary>
     Slider,
 
     /// <summary>"format": "color" (profile 1.2): "#RRGGBB", a colour well.</summary>
@@ -299,7 +299,7 @@ public sealed class PluginSettingsForm
         var kind = (type, format) switch
         {
             ("boolean", _) => SettingFieldKind.Toggle,
-            ("number", _) when ranged => SettingFieldKind.Slider, // integers stay fields: ports, counts
+            ("number" or "integer", _) when ranged => SettingFieldKind.Slider, // ADR-0020 §3, as the other apps
             ("integer", _) => SettingFieldKind.Integer,
             ("number", _) => SettingFieldKind.Number,
             ("string", _) when choices.Count > 0 => SettingFieldKind.Choice,

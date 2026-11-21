@@ -283,7 +283,7 @@ public class ExtensionsTests
         Assert.Equal("#FF8A3D", f["highlight_colour"].Text);
         Assert.Equal(SettingFieldKind.Checklist, f["sidebar"].Kind);
         Assert.Equal([("Albums", true), ("Home", true), ("Songs", false)], f["sidebar"].Items.Select(i => (i.Title, i.IsChecked)));
-        Assert.Equal(SettingFieldKind.Integer, f["count"].Kind); // integers stay fields (a port, a count)
+        Assert.Equal(SettingFieldKind.Slider, f["count"].Kind); // an integer between bounds too (ADR-0020 §3)
         Assert.Equal(["a", "b"], f["legacy"].Choices);
         Assert.Equal("b", f["legacy"].Choice);
 
@@ -295,7 +295,7 @@ public class ExtensionsTests
         f["typeface"].SelectedOption = f["typeface"].Options[1];
         f["sidebar"].MoveDownCommand.Execute(f["sidebar"].Items[0]);
         f["sidebar"].Items[2].IsChecked = true;
-        f["count"].Text = "7";
+        f["count"].Value = 6.6;
         Assert.True(form.Validate());
         using var json = JsonDocument.Parse(form.ToJson());
         var root = json.RootElement;

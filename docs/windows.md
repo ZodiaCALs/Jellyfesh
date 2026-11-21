@@ -218,8 +218,8 @@ plugin settings applied with **Save**.
   bar and Cancel, "Ready" with **Delete…**, which asks first) and **Sending
   Audio** (each allowed origin with **Stop Allowing**), "Version · Author"
   and Uninstall…; **Install from File…** in the heading. Settings forms read
-  schema profile 1.2: sliders for numbers with both bounds (`multipleOf` the
-  step), colour wells (`format: color`, a colour picker), ordered checklists
+  schema profile 1.2: sliders for numbers and integers with both bounds
+  (`multipleOf` the step, 1 for integers; ADR-0020 §3), colour wells (`format: color`, a colour picker), ordered checklists
   (ticked items in order, Move Up and Move Down), `oneOf` choices with their
   titles and `x-jf-group` headings.
 * **The Pro sheet** opens from any Pro action while Pro is inactive: "Jellyfesh

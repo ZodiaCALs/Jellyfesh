@@ -68,17 +68,14 @@ public class QrAndSettingsTests
         Assert.Equal("Server", form.Fields[0].Label);
         Assert.Equal(SettingFieldKind.Url, form.Fields[0].Kind);
         Assert.Equal(SettingFieldKind.Secret, form.Fields[2].Kind);
-        Assert.Equal("192", form.Fields[3].Text);
+        Assert.Equal((SettingFieldKind.Slider, 192d, 1d), (form.Fields[3].Kind, form.Fields[3].Value, form.Fields[3].Step!.Value)); // an integer between bounds (ADR-0020 §3)
         Assert.True(form.Fields[4].IsOn);
         Assert.Equal("high", form.Fields[5].Choice);
 
         Assert.False(form.Validate()); // username is required
         Assert.Equal("Settings_Required", form.Fields[1].Error);
         form.Fields[1].Text = "ana";
-        form.Fields[3].Text = "999";
-        Assert.False(form.Validate());
-        Assert.Equal("Settings_OutOfRange", form.Fields[3].Error);
-        form.Fields[3].Text = "256";
+        form.Fields[3].Value = 255.6; // a slider keeps to its range and whole steps
         Assert.True(form.Validate());
 
         using var written = JsonDocument.Parse(form.ToJson());
