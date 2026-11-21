@@ -1,5 +1,7 @@
-//! About (docs/ui.md, "Settings"): the website and the third-party licences
-//! where the build knows where they are published, derived as the macOS,
+//! About (docs/ui.md, "Settings"): the website, the third-party licences
+//! and the legal pages (legal/README.md: the Licence Agreement, the Privacy
+//! Policy and the Terms of Sale) where the build knows where they are
+//! published, derived as the macOS,
 //! Windows and Android builds do: the website the build was given
 //! (`JF_WEBSITE`), else, in GitHub Actions, the repository's GitHub Pages
 //! address, where the website is deployed (docs/github.md); the licences are
@@ -12,11 +14,20 @@ use std::path::{Path, PathBuf};
 /// The page the website publishes the third-party notices on.
 pub const NOTICES_PAGE: &str = "THIRD_PARTY_NOTICES.html";
 
-/// The website and its notices page.
+/// The legal pages, relative to the website (tools/release/legal_pages.py
+/// writes them).
+pub const LICENCE_AGREEMENT_PAGE: &str = "legal/eula.html";
+pub const PRIVACY_POLICY_PAGE: &str = "legal/privacy.html";
+pub const TERMS_OF_SALE_PAGE: &str = "legal/terms-of-sale.html";
+
+/// The website and the pages it publishes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Links {
     pub website: String,
     pub licences: String,
+    pub licence_agreement: String,
+    pub privacy_policy: String,
+    pub terms_of_sale: String,
 }
 
 /// The website a build knows: `explicit` (the `JF_WEBSITE` build
@@ -33,8 +44,8 @@ pub fn website(explicit: Option<&str>, repository: Option<&str>) -> Option<Strin
     Some(format!("https://{}.github.io/{name}/", owner.to_lowercase()))
 }
 
-/// The website (with a trailing slash) and its notices page; `None` unless
-/// `website` is an `https` address.
+/// The website (with a trailing slash) and the pages it publishes; `None`
+/// unless `website` is an `https` address.
 pub fn links(website: Option<&str>) -> Option<Links> {
     let site = website?.trim();
     if !site.starts_with("https://") || site.len() <= "https://".len() {
@@ -47,6 +58,9 @@ pub fn links(website: Option<&str>) -> Option<Links> {
     };
     Some(Links {
         licences: format!("{base}{NOTICES_PAGE}"),
+        licence_agreement: format!("{base}{LICENCE_AGREEMENT_PAGE}"),
+        privacy_policy: format!("{base}{PRIVACY_POLICY_PAGE}"),
+        terms_of_sale: format!("{base}{TERMS_OF_SALE_PAGE}"),
         website: base,
     })
 }
@@ -96,6 +110,9 @@ mod tests {
             Some(Links {
                 website: "https://example.github.io/jellyfesh/".into(),
                 licences: "https://example.github.io/jellyfesh/THIRD_PARTY_NOTICES.html".into(),
+                licence_agreement: "https://example.github.io/jellyfesh/legal/eula.html".into(),
+                privacy_policy: "https://example.github.io/jellyfesh/legal/privacy.html".into(),
+                terms_of_sale: "https://example.github.io/jellyfesh/legal/terms-of-sale.html".into(),
             })
         );
         assert_eq!(

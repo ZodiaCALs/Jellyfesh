@@ -30,6 +30,7 @@ pub mod lyricsbar;
 pub mod motion;
 pub mod paging;
 pub mod playback;
+pub mod pro;
 pub mod queue;
 pub mod remote;
 pub mod schedule;

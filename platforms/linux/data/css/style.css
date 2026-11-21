@@ -764,6 +764,34 @@ button.desktop-lyrics-control:hover {
   margin-top: {{space.s2}};
 }
 
+/* Headings between groups of plugin settings (x-jf-group). */
+.settings-group-heading {
+  margin: {{space.s3}} {{space.s4}} {{space.s1}};
+  color: {{ink.ink-70}};
+}
+
+/* Jellyfesh Pro: the sheet, the badge and the legal pages. */
+.pro-sheet {
+  margin: 0 {{space.s6}} {{space.s6}};
+}
+
+.pro-pitch {
+  color: {{ink.ink-70}};
+}
+
+.legal-links {
+  margin: {{space.s1}} 0;
+}
+
+.legal-links button {
+  {{type-roles.list-secondary}};
+}
+
+.badge.pro {
+  color: {{accent.accent-text}};
+  background-color: alpha({{accent.accent-text}}, 0.14);
+}
+
 /* Get Info (docs/ui.md, "Details"). */
 .details {
   margin: {{space.s2}} {{space.s5}} {{space.s6}};

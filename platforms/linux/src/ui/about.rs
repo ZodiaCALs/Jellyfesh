@@ -1,15 +1,20 @@
 //! About: the app icon and the formal spaced-capitals wordmark (ink on
 //! light, white on dark; design/brand), the version from the build, the
-//! website and the third-party licences where the build knows them
-//! (docs/ui.md, "Settings"; `logic::about`), and the design credits.
+//! website, the third-party licences, the Licence Agreement and the Privacy
+//! Policy where the build knows them (docs/ui.md, "Settings";
+//! `logic::about`), Check for Updates in direct downloads (the core's
+//! `Update` slice), and the design credits.
 
 use std::path::PathBuf;
 
 use adw::prelude::*;
 
+use jf_core::Command;
+
 use crate::logic::about;
 use crate::ui::APP_ID;
 use crate::ui::i18n::{tr, trf};
+use crate::ui::state::{Change, app};
 use crate::ui::widgets::glyph::Glyph;
 
 /// What the third-party licences open: the website's page, or the file
@@ -19,10 +24,15 @@ enum Licences {
     File(PathBuf),
 }
 
+/// The website and the pages it publishes, when the build knows it.
+pub fn links() -> Option<about::Links> {
+    let site = about::website(option_env!("JF_WEBSITE"), option_env!("GITHUB_REPOSITORY"));
+    about::links(site.as_deref())
+}
+
 /// The website and the licences this build knows.
 fn known() -> (Option<about::Links>, Option<Licences>) {
-    let site = about::website(option_env!("JF_WEBSITE"), option_env!("GITHUB_REPOSITORY"));
-    let links = about::links(site.as_deref());
+    let links = links();
     let licences = match &links {
         Some(l) => Some(Licences::Page(l.licences.clone())),
         None => std::env::current_exe()
@@ -138,6 +148,16 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         }
         None => {}
     }
+    if let Some(l) = &links {
+        for (title, page) in [
+            (tr("Licence Agreement"), l.licence_agreement.clone()),
+            (tr("Privacy Policy"), l.privacy_policy.clone()),
+        ] {
+            places.append(&link_row(&title, None, move || {
+                crate::ui::actions::open_link(&page);
+            }));
+        }
+    }
     places.set_visible(places.first_child().is_some());
 
     let credits = gtk::ListBox::new();
@@ -163,6 +183,9 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     body.append(&version);
     body.append(&summary);
     body.append(&places);
+    if app().update.borrow().supported {
+        body.append(&updates(&dialog));
+    }
     body.append(&credits);
     let scroll = gtk::ScrolledWindow::builder()
         .child(&body)
@@ -174,4 +197,80 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     view.set_content(Some(&scroll));
     dialog.set_child(Some(&view));
     dialog.present(Some(parent));
+}
+
+/// Check for Updates and Check for Updates Automatically (direct
+/// downloads), with "Jellyfesh {version} Is Available" and View Release
+/// when the core found a newer release.
+fn updates(dialog: &adw::Dialog) -> gtk::ListBox {
+    let list = gtk::ListBox::new();
+    list.add_css_class("boxed-list");
+    list.set_selection_mode(gtk::SelectionMode::None);
+    let check = adw::ActionRow::builder().title(tr("Check for Updates")).build();
+    let button = gtk::Button::with_label(&tr("Check for Updates"));
+    button.set_valign(gtk::Align::Center);
+    button.connect_clicked(|_| {
+        app().send(Command::CheckForUpdates);
+    });
+    let view = gtk::Button::with_label(&tr("View Release"));
+    view.set_valign(gtk::Align::Center);
+    view.add_css_class("suggested-action");
+    view.connect_clicked(|_| {
+        let url = app().update.borrow().available.as_ref().map(|u| u.url.clone());
+        if let Some(url) = url {
+            crate::ui::actions::open_link(&url);
+        }
+    });
+    check.add_suffix(&view);
+    check.add_suffix(&button);
+    let auto = adw::SwitchRow::builder()
+        .title(tr("Check for Updates Automatically"))
+        .build();
+    let quiet = std::rc::Rc::new(std::cell::Cell::new(false));
+    let q = quiet.clone();
+    auto.connect_active_notify(move |r| {
+        if !q.get() {
+            let on = r.is_active();
+            app().update_settings(|s| s.check_for_updates = on);
+        }
+    });
+    list.append(&check);
+    list.append(&auto);
+    let show = {
+        let (check, button, view, auto) = (
+            check.downgrade(),
+            button.downgrade(),
+            view.downgrade(),
+            auto.downgrade(),
+        );
+        move || {
+            let (Some(check), Some(button), Some(view), Some(auto)) =
+                (check.upgrade(), button.upgrade(), view.upgrade(), auto.upgrade())
+            else {
+                return;
+            };
+            let a = app();
+            let update = a.update.borrow().clone();
+            let line = if update.checking {
+                tr("Checking…")
+            } else if let Some(found) = &update.available {
+                trf("Jellyfesh {version} Is Available", &[("version", &found.version)])
+            } else {
+                update.error.clone().unwrap_or_default()
+            };
+            check.set_subtitle(&gtk::glib::markup_escape_text(&line));
+            button.set_sensitive(!update.checking);
+            view.set_visible(update.available.is_some());
+            quiet.set(true);
+            auto.set_active(a.settings.borrow().check_for_updates);
+            quiet.set(false);
+        }
+    };
+    show();
+    app().listen_for(dialog, move |c| {
+        if matches!(c, Change::Update | Change::Settings) {
+            show();
+        }
+    });
+    list
 }

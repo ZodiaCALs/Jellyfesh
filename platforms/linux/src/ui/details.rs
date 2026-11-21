@@ -222,16 +222,6 @@ fn replaygain(values: &ReplayGainValues) -> String {
     format::dot_join([track.as_deref(), album.as_deref()])
 }
 
-/// A size for people: "8.4 MB", "1.2 GB".
-fn size(bytes: u64) -> String {
-    let mb = bytes as f64 / 1_000_000.0;
-    if mb >= 1_000.0 {
-        trf("{n} GB", &[("n", &format!("{:.1}", mb / 1_000.0))])
-    } else {
-        trf("{n} MB", &[("n", &format!("{mb:.1}"))])
-    }
-}
-
 /// A row's value, worded.
 pub fn value_text(value: &Value) -> String {
     match value {
@@ -240,7 +230,7 @@ pub fn value_text(value: &Value) -> String {
         Value::Quality(label) => quality(*label),
         Value::Format(parts) => format_line(parts),
         Value::Bitrate(kbps) => trf("{n} kbps", &[("n", &format::count(u64::from(*kbps)))]),
-        Value::Size(bytes) => size(*bytes),
+        Value::Size(bytes) => format::size(*bytes),
         Value::ReplayGain(values) => replaygain(values),
         Value::Path(path) => path.display().to_string(),
     }

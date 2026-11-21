@@ -1,5 +1,6 @@
-//! Settings: Appearance, Playback, Library and Sources, with their groups
-//! and rows in the order docs/ui.md ("Settings") gives every app.
+//! Settings: Appearance, Playback, Library, Sources and Extensions, with
+//! their groups and rows in the order docs/ui.md ("Settings") gives every
+//! app.
 //!
 //! Every control edits a copy of the core's `Settings` slice and sends it
 //! back (`SetSettings`), or sends the matching command; controls update from
@@ -25,7 +26,8 @@ use crate::ui::widgets::preview::{ColorDot, HueSlider, Picture, Preview};
 use crate::ui::window;
 
 /// Shows Settings, optionally on a page (`appearance`, `playback`,
-/// `library`, `sources`; `lyrics` opens Appearance, which holds them now).
+/// `library`, `sources`, `extensions`; `lyrics` opens Appearance, which
+/// holds them now).
 pub fn present(parent: &adw::ApplicationWindow, page: Option<&str>) {
     let dialog = adw::PreferencesDialog::new();
     // The Luminous field and Mist groups (style.css).
@@ -36,6 +38,7 @@ pub fn present(parent: &adw::ApplicationWindow, page: Option<&str>) {
     dialog.add(&playback_page());
     dialog.add(&library_page());
     dialog.add(&sources_ui::page());
+    dialog.add(&crate::ui::extensions::page());
     if let Some(name) = page {
         dialog.set_visible_page_name(if name == "lyrics" { "appearance" } else { name });
     }
@@ -393,6 +396,42 @@ fn appearance_page() -> adw::PreferencesPage {
         )),
     );
     p.add(&icon);
+
+    // Customize…: Settings › Extensions with Customize open; the Pro badge
+    // while Pro is inactive.
+    let customize_group = adw::PreferencesGroup::new();
+    let customize = adw::ActionRow::builder()
+        .title(tr("Customize…"))
+        .subtitle(tr("Corners, glass, type, lyrics style and layout."))
+        .activatable(true)
+        .build();
+    let badge = gtk::Label::new(Some("Pro"));
+    badge.add_css_class("badge");
+    badge.add_css_class("pro");
+    badge.set_valign(gtk::Align::Center);
+    badge.update_property(&[gtk::accessible::Property::Label("Jellyfesh Pro")]);
+    badge.set_visible(!app().pro.borrow().active);
+    customize.add_suffix(&badge);
+    customize.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+    customize.connect_activated(|row| {
+        crate::ui::extensions::reveal("appearance");
+        if let Some(dialog) = row
+            .ancestor(adw::PreferencesDialog::static_type())
+            .and_downcast::<adw::PreferencesDialog>()
+        {
+            dialog.set_visible_page_name("extensions");
+        }
+    });
+    let shown_badge = badge.downgrade();
+    app().listen_for(&customize, move |c| {
+        if matches!(c, Change::Pro)
+            && let Some(b) = shown_badge.upgrade()
+        {
+            b.set_visible(!app().pro.borrow().active);
+        }
+    });
+    customize_group.add(&customize);
+    p.add(&customize_group);
 
     // Wiring: every control sends the settings slice back to the core.
     for (i, b) in themes.iter().enumerate() {

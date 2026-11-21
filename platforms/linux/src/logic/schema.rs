@@ -4,8 +4,13 @@
 //! Supported: an object whose `properties` are strings (with `format`
 //! `password` or `uri`, or `writeOnly` for secrets), booleans, integers and
 //! numbers (`minimum`, `maximum`, `multipleOf`), and `enum`s (labels from
-//! `enumNames`, or `oneOf` entries with `const` and `title`). Unknown
-//! property types are skipped. Properties keep the schema's order.
+//! `enumNames`, or `oneOf` entries with `const` and `title`). Schema
+//! profile 1.2 (docs/plugins/authoring.md) adds `"format": "color"`
+//! (`#RRGGBB`, a colour well), sliders (a number with `minimum` and
+//! `maximum`, `multipleOf` its step), ordered checklists (an array of
+//! unique strings from an `enum` or `oneOf`: the value lists the shown
+//! items in order) and `x-jf-group` headings. Unknown property types are
+//! skipped. Properties keep the schema's order.
 
 use std::fmt;
 
@@ -20,6 +25,8 @@ pub enum FieldKind {
         secret: bool,
         url: bool,
     },
+    /// `#RRGGBB`, a colour well.
+    Color,
     Toggle,
     Integer {
         min: f64,
@@ -31,9 +38,20 @@ pub enum FieldKind {
         max: f64,
         step: f64,
     },
+    /// A number with a `minimum` and a `maximum`: a slider.
+    Slider {
+        min: f64,
+        max: f64,
+        step: f64,
+    },
     /// `(value, label)` pairs.
     Choice {
         options: Vec<(Value, String)>,
+    },
+    /// An ordered checklist of `(value, label)` items; the setting lists the
+    /// shown ones in order.
+    Checklist {
+        options: Vec<(String, String)>,
     },
 }
 
@@ -46,6 +64,8 @@ pub struct Field {
     pub kind: FieldKind,
     pub required: bool,
     pub default: Option<Value>,
+    /// The heading it shows under (`x-jf-group`).
+    pub group: Option<String>,
 }
 
 /// Properties in document order.
@@ -98,6 +118,12 @@ pub fn fields(schema_json: &str) -> Result<Vec<Field>, String> {
             required: schema.required.contains(&key),
             description: prop.get("description").and_then(Value::as_str).map(str::to_owned),
             default: prop.get("default").cloned(),
+            group: prop
+                .get("x-jf-group")
+                .and_then(Value::as_str)
+                .map(str::trim)
+                .filter(|g| !g.is_empty())
+                .map(str::to_owned),
             key,
             title,
             kind,
@@ -114,6 +140,9 @@ fn kind_of(prop: &Value) -> Option<FieldKind> {
     match prop.get("type").and_then(Value::as_str)? {
         "string" => {
             let format = prop.get("format").and_then(Value::as_str).unwrap_or_default();
+            if format == "color" {
+                return Some(FieldKind::Color);
+            }
             let write_only = prop.get("writeOnly").and_then(Value::as_bool).unwrap_or(false);
             Some(FieldKind::Text {
                 secret: write_only || format == "password",
@@ -126,11 +155,121 @@ fn kind_of(prop: &Value) -> Option<FieldKind> {
             max: num("maximum").unwrap_or(1_000_000.0),
             step: num("multipleOf").unwrap_or(1.0).max(1.0),
         }),
-        "number" => Some(FieldKind::Number {
-            min: num("minimum").unwrap_or(-1_000_000.0),
-            max: num("maximum").unwrap_or(1_000_000.0),
-            step: num("multipleOf").unwrap_or(0.1),
-        }),
+        "number" => match (num("minimum"), num("maximum")) {
+            (Some(min), Some(max)) if min < max => Some(FieldKind::Slider {
+                min,
+                max,
+                step: num("multipleOf")
+                    .filter(|s| *s > 0.0)
+                    .unwrap_or((max - min) / 100.0),
+            }),
+            (min, max) => Some(FieldKind::Number {
+                min: min.unwrap_or(-1_000_000.0),
+                max: max.unwrap_or(1_000_000.0),
+                step: num("multipleOf").unwrap_or(0.1),
+            }),
+        },
+        "array" => checklist(prop).map(|options| FieldKind::Checklist { options }),
+        _ => None,
+    }
+}
+
+/// The items of an ordered checklist: `"type": "array"` of unique strings
+/// from an `enum` or `oneOf`.
+fn checklist(prop: &Value) -> Option<Vec<(String, String)>> {
+    if !prop.get("uniqueItems").and_then(Value::as_bool).unwrap_or(false) {
+        return None;
+    }
+    let items = choices(prop.get("items")?)?;
+    let options: Vec<(String, String)> = items
+        .into_iter()
+        .filter_map(|(value, label)| Some((value.as_str()?.to_owned(), label)))
+        .collect();
+    (!options.is_empty()).then_some(options)
+}
+
+/// The fields under their headings: consecutive fields with the same
+/// `x-jf-group` together, in the schema's order.
+pub fn grouped(fields: Vec<Field>) -> Vec<(Option<String>, Vec<Field>)> {
+    let mut out: Vec<(Option<String>, Vec<Field>)> = Vec::new();
+    for field in fields {
+        match out.last_mut() {
+            Some((group, list)) if *group == field.group => list.push(field),
+            _ => out.push((field.group.clone(), vec![field])),
+        }
+    }
+    out
+}
+
+/// A colour as `#RRGGBB`, from what was typed (`#rgb`, `RRGGBB` and case
+/// are forgiven); `None` when it is not a colour.
+pub fn color(text: &str) -> Option<String> {
+    let hex = text.trim().trim_start_matches('#');
+    if !hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let full = match hex.len() {
+        6 => hex.to_owned(),
+        3 => hex.chars().flat_map(|c| [c, c]).collect(),
+        _ => return None,
+    };
+    Some(format!("#{}", full.to_ascii_uppercase()))
+}
+
+/// `#RRGGBB` as red, green and blue.
+pub fn rgb(color_text: &str) -> Option<[u8; 3]> {
+    let c = color(color_text)?;
+    let byte = |i: usize| u8::from_str_radix(&c[i..i + 2], 16).ok();
+    Some([byte(1)?, byte(3)?, byte(5)?])
+}
+
+/// A checklist's rows: the shown items in the setting's order, then the
+/// others in the schema's, each with whether it shows.
+pub fn checklist_rows(options: &[(String, String)], value: Option<&Value>) -> Vec<(String, String, bool)> {
+    let shown: Vec<&str> = value
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    let label = |v: &str| options.iter().find(|(o, _)| o == v).map(|(_, l)| l.clone());
+    let mut rows: Vec<(String, String, bool)> = Vec::new();
+    for v in shown {
+        if let Some(l) = label(v)
+            && !rows.iter().any(|(r, _, _)| r == v)
+        {
+            rows.push((v.to_owned(), l, true));
+        }
+    }
+    for (v, l) in options {
+        if !rows.iter().any(|(r, _, _)| r == v) {
+            rows.push((v.clone(), l.clone(), false));
+        }
+    }
+    rows
+}
+
+/// A checklist's setting: the shown items, in the rows' order.
+pub fn checklist_value(rows: &[(String, String, bool)]) -> Value {
+    Value::Array(
+        rows.iter()
+            .filter(|(_, _, shown)| *shown)
+            .map(|(v, _, _)| Value::String(v.clone()))
+            .collect(),
+    )
+}
+
+/// The language tag the core's `localized_settings_schema` takes for the
+/// app's locale (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES` or `LANG`), for the
+/// languages the app is translated into; `None` for English and the rest.
+pub fn schema_language(locale: &str) -> Option<&'static str> {
+    let first = locale.split(':').find(|l| !l.trim().is_empty())?.trim();
+    let base = first.split(['.', '@']).next().unwrap_or(first);
+    let mut parts = base.split(['_', '-']);
+    let language = parts.next()?.to_ascii_lowercase();
+    let region = parts.next().map(str::to_ascii_uppercase);
+    match (language.as_str(), region.as_deref()) {
+        ("ja", _) => Some("ja-JP"),
+        ("zh", Some("TW" | "HK" | "MO" | "HANT")) => Some("zh-TW"),
+        ("zh", _) => Some("zh-Hans"),
         _ => None,
     }
 }
@@ -225,6 +364,7 @@ mod tests {
             "quality": { "type": "string", "enum": ["low", "high"], "enumNames": ["Low", "High"] },
             "region": { "oneOf": [ { "const": "eu", "title": "Europe" }, { "const": "us" } ] },
             "volume": { "type": "number", "minimum": 0, "maximum": 1 },
+            "gain": { "type": "number", "minimum": -6 },
             "nested": { "type": "object" }
         }
     }"#;
@@ -242,7 +382,8 @@ mod tests {
                 "max_bitrate",
                 "quality",
                 "region",
-                "volume"
+                "volume",
+                "gain"
             ]
         );
         assert_eq!(f[0].title, "Server");
@@ -283,7 +424,117 @@ mod tests {
                 options: vec![(json!("eu"), "Europe".into()), (json!("us"), "us".into())]
             }
         );
-        assert!(matches!(f[6].kind, FieldKind::Number { .. }));
+        assert_eq!(
+            f[6].kind,
+            FieldKind::Slider {
+                min: 0.0,
+                max: 1.0,
+                step: 0.01
+            }
+        );
+        assert!(matches!(f[7].kind, FieldKind::Number { min, .. } if min == -6.0));
+        assert!(f.iter().all(|f| f.group.is_none()));
+    }
+
+    const PROFILE_1_2: &str = r##"{
+        "type": "object",
+        "properties": {
+            "corners": { "type": "number", "minimum": 0, "maximum": 2, "multipleOf": 0.05, "x-jf-group": "Look" },
+            "typeface": { "type": "string", "oneOf": [ { "const": "system", "title": "System" } ], "x-jf-group": "Look" },
+            "colour": { "type": "string", "format": "color", "default": "#FF8A3D", "x-jf-group": "Lyrics" },
+            "sidebar": {
+                "type": "array",
+                "items": { "type": "string", "oneOf": [
+                    { "const": "home", "title": "Home" },
+                    { "const": "albums", "title": "Albums" },
+                    { "const": "songs", "title": "Songs" }
+                ] },
+                "uniqueItems": true,
+                "x-jf-group": "Layout"
+            },
+            "tags": { "type": "array", "items": { "type": "string", "enum": ["a"] } },
+            "loose": { "type": "boolean" }
+        }
+    }"##;
+
+    #[test]
+    fn profile_1_2_fields() {
+        let f = fields(PROFILE_1_2).unwrap();
+        let keys: Vec<&str> = f.iter().map(|f| f.key.as_str()).collect();
+        // An array without uniqueItems is no checklist: skipped.
+        assert_eq!(keys, ["corners", "typeface", "colour", "sidebar", "loose"]);
+        assert_eq!(
+            f[0].kind,
+            FieldKind::Slider {
+                min: 0.0,
+                max: 2.0,
+                step: 0.05
+            }
+        );
+        assert_eq!(f[2].kind, FieldKind::Color);
+        assert_eq!(
+            f[3].kind,
+            FieldKind::Checklist {
+                options: vec![
+                    ("home".into(), "Home".into()),
+                    ("albums".into(), "Albums".into()),
+                    ("songs".into(), "Songs".into())
+                ]
+            }
+        );
+        let grouped_fields = grouped(f);
+        let groups: Vec<(Option<&str>, usize)> = grouped_fields
+            .iter()
+            .map(|(g, list)| (g.as_deref(), list.len()))
+            .collect();
+        assert_eq!(
+            groups,
+            [
+                (Some("Look"), 2),
+                (Some("Lyrics"), 1),
+                (Some("Layout"), 1),
+                (None, 1)
+            ]
+        );
+    }
+
+    #[test]
+    fn colours_as_typed() {
+        assert_eq!(color("#ff8a3d").as_deref(), Some("#FF8A3D"));
+        assert_eq!(color(" FF8A3D ").as_deref(), Some("#FF8A3D"));
+        assert_eq!(color("#f80").as_deref(), Some("#FF8800"));
+        assert_eq!(color("#ff8a3"), None);
+        assert_eq!(color("orange"), None);
+        assert_eq!(rgb("#FF8A3D"), Some([0xFF, 0x8A, 0x3D]));
+        assert_eq!(rgb("nope"), None);
+    }
+
+    #[test]
+    fn checklists_keep_the_shown_order() {
+        let options: Vec<(String, String)> = [("home", "Home"), ("albums", "Albums"), ("songs", "Songs")]
+            .iter()
+            .map(|(v, l)| ((*v).to_owned(), (*l).to_owned()))
+            .collect();
+        let rows = checklist_rows(&options, Some(&json!(["songs", "home", "gone", "home"])));
+        let order: Vec<(&str, bool)> = rows.iter().map(|(v, _, s)| (v.as_str(), *s)).collect();
+        assert_eq!(order, [("songs", true), ("home", true), ("albums", false)]);
+        assert_eq!(checklist_value(&rows), json!(["songs", "home"]));
+        // Nothing set: every item, none shown.
+        let rows = checklist_rows(&options, None);
+        assert!(rows.iter().all(|(_, _, s)| !s));
+        assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn languages_for_localised_schemas() {
+        assert_eq!(schema_language("ja_JP.UTF-8"), Some("ja-JP"));
+        assert_eq!(schema_language("zh_CN.UTF-8"), Some("zh-Hans"));
+        assert_eq!(schema_language("zh_TW.UTF-8"), Some("zh-TW"));
+        assert_eq!(schema_language("zh_HK"), Some("zh-TW"));
+        assert_eq!(schema_language(":ja:en"), Some("ja-JP"));
+        assert_eq!(schema_language("en_GB.UTF-8"), None);
+        assert_eq!(schema_language("C.UTF-8"), None);
+        assert_eq!(schema_language(""), None);
     }
 
     #[test]

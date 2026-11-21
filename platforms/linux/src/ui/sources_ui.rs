@@ -1,18 +1,19 @@
 //! Settings › Sources (docs/ui.md, "Settings"): Add a Source (the core's
-//! presets, also on the Sources page), the installed plugins with their
+//! presets, also on the Sources page), the installed sources with their
 //! badges, enabling, sign-in flows (QR code, browser, fields), settings forms
-//! from each plugin's JSON Schema, installing from a `.jfpkg` file and
-//! uninstalling, and Community Plugins with the disclosure (ADR-0012).
+//! from each plugin's JSON Schema (`ui::fields`), installing from a `.jfpkg`
+//! file and uninstalling, and Community Plugins with the disclosure
+//! (ADR-0012). Extensions are in Settings › Extensions.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use adw::prelude::*;
 use gtk::glib;
-use jf_core::{AuthField, AuthMethod, AuthStep, Command, PluginBadge, PluginSummary, SourcePreset};
-use serde_json::Value;
+use jf_core::{
+    AuthField, AuthMethod, AuthStep, Command, PluginBadge, PluginKind, PluginSummary, SourcePreset,
+};
 
-use crate::logic::schema::{self, FieldKind};
 use crate::logic::signin;
 use crate::ui::i18n::{tr, trf};
 use crate::ui::pages::sources::{account_text, badge_text};
@@ -102,7 +103,12 @@ pub fn page() -> adw::PreferencesPage {
                 add.add(&row);
                 preset_rows.borrow_mut().push(row.upcast());
             }
-            if sources.plugins.is_empty() {
+            let installed_sources: Vec<&PluginSummary> = sources
+                .plugins
+                .iter()
+                .filter(|p| p.kind == PluginKind::Source)
+                .collect();
+            if installed_sources.is_empty() {
                 let row = adw::ActionRow::builder()
                     .title(tr("No Sources Installed"))
                     .subtitle(tr("Install a source plugin from a .jfpkg file."))
@@ -110,7 +116,7 @@ pub fn page() -> adw::PreferencesPage {
                 installed.add(&row);
                 rows.borrow_mut().push(row.upcast());
             }
-            for plugin in &sources.plugins {
+            for plugin in installed_sources {
                 let row = plugin_row(plugin, sources.allow_community);
                 installed.add(&row);
                 rows.borrow_mut().push(row.upcast());
@@ -218,24 +224,30 @@ fn plugin_row(plugin: &PluginSummary, allow_community: bool) -> adw::ExpanderRow
     }
     row.add_row(&account);
 
-    // Settings from the schema.
-    match schema::fields(&plugin.settings_schema_json) {
-        Ok(fields) => {
-            for field in fields {
-                row.add_row(&field_row(plugin, &field));
+    // Settings from the schema, under their headings, in the app's language
+    // when the plugin has words for it (then they come from the core and go
+    // in before Version and Uninstall…).
+    let tail: Rc<RefCell<Vec<gtk::Widget>>> = Rc::new(RefCell::new(Vec::new()));
+    let fill = {
+        let (row, tail, plugin) = (row.downgrade(), tail.clone(), plugin.clone());
+        move |schema: &str| {
+            let Some(row) = row.upgrade() else { return };
+            for w in tail.borrow().iter() {
+                row.remove(w);
+            }
+            for (group, rows) in crate::ui::fields::grouped_rows(&plugin, schema) {
+                if let Some(g) = group {
+                    row.add_row(&crate::ui::fields::heading_row(&g));
+                }
+                for r in rows {
+                    row.add_row(&r);
+                }
+            }
+            for w in tail.borrow().iter() {
+                row.add_row(w);
             }
         }
-        Err(e) => {
-            let r = adw::ActionRow::builder()
-                .title(tr("Settings"))
-                .subtitle(trf(
-                    "This plugin's settings could not be read: {error}",
-                    &[("error", &e)],
-                ))
-                .build();
-            row.add_row(&r);
-        }
-    }
+    };
 
     // "Version 1.2.0 · Author", then Uninstall…, which asks first.
     let version = trf("Version {version}", &[("version", &plugin.version)]);
@@ -261,11 +273,22 @@ fn plugin_row(plugin: &PluginSummary, allow_community: bool) -> adw::ExpanderRow
     remove.add_suffix(&b);
     remove.set_activatable_widget(Some(&b));
     row.add_row(&remove);
+    tail.borrow_mut()
+        .extend([about_row.upcast::<gtk::Widget>(), remove.upcast()]);
+    if crate::ui::fields::schema_language().is_none() {
+        fill(&plugin.settings_schema_json);
+    } else {
+        let shown = plugin.clone();
+        spawn(async move {
+            let schema = crate::ui::fields::schema_text(&shown).await;
+            fill(&schema);
+        });
+    }
     row
 }
 
 /// "Uninstall Name?"; true when the person chose Uninstall.
-async fn confirm_uninstall(from: &gtk::Button, name: &str) -> bool {
+pub(crate) async fn confirm_uninstall(from: &gtk::Button, name: &str) -> bool {
     let dialog = adw::AlertDialog::new(
         Some(&trf("Uninstall {name}?", &[("name", name)])),
         Some(&tr("Its settings and sign-in are removed.")),
@@ -279,7 +302,7 @@ async fn confirm_uninstall(from: &gtk::Button, name: &str) -> bool {
 }
 
 /// The label of the button that signs in with `method`.
-fn method_label(method: AuthMethod) -> String {
+pub(crate) fn method_label(method: AuthMethod) -> String {
     match method {
         AuthMethod::Qr => tr("Sign In with QR Code"),
         AuthMethod::Oauth => tr("Sign In in Browser"),
@@ -570,101 +593,7 @@ fn field_input(field: &AuthField) -> (gtk::Widget, gtk::Widget, Answer) {
     }
 }
 
-fn field_row(plugin: &PluginSummary, field: &schema::Field) -> gtk::Widget {
-    let current = schema::current(&plugin.settings_json, field);
-    let id = plugin.id.clone();
-    let key = field.key.clone();
-    let send = move |value: Value| {
-        let a = app();
-        let json = a
-            .sources
-            .borrow()
-            .plugins
-            .iter()
-            .find(|p| p.id == id)
-            .map(|p| p.settings_json.clone())
-            .unwrap_or_default();
-        a.send(Command::SetPluginSettings {
-            id: id.clone(),
-            settings_json: schema::with_value(&json, &key, value),
-        });
-    };
-    let title = field.title.clone();
-    let widget: gtk::Widget = match &field.kind {
-        FieldKind::Text { secret: true, .. } => {
-            let row = adw::PasswordEntryRow::builder()
-                .title(&title)
-                .show_apply_button(true)
-                .build();
-            row.connect_apply(move |r| send(Value::String(r.text().to_string())));
-            row.upcast()
-        }
-        FieldKind::Text { .. } => {
-            let row = adw::EntryRow::builder()
-                .title(&title)
-                .show_apply_button(true)
-                .build();
-            if let Some(Value::String(s)) = &current {
-                row.set_text(s);
-            }
-            row.connect_apply(move |r| send(Value::String(r.text().to_string())));
-            row.upcast()
-        }
-        FieldKind::Toggle => {
-            let row = adw::SwitchRow::builder()
-                .title(&title)
-                .active(current.as_ref().and_then(Value::as_bool).unwrap_or(false))
-                .build();
-            row.connect_active_notify(move |r| send(Value::Bool(r.is_active())));
-            row.upcast()
-        }
-        FieldKind::Integer { min, max, step } | FieldKind::Number { min, max, step } => {
-            let integer = matches!(field.kind, FieldKind::Integer { .. });
-            let row = adw::SpinRow::with_range(*min, *max, *step);
-            row.set_title(&title);
-            if !integer {
-                row.set_digits(2);
-            }
-            if let Some(v) = current.as_ref().and_then(Value::as_f64) {
-                row.set_value(v);
-            }
-            row.connect_value_notify(move |r| {
-                let v = r.value();
-                send(if integer {
-                    Value::from(v.round() as i64)
-                } else {
-                    serde_json::Number::from_f64(v).map_or(Value::Null, Value::Number)
-                });
-            });
-            row.upcast()
-        }
-        FieldKind::Choice { options } => {
-            let labels: Vec<&str> = options.iter().map(|(_, l)| l.as_str()).collect();
-            let row = adw::ComboRow::builder()
-                .title(&title)
-                .model(&gtk::StringList::new(&labels))
-                .build();
-            if let Some(v) = &current
-                && let Some(i) = options.iter().position(|(o, _)| o == v)
-            {
-                row.set_selected(i as u32);
-            }
-            let values: Vec<Value> = options.iter().map(|(v, _)| v.clone()).collect();
-            row.connect_selected_notify(move |r| {
-                if let Some(v) = values.get(r.selected() as usize) {
-                    send(v.clone());
-                }
-            });
-            row.upcast()
-        }
-    };
-    if let Some(d) = &field.description {
-        widget.set_tooltip_text(Some(d));
-    }
-    widget
-}
-
-fn install_from_file() {
+pub(crate) fn install_from_file() {
     let filter = gtk::FileFilter::new();
     filter.set_name(Some(&tr("Jellyfesh Plugins")));
     filter.add_suffix("jfpkg");
@@ -686,7 +615,7 @@ fn install_from_file() {
 }
 
 /// The community-plugin disclosure (ADR-0012); true when accepted.
-async fn disclosure(plugin: Option<&str>) -> bool {
+pub(crate) async fn disclosure(plugin: Option<&str>) -> bool {
     let heading = match plugin {
         Some(name) => trf("Turn On “{name}”?", &[("name", name)]),
         None => tr("Allow Community Plugins?"),
@@ -757,7 +686,7 @@ fn spinner() -> gtk::Spinner {
 /// A sign-in flow: sends `start` (`BeginLogin` or `ConnectSource`) for
 /// `plugin` and shows the steps that follow (docs/core-api.md, "Signing
 /// in"), as in every app.
-fn sign_in(from: &impl IsA<gtk::Widget>, plugin: &str, name: &str, start: Command) {
+pub(crate) fn sign_in(from: &impl IsA<gtk::Widget>, plugin: &str, name: &str, start: Command) {
     let dialog = adw::Dialog::builder()
         .title(trf("Sign In to {name}", &[("name", name)]))
         .content_width(420)

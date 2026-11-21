@@ -88,6 +88,25 @@ pub fn count(n: u64) -> String {
     out
 }
 
+/// A file size as file managers give it (decimal units): `512 KB`,
+/// `8.4 MB`, `142 MB`, `1.6 GB`.
+pub fn size(bytes: u64) -> String {
+    let b = bytes as f64;
+    let (value, unit) = if b >= 1e9 {
+        (b / 1e9, "GB")
+    } else if b >= 1e6 {
+        (b / 1e6, "MB")
+    } else {
+        ((b / 1e3).max(if bytes > 0 { 1.0 } else { 0.0 }), "KB")
+    };
+    if value < 10.0 && unit != "KB" {
+        let text = format!("{value:.1}");
+        format!("{} {unit}", text.strip_suffix(".0").unwrap_or(&text))
+    } else {
+        format!("{value:.0} {unit}")
+    }
+}
+
 /// Joins the parts that are present with a middle dot: `Artist · Album`.
 pub fn dot_join<'a>(parts: impl IntoIterator<Item = Option<&'a str>>) -> String {
     parts
@@ -119,6 +138,17 @@ pub fn initials(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn sizes_as_file_managers_give_them() {
+        assert_eq!(size(0), "0 KB");
+        assert_eq!(size(300), "1 KB");
+        assert_eq!(size(512_000), "512 KB");
+        assert_eq!(size(8_400_000), "8.4 MB");
+        assert_eq!(size(8_000_000), "8 MB");
+        assert_eq!(size(142_000_000), "142 MB");
+        assert_eq!(size(1_620_000_000), "1.6 GB");
+    }
+
     use super::*;
 
     #[test]
