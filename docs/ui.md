@@ -341,7 +341,10 @@ Extensions**, plus **About** where the platform keeps About in settings
 3. **Customize**: Enabled; its settings by group (Look, Lyrics, Layout);
    **Reset to Defaults**.
 4. Any other extension the same way, and **Install from File…** in the
-   section heading.
+   section heading. Every extension ends with "Version · Author" and
+   **Uninstall…**, which asks as sources do ("Uninstall Name?", "Its
+   settings and sign-in are removed."); a bundled extension the person
+   uninstalls stays uninstalled until they install it again.
 
 **About**: the version (from the build, never typed in), and the website and
 the third-party licences where the build knows where they are published;
