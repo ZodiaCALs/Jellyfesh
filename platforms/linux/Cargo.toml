@@ -36,6 +36,10 @@ gettext-rs.workspace = true
 adw.workspace = true
 gdk4-x11.workspace = true
 gtk.workspace = true
+# AI Lyrics on this device (ADR-0019 §5): whisper.cpp's recogniser as the
+# core's Config::speech. Building it needs CMake and libclang; packaging
+# builds it without CPU tuning (GGML_NATIVE=OFF).
+jf-speech = { path = "../../core/jf-speech", default-features = false, features = ["whisper"] }
 mpris-server.workspace = true
 qrcode.workspace = true
 x11rb.workspace = true

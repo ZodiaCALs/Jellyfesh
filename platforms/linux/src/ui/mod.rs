@@ -102,6 +102,9 @@ fn config() -> Option<Config> {
     // How this build reached the person (the release workflow's flag):
     // which stores sell Pro and whether the core checks for updates.
     config.distribution = crate::logic::build::distribution(option_env!("JF_DISTRIBUTION"));
+    // AI Lyrics on this device: whisper.cpp, with its models in
+    // <data>/speech-models (the core's default store).
+    config.speech = jf_speech::recognizer();
     Some(config)
 }
 
