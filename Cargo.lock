@@ -2386,6 +2386,7 @@ dependencies = [
  "glib-build-tools",
  "gtk4",
  "jf-core",
+ "jf-speech",
  "jf-tokens",
  "libadwaita",
  "mpris-server",
