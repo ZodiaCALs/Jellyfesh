@@ -538,7 +538,15 @@ impl NowPlaying {
                 Change::Library => update_favorite(&inner),
                 Change::Playback | Change::Muted => update_transport(&inner),
                 Change::Queue => transport::update_toggles(&inner.shuffle, &inner.repeat),
-                Change::Lyrics => inner.lyrics.set_lyrics(app().lyrics.borrow().clone()),
+                Change::Lyrics => {
+                    inner.lyrics.set_lyrics(app().lyrics.borrow().clone());
+                    if !app().is_remote() {
+                        inner
+                            .info
+                            .update(app().now.borrow().as_ref(), app().lyrics.borrow().as_ref());
+                    }
+                }
+                Change::Details(page) => inner.info.details_arrived(page),
                 Change::Sources => update_more(&inner),
                 Change::Theme | Change::Settings => {
                     update_backdrop(&inner);
@@ -759,7 +767,7 @@ fn update_track(inner: &Inner) {
             inner.art.set_art(None);
         }
     }
-    inner.info.update(now.as_deref(), a.lyrics.borrow().as_deref());
+    inner.info.update(now.as_ref(), a.lyrics.borrow().as_ref());
     update_favorite(inner);
     update_more(inner);
 }

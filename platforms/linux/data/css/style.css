@@ -759,9 +759,27 @@ button.desktop-lyrics-control:hover {
   color: {{ink.ink-70}};
 }
 
-/* Open in {Service}, under About This Song. */
-button.np-open-link {
+/* Get Info and Open in {Service}, under the Info pane's rows. */
+.np-info-buttons {
   margin-top: {{space.s2}};
+}
+
+/* Get Info (docs/ui.md, "Details"). */
+.details {
+  margin: {{space.s2}} {{space.s5}} {{space.s6}};
+}
+
+.details > .heading {
+  margin-top: {{space.s2}};
+}
+
+.details-description {
+  color: {{ink.ink-70}};
+}
+
+.details .attribution {
+  {{type-roles.list-secondary}};
+  color: {{ink.ink-70}};
 }
 
 /* The seek bar's times are drawn by the widget: 12 px tabular figures. */

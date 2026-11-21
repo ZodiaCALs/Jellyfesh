@@ -6,6 +6,7 @@ mod bridge;
 mod clock;
 mod convert;
 mod desktoplyrics;
+mod details;
 mod devices;
 mod dnd;
 pub mod i18n;

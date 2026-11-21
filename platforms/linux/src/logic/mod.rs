@@ -15,6 +15,7 @@ pub mod build;
 // WCAG checks of the Luminous field and glass, run by the tests.
 #[cfg(test)]
 pub mod contrast;
+pub mod details;
 pub mod easing;
 pub mod eq;
 pub mod format;

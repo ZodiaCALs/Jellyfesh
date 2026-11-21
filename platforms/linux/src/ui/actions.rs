@@ -12,6 +12,7 @@ use jf_core::{Collection, Command, TrackQuery, TrackRef, TrackSort};
 use serde::{Deserialize, Serialize};
 
 use crate::logic::links::{self, MainAction};
+use crate::ui::details::InfoArgs;
 use crate::ui::i18n::{tr, trf};
 use crate::ui::models::{ItemData, Kind};
 use crate::ui::state::{app, spawn};
@@ -233,6 +234,12 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
         );
         menu.append_section(None, &files);
     }
+    // Get Info, last (docs/ui.md, "Details").
+    if let Some(args) = InfoArgs::of(data) {
+        let info = gio::Menu::new();
+        entry(&info, &tr("Get Info"), "win.get-info", json_target(&args));
+        menu.append_section(None, &info);
+    }
     menu
 }
 
@@ -420,6 +427,11 @@ pub fn install(window: &adw::ApplicationWindow) {
     window.add_action(&id_action("rename-playlist", rename_playlist));
     window.add_action(&id_action("delete-playlist", delete_playlist));
     window.add_action(&string_action("open-link", open_link));
+    window.add_action(&string_action("get-info", |json| {
+        if let Ok(args) = serde_json::from_str::<InfoArgs>(json) {
+            crate::ui::details::present(args);
+        }
+    }));
     // Stop Controlling: the service carries on playing on its own.
     let stop = gio::SimpleAction::new("stop-controlling", None);
     stop.connect_activate(|_, _| {
