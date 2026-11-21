@@ -11,6 +11,9 @@ Two source plugins that the Jellyfesh apps bundle as **community plugins**
 Both sign in with a QR code (NetEase's own web QR sign-in; WeChat's for QQ
 Music), search, browse your liked songs and playlists, play, and fetch
 synced lyrics and cover art, with the person's own account and no API key.
+From version 0.1.2 (Jellyfesh v0.0.7, plugin API 1.2) both have a Discover
+page and details; the NetEase plugin also shows comments and turns NetEase's
+word-timed lyrics (YRC) into enhanced LRC, word by word.
 For people using them: [`docs/plugins/community-netease.md`](../../docs/plugins/community-netease.md)
 and [`docs/plugins/community-qqmusic.md`](../../docs/plugins/community-qqmusic.md).
 
@@ -68,8 +71,9 @@ The release also publishes both packages as separate downloads
 (`community.unofficial.netease-<release>.jfpkg`,
 `community.unofficial.qqmusic-<release>.jfpkg`): **Install from File…**
 installs one once community plugins are allowed, for example after the
-bundled one was uninstalled. They declare plugin API 1.0 (version 0.1.0 was
-also checked in the API 1.0 host of Jellyfesh 0.0.5; 0.1.1 was not).
+bundled one was uninstalled. Version 0.1.2 declares plugin API 1.2 and
+needs Jellyfesh v0.0.7 or later; 0.1.1 declared API 1.0 (0.1.0 was also
+checked in the API 1.0 host of Jellyfesh 0.0.5; 0.1.1 was not).
 
 ## Build
 
@@ -116,6 +120,10 @@ never turns the feature on, the published settings schema has no
 `mock_origin` (the host refuses a setting its schema does not name; both
 plugins' `installs_only_as_a_community_plugin` tests check it), and the
 published allowlist could not reach the mock anyway.
+
+The tests build those components with a nested cargo in a target folder of
+its own (`target/community-plugin-tests`): a build in the test binary's own
+folder would wait for the build lock of the `cargo test` running it.
 
 ## What is in here
 

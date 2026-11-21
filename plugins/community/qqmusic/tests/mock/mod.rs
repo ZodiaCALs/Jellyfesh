@@ -435,8 +435,12 @@ fn call(
         ("music.UserInfo.userInfoServer", "GetLoginUserInfo") => needs_session(),
         ("music.search.SearchCgiService", "DoSearchForQQMusicDesktop") => search(library, param),
         ("music.pf_song_detail_svr", "get_song_detail_yqq") => {
-            match song(library, param["song_mid"].as_str().unwrap_or_default()) {
-                Some(track) => data(json!({ "track_info": track, "info": [], "extras": {} })),
+            let mid = param["song_mid"].as_str().unwrap_or_default();
+            match song(library, mid) {
+                Some(track) => {
+                    let info = library["song_info"].get(mid).cloned().unwrap_or(json!([]));
+                    data(json!({ "track_info": track, "info": info, "extras": {} }))
+                }
                 None => json!({ "code": 104400, "msg": "mock: no such song" }),
             }
         }
@@ -538,13 +542,83 @@ fn call(
                         "code": 0,
                         "dirinfo": {
                             "id": list["tid"], "title": list["dirName"], "picurl": list["picUrl"],
-                            "songnum": all.len(), "host_nick": list["owner"]
+                            "songnum": all.len(), "host_nick": list["owner"], "desc": list["desc"],
+                            "listennum": list["listennum"],
+                            "tag": list["tags"].as_array().map(|t| t.iter().map(|name| json!({ "id": 1, "name": name })).collect::<Vec<_>>())
                         },
                         "songlist": window(&all, begin, num),
                         "total_song_num": all.len()
                     }))
                 }
                 None => json!({ "code": 4000, "msg": "mock: no such playlist" }),
+            }
+        }
+        ("playlist.HotRecommendServer", "get_hot_recommend") => {
+            if param["cmd"] != 2 {
+                state
+                    .violations
+                    .push(format!("get_hot_recommend with cmd {}", param["cmd"]));
+            }
+            data(json!({ "v_hot": library["recommended"] }))
+        }
+        ("musicToplist.ToplistInfoServer", "GetAll") => {
+            let toplist: Vec<Value> = library["charts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| {
+                    let mut c = c.clone();
+                    c.as_object_mut().unwrap().remove("songs");
+                    c
+                })
+                .collect();
+            data(json!({ "group": [{ "groupId": 0, "groupName": "Mock charts", "toplist": toplist }] }))
+        }
+        ("musicToplist.ToplistInfoServer", "GetDetail") => {
+            let chart = library["charts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|c| c["topId"] == param["topId"]);
+            match chart {
+                Some(chart) if chart["period"] != param["period"] => {
+                    json!({ "code": 2000, "msg": "mock: not this chart's period" })
+                }
+                Some(chart) => {
+                    let all: Vec<Value> = mids(&chart["songs"])
+                        .iter()
+                        .filter_map(|mid| song(library, mid))
+                        .collect();
+                    let begin = param["offset"].as_u64().unwrap_or(0) as usize;
+                    let num = param["num"].as_u64().unwrap_or(30) as usize;
+                    data(json!({
+                        "data": { "topId": chart["topId"], "title": chart["title"], "totalNum": all.len() },
+                        "songInfoList": window(&all, begin, num)
+                    }))
+                }
+                None => json!({ "code": 2000, "msg": "mock: no such chart" }),
+            }
+        }
+        ("music.musichallAlbum.AlbumInfoServer", "GetAlbumDetail") => {
+            let album = library["albums"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|a| a["albumMID"] == param["albumMid"]);
+            match album {
+                Some(album) => {
+                    let detail = &album["detail"];
+                    data(json!({
+                        "basicInfo": {
+                            "albumMid": album["albumMID"], "albumName": album["albumName"], "publishDate": album["publicTime"],
+                            "desc": detail["desc"], "genre": detail["genre"], "language": detail["language"],
+                            "albumType": detail["albumType"]
+                        },
+                        "company": { "name": detail["company"] },
+                        "singer": { "singerList": album["singer_list"] }
+                    }))
+                }
+                None => json!({ "code": 104400, "msg": "mock: no such album" }),
             }
         }
         _ => {

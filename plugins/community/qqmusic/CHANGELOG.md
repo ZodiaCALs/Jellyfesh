@@ -1,5 +1,15 @@
 # Changelog: QQ Music (Unofficial) plugin
 
+## 0.1.2 — 2026-11-20
+
+* With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh
+  v0.0.7). Its own version line continues (0.1.x), not Jellyfesh's.
+* **Discover**: Recommended Playlists and Charts (a chart lists its songs
+  for its current period). **Details** of songs, albums, playlists and
+  charts. No singer details, no comments and no word-timed lyrics (QQ Music
+  encrypts those; the plugin does not decrypt them). Not yet tested against
+  the live service.
+
 ## 0.1.1 — 2026-11-17
 
 * Bundled with Jellyfesh v0.0.6 as a community plugin: unsigned (never

@@ -9,7 +9,8 @@
     {
       "albumID": 9201, "albumMID": "0000MockAlbum1", "albumName": "Mock Album", "publicTime": "2020-05-01",
       "singer_list": [{ "id": 9101, "mid": "0000MockSinger", "name": "Mock Singer" }],
-      "songs": ["0000MockSong01", "0000MockSong02", "0000MockSong06"]
+      "songs": ["0000MockSong01", "0000MockSong02", "0000MockSong06"],
+      "detail": { "desc": "Invented album notes.", "genre": "Pop", "language": "国语", "albumType": "录音室专辑", "company": "Mock Records" }
     },
     {
       "albumID": 9202, "albumMID": "0000MockAlbum2", "albumName": "Mock Members Album", "publicTime": "2021-01-01",
@@ -96,9 +97,42 @@
     {
       "tid": 8000003, "dirId": 0, "dirName": "Mock Public Mix", "own": false, "owner": "Someone Else (mock)",
       "picUrl": "http://qpic.y.qq.com/music_cover/mock-public/300",
-      "songs": ["0000MockSong01"]
+      "songs": ["0000MockSong01"],
+      "desc": "Invented songs for everyone.", "listennum": 1234567, "tags": ["华语", "Mock"]
     }
   ],
+  "charts": [
+    {
+      "topId": 62, "title": "Mock Soaring Chart", "period": "2026-11-19", "intro": "Invented chart of songs climbing fast.",
+      "frontPicUrl": "http://y.gtimg.cn/music/photo_new/mock-top-62.jpg", "listenNum": 98765, "updateTime": "2026-11-19",
+      "songs": ["0000MockSong06", "0000MockSong01", "0000MockSong02"]
+    },
+    {
+      "topId": 26, "title": "Mock Hot Chart", "period": "2026_46", "intro": "",
+      "frontPicUrl": "http://y.gtimg.cn/music/photo_new/mock-top-26.jpg", "listenNum": 4321, "updateTime": "2026-11-16",
+      "songs": ["0000MockSong02", "0000MockSong03"]
+    }
+  ],
+  "recommended": [
+    {
+      "content_id": 8100001, "title": "Mock Rainy Day Picks", "cover": "http://qpic.y.qq.com/music_cover/mock-rec-1/300",
+      "listen_num": 4567, "username": "Mock Curator"
+    },
+    {
+      "content_id": 8100002, "title": "Mock Morning Run", "cover": "http://qpic.y.qq.com/music_cover/mock-rec-2/300",
+      "listen_num": 890, "username": "Another Mock Curator"
+    }
+  ],
+  "song_info": {
+    "0000MockSong01": [
+      { "type": "lan", "title": "语种", "content": [{ "value": "国语" }] },
+      { "type": "genre", "title": "流派", "content": [{ "value": "Pop" }] },
+      { "type": "pub_time", "title": "发行时间", "content": [{ "value": "2020-05-01" }] },
+      { "type": "lyric", "title": "作词", "content": [{ "value": "Mock Writer" }] },
+      { "type": "composer", "title": "作曲", "content": [{ "value": "Mock Composer" }] },
+      { "type": "intro", "title": "歌曲简介", "content": [{ "value": "Invented notes about an invented song." }] }
+    ]
+  },
   "lyrics": {
     "0000MockSong01": {
       "lyric": "[ti:Mock Song One]\n[ar:Mock Singer]\n[00:10.00]第一句歌词\n[00:14.20]It&apos;s the second line\n[00:20.00]最后一句\n",

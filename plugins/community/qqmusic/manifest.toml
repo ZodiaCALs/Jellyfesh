@@ -1,11 +1,11 @@
 id = "community.unofficial.qqmusic"
 name = "QQ Music (Unofficial)"
-version = "0.1.1"
-api_version = "1.0"
+version = "0.1.2"
+api_version = "1.2"
 author = "ZodiaCALs"
 description = "Unofficial community plugin, not made or endorsed by Tencent or Jellyfesh. Plays only what your account may play. Not yet tested against the live service."
 official = false
-capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork"]
+capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "discover", "details"]
 playback_mode = "stream"
 auth = ["qr"]
 

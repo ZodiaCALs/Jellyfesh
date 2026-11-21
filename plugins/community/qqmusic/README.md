@@ -30,6 +30,17 @@ on: [`docs/plugins/community-qqmusic.md`](../../../docs/plugins/community-qqmusi
 * **Artwork** from QQ Music's picture service at the nearest size (90 to
   800 px), for its own items and, matched by title, artist and length, for
   tracks and albums from other sources (the same matching finds lyrics).
+* **Discover** (plugin API 1.2): Recommended Playlists
+  (`playlist.HotRecommendServer` `get_hot_recommend`) and Charts
+  (`musicToplist.ToplistInfoServer` `GetAll`; a chart, `qqm:top:<id>`,
+  lists its songs through `GetDetail` for the period `GetAll` names), with
+  See All (`qqm:f:recommended`, `qqm:f:charts`).
+* **Details** of songs (the `info` of `get_song_detail_yqq` by `type`:
+  `lan`, `genre`, `pub_time`, `lyric`, `composer`, `company`, `intro`),
+  albums (`music.musichallAlbum.AlbumInfoServer` `GetAlbumDetail`),
+  playlists (`uniform_get_Dissinfo` with `tag`) and charts. No singer
+  details and no comments: those calls could not be checked. No word-timed
+  lyrics: QQ Music sends them only as the app's encrypted QRC.
 
 ### What it never does
 
@@ -130,10 +141,17 @@ if possible, a VIP one), before anyone relies on the plugin:
    https.
 9. **The account name** from `GetLoginUserInfo` (otherwise the plugin shows
    "QQ Music user <number>").
+10. **Discover and details**: `get_hot_recommend` (`cmd` 2; `v_hot` with
+    `content_id`, `title`, `cover`, `username`), `GetAll` (`group[].toplist[]`
+    with `topId`, `period`, `frontPicUrl`, `intro`, `listenNum`,
+    `updateTime`), `GetDetail` (`topId`, `offset`, `num`, `period`;
+    `songInfoList`, `data.totalNum`), the `info` list of song details,
+    `GetAlbumDetail` (`basicInfo`, `company.name`) and `dirinfo`'s `desc`,
+    `listennum` and `tag`.
 
 ## Tests
 
-`cargo test -p jf-community-qqmusic`: 25 unit tests and 17 integration tests
+`cargo test -p jf-community-qqmusic`: 27 unit tests and 20 integration tests
 that run the plugin's component in a real Jellyfesh plugin host, installed
 unsigned as a community plugin, against the mock in `tests/mock` (it checks
 every request's signature with its own implementation of the scheme). The

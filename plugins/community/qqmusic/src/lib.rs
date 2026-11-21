@@ -14,6 +14,8 @@
 //! * Lyrics: plain synced LRC, with QQ Music's translation merged in as
 //!   bilingual lines ([`lyrics`]); never the app-encrypted QRC. Artwork from
 //!   the picture service at the size asked for.
+//! * Discover (recommended playlists, charts) and details of songs, albums,
+//!   playlists and charts ([`discover`]).
 //! * Requests: signed ([`sign`]), sent only to u.y.qq.com and, for the QR
 //!   sign-in, WeChat's open.weixin.qq.com; streams only from
 //!   stream.qqmusic.qq.com subdomains, pictures from y.gtimg.cn and
@@ -21,6 +23,7 @@
 
 mod api;
 mod catalog;
+mod discover;
 mod items;
 mod login;
 mod lyrics;
@@ -123,6 +126,14 @@ impl Plugin for QqMusic {
             json!({ "songMID": mid, "songID": 0, "trans": 1, "roma": 0, "qrc": 0, "crypt": 0 }),
         )?;
         Ok(lyrics::payload(&data, api::settings().translations))
+    }
+
+    fn discover() -> Result<Vec<Shelf>> {
+        discover::discover()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        discover::details(&item)
     }
 
     fn artwork(item: Item, size: u32) -> Result<Option<ImageRef>> {

@@ -57,6 +57,13 @@ but unusable until you allow them again.
 * **Artwork** from QQ Music's picture service, for its own items and,
   matched by title, artist and length, for songs and albums from your other
   sources (the same matching finds lyrics for them).
+* **Discover** (version 0.1.2, with Jellyfesh v0.0.7): Recommended Playlists
+  and the Charts, each with See All; a chart opens to its current songs.
+* **Get Info** (0.1.2) on a song (language, genre, release date, lyricist,
+  composer, notes), an album (notes, release date, genre, language, kind,
+  company), a playlist (description, listens, tags) or a chart
+  (introduction, listens, last update). Not for singers, and **no comments**:
+  QQ Music's interfaces for those could not be checked.
 
 ## Settings
 

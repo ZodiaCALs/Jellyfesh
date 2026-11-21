@@ -92,7 +92,11 @@ fn installs_only_as_a_community_plugin() {
     assert_eq!(info.signature, SignatureStatus::Unsigned);
     assert!(!info.enabled, "community plugins start turned off");
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr]);
-    assert_eq!(info.capabilities.len(), 6);
+    assert_eq!(info.capabilities.len(), 8);
+    for capability in [Capability::Discover, Capability::Details] {
+        assert!(info.capabilities.contains(&capability), "{capability:?}");
+    }
+    assert!(!info.capabilities.contains(&Capability::Comments));
     assert_eq!(info.content_policy.library_storage, LibraryStorage::Metadata);
     assert_eq!(info.settings["quality"], "app");
     assert!(matches!(
@@ -732,4 +736,195 @@ fn signing_out_forgets_the_session() {
         plugin_error(recv(env.host.browse(ID, None, page(10)))),
         PluginError::AuthRequired
     );
+}
+
+/// Every item has a cover from QQ Music's picture hosts (through the mock).
+fn assert_covers(items: &[Item], what: &str) {
+    assert!(!items.is_empty(), "{what}");
+    for entry in items {
+        let url = &entry
+            .artwork
+            .as_ref()
+            .unwrap_or_else(|| panic!("{what}: {} has no cover", entry.title))
+            .url;
+        assert!(
+            url.contains("/y.gtimg.cn/") || url.contains("/qpic.y.qq.com/"),
+            "{what}: {url}"
+        );
+    }
+}
+
+#[test]
+fn discover_recommended_playlists_and_charts() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(titles, ["Recommended Playlists", "Charts"]);
+    let recommended: Vec<&str> = shelves[0].items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(recommended, ["qqm:pl:8100001", "qqm:pl:8100002"]);
+    assert_eq!(shelves[0].items[0].artist.as_deref(), Some("Mock Curator"));
+    let charts: Vec<&str> = shelves[1].items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(charts, ["qqm:top:62", "qqm:top:26"]);
+    assert_eq!(shelves[1].more.as_deref(), Some("qqm:f:charts"));
+    for shelf in &shelves {
+        assert_covers(&shelf.items, &shelf.title);
+    }
+    // A chart's songs, for the period the chart list names.
+    let songs = recv(env.host.browse(ID, Some(shelves[1].items[0].clone()), page(2))).unwrap();
+    assert_eq!(ids(&songs), ["qqm:tr:0000MockSong06", "qqm:tr:0000MockSong01"]);
+    assert_eq!(songs.total, Some(3));
+    let rest = recv(
+        env.host
+            .browse(ID, Some(shelves[1].items[0].clone()), next_page(songs.next, 2)),
+    )
+    .unwrap();
+    assert_eq!(ids(&rest), ["qqm:tr:0000MockSong02"]);
+    assert_covers(&songs.items, "a chart's songs");
+    assert_eq!(
+        mock.count("musicToplist.ToplistInfoServer", "GetAll"),
+        1,
+        "the chart list is kept a while"
+    );
+    let detail = mock
+        .calls()
+        .into_iter()
+        .rfind(|c| c.method == "GetDetail")
+        .unwrap();
+    assert_eq!(detail.param["period"], "2026-11-19");
+    // See All.
+    let all = recv(env.host.browse(
+        ID,
+        Some(item(ItemKind::Folder, "qqm:f:recommended", "x")),
+        page(50),
+    ))
+    .unwrap();
+    assert_eq!(all.items.len(), 2);
+    assert!(mock.violations().is_empty(), "{:?}", mock.violations());
+}
+
+#[test]
+fn signed_in_lists_carry_covers() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    sign_in(&env);
+    for (id, title) in [
+        ("qqm:f:liked", "Liked Songs"),
+        ("qqm:f:playlists", "My Playlists"),
+    ] {
+        let listed = recv(
+            env.host
+                .browse(ID, Some(item(ItemKind::Folder, id, title)), page(50)),
+        )
+        .unwrap();
+        assert_covers(&listed.items, title);
+    }
+}
+
+#[test]
+fn details_of_songs_albums_playlists_and_charts() {
+    use jf_plugin_host::FactKey;
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    let facts = |details: &jf_plugin_host::ItemDetails| -> Vec<(FactKey, String)> {
+        details
+            .facts
+            .iter()
+            .map(|f| (f.key.clone(), f.value.clone()))
+            .collect()
+    };
+    let song = recv(env.host.details(ID, track("0000MockSong01"))).unwrap();
+    assert_eq!(
+        facts(&song),
+        [
+            (FactKey::Language, "国语".to_string()),
+            (FactKey::Genre, "Pop".into()),
+            (FactKey::Released, "2020-05-01".into()),
+            (FactKey::Lyricist, "Mock Writer".into()),
+            (FactKey::Composer, "Mock Composer".into())
+        ]
+    );
+    assert_eq!(
+        song.description.as_deref(),
+        Some("Invented notes about an invented song.")
+    );
+    assert!(
+        song.image
+            .unwrap()
+            .url
+            .contains("/y.gtimg.cn/music/photo_new/T002R800x800M0000000MockAlbum1.jpg")
+    );
+
+    let album = recv(
+        env.host
+            .details(ID, item(ItemKind::Album, "qqm:al:0000MockAlbum1", "Mock Album")),
+    )
+    .unwrap();
+    assert_eq!(album.description.as_deref(), Some("Invented album notes."));
+    assert_eq!(
+        facts(&album),
+        [
+            (FactKey::Released, "2020-05-01".to_string()),
+            (FactKey::Genre, "Pop".into()),
+            (FactKey::Language, "国语".into()),
+            (FactKey::Other("Type".into()), "录音室专辑".into()),
+            (FactKey::Label, "Mock Records".into())
+        ]
+    );
+
+    let playlist = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "qqm:pl:8000003", "Mock Public Mix")),
+    )
+    .unwrap();
+    assert_eq!(
+        playlist.description.as_deref(),
+        Some("Invented songs for everyone.")
+    );
+    assert_eq!(
+        facts(&playlist),
+        [
+            (FactKey::Popularity, "1,234,567 listens".to_string()),
+            (FactKey::Other("Tags".into()), "华语, Mock".into())
+        ]
+    );
+    assert!(
+        playlist
+            .image
+            .unwrap()
+            .url
+            .contains("/qpic.y.qq.com/music_cover/mock-public/300")
+    );
+
+    let chart = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "qqm:top:62", "Mock Soaring Chart")),
+    )
+    .unwrap();
+    assert_eq!(
+        chart.description.as_deref(),
+        Some("Invented chart of songs climbing fast.")
+    );
+    assert_eq!(
+        facts(&chart),
+        [
+            (FactKey::Popularity, "98,765 listens".to_string()),
+            (FactKey::Other("Updated".into()), "2026-11-19".into())
+        ]
+    );
+    assert_eq!(
+        plugin_error(recv(
+            env.host
+                .details(ID, item(ItemKind::Artist, "qqm:ar:0000MockSinger", "x"))
+        )),
+        PluginError::Unsupported
+    );
+    assert!(
+        matches!(
+            recv(env.host.comments(ID, track("0000MockSong01"), page(10))),
+            Err(CallError::NotDeclared(_))
+        ),
+        "no comments"
+    );
+    assert!(mock.violations().is_empty(), "{:?}", mock.violations());
 }

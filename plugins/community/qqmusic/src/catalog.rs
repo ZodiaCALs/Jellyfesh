@@ -221,6 +221,9 @@ pub fn browse(node: Option<&Item>, page: &PageRequest) -> Result<ItemPage> {
         api::require_session()?;
         return Ok(root());
     };
+    if let Some(chart) = crate::discover::chart_of(&node.id) {
+        return crate::discover::chart_page(chart, page);
+    }
     match Id::parse(&node.id) {
         Some(Id::Folder("liked")) => {
             let liked = own_playlists()?
@@ -237,7 +240,9 @@ pub fn browse(node: Option<&Item>, page: &PageRequest) -> Result<ItemPage> {
                 .collect();
             paging::slice(lists, page)
         }
-        Some(Id::Folder(_)) => Err(PluginError::NotFound),
+        Some(Id::Folder(name)) => {
+            crate::discover::browse_folder(name, page).unwrap_or(Err(PluginError::NotFound))
+        }
         Some(Id::Playlist(id)) => playlist_page(id, page),
         Some(Id::Album(mid)) => album_page(mid, page),
         Some(Id::Artist(mid)) => artist_albums(mid, page),
