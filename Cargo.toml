@@ -155,8 +155,13 @@ async-channel = "2.5.0"
 gettext-rs = { version = "0.8.0", features = ["gettext-system"] }
 glib-build-tools = "0.22.8"
 gtk = { package = "gtk4", version = "0.11.5", features = ["gnome_46"] }
+# Desktop Lyrics above other windows on X11 (ADR-0022 §6): the window's XID (gdk4-x11, MIT)
+# and the _NET_WM_STATE request to the window manager (x11rb, MIT OR Apache-2.0, safe Rust);
+# checked against crates.io on 2026-11-19.
+gdk4-x11 = "0.11.5"
 mpris-server = "0.11.0"
 qrcode = { version = "0.14.1", default-features = false }
+x11rb = "0.14.0"
 
 [workspace.lints.rust]
 unsafe_code = "deny"
