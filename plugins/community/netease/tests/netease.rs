@@ -108,7 +108,11 @@ fn installs_only_as_a_community_plugin() {
     env.host.set_enabled(ID, true).unwrap();
     let capabilities = recv(env.host.capabilities(ID)).unwrap();
     assert!(capabilities.contains(&Capability::ResolveStream));
-    assert_eq!(capabilities.len(), 9, "six it reports, and discover, details and comments");
+    assert_eq!(
+        capabilities.len(),
+        9,
+        "six it reports, and discover, details and comments"
+    );
     // The published package has no way to point it anywhere else.
     assert!(matches!(
         env.host
