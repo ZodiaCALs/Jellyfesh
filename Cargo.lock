@@ -2427,7 +2427,7 @@ dependencies = [
 
 [[package]]
 name = "jf-community-common"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "jf-plugin-sdk",
  "serde_json",
@@ -2435,12 +2435,13 @@ dependencies = [
 
 [[package]]
 name = "jf-community-netease"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "aes",
  "cbc",
  "jf-community-common",
  "jf-community-testsupport",
+ "jf-lyrics",
  "jf-plugin-host",
  "jf-plugin-sdk",
  "rsa",
@@ -2450,7 +2451,7 @@ dependencies = [
 
 [[package]]
 name = "jf-community-qqmusic"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "jf-community-common",
  "jf-community-testsupport",
