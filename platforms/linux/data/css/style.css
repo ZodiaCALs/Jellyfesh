@@ -704,6 +704,55 @@ button.np-back:hover {
   color: {{ink.ink-90}};
 }
 
+/* Desktop Lyrics (ADR-0022 §6): the line being sung and the next one in
+ * light ink with a soft shadow over the desktop (their colours come from the
+ * dark appearance, desktoplyrics.rs); pointing at the window shows a dark
+ * backdrop with Lock and Close; locked, only the words show. */
+window.desktop-lyrics {
+  background-color: transparent;
+}
+
+.desktop-lyrics-body {
+  /* The faintest fill keeps the whole window under the pointer. */
+  background-color: alpha(black, 0.01);
+  border-radius: {{radius.r-2xl}};
+  padding: {{space.s3}} {{space.s8}};
+  transition: background-color {{motion.dur-2}} ease-out;
+}
+
+window.desktop-lyrics.hover .desktop-lyrics-body {
+  background-color: alpha(black, 0.45);
+}
+
+window.desktop-lyrics.locked .desktop-lyrics-body {
+  background-color: transparent;
+}
+
+.desktop-lyrics .lyrics-bar-text,
+.desktop-lyrics-title {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.desktop-lyrics .lyrics-bar-next,
+.desktop-lyrics-artist {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.desktop-lyrics label {
+  text-shadow: 0 1px 3px alpha(black, 0.55);
+}
+
+button.desktop-lyrics-control {
+  color: white;
+  background-color: alpha(white, 0.18);
+}
+
+button.desktop-lyrics-control:hover {
+  background-color: alpha(white, 0.28);
+}
+
 .lyrics-bar-translation {
   {{type-roles.list-secondary}};
   font-size: 11px;

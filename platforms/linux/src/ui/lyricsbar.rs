@@ -178,6 +178,7 @@ impl LyricsBarView {
             let widget = LyricLine::new(line_text(line));
             widget.set_single_line(true);
             widget.set_centred(self.mode == Mode::WithNext);
+            widget.set_shadow(self.mode == Mode::WithNext);
             widget.add_css_class("lyrics-bar-text");
             if line.words.is_empty() {
                 // A line without word timing shows whole, in the sung colour.
@@ -218,6 +219,12 @@ impl LyricsBarView {
         let Some(widget) = line.as_ref() else {
             return false;
         };
+        // Desktop Lyrics draws light ink over the desktop, whatever the
+        // appearance.
+        let sung = match self.mode {
+            Mode::Line => style::lyrics_sung(),
+            Mode::WithNext => style::lyrics_sung_on_dark(),
+        };
         if !style::animations_enabled() {
             // With reduced motion a word lights whole as it starts.
             let lit: Vec<f32> = bar
@@ -225,10 +232,10 @@ impl LyricsBarView {
                 .iter()
                 .map(|w| if *w > 0.0 { 1.0 } else { 0.0 })
                 .collect();
-            widget.set_sweep(lyricsbar::sweep(&lit), &style::lyrics_sung());
+            widget.set_sweep(lyricsbar::sweep(&lit), &sung);
             return false;
         }
-        widget.set_sweep(lyricsbar::sweep(&bar.words), &style::lyrics_sung());
+        widget.set_sweep(lyricsbar::sweep(&bar.words), &sung);
         lyricsbar::sweeping(bar)
     }
 

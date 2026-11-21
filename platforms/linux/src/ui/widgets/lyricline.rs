@@ -28,6 +28,8 @@ mod imp {
         pub rows: RefCell<Vec<(f32, f32)>>,
         pub sweep: Cell<Option<(usize, f32)>>,
         pub sung: RefCell<Option<gdk::RGBA>>,
+        /// A soft shadow under the words (Desktop Lyrics, over any desktop).
+        pub shadow: Cell<bool>,
         pub rtl: Cell<bool>,
         pub centred: Cell<bool>,
         /// One row, cut with an ellipsis (the lyrics bar, Desktop Lyrics).
@@ -84,7 +86,14 @@ mod imp {
         }
 
         fn snapshot(&self, snapshot: &gtk::Snapshot) {
-            self.obj().draw(snapshot);
+            if self.shadow.get() {
+                let shadow = gtk::gsk::Shadow::new(gdk::RGBA::new(0.0, 0.0, 0.0, 0.55), 0.0, 1.0, 3.0);
+                snapshot.push_shadow(&[shadow]);
+                self.obj().draw(snapshot);
+                snapshot.pop();
+            } else {
+                self.obj().draw(snapshot);
+            }
         }
     }
 }
@@ -126,6 +135,13 @@ impl LyricLine {
 
     /// Centres the line (the Lyrics alignment setting) instead of starting
     /// it at the start edge.
+    /// Draws the words with a soft shadow, so they read over any desktop.
+    pub fn set_shadow(&self, shadow: bool) {
+        if self.imp().shadow.replace(shadow) != shadow {
+            self.queue_draw();
+        }
+    }
+
     pub fn set_centred(&self, centred: bool) {
         let imp = self.imp();
         if imp.centred.replace(centred) != centred {

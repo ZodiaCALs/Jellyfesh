@@ -5,6 +5,7 @@ mod actions;
 mod bridge;
 mod clock;
 mod convert;
+mod desktoplyrics;
 mod devices;
 mod dnd;
 pub mod i18n;
@@ -168,6 +169,9 @@ fn startup(application: &adw::Application) {
     style::apply_glass();
     style::apply_theme(false);
     install_actions(application);
+    // Before the window: Now Playing's More then sees Desktop Lyrics open
+    // or close before it rebuilds on a settings change.
+    desktoplyrics::follow();
     window::build(application, &state);
     window::listen();
     mpris::start();
@@ -276,6 +280,37 @@ fn install_actions(application: &adw::Application) {
     simple(application, "queue", &["<Primary>u"], || {
         toggle_tab(nowplaying::Tab::Queue);
     });
+    // Desktop Lyrics, as the setting (a check item in Now Playing's More),
+    // and its lock.
+    let desktop = gio::SimpleAction::new_stateful(
+        "desktop-lyrics",
+        None,
+        &app().settings.borrow().desktop_lyrics.to_variant(),
+    );
+    desktop.connect_change_state(|action, value| {
+        if let Some(on) = value.and_then(|v| v.get::<bool>()) {
+            action.set_state(&on.to_variant());
+            app().update_settings(|s| s.desktop_lyrics = on);
+        }
+    });
+    application.add_action(&desktop);
+    let follow = desktop.downgrade();
+    app().listen(move |change| {
+        if let (crate::ui::state::Change::Settings, Some(action)) = (change, follow.upgrade()) {
+            let on = app().settings.borrow().desktop_lyrics;
+            if action.state().and_then(|s| s.get::<bool>()) != Some(on) {
+                action.set_state(&on.to_variant());
+            }
+        }
+    });
+    let lock = gio::SimpleAction::new_stateful("lock-desktop-lyrics", None, &false.to_variant());
+    lock.connect_change_state(|action, value| {
+        if let Some(on) = value.and_then(|v| v.get::<bool>()) {
+            action.set_state(&on.to_variant());
+            desktoplyrics::set_locked(on);
+        }
+    });
+    application.add_action(&lock);
     simple(application, "search", &["<Primary>f"], || {
         window::close_now_playing();
         window::show_section(window::Section::Search);

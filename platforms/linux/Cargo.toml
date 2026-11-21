@@ -34,9 +34,11 @@ tracing-subscriber.workspace = true
 async-channel.workspace = true
 gettext-rs.workspace = true
 adw.workspace = true
+gdk4-x11.workspace = true
 gtk.workspace = true
 mpris-server.workspace = true
 qrcode.workspace = true
+x11rb.workspace = true
 
 [build-dependencies]
 serde_json.workspace = true

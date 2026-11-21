@@ -236,6 +236,18 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
     menu
 }
 
+/// Desktop Lyrics at the end of Now Playing's More (docs/ui.md, "Lyrics,
+/// word by word"): the setting as a check item and, while the window
+/// shows, its lock.
+fn desktop_lyrics_section(menu: &gio::Menu) {
+    let section = gio::Menu::new();
+    section.append(Some(&tr("Desktop Lyrics")), Some("app.desktop-lyrics"));
+    if crate::ui::desktoplyrics::shown() {
+        section.append(Some(&tr("Lock Desktop Lyrics")), Some("app.lock-desktop-lyrics"));
+    }
+    menu.append_section(None, &section);
+}
+
 /// Now Playing's More while a remote session runs: Open in {Service} and
 /// Stop Controlling (docs/ui.md, "Links and remote playback").
 pub fn remote_menu(view: &crate::logic::remote::RemoteView) -> gio::Menu {
@@ -253,6 +265,7 @@ pub fn remote_menu(view: &crate::logic::remote::RemoteView) -> gio::Menu {
     let section = gio::Menu::new();
     section.append(Some(&tr("Stop Controlling")), Some("win.stop-controlling"));
     menu.append_section(None, &section);
+    desktop_lyrics_section(&menu);
     menu
 }
 
@@ -313,6 +326,7 @@ pub fn now_playing_menu(np: &jf_core::NowPlaying, album_id: Option<i64>) -> gio:
         );
         menu.append_section(None, &files);
     }
+    desktop_lyrics_section(&menu);
     menu
 }
 

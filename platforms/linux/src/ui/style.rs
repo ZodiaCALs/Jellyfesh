@@ -256,11 +256,22 @@ pub fn apply_glass() {
 /// The colour of sung lyrics: the lyrics' sung ink, the accent or the
 /// person's colour, as the look says (ADR-0020).
 pub fn lyrics_sung() -> gdk::RGBA {
+    sung_with(|name| style().rgba(name))
+}
+
+/// The colour of sung lyrics in the dark appearance, whatever the shown
+/// one: Desktop Lyrics draws light ink over the desktop.
+pub fn lyrics_sung_on_dark() -> gdk::RGBA {
+    let colors = try_app().map(|a| colors_for(&a, true)).unwrap_or_default();
+    sung_with(|name| colors.get(name).copied().map_or(gdk::RGBA::WHITE, rgba_of))
+}
+
+fn sung_with(color: impl Fn(&str) -> gdk::RGBA) -> gdk::RGBA {
     use crate::logic::look::{self, Sung};
     let sung = try_app().map_or(Sung::Ink, |a| look::sung(&a.look.borrow()));
     match sung {
-        Sung::Ink => style().rgba("ink.ink-90"),
-        Sung::Accent => style().rgba("accent.accent-text"),
+        Sung::Ink => color("ink.ink-90"),
+        Sung::Accent => color("accent.accent-text"),
         Sung::Rgb(rgb) => gdk::RGBA::new(
             ((rgb >> 16) & 0xFF) as f32 / 255.0,
             ((rgb >> 8) & 0xFF) as f32 / 255.0,
@@ -270,16 +281,19 @@ pub fn lyrics_sung() -> gdk::RGBA {
     }
 }
 
+fn rgba_of([r, g, b, a]: [u8; 4]) -> gdk::RGBA {
+    gdk::RGBA::new(
+        f32::from(r) / 255.0,
+        f32::from(g) / 255.0,
+        f32::from(b) / 255.0,
+        f32::from(a) / 255.0,
+    )
+}
+
 impl Style {
     /// The colour shown now for a theme colour name (`ink.ink-90`).
     pub fn rgba(&self, name: &str) -> gdk::RGBA {
-        let [r, g, b, a] = self.shown.borrow().get(name).copied().unwrap_or([0, 0, 0, 255]);
-        gdk::RGBA::new(
-            f32::from(r) / 255.0,
-            f32::from(g) / 255.0,
-            f32::from(b) / 255.0,
-            f32::from(a) / 255.0,
-        )
+        rgba_of(self.shown.borrow().get(name).copied().unwrap_or([0, 0, 0, 255]))
     }
 
     fn set_colors(&self, colors: Colors, animate: bool) {

@@ -543,6 +543,7 @@ impl NowPlaying {
                 Change::Theme | Change::Settings => {
                     update_backdrop(&inner);
                     if matches!(change, Change::Settings) {
+                        update_more(&inner);
                         // The Misty frame takes room from the artwork.
                         fit_art(&inner);
                         inner.lyrics.apply_settings();
@@ -804,8 +805,10 @@ fn show_remote(inner: &Inner, view: &RemoteView) {
 /// Go to Album once the core has said which album a library song is on.
 fn update_more(inner: &Inner) {
     let a = app();
+    // Desktop Lyrics' items follow the window: part of the key.
+    let desktop = crate::ui::desktoplyrics::shown();
     if let Some(view) = a.remote_view() {
-        let key = format!("remote {} {:?}", view.service, view.link);
+        let key = format!("remote {} {:?} {desktop}", view.service, view.link);
         set_more(inner, key, || Some(actions::remote_menu(&view)));
         return;
     }
@@ -821,7 +824,7 @@ fn update_more(inner: &Inner) {
         jf_core::TrackRef::Source(s) => a.source_name(&s.plugin),
         _ => String::new(),
     };
-    let key = format!("local {} {album:?} {service} {:?}", np.uid, np.link);
+    let key = format!("local {} {album:?} {service} {:?} {desktop}", np.uid, np.link);
     set_more(inner, key, || Some(actions::now_playing_menu(&np, album)));
     let jf_core::TrackRef::Library(id) = np.track else {
         return;

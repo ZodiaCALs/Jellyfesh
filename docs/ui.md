@@ -386,7 +386,8 @@ conventions and must not reuse these keys.
   Folders. **Open Files…** plays files for one visit without adding
   them. Streaming Quality and Language are its own settings.
 * **Linux:** no App Icon (GNOME takes the icon from the installed files); a
-  note says so.
+  note says so. On Wayland, Desktop Lyrics is a normal window: Wayland lets
+  no app keep its window above the others (on X11 it stays above them).
 * **Android:** the library is one tab; it asks for access to music and offers
   "Find Music on This Phone" before folders.
 * **macOS:** About Jellyfesh is in the app menu. **Linux:** About and Keyboard
