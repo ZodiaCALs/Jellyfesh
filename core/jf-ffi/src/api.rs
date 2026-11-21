@@ -300,6 +300,40 @@ impl JellyfeshCore {
     }
 }
 
+/// The instruction sets whisper.cpp uses on x86 as shipped: built with `GGML_NATIVE=OFF` on a
+/// machine of the same architecture, ggml still enables SSE 4.2, AVX, AVX2, BMI2, FMA and F16C
+/// (never AVX-512 or AMX). Each with whether this processor has it.
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+fn speech_instructions() -> [(&'static str, bool); 6] {
+    [
+        ("sse4.2", std::arch::is_x86_feature_detected!("sse4.2")),
+        ("avx", std::arch::is_x86_feature_detected!("avx")),
+        ("avx2", std::arch::is_x86_feature_detected!("avx2")),
+        ("bmi2", std::arch::is_x86_feature_detected!("bmi2")),
+        ("fma", std::arch::is_x86_feature_detected!("fma")),
+        ("f16c", std::arch::is_x86_feature_detected!("f16c")),
+    ]
+}
+
+/// whisper.cpp's recogniser, when this library has it and the processor can run it. On a
+/// processor without the instructions above, recognition would stop the app with an illegal
+/// instruction, so AI Lyrics' on-device mode is unavailable there instead.
+fn on_device_speech() -> Option<Arc<dyn jf_speech::Recognizer>> {
+    #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+    {
+        let missing: Vec<&str> = speech_instructions()
+            .into_iter()
+            .filter(|(_, has)| !has)
+            .map(|(name, _)| name)
+            .collect();
+        if !missing.is_empty() {
+            tracing::warn!(?missing, "this processor cannot run on-device speech recognition");
+            return None;
+        }
+    }
+    jf_speech::recognizer()
+}
+
 impl JellyfeshCore {
     /// Starts the core and the thread that forwards its events to the listener, with the app's
     /// secret store if it passed one; `after_shutdown` runs once the core has shut down.
@@ -310,7 +344,7 @@ impl JellyfeshCore {
     ) -> Result<Self, CoreFfiError> {
         let mut config = jf::Config::from(config);
         // whisper.cpp where this library was built with it (AI Lyrics on this device).
-        config.speech = jf_speech::recognizer();
+        config.speech = on_device_speech();
         if let Some(store) = secrets {
             config.sources.secrets = Some(Arc::new(Foreign(store)));
         }
@@ -439,4 +473,21 @@ fn lock<T: ?Sized>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 fn read<T>(lock: &RwLock<T>) -> RwLockReadGuard<'_, T> {
     lock.read().unwrap_or_else(PoisonError::into_inner)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn on_device_speech_needs_the_instructions_whisper_was_built_for() {
+        #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+        let capable = speech_instructions().iter().all(|(_, has)| *has);
+        #[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+        let capable = true;
+        assert_eq!(
+            on_device_speech().is_some(),
+            capable && jf_speech::recognizer().is_some()
+        );
+    }
 }
