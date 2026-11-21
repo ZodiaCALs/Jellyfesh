@@ -356,6 +356,11 @@ URL in it is relative. Notes:
 | Services that refuse browsers | Reached directly | Through a relay you run yourself ([web-relay.md](web-relay.md)), or not at all |
 | Secrets | System keystore | IndexedDB, encrypted with a non-extractable WebCrypto key |
 | Resume Playback | Starts playing | Brings back the queue and position, ready to play: browsers do not start sound before a click |
+| Desktop Lyrics | A floating window that can be locked so clicks pass through | A Document Picture-in-Picture window where the browser offers one (Chromium on computers); no Lock (no page can pass clicks through a window). A page that opens with it on waits for a click: the player bar offers Show Desktop Lyrics |
+| Jellyfesh Pro | Store purchases, licence keys or Pro Preview | Licence keys (checked offline against the release's keys, kept in this browser) or Pro Preview; no store |
+| AI Lyrics | On the device (Whisper) or online | Online only: the page decodes the song with the browser's decoders; speech models and on-device recognition need the apps |
+| Made lyrics | Kept in the data folder | Kept in this browser (`localStorage`, the newest 60) |
+| Comments, Discover, details | From the core | The same rules in `jf_web` (`discover`, `details`), the calls from the page |
 
 What stays the same: the business logic. The queue, shuffle and repeat
 (`jf-session`), what plays next and how two songs join (gapless, or a
@@ -407,11 +412,45 @@ service's status and headers from inside the relay's answer (`Content-Range`
 included, so seeking works), and without it the page downloads the song
 through the relay first.
 
+### What v0.0.7 adds
+
+* **Plugin API 1.2.** The worker offers the `audio` import (the song of the
+  `maker.make` call in progress as 16 kHz mono WAV, decoded by the page with
+  `OfflineAudioContext` at 16 kHz and only once the person allowed sending it
+  to the plan's origin) and the `speech` import, which has no models and
+  answers `unavailable` (recognition needs the apps). The `maker`,
+  `appearance`, `discover`, `details` and `comments` exports are called with
+  the native answer checks (`jf_plugin_model::sanitize` through
+  `jf_web::sources`), and settings schemas are read with the package's
+  profile (`SettingsSchema::parse_with(…, Profile::for_api(api_version))`).
+  Making lyrics and the look are Jellyfesh Pro capabilities: they answer
+  `pro-required` while Pro is off, as natively.
+* **Discover.** A source's page (Sources › the source) shows the plugin's own
+  shelves, or, as the core does, For You from its suggestions and a shelf per
+  folder of its browse root (`jf_web::discover`); See All browses the shelf's
+  node, Browse lists the source's own folders.
+* **Details and comments.** Get Info (song, album and artist menus) and
+  Now Playing's Info show About This Song and Audio, with the core's quality
+  label (`jf_web::details`, the same rule as `jf-core`); Comments is a fourth
+  pane for sources whose plugin has comments.
+* **Lyrics bar and Desktop Lyrics.** The line being sung under the title in
+  the player bar (Show Lyrics Bar), from the port of `lyrics_bar`
+  (`src/lib/drawing/lyricsBar.ts`, replayed against
+  `tests/contract/lyrics-bar.json`); Desktop Lyrics in a Document
+  Picture-in-Picture window (above).
+* **Pro, the look and AI Lyrics.** Settings › Extensions has Jellyfesh Pro
+  (`jf_web::pro`, with `jf-licence`), the bundled AI Lyrics and Customize
+  extensions, and Sending Audio. The look (`jf_web::look`) applies live:
+  radii, glass, the aurora, typeface, type size, spacing, the lyrics' weight,
+  glow and highlight as custom properties; the places, Home's sections, Now
+  Playing's layout and the mini-player's style in the views.
+
 ### How covers load
 
 A source's picture (the item's own, or the plugin's `artwork` answer for the
-rows on screen, asked once per source, account, item and size, and again
-after a failed answer) loads straight into an `<img>`, which needs no CORS,
+rows on screen, asked once per source, account, item and size, a couple at a
+time with the newest requests first, as in the core, and again a while after
+a failed answer) loads straight into an `<img>`, which needs no CORS,
 and without a `Referer` (`referrerpolicy="no-referrer"`): the native apps send
 none unless the plugin asks for one, and image hosts that refuse other sites'
 pages usually accept requests without one. A picture whose `ImageRef` has
@@ -492,12 +531,15 @@ allows them:
 
 Jellyfesh Web talks only to the servers you sign in to; the site it is
 served from gets the static files and nothing else (no analytics, no
-cookies). In the browser it keeps your settings, volume and queue
+cookies). AI Lyrics sends a song's audio only to the provider whose API key
+you added, and only after you allowed that origin ("Send This Song to
+{origin}?"; Settings › Extensions › Sending Audio takes it back). In the browser it keeps your settings, volume and queue
 (`localStorage`; dropped files are never stored); per plugin, its state,
 settings, plain values and encrypted secrets, and the packages you installed
 (IndexedDB `jellyfesh`), with the cookies of sources that go through a relay
 encrypted like the secrets, and the relay's address and token (the token
-encrypted); and your library: the folders' names, what the songs' tags say and their
+encrypted); a Jellyfesh Pro licence key, the origins you allowed AI Lyrics to
+send songs to, and the lyrics it made (`localStorage`); and your library: the folders' names, what the songs' tags say and their
 covers (IndexedDB `jellyfesh-library`). The music files themselves are never
 copied. Clearing the site's data in the browser removes all of it.
 
