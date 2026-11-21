@@ -41,13 +41,21 @@ public sealed partial class LyricLineView : StackPanel
     private readonly TextBlock _translation = new() { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Medium };
     private readonly TextBlock _romanization = new() { TextWrapping = TextWrapping.Wrap, FontWeight = FontWeights.Medium };
     private readonly List<SweptWord> _parts = [];
+    private readonly Grid _plainLayer;
+    private readonly TextGlow _plainGlow;
     private Storyboard? _sweep;
     private LyricsAlign _align;
+    private LyricsLook? _look;
 
     public LyricLineView()
     {
         Spacing = 4;
-        Children.Add(_plain);
+
+        // The look's glow sits behind the line's text (a host the text's shadow is drawn in).
+        var glowHost = new Canvas();
+        _plainLayer = new Grid { Children = { glowHost, _plain } };
+        _plainGlow = new TextGlow(_plain, glowHost);
+        Children.Add(_plainLayer);
         Children.Add(_words);
         Children.Add(_background);
         Children.Add(_romanization);
@@ -87,6 +95,20 @@ public sealed partial class LyricLineView : StackPanel
             {
                 _align = value;
                 ApplyAlignment();
+            }
+        }
+    }
+
+    /// <summary>The look's lyrics (ADR-0020): the lines' weight, the current line's colour and glow; null is Luminous.</summary>
+    internal LyricsLook? Look
+    {
+        get => _look;
+        set
+        {
+            if (_look != value)
+            {
+                _look = value;
+                ApplyLook();
             }
         }
     }
@@ -183,7 +205,6 @@ public sealed partial class LyricLineView : StackPanel
     {
         var line = Line;
         var active = line?.IsActive == true;
-        UpdateInk();
         if (FrameworkElementAutomationPeer.FromElement(this) is { } peer)
         {
             peer.RaisePropertyChangedEvent(SelectionItemPatternIdentifiers.IsSelectedProperty, !active, active);
@@ -201,15 +222,32 @@ public sealed partial class LyricLineView : StackPanel
                 part.Show(0);
             }
 
-            _plain.Visibility = Visibility.Collapsed;
+            _plainLayer.Visibility = Visibility.Collapsed;
             _words.Visibility = Visibility.Visible;
         }
         else
         {
             StopSweep();
-            _plain.Visibility = Visibility.Visible;
+            _plainLayer.Visibility = Visibility.Visible;
             _words.Visibility = Visibility.Collapsed;
         }
+
+        UpdateInk();
+    }
+
+    /// <summary>The look's weight for the line's text and its lit colour for the words; then the inks and the glow.</summary>
+    private void ApplyLook()
+    {
+        var weight = _look?.Weight ?? FontWeights.Bold;
+        _plain.FontWeight = weight;
+        var sung = _look?.Highlight ?? (Brush)Application.Current.Resources["JfInk90"];
+        foreach (var part in _parts)
+        {
+            part.SetWeight(weight);
+            part.SetSung(sung);
+        }
+
+        UpdateInk();
     }
 
     /// <summary>ink-90 for the active line, ink-30 once sung, lyrics.ink-inactive (ink-50) still to come.</summary>
@@ -223,10 +261,20 @@ public sealed partial class LyricLineView : StackPanel
             LyricLineRole.Sung => "JfInk30",
             _ => "JfInk50",
         }];
-        _plain.Foreground = ink;
+        // The current line in the look's highlight (ink-90 by default, as before).
+        _plain.Foreground = role == LyricLineRole.Active && _look is { } look ? look.Highlight : ink;
         _translation.Foreground = ink;
         _romanization.Foreground = ink;
         _background.Foreground = (Brush)res[role == LyricLineRole.Sung ? "JfInk30" : "JfInk50"];
+
+        // Only the current line glows, and only in a look that asks for it.
+        var glow = role == LyricLineRole.Active ? _look?.Glow ?? 0 : 0;
+        var color = _look?.GlowColor ?? default;
+        _plainGlow.Set(color, glow);
+        foreach (var part in _parts)
+        {
+            part.SetGlow(color, glow);
+        }
     }
 
     /// <summary>Full size for the active line, 92 % for the others, from the start edge (the centre when centred).</summary>
@@ -254,12 +302,14 @@ public sealed partial class LyricLineView : StackPanel
     {
         var res = Application.Current.Resources;
         var unsung = (Brush)res["JfInk70"];
-        var sung = (Brush)res["JfInk90"];
+        var sung = _look?.Highlight ?? (Brush)res["JfInk90"];
+        var weight = _look?.Weight ?? FontWeights.Bold;
         for (var i = 0; i < line.Words.Count; i++)
         {
             var w = line.Words[i];
             var text = w.JoinsNext || i == line.Words.Count - 1 ? w.Text : w.Text + " ";
             var part = new SweptWord(text, unsung, sung, line.Direction == TextDirection.Rtl);
+            part.SetWeight(weight);
             part.Apply(LineFontSize, LineHeight(line));
             _parts.Add(part);
             _words.Children.Add(part.Root);

@@ -368,4 +368,86 @@ public static class LookRules
 
     /// <summary>The aurora field's opacity: its glows are drawn at the default strength, scaled down (never up) to the slice's.</summary>
     public static double AuroraOpacity(LookState look) => Math.Clamp(look.Aurora / LookState.DefaultAurora, 0, 1);
+
+    /// <summary>
+    /// The Transparency the glass is drawn with: the setting's times the look's glass, so a look
+    /// without glass is solid and the setting (and Reduce Transparency, which makes glass solid)
+    /// still wins (ADR-0020 §2).
+    /// </summary>
+    public static float GlassTransparency(LookState look, float setting) =>
+        Unit(setting, 0) * Unit(look.Glass, 1);
+
+    /// <summary>The lyric lines' weight (OpenType): Regular 400, Medium 500, Semibold 600, Bold 700 (v0.0.6), Heavy 800.</summary>
+    public static ushort LyricsFontWeight(LookState look) => look.LyricsWeight switch
+    {
+        LyricsWeight.Regular => 400,
+        LyricsWeight.Medium => 500,
+        LyricsWeight.Semibold => 600,
+        LyricsWeight.Heavy => 800,
+        _ => 700,
+    };
+
+    /// <summary>
+    /// The colour the current line lights up in: the theme's ink-90 for Artwork (v0.0.6, tinted by
+    /// the artwork's hue), its accent text for Accent, or the plugin's 0xRRGGBB.
+    /// </summary>
+    public static (HighlightInk Ink, uint Rgb) Highlight(LookState look) => look.LyricsHighlight switch
+    {
+        LyricsHighlight.Accent => (HighlightInk.Accent, 0u),
+        LyricsHighlight.Custom c => (HighlightInk.Custom, c.Rgb & 0xFFFFFF),
+        _ => (HighlightInk.Ink, 0u),
+    };
+
+    /// <summary>The glow around the current line, 0–1: none unless a look is customized (v0.0.6 had none).</summary>
+    public static double LyricsGlow(LookState look) => look.Customized ? Unit(look.LyricsGlow, 0) : 0;
+
+    /// <summary>
+    /// How Now Playing is arranged on a wide window for the look's layout and the pane chosen:
+    /// Stage (v0.0.6); Artwork puts the cover and the line being sung in place of the Lyrics pane
+    /// (the other panes keep the stage); Lyrics lays any pane across the window under a small cover.
+    /// Narrow windows keep one view at a time whatever the layout.
+    /// </summary>
+    public static NowPlayingArrangement Arrangement(NowPlayingLayout layout, bool lyricsPane) => layout switch
+    {
+        NowPlayingLayout.Artwork when lyricsPane => NowPlayingArrangement.Cover,
+        NowPlayingLayout.Lyrics => NowPlayingArrangement.WidePane,
+        _ => NowPlayingArrangement.Stage,
+    };
+
+    /// <summary>
+    /// The full player bar shows only for the Bar style on a wide window (v0.0.6); otherwise the
+    /// capsule does: as a compact bar across the window (Compact: cover, title, play) or floating.
+    /// </summary>
+    public static bool ShowsPlayerBar(MiniPlayerStyle style, bool wide) => wide && style == MiniPlayerStyle.Bar;
+
+    /// <summary>The capsule stretched into a compact bar across the window.</summary>
+    public static bool StretchesCapsule(MiniPlayerStyle style) => style == MiniPlayerStyle.Compact;
+
+    private static float Unit(float value, float otherwise) => float.IsNaN(value) ? otherwise : Math.Clamp(value, 0f, 1f);
+}
+
+/// <summary>How Now Playing's player and pane share a wide window.</summary>
+public enum NowPlayingArrangement
+{
+    /// <summary>The player beside the pane (v0.0.6).</summary>
+    Stage,
+
+    /// <summary>A large cover with the line being sung below it, no pane.</summary>
+    Cover,
+
+    /// <summary>The pane across the window, under a row with a small cover and the titles.</summary>
+    WidePane,
+}
+
+/// <summary>Where the current lyric line's colour comes from.</summary>
+public enum HighlightInk
+{
+    /// <summary>The theme's ink-90 (the Luminous default).</summary>
+    Ink,
+
+    /// <summary>The theme's accent text colour.</summary>
+    Accent,
+
+    /// <summary>A colour the appearance plugin chose.</summary>
+    Custom,
 }

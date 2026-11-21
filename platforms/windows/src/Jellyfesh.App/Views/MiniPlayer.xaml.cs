@@ -41,6 +41,17 @@ public sealed partial class MiniPlayer : UserControl
     public void UpdateSteps() =>
         Player.MiniProgress.Steps = SeekGeometry.MiniSteps(Capsule.ActualWidth, XamlRoot?.RasterizationScale ?? 1);
 
+    /// <summary>The look's Compact mini-player: the capsule as a bar across the window (as wide as the player bar).</summary>
+    public bool Stretched
+    {
+        get => HorizontalAlignment == HorizontalAlignment.Stretch;
+        set
+        {
+            HorizontalAlignment = value ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
+            Capsule.MaxWidth = value ? 1240 : 560;
+        }
+    }
+
     private void OnCapsuleSizeChanged(object sender, SizeChangedEventArgs e)
     {
         UpdateSteps();

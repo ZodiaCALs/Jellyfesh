@@ -39,6 +39,16 @@ public sealed partial class PlayerBar : UserControl
             }
         };
         bar.SweepChanged += BarLine.ApplySweep;
+
+        // The look's own highlight colour, if it chose one (ADR-0020).
+        BarLine.Highlight = Controls.LyricsLook.BarHighlight(Shell.Look);
+        Shell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AppViewModel.Look))
+            {
+                BarLine.Highlight = Controls.LyricsLook.BarHighlight(Shell.Look);
+            }
+        };
         Loaded += (_, _) => bar.Show(true);
         Unloaded += (_, _) => bar.Show(false);
     }

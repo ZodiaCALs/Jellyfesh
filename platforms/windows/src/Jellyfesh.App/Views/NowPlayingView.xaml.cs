@@ -24,11 +24,22 @@ public sealed partial class NowPlayingView : UserControl
     /// <summary>Now Playing's artwork on wide windows (Luminous).</summary>
     private const double ArtworkSize = 380;
 
+    /// <summary>The look's Artwork layout: the large cover on wide and medium windows.</summary>
+    private const double CoverSize = 520;
+    private const double MediumCoverSize = 440;
+
+    /// <summary>The look's Lyrics layout: the small cover beside the titles, above the pane.</summary>
+    private const double SmallCoverSize = 72;
+
     private Image _front;
     private Image _back;
     private string? _backdropPath = string.Empty;
     private bool _open;
     private bool _compact;
+    private bool _medium;
+    private double _width = 1200;
+    private bool _widePane;
+    private bool _sungShown;
     private Storyboard? _transition;
     private Storyboard? _backdropFade;
     private bool _artworkFromSource;
@@ -62,6 +73,30 @@ public sealed partial class NowPlayingView : UserControl
         Seek.SeekRequested += OnSeekRequested;
         Seek.ScrubMoved += OnScrubMoved;
         Seek.StepsChanged += (_, steps) => Player.Progress.Steps = steps;
+
+        // The look's Artwork layout shows the line being sung under the cover (the lyrics bar's line).
+        var bar = Shell.LyricsBar;
+        bar.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LyricsBarPresenter.Line))
+            {
+                SungLine.Line = bar.Line;
+                SungLine.ApplySweep(bar.Sweep);
+            }
+        };
+        bar.SweepChanged += SungLine.ApplySweep;
+        SungLine.Line = bar.Line;
+        SungLine.Highlight = LyricsLook.BarHighlight(Shell.Look);
+
+        // The look's Now Playing layout, live (ADR-0020).
+        Shell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AppViewModel.Look))
+            {
+                SungLine.Highlight = LyricsLook.BarHighlight(Shell.Look);
+                UpdatePanels();
+            }
+        };
     }
 
     public AppViewModel Shell { get; }
@@ -178,13 +213,7 @@ public sealed partial class NowPlayingView : UserControl
     public void ApplyTheme()
     {
         var misty = Shell.Settings.Style == BackdropStyle.Misty;
-        var resources = Application.Current.Resources;
-
-        // Misty: the artwork as hero media on a Clear frame. Artwork: the artwork alone, on shadow-3 (Luminous).
-        ArtFrame.Padding = new Thickness(misty ? 12 : 0);
-        ArtFrame.BorderThickness = new Thickness(misty ? 1 : 0);
-        ArtFrame.Background = misty ? (Brush)resources["JfGlassClear"] : null;
-        Elevation.Cast(ArtBorder, misty ? 0 : Elevation.Shadow3, Elevation.Stage);
+        ApplyFrame();
 
         var path = misty ? null : Shell.BackdropPath;
         if (path != _backdropPath)
@@ -341,11 +370,10 @@ public sealed partial class NowPlayingView : UserControl
     private void OnSizeChanged(object sender, SizeChangedEventArgs e)
     {
         var width = e.NewSize.Width;
+        _width = width;
         _compact = width < CompactWidth;
         var medium = width < MediumWidth;
-
-        // The artwork is 380 epx on wide windows (Luminous), smaller as the window narrows.
-        PlayerPanel.Width = _compact ? Math.Min(ArtworkSize, Math.Max(240, width - 48)) : medium ? 320 : ArtworkSize;
+        _medium = medium;
         Body.Padding = _compact ? new Thickness(24, 12, 24, 12) : medium ? new Thickness(32, 20, 32, 20) : new Thickness(64, 24, 48, 24);
         Body.ColumnSpacing = _compact ? 0 : medium ? 32 : 56;
         ArrangeDock(_compact, medium);
@@ -378,7 +406,11 @@ public sealed partial class NowPlayingView : UserControl
         Dock.Margin = narrow ? new Thickness(12, 0, 12, 12) : medium ? new Thickness(32, 0, 32, 20) : new Thickness(64, 0, 64, 24);
     }
 
-    /// <summary>Wide: the player and one side panel. Compact: one of the four at a time.</summary>
+    /// <summary>
+    /// Wide: the player and one side panel, arranged by the look's Now Playing layout (ADR-0020):
+    /// side by side (Stage), a large cover with the sung line instead of the Lyrics pane (Artwork),
+    /// or the pane across the window under a small cover (Lyrics). Compact: one of the four at a time.
+    /// </summary>
     private void UpdatePanels()
     {
         if (LyricsPanel is null || PlayerScroller is null)
@@ -386,13 +418,17 @@ public sealed partial class NowPlayingView : UserControl
             return; // during InitializeComponent
         }
 
+        var arrangement = _compact ? NowPlayingArrangement.Stage : LookRules.Arrangement(Shell.Look.NowPlaying, LyricsTab.IsChecked == true);
+        var cover = arrangement == NowPlayingArrangement.Cover;
+        var widePane = arrangement == NowPlayingArrangement.WidePane;
         var showPlayer = !_compact || PlayerTab.IsChecked == true;
-        var showSide = !_compact || PlayerTab.IsChecked != true;
+        var showSide = (!_compact || PlayerTab.IsChecked != true) && !cover;
         PlayerScroller.Visibility = showPlayer ? Visibility.Visible : Visibility.Collapsed;
         SidePanel.Visibility = showSide ? Visibility.Visible : Visibility.Collapsed;
-        PlayerColumn.Width = _compact ? new GridLength(showPlayer ? 1 : 0, GridUnitType.Star) : GridLength.Auto;
-        SideColumn.Width = _compact && showPlayer ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
-        Grid.SetColumn(SidePanel, _compact ? 0 : 1);
+        PlayerColumn.Width = _compact ? new GridLength(showPlayer ? 1 : 0, GridUnitType.Star) : cover ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
+        SideColumn.Width = (_compact && showPlayer) || cover ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        Grid.SetColumn(SidePanel, _compact || widePane ? 0 : 1);
+        ArrangePlayer(cover, widePane);
 
         var lyricsWereShown = LyricsPanel.Visibility == Visibility.Visible && SidePanel.Visibility == Visibility.Visible;
         LyricsPanel.Visibility = LyricsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -408,6 +444,52 @@ public sealed partial class NowPlayingView : UserControl
         {
             LyricsPanel.Refresh();
         }
+    }
+
+    /// <summary>The player for the arrangement: beside the pane, a large cover alone with the sung line, or a row above the pane.</summary>
+    private void ArrangePlayer(bool cover, bool widePane)
+    {
+        Grid.SetRowSpan(PlayerScroller, widePane ? 1 : 2);
+        Grid.SetColumnSpan(PlayerScroller, widePane ? 2 : 1);
+        Grid.SetRow(SidePanel, widePane ? 1 : 0);
+        Grid.SetRowSpan(SidePanel, widePane ? 1 : 2);
+        Grid.SetColumnSpan(SidePanel, widePane ? 2 : 1);
+        Body.RowSpacing = widePane ? 16 : 0;
+
+        // The artwork is 380 epx on wide windows (Luminous), smaller as the window narrows; the
+        // Artwork layout's cover is larger, the Lyrics layout's a small one beside the titles.
+        PlayerPanel.Orientation = widePane ? Orientation.Horizontal : Orientation.Vertical;
+        PlayerPanel.Width = widePane ? double.NaN
+            : cover ? Math.Min(_medium ? MediumCoverSize : CoverSize, Math.Max(240, _width - 96))
+            : _compact ? Math.Min(ArtworkSize, Math.Max(240, _width - 48)) : _medium ? 320 : ArtworkSize;
+        ArtFrame.Width = ArtFrame.Height = widePane ? SmallCoverSize : double.NaN;
+        TitleRow.VerticalAlignment = widePane ? VerticalAlignment.Center : VerticalAlignment.Stretch;
+        if (widePane != _widePane)
+        {
+            _widePane = widePane;
+            ApplyFrame();
+        }
+
+        SungLine.Visibility = cover ? Visibility.Visible : Visibility.Collapsed;
+        if (cover != _sungShown)
+        {
+            _sungShown = cover;
+            Shell.LyricsBar.Show(cover);
+        }
+    }
+
+    /// <summary>
+    /// Misty: the artwork as hero media on a Clear frame. Artwork: the artwork alone, on shadow-3
+    /// (Luminous). The Lyrics layout's small cover has no frame and a smaller radius.
+    /// </summary>
+    private void ApplyFrame()
+    {
+        var misty = Shell.Settings.Style == BackdropStyle.Misty && !_widePane;
+        ArtFrame.Padding = new Thickness(misty ? 12 : 0);
+        ArtFrame.BorderThickness = new Thickness(misty ? 1 : 0);
+        ArtFrame.Background = misty ? (Brush)Application.Current.Resources["JfGlassClear"] : null;
+        ArtBorder.CornerRadius = new CornerRadius(TokenValues.Number(_widePane ? "Artwork.RadiusGrid" : "Artwork.RadiusHero"));
+        Elevation.Cast(ArtBorder, misty ? 0 : Elevation.Shadow3, Elevation.Stage);
     }
 
     private void OnPlayerChanged(object? sender, PropertyChangedEventArgs e)

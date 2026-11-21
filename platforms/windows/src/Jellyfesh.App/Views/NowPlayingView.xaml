@@ -122,8 +122,13 @@
                     <ColumnDefinition x:Name="PlayerColumn" Width="Auto" />
                     <ColumnDefinition x:Name="SideColumn" Width="*" />
                 </Grid.ColumnDefinitions>
+                <!-- The look's Lyrics layout puts the player in a row above the pane; otherwise both span the rows. -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-                <ScrollViewer x:Name="PlayerScroller" HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="PlayerScroller" Grid.RowSpan="2" HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
                     <StackPanel x:Name="PlayerPanel" Width="380" VerticalAlignment="Center" Spacing="20">
                         <!-- Artwork: the hero on shadow-3 (Artwork style) or on a Clear frame (Misty style). -->
                         <Border x:Name="ArtFrame" Padding="12" Background="{ThemeResource JfGlassClear}" BorderBrush="{ThemeResource JfGlassEdgeSoft}" BorderThickness="1" CornerRadius="36" SizeChanged="OnArtSizeChanged">
@@ -134,7 +139,7 @@
                                 </Grid>
                             </Border>
                         </Border>
-                        <Grid ColumnSpacing="12">
+                        <Grid x:Name="TitleRow" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -158,10 +163,12 @@
                                 <controls:StrokeIcon Data="{StaticResource IconHeart}" Filled="{x:Bind Player.IsFavorite, Mode=OneWay}" Size="22" />
                             </ToggleButton>
                         </Grid>
+                        <!-- The look's Artwork layout: the line being sung, under the cover. -->
+                        <controls:LyricsBarLine x:Name="SungLine" LineFontSize="22" Visibility="Collapsed" />
                     </StackPanel>
                 </ScrollViewer>
 
-                <Grid x:Name="SidePanel" Grid.Column="1">
+                <Grid x:Name="SidePanel" Grid.Column="1" Grid.RowSpan="2">
                     <views:LyricsView x:Name="LyricsPanel" />
                     <views:QueueView x:Name="QueuePanel" Visibility="Collapsed" />
                     <!-- Comments: "Comments from {Service}", Popular, then Latest; more at the end; read-only. -->

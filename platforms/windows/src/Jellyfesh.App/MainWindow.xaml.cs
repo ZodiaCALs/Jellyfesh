@@ -245,7 +245,7 @@ public sealed partial class MainWindow : Window
         if (!_vm.ReduceMotion)
         {
             // The artwork grows from the mini player's or the bar's (a connected animation).
-            NowPlaying.PrepareArtworkFrom(_wide ? Bar.ArtElement : Mini.ArtElement);
+            NowPlaying.PrepareArtworkFrom(ShowsBar ? Bar.ArtElement : Mini.ArtElement);
         }
 
         // Under reduced motion Now Playing fades in (dur-1) without moving.
@@ -314,7 +314,7 @@ public sealed partial class MainWindow : Window
         _nowPlayingOpen = false;
         NowPlaying.Close(animate: true);
         UpdateActivity();
-        if (_wide)
+        if (ShowsBar)
         {
             Bar.Focus(FocusState.Programmatic);
         }
@@ -428,6 +428,9 @@ public sealed partial class MainWindow : Window
 
     // ---- what draws while it can be seen (Still mode) ----
 
+    /// <summary>The player bar rather than the capsule: wide windows with the look's Bar style (ADR-0020).</summary>
+    private bool ShowsBar => LookRules.ShowsPlayerBar(_vm.Look.MiniPlayer, _wide);
+
     /// <summary>
     /// The seek bar and lyrics draw only while Now Playing is open, the mini player's ring only while
     /// it shows, and nothing while the window is minimised or hidden; the ticker then sleeps.
@@ -436,8 +439,9 @@ public sealed partial class MainWindow : Window
     {
         var player = _vm.Player;
         var floating = player.HasTrack && !_nowPlayingOpen && !_compact;
-        var mini = floating && !_wide;
-        var bar = floating && _wide;
+        var mini = floating && !ShowsBar;
+        var bar = floating && ShowsBar;
+        Mini.Stretched = LookRules.StretchesCapsule(_vm.Look.MiniPlayer);
         Mini.Visibility = mini ? Visibility.Visible : Visibility.Collapsed;
         Bar.Visibility = bar ? Visibility.Visible : Visibility.Collapsed;
         ContentFade.Visibility = mini || bar ? Visibility.Visible : Visibility.Collapsed;
@@ -495,7 +499,9 @@ public sealed partial class MainWindow : Window
 
     /// <summary>
     /// The Look slice, live (ADR-0020 §2): the navigation pane's places in its order (a separator
-    /// before Search and Sources), the platform's face for its typeface, the aurora's strength.
+    /// before Search and Sources), the platform's face for its typeface, the aurora's strength, the
+    /// glass (the Transparency setting times the look's glass) and Desktop Lyrics' highlight. The
+    /// lyrics, the lyrics bar, Now Playing's layout and the mini-player follow it in their views.
     /// </summary>
     private void ApplyLook()
     {
@@ -540,6 +546,12 @@ public sealed partial class MainWindow : Window
         Bar.FontFamily = face;
         Mini.FontFamily = face;
         Field.Opacity = LookRules.AuroraOpacity(look);
+        UpdateActivity(); // the mini-player style: the bar, a compact bar or the floating capsule
+        ThemeBrushes.SetTransparency(LookRules.GlassTransparency(look, _vm.Settings.Transparency));
+        if (_desktopLyrics is { } desktop)
+        {
+            desktop.Highlight = LyricsLook.BarHighlight(look);
+        }
     }
 
     /// <summary>Desktop Lyrics follows its setting: opened when on, closed when off; its close button turns it off.</summary>
@@ -553,6 +565,7 @@ public sealed partial class MainWindow : Window
                 var window = new DesktopLyricsWindow(_vm.LyricsBar, _vm.Services.L, () =>
                     _vm.Services.Send(new CoreCommand.SetSettings(_vm.Services.Hub.State.Settings with { DesktopLyrics = false })));
                 window.Closed += (_, _) => _desktopLyrics = null;
+                window.Highlight = LyricsLook.BarHighlight(_vm.Look);
                 window.Activate();
                 return window;
             });
@@ -589,7 +602,7 @@ public sealed partial class MainWindow : Window
         }
 
         _themeApplied = true;
-        ThemeBrushes.SetTransparency(_vm.Settings.Transparency);
+        ThemeBrushes.SetTransparency(LookRules.GlassTransparency(_vm.Look, _vm.Settings.Transparency));
         _backdrop.SetReduceEffects(_vm.Settings.ReduceEffects);
         Optional("the window icon", () => _shell?.SetIcon(_vm.AppIcon));
         Optional("the title bar's icon", () => TitleIcon.ImageSource = new BitmapImage(AppAssets.IconPng(_vm.AppIcon, 32)));

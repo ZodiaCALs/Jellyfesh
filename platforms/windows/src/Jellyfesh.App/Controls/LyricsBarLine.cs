@@ -31,6 +31,7 @@ public sealed partial class LyricsBarLine : StackPanel
     private readonly StackPanel _words = new() { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed };
     private readonly TextBlock _translation = new() { TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly List<SweptWord> _parts = [];
+    private Brush? _highlight;
     private Microsoft.UI.Xaml.Media.Animation.Storyboard? _sweep;
 
     public LyricsBarLine()
@@ -62,6 +63,24 @@ public sealed partial class LyricsBarLine : StackPanel
     {
         get => (bool)GetValue(DimProperty);
         set => SetValue(DimProperty, value);
+    }
+
+    /// <summary>The colour sung words light up in: the look's own colour (ADR-0020), or the accent when null.</summary>
+    public Brush? Highlight
+    {
+        get => _highlight;
+        set
+        {
+            if (!ReferenceEquals(_highlight, value))
+            {
+                _highlight = value;
+                var sung = value ?? (Brush)Application.Current.Resources["JfAccentText"];
+                foreach (var part in _parts)
+                {
+                    part.SetSung(sung);
+                }
+            }
+        }
     }
 
     private void OnLineChanged(LyricLineViewModel? old)
@@ -141,7 +160,7 @@ public sealed partial class LyricsBarLine : StackPanel
         {
             // The sung part in the highlight colour, the rest quieter.
             var unsung = (Brush)res["JfInk70"];
-            var sung = (Brush)res["JfAccentText"];
+            var sung = _highlight ?? (Brush)res["JfAccentText"];
             for (var i = 0; i < line.Words.Count; i++)
             {
                 var w = line.Words[i];

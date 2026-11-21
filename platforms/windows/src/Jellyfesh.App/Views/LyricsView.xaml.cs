@@ -24,6 +24,7 @@ public sealed partial class LyricsView : UserControl
     private DateTime _pausedUntil;
     private double _lineSize = 30;
     private double _widthSize = 30;
+    private LyricsLook _look;
 
     public LyricsView()
     {
@@ -31,6 +32,7 @@ public sealed partial class LyricsView : UserControl
         Presenter = _app.Lyrics;
         Player = _app.Player;
         AiLyrics = _app.AiLyrics;
+        _look = LyricsLook.From(_app.Look);
         InitializeComponent();
         Presenter.PropertyChanged += OnPresenterChanged;
         Presenter.SweepChanged += OnSweepChanged;
@@ -83,6 +85,12 @@ public sealed partial class LyricsView : UserControl
         else if (e.PropertyName == nameof(AppViewModel.Settings))
         {
             ApplyLyricsSettings();
+        }
+        else if (e.PropertyName == nameof(AppViewModel.Look))
+        {
+            // The look's weight, highlight and glow, live (ADR-0020).
+            _look = LyricsLook.From(_app.Look);
+            ForEachLine(view => view.Look = _look);
         }
     }
 
@@ -211,6 +219,7 @@ public sealed partial class LyricsView : UserControl
         view.LineFontSize = _lineSize;
         view.ReduceMotion = _app.ReduceMotion;
         view.Align = _app.Settings.LyricsAlign;
+        view.Look = _look;
         view.SeekRequested += OnLineSeekRequested;
         if (args.Index == Presenter.ActiveIndex && Presenter.Sweep is { } sweep)
         {

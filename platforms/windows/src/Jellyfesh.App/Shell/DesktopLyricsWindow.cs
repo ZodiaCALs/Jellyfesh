@@ -30,6 +30,13 @@ internal sealed partial class DesktopLyricsWindow : Window
     private readonly StackPanel _tools = new() { Orientation = Orientation.Horizontal, Spacing = 4, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Opacity = 0 };
     private readonly nint _hwnd;
 
+    /// <summary>The colour the current line's words light up in (the look's, or the accent).</summary>
+    public Brush? Highlight
+    {
+        get => _current.Highlight;
+        set => _current.Highlight = value;
+    }
+
     public DesktopLyricsWindow(LyricsBarPresenter bar, ILocalizer l, Action close)
     {
         _bar = bar;
