@@ -129,7 +129,11 @@ class UniffiCoreClientTest {
 
             // Tones have no artwork: the core's theme is the fallback hue, which the app's
             // first-frame colours must match.
-            val theme = assertNotNull(state.theme ?: snapshot.theme, "a theme slice after playing")
+            // The theme can come after the songs end on a busy machine: wait a while for it then.
+            val theme = assertNotNull(
+                state.theme ?: snapshot.theme ?: (waitForOrNull(events, 10_000) { it is CoreEvent.Theme } as CoreEvent.Theme?)?.snapshot,
+                "a theme slice after playing",
+            )
             assertEquals(FallbackTheme.HUE, theme.hue)
             assertEquals(FallbackTheme.light, theme.light.colors)
             assertEquals(FallbackTheme.dark, theme.dark.colors)
@@ -281,11 +285,93 @@ class UniffiCoreClientTest {
         assertNull(timeline.nextChange(2_500))
     }
 
+    /**
+     * v0.0.7 through the shell's adapter and store: the new slices' starting values for a build
+     * from source, a refused licence key, a library song's details, the library's Discover page,
+     * the decoded format of what plays, and the store's view of each.
+     */
+    @Test
+    fun theV007SlicesAndCommandsThroughTheShellsStore() {
+        library()
+        val dir = Files.createTempDirectory("jf-android-ffi-v007").toFile()
+        try {
+            val music = dir.resolve("music").apply { mkdirs() }
+            // Long enough to still be playing when the store is read.
+            writeTone(music.resolve("01 Harbor.wav"), 440.0, seconds = 5.0)
+            val client = start(dir)
+            val store = CoreStore()
+            val events = LinkedBlockingQueue<CoreEvent>()
+            store.attach(client)
+            client.setListener { event ->
+                store.onEvent(event)
+                events.put(event)
+            }
+            val first = store.state.value
+            // A build from source: no store sells Pro, keys work, no update check, the Luminous look.
+            assertEquals(false, first.pro.active)
+            assertEquals(emptyList(), first.pro.stores)
+            assertTrue(first.pro.licenceKeys)
+            assertEquals(false, first.update.supported)
+            assertEquals(false, first.look.customized)
+            assertEquals(org.jellyfesh.logic.core.LookSnapshot.Default.copy(version = first.look.version), first.look)
+            assertTrue(first.sources.canInstallPlugins)
+
+            // A key that is not one: the Pro slice says why, and Pro stays off.
+            client.send(Command.ActivateLicence("not a licence key"))
+            val refused = waitFor(events) { it is CoreEvent.Pro && it.snapshot.licenceError != null } as CoreEvent.Pro
+            assertEquals(org.jellyfesh.logic.core.LicenceError.Malformed, refused.snapshot.licenceError)
+            assertEquals(false, refused.snapshot.active)
+
+            client.send(Command.AddRoot(music.path))
+            waitFor(events) { it is CoreEvent.Scan && it.status is ScanStatus.Finished }
+            val track = client.tracks(TrackQuery(sort = TrackSort.Path)).single()
+
+            // Get Info: the core's details of a library song, answering its own request.
+            val asked = client.send(Command.Details(org.jellyfesh.logic.core.ItemRef.Track(track.id)))
+            val details = (waitFor(events) { it is CoreEvent.Details && it.page.request == asked } as CoreEvent.Details).page
+            assertEquals("01 Harbor", details.title)
+            assertEquals(org.jellyfesh.logic.core.ItemRef.Track(track.id), details.item)
+            val technical = assertNotNull(details.technical, "a library song's technical details")
+            assertEquals(44_100, technical.format.sampleRateHz)
+            assertEquals(2, technical.format.channels)
+            assertTrue((technical.fileSizeBytes ?: 0) > 0)
+
+            // The library's Discover page: only the core's own shelves.
+            val discoverRequest = client.send(Command.Discover("library"))
+            val page = (waitFor(events) { it is CoreEvent.Discover && it.page.request == discoverRequest } as CoreEvent.Discover).page
+            assertEquals("library", page.source)
+            assertTrue(page.shelves.all { it.id in setOf("recently_added", "most_played", "rediscover") }, page.shelves.map { it.id }.toString())
+
+            // What plays, as decoded, with the core's quality label.
+            client.send(Command.PlayTracks(listOf(TrackRef.Library(track.id)), 0))
+            val playing = waitFor(events) { it is CoreEvent.NowPlayingChanged && it.snapshot?.quality != null } as CoreEvent.NowPlayingChanged
+            val quality = assertNotNull(playing.snapshot?.quality)
+            assertEquals(44_100, quality.sampleRateHz)
+            assertEquals(true, quality.lossless)
+            assertEquals(org.jellyfesh.logic.core.QualityLabel.Lossless, quality.quality)
+            // The store applied the event before the test saw it.
+            assertEquals(quality, store.state.value.nowPlaying?.quality)
+            client.shutdown()
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     private fun waitFor(events: LinkedBlockingQueue<CoreEvent>, done: (CoreEvent) -> Boolean): CoreEvent {
         val end = System.nanoTime() + 30_000_000_000L
         while (true) {
             val left = end - System.nanoTime()
             val event = events.poll(left.coerceAtLeast(0), TimeUnit.NANOSECONDS) ?: throw AssertionError("timed out")
+            if (done(event)) return event
+        }
+    }
+
+    private fun waitForOrNull(events: LinkedBlockingQueue<CoreEvent>, timeoutMs: Long, done: (CoreEvent) -> Boolean): CoreEvent? {
+        val end = System.nanoTime() + timeoutMs * 1_000_000L
+        while (true) {
+            val left = end - System.nanoTime()
+            if (left <= 0) return null
+            val event = events.poll(left, TimeUnit.NANOSECONDS) ?: return null
             if (done(event)) return event
         }
     }
