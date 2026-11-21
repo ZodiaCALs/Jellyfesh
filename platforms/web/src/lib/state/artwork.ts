@@ -11,6 +11,8 @@
 //
 // An answer is kept per source, account, item and size; a failed one is not (the plugin was
 // restarting, the sign-in was not finished, the network dropped): it is asked again after a pause.
+// A source answers a few at a time and the newest requests go first, as in the core (while a long
+// list scrolls, the rows now on screen come before those already gone by).
 
 import type { ImageRef, Item } from '../core/types';
 import type { Plugin } from '../plugins/host';
@@ -20,6 +22,8 @@ const MAX_REFS = 4000;
 const MAX_BLOBS = 300;
 /** How long a failed answer is not asked again. */
 const RETRY_MS = 30_000;
+/** A source's `artwork` calls at once; the others wait, the newest first. */
+export const ARTWORK_CALLS = 2;
 
 function trim<K, V>(map: Map<K, V>, max: number, drop?: (value: V) => void) {
   while (map.size > max) {
@@ -33,8 +37,32 @@ export class Artworks {
   private refs = new Map<string, Promise<ImageRef | null>>();
   private failed = new Map<string, number>();
   private blobs = new Map<string, Promise<string | null>>();
+  /** Per source: calls running, and those waiting (a stack: the newest starts next). */
+  private running = new Map<string, number>();
+  private waiting = new Map<string, (() => void)[]>();
 
   constructor(private readonly now: () => number = () => Date.now()) {}
+
+  /** Runs `call` when the source has a free slot; waiting calls start newest first. */
+  private schedule<T>(source: string, call: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const start = () => {
+        this.running.set(source, (this.running.get(source) ?? 0) + 1);
+        call()
+          .then(resolve, reject)
+          .finally(() => {
+            this.running.set(source, (this.running.get(source) ?? 1) - 1);
+            this.waiting.get(source)?.pop()?.();
+          });
+      };
+      if ((this.running.get(source) ?? 0) < ARTWORK_CALLS) start();
+      else {
+        const stack = this.waiting.get(source) ?? [];
+        stack.push(start);
+        this.waiting.set(source, stack);
+      }
+    });
+  }
 
   /** The image for `item` at about `size` px. */
   ref(plugin: Plugin | undefined, item: Item, size: number): Promise<ImageRef | null> {
@@ -47,7 +75,7 @@ export class Artworks {
     if (!found) {
       const failedAt = this.failed.get(key);
       if (failedAt !== undefined && this.now() - failedAt < RETRY_MS) return Promise.resolve(own);
-      found = plugin.artwork(item, size).then(
+      found = this.schedule(plugin.id, () => plugin.artwork(item, size)).then(
         (image) => image ?? own,
         () => {
           this.refs.delete(key);

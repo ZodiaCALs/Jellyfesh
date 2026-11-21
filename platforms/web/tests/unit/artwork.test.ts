@@ -51,6 +51,41 @@ afterEach(() => {
 });
 
 describe('covers', () => {
+  it('asks a source a few at a time, the newest requests first', async () => {
+    const started: string[] = [];
+    const finish = new Map<string, (image: ImageRef | null) => void>();
+    const fake = {
+      id: 'org.example.music',
+      state: { account: 'demo' },
+      blocked: null,
+      declares: (capability: string) => capability === 'Artwork',
+      artwork: (item: Item) =>
+        new Promise<ImageRef | null>((resolve) => {
+          started.push(item.id);
+          finish.set(item.id, resolve);
+        }),
+    } as unknown as Plugin;
+    const artworks = new Artworks();
+    const answers = ['a', 'b', 'c', 'd', 'e'].map((id) => artworks.ref(fake, { ...ITEM, id }, 300));
+    expect(started).toEqual(['a', 'b']);
+    finish.get('a')?.(image('https://cdn.example/a.jpg'));
+    await answers[0];
+    await Promise.resolve();
+    expect(started).toEqual(['a', 'b', 'e']);
+    finish.get('b')?.(null);
+    await answers[1];
+    await Promise.resolve();
+    expect(started).toEqual(['a', 'b', 'e', 'd']);
+    finish.get('e')?.(null);
+    await answers[4];
+    await Promise.resolve();
+    expect(started).toEqual(['a', 'b', 'e', 'd', 'c']);
+    finish.get('d')?.(null);
+    finish.get('c')?.(null);
+    await Promise.all(answers);
+    expect((await answers[0])?.url).toBe('https://cdn.example/a.jpg');
+  });
+
   it('uses the item’s own picture when it is large enough', async () => {
     const { plugin: p, calls } = plugin(async () => image('https://cdn.example/big.jpg'));
     const own = { ...ITEM, artwork: image('https://cdn.example/own.jpg', [], 600) };
