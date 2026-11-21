@@ -20,7 +20,29 @@
     xmlns:controls="using:Jellyfesh.App.Controls"
     xmlns:shell="using:Jellyfesh.App.Shell"
     xmlns:th="using:Jellyfesh.App.Theming"
-    xmlns:views="using:Jellyfesh.App.Views">
+    xmlns:views="using:Jellyfesh.App.Views"
+    xmlns:vm="using:Jellyfesh.ViewModels">
+
+    <UserControl.Resources>
+        <!-- A comment: the author's picture and name, when, the likes, the text. -->
+        <DataTemplate x:Key="CommentTemplate" x:DataType="vm:CommentItem">
+            <Grid ColumnSpacing="12" AutomationProperties.Name="{x:Bind AccessibleName}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="32" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="32" Height="32" VerticalAlignment="Top" Background="{ThemeResource JfFill}" CornerRadius="16">
+                    <Image controls:Artwork.DecodeSize="64" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+                </Border>
+                <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock>
+                        <Run FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Author}" /><Run Foreground="{ThemeResource JfInk50}" Text="{x:Bind shell:Bind.After(When)}" /><Run Foreground="{ThemeResource JfInk50}" Text="{x:Bind shell:Bind.After(Likes)}" />
+                    </TextBlock>
+                    <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind Text}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
 
     <UserControl.KeyboardAccelerators>
         <KeyboardAccelerator Key="Escape" Invoked="OnEscape" />
@@ -78,6 +100,8 @@
                         <RadioButton x:Name="LyricsTab" x:Uid="NowPlaying_LyricsTab" Checked="OnViewChecked" Content="Lyrics" GroupName="NowPlayingViews" IsChecked="True" Style="{StaticResource JfSegmentStyle}" />
                         <RadioButton x:Name="QueueTab" x:Uid="NowPlaying_QueueTab" Checked="OnViewChecked" Content="Queue" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" />
                         <RadioButton x:Name="InfoTab" x:Uid="NowPlaying_InfoTab" Checked="OnViewChecked" Content="Info" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" />
+                        <!-- The fourth pane, for songs from sources with comments. -->
+                        <RadioButton x:Name="CommentsTab" x:Uid="NowPlaying_CommentsTab" Checked="OnViewChecked" Content="Comments" GroupName="NowPlayingViews" Style="{StaticResource JfSegmentStyle}" Visibility="{x:Bind shell:Bind.Visible(Comments.IsAvailable), Mode=OneWay}" />
                     </StackPanel>
                 </Border>
                 <Button
@@ -140,6 +164,27 @@
                 <Grid x:Name="SidePanel" Grid.Column="1">
                     <views:LyricsView x:Name="LyricsPanel" />
                     <views:QueueView x:Name="QueuePanel" Visibility="Collapsed" />
+                    <!-- Comments: "Comments from {Service}", Popular, then Latest; more at the end; read-only. -->
+                    <ScrollViewer x:Name="CommentsPanel" ViewChanged="OnCommentsScrolled" Visibility="Collapsed">
+                        <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="12" Padding="0,0,0,24">
+                            <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Comments.Attribution, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(Comments.Attribution), Mode=OneWay}" />
+                            <TextBlock x:Uid="Comments_Popular" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Popular" Visibility="{x:Bind shell:Bind.Visible(Comments.HasPopular), Mode=OneWay}" />
+                            <ItemsRepeater ItemTemplate="{StaticResource CommentTemplate}" ItemsSource="{x:Bind Comments.Popular}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="16" />
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+                            <TextBlock x:Uid="Comments_Latest" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Latest" Visibility="{x:Bind shell:Bind.Visible(Comments.HasPopular), Mode=OneWay}" />
+                            <ItemsRepeater ItemTemplate="{StaticResource CommentTemplate}" ItemsSource="{x:Bind Comments.Latest}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="16" />
+                                </ItemsRepeater.Layout>
+                            </ItemsRepeater>
+                            <ProgressRing HorizontalAlignment="Left" IsActive="{x:Bind Comments.IsLoading, Mode=OneWay}" />
+                            <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Comments.Error, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Comments.Error), Mode=OneWay}" />
+                            <TextBlock x:Uid="Comments_None" Style="{StaticResource JfSecondaryBodyText}" Text="No Comments Yet" Visibility="{x:Bind shell:Bind.Visible(Comments.IsEmpty), Mode=OneWay}" />
+                        </StackPanel>
+                    </ScrollViewer>
                     <!-- About This Song: Title, Artist, Album, Year, Length, Format, Lyrics and File (a row shows when it has a value). -->
                     <ScrollViewer x:Name="InfoPanel" Visibility="Collapsed">
                         <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="16">

@@ -416,6 +416,48 @@
   <data name="Browse_More.Content" xml:space="preserve">
     <value>More</value>
   </data>
+  <data name="Comments_Days_One" xml:space="preserve">
+    <value>{0} day ago</value>
+  </data>
+  <data name="Comments_Days_Other" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="Comments_From" xml:space="preserve">
+    <value>Comments from {0}</value>
+  </data>
+  <data name="Comments_Hours_One" xml:space="preserve">
+    <value>{0} hour ago</value>
+  </data>
+  <data name="Comments_Hours_Other" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="Comments_JustNow" xml:space="preserve">
+    <value>Just now</value>
+  </data>
+  <data name="Comments_Latest.Text" xml:space="preserve">
+    <value>Latest</value>
+  </data>
+  <data name="Comments_Likes" xml:space="preserve">
+    <value>{0} likes</value>
+  </data>
+  <data name="Comments_Minutes_One" xml:space="preserve">
+    <value>{0} minute ago</value>
+  </data>
+  <data name="Comments_Minutes_Other" xml:space="preserve">
+    <value>{0} minutes ago</value>
+  </data>
+  <data name="Comments_None.Text" xml:space="preserve">
+    <value>No Comments Yet</value>
+  </data>
+  <data name="Comments_Popular.Text" xml:space="preserve">
+    <value>Popular</value>
+  </data>
+  <data name="Comments_Years_One" xml:space="preserve">
+    <value>{0} year ago</value>
+  </data>
+  <data name="Comments_Years_Other" xml:space="preserve">
+    <value>{0} years ago</value>
+  </data>
   <data name="Common_AddMusicFolder.Content" xml:space="preserve">
     <value>Add Music Folder…</value>
   </data>
@@ -1033,6 +1075,9 @@
   </data>
   <data name="NowPlaying_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Back to the Library</value>
+  </data>
+  <data name="NowPlaying_CommentsTab.Content" xml:space="preserve">
+    <value>Comments</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Mini Player</value>

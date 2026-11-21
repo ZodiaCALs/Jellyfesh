@@ -26,6 +26,8 @@ public partial class LocalizationTests
         "Fact_Version", "Fact_Genre", "Fact_Language", "Fact_Released", "Fact_Label", "Fact_Composer", "Fact_Lyricist",
         "Fact_Arranger", "Fact_Producer", "Fact_Popularity", "Fact_Quality", "Fact_Isrc", "Fact_Disc", "Fact_Track",
         "Shelf_for_you", "Shelf_recently_added", "Shelf_most_played", "Shelf_rediscover",
+        "Comments_Minutes_One", "Comments_Minutes_Other", "Comments_Hours_One", "Comments_Hours_Other",
+        "Comments_Days_One", "Comments_Days_Other", "Comments_Years_One", "Comments_Years_Other",
     ];
 
     [Fact]
@@ -64,7 +66,8 @@ public partial class LocalizationTests
         var used = Directory.GetFiles(src, "*.cs", SearchOption.AllDirectories)
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .SelectMany(f => KeyLiteral().Matches(NativeEntryPoint().Replace(File.ReadAllText(f), string.Empty)).Select(m => m.Groups[1].Value))
-            .Where(k => k is not ("Count_Songs" or "Count_Albums" or "Count_Artists" or "Count_Minutes" or "Count_Hours")) // read through Plural
+            .Where(k => k is not ("Count_Songs" or "Count_Albums" or "Count_Artists" or "Count_Minutes" or "Count_Hours"
+                or "Comments_Minutes" or "Comments_Hours" or "Comments_Days" or "Comments_Years")) // read through Plural
             .Where(k => k != k.ToUpperInvariant()) // environment variables (JF_LOG_DIR), not strings
             .Concat(Dynamic)
             .ToHashSet(StringComparer.Ordinal);

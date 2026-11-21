@@ -62,6 +62,7 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         LyricsBar = new LyricsBarPresenter(time);
         Pro = new ProViewModel(Services, store, links);
         AiLyrics = new AiLyricsViewModel(Services, Pro);
+        Comments = new CommentsViewModel(Services);
         Links = links;
         ticker.Attach(Lyrics);
         ticker.Attach(LyricsBar);
@@ -83,6 +84,9 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
 
     /// <summary>AI Lyrics in the Lyrics pane and the song menu.</summary>
     public AiLyricsViewModel AiLyrics { get; }
+
+    /// <summary>Now Playing's Comments pane, for songs from sources with comments.</summary>
+    public CommentsViewModel Comments { get; }
 
     /// <summary>The website's pages (About, the legal links), when the build knows the website.</summary>
     public AboutInfo.Links? Links { get; }
@@ -149,6 +153,11 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         if ((changes & (SliceChange.AiLyrics | SliceChange.Lyrics | SliceChange.NowPlaying | SliceChange.Pro | SliceChange.Remote)) != 0)
         {
             AiLyrics.Update(state);
+        }
+
+        if ((changes & (SliceChange.NowPlaying | SliceChange.Sources | SliceChange.Remote)) != 0)
+        {
+            Comments.Update(state);
         }
 
         if (changes.HasFlag(SliceChange.Queue))

@@ -416,6 +416,48 @@
   <data name="Browse_More.Content" xml:space="preserve">
     <value>更多</value>
   </data>
+  <data name="Comments_Days_One" xml:space="preserve">
+    <value>{0} 天前</value>
+  </data>
+  <data name="Comments_Days_Other" xml:space="preserve">
+    <value>{0} 天前</value>
+  </data>
+  <data name="Comments_From" xml:space="preserve">
+    <value>评论来自 {0}</value>
+  </data>
+  <data name="Comments_Hours_One" xml:space="preserve">
+    <value>{0} 小时前</value>
+  </data>
+  <data name="Comments_Hours_Other" xml:space="preserve">
+    <value>{0} 小时前</value>
+  </data>
+  <data name="Comments_JustNow" xml:space="preserve">
+    <value>刚刚</value>
+  </data>
+  <data name="Comments_Latest.Text" xml:space="preserve">
+    <value>最新</value>
+  </data>
+  <data name="Comments_Likes" xml:space="preserve">
+    <value>{0} 个赞</value>
+  </data>
+  <data name="Comments_Minutes_One" xml:space="preserve">
+    <value>{0} 分钟前</value>
+  </data>
+  <data name="Comments_Minutes_Other" xml:space="preserve">
+    <value>{0} 分钟前</value>
+  </data>
+  <data name="Comments_None.Text" xml:space="preserve">
+    <value>暂无评论</value>
+  </data>
+  <data name="Comments_Popular.Text" xml:space="preserve">
+    <value>热门</value>
+  </data>
+  <data name="Comments_Years_One" xml:space="preserve">
+    <value>{0} 年前</value>
+  </data>
+  <data name="Comments_Years_Other" xml:space="preserve">
+    <value>{0} 年前</value>
+  </data>
   <data name="Common_AddMusicFolder.Content" xml:space="preserve">
     <value>添加音乐文件夹…</value>
   </data>
@@ -1033,6 +1075,9 @@
   </data>
   <data name="NowPlaying_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>返回资料库</value>
+  </data>
+  <data name="NowPlaying_CommentsTab.Content" xml:space="preserve">
+    <value>评论</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>迷你播放器</value>

@@ -483,6 +483,12 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   artist or album (`Browse` of the id), which asks for its `Details` when the
   source offers them: the picture for the header and the notes or biography
   (three lines, **More** shows it whole), and Get Info in More.
+* **Comments** (`CommentsViewModel`): for songs from sources whose
+  `PluginSummary.comments` is true, Now Playing has a fourth pane: "Comments
+  from {Service}", "Popular" (the first page's hot comments) then "Latest",
+  each with the author's picture (through the core), name, age ("3 days ago")
+  and likes, and the text; more load near the end of the list; "No Comments
+  Yet" without any. Read-only, asked by request id when the pane opens.
 * **AI Lyrics** (`AiLyricsViewModel`, from the `AiLyrics` slice): the Lyrics
   pane offers **Create Synced Lyrics** under "No Lyrics" and **Time These
   Lyrics** under plain lyrics while AI Lyrics is offered (or Pro is inactive,

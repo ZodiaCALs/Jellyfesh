@@ -40,6 +40,15 @@ public sealed partial class NowPlayingView : UserControl
     {
         Shell = AppHost.App;
         Player = Shell.Player;
+        Comments = Shell.Comments;
+        Comments.PropertyChanged += (_, e) =>
+        {
+            // The song's source has no comments: back to the lyrics.
+            if (e.PropertyName == nameof(CommentsViewModel.IsAvailable) && !Comments.IsAvailable && CommentsTab?.IsChecked == true)
+            {
+                LyricsTab.IsChecked = true;
+            }
+        };
         InitializeComponent();
         _front = BackdropA;
         _back = BackdropB;
@@ -58,6 +67,9 @@ public sealed partial class NowPlayingView : UserControl
     public AppViewModel Shell { get; }
 
     public PlayerViewModel Player { get; }
+
+    /// <summary>The Comments pane (sources with comments).</summary>
+    public CommentsViewModel Comments { get; }
 
     /// <summary>Whether the lyrics are on screen (the lyrics presenter draws only then).</summary>
     public bool ShowsLyrics => _open && SidePanel.Visibility == Visibility.Visible && LyricsPanel.Visibility == Visibility.Visible;
@@ -386,6 +398,11 @@ public sealed partial class NowPlayingView : UserControl
         LyricsPanel.Visibility = LyricsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         QueuePanel.Visibility = QueueTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         InfoPanel.Visibility = InfoTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        CommentsPanel.Visibility = CommentsTab.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (CommentsTab.IsChecked == true)
+        {
+            Comments.Open();
+        }
         ViewsChanged?.Invoke(this, EventArgs.Empty);
         if (ShowsLyrics && !lyricsWereShown)
         {
@@ -426,5 +443,14 @@ public sealed partial class NowPlayingView : UserControl
         var source = np.Track is TrackRef.Source s ? ItemLinks.ServiceName(services.Hub.State.Sources, s.Track.Plugin) : null;
         var known = new KnownDetails(np.Title, np.Artist, np.Album, null, np.DurationMs, np.Path, source);
         _ = InfoDialog.ShowAsync(AppHost.Platform, new DetailsViewModel(services, item, InfoKind.Song, known), services.L);
+    }
+
+    /// <summary>More comments at the end of the list.</summary>
+    private void OnCommentsScrolled(object? sender, ScrollViewerViewChangedEventArgs e)
+    {
+        if (CommentsPanel.VerticalOffset >= CommentsPanel.ScrollableHeight - 200)
+        {
+            Comments.LoadMoreCommand.Execute(null);
+        }
     }
 }
