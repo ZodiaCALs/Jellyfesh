@@ -815,7 +815,7 @@
                     <Border Style="{StaticResource JfCardStyle}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
-                                <TextBlock x:Uid="Pro_Title" Style="{StaticResource CardHeading}" Text="Jellyfesh Pro" />
+                                <TextBlock x:Uid="Pro_Heading" Style="{StaticResource CardHeading}" Text="Jellyfesh Pro" />
                                 <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Pro.Status, Mode=OneWay}" TextWrapping="Wrap" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8">

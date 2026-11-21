@@ -413,6 +413,9 @@
   <data name="Browse_ErrorTitle.Text" xml:space="preserve">
     <value>该来源没有响应</value>
   </data>
+  <data name="Browse_More.Content" xml:space="preserve">
+    <value>更多</value>
+  </data>
   <data name="Common_AddMusicFolder.Content" xml:space="preserve">
     <value>添加音乐文件夹…</value>
   </data>
@@ -1319,6 +1322,9 @@
   <data name="Pro_EnterKeyLabel" xml:space="preserve">
     <value>输入许可证密钥…</value>
   </data>
+  <data name="Pro_Heading.Text" xml:space="preserve">
+    <value>Jellyfesh Pro</value>
+  </data>
   <data name="Pro_Inactive" xml:space="preserve">
     <value>AI 歌词和自定义是 Jellyfesh Pro 的功能。</value>
   </data>
@@ -1359,9 +1365,6 @@
     <value>Microsoft Store 未能完成购买。请稍后再试。</value>
   </data>
   <data name="Pro_Title" xml:space="preserve">
-    <value>Jellyfesh Pro</value>
-  </data>
-  <data name="Pro_Title.Text" xml:space="preserve">
     <value>Jellyfesh Pro</value>
   </data>
   <data name="Quality_High" xml:space="preserve">

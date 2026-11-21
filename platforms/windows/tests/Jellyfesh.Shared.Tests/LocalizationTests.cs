@@ -41,6 +41,21 @@ public partial class LocalizationTests
         }
     }
 
+    /// <summary>
+    /// MRT Core cannot hold a string that is also the scope of x:Uid entries ("Name" beside
+    /// "Name.Text": PRI278, "defined as both resource and scope"), and the build's resource index fails.
+    /// </summary>
+    [Fact]
+    public void No_key_is_also_the_scope_of_x_uid_keys()
+    {
+        foreach (var lang in Languages)
+        {
+            var keys = Read(lang).Keys.ToHashSet(StringComparer.Ordinal);
+            var scopes = keys.Where(k => k.Contains('.', StringComparison.Ordinal)).Select(k => k[..k.IndexOf('.', StringComparison.Ordinal)]).ToHashSet(StringComparer.Ordinal);
+            Assert.DoesNotContain(keys, scopes.Contains);
+        }
+    }
+
     [Fact]
     public void Every_key_the_code_reads_exists()
     {
