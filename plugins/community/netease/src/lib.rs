@@ -12,14 +12,20 @@
 //!   albums ([`catalog`]).
 //! * Streams: only full tracks the account may play, at the chosen quality;
 //!   never a preview in place of the song ([`stream`]).
-//! * Lyrics: plain synced LRC, with NetEase's translation merged in as
-//!   bilingual lines ([`lyrics`]). Artwork at the size asked for.
+//! * Lyrics: word by word when NetEase has word timing (its YRC, converted
+//!   to enhanced LRC in [`yrc`]), else synced LRC, with NetEase's
+//!   translation merged in as bilingual lines ([`lyrics`]). Artwork at the
+//!   size asked for.
+//! * Discover (daily picks, recommended playlists, charts), details of
+//!   songs, albums, artists and playlists, and their comments, read-only
+//!   ([`discover`]).
 //! * Requests: weapi encoding ([`weapi`], with the raw RSA step in
 //!   [`rsa_raw`]), sent only to music.163.com; streams and pictures only from
 //!   music.126.net subdomains.
 
 mod api;
 mod catalog;
+mod discover;
 mod items;
 mod login;
 mod lyrics;
@@ -28,6 +34,9 @@ mod rsa_raw;
 mod settings;
 mod stream;
 mod weapi;
+mod yrc;
+#[cfg(test)]
+mod yrc_golden;
 
 use jf_plugin_sdk::prelude::*;
 use serde_json::json;
@@ -62,7 +71,7 @@ fn own_cover(id: Id<'_>, item_id: &str) -> Result<Option<String>> {
             let artist = catalog::artist(id)?;
             artist.pic_url.or(artist.img1v1_url)
         }
-        Id::Playlist(id) => catalog::playlist(id)?.cover_img_url,
+        Id::Playlist(id) => catalog::playlist(id)?.cover().map(str::to_owned),
         Id::Folder(_) => None,
     };
     api::remember_cover(item_id, cover.as_deref());
@@ -142,8 +151,19 @@ impl Plugin for NetEase {
                 None => return Ok(None),
             },
         };
-        let answer: model::Lyrics = api::call_as("/song/lyric", json!({ "id": id, "lv": -1, "tv": -1 }))?;
-        Ok(lyrics::payload(&answer, api::settings().translations))
+        Ok(lyrics::payload(&lyrics::fetch(id)?, api::settings().translations))
+    }
+
+    fn discover() -> Result<Vec<Shelf>> {
+        discover::discover()
+    }
+
+    fn details(item: Item) -> Result<ItemDetails> {
+        discover::details(&item)
+    }
+
+    fn comments(item: Item, page: PageRequest) -> Result<CommentPage> {
+        discover::comments(&item, &page)
     }
 
     fn artwork(item: Item, size: u32) -> Result<Option<ImageRef>> {

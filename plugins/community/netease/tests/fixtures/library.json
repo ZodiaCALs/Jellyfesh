@@ -2,14 +2,19 @@
   "_comment": "Invented data for the mock NetEase Cloud Music service in tests/mock. Nothing here comes from NetEase or from any account. Host names in URLs are the real ones only so that the plugin's checks on stream and picture hosts run; the paths are made up. `stream` describes what the mock's stream endpoint answers for a song and is not part of NetEase's answers.",
   "account": { "userId": 90001, "nickname": "Mock Listener" },
   "artists": [
-    { "id": 501, "name": "Mock Artist", "picUrl": "http://p1.music.126.net/mock/artist-501.jpg", "albumSize": 2 },
+    {
+      "id": 501, "name": "Mock Artist", "picUrl": "http://p1.music.126.net/mock/artist-501.jpg", "albumSize": 2,
+      "briefDesc": "An invented singer who exists only in these tests.", "alias": ["Mock A.", "模拟歌手"]
+    },
     { "id": 502, "name": "Guest Mock", "picUrl": "http://p2.music.126.net/mock/artist-502.jpg", "albumSize": 0 }
   ],
   "albums": [
     {
       "id": 701, "name": "Mock Album", "picUrl": "http://p1.music.126.net/mock/album-701.jpg",
       "artist": { "id": 501, "name": "Mock Artist" }, "artists": [{ "id": 501, "name": "Mock Artist" }],
-      "size": 3, "publishTime": 1577808000000, "songs": [1001, 1002, 1007]
+      "size": 3, "publishTime": 1577808000000, "songs": [1001, 1002, 1007],
+      "description": "Invented album notes.", "company": "Mock Records", "subType": "录音室版",
+      "info": { "commentCount": 42 }
     },
     {
       "id": 702, "name": "Mock Members Album", "picUrl": "http://p3.music.126.net/mock/album-702.jpg",
@@ -85,7 +90,9 @@
       "id": 3002, "name": "Mock Road Trip", "specialType": 0, "userId": 90001,
       "creator": { "userId": 90001, "nickname": "Mock Listener" }, "subscribed": false,
       "coverImgUrl": "http://p4.music.126.net/mock/playlist-3002.jpg",
-      "trackIds": [1001, 1002, 1003, 1004, 1005, 1006, 1007]
+      "trackIds": [1001, 1002, 1003, 1004, 1005, 1006, 1007],
+      "description": "Invented songs for a long drive.", "tags": ["华语", "Mock"], "playCount": 1234567,
+      "createTime": 1600000000000, "commentCount": 5
     },
     {
       "id": 3003, "name": "Mock Saved Mix", "specialType": 0, "userId": 90002,
@@ -94,12 +101,44 @@
     }
   ],
   "liked": [1002, 1001, 1007],
+  "daily": [1007, 1003, 1002],
+  "charts": [
+    {
+      "id": 4001, "name": "Mock Soaring Chart", "updateFrequency": "Updated daily (mock)",
+      "coverImgUrl": "http://p5.music.126.net/mock/chart-4001.jpg", "description": "Invented chart of songs climbing fast.",
+      "playCount": 98765, "creator": { "userId": 1, "nickname": "Mock Charts" }, "trackIds": [1007, 1001, 1002]
+    },
+    {
+      "id": 4002, "name": "Mock New Songs Chart", "updateFrequency": "Updated every Thursday (mock)",
+      "coverImgUrl": "http://p5.music.126.net/mock/chart-4002.jpg", "description": "",
+      "playCount": 4321, "creator": { "userId": 1, "nickname": "Mock Charts" }, "trackIds": [1002, 1003]
+    }
+  ],
+  "recommended": [
+    {
+      "id": 5001, "name": "Mock Rainy Day Picks", "picUrl": "http://p6.music.126.net/mock/rec-5001.jpg", "playcount": 4567,
+      "trackCount": 12, "copywriter": "Invented reason (mock)", "creator": { "userId": 7, "nickname": "Mock Curator" }
+    },
+    {
+      "id": 5002, "name": "Mock Morning Run", "picUrl": "http://p6.music.126.net/mock/rec-5002.jpg", "playcount": 890,
+      "trackCount": 20, "creator": { "userId": 8, "nickname": "Another Mock Curator" }
+    }
+  ],
+  "personalized": [
+    { "id": 5101, "name": "Mock Picks for Everyone", "picUrl": "http://p6.music.126.net/mock/rec-5101.jpg", "playCount": 1000, "trackCount": 30 }
+  ],
   "lyrics": {
     "1001": {
       "lrc": "{\"t\":0,\"c\":[{\"tx\":\"作词: \"},{\"tx\":\"Mock Writer\"}]}\n{\"t\":1000,\"c\":[{\"tx\":\"作曲: \"},{\"tx\":\"Mock Composer\"}]}\n[00:12.00]第一句歌词\n[00:15.50]第二句歌词\n[00:20.00]\n[00:22.25]最后一句\n",
       "tlyric": "[by:mock translator]\n[00:12.00]The first line\n[00:15.50]The second line\n[00:22.25]The last line\n"
     },
     "1002": { "nolyric": true },
+    "1003": {
+      "lrc": "[00:05.00]Lanterns on strings\n[00:07.50]Swaying in the wind\n",
+      "tlyric": "[00:05.00]绳上的灯笼\n[00:07.50]在风中摇摆\n",
+      "yrc": "{\"t\":0,\"c\":[{\"tx\":\"作词: \"},{\"tx\":\"Mock Writer\"}]}\n[5000,2000](5000,500,0)Lanterns (5500,500,0)on (6000,1000,0)strings\n[7500,2500](7500,600,0)Swaying (8100,400,0)in (8500,300,0)the (8800,1200,0)wind\n",
+      "ytlrc": "[00:05.00]绳上的灯笼\n[00:07.50]在风中摇摆\n"
+    },
     "1007": { "lrc": "Words without times\nA second line without times\n" },
     "1006": { "lrc": "[99:00.00]纯音乐，请欣赏\n" }
   }

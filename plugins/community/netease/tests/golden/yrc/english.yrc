@@ -1,0 +1,4 @@
+# Invented test data: English words with their spaces, and a pause inside a line.
+[8000,2900](8000,350,0)Paper (8350,400,0)boats (8750,300,0)on (9050,250,0)the (9300,1600,0)river
+[11500,4000](11500,500,0)Wait (12000,300,0)for (12300,700,0)me(14000,300,0) (14300,1200,0)there
+[16000,1500](16000,1500,0)Oh!

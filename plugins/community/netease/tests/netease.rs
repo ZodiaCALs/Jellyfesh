@@ -94,7 +94,10 @@ fn installs_only_as_a_community_plugin() {
     assert_eq!(info.signature, SignatureStatus::Unsigned);
     assert!(!info.enabled, "community plugins start turned off");
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr]);
-    assert_eq!(info.capabilities.len(), 6);
+    assert_eq!(info.capabilities.len(), 9);
+    for capability in [Capability::Discover, Capability::Details, Capability::Comments] {
+        assert!(info.capabilities.contains(&capability), "{capability:?}");
+    }
     assert_eq!(info.content_policy.library_storage, LibraryStorage::Metadata);
     assert_eq!(info.settings["quality"], "app");
     assert_eq!(info.settings["translations"], true);
@@ -105,7 +108,7 @@ fn installs_only_as_a_community_plugin() {
     env.host.set_enabled(ID, true).unwrap();
     let capabilities = recv(env.host.capabilities(ID)).unwrap();
     assert!(capabilities.contains(&Capability::ResolveStream));
-    assert_eq!(capabilities.len(), 6);
+    assert_eq!(capabilities.len(), 9, "six it reports, and discover, details and comments");
     // The published package has no way to point it anywhere else.
     assert!(matches!(
         env.host
@@ -594,6 +597,50 @@ fn lyrics() {
 }
 
 #[test]
+fn word_timed_lyrics_come_as_enhanced_lrc() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    let words = recv(env.host.lyrics(ID, track(1003))).unwrap().expect("lyrics");
+    assert_eq!(words.format, LyricFormat::Elrc);
+    assert_eq!(words.text, include_str!("golden/1003.elrc"));
+    let asked = mock
+        .decoded()
+        .into_iter()
+        .rfind(|d| d.endpoint == "/song/lyric/v1")
+        .unwrap();
+    assert_eq!(
+        (asked.params["yv"].clone(), asked.params["ytv"].clone()),
+        (json!(-1), json!(-1))
+    );
+    // Without translations: the words alone.
+    let (env, info) = with_mock(dir(), PACKAGE, &mock.server, json!({ "translations": false }));
+    let alone = recv(env.host.lyrics(&info.id, track(1003))).unwrap().unwrap();
+    assert!(!alone.text.contains("灯笼"), "{}", alone.text);
+    assert_eq!(alone.text.lines().count(), 3);
+}
+
+#[test]
+fn lyrics_fall_back_to_the_older_endpoint() {
+    let mock = Mock::with(|state| {
+        state.qr_script = vec![803];
+        state.lyric_v1_fails = true;
+    });
+    let env = env_for(&mock);
+    let lyrics = recv(env.host.lyrics(ID, track(1003))).unwrap().expect("lyrics");
+    assert_eq!(
+        lyrics.format,
+        LyricFormat::Lrc,
+        "no word timing from the older endpoint"
+    );
+    assert_eq!(
+        lyrics.text,
+        "[00:05.00]Lanterns on strings\n[00:05.00]绳上的灯笼\n[00:07.50]Swaying in the wind\n[00:07.50]在风中摇摆\n"
+    );
+    assert_eq!(mock.calls("/song/lyric/v1"), 1);
+    assert_eq!(mock.calls("/song/lyric"), 1);
+}
+
+#[test]
 fn lyrics_without_translations() {
     let mock = quick_mock();
     let (env, info) = with_mock(dir(), PACKAGE, &mock.server, json!({ "translations": false }));
@@ -711,6 +758,272 @@ fn signing_out_ends_the_session() {
     assert_eq!(
         plugin_error(recv(env.host.browse(ID, None, page(10)))),
         PluginError::AuthRequired
+    );
+    assert!(mock.violations().is_empty(), "{:?}", mock.violations());
+}
+
+/// Every item has a cover from NetEase's picture servers (through the mock).
+fn assert_covers(items: &[Item], what: &str) {
+    assert!(!items.is_empty(), "{what}");
+    for entry in items {
+        let url = &entry
+            .artwork
+            .as_ref()
+            .unwrap_or_else(|| panic!("{what}: {} has no cover", entry.title))
+            .url;
+        assert!(url.contains(".music.126.net/mock/"), "{what}: {url}");
+    }
+}
+
+#[test]
+fn discover_signed_out_then_in() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    let titles = |shelves: &[jf_plugin_host::Shelf]| -> Vec<String> {
+        shelves.iter().map(|s| s.title.clone()).collect()
+    };
+    // Signed out: everyone's recommended playlists, and the charts.
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    assert_eq!(titles(&shelves), ["Recommended Playlists", "Charts"]);
+    assert_eq!(shelves[0].items[0].id, "ncm:pl:5101");
+    assert_eq!(
+        mock.calls("/v3/discovery/recommend/songs"),
+        0,
+        "no daily picks without an account"
+    );
+
+    sign_in(&env);
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    assert_eq!(
+        titles(&shelves),
+        ["Daily Picks", "Recommended Playlists", "Charts"]
+    );
+    let daily = &shelves[0];
+    let ids: Vec<&str> = daily.items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(ids, ["ncm:tr:1007", "ncm:tr:1003", "ncm:tr:1002"]);
+    assert!(daily.items[0].playable);
+    assert!(!daily.items[1].playable, "a VIP song stays unplayable");
+    assert_eq!(
+        mock.calls("/v3/song/detail"),
+        1,
+        "privileges for the songs that came without"
+    );
+    assert_eq!(daily.more.as_deref(), Some("ncm:f:daily"));
+    let recommended = &shelves[1];
+    assert_eq!(recommended.items[0].id, "ncm:pl:5001");
+    assert_eq!(recommended.items[0].artist.as_deref(), Some("Mock Curator"));
+    assert_eq!(recommended.style, jf_plugin_host::ShelfStyle::Grid);
+    let charts = &shelves[2];
+    let ids: Vec<&str> = charts.items.iter().map(|i| i.id.as_str()).collect();
+    assert_eq!(ids, ["ncm:pl:4001", "ncm:pl:4002"]);
+    assert_eq!(charts.items[0].child_count, Some(3));
+    for shelf in &shelves {
+        assert_covers(&shelf.items, &shelf.title);
+    }
+    // See All, and a chart's songs.
+    let all = recv(env.host.browse(
+        ID,
+        Some(item(ItemKind::Folder, "ncm:f:charts", "Charts")),
+        page(50),
+    ))
+    .unwrap();
+    assert_eq!(all.items.len(), 2);
+    let songs = recv(env.host.browse(ID, Some(all.items[0].clone()), page(50))).unwrap();
+    assert_eq!(songs.items.len(), 3);
+    assert_covers(&songs.items, "a chart's songs");
+    assert!(mock.violations().is_empty(), "{:?}", mock.violations());
+}
+
+#[test]
+fn signed_in_lists_carry_covers() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    sign_in(&env);
+    for (id, title) in [
+        ("ncm:f:liked", "Liked Songs"),
+        ("ncm:f:playlists", "My Playlists"),
+        ("ncm:f:saved", "Saved Playlists"),
+    ] {
+        let listed = recv(
+            env.host
+                .browse(ID, Some(item(ItemKind::Folder, id, title)), page(50)),
+        )
+        .unwrap();
+        assert_covers(&listed.items, title);
+    }
+}
+
+#[test]
+fn details_of_songs_albums_artists_and_playlists() {
+    use jf_plugin_host::FactKey;
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    let facts = |details: &jf_plugin_host::ItemDetails| -> Vec<(FactKey, String)> {
+        details
+            .facts
+            .iter()
+            .map(|f| (f.key.clone(), f.value.clone()))
+            .collect()
+    };
+    let song = recv(env.host.details(ID, track(1001))).unwrap();
+    assert_eq!(
+        facts(&song),
+        [(FactKey::Released, "2020-01-01".to_string())],
+        "in China time"
+    );
+    assert!(
+        song.image
+            .unwrap()
+            .url
+            .ends_with("/p1.music.126.net/mock/album-701.jpg?param=1200y1200")
+    );
+
+    let album = recv(
+        env.host
+            .details(ID, item(ItemKind::Album, "ncm:al:701", "Mock Album")),
+    )
+    .unwrap();
+    assert_eq!(album.description.as_deref(), Some("Invented album notes."));
+    assert_eq!(
+        facts(&album),
+        [
+            (FactKey::Released, "2020-01-01".to_string()),
+            (FactKey::Label, "Mock Records".into()),
+            (FactKey::Other("Type".into()), "录音室版".into())
+        ]
+    );
+    assert_eq!(album.comment_count, Some(42));
+
+    let artist = recv(
+        env.host
+            .details(ID, item(ItemKind::Artist, "ncm:ar:501", "Mock Artist")),
+    )
+    .unwrap();
+    assert_eq!(
+        artist.description.as_deref(),
+        Some("An invented singer who exists only in these tests.")
+    );
+    assert_eq!(
+        facts(&artist),
+        [(
+            FactKey::Other("Also known as".into()),
+            "Mock A., 模拟歌手".to_string()
+        )]
+    );
+    assert!(artist.image.is_some());
+
+    let playlist = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "ncm:pl:3002", "Mock Road Trip")),
+    )
+    .unwrap();
+    assert_eq!(
+        playlist.description.as_deref(),
+        Some("Invented songs for a long drive.")
+    );
+    assert_eq!(
+        facts(&playlist),
+        [
+            (FactKey::Popularity, "1,234,567 plays".to_string()),
+            (FactKey::Other("Tags".into()), "华语, Mock".into()),
+            (FactKey::Other("Created".into()), "2020-09-13".into())
+        ]
+    );
+    assert_eq!(playlist.comment_count, Some(5));
+    let chart = recv(
+        env.host
+            .details(ID, item(ItemKind::Playlist, "ncm:pl:4001", "Mock Soaring Chart")),
+    )
+    .unwrap();
+    assert_eq!(
+        facts(&chart),
+        [
+            (FactKey::Popularity, "98,765 plays".to_string()),
+            (FactKey::Other("Updated".into()), "Updated daily (mock)".into())
+        ]
+    );
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Folder, "ncm:f:liked", "x"))),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+    assert_eq!(
+        recv(env.host.details(ID, item(ItemKind::Track, "elsewhere:1", "x"))),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+}
+
+#[test]
+fn comments_hot_first_then_the_latest_page_by_page() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    let first = recv(env.host.comments(ID, track(1001), page(30))).unwrap();
+    let hot: Vec<&str> = first.hot.iter().map(|c| c.text.as_str()).collect();
+    assert_eq!(hot, ["An invented hot comment", "Another invented hot comment"]);
+    assert_eq!(first.hot[0].likes, Some(1200));
+    assert!(first.hot[1].avatar.is_none());
+    assert_eq!(first.comments.len(), 30);
+    assert_eq!(first.total, Some(75));
+    let c = &first.comments[0];
+    assert_eq!(
+        (c.id.as_str(), c.author.as_str(), c.text.as_str()),
+        ("880001", "Mock Fan 1", "Invented comment 1")
+    );
+    assert_eq!(
+        (c.likes, c.replies, c.time_ms),
+        (Some(1), Some(1), Some(1_699_999_940_000))
+    );
+    assert!(
+        c.avatar
+            .as_ref()
+            .unwrap()
+            .url
+            .contains("/p1.music.126.net/mock/avatar-1.jpg")
+    );
+    let asked = mock
+        .decoded()
+        .into_iter()
+        .rfind(|d| d.endpoint.starts_with("/v1/resource/comments/"))
+        .unwrap();
+    assert_eq!(asked.endpoint, "/v1/resource/comments/R_SO_4_1001");
+    assert_eq!(asked.params["rid"], "R_SO_4_1001");
+    let second = recv(env.host.comments(ID, track(1001), next_page(first.next, 30))).unwrap();
+    assert!(
+        second.hot.is_empty(),
+        "hot comments come with the first page only"
+    );
+    assert_eq!(second.comments[0].text, "Invented comment 31");
+    let last = recv(env.host.comments(ID, track(1001), next_page(second.next, 30))).unwrap();
+    assert_eq!((last.comments.len(), last.next), (15, None));
+    // Albums and playlists have threads of their own; artists none.
+    recv(
+        env.host
+            .comments(ID, item(ItemKind::Album, "ncm:al:701", "x"), page(10)),
+    )
+    .unwrap();
+    recv(
+        env.host
+            .comments(ID, item(ItemKind::Playlist, "ncm:pl:3002", "x"), page(10)),
+    )
+    .unwrap();
+    let threads: Vec<String> = mock
+        .decoded()
+        .into_iter()
+        .filter_map(|d| {
+            d.endpoint
+                .strip_prefix("/v1/resource/comments/")
+                .map(str::to_owned)
+        })
+        .collect();
+    assert_eq!(
+        threads[threads.len() - 2..],
+        ["R_AL_3_701".to_string(), "A_PL_0_3002".into()]
+    );
+    assert_eq!(
+        recv(
+            env.host
+                .comments(ID, item(ItemKind::Artist, "ncm:ar:501", "x"), page(10))
+        ),
+        Err(CallError::Plugin(PluginError::Unsupported))
     );
     assert!(mock.violations().is_empty(), "{:?}", mock.violations());
 }

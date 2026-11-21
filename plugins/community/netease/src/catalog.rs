@@ -217,7 +217,9 @@ pub fn browse(node: Option<&Item>, page: &PageRequest) -> Result<ItemPage> {
             let (own, saved) = user_playlists()?;
             paging::slice(if which == "playlists" { own } else { saved }, page)
         }
-        Some(Id::Folder(_)) => Err(PluginError::NotFound),
+        Some(Id::Folder(name)) => {
+            crate::discover::browse_folder(name, page).unwrap_or(Err(PluginError::NotFound))
+        }
         Some(Id::Playlist(id)) => playlist_tracks(id, page),
         Some(Id::Album(id)) => paging::slice(album_tracks(id)?, page),
         Some(Id::Artist(id)) => artist_albums(id, page),

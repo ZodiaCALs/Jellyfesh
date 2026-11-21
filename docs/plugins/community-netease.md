@@ -48,8 +48,20 @@ but unusable until you allow them again.
 * **Plays** whole tracks at the quality you choose, as far as your account
   allows.
 * **Lyrics**: synced lyrics, with NetEase's translation under each line when
-  it has one; instrumentals have none. No word-by-word lyrics (they need
-  NetEase's app keys, which this plugin does not use).
+  it has one; instrumentals have none. **Word by word** (version 0.1.2, with
+  Jellyfesh v0.0.7) when NetEase's answer has its word timing (YRC): the
+  plugin turns it into enhanced LRC, so the lyrics bar and Desktop Lyrics
+  follow each word. Whether the web interface sends word timing is not
+  confirmed; without it you get synced lines as before.
+* **Discover** (0.1.2): your Daily Picks when signed in, Recommended
+  Playlists (yours when signed in, everyone's otherwise) and the Charts,
+  each with See All.
+* **Get Info** (0.1.2) on a song (release date, cover), an album (notes,
+  release date, label, kind, comment count), an artist (short biography,
+  other names, photo) or a playlist or chart (description, plays, tags,
+  how often it changes, creation date, comment count).
+* **Comments** (0.1.2) on songs, albums and playlists: the hot ones first,
+  then the latest, page by page, read-only, as NetEase's users wrote them.
 * **Artwork** for its own items and, matched by title, artist and length,
   for songs and albums from your other sources (the same matching finds
   lyrics for them).

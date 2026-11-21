@@ -25,6 +25,25 @@ fn lenient_opt_i64<'de, D: Deserializer<'de>>(de: D) -> Result<Option<i64>, D::E
     })
 }
 
+/// A list of strings; anything else in it (or no list at all) is dropped.
+fn lenient_strings<'de, D: Deserializer<'de>>(de: D) -> Result<Vec<String>, D::Error> {
+    Ok(match Value::deserialize(de)? {
+        Value::Array(items) => items
+            .into_iter()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect(),
+        _ => Vec::new(),
+    })
+}
+
+/// A list of JSON values, or none for anything that is not a list.
+fn lenient_list<'de, D: Deserializer<'de>>(de: D) -> Result<Vec<Value>, D::Error> {
+    Ok(match Value::deserialize(de)? {
+        Value::Array(items) => items,
+        _ => Vec::new(),
+    })
+}
+
 /// Reads an optional number as `u32`, dropping negative or huge values.
 pub fn to_u32(value: Option<i64>) -> Option<u32> {
     value.and_then(|v| u32::try_from(v).ok())
@@ -43,6 +62,12 @@ pub struct Artist {
     pub img1v1_url: Option<String>,
     #[serde(rename = "albumSize", deserialize_with = "lenient_opt_i64")]
     pub album_size: Option<i64>,
+    /// A short biography (artist details).
+    #[serde(rename = "briefDesc")]
+    pub brief_desc: Option<String>,
+    /// Other names.
+    #[serde(deserialize_with = "lenient_strings")]
+    pub alias: Vec<String>,
 }
 
 /// The album of a song (`al`).
@@ -123,6 +148,22 @@ pub struct Album {
     pub size: Option<i64>,
     #[serde(rename = "publishTime", deserialize_with = "lenient_opt_i64")]
     pub publish_time: Option<i64>,
+    /// The album's notes (album details).
+    pub description: Option<String>,
+    /// The record company.
+    pub company: Option<String>,
+    /// What kind of release: 录音室版 (studio), 现场版 (live), …
+    #[serde(rename = "subType")]
+    pub sub_type: Option<String>,
+    pub info: Option<CommentInfo>,
+}
+
+/// An album's `info`: how many comments it has.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct CommentInfo {
+    #[serde(rename = "commentCount", deserialize_with = "lenient_opt_i64")]
+    pub comment_count: Option<i64>,
 }
 
 /// Who made a playlist.
@@ -163,6 +204,79 @@ pub struct Playlist {
     #[serde(rename = "trackIds")]
     pub track_ids: Vec<TrackId>,
     pub tracks: Vec<Song>,
+    /// The cover where `coverImgUrl` is missing (recommended playlists).
+    #[serde(rename = "picUrl")]
+    pub pic_url: Option<String>,
+    pub description: Option<String>,
+    #[serde(deserialize_with = "lenient_strings")]
+    pub tags: Vec<String>,
+    #[serde(rename = "playCount", deserialize_with = "lenient_opt_i64")]
+    pub play_count: Option<i64>,
+    /// Ms since the epoch.
+    #[serde(rename = "createTime", deserialize_with = "lenient_opt_i64")]
+    pub create_time: Option<i64>,
+    #[serde(rename = "commentCount", deserialize_with = "lenient_opt_i64")]
+    pub comment_count: Option<i64>,
+    /// How often a chart changes ("每天更新").
+    #[serde(rename = "updateFrequency")]
+    pub update_frequency: Option<String>,
+}
+
+impl Playlist {
+    /// Its cover: `coverImgUrl`, else `picUrl`.
+    pub fn cover(&self) -> Option<&str> {
+        self.cover_img_url.as_deref().or(self.pic_url.as_deref())
+    }
+}
+
+/// Who wrote a comment.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct CommentUser {
+    pub nickname: Option<String>,
+    #[serde(rename = "avatarUrl")]
+    pub avatar_url: Option<String>,
+}
+
+/// A comment's replies, where an answer counts them.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Floor {
+    #[serde(rename = "replyCount", deserialize_with = "lenient_opt_i64")]
+    pub reply_count: Option<i64>,
+}
+
+/// One comment.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Comment {
+    #[serde(rename = "commentId", deserialize_with = "lenient_u64")]
+    pub comment_id: u64,
+    pub user: Option<CommentUser>,
+    pub content: Option<String>,
+    /// Ms since the epoch.
+    #[serde(deserialize_with = "lenient_opt_i64")]
+    pub time: Option<i64>,
+    #[serde(rename = "likedCount", deserialize_with = "lenient_opt_i64")]
+    pub liked_count: Option<i64>,
+    #[serde(rename = "replyCount", deserialize_with = "lenient_opt_i64")]
+    pub reply_count: Option<i64>,
+    #[serde(rename = "showFloorComment")]
+    pub floor: Option<Floor>,
+}
+
+/// A page of comments.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct Comments {
+    /// The highlighted comments (first page).
+    #[serde(rename = "hotComments", deserialize_with = "lenient_list")]
+    pub hot: Vec<Value>,
+    #[serde(deserialize_with = "lenient_list")]
+    pub comments: Vec<Value>,
+    #[serde(deserialize_with = "lenient_opt_i64")]
+    pub total: Option<i64>,
+    pub more: bool,
 }
 
 /// One entry of a stream URL answer.
@@ -209,6 +323,10 @@ pub struct Lyrics {
     pub lrc: Option<LyricText>,
     /// The translation, when there is one.
     pub tlyric: Option<LyricText>,
+    /// Word-timed lyrics (NetEase's YRC), when there are some.
+    pub yrc: Option<LyricText>,
+    /// The translation timed for `yrc`.
+    pub ytlrc: Option<LyricText>,
     /// No lyrics: an instrumental.
     pub nolyric: bool,
     /// Nobody has added lyrics yet.

@@ -25,7 +25,20 @@ it on: [`docs/plugins/community-netease.md`](../../../docs/plugins/community-net
   (FLAC). Your account decides what you get; NetEase may give less.
 * **Lyrics**: plain synced LRC, with NetEase's translation shown under each
   line when it has one (setting **Translated Lyrics**); credits at the top
-  become timed lines; instrumentals give no lyrics.
+  become timed lines; instrumentals give no lyrics. **Word-timed lyrics**
+  (NetEase's YRC, asked for with `yv`/`ytv` on `/song/lyric/v1`; the older
+  `/song/lyric` when that fails) become enhanced LRC in `src/yrc.rs`, with
+  the YRC translation (`ytlrc`) under each line; golden tests in
+  `tests/golden/yrc/`.
+* **Discover** (plugin API 1.2): Daily Picks (`/v3/discovery/recommend/songs`,
+  signed in), Recommended Playlists (`/v1/discovery/recommend/resource`
+  signed in, `/personalized/playlist` otherwise) and Charts (`/toplist`),
+  with See All (`ncm:f:daily`, `ncm:f:recommended`, `ncm:f:charts`).
+* **Details** of songs, albums, artists and playlists (the detail answers the
+  plugin already reads: release dates, notes, label, kind, biography, other
+  names, plays, tags, comment counts) and **comments** on songs, albums and
+  playlists (`/v1/resource/comments/<thread>`: `R_SO_4_`, `R_AL_3_`,
+  `A_PL_0_`), hot ones on the first page.
 * **Artwork** at the size the screen needs, for its own items and, matched by
   title, artist and length, for tracks and albums from other sources (the
   same matching finds lyrics for them).
@@ -41,8 +54,8 @@ it on: [`docs/plugins/community-netease.md`](../../../docs/plugins/community-net
   sends with every listing: a VIP subscription or an album purchase needed,
   or no rights).
 * Use anything from NetEase's apps: the `eapi`/`linuxapi` schemes and their
-  keys, word-timed YRC lyrics and app-only stream endpoints are not
-  implemented.
+  keys and app-only stream endpoints are not implemented. Word-timed lyrics
+  come only if the web interface's own lyric answer carries them.
 * Reach any host but `music.163.com` (the API) and `*.music.126.net`
   (streams and pictures). A stream on any other host is refused.
 
@@ -121,14 +134,28 @@ if possible, a VIP one), before anyone relies on the plugin:
    `/v6/playlist/detail` (`trackIds`), `/v1/album/<id>` (whether its songs
    carry `privilege`; if not, the plugin asks `/v3/song/detail`),
    `/artist/albums/<id>`, `/v1/artist/<id>`.
-7. **Lyrics**: `/song/lyric` with `lv`/`tv`, the JSON credit lines, the
-   instrumental marker (`纯音乐，请欣赏` at 99:00).
-8. **Rate**: whether 5 requests a second is accepted (code 405 means "too
+7. **Lyrics**: `/song/lyric/v1` with `lv`/`tv`/`yv`/`ytv` (whether weapi
+   answers it, and with `yrc` and `ytlrc`; the plugin falls back to
+   `/song/lyric`), the YRC line and word stamps (absolute milliseconds; the
+   converter reads stamps more than a second before their line as
+   relative), the JSON credit lines, the instrumental marker
+   (`纯音乐，请欣赏` at 99:00).
+8. **Discover, details and comments**: `/v3/discovery/recommend/songs`
+   (`data.dailySongs`, with or without `privilege`),
+   `/v1/discovery/recommend/resource` (`recommend`, `picUrl`),
+   `/personalized/playlist` (`result`), `/toplist` (`list`), the detail
+   fields (`description`, `company`, `subType`, `info.commentCount`,
+   `briefDesc`, `alias`, `tags`, `playCount`, `commentCount`,
+   `updateFrequency`) and `/v1/resource/comments/<thread>` (`rid`, `offset`,
+   `limit`; `hotComments`, `comments`, `total`, `more`, `commentId`,
+   `user.nickname`, `user.avatarUrl`, `likedCount`, `time`).
+9. **Rate**: whether 5 requests a second is accepted (code 405 means "too
    many").
 
 ## Tests
 
-`cargo test -p jf-community-netease`: 28 unit tests and 18 integration tests
+`cargo test -p jf-community-netease`: 38 unit tests (among them the YRC golden
+cases in `tests/golden/yrc/`) and 24 integration tests
 that run the plugin's component in a real Jellyfesh plugin host, installed
 unsigned as a community plugin, against the mock in `tests/mock` (it opens
 every request, so a wrongly encoded one fails). The mock and its data are

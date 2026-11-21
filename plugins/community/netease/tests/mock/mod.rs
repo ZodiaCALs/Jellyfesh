@@ -72,6 +72,8 @@ pub struct State {
     pub qr_script: Vec<i64>,
     /// The `url/v1` endpoint fails, so the plugin must use the older one.
     pub v1_fails: bool,
+    /// The `song/lyric/v1` endpoint fails, so the plugin must use the older one.
+    pub lyric_v1_fails: bool,
     /// Search answers in the scrambled form used outside mainland China.
     pub scrambled_search: bool,
     qr_polls: HashMap<String, usize>,
@@ -357,7 +359,9 @@ fn weapi(library: &Value, state: &Mutex<State>, request: &Request, path: &str) -
             ok(search(library, &params))
         }
         "/v3/song/detail" => ok(song_details(library, &params)),
-        "/v6/playlist/detail" => match find(library, "playlists", params["id"].as_u64()) {
+        "/v6/playlist/detail" => match find(library, "playlists", params["id"].as_u64())
+            .or_else(|| find(library, "charts", params["id"].as_u64()))
+        {
             Some(list) => {
                 let ids = ids_of(&list["trackIds"]);
                 let first: Vec<Value> = ids
@@ -379,6 +383,45 @@ fn weapi(library: &Value, state: &Mutex<State>, request: &Request, path: &str) -
             }
             None => ok(json!({ "code": 404, "message": "mock: no such playlist" })),
         },
+        "/v3/discovery/recommend/songs" | "/v1/discovery/recommend/resource" if !signed_in => {
+            ok(needs_session)
+        }
+        "/v3/discovery/recommend/songs" => {
+            // Song 1003 comes with its privilege, the others without.
+            let songs: Vec<Value> = ids_of(&library["daily"])
+                .iter()
+                .filter_map(|id| song(library, *id, *id == 1003))
+                .collect();
+            ok(json!({ "data": { "dailySongs": songs, "recommendReasons": [] } }))
+        }
+        "/v1/discovery/recommend/resource" => {
+            ok(json!({ "recommend": library["recommended"], "featureFirst": false }))
+        }
+        "/personalized/playlist" => {
+            let limit = params["limit"].as_u64().unwrap_or(30) as usize;
+            let lists: Vec<Value> = library["personalized"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .take(limit)
+                .cloned()
+                .collect();
+            ok(json!({ "hasTaste": false, "category": 0, "result": lists }))
+        }
+        "/toplist" => {
+            let lists: Vec<Value> = library["charts"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|l| {
+                    let mut l = l.clone();
+                    l["trackCount"] = json!(ids_of(&l["trackIds"]).len());
+                    l.as_object_mut().unwrap().remove("trackIds");
+                    l
+                })
+                .collect();
+            ok(json!({ "list": lists }))
+        }
         "/user/playlist" if !signed_in => ok(needs_session),
         "/user/playlist" => {
             let lists: Vec<Value> = library["playlists"]
@@ -414,7 +457,10 @@ fn weapi(library: &Value, state: &Mutex<State>, request: &Request, path: &str) -
             let bit_rate = params["br"].as_u64().unwrap_or(128_000);
             ok(urls(library, &params, bit_rate))
         }
-        "/song/lyric" => {
+        "/song/lyric/v1" if state.lyric_v1_fails => {
+            ok(json!({ "code": -2, "message": "mock: this endpoint is unavailable" }))
+        }
+        "/song/lyric" | "/song/lyric/v1" => {
             let id = params["id"].as_u64().unwrap_or(0).to_string();
             match library["lyrics"].get(&id) {
                 Some(found) if found.get("nolyric").is_some() => ok(json!({ "nolyric": true })),
@@ -422,6 +468,15 @@ fn weapi(library: &Value, state: &Mutex<State>, request: &Request, path: &str) -
                     let mut body = json!({ "lrc": { "version": 3, "lyric": found["lrc"] } });
                     if let Some(translation) = found.get("tlyric") {
                         body["tlyric"] = json!({ "version": 1, "lyric": translation });
+                    }
+                    // Word timing only from the newer endpoint, when asked for
+                    // (`yv`; `ytv` for its translation).
+                    if endpoint == "/song/lyric/v1" {
+                        for (key, flag) in [("yrc", "yv"), ("ytlrc", "ytv")] {
+                            if let Some(text) = found.get(key).filter(|_| params.get(flag).is_some()) {
+                                body[key] = json!({ "version": 2, "lyric": text });
+                            }
+                        }
                     }
                     ok(body)
                 }
@@ -462,6 +517,9 @@ fn weapi(library: &Value, state: &Mutex<State>, request: &Request, path: &str) -
                     json!({ "artist": find(library, "artists", Some(id)), "hotAlbums": page, "more": more }),
                 );
             }
+            if let Some(thread) = endpoint.strip_prefix("/v1/resource/comments/") {
+                return ok(comments(thread, &params));
+            }
             if let Some(id) = endpoint.strip_prefix("/v1/artist/") {
                 return match find(library, "artists", id.parse().ok()) {
                     Some(artist) => ok(json!({ "artist": artist, "hotSongs": [] })),
@@ -491,6 +549,35 @@ fn media(state: &Mutex<State>, request: &Request, host: &str, path: &str) -> Res
     } else {
         Response::text(404, "not found")
     }
+}
+
+/// Invented comments: 75 on song 1001 (two of them hot), none elsewhere.
+fn comments(thread: &str, params: &Value) -> Value {
+    if params["rid"].as_str() != Some(thread) {
+        return json!({ "code": 400, "message": "mock: rid is not the thread" });
+    }
+    let total = if thread == "R_SO_4_1001" { 75 } else { 0 };
+    let comment = |n: u64| {
+        json!({
+            "commentId": 880_000 + n, "content": format!("Invented comment {n}"),
+            "time": 1_700_000_000_000_u64 - n * 60_000, "likedCount": n % 7,
+            "user": { "userId": 70_000 + n, "nickname": format!("Mock Fan {n}"),
+                      "avatarUrl": format!("http://p1.music.126.net/mock/avatar-{n}.jpg") },
+            "beReplied": [], "showFloorComment": { "replyCount": n % 3 }
+        })
+    };
+    let all: Vec<Value> = (1..=total).map(comment).collect();
+    let (page, more) = window(&all, params);
+    let mut body = json!({ "comments": page, "total": total, "more": more, "topComments": [] });
+    if params["offset"].as_u64().unwrap_or(0) == 0 && total > 0 {
+        body["hotComments"] = json!([
+            { "commentId": 990_001, "content": "An invented hot comment", "time": 1_690_000_000_000_u64, "likedCount": 1200,
+              "user": { "userId": 1, "nickname": "Mock Star Fan", "avatarUrl": "http://p2.music.126.net/mock/avatar-hot.jpg" } },
+            { "commentId": 990_002, "content": "Another invented hot comment", "likedCount": 800,
+              "user": { "userId": 2, "nickname": "Mock Second Fan" } }
+        ]);
+    }
+    body
 }
 
 fn find<'a>(library: &'a Value, list: &str, id: Option<u64>) -> Option<&'a Value> {

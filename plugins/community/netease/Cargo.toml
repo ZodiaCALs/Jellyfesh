@@ -2,7 +2,7 @@
 name = "jf-community-netease"
 description = "NetEase Cloud Music (Unofficial): a community source plugin for Jellyfesh, on the web player's weapi endpoints. Not made or endorsed by NetEase."
 # The plugin's own version: keep it equal to `version` in manifest.toml.
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -30,6 +30,8 @@ serde_json.workspace = true
 [dev-dependencies]
 jf-plugin-host.workspace = true
 jf-community-testsupport.workspace = true
+# The YRC conversion's output must read as enhanced LRC in the core.
+jf-lyrics.workspace = true
 # The mock opens every request: AES for both layers, and rsa's big numbers
 # (crypto-bigint) to undo the RSA step under the test build's prime modulus.
 aes.workspace = true

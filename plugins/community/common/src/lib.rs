@@ -65,6 +65,19 @@ pub fn url_host(url: &str) -> Option<String> {
 /// time, UTC+8). `None` for 0 and earlier, which the services use for
 /// "unknown".
 pub fn year_from_epoch_ms(ms: i64, utc_offset_hours: i64) -> Option<u32> {
+    civil_date(ms, utc_offset_hours).and_then(|(year, _, _)| u32::try_from(year).ok())
+}
+
+/// The date (`2021-03-05`) of a time in milliseconds since the epoch, in a
+/// time zone `utc_offset_hours` from UTC; `None` for 0 or earlier, which
+/// the services send for "unknown".
+pub fn date_from_epoch_ms(ms: i64, utc_offset_hours: i64) -> Option<String> {
+    let (year, month, day) = civil_date(ms, utc_offset_hours)?;
+    Some(format!("{year:04}-{month:02}-{day:02}"))
+}
+
+/// Year, month and day of a time after the epoch.
+fn civil_date(ms: i64, utc_offset_hours: i64) -> Option<(i64, i64, i64)> {
     if ms <= 0 {
         return None;
     }
@@ -76,9 +89,10 @@ pub fn year_from_epoch_ms(ms: i64, utc_offset_hours: i64) -> Option<u32> {
     let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
     let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
     let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
     let month = if mp < 10 { mp + 3 } else { mp - 9 };
     let year = yoe + era * 400 + i64::from(month <= 2);
-    u32::try_from(year).ok().filter(|y| *y > 0)
+    (year > 0).then_some((year, month, day))
 }
 
 /// The year at the start of a date written as text (`2020-01-01`, `2020`).
@@ -138,6 +152,19 @@ mod tests {
         assert_eq!(year_from_epoch_ms(951_782_400_000, 0), Some(2000), "2000-02-29");
         assert_eq!(year_from_epoch_ms(0, 8), None);
         assert_eq!(year_from_epoch_ms(-5, 8), None);
+        assert_eq!(
+            date_from_epoch_ms(new_year_china, 8).as_deref(),
+            Some("2020-01-01")
+        );
+        assert_eq!(
+            date_from_epoch_ms(new_year_china, 0).as_deref(),
+            Some("2019-12-31")
+        );
+        assert_eq!(
+            date_from_epoch_ms(951_782_400_000, 0).as_deref(),
+            Some("2000-02-29")
+        );
+        assert_eq!(date_from_epoch_ms(0, 8), None);
         assert_eq!(year_from_text("2020-01-01"), Some(2020));
         assert_eq!(year_from_text(" 1999"), Some(1999));
         assert_eq!(year_from_text("20-01-01"), None);

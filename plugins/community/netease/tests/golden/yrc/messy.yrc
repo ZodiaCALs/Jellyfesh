@@ -1,0 +1,9 @@
+# Invented test data: what a sloppy answer may hold (CRLF, junk, order).
+[ti:Mock Title]
+
+[40000,2000](40000,500,0)<b>bold(40500,500,0)words(39000,1000,0)back
+[35000,1000](35000,1000,0)Earlier line
+[not,a,stamp](1,2,0)skipped
+[45000,1000]
+[46000,1000]untimed text
+[47000,1000](47000,500,0)(feat. Someone) (47500,500,0)end

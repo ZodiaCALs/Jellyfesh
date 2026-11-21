@@ -211,7 +211,7 @@ pub fn playlist(playlist: &Playlist) -> Option<Item> {
         .as_ref()
         .and_then(|c| non_empty(c.nickname.as_deref()));
     item.child_count = to_u32(playlist.track_count);
-    art(&mut item, playlist.cover_img_url.as_deref());
+    art(&mut item, playlist.cover());
     Some(item)
 }
 
