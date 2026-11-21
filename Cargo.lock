@@ -2968,6 +2968,7 @@ dependencies = [
  "jf-core",
  "jf-engine",
  "jf-library",
+ "jf-licence",
  "jf-lyrics",
  "jf-palette",
  "jf-plugin-model",
