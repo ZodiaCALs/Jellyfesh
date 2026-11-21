@@ -161,7 +161,7 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <CheckBox Content="{x:Bind Title}" IsChecked="{x:Bind IsChecked, Mode=TwoWay}" />
+                                <CheckBox Click="OnChecklistItemClick" Content="{x:Bind Title}" IsChecked="{x:Bind IsChecked, Mode=OneWay}" />
                                 <Button x:Uid="Settings_MoveUp" Grid.Column="1" AutomationProperties.Name="Move Up" Command="{x:Bind MoveUpCommand}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Move Up">
                                     <FontIcon FontSize="12" Glyph="&#xE70E;" />
                                 </Button>

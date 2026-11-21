@@ -305,6 +305,15 @@ public sealed partial class SettingsPage : JfPage
         }
     }
 
+    /// <summary>An ordered checklist's item shown or hidden (CheckBox.IsChecked is a bool?, the item's a bool).</summary>
+    private void OnChecklistItemClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox { DataContext: ChecklistItem item } box)
+        {
+            item.IsChecked = box.IsChecked == true;
+        }
+    }
+
     /// <summary>A colour well opens on the field's colour.</summary>
     private void OnColorFlyoutOpening(object sender, object e)
     {
