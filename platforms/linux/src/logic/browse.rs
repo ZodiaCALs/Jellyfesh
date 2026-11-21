@@ -4,7 +4,83 @@
 //! core lists the items page by page and plays the container
 //! (`Collection::Source`); this only reads what it listed.
 
-use jf_core::ItemKind;
+use jf_core::{ItemKind, SourceItem};
+use serde::{Deserialize, Serialize};
+
+/// A source's album or artist to open: Go to Album and Go to Artist for a
+/// source's songs and albums (`SourceItem::album_id` and `artist_id`; the
+/// core browses them and describes them with `Details`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Container {
+    pub plugin: String,
+    pub kind: ItemKind,
+    pub id: String,
+    pub title: String,
+    /// An album's artist, and the source's id for them.
+    pub artist: Option<String>,
+    pub artist_id: Option<String>,
+}
+
+impl Container {
+    /// The container as the item its page shows.
+    pub fn item(&self) -> SourceItem {
+        SourceItem {
+            source: self.plugin.clone(),
+            kind: self.kind,
+            id: self.id.clone(),
+            title: self.title.clone(),
+            subtitle: self.artist.clone(),
+            album: None,
+            duration_ms: None,
+            artwork: None,
+            playable: true,
+            unplayable_reason: None,
+            track: None,
+            also_in: Vec::new(),
+            link: None,
+            artist_id: self.artist_id.clone(),
+            album_id: None,
+        }
+    }
+}
+
+fn named(name: Option<&str>) -> Option<String> {
+    name.map(str::trim).filter(|n| !n.is_empty()).map(str::to_owned)
+}
+
+/// Go to Album for a source's song: its album in the same source.
+pub fn album_of(item: &SourceItem) -> Option<Container> {
+    if item.source == crate::logic::search::LIBRARY || item.kind != ItemKind::Track {
+        return None;
+    }
+    let id = item.album_id.clone().filter(|i| !i.is_empty())?;
+    Some(Container {
+        plugin: item.source.clone(),
+        kind: ItemKind::Album,
+        id,
+        title: named(item.album.as_deref()).unwrap_or_default(),
+        artist: named(item.subtitle.as_deref()),
+        artist_id: item.artist_id.clone(),
+    })
+}
+
+/// Go to Artist for a source's song or album: its artist in the same
+/// source.
+pub fn artist_of(item: &SourceItem) -> Option<Container> {
+    if item.source == crate::logic::search::LIBRARY || !matches!(item.kind, ItemKind::Track | ItemKind::Album)
+    {
+        return None;
+    }
+    let id = item.artist_id.clone().filter(|i| !i.is_empty())?;
+    Some(Container {
+        plugin: item.source.clone(),
+        kind: ItemKind::Artist,
+        id,
+        title: named(item.subtitle.as_deref()).unwrap_or_default(),
+        artist: None,
+        artist_id: None,
+    })
+}
 
 /// What a container's page shows around its list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,6 +166,53 @@ pub fn numbers(kinds: impl IntoIterator<Item = ItemKind>) -> Vec<Option<u32>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn song(source: &str) -> SourceItem {
+        SourceItem {
+            source: source.into(),
+            kind: ItemKind::Track,
+            id: "t1".into(),
+            title: "Harbour Lights".into(),
+            subtitle: Some("The Quiet Fleet".into()),
+            album: Some("Lanterns".into()),
+            duration_ms: None,
+            artwork: None,
+            playable: true,
+            unplayable_reason: None,
+            track: None,
+            also_in: Vec::new(),
+            link: None,
+            artist_id: Some("ar9".into()),
+            album_id: Some("al3".into()),
+        }
+    }
+
+    #[test]
+    fn a_source_songs_album_and_artist() {
+        let album = album_of(&song("subsonic")).unwrap();
+        assert_eq!(
+            (album.kind, album.id.as_str(), album.title.as_str()),
+            (ItemKind::Album, "al3", "Lanterns")
+        );
+        assert_eq!(album.artist_id.as_deref(), Some("ar9"));
+        let page = album.item();
+        assert_eq!(
+            (page.source.as_str(), page.kind, page.subtitle.as_deref()),
+            ("subsonic", ItemKind::Album, Some("The Quiet Fleet"))
+        );
+        let artist = artist_of(&song("subsonic")).unwrap();
+        assert_eq!(
+            (artist.kind, artist.id.as_str(), artist.title.as_str()),
+            (ItemKind::Artist, "ar9", "The Quiet Fleet")
+        );
+        // The library's own items keep the library's pages.
+        assert!(album_of(&song("library")).is_none());
+        let mut unknown = song("subsonic");
+        unknown.album_id = None;
+        unknown.artist_id = Some(String::new());
+        assert!(album_of(&unknown).is_none());
+        assert!(artist_of(&unknown).is_none());
+    }
     use ItemKind::{Album, Artist, Folder, Playlist, Track};
 
     #[test]

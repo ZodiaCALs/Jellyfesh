@@ -197,6 +197,11 @@ struct Browse {
     play_row: Option<gtk::Box>,
     stack: gtk::Stack,
     error: adw::StatusPage,
+    /// A source's album or artist: its details (the picture, the notes or
+    /// biography), asked once.
+    details: Cell<Option<CommandId>>,
+    art: Option<crate::ui::widgets::art::Art>,
+    notes: gtk::Box,
 }
 
 /// A source's catalogue: its root (`item` `None`, titled `title`), or the
@@ -268,6 +273,10 @@ pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::
             large = Some(t);
         }
     }
+    // The notes or biography, once the source has described the item.
+    let notes = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    notes.set_visible(false);
+    body.append(&notes);
     if let Some(text) = attribution_text(plugin) {
         let note = gtk::Label::builder().label(text).xalign(0.0).wrap(true).build();
         note.add_css_class("attribution");
@@ -310,6 +319,7 @@ pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::
         let small = small_title(&header_bar, title);
         follow_title(&scroll, t, &small);
     }
+    let art = header_keep.as_ref().map(|h| h.art.clone());
     if let Some(header) = header_keep {
         keep_alive(&page, header);
     }
@@ -329,8 +339,32 @@ pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::
         play_row,
         stack,
         error,
+        details: Cell::new(None),
+        art,
+        notes,
     });
     request(&browse, 0);
+    // A source's album or artist: the picture and the notes or biography
+    // from the source (`Details`), when it describes items.
+    if let Some(container) = item
+        .as_ref()
+        .filter(|i| matches!(i.kind, ItemKind::Album | ItemKind::Artist))
+        && app()
+            .sources
+            .borrow()
+            .plugins
+            .iter()
+            .any(|p| p.id == plugin && p.details)
+    {
+        let request = app().send_quiet(Command::Details {
+            item: jf_core::ItemRef::Source {
+                plugin: plugin.to_owned(),
+                item_kind: container.kind,
+                id: container.id.clone(),
+            },
+        });
+        browse.details.set(Some(request));
+    }
     more.connect_clicked(glib::clone!(
         #[weak]
         browse,
@@ -354,6 +388,16 @@ pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::
                 }
                 browse.listed.borrow_mut().extend(update.items.iter().cloned());
                 show_listed(&browse, update.next_page);
+            }
+            Change::Details(page) if browse.details.get() == Some(page.request) => {
+                browse.details.set(None);
+                if let (Some(art), Some(image)) = (&browse.art, page.image.as_ref()) {
+                    art.set_art(convert::art_of(Some(image)));
+                }
+                if let Some(text) = page.description.as_deref().filter(|d| !d.trim().is_empty()) {
+                    browse.notes.append(&crate::ui::details::description(text));
+                    browse.notes.set_visible(true);
+                }
             }
             Change::Failed(id, error) if browse.requests.borrow().contains(id) => {
                 browse.more.set_sensitive(true);
@@ -383,12 +427,27 @@ fn container_header(item: &SourceItem, facts: browse::PageFacts) -> Header {
     let header = Header::new(&kind, false);
     header.title.set_label(&item.title);
     header.art.set_art(convert::art_of(item.artwork.as_ref()));
-    // The artist, in accent text; the core gives no page to open for it.
+    // The artist, in accent text: Go to Artist when the source says who
+    // they are.
     match item.subtitle.as_deref().filter(|_| facts.artist_line) {
         Some(artist) => {
             header.subtitle.set_label(artist);
-            header.subtitle.set_can_target(false);
-            header.subtitle.set_focusable(false);
+            let page = crate::logic::browse::artist_of(&SourceItem {
+                kind: ItemKind::Album,
+                ..item.clone()
+            })
+            .filter(|_| item.kind == ItemKind::Album);
+            match page {
+                Some(artist_page) => {
+                    header.subtitle.connect_clicked(move |_| {
+                        window::show_source(&artist_page.plugin, Some(artist_page.item()), &artist_page.title)
+                    });
+                }
+                None => {
+                    header.subtitle.set_can_target(false);
+                    header.subtitle.set_focusable(false);
+                }
+            }
         }
         None => header.subtitle.set_visible(false),
     }

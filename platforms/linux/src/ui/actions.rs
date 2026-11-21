@@ -200,6 +200,25 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             );
         }
     }
+    // A source's song or album: its album and artist in the same source.
+    if let Some(s) = data.source.as_deref().filter(|_| !own_page) {
+        if let Some(album) = crate::logic::browse::album_of(s) {
+            entry(
+                &more,
+                &tr("Go to Album"),
+                "win.show-container",
+                json_target(&album),
+            );
+        }
+        if let Some(artist) = crate::logic::browse::artist_of(s) {
+            entry(
+                &more,
+                &tr("Go to Artist"),
+                "win.show-container",
+                json_target(&artist),
+            );
+        }
+    }
     // Open in {Service}, after Go to Artist (docs/ui.md).
     if let Some((link, service)) = link_of(data) {
         entry(
@@ -427,6 +446,11 @@ pub fn install(window: &adw::ApplicationWindow) {
     window.add_action(&id_action("rename-playlist", rename_playlist));
     window.add_action(&id_action("delete-playlist", delete_playlist));
     window.add_action(&string_action("open-link", open_link));
+    window.add_action(&string_action("show-container", |json| {
+        if let Ok(c) = serde_json::from_str::<crate::logic::browse::Container>(json) {
+            window::show_source(&c.plugin, Some(c.item()), &c.title);
+        }
+    }));
     window.add_action(&string_action("get-info", |json| {
         if let Ok(args) = serde_json::from_str::<InfoArgs>(json) {
             crate::ui::details::present(args);
