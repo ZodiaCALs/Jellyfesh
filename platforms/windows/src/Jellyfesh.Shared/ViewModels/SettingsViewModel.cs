@@ -931,6 +931,9 @@ public sealed partial class PluginViewModel(ShellServices s, SettingsViewModel o
 
     public IReadOnlyList<AuthMethod> AuthMethods => Info?.AuthMethods ?? [];
 
+    /// <summary>It signs in some way (AI Lyrics' API key): its sign-in row shows.</summary>
+    public bool HasAuthMethods => AuthMethods.Count > 0;
+
     /// <summary>A button for each way the source signs in, in its order, with the shared labels.</summary>
     public IReadOnlyList<SignInAction> SignInActions { get; private set; } = [];
 

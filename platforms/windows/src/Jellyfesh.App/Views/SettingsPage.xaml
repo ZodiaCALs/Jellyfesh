@@ -96,7 +96,7 @@
         <DataTemplate x:Key="FieldChoice" x:DataType="settings:SettingField">
             <StackPanel Spacing="4">
                 <TextBlock Margin="0,8,0,0" Style="{StaticResource RowTitle}" Text="{x:Bind Group}" Visibility="{x:Bind shell:Bind.Visible(StartsGroup)}" />
-                <ComboBox MinWidth="200" DisplayMemberPath="Title" Header="{x:Bind Label}" ItemsSource="{x:Bind Options}" SelectedItem="{x:Bind SelectedOption, Mode=TwoWay}" />
+                <ComboBox MinWidth="200" Header="{x:Bind Label}" ItemsSource="{x:Bind Options}" SelectedItem="{x:Bind SelectedOption, Mode=OneWay}" SelectionChanged="OnFieldChoiceChanged" />
                 <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Description}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.VisibleIf(Description)}" />
             </StackPanel>
         </DataTemplate>
@@ -861,7 +861,7 @@
                                         <ToggleSwitch x:Uid="Source_Enabled" Header="Enabled" IsOn="{x:Bind Plugin.IsEnabled, Mode=TwoWay}" />
 
                                         <!-- AI Lyrics: the online mode's API key. -->
-                                        <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(Plugin.AuthMethods.Count), Mode=OneWay}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind shell:Bind.Visible(Plugin.HasAuthMethods), Mode=OneWay}">
                                             <TextBlock VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind KeyStatus, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(KeyStatus), Mode=OneWay}" />
                                             <ItemsRepeater ItemTemplate="{StaticResource SignInActionTemplate}" ItemsSource="{x:Bind Plugin.SignInActions, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(Plugin.CanSignIn), Mode=OneWay}">
                                                 <ItemsRepeater.Layout>

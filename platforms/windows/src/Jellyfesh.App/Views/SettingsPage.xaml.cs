@@ -296,6 +296,15 @@ public sealed partial class SettingsPage : JfPage
 
     private void OnRemoveFolderClick(object sender, RoutedEventArgs e) => ViewModel.RemoveFolderCommand.Execute((sender as FrameworkElement)?.Tag as FolderItem);
 
+    /// <summary>A settings choice; the combo box shows each choice by its title (SettingChoice.ToString), as the device list does.</summary>
+    private void OnFieldChoiceChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox { DataContext: SettingField field, SelectedItem: SettingChoice choice })
+        {
+            field.SelectedOption = choice;
+        }
+    }
+
     /// <summary>A colour well opens on the field's colour.</summary>
     private void OnColorFlyoutOpening(object sender, object e)
     {
