@@ -14,6 +14,9 @@ public static class Bind
 
     public static Visibility VisibleIf(string? text) => string.IsNullOrEmpty(text) ? Visibility.Collapsed : Visibility.Visible;
 
+    /// <summary>Visible when it has text and is wanted (Home's summary while the look lists it).</summary>
+    public static Visibility VisibleIfTextAnd(string? text, bool wanted) => !string.IsNullOrEmpty(text) && wanted ? Visibility.Visible : Visibility.Collapsed;
+
     public static Visibility VisibleIfEmpty(string? text) => string.IsNullOrEmpty(text) ? Visibility.Visible : Visibility.Collapsed;
 
     public static Visibility VisibleIfNull(object? value) => value is null ? Visibility.Visible : Visibility.Collapsed;
@@ -32,6 +35,9 @@ public static class Bind
     public static Visibility VisibleIfButNot(bool a, bool b) => a && !b ? Visibility.Visible : Visibility.Collapsed;
 
     public static Visibility VisibleIfAny(int count) => count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>Visible when it has something and is wanted (a Home section the look lists).</summary>
+    public static Visibility VisibleIfAnyAnd(int count, bool wanted) => count > 0 && wanted ? Visibility.Visible : Visibility.Collapsed;
 
     public static Visibility VisibleIfNone(int count) => count == 0 ? Visibility.Visible : Visibility.Collapsed;
 

@@ -332,3 +332,40 @@ public sealed record UpdateState(
 {
     public static UpdateState Initial { get; } = new(0, false, false, null, null, false, null);
 }
+
+/// <summary>
+/// How the Windows app applies the Look slice (ADR-0020 §2): the navigation pane's places and
+/// Home's sections in the slice's order, the platform's own faces, the aurora's strength.
+/// </summary>
+public static class LookRules
+{
+    /// <summary>The navigation pane's tags for the slice's places, in its order (Settings is always shown apart).</summary>
+    public static IReadOnlyList<string> SidebarTags(LookState look) => look.Sidebar.Select(p => p switch
+    {
+        Place.Home => "home",
+        Place.Albums => "albums",
+        Place.Artists => "artists",
+        Place.Songs => "songs",
+        Place.Playlists => "playlists",
+        Place.Favourites => "favorites",
+        Place.Search => "search",
+        _ => "sources",
+    }).Distinct().ToArray();
+
+    /// <summary>A place of the library (above the pane's separator), as opposed to Search and Sources.</summary>
+    public static bool IsLibraryTag(string tag) => tag is not ("search" or "sources");
+
+    /// <summary>
+    /// The face for a typeface: Segoe UI Variable, then Cascadia Mono for mono and Georgia for serif
+    /// (ADR-0020 §2; no bundled fonts). Windows has no rounded face: Rounded keeps the system's.
+    /// </summary>
+    public static string FontFamily(Typeface typeface) => typeface switch
+    {
+        Typeface.Serif => "Georgia",
+        Typeface.Mono => "Cascadia Mono, Consolas",
+        _ => "Segoe UI Variable Text, Segoe UI",
+    };
+
+    /// <summary>The aurora field's opacity: its glows are drawn at the default strength, scaled down (never up) to the slice's.</summary>
+    public static double AuroraOpacity(LookState look) => Math.Clamp(look.Aurora / LookState.DefaultAurora, 0, 1);
+}

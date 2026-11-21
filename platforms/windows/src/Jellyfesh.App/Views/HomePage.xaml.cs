@@ -20,6 +20,39 @@ public sealed partial class HomePage : JfPage
         {
             Lists.Attach(list, 40, menu: songs);
         }
+
+        ViewModel.SectionsChanged += OrderSections;
+        OrderSections();
+    }
+
+    /// <summary>Home's sections in the look's order (ADR-0020); the ones it leaves out are collapsed by their bindings.</summary>
+    private void OrderSections()
+    {
+        var panels = new Dictionary<HomeSection, FrameworkElement>
+        {
+            [HomeSection.RecentlyAdded] = RecentlyAddedSection,
+            [HomeSection.RecentlyPlayed] = RecentlyPlayedSection,
+            [HomeSection.MostPlayed] = MostPlayedSection,
+        };
+        var first = panels.Values.Select(p => SectionsPanel.Children.IndexOf(p)).Where(i => i >= 0).DefaultIfEmpty(-1).Min();
+        if (first < 0)
+        {
+            return;
+        }
+
+        foreach (var panel in panels.Values)
+        {
+            SectionsPanel.Children.Remove(panel);
+        }
+
+        var at = first;
+        foreach (var section in ViewModel.Sections.Concat(panels.Keys).Distinct())
+        {
+            if (panels.TryGetValue(section, out var panel))
+            {
+                SectionsPanel.Children.Insert(at++, panel);
+            }
+        }
     }
 
     public HomeViewModel ViewModel { get; }

@@ -483,6 +483,16 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   artist or album (`Browse` of the id), which asks for its `Details` when the
   source offers them: the picture for the header and the notes or biography
   (three lines, **More** shows it whole), and Get Info in More.
+* **The look** (ADR-0020, the `Look` slice, applied live by `LookRules`): the
+  navigation pane shows the slice's places in its order (a separator before
+  Search and Sources; Settings always); Home shows the sections it lists, in
+  its order; text uses the platform's face for the typeface (Segoe UI
+  Variable, Georgia for serif, Cascadia Mono for mono; Windows has no rounded
+  face, so Rounded keeps the system's); the aurora field fades with a weaker
+  aurora (never brighter than the default). Not applied yet on Windows: corner
+  scale, glass, text scale and density (the tokens are read when a view
+  loads), the lyrics' weight, glow and highlight, the Now Playing layouts and
+  the mini-player styles; those stay the Luminous defaults.
 * **Comments** (`CommentsViewModel`): for songs from sources whose
   `PluginSummary.comments` is true, Now Playing has a fourth pane: "Comments
   from {Service}", "Popular" (the first page's hot comments) then "Latest",

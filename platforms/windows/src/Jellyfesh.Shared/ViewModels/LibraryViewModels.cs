@@ -244,6 +244,20 @@ public sealed partial class HomeViewModel(ShellServices services) : PageViewMode
 
     public ObservableCollection<TrackItem> MostPlayed { get; } = [];
 
+    /// <summary>Home's sections in the Look slice's order (ADR-0020); a section not listed is not shown.</summary>
+    public IReadOnlyList<HomeSection> Sections => S.Hub.State.Look.Home;
+
+    public bool ShowsSummary => Sections.Contains(HomeSection.Summary);
+
+    public bool ShowsRecentlyAdded => Sections.Contains(HomeSection.RecentlyAdded);
+
+    public bool ShowsRecentlyPlayed => Sections.Contains(HomeSection.RecentlyPlayed);
+
+    public bool ShowsMostPlayed => Sections.Contains(HomeSection.MostPlayed);
+
+    /// <summary>Raised when the sections' order changed (the view moves them).</summary>
+    public event Action? SectionsChanged;
+
     [RelayCommand]
     private void Play(TrackItem? item)
     {
@@ -282,6 +296,16 @@ public sealed partial class HomeViewModel(ShellServices services) : PageViewMode
         if (changes.HasFlag(SliceChange.Sources))
         {
             UpdateWelcome(state.Sources); // signing in to a source ends the welcome
+        }
+
+        if (changes.HasFlag(SliceChange.Look))
+        {
+            OnPropertyChanged(nameof(Sections));
+            OnPropertyChanged(nameof(ShowsSummary));
+            OnPropertyChanged(nameof(ShowsRecentlyAdded));
+            OnPropertyChanged(nameof(ShowsRecentlyPlayed));
+            OnPropertyChanged(nameof(ShowsMostPlayed));
+            SectionsChanged?.Invoke();
         }
     }
 

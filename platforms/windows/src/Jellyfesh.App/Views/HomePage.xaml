@@ -34,10 +34,11 @@
     </Page.Resources>
 
     <ScrollViewer>
-        <StackPanel Padding="32,24,32,112" Spacing="28">
+        <StackPanel x:Name="SectionsPanel" Padding="32,24,32,112" Spacing="28">
             <StackPanel Spacing="4">
                 <TextBlock x:Uid="Home_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Home" />
-                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.LibrarySize, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.LibrarySize), Mode=OneWay}" />
+                <!-- Summary: shown while the look lists it (ADR-0020). -->
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.LibrarySize, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIfTextAnd(ViewModel.LibrarySize, ViewModel.ShowsSummary), Mode=OneWay}" />
             </StackPanel>
 
             <StackPanel MaxWidth="560" HorizontalAlignment="Left" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.ShowWelcome, ViewModel.IsLoading), Mode=OneWay}">
@@ -49,19 +50,19 @@
                 </StackPanel>
             </StackPanel>
 
-            <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.RecentlyAdded.Count), Mode=OneWay}">
+            <StackPanel x:Name="RecentlyAddedSection" Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAnyAnd(ViewModel.RecentlyAdded.Count, ViewModel.ShowsRecentlyAdded), Mode=OneWay}">
                 <TextBlock x:Uid="Home_RecentlyAdded" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently Added" />
                 <GridView x:Name="AddedShelf" x:Uid="Home_RecentlyAddedList" Height="252" AutomationProperties.Name="Recently Added" ItemClick="OnAlbumClick" ItemTemplate="{StaticResource AlbumTileTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyAdded}" Style="{StaticResource ShelfStyle}" />
             </StackPanel>
 
-            <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.RecentlyPlayed.Count), Mode=OneWay}">
+            <StackPanel x:Name="RecentlyPlayedSection" Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAnyAnd(ViewModel.RecentlyPlayed.Count, ViewModel.ShowsRecentlyPlayed), Mode=OneWay}">
                 <TextBlock x:Uid="Home_RecentlyPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Recently Played" />
                 <Border Padding="8" Style="{StaticResource JfCardStyle}">
                     <ListView x:Name="PlayedList" x:Uid="Home_RecentlyPlayedList" AutomationProperties.Name="Recently Played" IsItemClickEnabled="True" ItemClick="OnTrackClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.RecentlyPlayed}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />
                 </Border>
             </StackPanel>
 
-            <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.MostPlayed.Count), Mode=OneWay}">
+            <StackPanel x:Name="MostPlayedSection" Spacing="8" Visibility="{x:Bind shell:Bind.VisibleIfAnyAnd(ViewModel.MostPlayed.Count, ViewModel.ShowsMostPlayed), Mode=OneWay}">
                 <TextBlock x:Uid="Home_MostPlayed" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Most Played" />
                 <Border Padding="8" Style="{StaticResource JfCardStyle}">
                     <ListView x:Name="MostList" x:Uid="Home_MostPlayedList" AutomationProperties.Name="Most Played" IsItemClickEnabled="True" ItemClick="OnTrackClick" ItemContainerStyle="{StaticResource JfTrackRowStyle}" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.MostPlayed}" ScrollViewer.VerticalScrollMode="Disabled" SelectionMode="None" />

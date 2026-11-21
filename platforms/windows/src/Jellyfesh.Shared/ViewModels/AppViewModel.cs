@@ -42,6 +42,10 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     private bool _reduceMotion;
 
+    /// <summary>The look (ADR-0020): the window applies it live.</summary>
+    [ObservableProperty]
+    private LookState _look = LookState.Default;
+
     public AppViewModel(
         ICoreClient core,
         IUiDispatcher ui,
@@ -148,6 +152,11 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
         if (changes.HasFlag(SliceChange.Pro))
         {
             Pro.Update(state.Pro);
+        }
+
+        if (changes.HasFlag(SliceChange.Look))
+        {
+            Look = state.Look;
         }
 
         if ((changes & (SliceChange.AiLyrics | SliceChange.Lyrics | SliceChange.NowPlaying | SliceChange.Pro | SliceChange.Remote)) != 0)

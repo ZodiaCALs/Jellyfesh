@@ -79,6 +79,7 @@ public sealed partial class MainWindow : Window
     private Notification? _shownNotice;
     private readonly HashSet<string> _failedParts = [];
     private DesktopLyricsWindow? _desktopLyrics;
+    private Dictionary<string, NavigationViewItem>? _allNavItems;
 
     /// <summary>Desktop Lyrics while open (the More menu unlocks it).</summary>
     internal DesktopLyricsWindow? DesktopLyrics => _desktopLyrics;
@@ -486,6 +487,59 @@ public sealed partial class MainWindow : Window
         {
             SyncDesktopLyrics();
         }
+        else if (e.PropertyName == nameof(AppViewModel.Look))
+        {
+            Optional("the look", ApplyLook);
+        }
+    }
+
+    /// <summary>
+    /// The Look slice, live (ADR-0020 §2): the navigation pane's places in its order (a separator
+    /// before Search and Sources), the platform's face for its typeface, the aurora's strength.
+    /// </summary>
+    private void ApplyLook()
+    {
+        var look = _vm.Look;
+        var items = Nav.MenuItems.OfType<NavigationViewItem>().Where(i => i.Tag is string).ToDictionary(i => (string)i.Tag);
+        _allNavItems ??= items;
+        var selected = (Nav.SelectedItem as NavigationViewItem)?.Tag as string;
+        _syncingNav = true;
+        try
+        {
+            Nav.MenuItems.Clear();
+            var library = true;
+            foreach (var tag in LookRules.SidebarTags(look))
+            {
+                if (!_allNavItems.TryGetValue(tag, out var item))
+                {
+                    continue;
+                }
+
+                if (library && !LookRules.IsLibraryTag(tag) && Nav.MenuItems.Count > 0)
+                {
+                    Nav.MenuItems.Add(new NavigationViewItemSeparator());
+                }
+
+                library = LookRules.IsLibraryTag(tag);
+                Nav.MenuItems.Add(item);
+            }
+
+            if (selected is not null && _allNavItems.TryGetValue(selected, out var current) && Nav.MenuItems.Contains(current))
+            {
+                Nav.SelectedItem = current;
+            }
+        }
+        finally
+        {
+            _syncingNav = false;
+        }
+
+        var face = new Microsoft.UI.Xaml.Media.FontFamily(LookRules.FontFamily(look.Typeface));
+        Nav.FontFamily = face;
+        NowPlaying.FontFamily = face;
+        Bar.FontFamily = face;
+        Mini.FontFamily = face;
+        Field.Opacity = LookRules.AuroraOpacity(look);
     }
 
     /// <summary>Desktop Lyrics follows its setting: opened when on, closed when off; its close button turns it off.</summary>
