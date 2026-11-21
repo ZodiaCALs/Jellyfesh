@@ -18,6 +18,7 @@
 mod comments;
 mod info;
 mod lyrics;
+mod making;
 mod queue;
 
 use std::cell::{Cell, RefCell};
@@ -550,6 +551,8 @@ impl NowPlaying {
                 Change::Queue => transport::update_toggles(&inner.shuffle, &inner.repeat),
                 Change::Lyrics => {
                     inner.lyrics.set_lyrics(app().lyrics.borrow().clone());
+                    inner.lyrics.update_making();
+                    update_more(&inner);
                     if !app().is_remote() {
                         inner
                             .info
@@ -558,6 +561,7 @@ impl NowPlaying {
                 }
                 Change::Details(page) => inner.info.details_arrived(page),
                 Change::Comments(page) => inner.comments.page(page),
+                Change::AiLyrics | Change::Pro => inner.lyrics.update_making(),
                 Change::Failed(id, message) => inner.comments.failed(*id, message),
                 Change::Sources => {
                     update_more(&inner);
@@ -785,6 +789,7 @@ fn update_track(inner: &Inner) {
     inner.info.update(now.as_ref(), a.lyrics.borrow().as_ref());
     inner.comments.update(now.as_ref());
     update_comments_tab(inner);
+    inner.lyrics.update_making();
     update_favorite(inner);
     update_more(inner);
 }
@@ -874,7 +879,16 @@ fn update_more(inner: &Inner) {
         jf_core::TrackRef::Source(s) => a.source_name(&s.plugin),
         _ => String::new(),
     };
-    let key = format!("local {} {album:?} {service} {:?} {desktop}", np.uid, np.link);
+    // Make Again and Delete Made Lyrics follow the lyrics: part of the key.
+    let made = {
+        let lyrics = a.lyrics.borrow();
+        let current = lyrics.as_deref().filter(|l| l.uid == np.uid);
+        crate::logic::ailyrics::made_with(current).is_some()
+    };
+    let key = format!(
+        "local {} {album:?} {service} {:?} {desktop} {made}",
+        np.uid, np.link
+    );
     set_more(inner, key, || Some(actions::now_playing_menu(&np, album)));
     let jf_core::TrackRef::Library(id) = np.track else {
         return;

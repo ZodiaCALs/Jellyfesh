@@ -9,6 +9,7 @@
 //! slice and the items' links offer.
 
 pub mod about;
+pub mod ailyrics;
 pub mod appearance;
 pub mod browse;
 pub mod build;

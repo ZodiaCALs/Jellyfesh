@@ -2,6 +2,7 @@
 
 mod about;
 mod actions;
+mod ailyrics;
 mod bridge;
 mod clock;
 mod convert;

@@ -92,6 +92,9 @@ pub struct Lyrics {
     weak_self: RefCell<std::rc::Weak<Lyrics>>,
     empty: adw::StatusPage,
     remote: adw::StatusPage,
+    /// Making lyrics, in the empty state and after the lines.
+    making_empty: super::making::Making,
+    making_lines: super::making::Making,
     /// The service whose remote session plays, if one does.
     remote_service: RefCell<Option<String>>,
 }
@@ -135,6 +138,10 @@ impl Lyrics {
             .build();
         empty.add_css_class("compact");
         empty.add_css_class("lyrics-empty");
+        let making_empty = super::making::Making::new();
+        empty.set_child(Some(&making_empty.root));
+        let making_lines = super::making::Making::new();
+        making_lines.root.add_css_class("after-lines");
         stack.add_named(&empty, Some("empty"));
         // While a remote session plays, the service has the lyrics.
         let remote = adw::StatusPage::new();
@@ -172,6 +179,8 @@ impl Lyrics {
             weak_self: RefCell::new(std::rc::Weak::new()),
             empty,
             remote,
+            making_empty,
+            making_lines,
             remote_service: RefCell::new(None),
         });
         *lyrics.weak_self.borrow_mut() = Rc::downgrade(&lyrics);
@@ -342,6 +351,38 @@ impl Lyrics {
         self.rebuild();
     }
 
+    /// What making lyrics offers for the song playing (`logic::ailyrics`):
+    /// in the empty state once the core has said there are none, and after
+    /// the lines.
+    pub fn update_making(&self) {
+        use crate::logic::ailyrics::{self, Offer};
+        let Some(a) = try_app() else { return };
+        let uid = a.now.borrow().as_ref().map(|n| n.uid);
+        let lyrics = self.lyrics.borrow().clone().filter(|l| Some(l.uid) == uid);
+        if uid.is_none() || self.remote_service.borrow().is_some() {
+            self.making_empty.show(&Offer::None, false, None);
+            self.making_lines.show(&Offer::None, false, None);
+            return;
+        }
+        let ai = a.ai_lyrics.borrow().clone();
+        let offer = ailyrics::offer(ailyrics::job_for(&ai, uid), &ai);
+        let times = ailyrics::times_existing(lyrics.as_deref());
+        // While the lyrics are still being looked for, nothing is offered.
+        let empty_offer = if lyrics.is_some() {
+            offer.clone()
+        } else {
+            Offer::None
+        };
+        self.making_empty.show(&empty_offer, times, None);
+        let lines_offer = if ailyrics::shows(&offer, lyrics.as_deref()) {
+            offer
+        } else {
+            Offer::None
+        };
+        self.making_lines
+            .show(&lines_offer, times, ailyrics::made_with(lyrics.as_deref()));
+    }
+
     /// Rebuilds the lines (new song or changed Lyrics settings).
     pub fn rebuild(self: &Rc<Self>) {
         self.stop_tick();
@@ -375,6 +416,7 @@ impl Lyrics {
             self.empty
                 .set_description(if loading { None } else { Some(&hint) });
             self.stack.set_visible_child_name("empty");
+            self.update_making();
             return;
         };
         if doc
@@ -383,6 +425,7 @@ impl Lyrics {
             .all(|l| l.text.trim().is_empty() && l.words.is_empty())
         {
             self.stack.set_visible_child_name("empty");
+            self.update_making();
             return;
         }
         let synced = doc.is_synced();
@@ -450,6 +493,9 @@ impl Lyrics {
             });
         }
         *self.lines.borrow_mut() = lines;
+        // Time These Lyrics, a job, or who made them: after the last line.
+        self.column.append(&self.making_lines.root);
+        self.update_making();
         self.stack.set_visible_child_name("lines");
         self.scroll.vadjustment().set_value(0.0);
         let states = self.states();

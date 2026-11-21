@@ -219,6 +219,19 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             );
         }
     }
+    // Create Synced Lyrics, after Go to Artist, for library songs while AI
+    // Lyrics is available (docs/ui.md).
+    if let Some(track @ TrackRef::Library(id)) = &data.track
+        && matches!(data.kind, Kind::Track | Kind::QueueEntry | Kind::PlaylistEntry)
+        && crate::logic::ailyrics::offers_for(&app().ai_lyrics.borrow(), track)
+    {
+        entry(
+            &more,
+            &tr("Create Synced Lyrics"),
+            "win.make-lyrics",
+            id.to_variant(),
+        );
+    }
     // Open in {Service}, after Go to Artist (docs/ui.md).
     if let Some((link, service)) = link_of(data) {
         entry(
@@ -352,6 +365,19 @@ pub fn now_playing_menu(np: &jf_core::NowPlaying, album_id: Option<i64>) -> gio:
         );
         menu.append_section(None, &files);
     }
+    // Made lyrics: Make Again and Delete Made Lyrics (asks first).
+    let made = {
+        let a = app();
+        let lyrics = a.lyrics.borrow();
+        let current = lyrics.as_deref().filter(|l| l.uid == np.uid);
+        crate::logic::ailyrics::made_with(current).is_some()
+    };
+    if made {
+        let section = gio::Menu::new();
+        section.append(Some(&tr("Make Again")), Some("win.make-again"));
+        section.append(Some(&tr("Delete Made Lyrics")), Some("win.delete-made-lyrics"));
+        menu.append_section(None, &section);
+    }
     desktop_lyrics_section(&menu);
     menu
 }
@@ -451,6 +477,15 @@ pub fn install(window: &adw::ApplicationWindow) {
             window::show_source(&c.plugin, Some(c.item()), &c.title);
         }
     }));
+    window.add_action(&id_action("make-lyrics", |id| {
+        crate::ui::ailyrics::make(jf_core::SongRef::Library { id });
+    }));
+    let again = gio::SimpleAction::new("make-again", None);
+    again.connect_activate(|_, _| crate::ui::ailyrics::make(jf_core::SongRef::Current));
+    window.add_action(&again);
+    let delete = gio::SimpleAction::new("delete-made-lyrics", None);
+    delete.connect_activate(|_, _| crate::ui::ailyrics::delete_made());
+    window.add_action(&delete);
     window.add_action(&string_action("get-info", |json| {
         if let Ok(args) = serde_json::from_str::<InfoArgs>(json) {
             crate::ui::details::present(args);

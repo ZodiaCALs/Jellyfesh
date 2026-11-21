@@ -792,6 +792,19 @@ button.desktop-lyrics-control:hover {
   background-color: alpha({{accent.accent-text}}, 0.14);
 }
 
+/* Making lyrics in the Lyrics pane (AI Lyrics). */
+.lyrics-making.after-lines {
+  margin-top: {{space.s6}};
+}
+
+.lyrics-making-text {
+  color: {{ink.ink-70}};
+}
+
+.lyrics-made-by {
+  {{type-roles.list-secondary}};
+}
+
 /* Now Playing's Comments pane. */
 .comment-author {
   font-weight: 600;
