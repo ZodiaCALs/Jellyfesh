@@ -42,6 +42,12 @@ pub struct CoreConfig {
     /// tools turn it off.
     #[uniffi(default = true)]
     pub watch_folders: bool,
+    /// Let `Settings.resume_on_launch` start playback when the core starts. Apps started
+    /// without their window (a media button, a start by the system) pass false, so no audio
+    /// starts before their media session exists, and send `Play` themselves later.
+    #[uniffi(default = true)]
+    #[serde(default = "yes")]
+    pub resume_on_start: bool,
     /// `.jfpkg` plugin packages the app ships in its bundle: installed at start when missing,
     /// updated when the bundled version is newer, never reinstalled once the person uninstalled
     /// one (until they install it again).

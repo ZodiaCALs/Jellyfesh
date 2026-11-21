@@ -132,7 +132,9 @@ the core keeps it within 0–1), lyrics_size (small/medium/large),
 lyrics_align (start/center), show_translation, show_romanization, crossfade
 (enabled, 1–12 s, album continuity), replaygain_mode, preamp_db, eq,
 output_device, resume_on_launch (the core resumes the restored queue at its
-saved position when it starts, when session restore is on), watch_folders,
+saved position when it starts, when session restore is on and
+`Config::resume_on_start` allows it: apps started without their window clear
+it), watch_folders,
 allow_community_plugins, check_for_updates (direct downloads: at most one
 check a day; on by default), show_lyrics_bar (Show Lyrics Bar in Settings ›
 Appearance › Lyrics: the one-line lyrics bar, on by default) and

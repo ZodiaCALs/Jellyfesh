@@ -101,12 +101,19 @@ that draw every frame port it instead, see "Drawing-time ports").
 
 **Config:** `CoreConfig { data_dir, cache_dir, output: OutputKind, buffer_ms
 (200), restore_session (true), persist_session (true), watch_folders (true),
-bundled_plugins ([]), distribution: Distribution }` (defaults in Swift,
-Kotlin and C# constructors; in JSON `bundled_plugins` and `distribution` may
-be left out, and `distribution` is then `Source`; Swift and Kotlin pass it:
+bundled_plugins ([]), distribution: Distribution, resume_on_start (true) }`
+(defaults in Swift, Kotlin and C# constructors; in JSON `bundled_plugins`,
+`distribution` and `resume_on_start` may be left out, and `distribution` is
+then `Source`). `resume_on_start` lets the person's Resume on Launch start
+playback when the core starts: an app started without its window (Android:
+a media button, or the system restarting the process) passes false, so no
+audio starts before its media session exists, and sends `Play` itself when it
+wants. Swift and Kotlin pass `distribution`:
 `Direct` for the release page's downloads, `AppStore`, `MicrosoftStore` or
 `GooglePlay` for store builds). The on-device recogniser for AI Lyrics is
-built into `jf-ffi` where whisper.cpp builds and set by the core itself. `bundled_plugins` lists the `.jfpkg`
+built into `jf-ffi` where whisper.cpp builds and set by the core itself, on processors
+that have the instructions whisper.cpp was built for (on x86: SSE 4.2, AVX, AVX2, BMI2, FMA
+and F16C; elsewhere the on-device mode is unavailable rather than crashing). `bundled_plugins` lists the `.jfpkg`
 files the app ships (`core-api.md`, "Online sources"). The core's other
 source options keep their defaults; the secret store goes to
 `with_secret_store`.

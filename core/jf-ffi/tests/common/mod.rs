@@ -1293,6 +1293,7 @@ pub fn config() -> jf::Config {
         restore_session: false,
         persist_session: true,
         watch_folders: false,
+        resume_on_start: false,
         bundled_plugins: vec!["/app/plugins/subsonic.jfpkg".into()],
         distribution: jf::Distribution::Direct,
         ..jf::Config::new("/data/jellyfesh", "/cache/jellyfesh")

@@ -2073,13 +2073,17 @@ impl Actor {
     fn on_media(&mut self, msg: MediaMsg) {
         let current = self.shared.read_queue().current_uid();
         match msg {
-            MediaMsg::Lyrics(l) if Some(l.uid) == current => {
+            // Only for the entry they were asked for, while it is still the one playing: after
+            // the queue ends (and rewinds) a late answer must not bring back its lyrics or theme.
+            MediaMsg::Lyrics(l) if Some(l.uid) == current && Some(l.uid) == self.media_uid => {
                 let l: Arc<LyricsSnapshot> = Arc::from(l);
                 self.shared.update(|s| s.lyrics = Some(l.clone()));
                 self.shared.emit(Event::Lyrics(l.clone()));
                 self.consider_automatic_lyrics(&l);
             }
-            MediaMsg::NowPlayingArtwork { uid, path } if Some(uid) == current => {
+            MediaMsg::NowPlayingArtwork { uid, path }
+                if Some(uid) == current && Some(uid) == self.media_uid =>
+            {
                 let now = self.shared.snapshot().now_playing.clone();
                 if let Some(now) = now.filter(|n| n.uid == uid) {
                     let mut now = (*now).clone();
@@ -2087,7 +2091,7 @@ impl Actor {
                     self.set_now_playing(Some(now));
                 }
             }
-            MediaMsg::Theme(t) if t.uid == current => {
+            MediaMsg::Theme(t) if t.uid == current && t.uid == self.media_uid => {
                 self.artwork_theme = Some(Arc::from(t));
                 self.publish_theme(false);
             }
@@ -2783,7 +2787,9 @@ impl Actor {
     /// Starts the restored queue where it was, when the person asked for that
     /// (Settings: resume on launch) and the session was restored.
     fn resume_on_launch(&mut self) {
-        if !(self.config.restore_session && self.settings.resume_on_launch) || self.resume_at.is_none() {
+        if !(self.config.restore_session && self.config.resume_on_start && self.settings.resume_on_launch)
+            || self.resume_at.is_none()
+        {
             return;
         }
         let Some(item) = self.shared.read_queue().current() else {

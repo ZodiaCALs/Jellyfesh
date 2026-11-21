@@ -222,6 +222,7 @@ impl From<CoreConfig> for jf::Config {
             restore_session: value.restore_session,
             persist_session: value.persist_session,
             watch_folders: value.watch_folders,
+            resume_on_start: value.resume_on_start,
             bundled_plugins: value.bundled_plugins.conv(),
             distribution: value.distribution.conv(),
             ..jf::Config::new(value.data_dir, value.cache_dir)
@@ -239,6 +240,7 @@ impl From<jf::Config> for CoreConfig {
             restore_session: value.restore_session,
             persist_session: value.persist_session,
             watch_folders: value.watch_folders,
+            resume_on_start: value.resume_on_start,
             bundled_plugins: value.bundled_plugins.conv(),
             distribution: value.distribution.conv(),
         }

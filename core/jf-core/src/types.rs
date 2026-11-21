@@ -33,6 +33,11 @@ pub struct Config {
     /// Watch the library folders for changes while the user's setting
     /// ([`Settings::watch_folders`]) is on. Short-lived tools turn it off.
     pub watch_folders: bool,
+    /// Let [`Settings::resume_on_launch`] start playback when the core starts.
+    /// Apps started without their window (by a media button, or by the system
+    /// after a restart) clear it, so no audio starts before their media
+    /// session exists; they send `Play` themselves when they want it.
+    pub resume_on_start: bool,
     /// Online sources: plugins in `<data_dir>/plugins`, secrets, limits.
     pub sources: SourcesConfig,
     /// `.jfpkg` plugin packages the app ships inside its bundle. At start
@@ -99,6 +104,7 @@ impl std::fmt::Debug for Config {
             .field("restore_session", &self.restore_session)
             .field("persist_session", &self.persist_session)
             .field("watch_folders", &self.watch_folders)
+            .field("resume_on_start", &self.resume_on_start)
             .field("sources", &self.sources)
             .field("bundled_plugins", &self.bundled_plugins)
             .field("distribution", &self.distribution)
@@ -124,6 +130,7 @@ impl Config {
             restore_session: true,
             persist_session: true,
             watch_folders: true,
+            resume_on_start: true,
             sources: SourcesConfig::default(),
             bundled_plugins: Vec::new(),
             distribution: Distribution::Source,

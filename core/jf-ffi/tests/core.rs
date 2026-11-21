@@ -33,6 +33,7 @@ fn config(dir: &Path, output: OutputKind) -> CoreConfig {
         restore_session: false,
         persist_session: false,
         watch_folders: false,
+        resume_on_start: true,
         bundled_plugins: Vec::new(),
         distribution: Distribution::Source,
     }

@@ -702,6 +702,41 @@ fn crossfade_settings_reach_the_engine() {
 }
 
 #[test]
+fn nothing_of_a_song_comes_back_once_the_queue_has_ended() {
+    // Short tones rendered as fast as possible: the queue ends (and rewinds to its first song)
+    // before the media worker has answered for them. Its late answers must not bring back
+    // lyrics or a theme while nothing plays; while a song plays, its own still come.
+    for _ in 0..10 {
+        let dir = tempfile::tempdir().unwrap();
+        let tracks = files(dir.path(), &[("a.wav", 440.0), ("b.wav", 550.0)], 0.1);
+        let mut c = config(dir.path(), OutputKind::Null { realtime: false }, false);
+        c.watch_folders = false;
+        let core = Core::start(c).unwrap();
+        let rx = core.subscribe();
+        core.send(Command::PlayTracks {
+            tracks: tracks.into_iter().map(TrackRef::File).collect(),
+            start: 0,
+        });
+        wait_for(
+            &rx,
+            Duration::from_secs(20),
+            |e| matches!(e, Event::Playback(p) if p.status == Status::Ended),
+        );
+        // Long enough for the media worker to answer for both songs.
+        std::thread::sleep(Duration::from_millis(300));
+        let snapshot = core.snapshot();
+        assert!(snapshot.now_playing.is_none());
+        assert!(snapshot.lyrics.is_none(), "{:?}", snapshot.lyrics);
+        assert!(
+            snapshot.theme.is_none(),
+            "{:?}",
+            snapshot.theme.as_ref().map(|t| t.uid)
+        );
+        core.shutdown();
+    }
+}
+
+#[test]
 fn short_tracks_rendered_offline_are_each_announced_once() {
     // Offline rendering runs far ahead of the actor; the next track must still follow the
     // right one (it once played twice when the list arrived after the engine moved on).

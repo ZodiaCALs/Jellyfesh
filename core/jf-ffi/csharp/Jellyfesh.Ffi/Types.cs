@@ -37,7 +37,8 @@ public sealed record CoreConfig(
     bool WatchFolders = true,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyList<string>? BundledPlugins = null,
-    Distribution Distribution = Distribution.Source);
+    Distribution Distribution = Distribution.Source,
+    bool ResumeOnStart = true);
 
 /// <summary>How this build of the app reached the person.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<Distribution>))]

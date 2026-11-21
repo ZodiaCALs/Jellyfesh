@@ -413,6 +413,21 @@ fn playback_resumes_on_launch_when_asked() {
         .clone()
         .expect("the restored song plays");
     assert_eq!(now.path.as_deref(), Some(song.as_path()));
+    // An app started without its window (a media button) does not resume.
+    env.run(
+        Command::Pause,
+        |e| matches!(e, Event::Playback(p) if p.status == Status::Paused),
+    );
+    let env = env.restart_with(|c| {
+        kept(c);
+        c.resume_on_start = false;
+    });
+    std::thread::sleep(Duration::from_millis(500));
+    assert_ne!(env.core.snapshot().playback.status, Status::Playing);
+    let env = env.restart_with(kept);
+    assert!(until(Duration::from_secs(20), || {
+        env.core.snapshot().playback.status == Status::Playing
+    }));
     // Without the setting it waits.
     let settings = Settings {
         resume_on_launch: false,

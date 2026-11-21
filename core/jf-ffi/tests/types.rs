@@ -164,6 +164,17 @@ fn deviations_from_the_core_types() {
     );
 }
 
+/// A config from an app that does not know `resume_on_start` lets playback resume.
+#[test]
+fn configs_without_resume_on_start_let_playback_resume() {
+    let mut json = serde_json::to_value(CoreConfig::from(common::config())).unwrap();
+    assert_eq!(json["resume_on_start"], false);
+    json.as_object_mut().unwrap().remove("resume_on_start");
+    let read: CoreConfig = serde_json::from_value(json).unwrap();
+    assert!(read.resume_on_start);
+    assert!(jf::Config::from(read).resume_on_start);
+}
+
 /// Settings JSON from an older app or file, without the newer fields, reads with their
 /// defaults: Check for Updates and Show Lyrics Bar on, Desktop Lyrics off.
 #[test]
