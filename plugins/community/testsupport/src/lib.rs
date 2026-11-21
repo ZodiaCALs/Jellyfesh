@@ -29,9 +29,9 @@ use serde_json::{Value, json};
 pub const MOCK_SETTING: &str = "mock_origin";
 
 /// The component of the plugin crate in `dir` (cargo package `package`),
-/// built for `wasm32-unknown-unknown` with `features` in the test binary's
-/// target folder, wrapped and checked like `jf-plugin build` does it. Built
-/// once per test binary and feature set.
+/// built for `wasm32-unknown-unknown` with `features`, wrapped and checked
+/// like `jf-plugin build` does it. Built once per test binary and feature
+/// set, in a target folder of its own ([`build_dir`]).
 pub fn component(dir: &Path, package: &str, features: &[&str]) -> Vec<u8> {
     static BUILT: OnceLock<Mutex<HashMap<String, Vec<u8>>>> = OnceLock::new();
     let key = format!("{package}+{}", features.join(","));
@@ -52,7 +52,7 @@ pub fn component(dir: &Path, package: &str, features: &[&str]) -> Vec<u8> {
         .args(["--target", jf_plugin_build::TARGET])
         .arg("--message-format=json-render-diagnostics")
         .arg("--target-dir")
-        .arg(jf_plugin_testkit::target_dir())
+        .arg(build_dir())
         .env("CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS", flags.trim())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit());
@@ -67,6 +67,15 @@ pub fn component(dir: &Path, package: &str, features: &[&str]) -> Vec<u8> {
     jf_plugin_build::check_component(&wasm).expect("a valid plugin component");
     cache.insert(key, wasm.clone());
     wasm
+}
+
+/// Where the components are built: `community-plugin-tests` in the test
+/// binary's target folder, a cargo target folder of its own. A build in the
+/// test binary's own folder would wait on its build lock, which the
+/// `cargo test` running the tests (or any other cargo using that folder) may
+/// hold for as long as it runs.
+pub fn build_dir() -> PathBuf {
+    jf_plugin_testkit::target_dir().join("community-plugin-tests")
 }
 
 /// The `.wasm` cargo wrote for `package`, from its JSON messages.
