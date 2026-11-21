@@ -238,7 +238,7 @@
   }
   .times,
   .time {
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     line-height: 1.45;
     font-weight: 600;
     font-variant-numeric: tabular-nums;

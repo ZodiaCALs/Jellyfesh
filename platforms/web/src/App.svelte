@@ -6,11 +6,17 @@
   // the player and the phone tabs are Veil capsules floating over the content, which fades out
   // just above them.
   import { MediaQuery } from 'svelte/reactivity';
+  import ConfirmSheet from './components/ConfirmSheet.svelte';
+  import ConsentSheet from './components/ConsentSheet.svelte';
+  import GetInfoSheet from './components/GetInfoSheet.svelte';
+  import LicenceSheet from './components/LicenceSheet.svelte';
+  import ProSheet from './components/ProSheet.svelte';
   import Icon from './components/Icon.svelte';
   import MiniPlayer from './components/MiniPlayer.svelte';
   import PlayerBar from './components/PlayerBar.svelte';
   import { type App as AppState, provideApp } from './lib/app';
   import { t } from './lib/i18n/index.svelte';
+  import { bottomPlayer, type Place, placesInOrder } from './lib/look';
   import type { Tab } from './lib/state/nav.svelte';
   import { toast, toasts } from './lib/state/toast.svelte';
   import NowPlaying from './nowplaying/NowPlaying.svelte';
@@ -22,6 +28,7 @@
   import Settings from './views/Settings.svelte';
   import Songs from './views/Songs.svelte';
   import SourcePage from './views/SourcePage.svelte';
+  import SourceRoot from './views/SourceRoot.svelte';
   import SourcesView from './views/SourcesView.svelte';
 
   let { app }: { app: AppState } = $props();
@@ -61,8 +68,9 @@
   let dragDepth = 0;
   let installEvent = $state<(Event & { prompt(): Promise<void> }) | null>(null);
 
-  // The places in the order every app lists them (docs/ui.md); a null starts a new group.
-  const PLACES: ([Tab, string, string] | null)[] = [
+  // The places in the order every app lists them (docs/ui.md); a null starts a new group. A
+  // customized look (ADR-0020) lists the places it shows, in its order, without groups.
+  const DEFAULT_PLACES: ([Tab, string, string] | null)[] = [
     ['home', 'Home', 'home'],
     ['albums', 'Albums', 'album'],
     ['artists', 'Artists', 'artist'],
@@ -71,15 +79,30 @@
     ['search', 'Search', 'search'],
     ['sources', 'Sources', 'sources'],
   ];
+  const BY_PLACE = new Map<Place, [Tab, string, string]>([
+    ['Home', ['home', 'Home', 'home']],
+    ['Albums', ['albums', 'Albums', 'album']],
+    ['Artists', ['artists', 'Artists', 'artist']],
+    ['Songs', ['songs', 'Songs', 'note']],
+    ['Search', ['search', 'Search', 'search']],
+    ['Sources', ['sources', 'Sources', 'sources']],
+  ]);
+  const PLACES = $derived(app.look.value.customized ? placesInOrder(app.look.value.sidebar, BY_PLACE) : DEFAULT_PLACES);
+  const bottom = $derived(bottomPlayer(app.look.value.mini_player, wide.current));
   const LIBRARY_TABS: Tab[] = ['albums', 'artists', 'songs'];
-  // Phones: the library is one tab, as on Android.
-  const PHONE_TABS: [Tab, string, string][] = [
-    ['home', 'Home', 'home'],
-    ['albums', 'Library', 'library'],
-    ['search', 'Search', 'search'],
-    ['sources', 'Sources', 'sources'],
-    ['settings', 'Settings', 'settings'],
-  ];
+  // Phones: the library is one tab, as on Android; a customized look orders them (Settings last).
+  const LIBRARY_TAB: [Tab, string, string] = ['albums', 'Library', 'library'];
+  const PHONE_TABS = $derived.by((): [Tab, string, string][] => {
+    const byPlace = new Map<Place, [Tab, string, string]>([
+      ['Home', ['home', 'Home', 'home']],
+      ['Albums', LIBRARY_TAB],
+      ['Artists', LIBRARY_TAB],
+      ['Songs', LIBRARY_TAB],
+      ['Search', ['search', 'Search', 'search']],
+      ['Sources', ['sources', 'Sources', 'sources']],
+    ]);
+    return [...placesInOrder(app.look.value.sidebar, byPlace), ['settings', 'Settings', 'settings']];
+  });
   function onTab(id: Tab): boolean {
     return id === 'albums' ? LIBRARY_TABS.includes(nav.tab) : nav.tab === id;
   }
@@ -223,6 +246,8 @@
           <Browse plugin={route.plugin} item={route.item} />
         {:else if route.view === 'source'}
           <SourcePage plugin={route.plugin} />
+        {:else if route.view === 'root'}
+          <SourceRoot plugin={route.plugin} />
         {:else if route.view === 'albums' || route.view === 'artists' || route.view === 'songs'}
           <nav class="library-tabs" aria-label={t('Library')}>
             {#each [['albums', t('Albums')], ['artists', t('Artists')], ['songs', t('Songs')]] as [id, label] (id)}
@@ -258,7 +283,7 @@
     {/if}
     <!-- Covered by Now Playing: not drawn at all, so its clock does not run. -->
     {#if !nav.nowPlaying}
-      {#if wide.current}<PlayerBar />{:else}<MiniPlayer />{/if}
+      {#if bottom === 'bar'}<PlayerBar />{:else}<MiniPlayer floating={bottom === 'floating'} />{/if}
     {/if}
   </div>
 
@@ -270,6 +295,37 @@
     {/each}
   </nav>
 </div>
+
+{#if app.pro.sheet}
+  <ProSheet onclose={() => (app.pro.sheet = false)} />
+{/if}
+{#if app.pro.entering}
+  <LicenceSheet onclose={() => (app.pro.entering = false)} />
+{/if}
+
+{#if app.aiLyrics.asking}
+  {@const asking = app.aiLyrics.asking}
+  <ConsentSheet row={asking.row} origin={asking.origin} />
+{/if}
+
+{#if app.aiLyrics.deleting}
+  {@const deleting = app.aiLyrics.deleting}
+  <ConfirmSheet
+    title={t('Delete These Lyrics?')}
+    message={t('You can make them again.')}
+    action={t('Delete')}
+    onconfirm={() => {
+      app.aiLyrics.deleting = null;
+      app.aiLyrics.deleteMade(deleting);
+    }}
+    oncancel={() => (app.aiLyrics.deleting = null)}
+  />
+{/if}
+
+{#if nav.info}
+  {@const info = nav.info}
+  <GetInfoSheet plugin={info.plugin} item={info.item} onclose={() => (nav.info = null)} />
+{/if}
 
 {#if nav.nowPlaying}
   <NowPlaying />
@@ -347,7 +403,7 @@
     gap: 11px;
     padding: 0 10px var(--jf-space-s6);
     font-weight: 700;
-    font-size: 16px;
+    font-size: calc(16px * var(--jf-text-scale, 1));
     letter-spacing: -0.01em;
   }
   .brand img {
@@ -364,7 +420,7 @@
     background: transparent;
     color: var(--jf-ink-70);
     font: inherit;
-    font-size: 14.5px;
+    font-size: calc(14.5px * var(--jf-text-scale, 1));
     font-weight: 500;
     text-align: start;
     cursor: pointer;
@@ -461,7 +517,7 @@
     border-radius: var(--jf-radius-r-lg);
     background: var(--jf-cloud);
     color: var(--jf-ink-90);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     line-height: 1.4;
     box-shadow:
       inset 0 0 0 1px var(--jf-line-soft),
@@ -535,7 +591,7 @@
     border-radius: var(--jf-radius-r-full);
     background: var(--jf-ink-90);
     color: var(--jf-sky);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     font-weight: 600;
     box-shadow: var(--jf-elevation-shadow-2);
   }
@@ -597,7 +653,7 @@
       background: transparent;
       color: var(--jf-ink-70);
       font: inherit;
-      font-size: 11px;
+      font-size: calc(11px * var(--jf-text-scale, 1));
       font-weight: 600;
       cursor: pointer;
     }

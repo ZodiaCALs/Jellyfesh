@@ -3,6 +3,8 @@
     label: string;
     action: () => void;
     disabled?: boolean;
+    /** A check item (Desktop Lyrics): whether it is on. */
+    checked?: boolean;
   }
 </script>
 
@@ -82,7 +84,13 @@
   onkeydown={keys}
 >
   {#each items as item (item.label)}
-    <button role="menuitem" disabled={item.disabled} onclick={() => run(item)}>{item.label}</button>
+    {#if item.checked === undefined}
+      <button role="menuitem" disabled={item.disabled} onclick={() => run(item)}>{item.label}</button>
+    {:else}
+      <button class="check" role="menuitemcheckbox" aria-checked={item.checked} disabled={item.disabled} onclick={() => run(item)}>
+        <span class="mark" aria-hidden="true">{#if item.checked}<Icon name="check" size={16} />{/if}</span>{item.label}
+      </button>
+    {/if}
   {/each}
 </div>
 
@@ -138,12 +146,25 @@
     background: transparent;
     color: inherit;
     font: inherit;
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     text-align: start;
     cursor: pointer;
   }
   .menu button:hover:not(:disabled) {
     background: var(--jf-fill-hover);
+  }
+  .menu .check {
+    display: flex;
+    align-items: center;
+    gap: var(--jf-space-s2);
+    padding-inline-start: var(--jf-space-s2);
+  }
+  .mark {
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 16px;
+    color: var(--jf-accent-text);
   }
   .menu button:disabled {
     color: var(--jf-ink-30);

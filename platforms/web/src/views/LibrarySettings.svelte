@@ -163,7 +163,7 @@
   .help,
   .note,
   .muted {
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     line-height: 1.45;
     color: var(--jf-ink-70);
   }

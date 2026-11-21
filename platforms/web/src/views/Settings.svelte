@@ -7,6 +7,7 @@
   import Icon from '../components/Icon.svelte';
   import LineSlider from '../components/LineSlider.svelte';
   import LibrarySettings from './LibrarySettings.svelte';
+  import ExtensionsSettings from './ExtensionsSettings.svelte';
   import SourcesSettings from './SourcesSettings.svelte';
   import { useApp } from '../lib/app';
   import type { EqSettings, Quality, Themes, WebSettings } from '../lib/core/types';
@@ -24,12 +25,14 @@
     ['playback', 'Playback'],
     ['library', 'Library'],
     ['sources', 'Sources'],
+    ['extensions', 'Extensions'],
     ['about', 'About'],
   ];
   const s = $derived(settings.value);
   const presets = JSON.parse(app.jf.eq_presets()) as [string, EqSettings][];
   const PRESET_LABELS: Record<string, string> = { flat: 'Flat', bass_boost: 'Bass Boost', vocal: 'Vocal', treble: 'Treble' };
   const version = app.jf.version();
+  const site = app.jf.website();
 
   const preset = $derived.by(() => {
     const gains = s.eq.bands.map((b) => b.gain_db).join(',');
@@ -111,14 +114,14 @@
   ];
 </script>
 
-{#snippet toggle(label: string, help: string | null, on: boolean, change: (on: boolean) => void)}
-  <label class="row">
+{#snippet toggle(label: string, help: string | null, on: boolean, change: (on: boolean) => void, disabled: boolean = false)}
+  <label class="row" class:off={disabled}>
     <span class="text">
       <span class="label">{label}</span>
       {#if help}<span class="help">{help}</span>{/if}
     </span>
     <span class="switch">
-      <input type="checkbox" role="switch" checked={on} onchange={(event) => change(checked(event))} />
+      <input type="checkbox" role="switch" checked={on} {disabled} onchange={(event) => change(checked(event))} />
       <span aria-hidden="true"></span>
     </span>
   </label>
@@ -348,6 +351,21 @@
         s.show_romanization,
         (on) => set((d) => (d.show_romanization = on)),
       )}
+      {@render toggle(
+        t('Show Lyrics Bar'),
+        t('The line being sung, under the song’s title in the player bar.'),
+        s.show_lyrics_bar,
+        (on) => set((d) => (d.show_lyrics_bar = on)),
+      )}
+      {@render toggle(
+        t('Desktop Lyrics'),
+        app.desktopLyrics.supported
+          ? t('The line being sung and the next one, in a window that stays above other apps.')
+          : t('This browser can’t keep a window above other apps. Chrome and Edge on a computer can.'),
+        s.desktop_lyrics && app.desktopLyrics.supported,
+        (on) => set((d) => (d.desktop_lyrics = on)),
+        !app.desktopLyrics.supported,
+      )}
     </div>
   </section>
   <section class="group" aria-labelledby="g-language">
@@ -528,6 +546,8 @@
   <LibrarySettings />
   {:else if section === 'sources'}
   <SourcesSettings />
+  {:else if section === 'extensions'}
+  <ExtensionsSettings />
   {:else}
   <section class="group" aria-labelledby="g-keys">
     <h2 id="g-keys" class="section">{t('Keyboard Shortcuts')}</h2>
@@ -546,6 +566,13 @@
       <p>{t('Version {version}', { version })} · {t('An elegant, lightweight music player.')}</p>
       <p>{t('Designed with the Misty design language.')}</p>
       <p><a href="THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener">{t('Third-party notices')}</a></p>
+      {#if site}
+        <p class="links">
+          <a href={site} target="_blank" rel="noopener">{t('Website')}</a>
+          <a href="{site}legal/eula.html" target="_blank" rel="noopener">{t('Licence Agreement')}</a>
+          <a href="{site}legal/privacy.html" target="_blank" rel="noopener">{t('Privacy Policy')}</a>
+        </p>
+      {/if}
       {#if installPrompt}
         <div class="row">
           <span class="text">
@@ -665,7 +692,7 @@
   }
   .help,
   .note {
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     line-height: 1.45;
     color: var(--jf-ink-70);
   }
@@ -700,7 +727,7 @@
     padding: 0 var(--jf-space-s4);
     border-radius: var(--jf-radius-r-full);
     color: var(--jf-ink-70);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     font-weight: 600;
     cursor: pointer;
     transition:
@@ -731,7 +758,7 @@
     cursor: pointer;
   }
   .tile .name {
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-70);
   }
@@ -892,7 +919,7 @@
     border-radius: var(--jf-radius-r-full);
     background: var(--jf-accent-soft);
     color: var(--jf-accent-text);
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 700;
   }
   .transparency {
@@ -959,7 +986,7 @@
     align-items: center;
     gap: var(--jf-space-s3);
     min-width: 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-70);
   }
@@ -1003,7 +1030,7 @@
     flex-direction: column;
     align-items: center;
     gap: var(--jf-space-s2);
-    font-size: 11px;
+    font-size: calc(11px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .band input {
@@ -1056,6 +1083,14 @@
   .switch input:focus-visible + span {
     box-shadow: var(--jf-elevation-focus);
   }
+  /* A switch the browser cannot honour (Desktop Lyrics without Picture-in-Picture). */
+  .row.off .label,
+  .switch input:disabled + span {
+    opacity: 0.45;
+  }
+  .switch input:disabled {
+    cursor: default;
+  }
   .button {
     display: inline-flex;
     align-items: center;
@@ -1086,7 +1121,7 @@
     background: var(--jf-fill);
     box-shadow: inset 0 0 0 1px var(--jf-line);
     font-family: var(--jf-font-mono);
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
   }
   .about p {
     margin: 0 0 var(--jf-space-s2);
@@ -1100,6 +1135,11 @@
     font-weight: 600;
     text-decoration: none;
     border-radius: var(--jf-radius-r-sm);
+  }
+  .about .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--jf-space-s4);
   }
   .about a:hover {
     text-decoration: underline;

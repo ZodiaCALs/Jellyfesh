@@ -8,6 +8,7 @@
 
 import type { Jf } from '../core/wasm';
 import type {
+  AudioFormat,
   FileMeta,
   Item,
   Lyrics,
@@ -41,8 +42,8 @@ interface Resolved {
   replaygain: ReplayGainInfo | null;
   /** The quality asked for (null for a dropped file). */
   quality: Quality | null;
-  /** What it is, for About This Song ("FLAC · 44.1 kHz"). */
-  format: string | null;
+  /** What it is, for About This Song's Audio rows (with the core's quality label). */
+  format: AudioFormat | null;
   expiresAt: number | null;
   release(): void;
 }
@@ -51,7 +52,8 @@ export type LyricsState =
   | { status: 'none' }
   | { status: 'loading' }
   | { status: 'missing' }
-  | { status: 'ready'; lyrics: Lyrics };
+  /** `made`: AI Lyrics made them, with this engine ("Made by AI Lyrics · {engine}"). */
+  | { status: 'ready'; lyrics: Lyrics; made?: string };
 
 const QUEUE_KEY = 'jf.queue';
 const PLAYBACK_KEY = 'jf.playback';
@@ -107,8 +109,8 @@ export class Player {
   problem = $state<string | null>(null);
   /** The person must press play (autoplay policy, or a restored queue). */
   waitingForPlay = $state(false);
-  /** The current track's format, once its stream is prepared. */
-  format = $state<string | null>(null);
+  /** The current track's format, once its stream is prepared (with the core's quality label). */
+  format = $state.raw<AudioFormat | null>(null);
 
   readonly engine: AudioEngine;
   /** What the player did lately (the last 100 events), for diagnostics and the end-to-end tests. */
@@ -533,6 +535,22 @@ export class Player {
     this.engine.arm(next.uid, resolved.media, resolved.gain, plan);
   }
 
+  /** The bytes of `row`'s audio, as the browser plays it (AI Lyrics decodes them). */
+  async audioBytes(row: Row): Promise<ArrayBuffer> {
+    const resolved = await this.resolve(row);
+    const response = await fetch(resolved.media.url, { credentials: 'omit', mode: resolved.media.crossOrigin ? 'cors' : 'same-origin' });
+    if (!response.ok) throw new Error(t('The song could not be read ({status}).', { status: response.status }));
+    return response.arrayBuffer();
+  }
+
+  /** Lyrics AI Lyrics made for `row`'s song, shown when it has no synced lyrics of its own. */
+  madeLyrics: ((row: Row) => { lyrics: Lyrics; engine: string } | null) | null = null;
+
+  /** Shows made lyrics now (a job finished for the song playing, or they were deleted). */
+  refreshLyrics() {
+    if (this.current) void this.loadLyrics(this.current);
+  }
+
   /** A stream for `row` (prepared once; shared by concurrent callers). */
   private resolve(row: Row, quality?: Quality): Promise<Resolved> {
     const ready = this.resolved.get(row.uid);
@@ -573,19 +591,13 @@ export class Player {
         }
       }
       const tags = dropped.tags;
-      const format = [
-        tags?.codec?.toUpperCase(),
-        tags?.sample_rate ? `${(tags.sample_rate / 1000).toLocaleString()} kHz` : null,
-        tags?.bitrate_kbps ? `${tags.bitrate_kbps} kbps` : null,
-      ]
-        .filter(Boolean)
-        .join(' · ');
+      const format = this.audioFormat(tags?.codec ?? null, tags?.sample_rate ?? null, tags?.channels ?? null, tags?.bitrate_kbps ?? null);
       return {
         media: { url: dropped.url, crossOrigin: false },
         gain: this.core.replaygain_scale(JSON.stringify(meta.replaygain)),
         replaygain: meta.replaygain,
         quality: null,
-        format: format || null,
+        format,
         expiresAt: null,
         release() {},
       };
@@ -604,19 +616,25 @@ export class Player {
         }
       }
       const prepared = await prepareStream(info, source.plugin.relay);
-      const format = [info.codec?.toUpperCase(), info.bitrate_kbps ? `${info.bitrate_kbps} kbps` : null]
-        .filter(Boolean)
-        .join(' · ');
+      const format = this.audioFormat(info.codec, null, null, info.bitrate_kbps);
       return {
         media: prepared.media,
         gain: this.core.replaygain_scale('null'),
         replaygain: null,
         quality,
-        format: format || null,
+        format,
         expiresAt: info.expires_at_ms,
         release: prepared.release,
       };
     }
+  }
+
+  /** The format with the core's quality label (jf-web's details rules), or null when unknown. */
+  private audioFormat(codec: string | null, sampleRate: number | null, channels: number | null, kbps: number | null): AudioFormat | null {
+    const format = JSON.parse(
+      this.jf.audio_format(codec ?? undefined, sampleRate ?? undefined, undefined, channels ?? undefined, kbps ?? undefined),
+    ) as AudioFormat;
+    return format.codec || format.bitrate_kbps || format.sample_rate_hz ? format : null;
   }
 
   private canPlay(mime: string): boolean {
@@ -804,7 +822,11 @@ export class Player {
       lyrics = null;
     }
     if (this.current?.uid !== row.uid) return;
-    this.lyrics = lyrics && lyrics.doc.lines.length > 0 ? { status: 'ready', lyrics } : { status: 'missing' };
+    const own = lyrics && lyrics.doc.lines.length > 0 ? lyrics : null;
+    // Made lyrics show when the song has no synced lyrics of its own (ADR-0019).
+    const made = own?.synced ? null : (this.madeLyrics?.(row) ?? null);
+    if (made) this.lyrics = { status: 'ready', lyrics: made.lyrics, made: made.engine };
+    else this.lyrics = own ? { status: 'ready', lyrics: own } : { status: 'missing' };
   }
 
   private async loadArtwork(row: Row) {

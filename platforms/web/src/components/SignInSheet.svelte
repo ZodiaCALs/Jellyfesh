@@ -236,7 +236,7 @@
   }
   label {
     font-weight: 600;
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
   }
   input {
     min-height: 44px;
@@ -256,12 +256,12 @@
   }
   .help {
     margin: 0;
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .code {
     margin: var(--jf-space-s4) 0 0;
-    font-size: 40px;
+    font-size: calc(40px * var(--jf-text-scale, 1));
     font-weight: 700;
     letter-spacing: 0.18em;
     text-align: center;
@@ -308,7 +308,7 @@
     align-items: center;
     gap: var(--jf-space-s3);
     margin: 0;
-    font-size: 18px;
+    font-size: calc(18px * var(--jf-text-scale, 1));
     font-weight: 600;
   }
   .done :global(svg) {

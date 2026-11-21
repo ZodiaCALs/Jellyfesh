@@ -1,19 +1,62 @@
 <script lang="ts">
-  // About This Song: what plays, from where, in what format, with what lyrics; then Open in
-  // {Service} when the song has a link (API 1.1, docs/ui.md).
+  // Now Playing's Info: About This Song and Audio for what plays, as Get Info shows them (docs/ui.md
+  // "Details"), with the format actually being played; then the lyrics' kind, and Open in
+  // {Service} when the song has a link (API 1.1). A source's details come from its plugin.
   import Icon from '../components/Icon.svelte';
   import { useApp } from '../lib/app';
-  import { formatTime, t } from '../lib/i18n/index.svelte';
+  import type { InfoRow, ItemDetails, KnownSong, SongRows } from '../lib/core/types';
+  import { rowLabel, rowValue } from '../lib/details';
+  import { t } from '../lib/i18n/index.svelte';
   import { linkOf, openLink } from '../lib/items';
+  import { LIBRARY_ID } from '../lib/state/library.svelte';
 
   const app = useApp();
   const player = app.player;
   const row = $derived(player.current);
-  const source = $derived(row?.plugin ? (app.sources.get(row.plugin)?.name ?? row.plugin) : null);
-  const link = $derived.by(() => {
+  const found = $derived.by(() => {
     void app.sources.revision;
-    const found = row ? player.sourceItem(row) : null;
-    return found ? linkOf(app, found.plugin.id, found.item) : null;
+    return row ? player.sourceItem(row) : null;
+  });
+  const link = $derived(found ? linkOf(app, found.plugin.id, found.item) : null);
+  let details = $state.raw<ItemDetails | null>(null);
+
+  $effect(() => {
+    const source = found;
+    details = null;
+    if (!source?.plugin.declares('Details')) return;
+    let live = true;
+    source.plugin
+      .details(source.item)
+      .then((answer) => live && (details = answer))
+      .catch(() => {
+        // What the page knows stays.
+      });
+    return () => {
+      live = false;
+    };
+  });
+
+  const rows = $derived.by((): SongRows | null => {
+    if (!row) return null;
+    const known: KnownSong = { title: row.title, artist: row.artist, album: row.album, duration_ms: player.durationMs ?? row.duration_ms };
+    if (found) {
+      known.source = found.plugin.name;
+      if (found.item.year !== null) known.year = String(found.item.year);
+    } else if (row.id.startsWith(LIBRARY_ID)) {
+      const track = app.library.track(row.id.slice(LIBRARY_ID.length));
+      const folder = track ? app.library.folders.find((f) => f.id === track.folder) : undefined;
+      if (track) {
+        known.file = folder ? `${folder.name}/${track.path}` : track.path;
+        known.size_bytes = track.size;
+        known.replaygain = track.replaygain;
+        if (track.year !== null) known.year = String(track.year);
+      }
+    } else {
+      known.file = t('Dropped on this page; not saved');
+    }
+    return JSON.parse(
+      app.jf.song_rows(details ? JSON.stringify(details) : undefined, JSON.stringify(known), player.format ? JSON.stringify(player.format) : undefined),
+    );
   });
   const lyrics = $derived.by(() => {
     const state = player.lyrics;
@@ -25,22 +68,13 @@
 
 <div class="info">
   <h2 class="section">{t('About This Song')}</h2>
-  {#if row}
-    <dl>
-      <dt>{t('Title')}</dt>
-      <dd>{row.title}</dd>
-      <dt>{t('Artist')}</dt>
-      <dd>{row.artist ?? t('Unknown Artist')}</dd>
-      <dt>{t('Album')}</dt>
-      <dd>{row.album ?? t('Unknown Album')}</dd>
-      <dt>{t('Length')}</dt>
-      <dd>{formatTime(player.durationMs ?? row.duration_ms)}</dd>
-      {#if player.format}
-        <dt>{t('Format')}</dt>
-        <dd>{player.format}</dd>
-      {/if}
-      <dt>{row.kind === 'file' ? t('File') : t('Source')}</dt>
-      <dd>{row.kind === 'file' ? t('Dropped on this page; not saved') : source}</dd>
+  {#if rows}
+    {@render list(rows.about)}
+    {#if rows.audio.length}
+      <h3 class="section audio">{t('Audio')}</h3>
+      {@render list(rows.audio)}
+    {/if}
+    <dl class="lyrics">
       <dt>{t('Lyrics')}</dt>
       <dd>{lyrics}</dd>
     </dl>
@@ -54,6 +88,15 @@
     <p class="muted">{t('Nothing Playing')}</p>
   {/if}
 </div>
+
+{#snippet list(items: InfoRow[])}
+  <dl>
+    {#each items as item (item.key)}
+      <dt>{rowLabel(item)}</dt>
+      <dd>{rowValue(item)}</dd>
+    {/each}
+  </dl>
+{/snippet}
 
 <style>
   .info {
@@ -76,6 +119,12 @@
   }
   .muted {
     color: var(--jf-ink-70);
+  }
+  .audio {
+    margin-top: var(--jf-space-s5);
+  }
+  .lyrics {
+    margin-top: var(--jf-space-s3);
   }
   .open-in {
     display: inline-flex;

@@ -1,5 +1,6 @@
 <script lang="ts">
-  // A source's own start page (what its `browse` lists at the top), opened from Your Sources.
+  // A source's own folders (what its `browse` lists at the top), opened from Browse on its
+  // Discover page.
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
   import Skeleton from '../components/Skeleton.svelte';

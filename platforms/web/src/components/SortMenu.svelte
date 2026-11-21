@@ -28,7 +28,7 @@
     display: flex;
     align-items: center;
     gap: var(--jf-space-s2);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   select {

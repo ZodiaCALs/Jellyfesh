@@ -11,12 +11,16 @@
   import Sheet from '../components/Sheet.svelte';
   import SignInSheet from '../components/SignInSheet.svelte';
   import { useApp } from '../lib/app';
-  import { t } from '../lib/i18n/index.svelte';
+  import { language, t } from '../lib/i18n/index.svelte';
   import type { Plugin } from '../lib/plugins/host';
   import { explain, type SourceView } from '../lib/state/sources.svelte';
   import { toast } from '../lib/state/toast.svelte';
 
+  // With `extensions`, the same list for Settings › Extensions: the extensions installed (AI Lyrics,
+  // Customize, others), each the same way, and Install from File… in the heading.
+  let { extensions = false }: { extensions?: boolean } = $props();
   const app = useApp();
+  const shown = $derived(app.sources.list.filter((source) => source.extension === extensions));
   let signingIn = $state<Plugin | null>(null);
   let editing = $state<Plugin | null>(null);
   let editError = $state<string | null>(null);
@@ -101,6 +105,15 @@
     editing = plugin;
   }
 
+  /** The plugin's settings in the app's language, where the package translates them (API 1.2). */
+  function schemaFor(plugin: Plugin) {
+    const info = plugin.info;
+    if (!info) return {};
+    const localized = info.localized_schemas ?? {};
+    const best = app.jf.best_language(JSON.stringify(Object.keys(localized)), language());
+    return (best ? localized[best] : undefined) ?? info.settings_schema;
+  }
+
   async function signIn(source: SourceView) {
     const plugin = app.sources.get(source.id);
     if (!plugin) return;
@@ -113,8 +126,10 @@
   }
 </script>
 
-<section class="sources-settings" aria-label={t('Sources')}>
-  {#if !app.store.persistent}
+<section class="sources-settings" aria-label={extensions ? t('Extensions') : t('Sources')}>
+  {#if extensions}
+    <!-- Only the list. -->
+  {:else if !app.store.persistent}
     <p class="note" role="note">
       <Icon name="alert" size={18} />{t('This browser does not let Jellyfesh Web keep data: you will sign in again next time.')}
     </p>
@@ -124,23 +139,27 @@
     </p>
   {/if}
 
-  <AddSource />
+  {#if !extensions}<AddSource />{/if}
 
   <section class="group" aria-labelledby="installed-title">
     <header class="group-head">
-      <h2 id="installed-title" class="section">{t('Installed')}</h2>
+      <h2 id="installed-title" class="section">{extensions ? t('Extensions') : t('Installed')}</h2>
       <button class="secondary small" disabled={installing} onclick={() => packageInput?.click()}>
         <Icon name="install" size={16} />{installing ? t('Installing…') : t('Install from File…')}
       </button>
     </header>
-    {#if app.sources.list.length === 0}
+    {#if shown.length === 0}
       <div class="empty">
-        <h3>{t('No Sources Installed')}</h3>
-        <p>{t('Install a source plugin from a .jfpkg file.')}</p>
+        {#if extensions}
+          <p>{t('Install an extension from a .jfpkg file.')}</p>
+        {:else}
+          <h3>{t('No Sources Installed')}</h3>
+          <p>{t('Install a source plugin from a .jfpkg file.')}</p>
+        {/if}
       </div>
     {/if}
   <ul class="list">
-    {#each app.sources.list as source (source.id)}
+    {#each shown as source (source.id)}
       <li class="source">
         <div class="top">
           <div class="name">
@@ -189,6 +208,7 @@
   </ul>
   </section>
 
+  {#if !extensions}
     <section class="community" aria-labelledby="community-title">
       <h2 id="community-title" class="section">{t('Community Plugins')}</h2>
       <p class="description">
@@ -264,6 +284,7 @@
         </div>
       </form>
     </section>
+  {/if}
 </section>
 
 {#if signingIn}
@@ -300,7 +321,7 @@
   {@const plugin = editing}
   <Sheet title={plugin.info?.settings_schema.title ?? plugin.name} onclose={() => (editing = null)}>
     <SettingsForm
-      schema={plugin.info?.settings_schema ?? {}}
+      schema={schemaFor(plugin)}
       values={plugin.state.settings ?? {}}
       submitLabel={t('Save')}
       error={editError}
@@ -344,14 +365,14 @@
   }
   .small {
     min-height: 36px;
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
   }
   .secondary.danger {
     color: var(--jf-danger);
   }
   .facts {
     margin: 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .package-input {
@@ -394,7 +415,7 @@
   }
   .name h2 {
     margin: 0 0 4px;
-    font-size: var(--jf-type-roles-section-size);
+    font-size: calc(var(--jf-type-roles-section-size) * var(--jf-text-scale, 1));
   }
   .badge {
     display: inline-block;
@@ -402,7 +423,7 @@
     border-radius: var(--jf-radius-r-full);
     background: var(--jf-fill-press);
     color: var(--jf-ink-70);
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     font-weight: 600;
   }
   .badge.official {
@@ -427,7 +448,7 @@
   }
   .server {
     margin: 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
     overflow-wrap: anywhere;
   }
@@ -508,7 +529,7 @@
   }
   .field label {
     font-weight: 600;
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
   }
   .field input {
     min-height: 44px;
@@ -526,7 +547,7 @@
   }
   .help {
     margin: 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .relay-status {

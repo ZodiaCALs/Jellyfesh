@@ -1,6 +1,7 @@
 // Prepares the official plugins for Jellyfesh Web:
 //
-//   dist/plugins/<id>.jfpkg (from plugins/release.sh; unsigned is fine in development)
+//   dist/plugins/<id>.jfpkg (from plugins/release.sh; unsigned is fine in development): the
+//   Subsonic and Jellyfin sources, and the AI Lyrics and Customize extensions
 //     -> public/plugins/<id>.jfpkg            the package itself; each plugin worker reads and
 //                                             verifies it at run time (core/jf-web/sandbox)
 //     -> public/plugins/<id>/plugin.js + *.core.wasm
@@ -23,7 +24,9 @@ const web = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const root = resolve(web, '../..');
 const source = resolve(process.env.JF_PLUGIN_PACKAGES ?? join(root, 'dist/plugins'));
 const out = join(web, 'public/plugins');
-const official = ['org.jellyfesh.subsonic', 'org.jellyfesh.jellyfin'];
+// The sources Jellyfesh Web offers, and the extensions (Settings › Extensions; Jellyfesh Pro):
+// AI Lyrics (its online mode; the on-device one needs the app) and Customize.
+const official = ['org.jellyfesh.subsonic', 'org.jellyfesh.jellyfin', 'org.jellyfesh.ai-lyrics', 'org.jellyfesh.customize'];
 
 const sandboxJs = join(web, 'generated/wasm/jf_web_sandbox.js');
 if (!existsSync(sandboxJs)) {
@@ -87,6 +90,9 @@ try {
       description: info.description,
       capabilities: info.capabilities,
       auth_kinds: info.auth_kinds,
+      // Settings › Extensions rather than a source of music (API 1.2), and part of Jellyfesh Pro.
+      extension: info.extension,
+      requires_pro: info.requires_pro,
       package: `${info.id}.jfpkg`,
       module: `${info.id}/plugin.js`,
       wasm_sha256: info.wasm_sha256,

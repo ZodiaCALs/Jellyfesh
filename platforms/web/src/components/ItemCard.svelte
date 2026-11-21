@@ -208,13 +208,13 @@
     white-space: nowrap;
   }
   .title {
-    font-size: 15px;
+    font-size: calc(15px * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-90);
   }
   .second {
     min-height: 1.3em;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   /* Phones (two lifts' budget of blur is taken by the capsules): the play button is Veil without

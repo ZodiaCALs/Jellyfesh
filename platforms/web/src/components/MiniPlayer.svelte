@@ -12,7 +12,8 @@
   import { t } from '../lib/i18n/index.svelte';
   import PlayGlyph from './PlayGlyph.svelte';
 
-  let { active = true }: { active?: boolean } = $props();
+  // Floating (the look's mini-player style, ADR-0020): a smaller capsule at the end corner.
+  let { active = true, floating = false }: { active?: boolean; floating?: boolean } = $props();
   const app = useApp();
   const { player, nav, theme } = app;
   const row = $derived(player.current);
@@ -65,7 +66,7 @@
 </script>
 
 {#if row}
-  <div class="mini glass-veil" role="region" aria-label={t('Now Playing')}>
+  <div class="mini glass-veil" class:floating role="region" aria-label={t('Now Playing')}>
     <button class="open" onclick={() => nav.openNowPlaying()} aria-label={t('Open Now Playing')}>
       <span class="art">
         {#each theme.artwork ? [theme.artwork] : [] as url (url)}
@@ -92,6 +93,11 @@
 {/if}
 
 <style>
+  .mini.floating {
+    align-self: flex-end;
+    width: min(360px, 100%);
+    box-shadow: var(--jf-elevation-shadow-3);
+  }
   .mini {
     position: relative;
     display: flex;
@@ -155,12 +161,12 @@
     white-space: nowrap;
   }
   .title {
-    font-size: 14.5px;
+    font-size: calc(14.5px * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-90);
   }
   .second {
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .play {

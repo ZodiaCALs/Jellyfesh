@@ -22,8 +22,11 @@
   import type { PlaybackAnchor } from '../lib/drawing/displayClock';
   import { Ticker } from '../lib/drawing/ticker';
   import { t } from '../lib/i18n/index.svelte';
+  import MakeLyrics from './MakeLyrics.svelte';
 
-  let { lyrics, anchor }: { lyrics: Lyrics; anchor: PlaybackAnchor } = $props();
+  // `made`: AI Lyrics made these, with this engine ("Made by AI Lyrics · {engine}" under the last
+  // line); plain lyrics offer Time These Lyrics there.
+  let { lyrics, anchor, made = null }: { lyrics: Lyrics; anchor: PlaybackAnchor; made?: string | null } = $props();
   const app = useApp();
 
   let activeLine = $state<number | null>(null);
@@ -224,7 +227,7 @@
               class:sweeping={current && running && !reduced && remainingMs > 0}
               style:--from="{Math.round((current ? progress : sung ? 1 : 0) * 100)}%"
               style:--ms="{Math.round(remainingMs)}ms"
-              style:animation-name={current && running && !reduced && remainingMs > 0 ? `sweep-${parity % 2}` : 'none'}
+              style:animation-name={current && running && !reduced && remainingMs > 0 ? `jf-sweep-${parity % 2}` : 'none'}
               >{word.text}{word.joins_next ? '' : ' '}</span
             >
           {/each}
@@ -240,8 +243,13 @@
     </div>
   {/each}
   <div class="spacer bottom" aria-hidden="true"></div>
-  {#if lyrics.doc.source.origin || lyrics.doc.metadata.by}
+  {#if made}
+    <p class="credit">{t('Made by AI Lyrics · {engine}', { engine: made })}</p>
+  {:else if lyrics.doc.source.origin || lyrics.doc.metadata.by}
     <p class="credit">{lyrics.doc.source.origin ?? lyrics.doc.metadata.by}</p>
+  {/if}
+  {#if !synced && !made && app.player.current}
+    <div class="time-these"><MakeLyrics row={app.player.current} text={lyrics.doc.lines.map((l) => l.text).join('\n')} /></div>
   {/if}
 </div>
 
@@ -296,6 +304,11 @@
     scale: 1;
     opacity: 1;
   }
+  /* The look's glow around the sung line (none by default: v0.0.6 had none). */
+  .line.active .text {
+    text-shadow: 0 0 calc(18px * var(--jf-lyrics-glow, 0))
+      color-mix(in srgb, var(--jf-lyrics-highlight, var(--jf-ink-90)) calc(var(--jf-lyrics-glow, 0) * 60%), transparent);
+  }
   .line.rtl {
     transform-origin: right center;
   }
@@ -326,7 +339,7 @@
     background: none;
     font: inherit;
     /* lyrics.line between its fluid ends, by the pane's width (Now Playing's pane is a container). */
-    font-size: calc(clamp(var(--jf-lyrics-line-fluid-min), 6.4cqi, var(--jf-lyrics-line-fluid-max)) * var(--size, 1));
+    font-size: calc(clamp(var(--jf-lyrics-line-fluid-min), 6.4cqi, var(--jf-lyrics-line-fluid-max)) * var(--size, 1) * var(--jf-text-scale, 1));
     line-height: var(--jf-lyrics-line-line-height);
     font-weight: var(--jf-lyrics-line-weight);
     letter-spacing: -0.02em;
@@ -355,7 +368,7 @@
   .word {
     color: transparent;
     background-image:
-      linear-gradient(90deg, var(--jf-ink-90) calc(100% - 0.3em), transparent),
+      linear-gradient(90deg, var(--jf-lyrics-highlight, var(--jf-ink-90)) calc(100% - 0.3em), transparent),
       linear-gradient(var(--jf-ink-70), var(--jf-ink-70));
     background-repeat: no-repeat;
     background-size:
@@ -381,34 +394,10 @@
     animation-timing-function: linear;
     animation-fill-mode: forwards;
   }
-  @keyframes sweep-0 {
-    from {
-      background-size:
-        calc(var(--from) + 0.3em) 100%,
-        100% 100%;
-    }
-    to {
-      background-size:
-        calc(100% + 0.3em) 100%,
-        100% 100%;
-    }
-  }
-  @keyframes sweep-1 {
-    from {
-      background-size:
-        calc(var(--from) + 0.3em) 100%,
-        100% 100%;
-    }
-    to {
-      background-size:
-        calc(100% + 0.3em) 100%,
-        100% 100%;
-    }
-  }
   .background {
     margin: 0;
     padding: 0 8px;
-    font-size: calc(var(--jf-lyrics-translation-size) * var(--size, 1));
+    font-size: calc(var(--jf-lyrics-translation-size) * var(--size, 1) * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-70);
   }
@@ -418,18 +407,21 @@
     color: var(--jf-ink-70);
   }
   .translation {
-    font-size: calc(var(--jf-lyrics-translation-size) * var(--size, 1));
+    font-size: calc(var(--jf-lyrics-translation-size) * var(--size, 1) * var(--jf-text-scale, 1));
     line-height: var(--jf-lyrics-translation-line-height);
     font-weight: var(--jf-lyrics-translation-weight);
   }
   .romanization {
-    font-size: calc(var(--jf-lyrics-romanization-size) * var(--size, 1));
+    font-size: calc(var(--jf-lyrics-romanization-size) * var(--size, 1) * var(--jf-text-scale, 1));
     line-height: var(--jf-lyrics-romanization-line-height);
     font-weight: var(--jf-lyrics-romanization-weight);
   }
   .credit {
     margin: 0 8px var(--jf-space-s8);
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
+  }
+  .time-these {
+    margin: 0 8px var(--jf-space-s8);
   }
 </style>

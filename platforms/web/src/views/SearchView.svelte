@@ -122,7 +122,7 @@
 <style>
   .from {
     margin: var(--jf-space-s7) 0 var(--jf-space-s2);
-    font-size: var(--jf-type-text-h3);
+    font-size: calc(var(--jf-type-text-h3) * var(--jf-text-scale, 1));
   }
   .field {
     display: flex;
@@ -147,7 +147,7 @@
     background: transparent;
     color: var(--jf-ink-90);
     font: inherit;
-    font-size: 16px;
+    font-size: calc(16px * var(--jf-text-scale, 1));
     outline: none;
   }
   .hint {
@@ -156,7 +156,7 @@
   }
   .hint h2 {
     margin: 0 0 var(--jf-space-s2);
-    font-size: var(--jf-type-text-h3);
+    font-size: calc(var(--jf-type-text-h3) * var(--jf-text-scale, 1));
   }
   .hint p {
     margin: 0;

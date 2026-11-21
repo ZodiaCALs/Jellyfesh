@@ -1,7 +1,8 @@
 // Redraws only when the drawing changes: `draw` gets the position and answers when (in µs of track
 // time) it next needs to run; the DisplayClock turns that into a timer. Nothing runs while paused,
 // while the page is hidden or while the view says it is not shown (setActive), and nothing runs per
-// frame (a sweeping lyric word is a CSS animation the browser runs).
+// frame (a sweeping lyric word is a CSS animation the browser runs). A view in another window
+// (Desktop Lyrics) passes that window's own `hidden`.
 
 import { DisplayClock, monotonicNowNs, type PlaybackAnchor } from './displayClock';
 
@@ -27,7 +28,10 @@ export class Ticker {
   private stopped = false;
   private active = true;
 
-  constructor(private readonly draw: (positionUs: bigint, running: boolean) => bigint | null) {
+  constructor(
+    private readonly draw: (positionUs: bigint, running: boolean) => bigint | null,
+    private readonly isHidden: () => boolean = hidden,
+  ) {
     live.add(this);
     watchVisibility();
   }
@@ -49,7 +53,7 @@ export class Ticker {
   tick() {
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
-    if (this.stopped || !this.active || hidden()) return;
+    if (this.stopped || !this.active || this.isHidden()) return;
     const now = monotonicNowNs();
     const position = this.clock.positionUs(now);
     const target = this.draw(position, this.clock.isRunning);

@@ -48,7 +48,7 @@
     border-radius: var(--jf-radius-r-lg);
     background: var(--jf-tint-mist);
     box-shadow: inset 0 0 0 1px var(--jf-glass-edge-soft);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
   }
   .notice span {
     flex: 1;
@@ -75,7 +75,7 @@
   }
   .empty h2 {
     margin: 0 0 var(--jf-space-s2);
-    font-size: 20px;
+    font-size: calc(20px * var(--jf-text-scale, 1));
   }
   .empty p {
     margin: 0 0 var(--jf-space-s5);

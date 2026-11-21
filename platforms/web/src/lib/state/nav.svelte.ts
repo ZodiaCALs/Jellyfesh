@@ -8,10 +8,16 @@ import { picturesReady, viewTransition } from '../motion';
 
 export type Tab = 'home' | 'albums' | 'artists' | 'songs' | 'search' | 'sources' | 'settings';
 /** The sections of Settings, in their order. */
-export type SettingsSection = 'appearance' | 'playback' | 'library' | 'sources' | 'about';
-export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'playback', 'library', 'sources', 'about'];
-export type Route = { view: Tab } | { view: 'browse'; plugin: string; item: Item } | { view: 'source'; plugin: string };
-export type Pane = 'lyrics' | 'queue' | 'info';
+export type SettingsSection = 'appearance' | 'playback' | 'library' | 'sources' | 'extensions' | 'about';
+export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'playback', 'library', 'sources', 'extensions', 'about'];
+export type Route =
+  | { view: Tab }
+  | { view: 'browse'; plugin: string; item: Item }
+  /** A source's Discover page. */
+  | { view: 'source'; plugin: string }
+  /** A source's own folders (Browse on its Discover page). */
+  | { view: 'root'; plugin: string };
+export type Pane = 'lyrics' | 'queue' | 'info' | 'comments';
 /** How the last page change happened, for its motion: deeper and tabs rise, back fades. */
 export type Motion = 'forward' | 'back';
 
@@ -39,6 +45,8 @@ export class Nav {
   pane = $state<Pane>('lyrics');
   motion = $state<Motion>('forward');
   settingsSection = $state<SettingsSection>('appearance');
+  /** Get Info's item, while its sheet is open. */
+  info = $state.raw<{ plugin: string; item: Item } | null>(null);
 
   constructor() {
     this.stack = [{ view: tabFromHash() }];

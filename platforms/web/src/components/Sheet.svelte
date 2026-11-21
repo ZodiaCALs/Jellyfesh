@@ -73,7 +73,7 @@
   }
   h2 {
     margin: 0;
-    font-size: var(--jf-type-roles-section-size);
+    font-size: calc(var(--jf-type-roles-section-size) * var(--jf-text-scale, 1));
     line-height: var(--jf-type-roles-section-line-height);
   }
   .close {

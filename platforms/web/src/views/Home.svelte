@@ -6,6 +6,7 @@
   import ItemList from '../components/ItemList.svelte';
   import Skeleton from '../components/Skeleton.svelte';
   import { useApp } from '../lib/app';
+  import { homeSections } from '../lib/look';
   import type { Item } from '../lib/core/types';
   import { t, tn } from '../lib/i18n/index.svelte';
   import { LIBRARY } from '../lib/state/library.svelte';
@@ -14,6 +15,8 @@
 
   let { onopenfiles }: { onopenfiles: () => void } = $props();
   const app = useApp();
+  // The look's Home sections this page has (ADR-0020): the library's size and Recently Added.
+  const sections = $derived(homeSections(app.look.value.home));
 
   interface Shelf {
     plugin: string;
@@ -67,7 +70,7 @@
 
 <section class="page" aria-labelledby="home-title">
   <h1 id="home-title" class="page-title">{t('Home')}</h1>
-  {#if size}<p class="size">{size}</p>{/if}
+  {#if size && sections.includes('Summary')}<p class="size">{size}</p>{/if}
   {#if shelves.length === 0 && library.isEmpty && library.folders.length === 0}
     <div class="welcome">
       <h2>{t('Welcome to Jellyfesh')}</h2>
@@ -80,7 +83,7 @@
       <p class="hint">{t('Files you open or drop on this page play without being added.')}</p>
     </div>
   {/if}
-  {#if recent.length > 0}
+  {#if recent.length > 0 && sections.includes('RecentlyAdded')}
     <section class="shelf" aria-labelledby="recent-title">
       <h2 id="recent-title" class="section">{t('Recently Added')}</h2>
       <ItemList plugin={LIBRARY} items={recent} />
@@ -107,7 +110,7 @@
   }
   .hint {
     margin: var(--jf-space-s4) 0 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .welcome {
@@ -121,7 +124,7 @@
   }
   .welcome h2 {
     margin: 0 0 var(--jf-space-s2);
-    font-size: var(--jf-type-text-h3);
+    font-size: calc(var(--jf-type-text-h3) * var(--jf-text-scale, 1));
   }
   .welcome p {
     margin: 0;

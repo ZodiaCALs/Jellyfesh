@@ -111,6 +111,15 @@ export class Theme {
     return JSON.parse(this.jf.theme_for_hue(hue));
   }
 
+  /** The look's glass (alpha × this, 0–1; ADR-0020). */
+  private glassScale = 1;
+
+  setGlass(scale: number) {
+    if (scale === this.glassScale) return;
+    this.glassScale = scale;
+    this.apply(false);
+  }
+
   setSettings(settings: WebSettings) {
     this.settings = settings;
     this.refresh();
@@ -208,7 +217,10 @@ export class Theme {
     const theme: CoreTheme = this.themes[this.appearance];
     // Reduce motion and transparency makes glass solid wherever it is used.
     const transparency = this.settings.reduce_effects ? 0 : this.settings.transparency;
-    const colors = withTransparency(theme.colors, transparency, (a, t) => this.jf.glass_alpha(a, t));
+    // The look's glass scales the glass tints' alpha (the Transparency setting and Reduce
+    // Transparency still win: solid stays solid).
+    const glass = this.settings.reduce_effects ? 1 : this.glassScale;
+    const colors = withTransparency(theme.colors, transparency, (a, t) => this.jf.glass_alpha(a, t) * glass);
     let css = ':root{';
     for (const [token, colour] of Object.entries(colors)) css += `${cssName(token)}:${rgba(colour)};`;
     css += `--jf-hue:${theme.hue};`;

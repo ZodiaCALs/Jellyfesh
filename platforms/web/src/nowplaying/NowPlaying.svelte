@@ -22,6 +22,10 @@
   import { nowPlayingMenu } from '../lib/items';
   import { back, crossfade, deeper } from '../lib/motion';
   import type { Pane } from '../lib/state/nav.svelte';
+  import { arrangement } from '../lib/look';
+  import CommentsPane from './CommentsPane.svelte';
+  import MakeLyrics from './MakeLyrics.svelte';
+  import SungLine from './SungLine.svelte';
   import InfoPane from './InfoPane.svelte';
   import LyricsPane from './LyricsPane.svelte';
   import QueuePane from './QueuePane.svelte';
@@ -53,11 +57,26 @@
     return () => clearTimeout(timer);
   });
 
-  const PANES: [Pane, string, string][] = [
+  // The look's layout (ADR-0020): Stage (v0.0.6), Artwork (the cover and the sung line in place of
+  // the Lyrics pane) or Lyrics (any pane across the window, a small cover in the corner).
+  const arranged = $derived(arrangement(app.look.value.now_playing, nav.pane));
+
+  // A fourth pane, Comments, for songs of a source whose plugin has comments (API 1.2).
+  const commented = $derived.by(() => {
+    void app.sources.revision;
+    const found = row ? player.sourceItem(row) : null;
+    return found && found.plugin.declares('Comments') ? found : null;
+  });
+  const PANES = $derived<[Pane, string, string][]>([
     ['lyrics', 'Lyrics', 'lyrics'],
     ['queue', 'Queue', 'queue'],
     ['info', 'Info', 'info'],
-  ];
+    ...(commented ? ([['comments', 'Comments', 'comments']] as [Pane, string, string][]) : []),
+  ]);
+  // A song without comments leaves the Comments pane for its lyrics.
+  $effect(() => {
+    if (nav.pane === 'comments' && !commented) nav.pane = 'lyrics';
+  });
 
   function choose(pane: Pane) {
     if (nav.pane === pane && phonePane) phonePane = false;
@@ -111,7 +130,7 @@
     </div>
   </header>
 
-  <main class="stage">
+  <main class="stage" class:cover-layout={arranged === 'cover'} class:wide-pane={arranged === 'wide-pane'}>
     <section class="player" aria-label={t('Player')}>
       <div class="hero" class:paused={!player.playing}>
         {#each theme.artwork ? [theme.artwork] : [] as url (url)}
@@ -134,6 +153,7 @@
             )}{/if}
         </p>
       </div>
+      {#if arranged === 'cover' && wide.current}<SungLine />{/if}
       {#if player.problem}
         <p class="problem" role="alert"><Icon name="alert" size={18} />{player.problem}</p>
       {/if}
@@ -142,7 +162,7 @@
     <section class="pane" aria-label={t(PANES.find((p) => p[0] === nav.pane)?.[1] ?? 'Lyrics')}>
       {#if nav.pane === 'lyrics'}
         {#if player.lyrics.status === 'ready'}
-          <LyricsPane lyrics={player.lyrics.lyrics} anchor={player.anchor} />
+          <LyricsPane lyrics={player.lyrics.lyrics} anchor={player.anchor} made={player.lyrics.made ?? null} />
         {:else if player.lyrics.status === 'loading'}
           <p class="muted">{t('Loading…')}</p>
         {:else}
@@ -153,12 +173,17 @@
                 ? t('Jellyfesh shows lyrics from a .lrc, .ttml or .vtt file next to the song, or from its tags.')
                 : t('The server has no lyrics for this song.')}
             </p>
+            {#if row}<MakeLyrics {row} />{/if}
           </div>
         {/if}
       {:else if nav.pane === 'queue'}
         <QueuePane />
       {:else}
-        <InfoPane />
+        {#if nav.pane === 'comments' && commented}
+          <CommentsPane plugin={commented.plugin} item={commented.item} />
+        {:else}
+          <InfoPane />
+        {/if}
       {/if}
     </section>
   </main>
@@ -241,7 +266,7 @@
     border-radius: var(--jf-radius-r-full);
     color: var(--jf-ink-90);
     font: inherit;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 600;
     cursor: pointer;
   }
@@ -264,7 +289,7 @@
     background: transparent;
     color: var(--jf-ink-70);
     font: inherit;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 600;
     cursor: pointer;
     transition:
@@ -356,7 +381,7 @@
   }
   .title {
     margin: 0;
-    font-size: var(--jf-type-roles-now-playing-title-size);
+    font-size: calc(var(--jf-type-roles-now-playing-title-size) * var(--jf-text-scale, 1));
     line-height: var(--jf-type-roles-now-playing-title-line-height);
     font-weight: var(--jf-type-roles-now-playing-title-weight);
     letter-spacing: -0.018em;
@@ -364,7 +389,7 @@
   }
   .artist {
     margin: 0;
-    font-size: 17px;
+    font-size: calc(17px * var(--jf-text-scale, 1));
     line-height: var(--jf-type-roles-now-playing-artist-line-height);
     font-weight: 500;
     color: var(--jf-ink-70);
@@ -378,12 +403,41 @@
     border-radius: var(--jf-radius-r-lg);
     background: var(--jf-tint-veil);
     color: var(--jf-ink-90);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     line-height: 1.4;
   }
   .problem :global(svg) {
     flex: none;
     color: var(--jf-warning);
+  }
+  /* The look's layouts, where the stage is wide (phones keep one view at a time). */
+  @media (min-width: 761px) {
+    .stage.cover-layout {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+    }
+    .stage.cover-layout .pane {
+      display: none;
+    }
+    .stage.cover-layout .player {
+      align-items: center;
+      text-align: center;
+    }
+    .stage.wide-pane {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      row-gap: var(--jf-space-s4);
+    }
+    .stage.wide-pane .player {
+      flex-direction: row;
+      align-items: center;
+      gap: var(--jf-space-s4);
+      padding-top: 0;
+    }
+    .stage.wide-pane .hero {
+      width: 72px;
+      height: 72px;
+    }
   }
   .pane {
     height: 100%;
@@ -401,7 +455,7 @@
     color: var(--jf-ink-70);
   }
   .title-2 {
-    font-size: var(--jf-type-text-h3);
+    font-size: calc(var(--jf-type-text-h3) * var(--jf-text-scale, 1));
     font-weight: 700;
     color: var(--jf-ink-90);
   }
@@ -515,10 +569,10 @@
       height: auto;
     }
     .title {
-      font-size: 25px;
+      font-size: calc(25px * var(--jf-text-scale, 1));
     }
     .artist {
-      font-size: 15.5px;
+      font-size: calc(15.5px * var(--jf-text-scale, 1));
     }
     .pane {
       display: none;

@@ -8,6 +8,10 @@ import { openLibraryStore } from './library/store';
 import { PluginHost } from './plugins/host';
 import { openStore, type Store } from './plugins/storage';
 import { Artworks } from './state/artwork';
+import { DesktopLyricsWindow } from './state/desktopLyrics.svelte';
+import { AiLyrics } from './state/aiLyrics.svelte';
+import { Look } from './state/look.svelte';
+import { Pro } from './state/pro.svelte';
 import { Files } from './state/files';
 import { Library } from './state/library.svelte';
 import { Nav } from './state/nav.svelte';
@@ -30,6 +34,10 @@ export interface App {
   artworks: Artworks;
   player: Player;
   search: Search;
+  desktopLyrics: DesktopLyricsWindow;
+  pro: Pro;
+  look: Look;
+  aiLyrics: AiLyrics;
 }
 
 const KEY = Symbol('jellyfesh');
@@ -71,14 +79,27 @@ export async function createApp(): Promise<App> {
   const player = new Player(jf, core, sources, files, theme, artworks, settings.value);
   const search = new Search(jf, sources);
   const nav = new Nav();
+  const desktopLyrics = new DesktopLyricsWindow();
+  const pro = new Pro(jf);
+  host.proActive = pro.active;
+  pro.onChange((active) => {
+    host.proActive = active;
+  });
+  const look = new Look(jf, host, pro);
+  const aiLyrics = new AiLyrics(jf, host, pro, player);
+  look.onChange((value) => theme.setGlass(value.glass));
   settings.onChange((value) => {
     theme.setSettings(value);
     player.applySettings(value);
     void setLanguage(value.language);
+    desktopLyrics.follow(value.desktop_lyrics);
   });
   await Promise.all([sources.init(), library.init()]);
   player.restore(() => library.restoreQueue());
-  const app: App = { jf, core, store, settings, theme, nav, sources, files, library, artworks, player, search };
+  const app: App = { jf, core, store, settings, theme, nav, sources, files, library, artworks, player, search, desktopLyrics, pro, look, aiLyrics };
+  desktopLyrics.attach(app);
+  void look.refresh();
+  void aiLyrics.refresh();
   if (new URLSearchParams(location.search).has('e2e')) {
     // A handle for the end-to-end tests (gap measurement, state checks); only with ?e2e. The
     // aurora's drift stands still there, so screenshots and motion counts do not depend on time.

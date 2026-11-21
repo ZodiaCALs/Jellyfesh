@@ -180,7 +180,7 @@
   }
   .kind {
     margin: 0;
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -188,7 +188,7 @@
   }
   h1 {
     margin: 4px 0;
-    font-size: var(--jf-type-text-h2);
+    font-size: calc(var(--jf-type-text-h2) * var(--jf-text-scale, 1));
     font-weight: 700;
     line-height: 1.1;
     letter-spacing: -0.02em;
@@ -203,7 +203,7 @@
     background: none;
     color: var(--jf-accent-text);
     font: inherit;
-    font-size: var(--jf-type-text-lede);
+    font-size: calc(var(--jf-type-text-lede) * var(--jf-text-scale, 1));
     font-weight: 600;
     text-align: start;
   }
@@ -215,7 +215,7 @@
   }
   .meta {
     margin: 4px 0 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-70);
   }
@@ -289,7 +289,7 @@
   .empty,
   .footer {
     margin: var(--jf-space-s4) var(--jf-space-s2) 0;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   /* Phones: the artwork takes the full width. */

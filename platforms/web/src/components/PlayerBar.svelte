@@ -4,23 +4,47 @@
   // The artwork (56 px) and two lines open Now Playing; in the middle the transport sits above the
   // seek bar and its times; Lyrics, Queue and the volume are at the end. It bends CMP-02 (one
   // control) on purpose, for desktop use; play stays its only accent fill. The seek bar's clock
-  // sleeps while inactive.
+  // sleeps while inactive. With Show Lyrics Bar on and timed lyrics, the line being sung fills word
+  // by word under the title, instead of the artist, with its translation when Show Translations is
+  // on (ADR-0022 §6). While Desktop Lyrics waits for a click (the page opened with it on), Show
+  // Desktop Lyrics opens it.
+  import { untrack } from 'svelte';
   import { useApp } from '../lib/app';
   import { crossfade } from '../lib/motion';
   import { t } from '../lib/i18n/index.svelte';
+  import { LyricsBarClock, showsLyricsBar } from '../lib/state/lyricsBar.svelte';
   import Icon from './Icon.svelte';
+  import LyricsBarLine from './LyricsBarLine.svelte';
   import SeekBar from './SeekBar.svelte';
   import Transport from './Transport.svelte';
   import Volume from './Volume.svelte';
 
   let { active = true }: { active?: boolean } = $props();
-  const { player, nav, theme } = useApp();
+  const { player, nav, theme, settings, desktopLyrics } = useApp();
   const row = $derived(player.current);
   const second = $derived(
     player.waitingForPlay
       ? t('Press play to resume')
       : [row?.artist ?? t('Unknown Artist'), row?.album].filter(Boolean).join(' · '),
   );
+
+  const lyrics = $derived(player.lyrics.status === 'ready' ? player.lyrics.lyrics : null);
+  const showsBar = $derived(showsLyricsBar(settings.value.show_lyrics_bar, lyrics));
+  const clock = new LyricsBarClock();
+  $effect(() => {
+    const timeline = showsBar && lyrics ? lyrics.timeline : null;
+    const anchor = player.anchor;
+    untrack(() => clock.set(timeline, anchor));
+  });
+  $effect(() => clock.setActive(active));
+  $effect(() => () => clock.destroy());
+  const barLine = $derived(
+    showsBar && lyrics && !player.waitingForPlay && clock.bar.line !== null ? (lyrics.doc.lines[clock.bar.line] ?? null) : null,
+  );
+  const translation = $derived.by(() => {
+    if (!barLine || !lyrics || !settings.value.show_translation) return null;
+    return lyrics.doc.tracks.find((track) => track.kind === 'translation')?.lines[String(barLine.id)]?.text ?? null;
+  });
 </script>
 
 {#if row}
@@ -34,7 +58,14 @@
         </span>
         <span class="text">
           <span class="title">{row.title}</span>
-          <span class="second">{second}</span>
+          {#if barLine && lyrics}
+            <span class="lyric-line" lang={lyrics.doc.language ?? undefined}>
+              <LyricsBarLine line={barLine} {clock} wordTimed={lyrics.doc.timing === 'word'} reduced={theme.reducedMotion} />
+            </span>
+            {#if translation}<span class="translation">{translation}</span>{/if}
+          {:else}
+            <span class="second">{second}</span>
+          {/if}
         </span>
       </button>
       <div class="middle">
@@ -42,6 +73,11 @@
         <SeekBar compact anchor={player.anchor} durationMs={player.durationMs} onseek={(ms) => player.seek(ms)} {active} />
       </div>
       <div class="end">
+        {#if desktopLyrics.waiting}
+          <button class="tool" aria-label={t('Show Desktop Lyrics')} title={t('Show Desktop Lyrics')} onclick={() => void desktopLyrics.show()}>
+            <Icon name="external" />
+          </button>
+        {/if}
         <button class="tool" aria-label={t('Lyrics')} title={t('Lyrics')} onclick={() => nav.openNowPlaying('lyrics')}>
           <Icon name="lyrics" />
         </button>
@@ -127,12 +163,24 @@
     white-space: nowrap;
   }
   .title {
-    font-size: 15px;
+    font-size: calc(15px * var(--jf-text-scale, 1));
     font-weight: 600;
     color: var(--jf-ink-90);
   }
   .second {
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--jf-text-scale, 1));
+    color: var(--jf-ink-70);
+  }
+  .lyric-line {
+    min-width: 0;
+    font-size: calc(13px * var(--jf-text-scale, 1));
+    font-weight: 600;
+  }
+  .translation {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: calc(11px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .middle {

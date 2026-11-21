@@ -12,6 +12,8 @@ export interface MenuEntry {
   label: string;
   action: () => void;
   disabled?: boolean;
+  /** A check item: whether it is on. */
+  checked?: boolean;
 }
 
 /** Where Open in {Service} goes: the link the core filled in, and the plugin's name. */
@@ -156,9 +158,17 @@ export function itemMenu(
   }
   const artist = item.kind !== 'Artist' ? artistOf(item) : null;
   if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
+  if (offersInfo(app, plugin, item)) menu.push({ label: t('Get Info'), action: () => (app.nav.info = { plugin, item }) });
   const link = linkOf(app, plugin, item);
   if (link) menu.push(openInEntry(link));
   return menu;
+}
+
+/** Get Info is offered for songs, and for albums and artists the library or the source describes. */
+function offersInfo(app: App, plugin: string, item: Item): boolean {
+  if (item.kind === 'Track') return true;
+  if (item.kind !== 'Album' && item.kind !== 'Artist') return false;
+  return plugin !== LIBRARY && (app.sources.get(plugin)?.declares('Details') ?? false);
 }
 
 /**
@@ -167,15 +177,35 @@ export function itemMenu(
  */
 export function nowPlayingMenu(app: App, row: Row | null): MenuEntry[] {
   const found = row ? app.player.sourceItem(row) : null;
-  if (!found) return [];
-  const plugin = found.plugin.id;
   const menu: MenuEntry[] = [];
-  const album = albumOf(found.item);
-  if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
-  const artist = artistOf(found.item);
-  if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
-  const link = linkOf(app, plugin, found.item);
-  if (link) menu.push(openInEntry(link));
+  if (found) {
+    const plugin = found.plugin.id;
+    const album = albumOf(found.item);
+    if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
+    const artist = artistOf(found.item);
+    if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
+    const link = linkOf(app, plugin, found.item);
+    if (link) menu.push(openInEntry(link));
+  }
+  // Made lyrics: Make Again, and Delete Made Lyrics (asks first, in Now Playing).
+  if (row && app.aiLyrics.hasMade(row)) {
+    menu.push(
+      { label: t('Make Again'), action: () => void app.aiLyrics.make(row) },
+      { label: t('Delete Made Lyrics'), action: () => (app.aiLyrics.deleting = row) },
+    );
+  }
+  // At the end, as in the apps: the setting as a check item.
+  if (row && app.desktopLyrics.supported) {
+    const on = app.settings.value.desktop_lyrics;
+    menu.push({
+      label: t('Desktop Lyrics'),
+      checked: on && app.desktopLyrics.shown,
+      action: () => {
+        if (on && !app.desktopLyrics.shown) void app.desktopLyrics.show();
+        else app.settings.update((d) => (d.desktop_lyrics = !on));
+      },
+    });
+  }
   return menu;
 }
 

@@ -9,7 +9,7 @@
   --jf-ink-50: rgb(16 24 32 / 0.62);
   color-scheme: light dark;
   font-family: var(--jf-font-sans);
-  font-size: 16px;
+  font-size: calc(16px * var(--jf-text-scale, 1));
   line-height: 1.4;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -101,7 +101,7 @@ select {
  * Luminous: 48 px (type.text-h1) on wide windows. */
 .page-title {
   margin: 0 0 var(--jf-space-s6);
-  font-size: var(--jf-type-text-h2);
+  font-size: calc(var(--jf-type-text-h2) * var(--jf-text-scale, 1));
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.024em;
@@ -109,7 +109,7 @@ select {
 
 .section {
   margin: 0 0 var(--jf-space-s3);
-  font-size: var(--jf-type-roles-section-size);
+  font-size: calc(var(--jf-type-roles-section-size) * var(--jf-text-scale, 1));
   line-height: var(--jf-type-roles-section-line-height);
   font-weight: var(--jf-type-roles-section-weight);
 }
@@ -146,6 +146,36 @@ select {
   }
 }
 
+/* A lyric word being sung: its sung layer (a background clipped to the text) grows from where the
+ * word is (--from) to the whole word, in the time the word has left (--ms, linear). Two names, so
+ * a redraw restarts the sweep from the new place: the Lyrics pane and the lyrics bar alternate
+ * them by redraw. Global, because the name is set inline. */
+@keyframes jf-sweep-0 {
+  from {
+    background-size:
+      calc(var(--from) + 0.3em) 100%,
+      100% 100%;
+  }
+  to {
+    background-size:
+      calc(100% + 0.3em) 100%,
+      100% 100%;
+  }
+}
+
+@keyframes jf-sweep-1 {
+  from {
+    background-size:
+      calc(var(--from) + 0.3em) 100%,
+      100% 100%;
+  }
+  to {
+    background-size:
+      calc(100% + 0.3em) 100%,
+      100% 100%;
+  }
+}
+
 /* Sheets and popovers scale from 96 % and fade (dur-2 Fluid). */
 @keyframes jf-pop-in {
   from {
@@ -178,7 +208,7 @@ select {
 
 @media (min-width: 900px) {
   .page-title {
-    font-size: var(--jf-type-text-h1);
+    font-size: calc(var(--jf-type-text-h1) * var(--jf-text-scale, 1));
   }
 }
 

@@ -162,16 +162,16 @@
     white-space: nowrap;
   }
   .name {
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
     font-weight: 500;
     color: var(--jf-ink-90);
   }
   .second {
-    font-size: 12px;
+    font-size: calc(12px * var(--jf-text-scale, 1));
     color: var(--jf-ink-70);
   }
   .length {
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-variant-numeric: tabular-nums;
     color: var(--jf-ink-70);
   }

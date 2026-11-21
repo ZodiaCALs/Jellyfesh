@@ -13,6 +13,8 @@ import { pingRelay, type RelayConfig, type RelayErrorCode } from '../plugins/rel
 export interface SourceView {
   id: string;
   name: string;
+  /** An extension (Settings › Extensions): makes lyrics or changes the look. */
+  extension: boolean;
   version: string;
   description: string | null;
   official: boolean;
@@ -214,6 +216,7 @@ export class Sources {
       return {
         id: p.id,
         name: p.name,
+        extension: p.info?.extension ?? p.entry.extension ?? false,
         version: p.info?.version ?? p.entry.version,
         description: p.info?.description ?? p.entry.description ?? null,
         official: p.official,

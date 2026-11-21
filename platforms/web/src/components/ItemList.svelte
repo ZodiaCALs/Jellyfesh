@@ -14,6 +14,7 @@
     plugin,
     items,
     numbered = false,
+    row = false,
     hasMore = false,
     loadingMore = false,
     onmore,
@@ -23,6 +24,8 @@
     plugin: string;
     items: Item[];
     numbered?: boolean;
+    /** One row of cards that scrolls sideways (a Discover row shelf), tracks included. */
+    row?: boolean;
     hasMore?: boolean;
     loadingMore?: boolean;
     onmore?: () => void;
@@ -62,6 +65,13 @@
   }
 </script>
 
+{#if row}
+  <div class="row-shelf">
+    {#each items as item, index (item.kind + item.id)}
+      <ItemCard {plugin} {item} index={index < STAGGERED ? index : null} onactivate={(origin) => activate(item, origin)} />
+    {/each}
+  </div>
+{:else}
 {#if folders.length}
   <div class="folders">
     {#each folders as item (item.id)}
@@ -92,6 +102,7 @@
     {/each}
   </div>
 {/if}
+{/if}
 {#if hasMore}
   <div class="more" bind:this={sentinel}>
     <button onclick={() => onmore?.()} disabled={loadingMore}>{t('Load More')}</button>
@@ -99,6 +110,22 @@
 {/if}
 
 <style>
+  /* A row shelf: cards side by side, scrolling sideways, snapping to each card. */
+  .row-shelf {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 168px;
+    gap: var(--jf-space-s4);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    padding: 4px 4px var(--jf-space-s3);
+    margin: -4px -4px 0;
+    scrollbar-width: thin;
+  }
+  .row-shelf > :global(*) {
+    scroll-snap-align: start;
+  }
   .folders {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

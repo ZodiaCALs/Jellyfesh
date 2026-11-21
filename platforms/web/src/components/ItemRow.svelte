@@ -162,7 +162,7 @@
     width: 40px;
     font-variant-numeric: tabular-nums;
     color: var(--jf-ink-70);
-    font-size: 14px;
+    font-size: calc(14px * var(--jf-text-scale, 1));
   }
   .glyph {
     display: none;
@@ -207,7 +207,7 @@
     white-space: nowrap;
   }
   .title {
-    font-size: var(--jf-type-roles-list-title-size);
+    font-size: calc(var(--jf-type-roles-list-title-size) * var(--jf-text-scale, 1));
     line-height: var(--jf-type-roles-list-title-line-height);
     font-weight: var(--jf-type-roles-list-title-weight);
     color: var(--jf-ink-90);
@@ -217,7 +217,7 @@
     font-weight: 600;
   }
   .second {
-    font-size: var(--jf-type-roles-list-secondary-size);
+    font-size: calc(var(--jf-type-roles-list-secondary-size) * var(--jf-text-scale, 1));
     line-height: var(--jf-type-roles-list-secondary-line-height);
     color: var(--jf-ink-70);
   }
@@ -244,13 +244,13 @@
     border-radius: var(--jf-radius-r-xs);
     background: var(--jf-ink-10);
     color: var(--jf-ink-70);
-    font-size: 10px;
+    font-size: calc(10px * var(--jf-text-scale, 1));
     font-weight: 700;
     vertical-align: 1px;
   }
   .length {
     flex: none;
-    font-size: 13px;
+    font-size: calc(13px * var(--jf-text-scale, 1));
     font-variant-numeric: tabular-nums;
     color: var(--jf-ink-70);
   }
