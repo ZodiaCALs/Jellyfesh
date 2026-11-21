@@ -2,6 +2,7 @@
 // structured-cloned: jco's shapes (including bigint and Uint8Array) pass through unchanged.
 
 import type { AllowRule, PackageInfo } from '../core/types';
+import type { MakeAudio } from './imports';
 import type { RelayConfig, RelayErrorCode } from './relay';
 
 export type ToWorker =
@@ -39,6 +40,8 @@ export type ToWorker =
       /** Values typed into a login form being submitted. */
       protect: string[];
       keystore: boolean;
+      /** For `maker.make`: the song's audio, decoded by the page (API 1.2, the `audio` import). */
+      audio?: MakeAudio | null;
     }
   | { type: 'settings'; settings: string; allow: AllowRule[]; maxRps: number }
   | { type: 'relay'; relay: RelayConfig | null };
@@ -55,4 +58,6 @@ export type FromWorker =
   | { type: 'log'; level: string; message: string }
   | { type: 'network-error'; url: string; kind: 'mixed-content' | 'network' | 'relay'; reason?: RelayErrorCode }
   /** The cookie jar changed: all of it (for the next worker of this visit), and what outlives the visit. */
-  | { type: 'cookies'; all: string; persistent: string };
+  | { type: 'cookies'; all: string; persistent: string }
+  /** The plugin read the song's audio in the `maker.make` call `seq`. */
+  | { type: 'audio-read'; seq: number };

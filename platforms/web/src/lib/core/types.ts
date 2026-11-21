@@ -78,7 +78,16 @@ export type Capability =
   | 'Artwork'
   | 'Recommendations'
   /** API 1.1: plays on the person's own devices (a manifest capability; Jellyfesh Web refuses such plugins). */
-  | 'Remote';
+  | 'Remote'
+  /** API 1.2 (manifest capabilities): making lyrics and the look (Pro), Discover, details, comments. */
+  | 'MakeLyrics'
+  | 'Appearance'
+  | 'Discover'
+  | 'Details'
+  | 'Comments';
+
+/** API 1.2: a host import the manifest declares. */
+export type Permission = 'Audio' | 'Speech';
 export type AuthKind = 'Qr' | 'Oauth' | 'CookieImport' | 'PasswordExchange' | 'ApiKey';
 export type FieldKind = 'Text' | 'Email' | 'Url' | 'Number' | 'CookieHeader';
 
@@ -206,27 +215,201 @@ export interface PackageInfo {
   links?: Links;
   wasm_sha256: string;
   has_icon: boolean;
+  /** API 1.2; missing from packages kept before it. */
+  permissions?: Permission[];
+  /** The schema translated by the package, by language tag (API 1.2). */
+  localized_schemas?: Record<string, SettingsSchema>;
+  requires_pro?: boolean;
+  extension?: boolean;
+}
+
+// ---- API 1.2 answers (jf_plugin_model's types, as serde writes them) --------------------------
+
+export type ShelfStyle = 'Row' | 'Grid' | 'Chart';
+
+export interface Shelf {
+  id: string;
+  title: string;
+  style: ShelfStyle;
+  items: Item[];
+  /** A node for See All (browse it). */
+  more: string | null;
+}
+
+// ---- details (jf_web::details) --------------------------------------------------------------
+
+export type QualityLabel = 'HiResLossless' | 'Lossless' | 'High' | 'Standard';
+
+/** The format of what plays or of a file, with the core's quality label. */
+export interface AudioFormat {
+  codec: string | null;
+  sample_rate_hz: number | null;
+  bit_depth: number | null;
+  channels: number | null;
+  bitrate_kbps: number | null;
+  lossless: boolean | null;
+  quality: QualityLabel | null;
+}
+
+/** One row of Get Info, by key; the page words it. */
+export type InfoRow =
+  | { key: 'Title' | 'Artist' | 'Album' | 'Version' | 'Year' | 'Genre' | 'Composer' | 'Lyricist' | 'Label' | 'File' | 'Source'; value: string }
+  | { key: 'Length' | 'Size'; value: number }
+  | { key: 'Bitrate'; value: number }
+  | { key: 'Quality'; value: QualityLabel }
+  | { key: 'Format'; value: { codec: string | null; bit_depth: number | null; sample_rate_hz: number | null; channels: number | null } }
+  | { key: 'ReplayGain'; value: ReplayGainInfo };
+
+/** What the page knows of a song, for its rows (jf_web::details::Known). */
+export interface KnownSong {
+  title?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  year?: string | null;
+  duration_ms?: number | null;
+  size_bytes?: number | null;
+  replaygain?: ReplayGainInfo | null;
+  file?: string | null;
+  source?: string | null;
+}
+
+export interface SongRows {
+  about: InfoRow[];
+  audio: InfoRow[];
+}
+
+/** A source's Discover page (jf_web::discover). */
+export interface DiscoverPage {
+  shelves: Shelf[];
+  error: string | null;
+  /** What See All browses, by shelf id. */
+  see_all: Record<string, Item>;
+  /** Made by Jellyfesh rather than the plugin: shelves are worded by id (`for_you`). */
+  made: boolean;
+}
+
+export type FactKey =
+  | 'Version'
+  | 'Genre'
+  | 'Language'
+  | 'Released'
+  | 'Label'
+  | 'Composer'
+  | 'Lyricist'
+  | 'Arranger'
+  | 'Producer'
+  | 'Popularity'
+  | 'Quality'
+  | { Other: string };
+
+export interface Fact {
+  key: FactKey;
+  value: string;
+}
+
+export interface ItemDetails {
+  description: string | null;
+  image: ImageRef | null;
+  facts: Fact[];
+  comment_count: number | null;
+}
+
+export interface Comment {
+  id: string;
+  author: string;
+  avatar: ImageRef | null;
+  text: string;
+  likes: number | null;
+  time_ms: number | null;
+  replies: number | null;
+}
+
+export interface CommentPage {
+  hot: Comment[];
+  comments: Comment[];
+  total: number | null;
+  next: string | null;
+}
+
+export type MakerNeed = 'Nothing' | 'SignIn' | { Model: string } | { Unavailable: string };
+
+export interface MakerPlan {
+  mode: 'OnDevice' | 'Online';
+  engine: string;
+  upload_to: string | null;
+  need: MakerNeed;
+  automatic: boolean;
+}
+
+export interface MakeSong {
+  title: string;
+  artist: string | null;
+  album: string | null;
+  duration_ms: number;
+  text: string | null;
+  language: string | null;
+}
+
+export interface Made {
+  lyrics: LyricPayload;
+  engine: string;
+}
+
+export type Typeface = 'System' | 'Rounded' | 'Serif' | 'Mono';
+export type Density = 'Compact' | 'Standard' | 'Roomy';
+export type LyricsWeight = 'Regular' | 'Medium' | 'Semibold' | 'Bold' | 'Heavy';
+export type Highlight = 'Artwork' | 'Accent' | { Custom: number };
+export type Place = 'Home' | 'Albums' | 'Artists' | 'Songs' | 'Playlists' | 'Favourites' | 'Search' | 'Sources';
+export type HomeSection = 'Summary' | 'RecentlyAdded' | 'RecentlyPlayed' | 'MostPlayed' | 'Favourites';
+export type NowPlayingLayout = 'Stage' | 'Artwork' | 'Lyrics';
+export type MiniPlayerStyle = 'Bar' | 'Compact' | 'Floating';
+
+/** An appearance plugin's look (API 1.2); every field optional. */
+export interface Look {
+  corner_scale: number | null;
+  glass: number | null;
+  aurora: number | null;
+  typeface: Typeface | null;
+  text_scale: number | null;
+  density: Density | null;
+  lyrics_weight: LyricsWeight | null;
+  lyrics_glow: number | null;
+  lyrics_highlight: Highlight | null;
+  sidebar: Place[] | null;
+  home: HomeSection[] | null;
+  now_playing: NowPlayingLayout | null;
+  mini_player: MiniPlayerStyle | null;
+}
+
+/** One setting of a plugin's schema (profiles 1.1 and 1.2). */
+export interface SettingSpec {
+  type: 'string' | 'integer' | 'number' | 'boolean' | 'array';
+  title?: string;
+  description?: string;
+  default?: unknown;
+  enum?: string[];
+  /** Profile 1.2: `color` is `#RRGGBB` (a colour well). */
+  format?: 'uri' | 'email' | 'color';
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+  /** Profile 1.2: a slider's step. */
+  multipleOf?: number;
+  /** Profile 1.2: choices with titles. */
+  oneOf?: { const: string | number; title?: string }[];
+  /** Profile 1.2: an ordered checklist's items (`type: "array"`, `uniqueItems`). */
+  items?: { type?: string; enum?: string[]; oneOf?: { const: string; title?: string }[] };
+  uniqueItems?: boolean;
+  /** Profile 1.2: consecutive settings with the same group share a heading. */
+  'x-jf-group'?: string;
 }
 
 export interface SettingsSchema {
   title?: string;
   description?: string;
   type?: 'object';
-  properties?: Record<
-    string,
-    {
-      type: 'string' | 'integer' | 'number' | 'boolean';
-      title?: string;
-      description?: string;
-      default?: unknown;
-      enum?: string[];
-      format?: 'uri' | 'email';
-      minLength?: number;
-      maxLength?: number;
-      minimum?: number;
-      maximum?: number;
-    }
-  >;
+  properties?: Record<string, SettingSpec>;
   required?: string[];
 }
 
@@ -355,6 +538,10 @@ export interface WebSettings {
   resume_on_launch: boolean;
   quality: Quality;
   language: string | null;
+  /** Show Lyrics Bar (Settings › Appearance › Lyrics); on by default. */
+  show_lyrics_bar: boolean;
+  /** Desktop Lyrics: a Document Picture-in-Picture window, where the browser offers one; off by default. */
+  desktop_lyrics: boolean;
 }
 
 // ---- lyrics and themes ------------------------------------------------------------------------

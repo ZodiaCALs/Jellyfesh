@@ -12,10 +12,13 @@ import {
   KV_QUOTA,
   LOG_BURST,
   LogLimiter,
+  type MakeAudio,
+  MAX_WAV_MS,
   sanitizeLog,
   TransportError,
   type TransportRequest,
   type TransportResponse,
+  wavOf,
 } from '../../src/lib/plugins/imports';
 
 const SERVER = 'http://192.168.1.20:4533';
@@ -254,5 +257,71 @@ describe('log', () => {
     const f = fake({ protect: ['hunter2-password'] });
     (createImports(f.deps)['jellyfesh:plugin/log'] as { log(level: string, m: string): void }).log('info', 'pw=hunter2-password');
     expect(f.logs).toEqual([['info', 'pw=***']]);
+  });
+});
+
+describe('audio and speech (API 1.2)', () => {
+  // One second of a ramp at 16 kHz, as the page decodes a song before `maker.make`.
+  const pcm = Int16Array.from({ length: 16_000 }, (_, i) => i - 8000);
+  const song = (consented: string[] = ['https://api.example']): MakeAudio => ({ track: 7n, durationMs: 1000, pcm, consented });
+
+  function withAudio(permissions: string[], current: MakeAudio | null) {
+    const f = fake();
+    let reads = 0;
+    f.deps.permissions = permissions;
+    f.deps.audio = () => current;
+    f.deps.onAudioRead = () => reads++;
+    const imports = createImports(f.deps);
+    return {
+      audio: imports['jellyfesh:plugin/audio'] as { info(t: bigint): { durationMs: bigint }; wav(t: bigint, s: bigint, l: bigint): Uint8Array },
+      speech: imports['jellyfesh:plugin/speech'] as { models(): unknown[]; transcribe(t: bigint, o: unknown): unknown },
+      versioned: imports['jellyfesh:plugin/audio@1.2.0'],
+      reads: () => reads,
+    };
+  }
+
+  it('writes 16 kHz mono 16-bit WAV', () => {
+    const wav = wavOf(Int16Array.from([1, -2, 32767]));
+    const view = new DataView(wav.buffer);
+    const text = (at: number) => String.fromCharCode(...wav.subarray(at, at + 4));
+    expect([text(0), text(8), text(12), text(36)]).toEqual(['RIFF', 'WAVE', 'fmt ', 'data']);
+    expect(view.getUint32(4, true)).toBe(36 + 6);
+    expect(view.getUint16(20, true)).toBe(1); // PCM
+    expect(view.getUint16(22, true)).toBe(1); // mono
+    expect(view.getUint32(24, true)).toBe(16_000);
+    expect(view.getUint32(28, true)).toBe(32_000);
+    expect(view.getUint16(34, true)).toBe(16);
+    expect(view.getUint32(40, true)).toBe(6);
+    expect([view.getInt16(44, true), view.getInt16(46, true), view.getInt16(48, true)]).toEqual([1, -2, 32767]);
+  });
+
+  it("gives the call's song as WAV, in parts, and says when it is first read", () => {
+    const a = withAudio(['audio'], song());
+    expect(a.audio.info(7n)).toEqual({ durationMs: 1000n });
+    const half = a.audio.wav(7n, 500n, 10_000n);
+    expect(half.length).toBe(44 + 8000 * 2);
+    expect(new DataView(half.buffer).getInt16(44, true)).toBe(0); // sample 8000 of the ramp
+    expect(a.audio.wav(7n, 2000n, 1000n).length).toBe(44); // past the end: no samples
+    expect(a.reads()).toBe(2);
+    expect(a.versioned).toBe(a.audio);
+    expect(MAX_WAV_MS).toBe(480_000);
+  });
+
+  it('refuses without the permission, consent or the right song', () => {
+    expect(attempt(() => withAudio([], song()).audio.info(7n))).toMatchObject({ ok: false, error: { tag: 'not-declared' } });
+    expect(attempt(() => withAudio(['audio'], song([])).audio.wav(7n, 0n, 1000n))).toMatchObject({ ok: false, error: { tag: 'no-consent' } });
+    expect(attempt(() => withAudio(['audio'], song()).audio.info(8n))).toMatchObject({ ok: false, error: { tag: 'unavailable' } });
+    expect(attempt(() => withAudio(['audio'], null).audio.info(7n))).toMatchObject({ ok: false, error: { tag: 'unavailable' } });
+  });
+
+  it('has no speech recognition in Jellyfesh Web', () => {
+    const a = withAudio(['audio', 'speech'], song());
+    expect(a.speech.models()).toEqual([]);
+    const result = attempt(() => a.speech.transcribe(7n, { model: 'base' }));
+    expect(result).toMatchObject({ ok: false, error: { tag: 'unavailable' } });
+    expect(attempt(() => withAudio(['audio'], song()).speech.transcribe(7n, { model: 'base' }))).toMatchObject({
+      ok: false,
+      error: { tag: 'not-declared' },
+    });
   });
 });

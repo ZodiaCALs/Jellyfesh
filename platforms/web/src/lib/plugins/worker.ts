@@ -6,7 +6,7 @@
 
 import initSandbox, * as sandbox from '../../../generated/wasm/jf_web_sandbox.js';
 import sandboxUrl from '../../../generated/wasm/jf_web_sandbox_bg.wasm?url';
-import { type CallContext, createImports, type HttpTransport, TransportError, type TransportResponse } from './imports';
+import { type CallContext, createImports, type HttpTransport, type MakeAudio, TransportError, type TransportResponse } from './imports';
 import type { FromWorker, ToWorker } from './protocol';
 import type { RelayConfig } from './relay';
 
@@ -24,6 +24,10 @@ let relay: RelayConfig | null = null;
 let jar: sandbox.CookieJar | null = null;
 const memories: WebAssembly.Memory[] = [];
 const call: CallContext = { deadline: Number.POSITIVE_INFINITY, protect: [], keystore: false, received: 0 };
+/** The song of the `maker.make` call in progress, and that call's number. */
+let audio: MakeAudio | null = null;
+let audioSeq = 0;
+let audioRead = false;
 const kv = new Map<string, Uint8Array>();
 const secrets = new Map<string, string>();
 
@@ -114,6 +118,13 @@ async function init(message: Extract<ToWorker, { type: 'init' }>) {
     onCookies: () => {
       if (jar) post({ type: 'cookies', all: jar.to_json(), persistent: jar.persistent_json(Date.now()) });
     },
+    permissions: (info.permissions ?? []).map((p: string) => p.toLowerCase()),
+    audio: () => audio,
+    onAudioRead: () => {
+      if (audioRead) return;
+      audioRead = true;
+      post({ type: 'audio-read', seq: audioSeq });
+    },
     crypto: sandbox,
     http: transport,
     pageIsHttps: scope.location.protocol === 'https:',
@@ -169,6 +180,9 @@ function run(message: Extract<ToWorker, { type: 'call' }>) {
   call.protect = message.protect;
   call.keystore = message.keystore;
   call.received = 0;
+  audio = message.audio ?? null;
+  audioSeq = message.seq;
+  audioRead = false;
   try {
     const value = instance[iface][name](...message.args);
     post({ type: 'result', seq: message.seq, ok: true, value, memory: memoryBytes() });
@@ -184,6 +198,7 @@ function run(message: Extract<ToWorker, { type: 'call' }>) {
     call.protect = [];
     call.keystore = false;
     call.deadline = Number.POSITIVE_INFINITY;
+    audio = null;
   }
 }
 

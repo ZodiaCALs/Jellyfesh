@@ -1,7 +1,8 @@
 // Plugin API 1.1 in Jellyfesh Web (ADR-0018): a source whose manifest has [links] offers Open in
 // {Service} for its items, and a source that plays on the person's own devices (playback_mode =
 // "remote") is refused at install, since the page has no remote sessions. Both plugins are the
-// build's Subsonic package with an invented manifest (tests/e2e/packages.ts), signed by nobody.
+// build's Subsonic package with an invented manifest (tests/e2e/packages.ts), signed by nobody,
+// at the package's own API version (1.2 since v0.0.7, which keeps what 1.1 added).
 
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,15 +27,7 @@ test.beforeAll(async ({ request }) => {
   expect(response.ok()).toBe(true);
   const subsonic = await response.body();
   const common = (manifest: string, id: string, name: string) =>
-    swap(
-      swap(
-        swap(swap(manifest, /^id = ".*"$/m, `id = "${id}"`), /^name = ".*"$/m, `name = "${name}"`),
-        /^api_version = ".*"$/m,
-        'api_version = "1.1"',
-      ),
-      /^official = true$/m,
-      'official = false',
-    );
+    swap(swap(swap(manifest, /^id = ".*"$/m, `id = "${id}"`), /^name = ".*"$/m, `name = "${name}"`), /^official = true$/m, 'official = false');
   dir = mkdtempSync(join(tmpdir(), 'jf-links-'));
   linked = join(dir, 'linked.jfpkg');
   writeFileSync(linked, repackage(subsonic, (m) => common(m, 'org.example.linked', 'Linked Sample') + LINKS));

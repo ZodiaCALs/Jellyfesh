@@ -28,6 +28,47 @@
 
 import { type RelayConfig, RelayError, type RelayErrorCode, unwrap, wrap } from './relay';
 
+/**
+ * The song of the `maker.make` call in progress (API 1.2, the `audio` import): the page decoded
+ * it before the call, with the browser's decoders, to 16 kHz mono 16-bit PCM, once the person
+ * allowed sending it where the plugin's plan says (`consented`).
+ */
+export interface MakeAudio {
+  /** The call's track handle. */
+  track: bigint;
+  durationMs: number;
+  /** 16 kHz mono 16-bit little-endian samples. */
+  pcm: Int16Array;
+  /** The origins the person allowed audio to go to for this plugin. */
+  consented: string[];
+}
+
+/** The most audio one `audio.wav` call returns (WIT: 8 minutes). */
+export const MAX_WAV_MS = 480_000;
+export const SPEECH_RATE = 16_000;
+
+/** A 16-bit mono PCM WAV of `samples` at 16 kHz. */
+export function wavOf(samples: Int16Array): Uint8Array {
+  const out = new Uint8Array(44 + samples.length * 2);
+  const view = new DataView(out.buffer);
+  const text = (at: number, value: string) => [...value].forEach((c, i) => view.setUint8(at + i, c.charCodeAt(0)));
+  text(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  text(8, 'WAVE');
+  text(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, SPEECH_RATE, true);
+  view.setUint32(28, SPEECH_RATE * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  text(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i++) view.setInt16(44 + i * 2, samples[i], true);
+  return out;
+}
+
 export const KV_QUOTA = 1024 * 1024;
 export const KV_MAX_KEY = 128;
 export const MAX_SECRET = 64 * 1024;
@@ -136,6 +177,12 @@ export interface HostDeps {
   cookies?: CookieStore | null;
   /** The jar changed: the worker hands it to the page to keep. */
   onCookies?(): void;
+  /** The host imports the manifest declares (API 1.2: `audio`, `speech`). */
+  permissions?: string[];
+  /** The song of the `maker.make` call in progress, or null. */
+  audio?(): MakeAudio | null;
+  /** The plugin read the song's audio (the first read shows "Reading Audio"). */
+  onAudioRead?(): void;
   /** Monotonic ms (performance.now()). */
   now(): number;
   /** Wall-clock ms since the epoch. */
@@ -583,14 +630,52 @@ export function createImports(deps: HostDeps): Record<string, Record<string, unk
     },
   };
 
+  // API 1.2: the song's audio during `maker.make`, and speech recognition, which needs the app
+  // (Whisper runs natively) and so is not in Jellyfesh Web.
+  const declared = (name: string) => (deps.permissions ?? []).includes(name);
+  const song = (track: bigint) => {
+    if (!declared('audio')) fail({ tag: 'not-declared' });
+    const current = deps.audio?.() ?? null;
+    if (!current || current.track !== track) {
+      fail({ tag: 'unavailable', val: 'this is not the song of the call in progress' });
+    }
+    // Audio leaves the device only where the person allowed it (the page asked first).
+    if (current.consented.length === 0) fail({ tag: 'no-consent', val: [] });
+    return current;
+  };
+  const audio = {
+    info(track: bigint) {
+      return { durationMs: BigInt(Math.round(song(track).durationMs)) };
+    },
+    wav(track: bigint, startMs: bigint, lengthMs: bigint) {
+      const current = song(track);
+      const start = Math.min(Number(startMs), current.durationMs);
+      const length = Math.min(Number(lengthMs), MAX_WAV_MS);
+      const from = Math.min(current.pcm.length, Math.floor((start * SPEECH_RATE) / 1000));
+      const to = Math.min(current.pcm.length, from + Math.floor((length * SPEECH_RATE) / 1000));
+      deps.onAudioRead?.();
+      return wavOf(current.pcm.subarray(from, to));
+    },
+  };
+  const speech = {
+    models() {
+      return [];
+    },
+    transcribe(_track: bigint, _options: unknown) {
+      if (!declared('speech')) fail({ tag: 'not-declared' });
+      fail({ tag: 'unavailable', val: 'recognition on this device is not available in Jellyfesh Web' });
+    },
+  };
+
   // jco's instantiation mode looks interfaces up without their version (`jellyfesh:plugin/http`);
-  // the versioned names of API 1.0 and 1.1 are there too, for tools that use them.
-  const interfaces: Record<string, Record<string, unknown>> = { http, kv, crypto, clock, log, types: {} };
+  // the versioned names of API 1.0, 1.1 and 1.2 are there too, for tools that use them.
+  const interfaces: Record<string, Record<string, unknown>> = { http, kv, crypto, clock, log, audio, speech, types: {} };
   const imports: Record<string, Record<string, unknown>> = {};
   for (const [name, value] of Object.entries(interfaces)) {
     imports[`jellyfesh:plugin/${name}`] = value;
     imports[`jellyfesh:plugin/${name}@1.0.0`] = value;
     imports[`jellyfesh:plugin/${name}@1.1.0`] = value;
+    imports[`jellyfesh:plugin/${name}@1.2.0`] = value;
   }
   return imports;
 }

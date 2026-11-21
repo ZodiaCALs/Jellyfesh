@@ -25,36 +25,52 @@ import type {
   AllowRule,
   AuthKind,
   Capability,
+  CommentPage,
   ImageRef,
   Item,
+  ItemDetails,
   ItemPage,
+  Look,
   Lyrics,
+  Made,
+  MakerPlan,
+  MakeSong,
   PackageInfo,
   PluginError,
   Quality,
+  Shelf,
   StreamInfo,
 } from '../core/types';
 import {
   capabilityFromJco,
+  commentsFromJco,
+  detailsFromJco,
   imageFromJco,
   itemToJco,
+  lookFromJco,
   lyricsFromJco,
+  madeFromJco,
   pageFromJco,
   pageRequestToJco,
+  planFromJco,
   pluginErrorFromJco,
   pluginErrorText,
   qualityToJco,
+  shelvesFromJco,
+  songToJco,
   streamFromJco,
 } from './convert';
+import type { MakeAudio } from './imports';
 import { preparePackage } from './install';
 import type { CallFailure, FromWorker, ToWorker } from './protocol';
 import type { RelayConfig, RelayErrorCode } from './relay';
 import { defaultState, type InstalledPlugin, type PluginState, type Store } from './storage';
 
-/** Wall-clock budgets (ADR-0004). */
+/** Wall-clock budgets (ADR-0004; making lyrics, ADR-0019: half an hour). */
 export const CALL_MS = 10_000;
 export const LOGIN_MS = 30_000;
 export const SEARCH_MS = 8_000;
+export const MAKE_MS = 30 * 60_000;
 const START_MS = 30_000;
 /** The page waits this much longer than the worker's own deadline before terminating it. */
 const GRACE_MS = 1_000;
@@ -75,6 +91,10 @@ export interface BundledPlugin {
   description: string | null;
   capabilities: Capability[];
   auth_kinds: AuthKind[];
+  /** Settings › Extensions rather than a source of music (API 1.2; absent in older indexes). */
+  extension?: boolean;
+  /** Part of Jellyfesh Pro (makes lyrics or changes the look). */
+  requires_pro?: boolean;
   package: string;
   module: string;
   wasm_sha256: string;
@@ -99,6 +119,8 @@ function installedEntry(installed: InstalledPlugin): PluginEntry {
     description: info.description,
     capabilities: info.capabilities,
     auth_kinds: info.auth_kinds,
+    extension: info.extension ?? false,
+    requires_pro: info.requires_pro ?? false,
     package: `${info.id}.jfpkg`,
     module: 'plugin.js',
     wasm_sha256: info.wasm_sha256,
@@ -116,7 +138,9 @@ export type CallErrorKind =
   | 'crashed'
   | 'memory'
   | 'load'
-  | 'invalid-response';
+  | 'invalid-response'
+  /** A Jellyfesh Pro capability (making lyrics, the look) while Pro is inactive (ADR-0021). */
+  | 'pro-required';
 
 /** Why a call produced no result (the native `CallError`). */
 export class CallError extends Error {
@@ -138,12 +162,17 @@ interface Pending {
   resolve(value: unknown): void;
   reject(error: CallError): void;
   timer: ReturnType<typeof setTimeout>;
+  onAudioRead?: () => void;
 }
 
 export interface CallOptions {
   wallMs?: number;
   protect?: string[];
   keystore?: boolean;
+  /** `maker.make`: the song's audio for the `audio` import. */
+  audio?: MakeAudio | null;
+  /** The plugin read the song's audio (once per call). */
+  onAudioRead?: () => void;
 }
 
 /** A plugin: its package, state, worker and calls. */
@@ -236,6 +265,7 @@ export class Plugin {
     const json = this.host.jf.effective_settings(
       JSON.stringify(this.info.settings_schema),
       this.state.settings ? JSON.stringify(this.state.settings) : undefined,
+      this.info.api_version,
     );
     return JSON.parse(json);
   }
@@ -390,6 +420,9 @@ export class Plugin {
       case 'network-error':
         this.networkError = { url: message.url, kind: message.kind, reason: message.reason };
         break;
+      case 'audio-read':
+        this.pending.get(message.seq)?.onAudioRead?.();
+        break;
       case 'cookies': {
         this.cookies = message.all;
         const lasting = (JSON.parse(message.persistent) as { cookies?: unknown[] }).cookies?.length ?? 0;
@@ -473,6 +506,9 @@ export class Plugin {
       if (capability && !this.declares(capability)) {
         throw new CallError('not-declared', `The plugin does not declare ${capability}.`);
       }
+      if (capability && PRO_CAPABILITIES.includes(capability) && !this.host.proActive) {
+        throw new CallError('pro-required', 'This is part of Jellyfesh Pro.');
+      }
       const wallMs = options.wallMs ?? CALL_MS;
       try {
         const value = await new Promise<unknown>((resolve, reject) => {
@@ -482,7 +518,7 @@ export class Plugin {
             this.stop();
             reject(new CallError('timeout', 'The plugin did not answer in time.'));
           }, wallMs + GRACE_MS);
-          this.pending.set(seq, { resolve, reject, timer });
+          this.pending.set(seq, { resolve, reject, timer, onAudioRead: options.onAudioRead });
           const message: ToWorker = {
             type: 'call',
             seq,
@@ -491,6 +527,7 @@ export class Plugin {
             wallMs,
             protect: options.protect ?? [],
             keystore: options.keystore ?? false,
+            audio: options.audio ?? null,
           };
           this.worker!.postMessage(message);
         });
@@ -533,7 +570,7 @@ export class Plugin {
   async setSettings(values: Record<string, unknown>) {
     if (!this.info) await this.start();
     const checked = JSON.parse(
-      this.host.jf.validate_settings(JSON.stringify(this.info!.settings_schema), JSON.stringify(values)),
+      this.host.jf.validate_settings(JSON.stringify(this.info!.settings_schema), JSON.stringify(values), this.info!.api_version),
     ) as Record<string, unknown>;
     this.state.settings = checked;
     await this.save();
@@ -633,7 +670,68 @@ export class Plugin {
     const page = await this.call('recommendations.forItem', [itemToJco(item), pageRequestToJco(null, limit)]);
     return JSON.parse(this.checker().check_page(JSON.stringify(pageFromJco(page)), limit));
   }
+
+  /** The service's suggestions for the person ("For You" on Discover). */
+  async forUser(limit = 20): Promise<ItemPage> {
+    const page = await this.call('recommendations.forUser', [pageRequestToJco(null, limit)]);
+    return JSON.parse(this.checker().check_page(JSON.stringify(pageFromJco(page)), limit));
+  }
+
+  // ---- API 1.2 ------------------------------------------------------------------------------
+
+  /** The plugin's own Discover shelves, checked. */
+  async discover(): Promise<Shelf[]> {
+    const shelves = await this.call<unknown[]>('discover.discover', [], { wallMs: 25_000 });
+    return JSON.parse(this.checker().check_shelves(JSON.stringify(shelvesFromJco(shelves))));
+  }
+
+  /** An item's details, checked. */
+  async details(item: Item): Promise<ItemDetails> {
+    const details = await this.call('details.details', [itemToJco(item)]);
+    return JSON.parse(this.checker().check_details(JSON.stringify(detailsFromJco(details))));
+  }
+
+  /** A page of comments on an item (`cursor` from the last page's `next`), checked. */
+  async comments(item: Item, cursor: string | null, limit = 30): Promise<CommentPage> {
+    const page = await this.call('comments.comments', [itemToJco(item), pageRequestToJco(cursor, limit)]);
+    return JSON.parse(this.checker().check_comments(JSON.stringify(commentsFromJco(page))));
+  }
+
+  /** What making lyrics would do now, checked. */
+  async plan(): Promise<MakerPlan> {
+    const plan = await this.call('maker.plan', []);
+    try {
+      return JSON.parse(this.checker().check_plan(JSON.stringify(planFromJco(plan))));
+    } catch (error) {
+      throw new CallError('invalid-response', (error as Error).message);
+    }
+  }
+
+  /** Makes synced lyrics for `song`, its audio decoded by the page; checked. */
+  async make(song: MakeSong, audio: MakeAudio | null, onAudioRead?: () => void): Promise<Made> {
+    const track = audio?.track ?? 1n;
+    const made = await this.call('maker.make', [songToJco(song, track)], { wallMs: MAKE_MS, audio, onAudioRead });
+    try {
+      return JSON.parse(this.checker().check_made(JSON.stringify(madeFromJco(made))));
+    } catch (error) {
+      throw new CallError('invalid-response', (error as Error).message);
+    }
+  }
+
+  /** Lyrics a maker made, parsed as the plugin's own lyrics are. */
+  parseLyrics(payload: Made['lyrics']): Lyrics {
+    return JSON.parse(this.checker().lyrics(JSON.stringify(payload)));
+  }
+
+  /** The look an appearance plugin asks for, checked. */
+  async look(): Promise<Look> {
+    const look = await this.call('appearance.look', []);
+    return JSON.parse(this.host.jf.check_look(JSON.stringify(lookFromJco(look))));
+  }
 }
+
+/** Capabilities that need Jellyfesh Pro, as in the core's host. */
+const PRO_CAPABILITIES = ['MakeLyrics', 'Appearance'];
 
 /** The capability a method needs (`catalog.search` needs Search). */
 function capabilityOf(method: string): string | null {
@@ -656,6 +754,17 @@ function capabilityOf(method: string): string | null {
     case 'auth.submit':
     case 'auth.logout':
       return 'Auth';
+    case 'maker.plan':
+    case 'maker.make':
+      return 'MakeLyrics';
+    case 'appearance.look':
+      return 'Appearance';
+    case 'discover.discover':
+      return 'Discover';
+    case 'details.details':
+      return 'Details';
+    case 'comments.comments':
+      return 'Comments';
     default:
       return null;
   }
@@ -663,6 +772,8 @@ function capabilityOf(method: string): string | null {
 
 /** The plugins (bundled with the app or installed from files) and their shared policy. */
 export class PluginHost {
+  /** Whether Jellyfesh Pro is active: Pro capabilities answer pro-required while it is not. */
+  proActive = false;
   plugins: Plugin[] = [];
   allowCommunity = false;
   /** The relay the person set up in Settings › Sources › Relay, or null. */

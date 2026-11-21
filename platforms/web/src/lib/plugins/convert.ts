@@ -6,16 +6,24 @@
 import type {
   AuthKind,
   Capability,
+  CommentPage,
+  FactKey,
   FieldValue,
   Flow,
   FlowStep,
   ImageRef,
   Item,
+  ItemDetails,
   ItemKind,
   ItemPage,
+  Look,
   LyricPayload,
+  Made,
+  MakerPlan,
+  MakeSong,
   PluginError,
   Quality,
+  Shelf,
   Step,
   StreamInfo,
 } from '../core/types';
@@ -220,4 +228,93 @@ export function pluginErrorText(e: PluginError): string {
   if ('Network' in e) return `network error: ${e.Network}`;
   if ('Service' in e) return e.Service;
   return `plugin error: ${e.Internal}`;
+}
+
+// ---- API 1.2 --------------------------------------------------------------------------------------
+
+export function shelvesFromJco(shelves: Jco[]): Shelf[] {
+  return shelves.map((s) => ({
+    id: s.id,
+    title: s.title,
+    style: pascal(s.style) as Shelf['style'],
+    items: s.items.map(itemFromJco),
+    more: opt(s.more),
+  }));
+}
+
+function factKey(k: Jco): FactKey {
+  return k.tag === 'other' ? { Other: String(k.val) } : (pascal(k.tag) as FactKey);
+}
+
+export function detailsFromJco(d: Jco): ItemDetails {
+  return {
+    description: opt(d.description),
+    image: d.image ? imageFromJco(d.image) : null,
+    facts: d.facts.map((f: Jco) => ({ key: factKey(f.key), value: f.value })),
+    comment_count: num(d.commentCount),
+  };
+}
+
+export function commentsFromJco(p: Jco): CommentPage {
+  const comment = (c: Jco) => ({
+    id: c.id,
+    author: c.author,
+    avatar: c.avatar ? imageFromJco(c.avatar) : null,
+    text: c.text,
+    likes: num(c.likes),
+    time_ms: num(c.timeMs),
+    replies: num(c.replies),
+  });
+  return { hot: p.hot.map(comment), comments: p.comments.map(comment), total: num(p.total), next: opt(p.next) };
+}
+
+export function planFromJco(p: Jco): MakerPlan {
+  const need = p.need.tag === 'model' ? { Model: String(p.need.val) } : p.need.tag === 'unavailable' ? { Unavailable: String(p.need.val) } : pascal(p.need.tag);
+  return {
+    mode: pascal(p.mode) as MakerPlan['mode'],
+    engine: p.engine,
+    upload_to: opt(p.uploadTo),
+    need: need as MakerPlan['need'],
+    automatic: p.automatic,
+  };
+}
+
+export function songToJco(song: MakeSong, track: bigint): Jco {
+  return {
+    track,
+    title: song.title,
+    artist: und(song.artist),
+    album: und(song.album),
+    durationMs: BigInt(Math.max(0, Math.round(song.duration_ms))),
+    text: und(song.text),
+    language: und(song.language),
+  };
+}
+
+export function madeFromJco(m: Jco): Made {
+  return { lyrics: lyricsFromJco(m.lyrics), engine: m.engine };
+}
+
+export function lookFromJco(l: Jco): Look {
+  const highlight = l.lyricsHighlight
+    ? l.lyricsHighlight.tag === 'custom'
+      ? { Custom: Number(l.lyricsHighlight.val) }
+      : pascal(l.lyricsHighlight.tag)
+    : null;
+  const list = <T,>(values: string[] | undefined) => (values ? (values.map(pascal) as T[]) : null);
+  return {
+    corner_scale: opt(l.cornerScale),
+    glass: opt(l.glass),
+    aurora: opt(l.aurora),
+    typeface: l.typeface ? (pascal(l.typeface) as Look['typeface']) : null,
+    text_scale: opt(l.textScale),
+    density: l.density ? (pascal(l.density) as Look['density']) : null,
+    lyrics_weight: l.lyricsWeight ? (pascal(l.lyricsWeight) as Look['lyrics_weight']) : null,
+    lyrics_glow: opt(l.lyricsGlow),
+    lyrics_highlight: highlight as Look['lyrics_highlight'],
+    sidebar: list(l.sidebar),
+    home: list(l.home),
+    now_playing: l.nowPlaying ? (pascal(l.nowPlaying) as Look['now_playing']) : null,
+    mini_player: l.miniPlayer ? (pascal(l.miniPlayer) as Look['mini_player']) : null,
+  };
 }
