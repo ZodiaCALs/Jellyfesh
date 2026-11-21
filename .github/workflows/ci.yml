@@ -146,6 +146,10 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       TINY_SHA1: bd577a113a864445d4c299885e0cb97d4ba92b5f
+      # As in the shipped builds: no tuning for this runner's CPU. A native build picked
+      # up AMX on a runner that offers it, and ggml then stopped with "AMX is not ready
+      # to be used!" (CI, 2026-11-20).
+      GGML_NATIVE: "OFF"
     steps:
       - uses: actions/checkout@v7
       - name: espeak-ng, FFmpeg, CMake and libclang (bindgen in whisper-rs-sys)
