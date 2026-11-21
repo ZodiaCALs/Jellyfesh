@@ -110,14 +110,19 @@ pub fn page() -> adw::NavigationPage {
             while let Some(c) = list.first_child() {
                 list.remove(&c);
             }
-            if sources.plugins.is_empty() {
+            let installed: Vec<&PluginSummary> = sources
+                .plugins
+                .iter()
+                .filter(|p| p.kind == jf_core::PluginKind::Source)
+                .collect();
+            if installed.is_empty() {
                 let row = adw::ActionRow::builder()
                     .title(tr("No Sources Installed"))
                     .subtitle(tr("Install a source plugin from a .jfpkg file."))
                     .build();
                 list.append(&row);
             }
-            for p in &sources.plugins {
+            for p in installed {
                 list.append(&source_row(p));
             }
         }
@@ -152,7 +157,8 @@ fn source_row(p: &PluginSummary) -> adw::ActionRow {
     if p.enabled {
         row.add_suffix(&glyph::Glyph::new("forward", 18));
         let (id, name) = (p.id.clone(), p.name.clone());
-        row.connect_activated(move |_| window::show_source(&id, None, &name));
+        let _ = name;
+        row.connect_activated(move |_| window::show_discover(&id));
     } else {
         let off = gtk::Label::new(Some(&tr("Off")));
         off.add_css_class("dim-label");

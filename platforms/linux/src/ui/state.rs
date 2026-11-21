@@ -17,10 +17,10 @@ use std::sync::Arc;
 use adw::prelude::*;
 use gtk::glib;
 use jf_core::{
-    AiLyricsSnapshot, AuthUpdate, BrowseUpdate, Command, CommandId, DetailsPage, DevicesSnapshot,
-    DisplayClock, Event, LookSnapshot, LyricsSnapshot, NowPlaying, PlaybackSnapshot, ProSnapshot,
-    QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate, Settings, Snapshot, SourcesSnapshot,
-    Status, ThemeSnapshot, UpdateSnapshot, monotonic_now_ns,
+    AiLyricsSnapshot, AuthUpdate, BrowseUpdate, Command, CommandId, CommentsPage, DetailsPage,
+    DevicesSnapshot, DiscoverPage, DisplayClock, Event, LookSnapshot, LyricsSnapshot, NowPlaying,
+    PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate,
+    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot, monotonic_now_ns,
 };
 
 use crate::logic::remote::{self, RemoteView};
@@ -48,6 +48,10 @@ pub enum Change<'a> {
     Browse(&'a Arc<BrowseUpdate>),
     /// An item's details, answering `Command::Details`.
     Details(&'a Arc<DetailsPage>),
+    /// A page of comments, answering `Command::Comments`.
+    Comments(&'a Arc<CommentsPage>),
+    /// A source's Discover page, answering `Command::Discover`.
+    Discover(&'a Arc<DiscoverPage>),
     Auth(&'a AuthUpdate),
     Buffering,
     /// A playlist was made by the command with this id.
@@ -422,8 +426,8 @@ impl App {
                 dirty.update = true;
             }
             Event::Details(page) => self.emit(&Change::Details(&page)),
-            // Discover and comments: not shown yet.
-            Event::Discover(_) | Event::Comments(_) => {}
+            Event::Comments(page) => self.emit(&Change::Comments(&page)),
+            Event::Discover(page) => self.emit(&Change::Discover(&page)),
             // A source's picture is in the cache: the views waiting load it.
             Event::Artwork(ready) => self.thumbs.artwork_ready(&ready),
         }

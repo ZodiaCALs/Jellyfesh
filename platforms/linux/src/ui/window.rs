@@ -460,6 +460,11 @@ pub fn show_playlist(id: i64, known: Option<ItemData>) {
     push(pages::playlists::playlist_page(id, known));
 }
 
+/// A source's Discover page (its shelves; Browse is in its header).
+pub fn show_discover(plugin: &str) {
+    push(pages::discover::page(plugin));
+}
+
 /// Browses a source's catalogue: its root (`item` `None`, titled `title`),
 /// or the page of an album, artist, playlist or folder it listed.
 pub fn show_source(plugin: &str, item: Option<jf_core::SourceItem>, title: &str) {

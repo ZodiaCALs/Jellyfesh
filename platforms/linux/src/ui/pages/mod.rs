@@ -1,6 +1,7 @@
 //! Section and detail pages.
 
 pub mod detail;
+pub mod discover;
 pub mod favourites;
 pub mod home;
 pub mod library;

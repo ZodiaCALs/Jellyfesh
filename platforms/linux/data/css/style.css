@@ -792,6 +792,25 @@ button.desktop-lyrics-control:hover {
   background-color: alpha({{accent.accent-text}}, 0.14);
 }
 
+/* Now Playing's Comments pane. */
+.comment-author {
+  font-weight: 600;
+}
+
+.comment-text {
+  color: {{ink.ink-90}};
+}
+
+/* Discover: placeholders the shape of the shelves while loading. */
+.placeholder {
+  background-color: alpha({{ink.ink-90}}, 0.06);
+  border-radius: {{radius.r-lg}};
+}
+
+.placeholder-heading {
+  border-radius: {{radius.r-sm}};
+}
+
 /* Get Info (docs/ui.md, "Details"). */
 .details {
   margin: {{space.s2}} {{space.s5}} {{space.s6}};

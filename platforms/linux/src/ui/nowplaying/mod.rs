@@ -15,6 +15,7 @@
 //! holds Open in {Service} and Stop Controlling, and the Lyrics and Queue
 //! panes say that the service has them.
 
+mod comments;
 mod info;
 mod lyrics;
 mod queue;
@@ -54,6 +55,8 @@ pub enum Tab {
     Lyrics,
     Queue,
     Info,
+    /// For a song whose source shows comments.
+    Comments,
 }
 
 impl Tab {
@@ -62,6 +65,7 @@ impl Tab {
             Tab::Lyrics => "lyrics",
             Tab::Queue => "queue",
             Tab::Info => "info",
+            Tab::Comments => "comments",
         }
     }
 }
@@ -116,6 +120,7 @@ struct Inner {
     lyrics: Rc<lyrics::Lyrics>,
     queue: Rc<queue::Queue>,
     info: info::Info,
+    comments: comments::CommentsPane,
 }
 
 /// The Now Playing view.
@@ -154,9 +159,11 @@ impl NowPlaying {
             (Tab::Lyrics, tr("Lyrics")),
             (Tab::Queue, tr("Queue")),
             (Tab::Info, tr("Info")),
+            (Tab::Comments, tr("Comments")),
         ] {
             let b = gtk::ToggleButton::with_label(&label);
             b.add_css_class("segment");
+            b.set_visible(tab != Tab::Comments);
             segmented.append(&b);
             tabs.push((tab, b));
         }
@@ -294,6 +301,7 @@ impl NowPlaying {
         let lyrics = lyrics::Lyrics::new();
         let queue_panel = queue::Queue::new();
         let info = info::Info::new();
+        let comments_pane = comments::CommentsPane::new();
         let panel = gtk::Stack::builder()
             .transition_type(gtk::StackTransitionType::Crossfade)
             .transition_duration(style::duration(jf_tokens::motion::DUR_2_MS))
@@ -309,6 +317,7 @@ impl NowPlaying {
             ),
             (queue_panel.root.clone().upcast(), Tab::Queue, 0.0),
             (info.root.clone().upcast(), Tab::Info, 0.0),
+            (comments_pane.root.clone().upcast(), Tab::Comments, 0.0),
         ] {
             let faded = FadeBin::new(&pane);
             faded.set_fades(top, PANEL_FADE_BOTTOM);
@@ -392,6 +401,7 @@ impl NowPlaying {
             lyrics,
             queue: queue_panel,
             info,
+            comments: comments_pane,
         });
         let weak = Rc::downgrade(&inner);
         // The size arrives during layout; the artwork is fitted right after
@@ -547,7 +557,12 @@ impl NowPlaying {
                     }
                 }
                 Change::Details(page) => inner.info.details_arrived(page),
-                Change::Sources => update_more(&inner),
+                Change::Comments(page) => inner.comments.page(page),
+                Change::Failed(id, message) => inner.comments.failed(*id, message),
+                Change::Sources => {
+                    update_more(&inner);
+                    update_comments_tab(&inner);
+                }
                 Change::Theme | Change::Settings => {
                     update_backdrop(&inner);
                     if matches!(change, Change::Settings) {
@@ -768,6 +783,8 @@ fn update_track(inner: &Inner) {
         }
     }
     inner.info.update(now.as_ref(), a.lyrics.borrow().as_ref());
+    inner.comments.update(now.as_ref());
+    update_comments_tab(inner);
     update_favorite(inner);
     update_more(inner);
 }
@@ -803,6 +820,8 @@ fn show_remote(inner: &Inner, view: &RemoteView) {
     inner.error_line.set_visible(view.error.is_some());
     inner.heart.set_visible(false);
     inner.info.update_remote(view);
+    inner.comments.update(None);
+    update_comments_tab(inner);
     inner.lyrics.set_remote(Some(&view.service));
     inner.queue.set_remote(Some(&view.service));
     let key = format!("remote {} {:?}", view.service, view.link);
@@ -810,6 +829,29 @@ fn show_remote(inner: &Inner, view: &RemoteView) {
 }
 
 /// More for the engine's track: what the song menu offers for it, with
+/// The Comments tab shows for a song whose source shows comments; when it
+/// goes while showing, the lyrics take its place.
+fn update_comments_tab(inner: &Inner) {
+    let a = app();
+    let offered = !a.is_remote() && comments::offered(a.now.borrow().as_deref());
+    for (t, b) in &inner.tabs {
+        if *t == Tab::Comments {
+            b.set_visible(offered);
+        }
+    }
+    if !offered && inner.tab.get() == Tab::Comments {
+        inner.tab.set(Tab::Lyrics);
+        inner.panel.set_visible_child_name(Tab::Lyrics.name());
+        inner.tab_guard.set(true);
+        for (t, b) in &inner.tabs {
+            if b.is_active() || *t == Tab::Lyrics {
+                b.set_active(*t == Tab::Lyrics && inner.panel.is_visible());
+            }
+        }
+        inner.tab_guard.set(false);
+    }
+}
+
 /// Go to Album once the core has said which album a library song is on.
 fn update_more(inner: &Inner) {
     let a = app();
