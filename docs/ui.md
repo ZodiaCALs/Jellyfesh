@@ -389,7 +389,14 @@ conventions and must not reuse these keys.
   note says so. On Wayland, Desktop Lyrics is a normal window: Wayland lets
   no app keep its window above the others (on X11 it stays above them).
 * **Android:** the library is one tab; it asks for access to music and offers
-  "Find Music on This Phone" before folders.
+  "Find Music on This Phone" before folders. No Desktop Lyrics: the lyrics
+  bar above the mini-player shows the line being sung. The look's places
+  order the Library tab's switcher (the four tabs stay), and its Rounded
+  typeface is the system's (Android has no rounded system face). Each source
+  and extension opens on a page of its own from Settings › Sources and
+  Settings › Extensions. The Google Play build sells Pro through Google Play
+  Billing only and has no **Install from File…**, **Allow Community
+  Plugins**, **Enter Licence Key…** or **Check for Updates**.
 * **macOS:** About Jellyfesh is in the app menu. **Linux:** About and Keyboard
   Shortcuts are in the main menu.
 * Plugin settings apply as each field is committed on macOS and Linux, and

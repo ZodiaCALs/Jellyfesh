@@ -88,11 +88,11 @@ A changed English string needs its three translations in every app.
 7. Fixed: the words of [3](#3-the-words) (System Default, Rescan Library, Remove from Queue, Playlists (M3U8)) and V3–V7, V10, V15, V19–V21.
 
 **Android**
-1. Source covers never load: `and/images/ArtworkLoader.kt:35` maps URLs to nothing [N29].
-2. Resume Playback is ignored at launch (`and/AppGraph.kt` `start()`) [N26].
-3. Songs › Play, Shuffle and a row play only the pages loaded so far [N2].
+1. Fixed: source covers come through the core (`source_artwork` and `Event::Artwork`; the media session gets the cached file) [N29].
+2. Fixed: Resume Playback at launch: the core reads `resume_on_launch` since M3, and the app shows what it resumes [N26].
+3. Fixed: Songs › Play, Shuffle and a row play the whole list (`Collection::Songs`) [N2].
 4. Fixed: Jellyfin's Quick Connect code is a step of its own, and fields keep their help, required and kind [N9, N12].
-5. Fixed: choosing a source in Your Sources browses it (its settings page while it is off or cannot browse) [N15].
+5. Fixed: choosing a source in Your Sources opens its Discover page, with Browse in the header (its settings page while it is off) [N15].
 6. Fixed: "Content from {Service}"; the media session follows remote sessions; Up Next lists every entry; plugin icons in every list; a source's album and playlist pages [N19, N21, N25, N31, N18].
 7. Fixed: the words of [3](#3-the-words) (System Default, No Folders Yet, Remove from Queue, Unknown Title, Also in …).
 
@@ -122,7 +122,7 @@ under the table: where the code is, or where the missing part belongs.
 | Home: welcome with Add Music Folder… and Add a Source | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Albums: grid, empty state | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Artists: list, empty state | ✓ | ✓ | ✓ | ✓ | partial: a grid of cards [N1] |
-| Songs: Play, Shuffle and a row cover the whole list | partial: a row plays only the loaded rows [N2] | partial: 2,000 (a row: 500) [N2] | partial: Play 500, Shuffle 5,000 [N2] | partial: loaded pages only [N2] | ✓ |
+| Songs: Play, Shuffle and a row cover the whole list | partial: a row plays only the loaded rows [N2] | partial: 2,000 (a row: 500) [N2] | partial: Play 500, Shuffle 5,000 [N2] | ✓ (`Collection::Songs`) | ✓ |
 | Songs: empty state | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Album page: artwork, facts, Play, Shuffle, More | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Artist page: picture, albums, songs, Play, Shuffle, More | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -272,7 +272,7 @@ under the table: where the code is, or where the missing part belongs.
 | ReplayGain (Off, Track, Album) and Preamp | ✓ | ✓ | ✓ | ✓ | partial: not for server streams [N27] |
 | Equalizer: on/off, Preset from `eq_presets()`, Custom, Preamp, ten bands, Reset to Flat | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Output Device (System Default, then the devices) | ✓ | ✓ | ✓ | ✓ | n/a (allowed: the browser's) |
-| Resume Playback at launch | ✗ [N26] | ✗ [N26] | ✓ | ✗ [N26] | partial: ready to play [N26] |
+| Resume Playback at launch | ✗ [N26] | ✗ [N26] | ✓ | ✓ (the core, since M3) [N26] | partial: ready to play [N26] |
 | Volume | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Mute | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Streaming Quality | n/a (allowed: web only) | n/a (allowed: web only) | n/a (allowed: web only) | n/a (allowed: web only) | ✓ |
@@ -352,9 +352,9 @@ Where: macOS `mac/App/AppCommands.swift` and `mac/Platform/SystemState.swift` (`
 | Function | macOS | Windows | Linux | Android | Web |
 |---|---|---|---|---|---|
 | Library thumbnails | ✓ | ✓ | ✓ | ✓ | ✓ |
-| A source item's cover (search, browse, Home shelves) | ✗ [N29] | ✓ (N30) | ✗ [N29] | ✗ [N29] | ✓ |
-| Now Playing artwork of a source song | ✗ [N29] | ✓ | ✗ [N29] | ✗ [N29] | ✓ |
-| A remote session's track artwork | ✗ [N29] | ✓ | ✗ [N29] | ✗ [N29] | n/a (no remote sessions) |
+| A source item's cover (search, browse, Home shelves) | ✗ [N29] | ✓ (N30) | ✗ [N29] | ✓ (through the core) | ✓ |
+| Now Playing artwork of a source song | ✗ [N29] | ✓ | ✗ [N29] | ✓ (through the core) | ✓ |
+| A remote session's track artwork | ✗ [N29] | ✓ | ✗ [N29] | ✓ (through the core) | n/a (no remote sessions) |
 | Plugin icons (Add a Source, Your Sources, Installed) | ✓ | ✓ | ✓ | ✓ | ✗ generic glyph [N31] |
 
 The Now Playing backdrop of a source song works everywhere: the core fetches

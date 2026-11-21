@@ -1,4 +1,4 @@
-# The Android app (v0.0.6)
+# The Android app (v0.0.7)
 
 Kotlin and Jetpack Compose over the Rust core through the UniFFI Kotlin bindings
 (docs/ffi.md). minSdk 26 (cpal's AAudio output, ADR-0009), compileSdk and targetSdk 37.
@@ -10,6 +10,64 @@ APK has never been built and the app has never run. The parts that need no Andro
 and tested here (`:logic`), the FFI adapter is compiled and run against the real core on the
 JVM (`:ffi-check`), and the whole app except the Media3 session is compiled on the JVM against
 stand-ins (`:ui-check`). The first CI build is the first real compile; see "Risks" below.
+
+## v0.0.7: Pro, extensions, the look, AI Lyrics, Discover and details
+
+Built from docs/ui.md and docs/core-api.md against the core's v0.0.7 contract; the rules read
+from the slices are in `:logic` with tests, the views only draw them.
+
+* **Covers through the core** (`images/ArtworkLoader.kt`, `logic/images/SourceCovers.kt`): every
+  source picture (rows, shelves, details, comment avatars, Now Playing, a remote session's track,
+  `jellyfesh-artwork://` items) goes to `source_artwork`; a path loads at once, otherwise the row
+  waits for `Event::Artwork`, which reaches the loader directly (`CoreStore.artworkListener`), so a
+  burst of covers cannot crowd the signal buffer. The media session shows the cached file only.
+* **Play and Shuffle for every song** (`Collection::Songs` in the Songs sort order).
+* **The lyrics bar** above the mini-player (`ui/player/LyricsBarView.kt`): the core's `lyrics_bar`
+  ported (`logic/lyrics/LyricsBar.kt`, replaying `tests/contract/lyrics-bar.json` within 1e-6),
+  the line filling word by word in the highlight colour, its translation with Show Translations,
+  and Show Lyrics Bar in Settings › Appearance › Lyrics. No Desktop Lyrics (an allowed difference).
+* **Settings › Extensions** (`ui/settings/ExtensionsSettings.kt`): Jellyfesh Pro (Preview,
+  Purchased, a licence with Remove Licence…, or the offer with Buy and Restore Purchases where the
+  core lists this build's store and Enter Licence Key… where keys work; the Licence Agreement, the
+  Privacy Policy and the Terms of Sale), then each extension on a page of its own: Enabled, its
+  account ("API Key Added" for AI Lyrics' key), its settings, Reset to Defaults for an appearance
+  plugin, AI Lyrics' On-Device Models and Sending Audio, its version. "Part of Jellyfesh Pro." with
+  Learn More… and the Pro badge while Pro is off. Appearance ends with Customize….
+* **Plugin settings in the app's language and schema profile 1.2** (`ui/sources/PluginSettings.kt`,
+  `logic/sources/SettingsSchema.kt`, `FormControls.kt`): `localized_settings_schema` for every
+  language but English, `x-jf-group` headings, colour wells, sliders on their steps, ordered
+  checklists with drag handles (and Move up, Move down for TalkBack), long choices from a list.
+* **The Pro sheet and licence keys** (`ui/settings/ProSheets.kt`): the sheet any Pro action opens
+  while Pro is off; Enter Licence Key waits for the Pro slice and words `licence_error`.
+* **Google Play Billing** in the Google Play build only (`billing/PlayBilling.kt`, Play Billing
+  9.1.0): the one-time product `pro`, `queryPurchasesAsync` at start and on every return to the
+  app, each purchase's signature checked with `BuildConfig.PLAY_LICENSE_KEY` (a build without the
+  key grants nothing), the result reported with `set_store_entitlement`, then acknowledged;
+  pending payments grant nothing. Other builds have no store (`AppGraph.purchases` is null).
+* **About**: the Licence Agreement and the Privacy Policy; direct downloads (the Update slice's
+  `supported`) add Check for Updates, its setting and View Release. Store builds hide Install
+  from File… and Community Plugins (`can_install_plugins`).
+* **AI Lyrics** (`ui/player/LyricsMakingView.kt`, `logic/lyrics/LyricsMaking.kt`): Create Synced
+  Lyrics and Time These Lyrics in the Lyrics pane, the job's stage with Cancel, the model or the
+  API key that comes first, Try Again, "Send This Song to {origin}?" before the first online job,
+  "Made by AI Lyrics · {engine}", Make Again and Delete Made Lyrics in Now Playing's More, and
+  Create Synced Lyrics in the song menu.
+* **The look applied live** (`ui/theme/Look.kt`, `logic/theme/LookStyle.kt`): corner radii, glass
+  (tint and blur), the aurora, the face (System, Serif or Mono; Rounded is the system's), text size
+  through the density's font scale, spacing, the lyrics' weight, glow and highlight, the Library
+  switcher's places and Home's sections in the look's order, Now Playing's Stage, Artwork and
+  Lyrics layouts and the Bar, Compact and Floating mini-players (`logic/player/NowPlayingLayouts.kt`).
+* **Discover, details and comments**: choosing a source opens its Discover page
+  (`ui/sources/DiscoverScreen.kt`); Get Info in the song, album and artist menus and Now Playing's
+  Info pane with the decoded format and the core's quality label (`ui/player/DetailsViews.kt`);
+  Go to Album and Go to Artist for a source's songs open its pages with the picture and the notes
+  or biography; a Comments pane for sources that show comments.
+
+Checked: `:logic` 240 tests pass, `:ffi-check` 6 pass against the M3 core (a v0.0.7 scenario among
+them: the slices' first values, a refused key, a song's details, the library's Discover page and
+the decoded format), and `:ui-check` compiles. `:ui-check` compiles the billing glue against
+stand-ins written from the developer.android.com reference; only CI builds it against Play
+Billing, and nothing here ran on a device.
 
 ## v0.0.7: the parity pass
 
