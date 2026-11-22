@@ -22,6 +22,11 @@ from the slices are in `:logic` with tests, the views only draw them.
   waits for `Event::Artwork`, which reaches the loader directly (`CoreStore.artworkListener`), so a
   burst of covers cannot crowd the signal buffer. The media session shows the cached file only.
 * **Play and Shuffle for every song** (`Collection::Songs` in the Songs sort order).
+* **Resume Playback** (`logic/player/ResumeOnLaunch.kt`): the core starts with `resume_on_start`
+  false, because the process may start without its window (a media button, the system restarting
+  the media service) and no audio may begin before the media session exists. When the first
+  window is created within 10 s of the process starting, the app sends Play itself if Resume
+  Playback is on and the restored queue has a song.
 * **The lyrics bar** above the mini-player (`ui/player/LyricsBarView.kt`): the core's `lyrics_bar`
   ported (`logic/lyrics/LyricsBar.kt`, replaying `tests/contract/lyrics-bar.json` within 1e-6),
   the line filling word by word in the highlight colour, its translation with Show Translations,

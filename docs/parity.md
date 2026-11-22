@@ -90,7 +90,7 @@ A changed English string needs its three translations in every app.
 
 **Android**
 1. Fixed: source covers come through the core (`source_artwork` and `Event::Artwork`; the media session gets the cached file) [N29].
-2. Fixed: Resume Playback at launch: the core reads `resume_on_launch` since M3, and the app shows what it resumes [N26].
+2. Fixed: Resume Playback at launch: the core starts with `resume_on_start` false and the app sends Play when the process started for its window [N26].
 3. Fixed: Songs › Play, Shuffle and a row play the whole list (`Collection::Songs`) [N2].
 4. Fixed: Jellyfin's Quick Connect code is a step of its own, and fields keep their help, required and kind [N9, N12].
 5. Fixed: choosing a source in Your Sources opens its Discover page, with Browse in the header (its settings page while it is off) [N15].
@@ -273,7 +273,7 @@ under the table: where the code is, or where the missing part belongs.
 | ReplayGain (Off, Track, Album) and Preamp | ✓ | ✓ | ✓ | ✓ | partial: not for server streams [N27] |
 | Equalizer: on/off, Preset from `eq_presets()`, Custom, Preamp, ten bands, Reset to Flat | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Output Device (System Default, then the devices) | ✓ | ✓ | ✓ | ✓ | n/a (allowed: the browser's) |
-| Resume Playback at launch | ✗ [N26] | ✗ [N26] | ✓ | ✓ (the core, since M3) [N26] | partial: ready to play [N26] |
+| Resume Playback at launch | ✗ [N26] | ✗ [N26] | ✓ | ✓ (Play from the app for a start with its window; `resume_on_start` false) [N26] | partial: ready to play [N26] |
 | Volume | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Mute | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Streaming Quality | n/a (allowed: web only) | n/a (allowed: web only) | n/a (allowed: web only) | n/a (allowed: web only) | ✓ |

@@ -26,6 +26,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         handle(intent)
+        // Resume on Launch, when the process started for this window (ResumeOnLaunch).
+        app.graph.windowCreated(android.os.SystemClock.uptimeMillis())
         setContent { AppRoot(app.graph, app.authRedirects) }
     }
 

@@ -7,7 +7,14 @@ import org.jellyfesh.ffi.OutputKind
 // `CoreConfig.bundledPlugins` yet (the core and FFI are gaining it): the core then starts without
 // the bundled plugins. settings.gradle.kts picks one of the two for :app, :ffi-check and :ui-check.
 @Suppress("UNUSED_PARAMETER")
-internal fun androidCoreConfig(dataDir: String, cacheDir: String, watchFolders: Boolean, bundledPlugins: List<String>): CoreConfig =
+internal fun androidCoreConfig(
+    dataDir: String,
+    cacheDir: String,
+    watchFolders: Boolean,
+    bundledPlugins: List<String>,
+    distribution: org.jellyfesh.ffi.Distribution,
+    resumeOnStart: Boolean,
+): CoreConfig =
     CoreConfig(
         dataDir = dataDir,
         cacheDir = cacheDir,

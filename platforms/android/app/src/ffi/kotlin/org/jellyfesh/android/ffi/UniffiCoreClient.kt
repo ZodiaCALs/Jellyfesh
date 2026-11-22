@@ -141,10 +141,11 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
             cacheDir: String,
             bundledPlugins: List<String>,
             distribution: Distribution,
+            resumeOnStart: Boolean,
             watchFolders: Boolean = true,
         ): UniffiCoreClient {
             AndroidContext.initialize(context)
-            return startWithoutContext(androidCoreConfig(dataDir, cacheDir, watchFolders, bundledPlugins, FfiMappingV7.ffi(distribution)))
+            return startWithoutContext(androidCoreConfig(dataDir, cacheDir, watchFolders, bundledPlugins, FfiMappingV7.ffi(distribution), resumeOnStart))
         }
 
         /** Starts a core from a ready config (JVM tests use a null output). */

@@ -26,6 +26,7 @@ import org.jellyfesh.logic.core.CoreClient
 import org.jellyfesh.logic.core.CoreException
 import org.jellyfesh.logic.core.Distribution
 import org.jellyfesh.logic.nav.NavState
+import org.jellyfesh.logic.player.ResumeOnLaunch
 import org.jellyfesh.logic.settings.BuildFlags
 import org.jellyfesh.logic.state.CoreStore
 import org.jellyfesh.logic.time.DrawClock
@@ -105,6 +106,9 @@ class AppGraph(private val app: Application) {
                     cacheDir = File(app.cacheDir, "core").path,
                     bundledPlugins = BundledPlugins.prepare(app),
                     distribution = distribution,
+                    // The process may have started without its window (a media button, the system
+                    // restarting the media service): the app resumes itself (ResumeOnLaunch).
+                    resumeOnStart = false,
                 )
             } catch (e: CoreException) {
                 _startup.value = CoreStartup.Failed(e.message.orEmpty())
@@ -124,10 +128,40 @@ class AppGraph(private val app: Application) {
                 followAppIcon()
                 // What Google Play says about Pro, now that the core can hear it.
                 play?.start()
+                maybeResume()
             }
             send(Command.RefreshDevices)
             library.onCoreReady()
         }
+    }
+
+    /** When the process started (uptime), to tell a start for the window from one without it. */
+    private val processStartMs: Long = android.os.Process.getStartUptimeMillis()
+
+    /** Whether the process started for its window; null until the first window is created. */
+    private var startedWithWindow: Boolean? = null
+    private var resumeDecided = false
+
+    /**
+     * The activity's window was created ([uptimeMs]): the first one tells whether the process
+     * started for it. Main thread.
+     */
+    fun windowCreated(uptimeMs: Long) {
+        if (startedWithWindow == null) startedWithWindow = ResumeOnLaunch.startedWithWindow(processStartMs, uptimeMs)
+        maybeResume()
+    }
+
+    /**
+     * Resume on Launch, once per process: Play when the process started for its window and the
+     * restored queue has a song (the core starts with `resumeOnStart` false). Main thread.
+     */
+    private fun maybeResume() {
+        if (resumeDecided) return
+        val window = startedWithWindow ?: return
+        val state = store.state.value
+        if (!state.ready) return
+        resumeDecided = true
+        ResumeOnLaunch.command(state, window)?.let(::send)
     }
 
     /** Sends a command; 0 when the core is not running. */
