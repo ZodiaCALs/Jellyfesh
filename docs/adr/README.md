@@ -30,6 +30,7 @@ holds the pinned versions.
 | [0020](0020-customize.md) | Customize: appearance plugins and the Look slice | Your Customize answer (v0.0.7) | Accepted |
 | [0021](0021-jellyfesh-pro.md) | Jellyfesh Pro, editions and commercial readiness | Your Free + Pro answer (v0.0.7) | Accepted |
 | [0022](0022-discover-details-comments.md) | Discover, details, comments, covers and the lyrics bar | Your v0.0.7 additions | Accepted |
+| [0023](0023-one-layout-web-reference.md) | One layout in every app: Jellyfesh Web's | Your v0.0.8 UI answer | Accepted |
 
 The service-by-service findings behind 0010–0012 are in
 [`../sources-report.md`](../sources-report.md).
