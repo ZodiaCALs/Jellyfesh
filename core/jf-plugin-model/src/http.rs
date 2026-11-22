@@ -82,9 +82,9 @@ pub fn check_headers(headers: &[Header]) -> Result<(), String> {
     Ok(())
 }
 
-/// Checks a request's URL, body and method: an absolute URL without user
-/// information (the fragment is dropped), a body within the limit, no body
-/// on `HEAD`. Returns the URL to send. The text says what is wrong.
+/// Checks a request's URL, body and method: an absolute http(s) URL without
+/// user information (the fragment is dropped), a body within the limit, no
+/// body on `HEAD`. Returns the URL to send. The text says what is wrong.
 pub fn check_request(url: &str, headers: &[Header], body_len: usize, is_head: bool) -> Result<Url, String> {
     if body_len > MAX_REQUEST_BODY {
         return Err("the request body is larger than 16 MiB".into());
@@ -94,6 +94,15 @@ pub fn check_request(url: &str, headers: &[Header], body_len: usize, is_head: bo
         return Err("a HEAD request cannot have a body".into());
     }
     let mut parsed = Url::parse(url).map_err(|e| format!("bad URL {url:?}: {e}"))?;
+    // Before anything asks for the URL's origin: for a `blob:` URL, `Url::origin`
+    // parses the URL inside it, and url 2.5.8 and older did so without a limit
+    // (RUSTSEC-2026-0592).
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err(format!(
+            "only http and https URLs can be requested, not {}:",
+            parsed.scheme()
+        ));
+    }
     if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err("URLs with user information are not allowed".into());
     }
@@ -185,6 +194,23 @@ mod tests {
         assert_eq!(timeout(Some(100)), Duration::from_millis(100));
         assert_eq!(timeout(Some(100_000)), MAX_TIMEOUT);
         assert_eq!(timeout(None), MAX_TIMEOUT);
+    }
+
+    #[test]
+    fn only_http_and_https_urls_can_be_requested() {
+        // A deeply nested `blob:` URL is refused by its scheme, before anything
+        // asks for its origin (RUSTSEC-2026-0592).
+        let nested = format!("{}https://music.example.com/", "blob:".repeat(20_000));
+        for url in [
+            "file:///etc/passwd",
+            "ftp://music.example.com/",
+            "blob:https://music.example.com/x",
+            nested.as_str(),
+        ] {
+            let error = check_request(url, &[], 0, false).unwrap_err();
+            assert!(error.starts_with("only http and https URLs"), "{error}");
+        }
+        assert!(check_request("http://music.example.com/", &[], 0, false).is_ok());
     }
 
     #[test]

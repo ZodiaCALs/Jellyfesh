@@ -230,8 +230,13 @@ pub fn redirect(method: &str, url: &str, status: u16, location: Option<String>) 
     } else {
         method.to_ascii_uppercase()
     };
+    // Only http(s) URLs are asked for their origin: for a `blob:` URL, `Url::origin` parses the
+    // URL inside it, and url 2.5.8 and older did so without a limit (RUSTSEC-2026-0592). Any
+    // other scheme counts as another origin; the next hop's request check refuses it.
+    let http = |url: &Url| matches!(url.scheme(), "http" | "https");
+    let cross_origin = !(http(&next) && http(&from)) || next.origin() != from.origin();
     Ok(json(&Hop {
-        cross_origin: next.origin() != from.origin(),
+        cross_origin,
         url: next.into(),
         method,
         drop_body: to_get,
@@ -569,6 +574,10 @@ schema = "settings.schema.json"
         );
         assert_eq!(hop("POST", 307, "d")["drop_body"], false);
         assert_eq!(hop("GET", 301, "https://y.qq.com/")["cross_origin"], true);
+        // A deeply nested `blob:` URL is another origin, found without asking for its origin
+        // (RUSTSEC-2026-0592).
+        let nested = format!("{}https://u.y.qq.com/", "blob:".repeat(20_000));
+        assert_eq!(hop("GET", 302, &nested)["cross_origin"], true);
         assert_eq!(hop("HEAD", 303, "/x")["method"], "HEAD");
         assert_eq!(
             redirect("GET", "https://u.y.qq.com/", 200, Some("/x".into())).unwrap(),

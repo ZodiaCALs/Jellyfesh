@@ -272,6 +272,27 @@ fn redirects_cannot_escape_the_allowlist() {
     assert_eq!(attack(&env, "{server}/loop"), "err TooManyRedirects");
 }
 
+/// Only http(s) URLs get as far as an origin check, as requests and as
+/// redirects: for a `blob:` URL, `Url::origin` parses the URL inside it, and
+/// url 2.5.8 and older did so without a limit, so a deeply nested one
+/// overflowed the stack and took the whole app down (RUSTSEC-2026-0592).
+#[test]
+fn nested_blob_urls_are_refused_and_the_host_carries_on() {
+    let env = Env::new();
+    let nested = format!("{}https://evil.example/", "blob:".repeat(10_000));
+    let location = nested.clone();
+    let server = TestServer::start(move |request| match request.path() {
+        "/to-blob" => Response::redirect(&location),
+        _ => Response::new(200, "landed"),
+    });
+    env.install("net-attacker", &net_manifest(20), NET, Some(&server.url()));
+    let outcome = attack(&env, &nested);
+    assert!(outcome.starts_with("err InvalidRequest"), "{outcome}");
+    let outcome = attack(&env, "{server}/to-blob");
+    assert!(outcome.starts_with("err NotAllowed"), "{outcome}");
+    assert_eq!(attack(&env, "{server}/fine"), "ok 200 6");
+}
+
 /// A fixed host whose DNS answer changes cannot be steered to a local
 /// address: the name is resolved once per request, an answer containing a
 /// private address is refused as a whole, and the connection goes to the

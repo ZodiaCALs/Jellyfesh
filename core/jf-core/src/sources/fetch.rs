@@ -39,6 +39,15 @@ pub(crate) fn image(image: &ImageRef) -> Result<Vec<u8>, String> {
                 .and_then(|v| v.to_str().ok())
                 .and_then(|location| url.join(location).ok())
                 .ok_or("the artwork server sent a bad redirect")?;
+            // Only http(s) URLs are asked for their origin: for a `blob:` URL, `Url::origin`
+            // parses the URL inside it, and url 2.5.8 and older did so without a limit
+            // (RUSTSEC-2026-0592).
+            if !matches!(next.scheme(), "http" | "https") {
+                return Err(format!(
+                    "the artwork server redirected to a {}: URL",
+                    next.scheme()
+                ));
+            }
             if next.origin() != url.origin() {
                 return Err("the artwork server redirected to another host".into());
             }
@@ -87,4 +96,48 @@ pub(crate) fn agent() -> &'static ureq::Agent {
             .build()
             .new_agent()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{BufRead, BufReader, Write};
+    use std::net::TcpListener;
+
+    use super::*;
+
+    /// Answers one request with `response`; gives the server's address.
+    fn serve_once(response: String) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream);
+            let mut line = String::new();
+            while reader.read_line(&mut line).unwrap() > 2 {
+                line.clear();
+            }
+            reader.get_mut().write_all(response.as_bytes()).unwrap();
+        });
+        address
+    }
+
+    #[test]
+    fn redirects_to_other_schemes_are_refused_before_asking_for_their_origin() {
+        // A deeply nested `blob:` URL overflowed the stack in `Url::origin` with url 2.5.8
+        // and older (RUSTSEC-2026-0592).
+        let location = format!("{}https://art.example/", "blob:".repeat(10_000));
+        let server = serve_once(format!(
+            "HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        ));
+        let cover = ImageRef {
+            url: format!("{server}/cover.jpg"),
+            headers: Vec::new(),
+            width: None,
+            height: None,
+        };
+        assert_eq!(
+            image(&cover).unwrap_err(),
+            "the artwork server redirected to a blob: URL"
+        );
+    }
 }

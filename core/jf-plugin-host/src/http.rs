@@ -135,6 +135,15 @@ impl HttpClient {
         }
         let mut url = Url::parse(&request.url)
             .map_err(|e| HttpError::InvalidRequest(format!("bad URL {:?}: {e}", request.url)))?;
+        // Only http(s) URLs get as far as `Url::origin` (below, and for each redirect): for a
+        // `blob:` URL it parses the URL inside it, and url 2.5.8 and older did so without a
+        // limit, so a deeply nested one overflowed the stack (RUSTSEC-2026-0592).
+        if !is_http(&url) {
+            return Err(HttpError::InvalidRequest(format!(
+                "only http and https URLs can be requested, not {}:",
+                url.scheme()
+            )));
+        }
         if !url.username().is_empty() || url.password().is_some() {
             return Err(HttpError::InvalidRequest(
                 "URLs with user information are not allowed".into(),
@@ -210,6 +219,12 @@ impl HttpClient {
                 let next = url
                     .join(&location)
                     .map_err(|e| HttpError::InvalidRequest(format!("bad redirect {location:?}: {e}")))?;
+                if !is_http(&next) {
+                    return Err(HttpError::NotAllowed(format!(
+                        "a redirect to a {}: URL",
+                        next.scheme()
+                    )));
+                }
                 if status == 303 || (matches!(status, 301 | 302) && method == Method::Post) {
                     method = Method::Get;
                     body = Vec::new();
@@ -273,6 +288,11 @@ impl HttpClient {
             }
         }
     }
+}
+
+/// Whether `url` is an http or https URL.
+fn is_http(url: &Url) -> bool {
+    matches!(url.scheme(), "http" | "https")
 }
 
 fn http_method(method: Method) -> http::Method {
