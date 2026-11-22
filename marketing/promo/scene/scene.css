@@ -1,0 +1,1290 @@
+/* Jellyfesh v0.0.7 promo: the stage, the type and the simulated screens.
+ *
+ * The screens recreate Jellyfesh's Luminous design. Sizes, radii, spacing, shadows and type
+ * roles are the static tokens of design/tokens.json as Jellyfesh Web uses them
+ * (`cargo xtask tokens --target css`), and the component rules follow
+ * platforms/web/src (App.svelte, PlayerBar, NowPlaying, LyricsPane, SourcePage, ItemCard,
+ * ItemRow, GetInfoSheet, CommentsPane, Settings). Colours are not baked here: each screen gets
+ * the theme Jellyfesh's core makes from its cover (assets/themes, from `jf theme`).
+ *
+ * Inter stands in for the system font the apps use. Nothing animates by itself: scene.js
+ * sets every moving value for the frame being drawn. */
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../fonts/Inter-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Nunito';
+  src: url('../fonts/Nunito-latin.woff2') format('woff2');
+  font-weight: 200 1000;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Source Serif 4';
+  src: url('../fonts/SourceSerif4-latin.woff2') format('woff2');
+  font-weight: 200 900;
+  font-display: block;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../fonts/JetBrainsMono-latin.woff2') format('woff2');
+  font-weight: 100 800;
+  font-display: block;
+}
+
+:root {
+  /* Static tokens (design/tokens.json). */
+  --jf-radius-r-xs: 4px;
+  --jf-radius-r-sm: 6px;
+  --jf-radius-r-md: 8px;
+  --jf-radius-r-lg: 12px;
+  --jf-radius-r-xl: 16px;
+  --jf-radius-r-2xl: 24px;
+  --jf-artwork-radius-grid: 16px;
+  --jf-artwork-radius-hero: 24px;
+  --jf-artwork-radius-list: 6px;
+  --jf-player-bar-height: 80px;
+  --jf-player-row-height: 52px;
+  --jf-player-scrubber-track: 4px;
+  --jf-player-scrubber-thumb: 14px;
+  --jf-lyrics-line-gap: 20px;
+  --jf-lyrics-scale-inactive: 0.92;
+  --jf-type-text-h1: 48px;
+  --jf-type-text-h3: 20.8px;
+  --jf-type-roles-section-size: 20px;
+  --jf-type-roles-list-title-size: 14px;
+  --jf-type-roles-list-secondary-size: 12px;
+  --jf-type-roles-now-playing-title-size: 32px;
+
+  /* What the Customize scene changes (the Look slice's values; 1 is Luminous). */
+  --cs: 1;
+  --gl: 1;
+  --glow: 0.75;
+  --face: 'Inter', sans-serif;
+  --lw: 700;
+  --lglow: 0;
+
+  --brand-ink: rgba(247, 248, 252, 0.92);
+  --brand-ink-70: rgba(247, 248, 252, 0.72);
+  --brand-accent: #8db7ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+html,
+body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: #05070c;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  color: var(--brand-ink);
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #05070c;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.abs {
+  position: absolute;
+}
+
+/* ---------- Backgrounds ---------- */
+
+/* The brand's dark aurora (the website hero: the dark field at the brand hue, strong). */
+.aurora-dark {
+  position: absolute;
+  inset: -12%;
+  background:
+    radial-gradient(52% 60% at 18% 12%, rgba(48, 78, 134, 0.95) 0%, transparent 70%),
+    radial-gradient(50% 62% at 86% 36%, rgba(82, 50, 93, 0.9) 0%, transparent 70%),
+    radial-gradient(46% 55% at 34% 96%, rgba(0, 61, 60, 0.8) 0%, transparent 70%),
+    radial-gradient(30% 34% at 70% 92%, rgba(48, 78, 134, 0.55) 0%, transparent 70%),
+    #0c0f16;
+}
+
+.aurora-light {
+  position: absolute;
+  inset: -12%;
+  background:
+    radial-gradient(52% 58% at 12% 8%, rgba(167, 205, 255, 0.85) 0%, transparent 72%),
+    radial-gradient(54% 64% at 92% 88%, rgba(239, 201, 253, 0.75) 0%, transparent 72%),
+    radial-gradient(44% 52% at 4% 96%, rgba(188, 239, 236, 0.7) 0%, transparent 70%),
+    radial-gradient(36% 40% at 90% 8%, rgba(167, 205, 255, 0.55) 0%, transparent 70%),
+    #eff3f9;
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.022;
+}
+
+/* ---------- Big type ---------- */
+
+.headline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+.sub {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.eyebrow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+.pro-badge {
+  display: inline-block;
+  height: 44px;
+  line-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.on-dark .pro-badge {
+  color: #0a0e17;
+  background: linear-gradient(100deg, #a3cbff, #e2b8ff);
+}
+.on-light .pro-badge {
+  color: #fafcff;
+  background: linear-gradient(100deg, #2552aa, #7a4fc2);
+}
+.on-dark {
+  color: var(--brand-ink);
+}
+.on-dark .sub {
+  color: var(--brand-ink-70);
+}
+.on-light {
+  color: rgba(18, 23, 32, 0.92);
+}
+.on-light .sub {
+  color: rgba(18, 23, 32, 0.66);
+}
+.grad-dark {
+  background: linear-gradient(100deg, #a9d0ff 0%, #c9b6ff 55%, #f2b9e6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.grad-light {
+  background: linear-gradient(100deg, #2552aa 0%, #5b4fc9 55%, #a24bb0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* A word revealed from below its own line (a mask the height of the line). */
+.reveal {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding: 0.06em 0.04em 0.12em;
+  margin: -0.06em -0.04em -0.12em;
+}
+.reveal > span {
+  display: inline-block;
+  will-change: auto;
+}
+
+.caption {
+  position: absolute;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.footnote {
+  position: absolute;
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.003em;
+}
+
+/* The persistent label of every scene with screens. */
+#label {
+  position: absolute;
+  right: 40px;
+  top: 36px;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 20px 0 16px;
+  border-radius: 999px;
+  background: rgba(10, 13, 20, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.003em;
+}
+#label .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8db7ff;
+}
+
+/* ---------- The window and the app ---------- */
+
+.win {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1600px;
+  height: 900px;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--jf-sky);
+  color: var(--jf-ink-90);
+  font-family: var(--face);
+  font-size: 16px;
+  line-height: 1.4;
+  isolation: isolate;
+}
+.win.dark {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 30px 90px -20px rgba(0, 0, 0, 0.7),
+    0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.win.light {
+  box-shadow:
+    0 0 0 1px rgba(20, 30, 60, 0.08),
+    0 34px 90px -24px rgba(30, 40, 90, 0.35),
+    0 10px 28px rgba(30, 40, 90, 0.12);
+}
+.cam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: 0 0;
+}
+
+/* The Luminous field: four glows at the theme's hue, as strong as the aurora (app.css). */
+.field {
+  position: absolute;
+  inset: -8%;
+  background:
+    radial-gradient(62% 58% at 9% 6%, color-mix(in srgb, var(--jf-aurora-1) calc(var(--glow) * 107%), transparent) 0%, transparent 72%),
+    radial-gradient(58% 64% at 95% 92%, color-mix(in srgb, var(--jf-aurora-2) calc(var(--glow) * 96%), transparent) 0%, transparent 72%),
+    radial-gradient(44% 52% at 6% 94%, color-mix(in srgb, var(--jf-aurora-3) calc(var(--glow) * 88%), transparent) 0%, transparent 70%),
+    radial-gradient(38% 40% at 88% 9%, color-mix(in srgb, var(--jf-aurora-1) calc(var(--glow) * 61%), transparent) 0%, transparent 70%);
+}
+
+.glass-clear {
+  background: color-mix(in srgb, var(--jf-tint-clear) calc(var(--gl) * 100%), var(--jf-cloud));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge),
+    var(--jf-elevation-shadow-1);
+}
+.glass-veil {
+  background: color-mix(in srgb, var(--jf-tint-veil) calc(var(--gl) * 100%), var(--jf-cloud));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge-soft),
+    var(--jf-elevation-shadow-2);
+}
+.glass-veil-flat {
+  background: color-mix(in srgb, var(--jf-tint-veil) calc(var(--gl) * 100%), var(--jf-cloud));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge-soft),
+    var(--jf-elevation-shadow-1);
+}
+.surface-mist {
+  background: color-mix(in srgb, var(--jf-tint-mist) calc(var(--gl) * 100%), var(--jf-cloud));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge-soft),
+    var(--jf-elevation-shadow-1);
+}
+
+svg.icon {
+  display: block;
+  flex: none;
+}
+
+/* Sidebar: a floating panel of Clear glass, r-2xl, 12 px from the window's edges. */
+.sidebar {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  bottom: 12px;
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 20px 12px;
+  border-radius: calc(24px * var(--cs));
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 10px 24px;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+}
+.brand img {
+  width: 32px;
+  height: 32px;
+  border-radius: calc(9px * var(--cs));
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: calc(12px * var(--cs));
+  color: var(--jf-ink-70);
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.nav-item.on {
+  background: var(--jf-accent-soft);
+  color: var(--jf-accent-text);
+  font-weight: 600;
+}
+.nav-gap {
+  margin: 8px 12px;
+  border-top: 1px solid var(--jf-line-soft);
+}
+.nav-end {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.content {
+  position: absolute;
+  left: 248px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  padding: 40px 32px 0;
+}
+.content.masked {
+  -webkit-mask-image: linear-gradient(to top, transparent 96px, black 144px);
+  mask-image: linear-gradient(to top, transparent 96px, black 144px);
+}
+.scroll {
+  position: relative;
+}
+.page-title {
+  margin: 0 0 24px;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.024em;
+}
+.section {
+  margin: 0 0 12px;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+.summary {
+  margin: -12px 0 28px;
+  color: var(--jf-ink-70);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* Cards (ItemCard): the cover on shadow-2 with r16, the title and the second line. */
+.card {
+  min-width: 0;
+  padding: 8px;
+}
+.card .cover {
+  position: relative;
+  display: block;
+  margin-bottom: 8px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: calc(16px * var(--cs));
+  box-shadow: var(--jf-elevation-shadow-2);
+}
+.card .cover img,
+.cover-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card .title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--jf-ink-90);
+}
+.card .second {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--jf-ink-70);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-inline: -8px;
+}
+.row-shelf {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 184px;
+  gap: 16px;
+  margin: -4px -4px 0;
+  padding: 4px 4px 12px;
+}
+.row-shelf .card {
+  padding: 0;
+}
+
+/* Lists (ItemRow in a Mist surface). */
+.rows {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px;
+  border-radius: calc(24px * var(--cs));
+}
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 8px;
+  border-radius: calc(8px * var(--cs));
+}
+.item-row.playing {
+  background: var(--jf-accent-soft);
+}
+.item-row .number {
+  flex: none;
+  width: 40px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--jf-ink-70);
+  font-size: 14px;
+}
+.item-row .art {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: calc(6px * var(--cs));
+}
+.item-row .text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.item-row .t1 {
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 500;
+  color: var(--jf-ink-90);
+}
+.item-row.playing .t1 {
+  color: var(--jf-accent-text);
+  font-weight: 600;
+}
+.item-row .t2 {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--jf-ink-70);
+}
+.item-row .len {
+  font-size: 13px;
+  color: var(--jf-ink-70);
+  font-variant-numeric: tabular-nums;
+  padding-right: 4px;
+}
+.item-row .more {
+  width: 36px;
+  color: var(--jf-ink-50);
+  display: grid;
+  place-items: center;
+}
+
+/* The player bar: a floating Veil capsule, 80 px high, r-2xl. */
+.player-bar {
+  position: absolute;
+  left: 264px;
+  right: 16px;
+  bottom: 16px;
+  height: 80px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px 0 8px;
+  border-radius: calc(24px * var(--cs));
+}
+.pb-open {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 6px;
+}
+.pb-art {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: calc(12px * var(--cs));
+  box-shadow:
+    inset 0 0 0 1px var(--jf-line-soft),
+    var(--jf-elevation-shadow-1);
+}
+.pb-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pb-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+.pb-second {
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--jf-ink-70);
+}
+.pb-lyric {
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pb-middle {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.pb-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  color: var(--jf-ink-70);
+}
+.tool {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--jf-ink-70);
+}
+
+/* Transport (compact in the bar, dock in Now Playing). */
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--jf-ink-90);
+}
+.transport .toggle {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--jf-ink-70);
+}
+.transport .skip {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+}
+.transport .play {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--jf-accent);
+  color: var(--jf-on-accent);
+}
+.dock .transport {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.dock .transport .play {
+  width: 54px;
+  height: 54px;
+  box-shadow: var(--jf-elevation-shadow-1);
+}
+.seek {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.seek .time {
+  flex: none;
+  min-width: 4.5ch;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--jf-ink-70);
+}
+.seek .time.start {
+  text-align: end;
+}
+.seek .line {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--jf-ink-30);
+}
+.seek .played {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--jf-ink-90);
+  transform-origin: 0 50%;
+}
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--jf-ink-70);
+}
+.volume .vline {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--jf-ink-30);
+}
+.volume .vline span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 72%;
+  border-radius: inherit;
+  background: var(--jf-ink-90);
+}
+
+/* ---------- Now Playing (a 1600 × 900 window: the web's stage geometry at that size) ---------- */
+
+.np {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--jf-sky);
+}
+.np .backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.np-top {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  top: 0;
+  height: 78px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.np-back {
+  position: absolute;
+  left: 0;
+  top: 17px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 18px 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.segmented {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+}
+.segmented span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: var(--jf-ink-70);
+  font-size: 13px;
+  font-weight: 600;
+}
+.segmented span.on {
+  background: var(--jf-ink-90);
+  color: var(--jf-sky);
+}
+.np-art {
+  position: absolute;
+  overflow: hidden;
+  border-radius: calc(24px * var(--cs));
+  box-shadow: var(--jf-elevation-shadow-3);
+}
+.np-titles {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.np-title {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  white-space: nowrap;
+}
+.np-artist {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--jf-ink-70);
+  white-space: nowrap;
+}
+.np-pane {
+  position: absolute;
+  overflow: hidden;
+}
+.lyrics-mask {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 72px, black calc(100% - 96px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, black 72px, black calc(100% - 96px), transparent 100%);
+}
+.dock {
+  position: absolute;
+  left: 140px;
+  width: 1320px;
+  top: 792px;
+  height: 80px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 200px auto;
+  align-items: center;
+  column-gap: 20px;
+  padding: 0 12px 0 16px;
+  border-radius: calc(40px * var(--cs));
+}
+
+/* Lyrics (LyricsPane): 40 px bold lines, the active one at full size, the rest at 92 %. */
+.lyric-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  transform-origin: 0 50%;
+}
+.lyric-line .text {
+  display: block;
+  padding: 4px 8px;
+  font-size: 40px;
+  line-height: 1.18;
+  font-weight: var(--lw);
+  letter-spacing: -0.02em;
+  color: var(--jf-ink-90);
+}
+.lyric-line.active .text {
+  text-shadow: 0 0 calc(18px * var(--lglow)) color-mix(in srgb, var(--hl, var(--jf-ink-90)) calc(var(--lglow) * 60%), transparent);
+}
+.word {
+  color: transparent;
+  background-image:
+    linear-gradient(90deg, var(--hl, var(--jf-ink-90)) calc(100% - 0.3em), transparent),
+    linear-gradient(var(--jf-ink-70), var(--jf-ink-70));
+  background-repeat: no-repeat;
+  background-size:
+    0.3em 100%,
+    100% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-box-decoration-break: clone;
+}
+.credit {
+  position: absolute;
+  left: 8px;
+  font-size: 12px;
+  color: var(--jf-ink-70);
+}
+
+.no-lyrics {
+  position: absolute;
+  left: 0;
+  top: 22px;
+  width: 460px;
+  color: var(--jf-ink-70);
+}
+.no-lyrics .title-2 {
+  margin: 0 0 12px;
+  font-size: 20.8px;
+  font-weight: 700;
+  color: var(--jf-ink-90);
+}
+.no-lyrics p {
+  margin: 0;
+  font-size: 16px;
+}
+.make {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 16px;
+}
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.btn-primary {
+  background: var(--jf-accent);
+  color: var(--jf-on-accent);
+}
+.btn-secondary {
+  background: var(--jf-fill);
+  color: var(--jf-ink-90);
+}
+.stage-text {
+  margin: 0;
+  font-weight: 600;
+  color: var(--jf-ink-90);
+  font-variant-numeric: tabular-nums;
+}
+.job-bar {
+  position: relative;
+  width: 280px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--jf-fill);
+}
+.job-bar span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 2px;
+  background: var(--jf-accent);
+}
+
+/* Comments (CommentsPane). */
+.comments .from {
+  margin: 0 0 12px;
+  color: var(--jf-ink-70);
+  font-size: 13px;
+  font-weight: 600;
+}
+.comments h3 {
+  margin: 16px 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.comments ul {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.comments li {
+  display: flex;
+  gap: 12px;
+}
+.comments .avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+.comments .meta {
+  display: flex;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0 0 2px;
+  font-size: 13px;
+  color: var(--jf-ink-70);
+}
+.comments .author {
+  font-weight: 600;
+  color: var(--jf-ink-90);
+}
+.comments .likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.comments .ctext {
+  margin: 0;
+  font-size: 16px;
+  color: var(--jf-ink-90);
+}
+
+/* A sheet (Get Info): r-2xl Cloud on shadow-3, over the scrim. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--jf-scrim);
+}
+.sheet {
+  position: absolute;
+  width: 520px;
+  border-radius: calc(24px * var(--cs));
+  background: var(--jf-cloud);
+  color: var(--jf-ink-90);
+  box-shadow:
+    inset 0 0 0 1px var(--jf-line-soft),
+    var(--jf-elevation-shadow-3);
+}
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0 24px;
+}
+.sheet h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+.sheet .close {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--jf-ink-70);
+}
+.sheet .body {
+  padding: 16px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sheet dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  margin: 0;
+}
+.sheet dt {
+  color: var(--jf-ink-70);
+  font-weight: 600;
+}
+.sheet dd {
+  margin: 0;
+}
+.sheet h3 {
+  margin: 12px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Settings groups (Mist cards) and their controls, for Customize and Jellyfesh Pro. */
+.group {
+  padding: 20px 24px 8px;
+  border-radius: calc(24px * var(--cs));
+  font-family: var(--face);
+  color: var(--jf-ink-90);
+}
+.group .gh {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--jf-ink-70);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.group .gtitle {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 700;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 60px;
+  padding: 12px 0;
+}
+.set-row + .set-row {
+  border-top: 1px solid var(--jf-line-soft);
+}
+.set-row .label {
+  font-weight: 600;
+  font-size: 15px;
+}
+.slider {
+  position: relative;
+  width: 240px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+}
+.slider .rest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--jf-ink-30);
+  overflow: hidden;
+}
+.slider .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--jf-ink-90);
+}
+.slider .thumb {
+  position: absolute;
+  top: 5px;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: var(--jf-ink-90);
+  box-shadow:
+    0 0 0 2px var(--jf-glass-edge),
+    var(--jf-elevation-shadow-1);
+}
+.slider-out {
+  width: 44px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--jf-ink-70);
+  font-size: 14px;
+}
+.seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--jf-fill);
+  box-shadow: inset 0 0 0 1px var(--jf-line-soft);
+}
+.seg span {
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  color: var(--jf-ink-70);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.seg span.on {
+  background: var(--jf-cloud);
+  color: var(--jf-ink-90);
+  box-shadow: var(--jf-elevation-shadow-1);
+}
+.well {
+  width: 56px;
+  height: 30px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--jf-line);
+}
+
+/* Desktop Lyrics (the native apps: light words with a soft shadow, over any desktop). */
+.desk-lyrics {
+  position: absolute;
+  padding: 18px 92px 18px 28px;
+  border-radius: 20px;
+}
+.desk-lyrics .now {
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  white-space: nowrap;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.45));
+}
+.desk-lyrics .next {
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: rgba(247, 248, 252, 0.6);
+  white-space: nowrap;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+}
+.desk-controls {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateY(-50%);
+}
+.desk-controls span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Generic windows for the platforms scene: plain rounded shapes, no system controls. */
+.device {
+  position: absolute;
+  overflow: hidden;
+  background: #0c0f16;
+}
+.device-label {
+  position: absolute;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: rgba(18, 23, 32, 0.9);
+}
+
+/* The Customize panel: a solid Settings card beside the window, a label over each control. */
+.look-panel {
+  transform-origin: 0 0;
+  font-family: 'Inter', sans-serif;
+  color: var(--jf-ink-90);
+}
+.look-panel .crumbs {
+  margin: 0 0 12px 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(247, 248, 252, 0.62);
+}
+.look-panel .crumbs b {
+  color: rgba(247, 248, 252, 0.95);
+}
+.look-card {
+  background: var(--jf-cloud);
+  box-shadow:
+    inset 0 0 0 1px var(--jf-glass-edge),
+    0 34px 90px -24px rgba(0, 0, 0, 0.75),
+    0 10px 28px rgba(0, 0, 0, 0.35);
+  padding: 22px 24px 22px;
+}
+.look-card .gh {
+  margin: 8px 0 6px;
+}
+.set-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 0;
+}
+.set-field + .set-field {
+  border-top: 1px solid var(--jf-line-soft);
+}
+.field-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 15px;
+  font-weight: 600;
+}
+.slider.wide {
+  width: 100%;
+}
+.seg.wide {
+  display: flex;
+}
+.seg.wide span {
+  flex: 1 1 auto;
+  padding: 0 10px;
+}

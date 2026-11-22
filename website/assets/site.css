@@ -171,6 +171,15 @@ section .lead { color: var(--ink-70); margin: 0 0 32px; max-width: 60ch; }
 .shots img[width][height] { max-height: 560px; width: auto; max-width: 100%; margin-inline: auto; }
 .shots figcaption { color: var(--ink-50); font-size: 14px; margin-top: 8px; }
 
+/* The v0.0.7 film: 16:9, the cards' corners and shadow, its label under it. */
+.film { padding-bottom: 32px; }
+.film figure { margin: 0; }
+.film video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: var(--radius-l);
+  background: #0c0f16; box-shadow: var(--shadow); border: 1px solid var(--line);
+}
+.film figcaption { color: var(--ink-50); font-size: 14px; margin-top: 10px; }
+
 /* Downloads */
 .platform h3 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .platform .req { color: var(--ink-50); font-size: 14px; margin: 2px 0 14px; }
