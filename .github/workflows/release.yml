@@ -586,6 +586,22 @@ jobs:
             echo "::error::$manifest has no \"CARGO_TERM_COLOR\": \"never\" entry to put the settings after"
             exit 1
           fi
+      # The image comes with the GNOME runtime installed in one of its read-only layers, and it
+      # is rebuilt only twice a week. When Flathub has a newer GNOME SDK, flatpak-builder updates
+      # it first, and on the image's layer that fails ("Failed to update org.gnome.Sdk: Invalid
+      # cross-device link": overlayfs cannot rename a lower layer's directories). So the
+      # installation is copied to the runner's own disk and used from there
+      # (FLATPAK_SYSTEM_DIR, "the location of the default system-wide installation").
+      - name: The image's Flatpak installation onto the runner's disk
+        shell: bash
+        run: |
+          from=$(flatpak --installations | head -n 1)
+          to="$RUNNER_TEMP/flatpak"
+          echo "copying $from to $to"
+          mkdir -p "$to"
+          cp -a "$from/." "$to/"
+          echo "FLATPAK_SYSTEM_DIR=$to" >> "$GITHUB_ENV"
+          FLATPAK_SYSTEM_DIR="$to" flatpak list --system --runtime --columns=ref
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
           bundle: Jellyfesh-${{ needs.check.outputs.label }}-Linux.flatpak
