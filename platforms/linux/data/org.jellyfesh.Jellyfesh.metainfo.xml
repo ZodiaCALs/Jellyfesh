@@ -53,6 +53,16 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.0.7" date="2026-11-22">
+      <description>
+        <p>Public Beta. AI Lyrics makes word-timed lyrics on this computer
+        or online with your own key, Customize changes the look and the
+        layout as you watch, and both come with Jellyfesh Pro, free during
+        the beta. Every source opens on its own Discover page, Get Info
+        shows the sound's real quality, the lyrics bar follows each word,
+        and Desktop Lyrics floats above your other windows.</p>
+      </description>
+    </release>
     <release version="0.0.6" date="2026-11-17">
       <description>
         <p>Public Beta. The Luminous design: the cover's colour fills the

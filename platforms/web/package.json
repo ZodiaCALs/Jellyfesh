@@ -1,6 +1,6 @@
 {
   "name": "jellyfesh-web",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "description": "Jellyfesh Web: the Jellyfesh music player in the browser, for Subsonic, Navidrome and Jellyfin servers.",
   "license": "UNLICENSED",
