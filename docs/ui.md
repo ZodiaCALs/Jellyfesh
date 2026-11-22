@@ -468,8 +468,10 @@ Groups and rows in this order:
    settings and sign-in are removed."); a bundled extension the person
    uninstalls stays uninstalled until they install it again.
 
-**About**: the version (from the build, never typed in), and the website and
-the third-party licences where the build knows where they are published;
+**About**: **Keyboard Shortcuts** on desktops and the web (the shared keys
+listed under Keyboard, with the platform's modifier); the version (from the
+build, never typed in), and the website and the third-party licences where
+the build knows where they are published;
 **Licence Agreement** and **Privacy Policy**. Direct downloads also have
 **Check for Updates** and **Check for Updates Automatically**; when a newer
 version exists, "Jellyfesh {version} Is Available" and **View Release**.
@@ -513,7 +515,6 @@ own conventions and must not reuse these keys.
     the browser.
   * The mini player needs Document Picture-in-Picture (Chrome and Edge 116+,
     Firefox 151+, desktops); elsewhere its button is hidden.
-  * Its Settings also list the keyboard shortcuts.
   * Its library is folders the browser may read, picked again on each visit
     before their songs play, with no Watch Folders. **Open Files…** plays
     files for one visit without adding them.
