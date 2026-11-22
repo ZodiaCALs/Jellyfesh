@@ -1,6 +1,7 @@
 //! Home (docs/ui.md, "Home"): the library's size, then Recently Added
-//! (albums), Recently Played and Most Played (songs); a welcome instead
-//! while the library is empty and no source is signed in.
+//! (albums), Recently Played and Most Played (songs), in the look's order
+//! with Favourites when it lists them (ADR-0020); a welcome instead while
+//! the library is empty and no source is signed in.
 
 use std::collections::HashSet;
 
@@ -9,7 +10,7 @@ use gtk::glib;
 use jf_core::{Collection, Track, TrackRef};
 
 use crate::ui::convert;
-use crate::ui::i18n::{tr, trn};
+use crate::ui::i18n::{tr, trc, trn};
 use crate::ui::models::{Item, ItemData, Kind};
 use crate::ui::pages::{follow_title, frame, heading, keep_alive, large_title, scroller, small_title};
 use crate::ui::rows::{Card, ListRow, RowStyle};
@@ -21,25 +22,30 @@ const RECENT_TRACKS: usize = 200;
 const RECENT_ALBUMS: usize = 12;
 const RECENT_PLAYED: usize = 10;
 const MOST_PLAYED: usize = 10;
+const FAVOURITES: usize = 10;
 
 /// A list of songs under a heading (Recently Played, Most Played); a row
 /// plays the list from that song.
 struct Shelf {
+    /// The heading and the list, together, to put in the look's order.
+    section: gtk::Box,
     heading: gtk::Label,
     list: gtk::ListBox,
     refs: std::cell::RefCell<Vec<TrackRef>>,
 }
 
 impl Shelf {
-    fn new(title: &str, body: &gtk::Box) -> std::rc::Rc<Shelf> {
+    fn new(title: &str) -> std::rc::Rc<Shelf> {
         let heading = heading(title);
         let list = gtk::ListBox::new();
         list.add_css_class("track-box");
         list.set_selection_mode(gtk::SelectionMode::None);
         list.update_property(&[gtk::accessible::Property::Label(title)]);
-        body.append(&heading);
-        body.append(&list);
+        let section = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        section.append(&heading);
+        section.append(&list);
         let shelf = std::rc::Rc::new(Shelf {
+            section,
             heading,
             list,
             refs: std::cell::RefCell::new(Vec::new()),
@@ -76,11 +82,17 @@ impl Shelf {
 struct Home {
     stats: gtk::Label,
     welcome: gtk::Widget,
+    /// The sections, in the look's order.
+    sections: gtk::Box,
+    added_section: gtk::Box,
     added_heading: gtk::Label,
     added: gtk::Box,
     added_scroll: gtk::ScrolledWindow,
     played: std::rc::Rc<Shelf>,
     most: std::rc::Rc<Shelf>,
+    favourites: std::rc::Rc<Shelf>,
+    /// The order the sections were last put in.
+    order: std::cell::RefCell<Vec<jf_core::HomeSection>>,
 }
 
 pub fn page() -> adw::NavigationPage {
@@ -91,7 +103,6 @@ pub fn page() -> adw::NavigationPage {
     stats.set_xalign(0.0);
     stats.add_css_class("page-subtitle");
     body.append(&title);
-    body.append(&stats);
 
     let welcome = welcome();
     body.append(&welcome);
@@ -105,11 +116,15 @@ pub fn page() -> adw::NavigationPage {
         .hscrollbar_policy(gtk::PolicyType::Automatic)
         .build();
     added_scroll.add_css_class("shelf-scroll");
-    body.append(&added_heading);
-    body.append(&added_scroll);
+    let added_section = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    added_section.append(&added_heading);
+    added_section.append(&added_scroll);
 
-    let played = Shelf::new(&tr("Recently Played"), &body);
-    let most = Shelf::new(&tr("Most Played"), &body);
+    let played = Shelf::new(&tr("Recently Played"));
+    let most = Shelf::new(&tr("Most Played"));
+    let favourites = Shelf::new(&trc("sidebar", "Favourites"));
+    let sections = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    body.append(&sections);
 
     let clamp = adw::Clamp::builder().child(&body).maximum_size(1100).build();
     let scroll = scroller(&clamp);
@@ -120,19 +135,28 @@ pub fn page() -> adw::NavigationPage {
     let home = std::rc::Rc::new(Home {
         stats,
         welcome: welcome.upcast(),
+        sections,
+        added_section,
         added_heading,
         added,
         added_scroll,
         played,
         most,
+        favourites,
+        order: std::cell::RefCell::new(Vec::new()),
     });
+    arrange(&home);
     refresh(&home);
     let weak = std::rc::Rc::downgrade(&home);
     app().listen_for(&page, move |change| {
-        if let Some(home) = weak.upgrade()
-            && matches!(change, Change::Library | Change::NowPlaying | Change::Sources)
-        {
-            refresh(&home);
+        let Some(home) = weak.upgrade() else { return };
+        match change {
+            Change::Library | Change::NowPlaying | Change::Sources => refresh(&home),
+            Change::Look => {
+                arrange(&home);
+                refresh(&home);
+            }
+            _ => {}
         }
     });
     // The page keeps the parts alive.
@@ -200,12 +224,43 @@ fn recent_albums(tracks: &[Track]) -> Vec<ItemData> {
     out
 }
 
+/// The sections in the look's order (Luminous's while it is not
+/// customized): the library's size, Recently Added, Recently Played, Most
+/// Played and Favourites, each where the look lists it.
+fn arrange(home: &Home) {
+    use jf_core::HomeSection;
+    let order = crate::logic::look::home(&app().look.borrow());
+    if *home.order.borrow() == order {
+        return;
+    }
+    while let Some(child) = home.sections.first_child() {
+        home.sections.remove(&child);
+    }
+    for section in &order {
+        let widget: gtk::Widget = match section {
+            HomeSection::Summary => home.stats.clone().upcast(),
+            HomeSection::RecentlyAdded => home.added_section.clone().upcast(),
+            HomeSection::RecentlyPlayed => home.played.section.clone().upcast(),
+            HomeSection::MostPlayed => home.most.section.clone().upcast(),
+            HomeSection::Favourites => home.favourites.section.clone().upcast(),
+        };
+        home.sections.append(&widget);
+    }
+    *home.order.borrow_mut() = order;
+}
+
+/// Whether the look shows `section` on Home.
+fn shows(home: &Home, section: jf_core::HomeSection) -> bool {
+    home.order.borrow().contains(&section)
+}
+
 fn refresh(home: &std::rc::Rc<Home>) {
+    let favourites_shown = shows(home, jf_core::HomeSection::Favourites);
     let weak = std::rc::Rc::downgrade(home);
     spawn(async move {
         let a = app();
         let result = a
-            .query(|core| {
+            .query(move |core| {
                 let stats = core.stats().ok();
                 let added = core.recently_added(RECENT_TRACKS).unwrap_or_default();
                 let most: Vec<ItemData> = core
@@ -231,10 +286,17 @@ fn refresh(home: &std::rc::Rc<Home>) {
                             .collect()
                     }
                 };
-                (stats, recent_albums(&added), played, most)
+                let favourites: Vec<ItemData> = if favourites_shown {
+                    core.favorites(0, FAVOURITES)
+                        .map(|rows| rows.iter().map(convert::track_row).collect())
+                        .unwrap_or_default()
+                } else {
+                    Vec::new()
+                };
+                (stats, recent_albums(&added), played, most, favourites)
             })
             .await;
-        let (Some(home), Some((stats, albums, played, most))) = (weak.upgrade(), result) else {
+        let (Some(home), Some((stats, albums, played, most, favourites))) = (weak.upgrade(), result) else {
             return;
         };
         let tracks = stats.map_or(0, |s| s.tracks);
@@ -247,6 +309,7 @@ fn refresh(home: &std::rc::Rc<Home>) {
             ),
             _ => String::new(),
         });
+        home.stats.set_visible(!home.stats.label().is_empty());
         // The welcome, while there is nothing to play: no library and no
         // source signed in.
         let signed_in = app().sources.borrow().plugins.iter().any(|p| p.account.is_some());
@@ -267,5 +330,6 @@ fn refresh(home: &std::rc::Rc<Home>) {
 
         home.played.fill(&played);
         home.most.fill(&most);
+        home.favourites.fill(&favourites);
     });
 }

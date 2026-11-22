@@ -95,6 +95,72 @@ impl Section {
     pub fn from_tag(tag: &str) -> Option<Section> {
         Section::ALL.into_iter().find(|s| s.tag() == tag)
     }
+
+    /// The section for one of the look's places.
+    fn of(place: jf_core::Place) -> Section {
+        use jf_core::Place;
+        match place {
+            Place::Home => Section::Home,
+            Place::Albums => Section::Albums,
+            Place::Artists => Section::Artists,
+            Place::Songs => Section::Songs,
+            Place::Playlists => Section::Playlists,
+            Place::Favourites => Section::Favourites,
+            Place::Search => Section::Search,
+            Place::Sources => Section::Sources,
+        }
+    }
+
+    /// Search and Sources, after the library's places.
+    fn is_library(self) -> bool {
+        !matches!(self, Section::Search | Section::Sources)
+    }
+}
+
+/// The sidebar's rows: the look's places in its order (all eight, in the
+/// Luminous order, while it is not customized).
+fn fill_sidebar(sidebar: &gtk::ListBox) {
+    while let Some(row) = sidebar.row_at_index(0) {
+        sidebar.remove(&row);
+    }
+    let places = try_app().map_or_else(
+        || crate::logic::look::sidebar(&jf_core::LookSnapshot::defaults(0)),
+        |a| crate::logic::look::sidebar(&a.look.borrow()),
+    );
+    for section in places.into_iter().map(Section::of) {
+        let row = gtk::ListBoxRow::new();
+        let b = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        b.append(&Glyph::new(section.glyph(), 18));
+        let label = gtk::Label::new(Some(&section.title()));
+        label.set_xalign(0.0);
+        b.append(&label);
+        row.set_child(Some(&b));
+        row.set_widget_name(section.tag());
+        row.update_property(&[gtk::accessible::Property::Label(&section.title())]);
+        sidebar.append(&row);
+    }
+}
+
+/// The look's places changed: the sidebar follows, with the section shown
+/// still selected when it is listed.
+fn refill_sidebar() {
+    let Some(s) = shell() else { return };
+    let current = *s.current.borrow();
+    fill_sidebar(&s.sidebar);
+    s.sidebar.invalidate_headers();
+    select_row(&s, current);
+}
+
+fn select_row(s: &Shell, section: Section) {
+    s.sidebar.unselect_all();
+    for i in 0.. {
+        let Some(row) = s.sidebar.row_at_index(i) else {
+            break;
+        };
+        if row.widget_name() == section.tag() {
+            s.sidebar.select_row(Some(&row));
+        }
+    }
 }
 
 pub struct Shell {
@@ -148,22 +214,14 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
     let sidebar = gtk::ListBox::new();
     sidebar.add_css_class("navigation-sidebar");
     sidebar.update_property(&[gtk::accessible::Property::Label(&tr("Library sections"))]);
-    for section in Section::ALL {
-        let row = gtk::ListBoxRow::new();
-        let b = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-        b.append(&Glyph::new(section.glyph(), 18));
-        let label = gtk::Label::new(Some(&section.title()));
-        label.set_xalign(0.0);
-        b.append(&label);
-        row.set_child(Some(&b));
-        row.set_widget_name(section.tag());
-        row.update_property(&[gtk::accessible::Property::Label(&section.title())]);
-        sidebar.append(&row);
-    }
-    // The library's six, a separator, then Search and Sources (docs/ui.md,
-    // "Navigation").
-    sidebar.set_header_func(|row, _| {
-        if row.widget_name() != Section::Search.tag() {
+    fill_sidebar(&sidebar);
+    // The library's places, a separator, then Search and Sources (docs/ui.md,
+    // "Navigation"); in the look's order, a separator wherever Search or
+    // Sources follows a library place.
+    sidebar.set_header_func(|row, before| {
+        let kind = |r: &gtk::ListBoxRow| Section::from_tag(&r.widget_name()).map(Section::is_library);
+        let separated = kind(row) == Some(false) && before.is_some_and(|b| kind(b) == Some(true));
+        if !separated {
             row.set_header(None::<&gtk::Widget>);
         } else if row.header().is_none() {
             row.set_header(Some(&gtk::Separator::new(gtk::Orientation::Horizontal)));
@@ -399,14 +457,7 @@ pub fn show_section(section: Section) {
         .clone();
     *s.current.borrow_mut() = section;
     s.content.replace(&[page]);
-    for i in 0.. {
-        let Some(row) = s.sidebar.row_at_index(i) else {
-            break;
-        };
-        if row.widget_name() == section.tag() {
-            s.sidebar.select_row(Some(&row));
-        }
-    }
+    select_row(&s, section);
     s.split.set_show_content(true);
     if section == Section::Search {
         pages::search::focus();
@@ -571,12 +622,13 @@ pub fn listen() {
         if let Change::Theme = change {
             crate::ui::style::apply_theme(true);
         }
-        // The look applies live: its stylesheets, glass in the theme and the
-        // artwork's corners.
+        // The look applies live: its stylesheets, glass in the theme, the
+        // artwork's corners and the sidebar's places.
         if let Change::Look = change {
             crate::ui::style::apply_look();
             crate::ui::style::apply_theme(false);
             crate::ui::widgets::art::redraw_all();
+            refill_sidebar();
         }
     });
 }
