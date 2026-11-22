@@ -14,10 +14,11 @@
   <a href="https://github.com/ZodiaCALs/Jellyfesh/actions/workflows/web.yml"><img src="https://github.com/ZodiaCALs/Jellyfesh/actions/workflows/web.yml/badge.svg?branch=main" alt="Jellyfesh Web status"></a>
 </p>
 
-> **Public Beta: v0.0.6 "Luminous".** Jellyfesh is feature-complete enough
-> for daily listening and still changing quickly. Read the
-> [release notes](docs/releases/v0.0.6.md) for what is new, what has been
-> tested and what is known not to work yet.
+> **Public Beta: v0.0.7 "Verse".** AI Lyrics, Customize and Jellyfesh Pro
+> (free during the beta), a Discover page for every source, and a Windows
+> app that starts. Jellyfesh is ready for daily listening and still
+> changing quickly: read the [release notes](docs/releases/v0.0.7.md) for
+> what is new, what has been tested and what is known not to work yet.
 
 ## Highlights
 
@@ -27,12 +28,19 @@
   date by themselves.
 - **Lyrics that follow every word.** Word-timed lyrics from LRC, enhanced
   LRC, TTML and WebVTT, with translations and romanization, synchronised to
-  within about 10 ms of what you hear.
+  within about 10 ms of what you hear, in Now Playing, a lyrics bar and a
+  floating Desktop Lyrics window.
+- **AI Lyrics** (Pro). Synced lyrics for songs that have none, and timing
+  for plain lyrics: on your device with an open Whisper model, or online
+  with your own OpenAI, Groq or self-hosted key, only after you agree.
+- **Customize** (Pro). Corners, glass, aurora, typeface, text size,
+  density, lyrics style and layout, applied live in every app.
 - **Servers and services in one place.** Jellyfin, Navidrome and other
   Subsonic servers; QQ Music, Spotify and NetEase Cloud Music through
-  official plugins; Apple Music on macOS. Your library and servers answer
-  one search together; each service keeps its own view where its terms ask
-  for it.
+  official plugins; Apple Music on macOS. Every source opens on its own
+  Discover page; Get Info shows the sound's real quality; your library and
+  servers answer one search together; each service keeps its own view
+  where its terms ask for it.
 - **Luminous design.** The colour of the cover fills the room: an aurora at
   the artwork's hue, glass where it helps, and a Now Playing stage with
   large lyrics and every control in one floating dock. Light and dark, with
@@ -51,17 +59,20 @@
 
 ## Platforms
 
-| App | Requirements | Status in v0.0.6 |
+| App | Requirements | Status in v0.0.7 |
 | --- | --- | --- |
 | **macOS** (SwiftUI) | macOS 14.2 or later, Apple silicon or Intel | Beta. Built and tested by CI; not yet signed or notarized. |
-| **Windows** (WinUI 3, .NET 10) | Windows 10 version 1809 or later, x64 or Arm64 | Beta. Built and tested by CI; not yet signed. |
+| **Windows** (WinUI 3, .NET 10) | Windows 10 version 1809 or later, x64 or Arm64 | Beta. One installer; built, tested and started by CI on every change; not yet signed. |
 | **Linux** (GTK 4, libadwaita) | GTK 4.14 and libadwaita 1.5 or later (Ubuntu 24.04, Debian 13, Fedora 40 and later) | Beta. Flatpak (with its GNOME runtime from Flathub); `platforms/linux/packaging/` also makes a tarball. |
 | **Android** (Jetpack Compose) | Android 8 or later | Beta. Built and tested by CI. |
 | **Jellyfesh Web** (Svelte, WebAssembly) | A current Chromium-based browser (others untested) | Beta. Online at the website's `/app/` and as a static folder to host yourself. |
 
 The macOS, Windows and Android apps are built and tested by continuous
-integration on every change but have not yet been run on physical devices
-by the project; see the release notes' known limitations.
+integration on every change (the Windows app is also started there) but
+have not yet been run on physical devices by the project; see the release
+notes' known limitations. Jellyfesh is free; **Jellyfesh Pro** adds AI
+Lyrics and Customize and is free for everyone during the public beta
+([ADR-0021](docs/adr/0021-jellyfesh-pro.md)).
 
 ## Sources
 

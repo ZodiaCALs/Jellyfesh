@@ -12,6 +12,66 @@ Design steps before the first code release are tagged `step-0.x`
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-11-22
+
+The second public beta: AI Lyrics, Customize and Jellyfesh Pro (free
+during the beta), a Discover page for every source, Get Info, comments,
+a word-by-word lyrics bar and Desktop Lyrics, a Windows app that starts,
+and one download per platform ([release notes](docs/releases/v0.0.7.md)).
+
+### Added
+
+- **AI Lyrics** (Pro, ADR-0019): word-timed lyrics for songs without
+  lyrics, and timing for plain lyrics; on the device with whisper.cpp and
+  an open Whisper model downloaded on request, or online with the
+  person's own OpenAI, Groq or self-hosted key after they agree to send
+  the song.
+- **Customize** (Pro, ADR-0020): corners, glass, aurora, typeface, text
+  size, density, lyrics style, sidebar and Home order, three Now Playing
+  layouts and three mini-player styles, applied live.
+- **Jellyfesh Pro** (ADR-0021): Pro Preview during the beta; store
+  purchases (StoreKit 2, Microsoft Store, Play Billing 9) and offline
+  licence keys (`jf-licence`, `tools/jf-licence`); Settings › Extensions.
+- **Discover** for every source and the library, **Get Info** with a
+  quality label decided by the core, **comments**, and artist and album
+  pages for source items (ADR-0022).
+- The **lyrics bar** and **Desktop Lyrics** in every app, from one timing
+  helper with contract vectors; NetEase (unofficial) word-by-word lyrics.
+- **Plugin API 1.2**: maker, appearance, discover, details and comments
+  exports; audio and speech imports with consent; settings schema profile
+  1.2 with translations.
+- `jf-speech`, `jf-relay` (a relay you run yourself for Jellyfesh Web),
+  Check for Updates for direct downloads, draft legal texts in `legal/`,
+  store packaging and signing set-up, `docs/parity.md`.
+
+### Changed
+
+- Releases carry one file per platform, a community plugins zip and
+  `SHA256SUMS.txt`; Windows ships as one installer for x64 and Arm64.
+- Commercial builds leave out the unofficial community plugins; store
+  builds run only their bundled official plugins.
+- Covers of source items come through the core in every app.
+- The five apps share the same sign-in steps, source pages, words and
+  empty states; Jellyfesh Web gained a design and motion pass.
+- Official plugins 0.0.7 (Discover and details); community plugins 0.1.2.
+- whisper.cpp builds are portable by default (`GGML_NATIVE=OFF`).
+
+### Fixed
+
+- Windows: the app closed at start on every PC since v0.0.4 (resources
+  read before WinUI loaded them), and three more start-up faults; the
+  core no longer needs the Visual C++ runtime.
+- Covers missing after signing in to an account.
+- Resume Playback did nothing on macOS, Windows and Android; Play and
+  Shuffle stopped part-way through large libraries.
+- NetEase Cloud Music's liked songs showed empty; word sweeps never
+  animated in Jellyfesh Web; late media answers could change the theme
+  after the queue ended.
+
+### Security
+
+- wasmtime 48.0.10, which fixes this week's advisories.
+
 ## [0.0.6] - 2026-11-17
 
 The first public beta: the Luminous design in every app, official plugins
@@ -259,7 +319,8 @@ First code release: the Rust core and `jf`, a command-line player
   online sources report, risk register, milestone plan, repository layout,
   lyrics model, proposed design tokens on Misty 1.1 and five icon concepts.
 
-[Unreleased]: https://github.com/ZodiaCALs/Jellyfesh/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/ZodiaCALs/Jellyfesh/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.7
 [0.0.6]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.6
 [0.0.5]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.5
 [0.0.4]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.4
