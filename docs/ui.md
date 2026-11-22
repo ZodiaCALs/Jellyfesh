@@ -2,9 +2,27 @@
 
 The macOS, Windows, Linux and Android apps and Jellyfesh Web are one app:
 the same places, in the same order, with the same words, features and
-steps. Each keeps its platform's own look and mechanics: the macOS Settings
-window and menus, the Windows navigation pane, GNOME's preferences and main
-menu, Android's bottom tabs, the web's sidebar and phone tabs. Rules and
+steps.
+
+Since v0.0.8 (ADR-0023) they also share **one layout, Jellyfesh Web's**:
+* the floating sidebar panel, or the phone tabs on narrow screens;
+* Settings as a page in the main window;
+* one player bar floating over every page;
+* the web's pages, measures and components.
+
+Each app draws it with its own toolkit: SwiftUI, WinUI 3, GTK 4 with
+libadwaita, Jetpack Compose. No app shows a webview.
+
+What stays native:
+* window frames and title-bar controls;
+* the macOS menu bar and Dock menu;
+* system file pickers and share sheets;
+* media controls and notifications;
+* accessibility;
+* scrolling;
+* the system font.
+
+The reference screenshots of every page are in `screenshots/web/`. Rules and
 lists (presets, sorting, what a setting does) come from the core, never from
 an app's own copy (ADR-0001).
 
@@ -49,24 +67,35 @@ acting.
 | Playing on {Device} | Connected to, Casting to |
 | Devices (the picker's title) | Speakers, Outputs |
 | Stop Controlling | Disconnect, Stop Remote |
+| Downloads · Download · Remove Download… · Remove All Downloads… | Offline, Save Offline, Delete Download |
+| Save as Playlist… (a source playlist) | Import, Copy Playlist |
+| Show More (a search tab's kind) | See More, Load More |
+| Results from {Service} (a separate source on the All tab) | |
+| Auto · Lossless · High · Normal · Low (Streaming Quality) | Hi-Fi, Standard Quality |
+| Open Mini Player · Keep on Top | Compact Mode, Floating Window |
+| Updated {time} ago (a source's cached likes or playlists) | Last synced |
 
 ## Navigation
 
 In this order everywhere: **Home · Albums · Artists · Songs · Playlists ·
-Favourites**, then **Search · Sources**, then **Settings**.
+Favourites · Downloads**, then **Search · Sources**, then **Open Files… ·
+Settings**. One layout in every app (ADR-0023):
 
-| App | How |
+| Width | Layout |
 |---|---|
-| macOS | Sidebar groups Library (the first six), Discover (Search, Sources) and Playlists (the person's playlists, with +). Settings is the Settings window (⌘,). |
-| Windows | Navigation pane with the first six, a separator, Search and Sources; Settings at the bottom. |
-| Linux | Sidebar with the first six, a separator, Search and Sources. The main menu holds Add Music Folder…, Rescan Library, Settings, Keyboard Shortcuts and About Jellyfesh. |
-| Android | Bottom tabs Home, Library, Search, Sources; Library switches between Albums, Artists, Songs, Playlists and Favourites. Settings is the gear on Home, Library and Sources. |
-| Web | Sidebar (wide) or bottom tabs (phones): Home, Albums, Artists, Songs, Search, Sources, Settings. Phones put Albums, Artists and Songs under one Library tab, as on Android. |
+| 761 px (or dp) and wider | The floating sidebar panel: the wordmark, the seven library places, a separator, Search and Sources; Open Files… and Settings at its foot. Every app, and Android tablets. |
+| Up to 760 px | Tabs **Home · Library · Search · Sources · Settings**. Library switches between Albums, Artists, Songs, Playlists, Favourites and Downloads. Android phones, and narrow windows. |
+
+Settings is a page in the main window everywhere. On macOS, ⌘, and the app
+menu's Settings… open it, and About Jellyfesh opens Settings › About; the
+menu bar's other items go to the same places. Jellyfesh Web has no Downloads
+place (see Allowed differences).
 
 ## Pages
 
 **Home.** The library size ("1,204 songs · 96 albums · 41 artists"), then
-Recently Added (albums), Recently Played (songs) and Most Played (songs).
+Recently Added (albums), Recently Played (songs) and Most Played (songs),
+every row with its cover.
 With nothing in the library and no source signed in, a welcome instead:
 "Welcome to Jellyfesh", "Add your music folders, or connect a server in
 Sources.", buttons **Add Music Folder…** and **Add a Source**.
@@ -84,23 +113,54 @@ music folder to see your songs here.", **Add Music Folder…**.
 
 **Album, artist and playlist pages.** Artwork and facts, **Play**,
 **Shuffle**, and a More menu (Play Next, Play Last, Add to Playlist…; on a
-playlist also Rename… and Delete Playlist…).
+playlist also Rename… and Delete Playlist…). Shuffle starts on a random
+song.
+* A **source playlist** (ADR-0024) has **Save as Playlist…** and Open in
+  {Service} in its More menu. Its songs show as soon as the first page
+  arrives.
+* A source playlist whose songs the service doesn't list (`songs-listed`
+  false, such as a Spotify playlist the person follows) says "{Service}
+  lists this playlist's songs only in {Service}.". Play and Shuffle still
+  start it there.
+* Albums, playlists and songs from a source that allows downloads have
+  **Download** in their More menu (ADR-0025). A downloaded song shows the
+  Downloaded mark.
 
 **Playlists.** **New Playlist…** asks for a name first. Import Playlist… and
 Export Playlist… (M3U8) in every app. Songs reorder by dragging (a handle on
 Android). Delete Playlist… asks first. Empty: "No Playlists Yet",
 "Make a playlist to keep songs together.", **New Playlist…**.
+* After the Jellyfesh playlists come the sources' playlists, one section
+  per signed-in source (the `SourceLibrary` slice). They refresh when the
+  page opens. A cached list says "Updated {time} ago".
 
 **Favourites.** Songs marked with the heart. Empty: "No Favourites Yet",
 "Songs you mark with the heart appear here."
+* After them comes one section per signed-in source, in the source's own
+  words ("Liked Songs", "Favourites", "Starred"), with Songs, Albums and
+  Artists where the source keeps them.
+* They are read-only: the heart marks a song in Jellyfesh only.
+* Spotify's sections stand on their own, attributed "Content from
+  Spotify".
+
+**Downloads** (ADR-0025). Downloads in progress (each with its progress,
+**Cancel** and, after a failure, the reason and **Try Again**), then the
+downloaded albums and songs. Each has **Remove Download…** (asks first),
+and the space used is shown at the top. Empty: "No Downloads Yet",
+"Download albums and playlists from your servers to play them offline."
 
 **Song menu** (right click, long press or More): Play Next, Play Last, Add to
 Playlist…, Add to Favourites or Remove from Favourites, Go to Album, Go to
 Artist, and on desktops Show in Finder / Show in Explorer / Show in Files.
 
-**Search.** One field ("Songs, albums and artists"). Library results first
-(Songs, Albums, Artists), then **From Your Sources**, one group per source.
-Nothing found: "No Results".
+**Search** (ADR-0024 §4). One field ("Songs, albums and artists"), then the
+tabs **All**, **Library**, and one per source that answered.
+* **All:** library results first (Songs, Albums, Artists), then **From Your
+  Sources**, one group per source that allows merging, then a link to each
+  separate source's tab ("Results from Spotify").
+* **A source's tab:** its Songs, Albums, Artists and Playlists, each with
+  **Show More**.
+* Nothing found: "No Results".
 
 **Sources.** "Sources bring music from servers and services into
 Jellyfesh." Then **Add a Source** (the services from the core's presets,
@@ -128,7 +188,7 @@ A remote source (`PluginSummary.remote_playback`, such as Spotify) plays on
 the person's own devices: Play and Shuffle work as usual and start a remote
 session; Play Next, Play Last and Add to Playlist are not offered for its
 songs. While the `Remote` slice has a `source`, the player bar, the
-mini-player and Now Playing show its track instead of the engine's, with
+capsule and Now Playing show its track instead of the engine's, with
 **Playing on {Device}** under the title (and `error`, when set, in a
 quieter line below). The transport controls send the usual commands (the
 core routes them). The device button opens **Devices** (it sends
@@ -154,7 +214,7 @@ every screen; Now Playing becomes a stage.
 * **Glass.** The sidebar is Clear glass; grouped surfaces (Settings groups,
   lists, cards) take the Mist tint **without live blur** plus `shadow-1`, so
   a screen stays within the glass budget (three live blur layers on
-  desktops, two on phones); the player bar, the mini-player and the phone
+  desktops, two on phones); the player bar, its capsule and the phone
   tab bar are Veil capsules floating above the content, which fades out
   just above them. Platforms use their own materials: the macOS sidebar
   material, Mica and Acrylic on Windows, `backdrop-filter` on GTK 4.22 and
@@ -217,7 +277,8 @@ for another product." and "This licence key has been withdrawn."
 aurora, typeface, text size, density, the lyrics' weight, glow and
 highlight, the order of the sidebar (navigation pane, Library switcher) and
 of Home, the Now Playing layout (Stage, Artwork, Lyrics) and the
-mini-player (Bar, Compact, Floating). With `customized` false every value is
+player bar's style (Bar, Compact, Floating; the Look calls it the
+mini-player, which is not the mini player window). With `customized` false every value is
 the v0.0.6 default.
 
 ## Discover, details, comments and the lyrics bar (v0.0.7)
@@ -253,7 +314,7 @@ Empty: "No Comments Yet".
 **Lyrics, word by word.** With word-timed lyrics, the current line fills
 word by word in the highlight colour, in Now Playing and in the **lyrics
 bar**: one line (and its translation when Show Translations is on) in the
-player bar on desktops and the web, and above the mini-player on Android.
+player bar on desktops and the web, and above the capsule on Android.
 **Desktop Lyrics** (macOS, Windows, Linux on X11, the web in Chromium)
 opens a floating, always-on-top window with the current and next line; it
 can be locked so clicks pass through, and closed from its own button or
@@ -268,11 +329,48 @@ Relay Address and Relay Token, with "A relay you run yourself lets
 Jellyfesh Web reach services that browsers can't. Jellyfesh doesn't run
 one for you."
 
+## The player bar and the mini player (v0.0.8)
+
+**The bar** (ADR-0023 §2) floats over every page, Settings included. It is
+the full bar from 900 px wide and the capsule below that, and hides only
+while Now Playing is open.
+
+The full bar holds, in this order:
+* the artwork and two lines (or the lyrics bar's line);
+* shuffle, previous, play, next, repeat, and the scrubber with times;
+* the **quality badge**;
+* Lyrics, Queue, the device button (while a remote source plays) and
+  volume;
+* the **mini player button** and More.
+
+The capsule holds the artwork, the title, play and next.
+
+**The quality menu** (ADR-0026 §3) opens from the badge, which shows the
+playing quality's label (the core's `QualityLabel`).
+* It lists the levels `NowPlaying.qualities` offers, with the chosen one
+  checked, and the format line ("FLAC · 24-bit · 96 kHz", "AAC · 256
+  kbit/s").
+* With no levels it shows the format line and "Files play as they are." or
+  "Quality is set in {Service}.".
+* A new level applies at once when the song can seek, and from the next
+  song otherwise.
+
+**The mini player** (ADR-0026 §4) opens with the bar's button or **Open
+Mini Player**. It is a small window above other windows with:
+* the cover, the title and the artist;
+* previous, play and next;
+* a progress line;
+* the lyrics bar's line, when Show Lyrics Line is on.
+
+It closes from its own button. It is a window on macOS, Windows, Linux and
+in the web (Document Picture-in-Picture), and picture-in-picture on Android
+when the setting is on.
+
 ## Settings
 
-Sections in this order: **Appearance · Playback · Library · Sources ·
-Extensions**, plus **About** where the platform keeps About in settings
-(Windows, Android, Web). Groups and rows in this order:
+Sections in this order in every app: **Appearance · Playback · Library ·
+Downloads · Sources · Extensions · About**. Downloads isn't in Jellyfesh Web.
+Groups and rows in this order:
 
 **Appearance**
 1. **Theme**: System, Light, Dark (with pictures). "Light, dark, or the same
@@ -284,9 +382,16 @@ Extensions**, plus **About** where the platform keeps About in settings
 5. **Lyrics**: Lyrics Size (Small, Medium, Large), Lyrics Alignment (Start,
    Centre), Show Translations, Show Romanization. Lyrics settings live only
    here: no separate Lyrics section.
-6. **App Icon** (macOS, Windows, Android).
-7. **Language** (Web only).
-8. **Customize…**: "Corners, glass, type, lyrics style and layout." Opens
+6. **Mini Player** (v0.0.8):
+   * **Keep on Top** (on);
+   * **Open When the Window Is Closed** (off): "Keep the mini player when
+     you close the window while music plays.";
+   * **Show Lyrics Line** (on);
+   * on Android instead, **Mini Player in Picture-in-Picture** (off):
+     "Show the mini player when you leave Jellyfesh while music plays.".
+7. **App Icon** (macOS, Windows, Android).
+8. **Language** (Web only).
+9. **Customize…**: "Corners, glass, type, lyrics style and layout." Opens
    Extensions › Customize (with a Pro badge while Pro is inactive).
 
 **Playback**
@@ -297,7 +402,9 @@ Extensions**, plus **About** where the platform keeps About in settings
 4. **Equalizer**: Equalizer (on/off), Preset (Flat, Bass Boost, Vocal,
    Treble from the core's `eq_presets()`; Custom once a band moves), Preamp,
    the ten bands, **Reset to Flat**.
-5. **Streaming** (Web only): Streaming Quality.
+5. **Streaming**: **Streaming Quality**: Auto, Lossless, High, Normal, Low.
+   "Auto plays lossless, or High on a metered connection." The same setting
+   as the bar's quality menu.
 6. **Startup**: Resume Playback, "Start playing where you left off when
    Jellyfesh opens."
 
@@ -310,6 +417,21 @@ Extensions**, plus **About** where the platform keeps About in settings
 2. **Watch Folders**: "Update the library when files change."
 3. **Rescan Library**: "Look for new, changed and removed files.", with the
    scan's progress and Last Scan.
+
+**Downloads** (v0.0.8, ADR-0025; not in Jellyfesh Web)
+1. **Folder**: the folder, with **Change…** and Show in Finder / Explorer /
+   Files. Android saves to Music/Jellyfesh.
+2. **Quality**: Original ("The file exactly as your server keeps it."),
+   High, Normal, Low.
+3. **File Names**: the template, with its fields and a live preview of one
+   song's path.
+4. **Tags**:
+   * **Add Missing Cover and Lyrics** (off): "Original files are kept as
+     they are unless this is on.";
+   * **Lyrics** (on);
+   * **Save .lrc Files** (off).
+5. **Network**: **Wi-Fi Only** (Android, on); **Downloads at Once** (1–4).
+6. **Space Used** and **Remove All Downloads…** (asks first).
 
 **Sources**
 1. **Add a Source**: as on the Sources page. Choosing a service asks for the
@@ -366,6 +488,8 @@ confirmation in every app, with these words (Cancel, then the action):
 | Delete Made Lyrics | Delete These Lyrics? | You can make them again. | Delete |
 | Remove Licence… | Remove the Licence Key? | Pro features stop until you enter a key or buy Jellyfesh Pro. | Remove Licence |
 | Delete… (a speech model) | Delete the {Model} Model? | You can download it again. | Delete |
+| Remove Download… | Remove the Download of “Name”? | The file is deleted from this device. You can download it again. | Remove Download |
+| Remove All Downloads… | Remove All Downloads? | Every downloaded file is deleted from this device. | Remove All |
  Turning on a community plugin, or Allow
 Community Plugins, shows the disclosure (ADR-0012). New Playlist… asks for
 the name before it creates anything.
@@ -375,35 +499,49 @@ the name before it creates anything.
 The same keys on every desktop app and the web (⌘ instead of Ctrl on
 macOS): Space Play or Pause · Ctrl+→ / Ctrl+← Next / Previous Song ·
 Shift+→ / Shift+← Skip 5 Seconds · Ctrl+↑ / Ctrl+↓ Volume · Ctrl+F Search ·
-Esc Back (and closes Now Playing). Anything more follows the platform's own
-conventions and must not reuse these keys.
+Ctrl+M Open Mini Player (⌥⌘M on macOS, where ⌘M minimises) · Ctrl+, Settings
+· Esc Back (and closes Now Playing). Anything more follows the platform's
+own conventions and must not reuse these keys.
 
 ## Allowed differences
 
-* **Web:** Remove Folder… says only "Its songs leave the library." (it has
-  no playlists). No Playlists, Favourites or history (so Home has no Recently
-  Played or Most Played; it shows each signed-in source's start page
-  instead), and no Output Device (a browser decides where sound goes). Its
-  Settings also list the keyboard shortcuts. Its library is folders the browser may
-  read, picked again on each visit before their songs play, with no Watch
-  Folders. **Open Files…** plays files for one visit without adding
-  them. Streaming Quality and Language are its own settings.
-* **Linux:** no App Icon (GNOME takes the icon from the installed files); a
-  note says so. On Wayland, Desktop Lyrics is a normal window: Wayland lets
-  no app keep its window above the others (on X11 it stays above them).
-  Customize's Rounded typeface is the system's sans: GNOME has no rounded
-  face.
-* **Android:** the library is one tab; it asks for access to music and offers
-  "Find Music on This Phone" before folders. No Desktop Lyrics: the lyrics
-  bar above the mini-player shows the line being sung. The look's places
-  order the Library tab's switcher (the four tabs stay), and its Rounded
-  typeface is the system's (Android has no rounded system face). Each source
-  and extension opens on a page of its own from Settings › Sources and
-  Settings › Extensions. The Google Play build sells Pro through Google Play
-  Billing only and has no **Install from File…**, **Allow Community
-  Plugins**, **Enter Licence Key…** or **Check for Updates**.
-* **macOS:** About Jellyfesh is in the app menu. **Linux:** About and Keyboard
-  Shortcuts are in the main menu.
+* **Web:**
+  * Remove Folder… says only "Its songs leave the library.".
+  * Hearts, playlists and history are kept in the browser.
+  * No Output Device: a browser decides where sound goes.
+  * No Downloads place or Settings section: Download saves one file through
+    the browser.
+  * The mini player needs Document Picture-in-Picture (Chrome and Edge 116+,
+    Firefox 151+, desktops); elsewhere its button is hidden.
+  * Its Settings also list the keyboard shortcuts.
+  * Its library is folders the browser may read, picked again on each visit
+    before their songs play, with no Watch Folders. **Open Files…** plays
+    files for one visit without adding them.
+  * Language is its own setting.
+* **Linux:**
+  * No App Icon: GNOME takes the icon from the installed files; a note says
+    so.
+  * On Wayland, Desktop Lyrics and the mini player are normal windows,
+    because Wayland lets no app keep its window above the others. The mini
+    player's **Keep on Top…** opens the desktop's window menu, where Always
+    on Top may be offered. On X11 both stay above other windows.
+  * Customize's Rounded typeface is the system's sans: GNOME has no rounded
+    face.
+* **Android:**
+  * It asks for access to music and offers "Find Music on This Phone" before
+    folders.
+  * It asks for **Local Network** access before connecting to a server on
+    the home network (Android 17).
+  * No Desktop Lyrics: the lyrics bar above the capsule shows the line being
+    sung.
+  * The mini player is picture-in-picture, off until turned on.
+  * Its Rounded typeface is the system's: Android has no rounded system
+    face.
+  * The Google Play build sells Pro through Google Play Billing only and has
+    no **Install from File…**, **Allow Community Plugins**, **Enter Licence
+    Key…** or **Check for Updates**.
+* **macOS:** the menu bar's Jellyfesh menu also holds About Jellyfesh and
+  Settings…, which open those Settings pages.
 * Plugin settings apply as each field is committed on macOS and Linux, and
   with **Save** on Windows, Android and the web.
 * **Store builds** (App Store, Microsoft Store, Google Play): no **Install
