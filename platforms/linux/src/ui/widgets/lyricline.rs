@@ -30,6 +30,8 @@ mod imp {
         pub sung: RefCell<Option<gdk::RGBA>>,
         /// A soft shadow under the words (Desktop Lyrics, over any desktop).
         pub shadow: Cell<bool>,
+        /// The look's glow around the sung line: its colour and radius.
+        pub glow: Cell<Option<(gdk::RGBA, f32)>>,
         pub rtl: Cell<bool>,
         pub centred: Cell<bool>,
         /// One row, cut with an ellipsis (the lyrics bar, Desktop Lyrics).
@@ -86,13 +88,24 @@ mod imp {
         }
 
         fn snapshot(&self, snapshot: &gtk::Snapshot) {
+            let mut shadows = Vec::new();
+            if let Some((color, radius)) = self.glow.get() {
+                shadows.push(gtk::gsk::Shadow::new(color, 0.0, 0.0, radius));
+            }
             if self.shadow.get() {
-                let shadow = gtk::gsk::Shadow::new(gdk::RGBA::new(0.0, 0.0, 0.0, 0.55), 0.0, 1.0, 3.0);
-                snapshot.push_shadow(&[shadow]);
+                shadows.push(gtk::gsk::Shadow::new(
+                    gdk::RGBA::new(0.0, 0.0, 0.0, 0.55),
+                    0.0,
+                    1.0,
+                    3.0,
+                ));
+            }
+            if shadows.is_empty() {
+                self.obj().draw(snapshot);
+            } else {
+                snapshot.push_shadow(&shadows);
                 self.obj().draw(snapshot);
                 snapshot.pop();
-            } else {
-                self.obj().draw(snapshot);
             }
         }
     }
@@ -135,6 +148,13 @@ impl LyricLine {
 
     /// Centres the line (the Lyrics alignment setting) instead of starting
     /// it at the start edge.
+    /// The look's glow around the words: its colour and blur radius.
+    pub fn set_glow(&self, glow: Option<(gdk::RGBA, f32)>) {
+        if self.imp().glow.replace(glow) != glow {
+            self.queue_draw();
+        }
+    }
+
     /// Draws the words with a soft shadow, so they read over any desktop.
     pub fn set_shadow(&self, shadow: bool) {
         if self.imp().shadow.replace(shadow) != shadow {

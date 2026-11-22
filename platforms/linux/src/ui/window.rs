@@ -571,5 +571,12 @@ pub fn listen() {
         if let Change::Theme = change {
             crate::ui::style::apply_theme(true);
         }
+        // The look applies live: its stylesheets, glass in the theme and the
+        // artwork's corners.
+        if let Change::Look = change {
+            crate::ui::style::apply_look();
+            crate::ui::style::apply_theme(false);
+            crate::ui::widgets::art::redraw_all();
+        }
     });
 }

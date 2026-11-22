@@ -29,6 +29,12 @@ use crate::ui::state::{App, try_app};
 const STYLE_CSS: &str = include_str!(concat!(env!("OUT_DIR"), "/css/style.css"));
 const CONTROLS_CSS: &str = include_str!(concat!(env!("OUT_DIR"), "/css/controls-d.css"));
 const GLASS_CSS: &str = include_str!(concat!(env!("OUT_DIR"), "/css/glass-live.css"));
+/// The templates and tokens the build expanded, expanded again with a
+/// customized look (`logic::look::stylesheet`).
+const STYLE_TEMPLATE: &str = include_str!("../../data/css/style.css");
+const CONTROLS_TEMPLATE: &str = include_str!("../../data/css/controls-d.css");
+const GLASS_TEMPLATE: &str = include_str!("../../data/css/glass-live.css");
+const TOKENS_JSON: &str = include_str!("../../../../design/tokens.json");
 
 /// Misty's Fluid curve, for animations driven in code (CSS transitions use
 /// the token curves directly).
@@ -39,6 +45,11 @@ pub const FLUID: CubicBezier = motion::FLUID;
 const CROSSFADE_STEPS: f64 = 12.0;
 
 pub struct Style {
+    /// style.css and controls-d.css: the build's, or expanded with the look.
+    sheets: Vec<(gtk::CssProvider, &'static str, &'static str)>,
+    /// The look the sheets were last made for.
+    look_key: RefCell<String>,
+    tokens: RefCell<Option<serde_json::Value>>,
     theme: gtk::CssProvider,
     glass: gtk::CssProvider,
     glass_on: Cell<bool>,
@@ -71,13 +82,18 @@ pub fn load() {
         return;
     };
     let priority = gtk::STYLE_PROVIDER_PRIORITY_APPLICATION;
-    for (name, css) in [("style.css", STYLE_CSS), ("controls-d.css", CONTROLS_CSS)] {
+    let mut sheets = Vec::new();
+    for (name, css, template) in [
+        ("style.css", STYLE_CSS, STYLE_TEMPLATE),
+        ("controls-d.css", CONTROLS_CSS, CONTROLS_TEMPLATE),
+    ] {
         let provider = gtk::CssProvider::new();
         provider.connect_parsing_error(move |_, section, error| {
             tracing::warn!("{name}: {} at {}", error, section.to_str());
         });
         provider.load_from_string(css);
         gtk::style_context_add_provider_for_display(&display, &provider, priority);
+        sheets.push((provider, css, template));
     }
     let theme_provider = gtk::CssProvider::new();
     // The theme's colours must win over libadwaita's own definitions.
@@ -87,6 +103,9 @@ pub fn load() {
         tracing::warn!("glass-live.css: {} at {}", error, section.to_str());
     });
     let s = Rc::new(Style {
+        sheets,
+        look_key: RefCell::new(String::new()),
+        tokens: RefCell::new(None),
         theme: theme_provider,
         glass,
         glass_on: Cell::new(false),
@@ -167,7 +186,8 @@ pub fn animate_popup(popover: &(impl IsA<gtk::Popover> + IsA<gtk::Widget>)) {
 
 /// The transparency glass is drawn with now.
 fn transparency(app: &App) -> f32 {
-    let setting = app.settings.borrow().transparency;
+    // The look's glass multiplies the setting, which still wins (ADR-0020).
+    let setting = crate::logic::look::transparency(app.settings.borrow().transparency, &app.look.borrow());
     let high_contrast = adw::StyleManager::default().is_high_contrast();
     glass_transparency(setting, reduce_effects(), high_contrast)
 }
@@ -241,7 +261,7 @@ pub fn apply_glass() {
         return;
     };
     if on {
-        s.glass.load_from_string(GLASS_CSS);
+        s.glass.load_from_string(&s.sheet_for(GLASS_CSS, GLASS_TEMPLATE));
         gtk::style_context_add_provider_for_display(
             &display,
             &s.glass,
@@ -251,6 +271,50 @@ pub fn apply_glass() {
         gtk::style_context_remove_provider_for_display(&display, &s.glass);
     }
     s.glass_on.set(on);
+}
+
+/// Applies the look's shapes, glass, aurora, type, density and lyrics
+/// weight (ADR-0020): the stylesheets are expanded again from their
+/// templates and the design tokens with the look, or are the build's own
+/// while it is not customized. The glass's alpha follows in the theme.
+pub fn apply_look() {
+    let Some(app) = try_app() else { return };
+    let look = app.look.borrow().clone();
+    let s = style();
+    let key = format!(
+        "{} {} {} {} {:?} {} {:?} {:?}",
+        look.customized,
+        look.corner_scale,
+        look.glass,
+        look.aurora,
+        look.typeface,
+        look.text_scale,
+        look.density,
+        look.lyrics_weight
+    );
+    if *s.look_key.borrow() == key {
+        return;
+    }
+    *s.look_key.borrow_mut() = key;
+    for (provider, built, template) in &s.sheets {
+        provider.load_from_string(&s.sheet_for(built, template));
+    }
+    if s.glass_on.get() {
+        s.glass.load_from_string(&s.sheet_for(GLASS_CSS, GLASS_TEMPLATE));
+    }
+}
+
+/// The glow around a sung line of `font_size` px: the highlight, half seen,
+/// as the look says; none while it is not customized.
+pub fn lyrics_glow(font_size: f64) -> Option<(gdk::RGBA, f32)> {
+    let look = try_app()?.look.borrow().clone();
+    let radius = crate::logic::look::glow_radius(&look, font_size);
+    if radius < 0.5 {
+        return None;
+    }
+    let mut color = lyrics_sung();
+    color.set_alpha(color.alpha() * 0.5);
+    Some((color, radius as f32))
 }
 
 /// The colour of sung lyrics: the lyrics' sung ink, the accent or the
@@ -291,6 +355,29 @@ fn rgba_of([r, g, b, a]: [u8; 4]) -> gdk::RGBA {
 }
 
 impl Style {
+    /// A stylesheet for the look: the build's own while it is not
+    /// customized, else its template expanded with the look's tokens.
+    fn sheet_for(&self, built: &'static str, template: &str) -> std::borrow::Cow<'static, str> {
+        let look = try_app().map(|a| a.look.borrow().clone());
+        let Some(look) = look.filter(|l| l.customized) else {
+            return std::borrow::Cow::Borrowed(built);
+        };
+        let mut tokens = self.tokens.borrow_mut();
+        if tokens.is_none() {
+            *tokens = serde_json::from_str(TOKENS_JSON).ok();
+        }
+        let Some(base) = tokens.as_ref() else {
+            return std::borrow::Cow::Borrowed(built);
+        };
+        match crate::logic::look::stylesheet(template, base, &look) {
+            Ok(css) => std::borrow::Cow::Owned(css),
+            Err(e) => {
+                tracing::warn!("the look's stylesheet: {e}");
+                std::borrow::Cow::Borrowed(built)
+            }
+        }
+    }
+
     /// The colour shown now for a theme colour name (`ink.ink-90`).
     pub fn rgba(&self, name: &str) -> gdk::RGBA {
         rgba_of(self.shown.borrow().get(name).copied().unwrap_or([0, 0, 0, 255]))

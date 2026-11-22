@@ -72,7 +72,10 @@ mod imp {
             let radius = if self.round.get() {
                 side / 2.0
             } else {
-                self.radius.get()
+                // The look's corners (ADR-0020); 1 in Luminous.
+                let scale = crate::ui::state::try_app()
+                    .map_or(1.0, |a| crate::logic::look::corner_scale(&a.look.borrow()));
+                (f64::from(self.radius.get()) * scale) as f32
             };
             let corner = graphene::Size::new(radius, radius);
             let rounded = gsk::RoundedRect::new(bounds, corner, corner, corner, corner);
@@ -126,13 +129,15 @@ glib::wrapper! {
 }
 
 impl Art {
-    /// Artwork of natural `size` px with corner `radius` (artwork tokens).
+    /// Artwork of natural `size` px with corner `radius` (artwork tokens,
+    /// times the look's corner scale).
     pub fn new(size: i32, radius: f32) -> Art {
         let a: Art = glib::Object::new();
         a.imp().size.set(size);
         a.imp().min.set(size.min(48));
         a.imp().radius.set(radius);
         a.add_css_class("art");
+        ARTS.with(|arts| arts.borrow_mut().push(a.downgrade()));
         a
     }
 
@@ -201,4 +206,22 @@ impl Art {
     pub fn texture(&self) -> Option<gdk::Texture> {
         self.imp().texture.borrow().clone()
     }
+}
+
+thread_local! {
+    /// Every artwork, so a new look redraws their corners.
+    static ARTS: std::cell::RefCell<Vec<glib::WeakRef<Art>>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Redraws every artwork (the look's corner scale changed).
+pub fn redraw_all() {
+    ARTS.with(|arts| {
+        arts.borrow_mut().retain(|w| match w.upgrade() {
+            Some(a) => {
+                a.queue_draw();
+                true
+            }
+            None => false,
+        })
+    });
 }

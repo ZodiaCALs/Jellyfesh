@@ -567,6 +567,11 @@ impl Lyrics {
 
     fn restyle(&self) {
         let lines = self.lines.borrow();
+        let glow = {
+            let size = try_app().map_or(LyricsSize::Medium, |a| a.settings.borrow().lyrics_size);
+            let scale = try_app().map_or(1.0, |a| crate::logic::look::text_scale(&a.look.borrow()));
+            style::lyrics_glow(line_size(f64::from(self.width.get()), size) * scale)
+        };
         for (i, line) in lines.iter().enumerate() {
             let state = line_state(i, self.active.get(), self.last.get());
             let c = &line.container;
@@ -590,7 +595,17 @@ impl Lyrics {
             if state != LineState::Active {
                 line.text.set_sweep(None, &style::style().rgba("ink.ink-90"));
             }
+            // The look's glow around the line being sung (none in Luminous).
+            let glow = (state == LineState::Active && self.synced.get())
+                .then_some(glow)
+                .flatten();
+            line.text.set_glow(glow);
         }
+    }
+
+    /// The look changed: the glow around the line being sung follows.
+    pub fn apply_look(&self) {
+        self.restyle();
     }
 
     /// Updates the active line's sweep; true while a word is being swept.

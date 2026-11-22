@@ -105,6 +105,13 @@ fn config() -> Option<Config> {
     // AI Lyrics on this device: whisper.cpp, with its models in
     // <data>/speech-models (the core's default store).
     config.speech = jf_speech::recognizer();
+    // Screenshot runs of debug builds can turn on Pro Preview, so that
+    // Customize's look shows (JELLYFESH_PRO_PREVIEW=1); release builds take
+    // Preview only from their build (JF_PRO_PREVIEW).
+    #[cfg(debug_assertions)]
+    if std::env::var_os("JELLYFESH_PRO_PREVIEW").is_some_and(|v| v == "1") {
+        config.pro.preview = true;
+    }
     Some(config)
 }
 
@@ -174,6 +181,7 @@ fn startup(application: &adw::Application) {
         }
     });
     style::apply_appearance();
+    style::apply_look();
     style::apply_glass();
     style::apply_theme(false);
     install_actions(application);
@@ -481,8 +489,49 @@ fn run_command(spec: &str) {
                 jf_core::LyricsAlign::Start
             }
         }),
+        _ if run_debug_command(kind, arg) => {}
         _ => tracing::warn!("unknown command {spec}"),
     }
+}
+
+/// Screenshot runs of debug builds install and set up plugins through the
+/// core as Settings would (`install-plugin:<path>`, `allow-community:on`,
+/// `acknowledge:<id>`, `enable-plugin:<id>`, `plugin-settings:<id>=<json>`);
+/// release builds have none of these.
+#[cfg(debug_assertions)]
+fn run_debug_command(kind: &str, arg: &str) -> bool {
+    let a = app();
+    match kind {
+        "install-plugin" => {
+            a.send(Command::InstallPlugin { path: arg.into() });
+        }
+        "allow-community" => a.update_settings(|s| s.allow_community_plugins = arg == "on"),
+        "acknowledge" => {
+            a.send(Command::AcknowledgeUnofficial { id: arg.to_owned() });
+        }
+        "enable-plugin" => {
+            a.send(Command::SetPluginEnabled {
+                id: arg.to_owned(),
+                enabled: true,
+            });
+        }
+        "plugin-settings" => {
+            let Some((id, json)) = arg.split_once('=') else {
+                return false;
+            };
+            a.send(Command::SetPluginSettings {
+                id: id.to_owned(),
+                settings_json: json.to_owned(),
+            });
+        }
+        _ => return false,
+    }
+    true
+}
+
+#[cfg(not(debug_assertions))]
+fn run_debug_command(_kind: &str, _arg: &str) -> bool {
+    false
 }
 
 /// Opens Now Playing on `tab`, or closes it when it already shows `tab`.

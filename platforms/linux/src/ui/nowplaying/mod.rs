@@ -562,6 +562,7 @@ impl NowPlaying {
                 Change::Details(page) => inner.info.details_arrived(page),
                 Change::Comments(page) => inner.comments.page(page),
                 Change::AiLyrics | Change::Pro => inner.lyrics.update_making(),
+                Change::Look => inner.lyrics.apply_look(),
                 Change::Failed(id, message) => inner.comments.failed(*id, message),
                 Change::Sources => {
                     update_more(&inner);

@@ -225,6 +225,14 @@ impl LyricsBarView {
             Mode::Line => style::lyrics_sung(),
             Mode::WithNext => style::lyrics_sung_on_dark(),
         };
+        // The look's glow around the line (none in Luminous), at the line's
+        // size: 13 px in the player bar, 30 px in Desktop Lyrics.
+        let size = match self.mode {
+            Mode::Line => 13.0,
+            Mode::WithNext => 30.0,
+        };
+        let scale = try_app().map_or(1.0, |a| crate::logic::look::text_scale(&a.look.borrow()));
+        widget.set_glow(style::lyrics_glow(size * scale));
         if !style::animations_enabled() {
             // With reduced motion a word lights whole as it starts.
             let lit: Vec<f32> = bar

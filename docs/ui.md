@@ -391,6 +391,8 @@ conventions and must not reuse these keys.
 * **Linux:** no App Icon (GNOME takes the icon from the installed files); a
   note says so. On Wayland, Desktop Lyrics is a normal window: Wayland lets
   no app keep its window above the others (on X11 it stays above them).
+  Customize's Rounded typeface is the system's sans: GNOME has no rounded
+  face.
 * **Android:** the library is one tab; it asks for access to music and offers
   "Find Music on This Phone" before folders. No Desktop Lyrics: the lyrics
   bar above the mini-player shows the line being sung. The look's places
