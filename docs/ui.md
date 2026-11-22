@@ -514,7 +514,10 @@ own conventions and must not reuse these keys.
   * No Downloads place or Settings section: Download saves one file through
     the browser.
   * The mini player needs Document Picture-in-Picture (Chrome and Edge 116+,
-    Firefox 151+, desktops); elsewhere its button is hidden.
+    Firefox 151+, desktops).
+    * Elsewhere its button is hidden and Ctrl+M does nothing.
+    * Its Settings group has only Show Lyrics Line: a picture-in-picture
+      window always stays on top and closes with the page.
   * Its library is folders the browser may read, picked again on each visit
     before their songs play, with no Watch Folders. **Open Files…** plays
     files for one visit without adding them.
