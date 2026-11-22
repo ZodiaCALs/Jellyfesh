@@ -43,6 +43,8 @@ const STRINGS = {
     "privacy.p3": "Online sources are plugins you choose to install. A plugin contacts only the servers its manifest lists, such as your own Subsonic or Jellyfin server, and only for what you ask it to do. Sign-in tokens are kept in your system’s keychain; passwords are never stored.",
     "privacy.p4": "Community plugins are off by default. Before you enable one, Jellyfesh explains that it is unofficial and may break the service’s terms.",
     "privacy.p5": "This website uses no cookies, no analytics and no third-party scripts or fonts.",
+    "privacy.p6": "AI Lyrics makes lyrics on your device by default, and nothing leaves it. Its speech models are downloaded from Hugging Face only when you ask. In its online mode, a song’s audio goes to the provider you choose (such as OpenAI or Groq), with your own key, and only after you agree; that provider’s terms and privacy policy apply.",
+    "privacy.p7": "Jellyfesh downloaded from this website checks GitHub once a day for a newer version while Check for Updates Automatically is on. Store versions are updated by their store, and purchases there are handled by Apple, Microsoft or Google.",
   },
   "zh-Hans": {
     "nav.home": "首页", "nav.download": "下载", "nav.privacy": "隐私",
@@ -84,6 +86,8 @@ const STRINGS = {
     "privacy.p3": "在线来源是你自行选择安装的插件。插件只会连接其清单中列出的服务器（例如你自己的 Subsonic 或 Jellyfin 服务器），且只执行你要求的操作。登录令牌保存在系统钥匙串中，密码从不保存。",
     "privacy.p4": "社区插件默认关闭。启用前，Jellyfesh 会说明它属于非官方插件，并可能违反相应服务的条款。",
     "privacy.p5": "本网站不使用 Cookie、统计分析，也不加载任何第三方脚本或字体。",
+    "privacy.p6": "AI 歌词默认在你的设备上生成，不会发送任何内容。语音模型仅在你要求时从 Hugging Face 下载。在线模式下，歌曲的音频会在你同意之后，使用你自己的密钥发送给你选择的服务商（例如 OpenAI 或 Groq），并适用该服务商的条款和隐私政策。",
+    "privacy.p7": "从本网站下载的 Jellyfesh 在开启“自动检查更新”时，每天向 GitHub 检查一次是否有新版本。应用商店版本由商店负责更新，在商店中的购买由 Apple、Microsoft 或 Google 处理。",
   },
   "zh-Hant": {
     "nav.home": "首頁", "nav.download": "下載", "nav.privacy": "隱私",
@@ -125,6 +129,8 @@ const STRINGS = {
     "privacy.p3": "線上來源是你自行選擇安裝的外掛。外掛只會連線至其資訊清單中列出的伺服器（例如你自己的 Subsonic 或 Jellyfin 伺服器），且只執行你要求的操作。登入權杖儲存在系統鑰匙圈中，密碼從不儲存。",
     "privacy.p4": "社群外掛預設關閉。啟用前，Jellyfesh 會說明它屬於非官方外掛，並可能違反相應服務的條款。",
     "privacy.p5": "本網站不使用 Cookie、統計分析，也不載入任何第三方指令碼或字型。",
+    "privacy.p6": "AI 歌詞預設在你的裝置上產生，不會傳送任何內容。語音模型只在你要求時從 Hugging Face 下載。線上模式下，歌曲的音訊會在你同意之後，使用你自己的金鑰傳送給你選擇的服務商（例如 OpenAI 或 Groq），並適用該服務商的條款與隱私權政策。",
+    "privacy.p7": "從本網站下載的 Jellyfesh 在開啟「自動檢查更新」時，每天向 GitHub 檢查一次是否有新版本。應用程式商店版本由商店負責更新，在商店中的購買由 Apple、Microsoft 或 Google 處理。",
   },
   ja: {
     "nav.home": "ホーム", "nav.download": "ダウンロード", "nav.privacy": "プライバシー",
@@ -166,6 +172,8 @@ const STRINGS = {
     "privacy.p3": "オンラインのソースは、あなたが選んでインストールするプラグインです。プラグインはマニフェストに記載されたサーバー（あなたの Subsonic や Jellyfin サーバーなど）にだけ、頼まれたことのためにだけ接続します。サインインのトークンはシステムのキーチェーンに保管され、パスワードは保存されません。",
     "privacy.p4": "コミュニティ製プラグインは初期状態でオフです。有効にする前に、非公式であり、サービスの規約に反する可能性があることを説明します。",
     "privacy.p5": "このウェブサイトは Cookie、解析、サードパーティのスクリプトやフォントを使用しません。",
+    "privacy.p6": "AI 歌詞は標準ではデバイス上で歌詞を作り、何も外部に送りません。音声モデルは、あなたが求めたときだけ Hugging Face からダウンロードされます。オンラインモードでは、あなたが同意した後にだけ、曲の音声があなた自身のキーで、あなたが選んだプロバイダー（OpenAI や Groq など）に送られます。そのプロバイダーの規約とプライバシーポリシーが適用されます。",
+    "privacy.p7": "このウェブサイトからダウンロードした Jellyfesh は、「アップデートを自動的に確認」がオンのとき、1 日に 1 回 GitHub で新しいバージョンを確認します。ストア版はストアが更新し、ストアでの購入は Apple、Microsoft、Google が処理します。",
   },
 };
 
