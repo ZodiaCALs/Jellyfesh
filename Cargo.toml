@@ -114,7 +114,7 @@ wit-bindgen = { version = "0.63.0", default-features = false, features = ["macro
 wit-component = "0.262.0"
 cookie_store = { version = "0.22.1", default-features = false, features = ["serde_json"] }
 cookie = "0.18.2"
-url = "2.5.8"
+url = "2.5.9"
 zip = { version = "9.4.1", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 toml = { version = "1.2.1", default-features = false, features = ["parse", "serde", "std"] }
 semver = "1.0.28"
