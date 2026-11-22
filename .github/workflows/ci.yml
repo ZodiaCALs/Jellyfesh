@@ -313,6 +313,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      # Caches Gradle's downloads (saved by runs on main, read by the others), so a run
+      # doesn't fetch every dependency from Maven Central again and get throttled (HTTP 429).
+      - uses: gradle/actions/setup-gradle@v6
       - uses: android-actions/setup-android@v4
       - name: Android platform 37, newest build tools and NDK
         shell: bash
