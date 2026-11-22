@@ -277,7 +277,12 @@ ditto "$app" "$stage/Jellyfesh.app"
 ln -s /Applications "$stage/Applications"
 dmg="$out/Jellyfesh-$version.dmg"
 rm -f "$dmg"
-hdiutil create -volname "Jellyfesh $version" -srcfolder "$stage" -ov -format UDZO "$dmg"
+# hdiutil sizes the image from the folder by itself, and that estimate sometimes falls short of
+# the app ("hdiutil: create failed - No space left on device"). Give it the folder's size with
+# room to spare: the compressed image doesn't grow, as the free space packs to almost nothing.
+size_mb=$(du -sm "$stage" | cut -f1)
+hdiutil create -volname "Jellyfesh $version" -srcfolder "$stage" -ov -format UDZO \
+  -size "$((size_mb + size_mb / 4 + 64))m" "$dmg"
 if [ "$sign_identity" != "-" ]; then
   codesign --force --timestamp --sign "$sign_identity" ${keychain_args[@]+"${keychain_args[@]}"} "$dmg"
   codesign --verify --verbose=2 "$dmg"
