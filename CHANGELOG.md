@@ -73,6 +73,10 @@ and one download per platform ([release notes](docs/releases/v0.0.7.md)).
 ### Security
 
 - wasmtime 48.0.10, which fixes this week's advisories.
+- url 2.5.9 (RUSTSEC-2026-0592): a deeply nested `blob:` URL from a plugin
+  or a server could overflow the stack and close the app or the relay.
+  Requests, redirects and artwork downloads also refuse anything but http
+  and https before an origin is checked.
 
 ## [0.0.6] - 2026-11-17
 
