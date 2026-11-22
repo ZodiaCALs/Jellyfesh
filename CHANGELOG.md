@@ -43,6 +43,8 @@ and one download per platform ([release notes](docs/releases/v0.0.7.md)).
 - `jf-speech`, `jf-relay` (a relay you run yourself for Jellyfesh Web),
   Check for Updates for direct downloads, draft legal texts in `legal/`,
   store packaging and signing set-up, `docs/parity.md`.
+- A 70-second film of the public beta on the website's home page
+  (simulated screens with sample content; sources in `marketing/promo`).
 
 ### Changed
 
