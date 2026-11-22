@@ -44,11 +44,12 @@ class UniffiCoreClientTest {
         return file
     }
 
-    private fun start(dir: File): UniffiCoreClient = UniffiCoreClient.startWithoutContext(
+    /** A core on a null output: as fast as it decodes, or in real time ([realtime]) where timing matters. */
+    private fun start(dir: File, realtime: Boolean = false): UniffiCoreClient = UniffiCoreClient.startWithoutContext(
         CoreConfig(
             dataDir = dir.resolve("data").path,
             cacheDir = dir.resolve("cache").path,
-            output = OutputKind.Null(realtime = false),
+            output = OutputKind.Null(realtime = realtime),
             restoreSession = false,
             persistSession = false,
             watchFolders = false,
@@ -62,10 +63,12 @@ class UniffiCoreClientTest {
         val dir = Files.createTempDirectory("jf-android-ffi").toFile()
         try {
             val music = dir.resolve("music").apply { mkdirs() }
-            writeTone(music.resolve("01 Harbor.wav"), 440.0)
-            writeTone(music.resolve("02 Lantern.wav"), 660.0)
+            // Played in real time and longer than the core's media lookup, so the theme of the
+            // song playing arrives while it plays (after the queue ends there is none, by design).
+            writeTone(music.resolve("01 Harbor.wav"), 440.0, seconds = 2.0)
+            writeTone(music.resolve("02 Lantern.wav"), 660.0, seconds = 2.0)
 
-            val client = start(dir)
+            val client = start(dir, realtime = true)
             val store = CoreStore()
             val events = LinkedBlockingQueue<CoreEvent>()
             // As the app does: the store listens and merges the snapshot; this test then also
@@ -116,8 +119,16 @@ class UniffiCoreClientTest {
             waitFor(events) { it is CoreEvent.LibraryChanged }
             assertEquals(listOf("02 Lantern", "01 Harbor"), client.playlistEntries(imported.id, 0, 50).map { it.row.title })
 
-            // Play it; the store mirrors the slices.
+            // Play it. Tones have no artwork: while one plays, the core's theme is the fallback
+            // hue, which the app's first-frame colours must match.
             client.send(Command.PlayCollection(CollectionRef.Playlist(created.id), start = 0, shuffle = false))
+            val themed = waitFor(events) { it is CoreEvent.Theme || (it is CoreEvent.Playback && it.snapshot.status == Status.Ended) }
+            val theme = assertNotNull((themed as? CoreEvent.Theme)?.snapshot, "a theme slice while a song plays")
+            assertEquals(FallbackTheme.HUE, theme.hue)
+            assertEquals(FallbackTheme.light, theme.light.colors)
+            assertEquals(FallbackTheme.dark, theme.dark.colors)
+
+            // The store mirrors the slices.
             waitFor(events) { it is CoreEvent.Playback && it.snapshot.status == Status.Ended }
             drain(events, 500)
             val state = store.state.value
@@ -127,16 +138,6 @@ class UniffiCoreClientTest {
             assertEquals(snapshot.playback, state.playback)
             assertEquals(snapshot.queue, state.queue)
 
-            // Tones have no artwork: the core's theme is the fallback hue, which the app's
-            // first-frame colours must match.
-            // The theme can come after the songs end on a busy machine: wait a while for it then.
-            val theme = assertNotNull(
-                state.theme ?: snapshot.theme ?: (waitForOrNull(events, 10_000) { it is CoreEvent.Theme } as CoreEvent.Theme?)?.snapshot,
-                "a theme slice after playing",
-            )
-            assertEquals(FallbackTheme.HUE, theme.hue)
-            assertEquals(FallbackTheme.light, theme.light.colors)
-            assertEquals(FallbackTheme.dark, theme.dark.colors)
 
             // Shut down: queries fail with the shell's ShutDown.
             client.shutdown()
@@ -296,9 +297,9 @@ class UniffiCoreClientTest {
         val dir = Files.createTempDirectory("jf-android-ffi-v007").toFile()
         try {
             val music = dir.resolve("music").apply { mkdirs() }
-            // Long enough to still be playing when the store is read.
+            // In real time and long enough to still be playing when the store is read.
             writeTone(music.resolve("01 Harbor.wav"), 440.0, seconds = 5.0)
-            val client = start(dir)
+            val client = start(dir, realtime = true)
             val store = CoreStore()
             val events = LinkedBlockingQueue<CoreEvent>()
             store.attach(client)
@@ -362,16 +363,6 @@ class UniffiCoreClientTest {
         while (true) {
             val left = end - System.nanoTime()
             val event = events.poll(left.coerceAtLeast(0), TimeUnit.NANOSECONDS) ?: throw AssertionError("timed out")
-            if (done(event)) return event
-        }
-    }
-
-    private fun waitForOrNull(events: LinkedBlockingQueue<CoreEvent>, timeoutMs: Long, done: (CoreEvent) -> Boolean): CoreEvent? {
-        val end = System.nanoTime() + timeoutMs * 1_000_000L
-        while (true) {
-            val left = end - System.nanoTime()
-            if (left <= 0) return null
-            val event = events.poll(left, TimeUnit.NANOSECONDS) ?: return null
             if (done(event)) return event
         }
     }
