@@ -464,7 +464,13 @@ fn browses_a_catalogue_page_by_page() {
 
 #[test]
 fn plays_a_source_track_with_lyrics_and_theme_from_its_plugin() {
-    let env = Env::new();
+    // Played in real time, so its lyrics, theme and picture come while it plays (once the
+    // queue has ended, late answers no longer count).
+    let env = Env::with(|c| {
+        if let jf_core::OutputKind::WavFile { realtime, .. } = &mut c.output {
+            *realtime = true;
+        }
+    });
     let server = catalog_server(Service {
         hits: vec![
             json!({ "id": "t1", "kind": "track", "title": "Tone One", "artist": "Test Artist",
@@ -486,8 +492,19 @@ fn plays_a_source_track_with_lyrics_and_theme_from_its_plugin() {
             _ => None,
         })
         .collect();
-    assert_eq!(now.len(), 1, "{:?}", events.iter().map(short).collect::<Vec<_>>());
+    // One song: Now Playing comes again only with its picture from the cache.
+    assert!(
+        !now.is_empty() && now.iter().all(|n| n.uid == now[0].uid),
+        "{:?}",
+        events.iter().map(short).collect::<Vec<_>>()
+    );
     let np = &now[0];
+    let last = now.last().unwrap();
+    assert!(
+        matches!(&last.artwork, Some(ArtworkRef::File(path)) if path.is_file()),
+        "the picture through the plugin, kept: {:?}",
+        last.artwork
+    );
     assert_eq!(np.track, track);
     assert_eq!(
         (np.title.as_str(), np.artist.as_deref(), np.album.as_deref()),
@@ -524,8 +541,7 @@ fn plays_a_source_track_with_lyrics_and_theme_from_its_plugin() {
     assert!(streams.iter().all(|r| r.header("x-token") == Some("abc")));
     assert_eq!(server.count("/resolve"), 1);
 
-    // Lyrics and theme colours came through the plugin too (the media
-    // worker may finish after the queue has ended).
+    // Lyrics and theme colours came through the plugin too.
     let mut lyrics = None;
     let mut theme = None;
     for e in events.iter() {
