@@ -9,3 +9,9 @@ rustflags = ["-C", "target-feature=+crt-static"]
 
 [target.aarch64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+
+[env]
+# whisper.cpp (jf-speech, ADR-0019): no tuning for the build machine's processor, so a build
+# runs on any x86-64 PC with AVX2 (a native build picked up AMX on a CI runner and aborted).
+# Release and CI jobs also set it; a value already in the environment still wins.
+GGML_NATIVE = "OFF"
