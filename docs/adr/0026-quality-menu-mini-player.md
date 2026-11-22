@@ -54,8 +54,15 @@ wayland-protocols).
    manifest (`content_policy.qualities`). The core gives the apps the levels
    for what is playing (`NowPlaying.qualities`).
    * Library files and remote playback (Spotify) offer none.
-   * The Jellyfin plugin's own quality setting goes. A value someone set is
-     kept once, as the app's level.
+   * The plugins' own quality settings go, so the bar's menu never checks
+     one level while another plays. Jellyfin, Subsonic, NetEase and the
+     community NetEase and QQ Music plugins each had one ("app", or a fixed
+     level).
+   * Migration: the core reads the old values from the stored settings
+     before the new schema drops them.
+     * If every plugin that set a fixed level agrees, that level becomes the
+       app's level.
+     * Otherwise the app keeps Auto.
 3. **The quality menu in the bar**, on every app and the web:
    * The bar shows a badge with the playing quality's label (the core's
      `QualityLabel`).
