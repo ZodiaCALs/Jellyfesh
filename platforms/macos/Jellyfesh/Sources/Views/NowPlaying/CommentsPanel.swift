@@ -109,7 +109,7 @@ private struct CommentRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Tokens.Space.s3) {
-            ArtworkView(source: comment.avatar.map { ArtworkSource(hash: nil, location: $0) }, size: 32,
+            ArtworkView(source: comment.avatar.flatMap { ArtworkSource(hash: nil, location: $0) }, size: 32,
                         cornerRadius: 16, placeholder: "person.crop.circle")
             VStack(alignment: .leading, spacing: Tokens.Space.s1) {
                 HStack(spacing: Tokens.Space.s2) {
