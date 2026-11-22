@@ -5,6 +5,7 @@
 //! bands where content fades out (Luminous: the pages fade out just above
 //! the floating player; the lyrics fade at their ends).
 
+use jf_core::{MiniPlayerStyle, NowPlayingLayout};
 use jf_tokens::{player, space};
 
 use crate::logic::seek::Line;
@@ -121,9 +122,92 @@ pub fn title_hidden(scrolled: f64, title_top: f64, title_height: f64) -> f64 {
     ((scrolled - title_top) / title_height).clamp(0.0, 1.0)
 }
 
+/// The player at the bottom for the look's style (ADR-0020), and whether
+/// it floats at the trailing corner: Bar is v0.0.6 (the bar in wide
+/// windows, the capsule in narrow ones), Compact the capsule at every
+/// width, Floating a smaller capsule at the trailing corner.
+pub fn chrome_for(style: MiniPlayerStyle, wide: bool) -> (Chrome, bool) {
+    match style {
+        MiniPlayerStyle::Bar => (if wide { Chrome::Bar } else { Chrome::Mini }, false),
+        MiniPlayerStyle::Compact => (Chrome::Mini, false),
+        MiniPlayerStyle::Floating => (Chrome::Mini, true),
+    }
+}
+
+/// The floating capsule's widest (px); the capsule at the bottom centre
+/// is up to 560 px.
+pub const FLOATING_WIDTH: i32 = 360;
+
+/// How Now Playing arranges itself for the look's layout (ADR-0020).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Arrangement {
+    /// The v0.0.6 stage: the artwork beside the pane.
+    Stage,
+    /// A large cover with the line being sung below it, in place of the
+    /// Lyrics pane.
+    Cover,
+    /// The pane across the view, a small cover in the corner.
+    WidePane,
+}
+
+/// Stage is v0.0.6. Artwork shows the cover and the sung line in place of
+/// the Lyrics pane, and Queue, Info and Comments beside the cover as on the
+/// stage. Lyrics puts any pane across the view. Narrow views keep their
+/// one-thing-at-a-time layout.
+pub fn arrangement(layout: NowPlayingLayout, lyrics_shown: bool, narrow: bool) -> Arrangement {
+    if narrow {
+        return Arrangement::Stage;
+    }
+    match layout {
+        NowPlayingLayout::Stage => Arrangement::Stage,
+        NowPlayingLayout::Artwork if lyrics_shown => Arrangement::Cover,
+        NowPlayingLayout::Artwork => Arrangement::Stage,
+        NowPlayingLayout::Lyrics => Arrangement::WidePane,
+    }
+}
+
+/// The cover in the Artwork layout: up to 520 px, as the view allows (the
+/// top bar, the dock, the title on up to two lines and the sung line with
+/// its translation take about 480 px of the height, and the cover at most
+/// half the width), never under 180.
+pub fn cover_side(width: i32, height: i32) -> i32 {
+    520.min(width / 2).min(height - 480).max(180)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_player_for_the_looks_style() {
+        assert_eq!(chrome_for(MiniPlayerStyle::Bar, true), (Chrome::Bar, false));
+        assert_eq!(chrome_for(MiniPlayerStyle::Bar, false), (Chrome::Mini, false));
+        assert_eq!(chrome_for(MiniPlayerStyle::Compact, true), (Chrome::Mini, false));
+        assert_eq!(chrome_for(MiniPlayerStyle::Floating, true), (Chrome::Mini, true));
+        assert_eq!(chrome_for(MiniPlayerStyle::Floating, false), (Chrome::Mini, true));
+    }
+
+    #[test]
+    fn now_playing_arrangements() {
+        use NowPlayingLayout::*;
+        assert_eq!(arrangement(Stage, true, false), Arrangement::Stage);
+        assert_eq!(arrangement(Artwork, true, false), Arrangement::Cover);
+        assert_eq!(arrangement(Artwork, false, false), Arrangement::Stage);
+        assert_eq!(arrangement(Lyrics, false, false), Arrangement::WidePane);
+        assert_eq!(
+            arrangement(Lyrics, true, true),
+            Arrangement::Stage,
+            "narrow views"
+        );
+    }
+
+    #[test]
+    fn the_cover_fits_the_view() {
+        assert_eq!(cover_side(1600, 1100), 520);
+        assert_eq!(cover_side(1200, 780), 300);
+        assert_eq!(cover_side(700, 1000), 350);
+        assert_eq!(cover_side(1200, 500), 180);
+    }
 
     #[test]
     fn the_bar_starts_at_900_px() {

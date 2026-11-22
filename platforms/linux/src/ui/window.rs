@@ -528,11 +528,26 @@ fn update_chrome() {
     let Some(s) = shell() else { return };
     let current = s.window.current_breakpoint();
     let compact = current.as_ref() == Some(&s.wide_compact);
-    let chrome = if compact || current.as_ref() == Some(&s.wide) {
-        Chrome::Bar
+    let wide = compact || current.as_ref() == Some(&s.wide);
+    // The look's player: Bar (v0.0.6), Compact or Floating (ADR-0020).
+    let style = try_app().map_or(jf_core::MiniPlayerStyle::Bar, |a| {
+        crate::logic::look::mini_player(&a.look.borrow())
+    });
+    let (chrome, floating) = layout::chrome_for(style, wide);
+    if let Some(clamp) = s.mini.downcast_ref::<adw::Clamp>() {
+        clamp.set_maximum_size(if floating { layout::FLOATING_WIDTH } else { 560 });
+        clamp.set_tightening_threshold(if floating { layout::FLOATING_WIDTH } else { 400 });
+        clamp.set_halign(if floating {
+            gtk::Align::End
+        } else {
+            gtk::Align::Fill
+        });
+    }
+    if floating {
+        s.mini.add_css_class("floating");
     } else {
-        Chrome::Mini
-    };
+        s.mini.remove_css_class("floating");
+    }
     s.bar.set_compact(compact);
     s.chrome.set(chrome);
     if chrome == Chrome::Bar {
@@ -623,12 +638,14 @@ pub fn listen() {
             crate::ui::style::apply_theme(true);
         }
         // The look applies live: its stylesheets, glass in the theme, the
-        // artwork's corners and the sidebar's places.
+        // artwork's corners, the sidebar's places and the player at the
+        // bottom.
         if let Change::Look = change {
             crate::ui::style::apply_look();
             crate::ui::style::apply_theme(false);
             crate::ui::widgets::art::redraw_all();
             refill_sidebar();
+            update_chrome();
         }
     });
 }

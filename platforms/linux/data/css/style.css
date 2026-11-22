@@ -824,6 +824,40 @@ button.desktop-lyrics-control:hover {
   border-radius: {{radius.r-sm}};
 }
 
+/* The look's layouts (ADR-0020): the line being sung under the cover
+ * (Artwork), the small cover in the corner (Lyrics), and the floating
+ * player at the trailing corner. */
+.lyrics-cover .lyrics-bar-text {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.lyrics-cover .lyrics-bar-translation {
+  font-size: 15px;
+}
+
+.np-corner {
+  margin-top: {{space.s4}};
+}
+
+art.np-corner-art {
+  border-radius: {{artwork.radius-grid}};
+}
+
+.np-corner-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: {{ink.ink-90}};
+}
+
+.np-corner-artist {
+  color: {{ink.ink-70}};
+}
+
+.mini-clamp.floating {
+  margin-right: {{space.s4}};
+}
+
 /* Get Info (docs/ui.md, "Details"). */
 .details {
   margin: {{space.s2}} {{space.s5}} {{space.s6}};

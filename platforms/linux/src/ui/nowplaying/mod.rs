@@ -30,6 +30,7 @@ use gtk::glib;
 use jf_core::{BackdropStyle, Command, ThemeSnapshot};
 
 use crate::logic::format;
+use crate::logic::layout;
 use crate::logic::lyrics as lyrics_logic;
 use crate::logic::motion::{self, artwork_plan, artwork_scale};
 use crate::logic::remote::{self, RemoteView};
@@ -37,6 +38,7 @@ use crate::logic::seek::Times;
 use crate::ui::actions;
 use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
+use crate::ui::lyricsbar::LyricsBarView;
 use crate::ui::outputs::DeviceButton;
 use crate::ui::state::{Change, app, spawn, try_app};
 use crate::ui::style::{self, FLUID};
@@ -122,6 +124,16 @@ struct Inner {
     queue: Rc<queue::Queue>,
     info: info::Info,
     comments: comments::CommentsPane,
+    /// The look's arrangement (Stage, Cover or the pane across the view).
+    arrangement: Cell<layout::Arrangement>,
+    /// The line being sung under the cover (the Artwork layout).
+    sung_box: gtk::Box,
+    _sung: Rc<LyricsBarView>,
+    /// The small cover, title and artist in the corner (the Lyrics layout).
+    corner: gtk::Box,
+    corner_art: Art,
+    corner_title: gtk::Label,
+    corner_artist: gtk::Label,
 }
 
 /// The Now Playing view.
@@ -237,6 +249,13 @@ impl NowPlaying {
         player.set_valign(gtk::Align::Center);
         player.append(&art_bin);
         player.append(&title_row);
+        // The Artwork layout: the line being sung under the cover.
+        let sung = LyricsBarView::new(crate::ui::lyricsbar::Mode::Cover);
+        let sung_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        sung_box.add_css_class("np-sung");
+        sung_box.append(&sung.root);
+        sung_box.set_visible(false);
+        player.append(&sung_box);
         let player_clamp = adw::Clamp::builder().child(&player).maximum_size(ART_MAX).build();
         player_clamp.set_hexpand(false);
 
@@ -331,9 +350,39 @@ impl NowPlaying {
             .build();
         panel_clamp.set_hexpand(true);
 
+        // The Lyrics layout: a small cover, the title and the artist in the
+        // corner, beside the pane across the view.
+        let corner_art = Art::new(96, jf_tokens::artwork::RADIUS_GRID);
+        corner_art.set_halign(gtk::Align::Start);
+        corner_art.set_size_request(96, 96);
+        corner_art.set_fixed(true);
+        corner_art.add_css_class("np-corner-art");
+        let corner_title = gtk::Label::builder()
+            .xalign(0.0)
+            .wrap(true)
+            .lines(2)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .max_width_chars(18)
+            .build();
+        corner_title.add_css_class("np-corner-title");
+        let corner_artist = gtk::Label::builder()
+            .xalign(0.0)
+            .ellipsize(gtk::pango::EllipsizeMode::End)
+            .max_width_chars(18)
+            .build();
+        corner_artist.add_css_class("np-corner-artist");
+        let corner = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        corner.add_css_class("np-corner");
+        corner.set_valign(gtk::Align::Start);
+        corner.append(&corner_art);
+        corner.append(&corner_title);
+        corner.append(&corner_artist);
+        corner.set_visible(false);
+
         let main = gtk::Box::new(gtk::Orientation::Horizontal, 64);
         main.add_css_class("np-main");
         main.set_vexpand(true);
+        main.append(&corner);
         main.append(&player_clamp);
         main.append(&panel_clamp);
 
@@ -403,6 +452,13 @@ impl NowPlaying {
             queue: queue_panel,
             info,
             comments: comments_pane,
+            arrangement: Cell::new(layout::Arrangement::Stage),
+            sung_box,
+            _sung: sung,
+            corner,
+            corner_art,
+            corner_title,
+            corner_artist,
         });
         let weak = Rc::downgrade(&inner);
         // The size arrives during layout; the artwork is fitted right after
@@ -562,7 +618,10 @@ impl NowPlaying {
                 Change::Details(page) => inner.info.details_arrived(page),
                 Change::Comments(page) => inner.comments.page(page),
                 Change::AiLyrics | Change::Pro => inner.lyrics.update_making(),
-                Change::Look => inner.lyrics.apply_look(),
+                Change::Look => {
+                    inner.lyrics.apply_look();
+                    relayout(&inner);
+                }
                 Change::Failed(id, message) => inner.comments.failed(*id, message),
                 Change::Sources => {
                     update_more(&inner);
@@ -596,10 +655,33 @@ impl NowPlaying {
         let inner = &self.0;
         let narrow = inner.narrow.get();
         let show_panel = !narrow || inner.show_panel_narrow.get();
-        player.set_visible(!(narrow && show_panel));
-        // Alone in a narrow view, the player takes the width and centres itself.
-        player.set_hexpand(narrow);
-        panel.set_visible(show_panel);
+        // The look's arrangement (ADR-0020): the stage, the cover with the
+        // line being sung in place of the Lyrics pane, or the pane across
+        // the view with a small cover in the corner.
+        let arrangement = arrangement_of(inner);
+        inner.arrangement.set(arrangement);
+        let (player_shown, panel_shown) = match arrangement {
+            layout::Arrangement::Stage => (!(narrow && show_panel), show_panel),
+            layout::Arrangement::Cover => (true, false),
+            layout::Arrangement::WidePane => (false, true),
+        };
+        player.set_visible(player_shown);
+        // Alone in a narrow view, the player takes the width and centres
+        // itself; so does the cover.
+        player.set_hexpand(narrow || arrangement == layout::Arrangement::Cover);
+        panel.set_visible(panel_shown);
+        panel.set_maximum_size(if arrangement == layout::Arrangement::WidePane {
+            WIDE_PANE
+        } else {
+            lyrics_logic::FULL_SIZE_WIDTH as i32
+        });
+        inner
+            .corner
+            .set_visible(arrangement == layout::Arrangement::WidePane);
+        inner
+            .sung_box
+            .set_visible(arrangement == layout::Arrangement::Cover);
+        fit_art(inner);
         inner.tab_guard.set(true);
         let tab = inner.tab.get();
         for (t, b) in &inner.tabs {
@@ -658,6 +740,27 @@ impl NowPlaying {
 /// The clamp around the panels.
 fn panel_clamp_of(panel: &gtk::Stack) -> Option<adw::Clamp> {
     panel.parent().and_downcast::<adw::Clamp>()
+}
+
+/// The pane across the view (the Lyrics layout), at most this wide.
+const WIDE_PANE: i32 = 1100;
+
+/// The look's arrangement for the pane shown now.
+fn arrangement_of(inner: &Inner) -> layout::Arrangement {
+    let layout = try_app().map_or(jf_core::NowPlayingLayout::Stage, |a| {
+        crate::logic::look::now_playing(&a.look.borrow())
+    });
+    layout::arrangement(layout, inner.tab.get() == Tab::Lyrics, inner.narrow.get())
+}
+
+/// Lays the view out again (the look changed).
+fn relayout(inner: &Rc<Inner>) {
+    if let (Some(pc), Some(nc)) = (
+        inner.player.parent().and_downcast::<adw::Clamp>(),
+        panel_clamp_of(&inner.panel),
+    ) {
+        NowPlaying(inner.clone()).layout(&pc, &nc);
+    }
 }
 
 /// Gives More the menu `build` makes, unless it shows the menu for `key`
@@ -747,9 +850,17 @@ fn fit_art(inner: &Inner) {
         return;
     }
     let misty = try_app().is_some_and(|a| a.settings.borrow().style == BackdropStyle::Misty);
-    let side = art_side(width, height, inner.narrow.get(), misty);
+    let side = if inner.arrangement.get() == layout::Arrangement::Cover {
+        layout::cover_side(width, height)
+    } else {
+        art_side(width, height, inner.narrow.get(), misty)
+    };
     inner.art.set_size(side);
     inner.art.set_size_request(side, side);
+    // The column is as wide as the artwork, the cover's up to 520 px.
+    if let Some(column) = inner.player.parent().and_downcast::<adw::Clamp>() {
+        column.set_maximum_size(side.max(ART_MAX));
+    }
 }
 
 fn update_track(inner: &Inner) {
@@ -772,7 +883,10 @@ fn update_track(inner: &Inner) {
                 .set_label(&format::dot_join([Some(artist.as_str()), np.album.as_deref()]));
             inner.subtitle.set_visible(true);
             let key = convert::art_of(np.artwork.as_ref());
+            inner.corner_art.set_art(key.clone());
             inner.art.set_art(key);
+            inner.corner_title.set_label(&np.title);
+            inner.corner_artist.set_label(&artist);
             inner.art.update_property(&[gtk::accessible::Property::Label(&trf(
                 "Artwork of {title}",
                 &[("title", &np.title)],
@@ -785,6 +899,9 @@ fn update_track(inner: &Inner) {
                 .set_label(&tr("Pick a song, an album or a playlist."));
             inner.subtitle.set_visible(true);
             inner.art.set_art(None);
+            inner.corner_art.set_art(None);
+            inner.corner_title.set_label(&tr("Nothing Playing"));
+            inner.corner_artist.set_label("");
         }
     }
     inner.info.update(now.as_ref(), a.lyrics.borrow().as_ref());
@@ -810,6 +927,11 @@ fn show_remote(inner: &Inner, view: &RemoteView) {
     // Artwork URLs are not fetched by the app (networking stays in the
     // core): the placeholder shows.
     inner.art.set_art(convert::art_of(view.artwork.as_ref()));
+    inner.corner_art.set_art(convert::art_of(view.artwork.as_ref()));
+    inner.corner_title.set_label(&title);
+    inner
+        .corner_artist
+        .set_label(view.artist.as_deref().unwrap_or_default());
     inner.art.update_property(&[gtk::accessible::Property::Label(&trf(
         "Artwork of {title}",
         &[("title", &title)],
@@ -834,7 +956,6 @@ fn show_remote(inner: &Inner, view: &RemoteView) {
     set_more(inner, key, || Some(actions::remote_menu(view)));
 }
 
-/// More for the engine's track: what the song menu offers for it, with
 /// The Comments tab shows for a song whose source shows comments; when it
 /// goes while showing, the lyrics take its place.
 fn update_comments_tab(inner: &Inner) {
@@ -858,6 +979,7 @@ fn update_comments_tab(inner: &Inner) {
     }
 }
 
+/// More for the engine's track: what the song menu offers for it, with
 /// Go to Album once the core has said which album a library song is on.
 fn update_more(inner: &Inner) {
     let a = app();
