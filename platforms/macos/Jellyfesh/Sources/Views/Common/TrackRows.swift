@@ -516,18 +516,24 @@ extension CollectionMoreMenu {
 }
 
 /// A page's header: a title, an optional line under it and actions; Back above them on a page
-/// opened from another (`showsBackButton`).
+/// opened from another (`showsBackButton`), and on the Library tab's pages in the phone layout the
+/// switcher between them (`showsLibrarySwitcher`).
 struct PageHeader<Actions: View>: View {
     var title: String
     var subtitle: String?
     @ViewBuilder var actions: Actions
     @Environment(\.palette) private var palette
     @Environment(\.showsBackButton) private var showsBackButton
+    @Environment(\.showsLibrarySwitcher) private var showsLibrarySwitcher
 
     var body: some View {
         VStack(alignment: .leading, spacing: Tokens.Space.s3) {
             if showsBackButton {
                 BackButton()
+            }
+            if showsLibrarySwitcher {
+                LibrarySwitcher()
+                    .padding(.bottom, Tokens.Space.s1)
             }
             HStack(alignment: .lastTextBaseline, spacing: Tokens.Space.s4) {
                 VStack(alignment: .leading, spacing: Tokens.Space.s1) {

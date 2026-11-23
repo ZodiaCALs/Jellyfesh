@@ -1,6 +1,9 @@
-// The main window: the library in a NavigationSplitView with the mini player or the player bar
-// floating over its detail column, and Now Playing opening over everything. Every view below gets the theme's
-// palette for the window's appearance and the effects the system and the person allow.
+// The main window, in Jellyfesh Web's layout (ADR-0023): the field behind everything; from 761 pt
+// wide the floating sidebar panel beside the pages, up to 760 pt the pages over the phone tabs;
+// the player floating over every page, Settings included; Now Playing opening over everything.
+// The window frame and its title-bar controls stay the system's (a hidden title bar over the
+// field). Every view below gets the theme's palette for the window's appearance and the effects
+// the system and the person allow.
 
 import SwiftUI
 
@@ -26,7 +29,7 @@ struct RootView: View {
             if let error = model.startupError {
                 StartupErrorView(message: error)
             } else {
-                LibraryWindow()
+                AppShell()
                     .allowsHitTesting(!router.nowPlayingShown)
                     .accessibilityHidden(router.nowPlayingShown)
                 if router.nowPlayingShown {
@@ -63,8 +66,7 @@ struct RootView: View {
             // Every New Playlist… starts with an empty name.
             playlistName = ""
         }
-        .frame(minWidth: 900, minHeight: 600)
-        .toolbar(router.nowPlayingShown ? .hidden : .visible, for: .windowToolbar)
+        .frame(minWidth: ShellLayout.minimumWidth, minHeight: ShellLayout.minimumHeight)
         .proSheet(in: .main)
         .getInfoSheet()
         .environment(\.palette, palette)
@@ -80,7 +82,7 @@ struct RootView: View {
             // A playlist made from this window (New Playlist, Import) opens when the core names it.
             if created != nil, let id = model.library.consumeCreatedPlaylist() {
                 router.showNowPlaying(false, reduceMotion: true)
-                router.select(.playlist(id))
+                router.openPlaylist(id)
             }
         }
         .onChange(of: model.playback.hasTrack) { _, hasTrack in
@@ -112,50 +114,20 @@ struct RootView: View {
     }
 }
 
-/// The library: sidebar sections and the pages pushed on them.
-struct LibraryWindow: View {
-    @State private var columns = NavigationSplitViewVisibility.all
+/// Jellyfesh Web's layout for the window's width (ShellLayout): the floating sidebar panel beside
+/// the pages from 761 pt, the pages alone (over the phone tabs) up to 760 pt; the field behind both.
+struct AppShell: View {
+    /// The window's width, once measured (the default window's until then).
+    @State private var width: CGFloat?
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columns) {
-            Sidebar()
-                .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 320)
-        } detail: {
-            DetailColumn()
-        }
-    }
-}
-
-/// The selected section, its pushed pages, and the mini player (columns under 900 pt) or the
-/// player bar (900 pt and wider) floating over them as Veil capsules; the pages fade out just
-/// above the player (Luminous). A customized look may ask for the mini player at every width, or
-/// a smaller floating capsule at the trailing corner (ADR-0020). Under Now Playing the bar stays
-/// in place but stops redrawing its progress.
-struct DetailColumn: View {
-    @Environment(Router.self) private var router
-    @Environment(PlaybackStore.self) private var playback
-    @Environment(\.effects) private var effects
-    @Environment(\.look) private var look
-    @State private var width: CGFloat = 0
-
-    var body: some View {
-        @Bindable var router = router
-        let player = LuminousGeometry.bottomPlayer(style: look.miniPlayer, wide: SeekGeometry.usesPlayerBar(width: width))
-        let wide = player == .bar
-        NavigationStack(path: $router.path) {
-            SectionPage(item: router.selection)
-                .pageEntrance()
-                .id(router.selection)
-                .navigationDestination(for: Route.self) { route in
-                    // Back is the page's own, at its top, as on the web.
-                    RoutePage(route: route)
-                        .pageEntrance()
-                        .environment(\.showsBackButton, true)
-                        .navigationBarBackButtonHidden(true)
-                }
-        }
-        .mask {
-            PlayerFadeMask(playerZone: LuminousGeometry.playerZone(hasPlayer: playback.hasTrack, wide: wide))
+        let layout = ShellLayout(width: width ?? 1180)
+        HStack(spacing: 0) {
+            if layout.showsSidebar {
+                SidebarPanel()
+                    .padding([.leading, .top, .bottom], ShellLayout.margin)
+            }
+            ContentColumn(layout: layout)
         }
         .background {
             MistyField()
@@ -167,27 +139,66 @@ struct DetailColumn: View {
                     .onChange(of: geometry.size.width) { _, value in width = value }
             }
         }
+    }
+}
+
+/// The place shown and the pages pushed on it, with the player floating over them as a Veil
+/// capsule: the player bar in windows 900 pt and wider, the capsule in narrower ones (a customized
+/// look may ask for the capsule at every width, or a smaller one at the trailing corner, ADR-0020).
+/// In the phone layout the tabs float under the player. The pages fade out just above them
+/// (Luminous). The player floats over every page, Settings included, and is not drawn while Now
+/// Playing is open: Now Playing has its own dock (ADR-0023 §2).
+struct ContentColumn: View {
+    var layout: ShellLayout
+
+    @Environment(Router.self) private var router
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(\.effects) private var effects
+    @Environment(\.look) private var look
+
+    var body: some View {
+        @Bindable var router = router
+        let player = LuminousGeometry.bottomPlayer(style: look.miniPlayer, wide: layout.showsPlayerBar)
+        let showsPlayer = playback.hasTrack && !router.nowPlayingShown
+        let playerHeight: CGFloat? = showsPlayer ? (player == .bar ? SeekGeometry.barHeight : Tokens.Player.miniHeight) : nil
+        NavigationStack(path: $router.path) {
+            SectionPage(item: router.selection)
+                .pageEntrance()
+                .id(router.selection)
+                .environment(\.showsLibrarySwitcher, layout.showsTabs && router.selection.isLibraryPlace)
+                .navigationDestination(for: Route.self) { route in
+                    // Back is the page's own, at its top, as on the web.
+                    RoutePage(route: route)
+                        .pageEntrance()
+                        .environment(\.showsBackButton, true)
+                        .environment(\.showsLibrarySwitcher, false)
+                        .navigationBarBackButtonHidden(true)
+                }
+        }
+        .mask {
+            PlayerFadeMask(playerZone: ShellLayout.bottomZone(playerHeight: playerHeight, tabs: layout.showsTabs))
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ZStack(alignment: player == .floating ? .bottomTrailing : .bottom) {
-                switch player {
-                case .bar: PlayerBar()
-                case .mini: MiniPlayer()
-                case .floating: MiniPlayer(floating: true)
+            VStack(spacing: 0) {
+                if showsPlayer {
+                    ZStack(alignment: player == .floating ? .bottomTrailing : .bottom) {
+                        switch player {
+                        case .bar: PlayerBar()
+                        case .mini: MiniPlayer()
+                        case .floating: MiniPlayer(floating: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: player == .floating ? .trailing : .center)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                if layout.showsTabs {
+                    PhoneTabBar()
                 }
             }
-            .frame(maxWidth: .infinity, alignment: player == .floating ? .trailing : .center)
-            .environment(\.effects, barEffects)
-            .animation(Motion.unless(effects.reduceMotion, Motion.move), value: playback.hasTrack)
+            .animation(Motion.unless(effects.reduceMotion, Motion.move), value: showsPlayer)
             .animation(Motion.unless(effects.reduceMotion, Motion.move), value: player)
         }
         .softScrollEdges()
-    }
-
-    /// Now Playing covers the bar: its progress stops redrawing until it closes.
-    private var barEffects: Effects {
-        var bar = effects
-        bar.windowVisible = effects.windowVisible && !router.nowPlayingShown
-        return bar
     }
 }
 
@@ -203,10 +214,10 @@ struct SectionPage: View {
         case .songs: SongsView()
         case .playlists: PlaylistsView()
         case .favorites: FavoritesView()
+        case .downloads: DownloadsView()
         case .search: SearchView()
         case .sources: SourcesView()
         case .settings: SettingsPage()
-        case .playlist(let id): PlaylistDetailView(playlistID: id)
         }
     }
 }

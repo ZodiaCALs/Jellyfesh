@@ -1,5 +1,5 @@
-// Open and save panels for folders, playlists and plugin packages, usable from menus as well as
-// views. The app is not sandboxed (ADR-0016), so the chosen paths go to the core as they are.
+// Open and save panels for audio files, folders, playlists and plugin packages, usable from menus as
+// well as views. The app is not sandboxed (ADR-0016), so the chosen paths go to the core as they are.
 
 import AppKit
 import UniformTypeIdentifiers
@@ -13,6 +13,21 @@ enum FilePanels {
 
     static var playlistTypes: [UTType] {
         [UTType.m3uPlaylist, UTType(filenameExtension: "m3u8")].compactMap { $0 }
+    }
+
+    /// Audio files to play now (Open Files…): they play without joining the library.
+    static func chooseAudioFiles(_ done: @escaping ([URL]) -> Void) {
+        let panel = NSOpenPanel()
+        panel.title = String(localized: "Open Files")
+        panel.prompt = String(localized: "Play")
+        panel.allowedContentTypes = [.audio]
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowsMultipleSelection = true
+        panel.begin { response in
+            guard response == .OK else { return }
+            done(panel.urls)
+        }
     }
 
     /// Folders with music to add to the library.

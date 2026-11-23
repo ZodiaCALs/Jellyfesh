@@ -65,6 +65,15 @@ private struct FileMenuItems: View {
     let model: AppModel
 
     var body: some View {
+        Button("Open Files…") {
+            // They play now, without joining the library.
+            FilePanels.chooseAudioFiles { urls in model.open(urls) }
+        }
+        .keyboardShortcut("o")
+        .disabled(model.startupError != nil)
+
+        Divider()
+
         Button("New Playlist…") {
             // The window asks for the name, then opens the playlist the core makes.
             model.router.showNowPlaying(false, reduceMotion: true)
@@ -112,10 +121,11 @@ private struct ViewMenuItems: View {
         var id: SidebarItem { item }
     }
 
+    /// The places in the sidebar's order (Search has ⌘F).
     private let shortcuts: [Shortcut] = [
         Shortcut(item: .home, key: "1"), Shortcut(item: .albums, key: "2"), Shortcut(item: .artists, key: "3"),
         Shortcut(item: .songs, key: "4"), Shortcut(item: .playlists, key: "5"), Shortcut(item: .favorites, key: "6"),
-        Shortcut(item: .sources, key: "7"),
+        Shortcut(item: .downloads, key: "7"), Shortcut(item: .sources, key: "8"),
     ]
 
     var body: some View {

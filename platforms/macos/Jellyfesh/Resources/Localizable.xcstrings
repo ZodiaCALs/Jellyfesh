@@ -3229,6 +3229,28 @@
         }
       }
     },
+    "Download albums and playlists from your servers to play them offline.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーからアルバムやプレイリストをダウンロードすると、オフラインでも再生できます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从你的服务器下载专辑和歌单，即可离线播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從你的伺服器下載專輯和播放清單，即可離線播放。"
+          }
+        }
+      }
+    },
     "Download the %@ model (%@) to make lyrics on this device.": {
       "localizations": {
         "ja": {
@@ -3291,6 +3313,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在下載… %@"
+          }
+        }
+      }
+    },
+    "Downloads": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載"
           }
         }
       }
@@ -4901,6 +4945,28 @@
         }
       }
     },
+    "Library sections": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブラリの項目"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资料库分区"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "資料庫分區"
+          }
+        }
+      }
+    },
     "Licence Agreement": {
       "localizations": {
         "ja": {
@@ -5781,6 +5847,28 @@
         }
       }
     },
+    "No Downloads Yet": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードはまだありません"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有下載"
+          }
+        }
+      }
+    },
     "No Favourites Yet": {
       "localizations": {
         "ja": {
@@ -6371,6 +6459,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "再次開啟瀏覽器"
+          }
+        }
+      }
+    },
+    "Open Files": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟檔案"
+          }
+        }
+      }
+    },
+    "Open Files…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを開く…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开文件…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟檔案…"
           }
         }
       }

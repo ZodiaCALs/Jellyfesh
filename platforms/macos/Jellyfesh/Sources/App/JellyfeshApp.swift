@@ -19,7 +19,8 @@ struct JellyfeshApp: App {
         }
         .defaultSize(width: 1180, height: 760)
         .windowResizability(.contentMinSize)
-        .windowToolbarStyle(.unified(showsTitle: false))
+        // The field fills the window under the system's title-bar controls (ADR-0023).
+        .windowStyle(.hiddenTitleBar)
         .commands {
             AppCommands(model: model)
         }

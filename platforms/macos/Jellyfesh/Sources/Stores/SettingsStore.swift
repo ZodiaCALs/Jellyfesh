@@ -167,4 +167,12 @@ enum AppIconChoice: String, CaseIterable, Identifiable {
     var thumbnailName: String {
         self == .automatic ? "IconThumb-ice" : "IconThumb-\(rawValue)"
     }
+
+    /// The sidebar wordmark's icon for the App Icon setting: the chosen icon; Automatic shows Steel
+    /// in a dark window and Ice in a light one, as the Dock does with the system's appearance.
+    static func wordmarkThumbnail(for setting: String, dark: Bool) -> String {
+        let choice = AppIconChoice(rawValue: setting) ?? .automatic
+        guard choice == .automatic else { return choice.thumbnailName }
+        return dark ? AppIconChoice.steel.thumbnailName : AppIconChoice.ice.thumbnailName
+    }
 }

@@ -35,7 +35,7 @@ enum SeekGeometry {
     static let miniRadius: CGFloat = 16
     /// `player.bar-height`.
     static let barHeight: CGFloat = 80
-    /// Content columns this wide and wider show the player bar instead of the capsule.
+    /// Windows this wide and wider show the player bar instead of the capsule (as the web's viewport).
     static let playerBarMinWidth: CGFloat = 900
     /// Left and Right seek 5 s; Page Up and Page Down 30 s.
     static let smallStepUs: Int64 = 5_000_000

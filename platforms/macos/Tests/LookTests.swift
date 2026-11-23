@@ -127,14 +127,22 @@ final class LookStyleTests: XCTestCase {
         XCTAssertEqual(customized { $0.sidebar = [.search] }.sidebar, LookPlace.allCases)
     }
 
-    func testTheSidebarKeepsItsSections() {
-        let luminous = SidebarItem.sections(for: LookStyle.luminous.sidebar)
-        XCTAssertEqual(luminous.library, [.home, .albums, .artists, .songs, .playlists, .favorites])
-        XCTAssertEqual(luminous.discover, [.search, .sources])
-        let custom = SidebarItem.sections(for: [.sources, .songs, .home])
-        XCTAssertEqual(custom.library, [.songs, .home])
-        XCTAssertEqual(custom.discover, [.sources])
-        XCTAssertTrue(SidebarItem.sections(for: [.albums]).discover.isEmpty)
+    func testThePanelListsTheLooksPlacesInItsOrder() {
+        XCTAssertEqual(SidebarItem.panelEntries(for: .luminous), [
+            .place(.home), .place(.albums), .place(.artists), .place(.songs), .place(.playlists),
+            .place(.favorites), .place(.downloads), .separator, .place(.search), .place(.sources),
+        ])
+        // A customized look lists its places without the line; Downloads follows its library places.
+        XCTAssertEqual(SidebarItem.panelEntries(for: customized { $0.sidebar = [.sources, .songs, .home] }),
+                       [.place(.sources), .place(.songs), .place(.home), .place(.downloads)])
+        XCTAssertEqual(SidebarItem.panelEntries(for: customized { $0.sidebar = [.albums, .search] }),
+                       [.place(.albums), .place(.downloads), .place(.search)])
+    }
+
+    func testThePhoneTabsFollowTheLook() {
+        XCTAssertEqual(PhoneTab.tabs(for: .luminous), [.home, .library, .search, .sources, .settings])
+        XCTAssertEqual(PhoneTab.tabs(for: customized { $0.sidebar = [.search, .songs, .albums, .home] }),
+                       [.search, .library, .home, .settings], "the library's places are one tab; Settings last")
     }
 
     func testTheLayoutStaysLuminousUntilCustomized() {
