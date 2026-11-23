@@ -1,18 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The shell (Luminous, v0.0.6): the title bar on the window material (Mica Alt on Windows 11, the
-    solid field otherwise, ADR-0007); below it the field with four glows at the artwork's hue
-    behind everything, the navigation pane as Clear glass over it, the library pages, the floating
-    mini player (under 900 px) or player bar (900 px and wider) with the content fading out just
-    above it, Now Playing over everything below the title bar, and one notice at a time.
+    The shell: one layout, Jellyfesh Web's (ADR-0023, docs/ui.md "Navigation"). The title bar stays
+    native, on the window material (Mica Alt on Windows 11, the solid field otherwise, ADR-0007).
+    Below it the Luminous field with four glows at the artwork's hue behind everything; from 761 epx
+    wide the floating sidebar panel of Clear glass (the wordmark, the library's places, a separator,
+    Search and Sources; Open Files… and Settings at its foot), up to 760 epx the phone layout's tab
+    bar (Home, Library, Search, Sources, Settings) with the Library tab's switcher above the page. The
+    pages; the player floating over every page, Settings included (the capsule, or the player bar from
+    900 epx) with the content fading out just above it; Now Playing over everything below the title
+    bar; one notice at a time. The places, tabs and switcher are made in code from the look's order.
 -->
 <Window
     x:Class="Jellyfesh.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Jellyfesh.App.Controls"
+    xmlns:th="using:Jellyfesh.App.Theming"
     xmlns:views="using:Jellyfesh.App.Views">
 
-    <Grid x:Name="Root" PreviewKeyDown="OnRootPreviewKeyDown">
+    <Grid x:Name="Root" PreviewKeyDown="OnRootPreviewKeyDown" SizeChanged="OnRootSizeChanged">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -20,10 +26,11 @@
 
         <!--
             The keys every Jellyfesh app shares (docs/ui.md, "Keyboard"): Space plays or pauses, Ctrl+F
-            searches and Esc goes back (closing Now Playing first); Ctrl+Right and Ctrl+Left, Ctrl+Up and
-            Ctrl+Down, Shift+Right and Shift+Left are handled in OnRootPreviewKeyDown, ahead of lists and
-            sliders. None of them acts while a text box has focus. The Groove and Windows Media Player keys
-            below reuse none of them.
+            searches, Ctrl+M opens the mini player and Esc goes back (closing Now Playing first);
+            Ctrl+Right and Ctrl+Left, Ctrl+Up and Ctrl+Down, Shift+Right and Shift+Left are handled in
+            OnRootPreviewKeyDown, ahead of lists and sliders. None of them acts while a text box has
+            focus. Ctrl+, (Settings) and the keyboard's Back key are added in code. The Groove and
+            Windows Media Player keys below reuse none of them.
         -->
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="Space" Invoked="OnSpaceKey" />
@@ -40,10 +47,9 @@
             <KeyboardAccelerator Key="F9" Invoked="OnVolumeDownKey" />
             <KeyboardAccelerator Key="F10" Invoked="OnVolumeUpKey" />
             <KeyboardAccelerator Key="Left" Modifiers="Menu" Invoked="OnBackKey" />
-            <!-- The keyboard's Back key is added in code: WinUI's XAML parser knows no VirtualKey.GoBack. -->
         </Grid.KeyboardAccelerators>
 
-        <!-- The Luminous field at the theme hue: the sky and four large glows (no photograph, MAT-02), behind the pane too. -->
+        <!-- The Luminous field at the theme hue: the sky and four large glows (no photograph, MAT-02), behind the sidebar too. -->
         <Grid x:Name="Field" Grid.Row="1" Background="{ThemeResource JfSky}" IsHitTestVisible="False">
             <Rectangle Fill="{ThemeResource JfAuroraGlow1}" />
             <Rectangle Fill="{ThemeResource JfAuroraGlow2}" />
@@ -56,104 +62,117 @@
             Title="Jellyfesh"
             BackRequested="OnBackRequested"
             IsBackButtonVisible="True"
-            IsPaneToggleButtonVisible="True"
-            PaneToggleRequested="OnPaneToggleRequested">
+            IsPaneToggleButtonVisible="False">
             <TitleBar.IconSource>
                 <ImageIconSource x:Name="TitleIcon" />
             </TitleBar.IconSource>
         </TitleBar>
 
-        <NavigationView
-            x:Name="Nav"
-            Grid.Row="1"
-            IsBackButtonVisible="Collapsed"
-            IsPaneToggleButtonVisible="False"
-            IsSettingsVisible="True"
-            IsTitleBarAutoPaddingEnabled="False"
-            OpenPaneLength="240"
-            PaneDisplayMode="Auto"
-            SelectionChanged="OnNavSelectionChanged">
-            <NavigationView.Resources>
-                <!-- The pane is Clear glass over the field (in-app acrylic; solid Cloud without transparency); the content area shows the field. -->
-                <StaticResource x:Key="NavigationViewDefaultPaneBackground" ResourceKey="JfGlassClear" />
-                <StaticResource x:Key="NavigationViewExpandedPaneBackground" ResourceKey="JfGlassClear" />
-                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
-                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-            </NavigationView.Resources>
-            <NavigationView.MenuItems>
-                <NavigationViewItem x:Uid="Nav_Home" Content="Home" Tag="home">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE80F;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Albums" Content="Albums" Tag="albums">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE93C;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Artists" Content="Artists" Tag="artists">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE77B;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Songs" Content="Songs" Tag="songs">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xEC4F;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Playlists" Content="Playlists" Tag="playlists">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE8FD;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Favorites" Content="Favourites" Tag="favorites">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xEB51;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItemSeparator />
-                <NavigationViewItem x:Uid="Nav_Search" Content="Search" Tag="search">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE721;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem x:Uid="Nav_Sources" Content="Sources" Tag="sources">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE753;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </NavigationView.MenuItems>
-            <NavigationView.PaneFooter>
-                <StackPanel x:Name="ScanPanel" Margin="16,8,16,12" Spacing="6" Visibility="Collapsed">
-                    <ProgressBar IsIndeterminate="True" />
-                    <TextBlock x:Name="ScanText" Style="{StaticResource JfCaptionText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-                </StackPanel>
-            </NavigationView.PaneFooter>
+        <Grid x:Name="ShellGrid" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="SidebarColumn" Width="248" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
-            <Grid x:Name="ContentArea" SizeChanged="OnContentAreaSizeChanged">
-                <Frame x:Name="ContentFrame" CacheSize="8" Navigated="OnNavigated" />
-                <!-- The content fades out just above the floating player (Luminous). -->
+            <!--
+                The sidebar: a floating panel of Clear glass (in-app acrylic; solid Cloud without
+                transparency), r-2xl, 12 epx from the window's edges: the wordmark, the places, the
+                scan's progress while the library is scanned, Open Files… and Settings at its foot.
+            -->
+            <Grid x:Name="Sidebar" Margin="12,4,0,12">
+                <Border Background="{ThemeResource JfGlassClear}" BorderBrush="{ThemeResource JfGlassEdge}" BorderThickness="1" CornerRadius="{th:Token Key=Radius.2xl, Kind=Corner}" />
+                <Grid Padding="12,20,12,12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Padding="10,0,10,24" Orientation="Horizontal" Spacing="11" AutomationProperties.AccessibilityView="Raw">
+                        <Border Width="32" Height="32" CornerRadius="9">
+                            <Image x:Name="BrandIcon" Width="32" Height="32" Stretch="UniformToFill" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" CharacterSpacing="-10" FontSize="16" FontWeight="Bold" Foreground="{ThemeResource JfInk90}" Text="Jellyfesh" />
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" HorizontalScrollMode="Disabled" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="Places" x:Uid="Sidebar_Places" AutomationProperties.Name="Library Sections" Spacing="3" />
+                    </ScrollViewer>
+                    <StackPanel x:Name="ScanPanel" Grid.Row="2" Margin="12,8,12,4" Spacing="6" Visibility="Collapsed">
+                        <ProgressBar IsIndeterminate="True" />
+                        <TextBlock x:Name="ScanText" AutomationProperties.LiveSetting="Polite" Style="{StaticResource JfCaptionText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel x:Name="Foot" Grid.Row="3" Margin="0,8,0,0" Spacing="2">
+                        <Button x:Name="OpenFilesButton" Click="OnOpenFilesClick" Style="{StaticResource JfSidebarActionStyle}">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <controls:StrokeIcon VerticalAlignment="Center" Data="{StaticResource IconFile}" Size="20" />
+                                <TextBlock x:Uid="Sidebar_OpenFiles" Grid.Column="1" VerticalAlignment="Center" Text="Open Files…" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <Grid x:Name="ContentArea" Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Phones: the Library tab switches between the library's places, above the page. -->
+                <ScrollViewer
+                    x:Name="LibrarySwitcher"
+                    Margin="16,8,16,4"
+                    HorizontalScrollBarVisibility="Hidden"
+                    HorizontalScrollMode="Enabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    VerticalScrollMode="Disabled"
+                    Visibility="Collapsed">
+                    <Border Padding="4" HorizontalAlignment="Left" Background="{ThemeResource JfFill}" CornerRadius="{StaticResource JfFullRadius}">
+                        <StackPanel x:Name="LibraryTabs" x:Uid="Sidebar_LibraryTabs" AutomationProperties.Name="Library" Orientation="Horizontal" Spacing="4" />
+                    </Border>
+                </ScrollViewer>
+
+                <Frame x:Name="ContentFrame" Grid.Row="1" CacheSize="8" Navigated="OnNavigated" />
+
+                <!-- The content fades out just above the floating player and tabs (Luminous). -->
                 <Rectangle
                     x:Name="ContentFade"
+                    Grid.Row="1"
                     Height="152"
                     VerticalAlignment="Bottom"
                     Fill="{ThemeResource JfContentFade}"
                     IsHitTestVisible="False"
                     Visibility="Collapsed" />
-                <views:MiniPlayer
-                    x:Name="Mini"
-                    Margin="16,0,16,16"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Bottom"
-                    Visibility="Collapsed" />
-                <views:PlayerBar
-                    x:Name="Bar"
-                    MaxWidth="1240"
-                    Margin="16,0,16,16"
-                    VerticalAlignment="Bottom"
-                    Visibility="Collapsed" />
+
+                <!-- The player floats over every page: the capsule, or the player bar from 900 epx. -->
+                <Grid x:Name="Dock" Grid.Row="1" Margin="32,0,32,16" VerticalAlignment="Bottom">
+                    <views:MiniPlayer
+                        x:Name="Mini"
+                        HorizontalAlignment="Center"
+                        Visibility="Collapsed" />
+                    <views:PlayerBar
+                        x:Name="Bar"
+                        MaxWidth="1280"
+                        Visibility="Collapsed" />
+                </Grid>
             </Grid>
-        </NavigationView>
+
+            <!-- Phones: the tab bar, a floating Veil capsule 24 epx above the bottom. -->
+            <Grid
+                x:Name="Tabs"
+                Grid.ColumnSpan="2"
+                Height="68"
+                Margin="14,0,14,24"
+                VerticalAlignment="Bottom"
+                Visibility="Collapsed">
+                <Border CornerRadius="{StaticResource JfFullRadius}" Style="{StaticResource JfVeilCapsuleStyle}" />
+                <Grid x:Name="TabItems" x:Uid="Sidebar_Tabs" Padding="6,0" AutomationProperties.Name="Library Sections" />
+            </Grid>
+        </Grid>
 
         <views:NowPlayingView x:Name="NowPlaying" Grid.Row="1" Visibility="Collapsed" />
 

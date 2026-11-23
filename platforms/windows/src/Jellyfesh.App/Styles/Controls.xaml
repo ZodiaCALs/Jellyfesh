@@ -44,6 +44,18 @@
     <x:String x:Key="IconDeviceTv">M3 6 h18 v11 H3 z M8 21 h8 M12 17 v4</x:String>
     <x:String x:Key="IconDeviceCar">M3 15 v-3 l2.5 -5 h13 l2.5 5 v3 z M7 18 v-3 M17 18 v-3 M3 12 h18</x:String>
     <x:String x:Key="IconDeviceOther">M4 5 h11 v14 H4 z M17 9 h3 v10 h-3 z</x:String>
+    <!-- The places of the sidebar and the phone tabs (ADR-0023), Jellyfesh Web's glyphs. -->
+    <x:String x:Key="IconHome">M4 11.5 L12 5 l8 6.5 V19 a1 1 0 0 1 -1 1 h-4.5 v-5 h-5 v5 H5 a1 1 0 0 1 -1 -1 z</x:String>
+    <x:String x:Key="IconAlbum">M12 3.5 a8.5 8.5 0 1 1 0 17 a8.5 8.5 0 0 1 0 -17 z M12 10 a2 2 0 1 1 0 4 a2 2 0 0 1 0 -4 z</x:String>
+    <x:String x:Key="IconArtist">M12 4 a4 4 0 1 1 0 8 a4 4 0 0 1 0 -8 z M4.5 20 a7.5 7.5 0 0 1 15 0</x:String>
+    <x:String x:Key="IconNote">M9 18 V6 l10 -2 v12 M9 18 a2.5 2.5 0 1 1 -2.5 -2.5 H9 M19 16 a2.5 2.5 0 1 1 -2.5 -2.5 H19</x:String>
+    <x:String x:Key="IconPlaylist">M4 6 h12 M4 11 h12 M4 16 h7 M17 13 v6.5 M17 19.5 a2 2 0 1 1 -2 -2 h2 M17 13 l3.5 -1</x:String>
+    <x:String x:Key="IconDownload">M12 4 v11 M7.5 10.5 L12 15 l4.5 -4.5 M5 19.5 h14</x:String>
+    <x:String x:Key="IconSearch">M10.5 4 a6.5 6.5 0 1 1 0 13 a6.5 6.5 0 0 1 0 -13 z M15.5 15.5 L20 20</x:String>
+    <x:String x:Key="IconSources">M5 6.5 h14 v4 H5 z M5 13.5 h14 v4 H5 z M8 8.5 h0.01 M8 15.5 h0.01</x:String>
+    <x:String x:Key="IconSettings">M5 7 h9 M18 7 h1 M5 17 h3 M12 17 h7 M14 5 v4 M8 15 v4 M5 12 h5 M14 12 h5 M10 10 v4</x:String>
+    <x:String x:Key="IconFile">M7 3.5 h7 l4 4 V20 a0.5 0.5 0 0 1 -0.5 0.5 h-10 A0.5 0.5 0 0 1 6 20 V4 a0.5 0.5 0 0 1 0.5 -0.5 z M14 3.5 V8 h4 M9.5 13.5 v3.5 M9.5 17 a1.5 1.5 0 1 1 -1.5 -1.5 h1.5 M9.5 13.5 l4 -1</x:String>
+    <x:String x:Key="IconLibrary">M5 4.5 v15 M9.5 4.5 v15 M14 5.5 l4.5 13.5</x:String>
 
     <!-- Radii as resources for markup that cannot use {th:Token} (Misty r-full). -->
     <CornerRadius x:Key="JfFullRadius">999</CornerRadius>
@@ -459,6 +471,245 @@
         <Setter Property="Background" Value="{ThemeResource JfAccent}" />
         <Setter Property="Foreground" Value="{ThemeResource JfOnAccent}" />
         <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- ===== Navigation (ADR-0023): Jellyfesh Web's sidebar items, phone tabs and Library switcher =====
+         Controls/SidebarItem: a radio button with a glyph and a label. The rest and current looks are
+         separate layers, so the pointer's states (CommonStates) and the current place (CheckStates)
+         never set the same property. -->
+
+    <!-- A place in the sidebar panel: 42 epx, r-lg; ink-70 at rest, the hover fill and ink-90 under the
+         pointer; the current place accent-soft with accent text, semibold. -->
+    <Style x:Key="JfSidebarItemStyle" TargetType="controls:SidebarItem">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="42" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="FontSize" Value="14.5" />
+        <Setter Property="CornerRadius" Value="{th:Token Key=Radius.Lg, Kind=Corner}" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource JfAccentText}" />
+        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource JfSky}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:SidebarItem">
+                    <Grid x:Name="Root" MinHeight="{TemplateBinding MinHeight}" Background="Transparent" CornerRadius="{TemplateBinding CornerRadius}" RenderTransformOrigin="0.5,0.5">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="Scale" />
+                        </Grid.RenderTransform>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Hover.Opacity" Value="1" />
+                                        <Setter Target="RestIcon.Foreground" Value="{ThemeResource JfInk90}" />
+                                        <Setter Target="RestText.Foreground" Value="{ThemeResource JfInk90}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Press.Opacity" Value="1" />
+                                        <Setter Target="RestIcon.Foreground" Value="{ThemeResource JfInk90}" />
+                                        <Setter Target="RestText.Foreground" Value="{ThemeResource JfInk90}" />
+                                        <Setter Target="Scale.ScaleX" Value="0.97" />
+                                        <Setter Target="Scale.ScaleY" Value="0.97" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.45" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Checked">
+                                    <VisualState.Setters>
+                                        <Setter Target="Fills.Visibility" Value="Collapsed" />
+                                        <Setter Target="Current.Opacity" Value="1" />
+                                        <Setter Target="RestContent.Opacity" Value="0" />
+                                        <Setter Target="CurrentContent.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Unchecked" />
+                                <VisualState x:Name="Indeterminate" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid x:Name="Fills">
+                            <Border x:Name="Hover" Background="{ThemeResource JfFillHover}" Opacity="0" />
+                            <Border x:Name="Press" Background="{ThemeResource JfFillPress}" Opacity="0" />
+                        </Grid>
+                        <Border x:Name="Current" Background="{ThemeResource JfAccentSoft}" Opacity="0" />
+                        <Grid x:Name="RestContent" Padding="{TemplateBinding Padding}" ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <controls:StrokeIcon x:Name="RestIcon" VerticalAlignment="Center" Data="{TemplateBinding Glyph}" Foreground="{ThemeResource JfInk70}" Size="20" />
+                            <TextBlock x:Name="RestText" Grid.Column="1" VerticalAlignment="Center" FontSize="{TemplateBinding FontSize}" FontWeight="Medium"
+                                       Foreground="{ThemeResource JfInk70}" Text="{TemplateBinding Label}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                        <Grid x:Name="CurrentContent" Padding="{TemplateBinding Padding}" ColumnSpacing="12" Opacity="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <controls:StrokeIcon VerticalAlignment="Center" Data="{TemplateBinding Glyph}" Foreground="{ThemeResource JfAccentText}" Size="20" />
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="{TemplateBinding FontSize}" FontWeight="SemiBold"
+                                       Foreground="{ThemeResource JfAccentText}" Text="{TemplateBinding Label}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Open Files… in the sidebar's foot: an action, not a place, so a button in the items' look. -->
+    <Style x:Key="JfSidebarActionStyle" TargetType="Button" BasedOn="{StaticResource JfBareButtonStyle}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="MinHeight" Value="42" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="FontSize" Value="14.5" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{ThemeResource JfInk70}" />
+        <Setter Property="CornerRadius" Value="{th:Token Key=Radius.Lg, Kind=Corner}" />
+    </Style>
+
+    <!-- A phone tab: a 54 by 30 pill around the glyph (accent-soft when current) and an 11 epx label below. -->
+    <Style x:Key="JfPhoneTabStyle" TargetType="controls:SidebarItem">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="56" />
+        <Setter Property="Padding" Value="0,4,0,0" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="CornerRadius" Value="{th:Token Key=Radius.Lg, Kind=Corner}" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource JfAccentText}" />
+        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource JfSky}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:SidebarItem">
+                    <Grid x:Name="Root" MinHeight="{TemplateBinding MinHeight}" Padding="{TemplateBinding Padding}" Background="Transparent" RenderTransformOrigin="0.5,0.5" RowSpacing="3">
+                        <Grid.RenderTransform>
+                            <ScaleTransform x:Name="Scale" />
+                        </Grid.RenderTransform>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="Hover.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="Hover.Opacity" Value="1" />
+                                        <Setter Target="Scale.ScaleX" Value="0.97" />
+                                        <Setter Target="Scale.ScaleY" Value="0.97" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.45" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Checked">
+                                    <VisualState.Setters>
+                                        <Setter Target="Hover.Visibility" Value="Collapsed" />
+                                        <Setter Target="Current.Opacity" Value="1" />
+                                        <Setter Target="RestIcon.Opacity" Value="0" />
+                                        <Setter Target="CurrentIcon.Opacity" Value="1" />
+                                        <Setter Target="RestText.Opacity" Value="0" />
+                                        <Setter Target="CurrentText.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Unchecked" />
+                                <VisualState x:Name="Indeterminate" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Grid Width="54" Height="30" HorizontalAlignment="Center" CornerRadius="15">
+                            <Border x:Name="Hover" Background="{ThemeResource JfFillHover}" Opacity="0" />
+                            <Border x:Name="Current" Background="{ThemeResource JfAccentSoft}" Opacity="0" />
+                            <controls:StrokeIcon x:Name="RestIcon" HorizontalAlignment="Center" VerticalAlignment="Center" Data="{TemplateBinding Glyph}" Foreground="{ThemeResource JfInk70}" Size="20" />
+                            <controls:StrokeIcon x:Name="CurrentIcon" HorizontalAlignment="Center" VerticalAlignment="Center" Data="{TemplateBinding Glyph}" Foreground="{ThemeResource JfAccentText}" Opacity="0" Size="20" />
+                        </Grid>
+                        <Grid Grid.Row="1">
+                            <TextBlock x:Name="RestText" HorizontalAlignment="Center" FontSize="{TemplateBinding FontSize}" FontWeight="SemiBold" Foreground="{ThemeResource JfInk70}"
+                                       Text="{TemplateBinding Label}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock x:Name="CurrentText" HorizontalAlignment="Center" FontSize="{TemplateBinding FontSize}" FontWeight="SemiBold" Foreground="{ThemeResource JfAccentText}"
+                                       Opacity="0" Text="{TemplateBinding Label}" TextTrimming="CharacterEllipsis" />
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The Library tab's switcher on phones (Albums, Artists, Songs, Playlists, Favourites): pills on a
+         fill track, the current one Cloud with ink-90 and a hairline. -->
+    <Style x:Key="JfLibraryTabStyle" TargetType="controls:SidebarItem">
+        <Setter Property="MinWidth" Value="0" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CornerRadius" Value="{th:Token Key=Radius.Full, Kind=Corner}" />
+        <Setter Property="UseSystemFocusVisuals" Value="True" />
+        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource JfAccentText}" />
+        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource JfSky}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="controls:SidebarItem">
+                    <Grid x:Name="Root" MinHeight="{TemplateBinding MinHeight}" Background="Transparent" CornerRadius="{TemplateBinding CornerRadius}">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal" />
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="RestText.Foreground" Value="{ThemeResource JfInk90}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="RestText.Foreground" Value="{ThemeResource JfInk90}" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="Root.Opacity" Value="0.45" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                            <VisualStateGroup x:Name="CheckStates">
+                                <VisualState x:Name="Checked">
+                                    <VisualState.Setters>
+                                        <Setter Target="Current.Opacity" Value="1" />
+                                        <Setter Target="RestText.Opacity" Value="0" />
+                                        <Setter Target="CurrentText.Opacity" Value="1" />
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Unchecked" />
+                                <VisualState x:Name="Indeterminate" />
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="Current" Background="{ThemeResource JfCloud}" BorderBrush="{ThemeResource JfLineSoft}" BorderThickness="1" CornerRadius="{TemplateBinding CornerRadius}" Opacity="0" />
+                        <TextBlock x:Name="RestText" Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{TemplateBinding FontSize}" FontWeight="SemiBold"
+                                   Foreground="{ThemeResource JfInk70}" Text="{TemplateBinding Label}" />
+                        <TextBlock x:Name="CurrentText" Margin="{TemplateBinding Padding}" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{TemplateBinding FontSize}" FontWeight="SemiBold"
+                                   Foreground="{ThemeResource JfInk90}" Opacity="0" Text="{TemplateBinding Label}" />
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ===== Misty's segmented control (Lyrics | Queue | Info; Artwork | Misty) ===== -->

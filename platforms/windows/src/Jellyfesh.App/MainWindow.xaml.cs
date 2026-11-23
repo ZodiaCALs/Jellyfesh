@@ -36,6 +36,7 @@ public sealed partial class MainWindow : Window
     /// <summary>Shift+Right and Shift+Left skip this far (docs/ui.md, "Keyboard").</summary>
     private const double SkipSeconds = 5;
 
+    /// <summary>The page of each place: the sidebar's, the phone tabs' (Library opens the library place last shown) and Settings.</summary>
     private static readonly Dictionary<string, Type> TopPages = new()
     {
         ["home"] = typeof(HomePage),
@@ -46,9 +47,25 @@ public sealed partial class MainWindow : Window
         ["favorites"] = typeof(FavoritesPage),
         ["search"] = typeof(SearchPage),
         ["sources"] = typeof(SourcesPage),
+        ["settings"] = typeof(SettingsPage),
     };
 
-    /// <summary>Detail pages select their section in the pane.</summary>
+    /// <summary>Each place's name (a string key) and glyph (a resource of Styles/Controls.xaml).</summary>
+    private static readonly Dictionary<string, (string Label, string Glyph)> PlaceLooks = new()
+    {
+        ["home"] = ("Place_Home", "IconHome"),
+        ["albums"] = ("Place_Albums", "IconAlbum"),
+        ["artists"] = ("Place_Artists", "IconArtist"),
+        ["songs"] = ("Place_Songs", "IconNote"),
+        ["playlists"] = ("Place_Playlists", "IconPlaylist"),
+        ["favorites"] = ("Place_Favourites", "IconHeart"),
+        ["search"] = ("Place_Search", "IconSearch"),
+        ["sources"] = ("Place_Sources", "IconSources"),
+        ["library"] = ("Place_Library", "IconLibrary"),
+        ["settings"] = ("Place_Settings", "IconSettings"),
+    };
+
+    /// <summary>Detail pages select their section's place.</summary>
     private static readonly Dictionary<Type, string> Sections = new()
     {
         [typeof(AlbumPage)] = "albums",
@@ -70,16 +87,25 @@ public sealed partial class MainWindow : Window
     private AudioDeviceNotifications? _devices;
     private bool _visible = true;
     private bool _nowPlayingOpen;
-    private bool _wide;
+    private ShellLayout _layout = ShellLayout.Initial;
+    private bool _layoutApplied;
 
     private bool _compact;
     private Windows.Graphics.SizeInt32? _fullSize;
     private bool _themeApplied;
-    private bool _syncingNav;
     private Notification? _shownNotice;
     private readonly HashSet<string> _failedParts = [];
     private DesktopLyricsWindow? _desktopLyrics;
-    private Dictionary<string, NavigationViewItem>? _allNavItems;
+
+    /// <summary>The sidebar's places, the phone tabs and the Library tab's switcher, by place (made from the look's order).</summary>
+    private readonly Dictionary<string, SidebarItem> _places = [];
+    private readonly Dictionary<string, SidebarItem> _tabs = [];
+    private readonly Dictionary<string, SidebarItem> _libraryTabs = [];
+    private readonly SidebarItem _settingsItem;
+
+    /// <summary>The place of the page shown, and the library place last shown (where the Library tab goes).</summary>
+    private string? _section;
+    private string _lastLibraryPlace = "albums";
 
     /// <summary>Desktop Lyrics while open (the More menu unlocks it).</summary>
     internal DesktopLyricsWindow? DesktopLyrics => _desktopLyrics;
@@ -125,6 +151,16 @@ public sealed partial class MainWindow : Window
         var backKey = new KeyboardAccelerator { Key = VirtualKey.GoBack };
         backKey.Invoked += OnBackKey;
         Root.KeyboardAccelerators.Add(backKey);
+
+        // Ctrl+, opens Settings (docs/ui.md, "Keyboard"); VirtualKey has no name for the comma key (VK_OEM_COMMA).
+        var settingsKey = new KeyboardAccelerator { Key = (VirtualKey)0xBC, Modifiers = Windows.System.VirtualKeyModifiers.Control };
+        settingsKey.Invoked += OnSettingsKey;
+        Root.KeyboardAccelerators.Add(settingsKey);
+
+        // The places: the sidebar's and the phone tabs' from the look, Settings always at the sidebar's foot.
+        _settingsItem = MakePlace("settings", "JfSidebarItemStyle", "Places");
+        Foot.Children.Add(_settingsItem);
+        Optional("the places", BuildPlaces);
 
         // Shadows of the library (covers, groups, the player bar) fall on the field (ThemeShadow receivers).
         Optional("the library's shadows", () => Elevation.AddReceiver(Elevation.Library, Field));
@@ -227,6 +263,13 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    /// <summary>Settings (Ctrl+,): the page in the main window (ADR-0023).</summary>
+    public void ShowSettings()
+    {
+        ExitCompact();
+        SelectSection("settings");
+    }
+
     public void OpenNowPlaying(NowPlayingPanel panel = NowPlayingPanel.Default)
     {
         ExitCompact();
@@ -273,7 +316,7 @@ public sealed partial class MainWindow : Window
         }
 
         AppTitleBar.Visibility = Visibility.Collapsed;
-        Nav.Visibility = Visibility.Collapsed;
+        ShellGrid.Visibility = Visibility.Collapsed;
         Notice.IsOpen = false;
         Compact.Visibility = Visibility.Visible;
         SetTitleBar(Compact.DragRegion);
@@ -299,7 +342,7 @@ public sealed partial class MainWindow : Window
 
         Compact.Visibility = Visibility.Collapsed;
         AppTitleBar.Visibility = Visibility.Visible;
-        Nav.Visibility = Visibility.Visible;
+        ShellGrid.Visibility = Visibility.Visible;
         SetTitleBar(AppTitleBar);
         UpdateActivity();
     }
@@ -324,13 +367,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>The player bar replaces the mini player's capsule in windows 900 px and wider.</summary>
-    private void OnContentAreaSizeChanged(object sender, SizeChangedEventArgs e)
+    /// <summary>The window's width picks the layout: the sidebar or the phone tabs, the player bar or the capsule.</summary>
+    private void OnRootSizeChanged(object sender, SizeChangedEventArgs e)
     {
-        var wide = SeekGeometry.UsesPlayerBar(e.NewSize.Width);
-        if (wide != _wide)
+        if (ShellLayout.For(e.NewSize.Width, _vm.Player.HasTrack, _vm.Look.MiniPlayer) != _layout)
         {
-            _wide = wide;
             UpdateActivity();
         }
     }
@@ -405,31 +446,36 @@ public sealed partial class MainWindow : Window
 
     // ---- the smoke test (Jellyfesh.exe --smoke-test, Shell/SmokeTest.cs) ----
 
-    /// <summary>Every section, in the navigation pane's order, then Settings: what the smoke test opens.</summary>
-    internal static IReadOnlyList<string> SmokeSections { get; } = [.. TopPages.Keys, "settings"];
+    /// <summary>Every place, in the sidebar's order, then Settings: what the smoke test opens.</summary>
+    internal static IReadOnlyList<string> SmokeSections { get; } = [.. TopPages.Keys];
+
+    /// <summary>The places the smoke test opens again in the phone layout (the tabs and the Library switcher).</summary>
+    internal static IReadOnlyList<string> SmokePhoneSections { get; } = ["home", "albums", "search", "settings"];
 
     /// <summary>The window's content, whose first frames the smoke test waits for.</summary>
     internal FrameworkElement ContentRoot => Root;
 
-    /// <summary>Opens a section as the pane would, and returns the page that now shows.</summary>
+    /// <summary>Opens a place as the sidebar would, and returns the page that now shows.</summary>
     internal FrameworkElement? ShowSection(string tag)
     {
-        if (tag == "settings")
-        {
-            Navigate(typeof(SettingsPage));
-        }
-        else
-        {
-            SelectSection(tag);
-        }
-
+        SelectSection(tag);
         return ContentFrame.Content as FrameworkElement;
     }
 
+    /// <summary>The smoke test's phone layout: the window this many effective pixels wide.</summary>
+    internal void ResizeForSmokeTest(double width, double height)
+    {
+        var scale = Math.Max(1.0, Win32.GetDpiForWindow(_hwnd) / 96.0);
+        AppWindow.Resize(new Windows.Graphics.SizeInt32((int)(width * scale), (int)(height * scale)));
+    }
+
+    /// <summary>Whether the window shows the phone layout (the smoke test checks it got there).</summary>
+    internal bool UsesPhoneLayout => !_layout.Sidebar;
+
     // ---- what draws while it can be seen (Still mode) ----
 
-    /// <summary>The player bar rather than the capsule: wide windows with the look's Bar style (ADR-0020).</summary>
-    private bool ShowsBar => LookRules.ShowsPlayerBar(_vm.Look.MiniPlayer, _wide);
+    /// <summary>The player bar rather than the capsule: windows 900 epx and wider with the look's Bar style (ADR-0020).</summary>
+    private bool ShowsBar => _layout.Bar;
 
     /// <summary>
     /// The seek bar and lyrics draw only while Now Playing is open, the mini player's ring only while
@@ -438,13 +484,14 @@ public sealed partial class MainWindow : Window
     private void UpdateActivity()
     {
         var player = _vm.Player;
+        ApplyLayout();
         var floating = player.HasTrack && !_nowPlayingOpen && !_compact;
         var mini = floating && !ShowsBar;
         var bar = floating && ShowsBar;
         Mini.Stretched = LookRules.StretchesCapsule(_vm.Look.MiniPlayer);
         Mini.Visibility = mini ? Visibility.Visible : Visibility.Collapsed;
         Bar.Visibility = bar ? Visibility.Visible : Visibility.Collapsed;
-        ContentFade.Visibility = mini || bar ? Visibility.Visible : Visibility.Collapsed;
+        ContentFade.Visibility = _layout.FadeHeight > 0 ? Visibility.Visible : Visibility.Collapsed;
         player.Progress.IsActive = _visible && _nowPlayingOpen && !_compact;
         player.BarProgress.IsActive = _visible && bar;
         player.MiniProgress.IsActive = _visible && (mini || _compact);
@@ -498,50 +545,24 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The Look slice, live (ADR-0020 §2): the navigation pane's places in its order (a separator
-    /// before Search and Sources), the platform's face for its typeface, the aurora's strength, the
-    /// glass (the Transparency setting times the look's glass) and Desktop Lyrics' highlight. The
-    /// lyrics, the lyrics bar, Now Playing's layout and the mini-player follow it in their views.
+    /// The Look slice, live (ADR-0020 §2): the sidebar's places in its order (a separator before
+    /// Search and Sources), the phone tabs and the Library switcher in the same order, the platform's
+    /// face for its typeface, the aurora's strength, the glass (the Transparency setting times the
+    /// look's glass) and Desktop Lyrics' highlight. The lyrics, the lyrics bar, Now Playing's layout
+    /// and the bottom player's style follow it in their views.
     /// </summary>
     private void ApplyLook()
     {
         var look = _vm.Look;
-        var items = Nav.MenuItems.OfType<NavigationViewItem>().Where(i => i.Tag is string).ToDictionary(i => (string)i.Tag);
-        _allNavItems ??= items;
-        var selected = (Nav.SelectedItem as NavigationViewItem)?.Tag as string;
-        _syncingNav = true;
-        try
-        {
-            Nav.MenuItems.Clear();
-            var library = true;
-            foreach (var tag in LookRules.SidebarTags(look))
-            {
-                if (!_allNavItems.TryGetValue(tag, out var item))
-                {
-                    continue;
-                }
-
-                if (library && !LookRules.IsLibraryTag(tag) && Nav.MenuItems.Count > 0)
-                {
-                    Nav.MenuItems.Add(new NavigationViewItemSeparator());
-                }
-
-                library = LookRules.IsLibraryTag(tag);
-                Nav.MenuItems.Add(item);
-            }
-
-            if (selected is not null && _allNavItems.TryGetValue(selected, out var current) && Nav.MenuItems.Contains(current))
-            {
-                Nav.SelectedItem = current;
-            }
-        }
-        finally
-        {
-            _syncingNav = false;
-        }
-
+        BuildPlaces();
         var face = new Microsoft.UI.Xaml.Media.FontFamily(LookRules.FontFamily(look.Typeface));
-        Nav.FontFamily = face;
+        ContentFrame.FontFamily = face;
+        OpenFilesButton.FontFamily = face;
+        foreach (var item in _places.Values.Concat(_tabs.Values).Concat(_libraryTabs.Values).Append(_settingsItem))
+        {
+            item.FontFamily = face;
+        }
+
         NowPlaying.FontFamily = face;
         Bar.FontFamily = face;
         Mini.FontFamily = face;
@@ -606,6 +627,7 @@ public sealed partial class MainWindow : Window
         _backdrop.SetReduceEffects(_vm.Settings.ReduceEffects);
         Optional("the window icon", () => _shell?.SetIcon(_vm.AppIcon));
         Optional("the title bar's icon", () => TitleIcon.ImageSource = new BitmapImage(AppAssets.IconPng(_vm.AppIcon, 32)));
+        Optional("the sidebar's icon", () => BrandIcon.Source = new BitmapImage(AppAssets.IconPng(_vm.AppIcon, 64)));
         Optional("the caption buttons' colours", () => ApplyCaptionButtons(dark));
         NowPlaying.ApplyTheme();
     }
@@ -630,36 +652,178 @@ public sealed partial class MainWindow : Window
         bar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(128, ink.R, ink.G, ink.B);
     }
 
-    // ---- navigation ----
+    // ---- navigation: the sidebar, the phone tabs and the Library switcher (ADR-0023) ----
 
-    private void SelectSection(string tag)
+    /// <summary>
+    /// Makes the places from the look's order (ADR-0020 §2): the sidebar's, with a separator before
+    /// Search and Sources; the phone tabs (the library's places as one Library tab, Settings last);
+    /// and the Library tab's switcher. Then marks the place shown.
+    /// </summary>
+    private void BuildPlaces()
     {
-        var item = Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string?)i.Tag == tag);
-        if (item is not null && !ReferenceEquals(Nav.SelectedItem, item))
+        var look = _vm.Look;
+        Places.Children.Clear();
+        _places.Clear();
+        var library = true;
+        foreach (var tag in LookRules.SidebarTags(look))
         {
-            Nav.SelectedItem = item; // raises SelectionChanged, which navigates
+            if (!PlaceLooks.ContainsKey(tag))
+            {
+                continue;
+            }
+
+            if (library && !LookRules.IsLibraryTag(tag) && Places.Children.Count > 0)
+            {
+                // The web's separator: a hairline 8 epx above and below, 12 in from the sides.
+                Places.Children.Add(new Border
+                {
+                    Height = 1,
+                    Margin = new Thickness(12, 8, 12, 8),
+                    Background = (Brush)Application.Current.Resources["JfLineSoft"],
+                });
+            }
+
+            library = LookRules.IsLibraryTag(tag);
+            var item = MakePlace(tag, "JfSidebarItemStyle", "Places");
+            Places.Children.Add(item);
+            _places[tag] = item;
         }
-        else if (TopPages.TryGetValue(tag, out var page))
+
+        TabItems.Children.Clear();
+        TabItems.ColumnDefinitions.Clear();
+        _tabs.Clear();
+        foreach (var tag in LookRules.PhoneTabs(look))
         {
-            Navigate(page);
+            var item = MakePlace(tag, "JfPhoneTabStyle", "Tabs");
+            TabItems.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(item, TabItems.Children.Count);
+            TabItems.Children.Add(item);
+            _tabs[tag] = item;
+        }
+
+        LibraryTabs.Children.Clear();
+        _libraryTabs.Clear();
+        foreach (var tag in LookRules.LibraryTags(look))
+        {
+            var item = MakePlace(tag, "JfLibraryTabStyle", "LibraryTabs");
+            LibraryTabs.Children.Add(item);
+            _libraryTabs[tag] = item;
+        }
+
+        MarkPlace(_section);
+    }
+
+    /// <summary>A place in one of the three looks; choosing it opens its page.</summary>
+    private SidebarItem MakePlace(string tag, string style, string group)
+    {
+        var (label, glyph) = PlaceLooks[tag];
+        var item = new SidebarItem
+        {
+            Place = tag,
+            Label = _vm.Services.L.Get(label),
+            Glyph = (string)Application.Current.Resources[glyph],
+            GroupName = group,
+            Style = (Style)Application.Current.Resources[style],
+        };
+        item.Click += OnPlaceClick;
+        return item;
+    }
+
+    /// <summary>Choosing a place opens its page, also the place already chosen (from an album back to Albums).</summary>
+    private void OnPlaceClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is SidebarItem item)
+        {
+            SelectSection(item.Place);
         }
     }
 
-    private void OnNavSelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
+    /// <summary>Open Files… plays files without adding them to the library.</summary>
+    private void OnOpenFilesClick(object sender, RoutedEventArgs e) => _vm.OpenFilesCommand.Execute(null);
+
+    private void SelectSection(string tag)
     {
-        if (_syncingNav)
+        if (tag == "library")
         {
-            return;
+            tag = _libraryTabs.ContainsKey(_lastLibraryPlace) ? _lastLibraryPlace : LookRules.LibraryTags(_vm.Look).FirstOrDefault() ?? "albums";
         }
 
-        if (args.IsSettingsSelected)
-        {
-            Navigate(typeof(SettingsPage));
-        }
-        else if (args.SelectedItemContainer?.Tag is string tag && TopPages.TryGetValue(tag, out var page))
+        if (TopPages.TryGetValue(tag, out var page))
         {
             Navigate(page);
         }
+
+        // Navigate does nothing for the page already shown; the place stays marked either way.
+        MarkPlace(SectionOf(ContentFrame.CurrentSourcePageType));
+    }
+
+    /// <summary>The place a page belongs to: its own, or for a detail page its section's.</summary>
+    private static string? SectionOf(Type? page) =>
+        page is null ? null : TopPages.FirstOrDefault(p => p.Value == page).Key ?? Sections.GetValueOrDefault(page);
+
+    /// <summary>Marks the place shown in the sidebar, the phone tabs and the Library switcher.</summary>
+    private void MarkPlace(string? tag)
+    {
+        _section = tag;
+        if (tag is not null && LookRules.PhoneTab(tag) == "library")
+        {
+            _lastLibraryPlace = tag;
+        }
+
+        foreach (var (place, item) in _places)
+        {
+            item.IsChecked = place == tag;
+        }
+
+        _settingsItem.IsChecked = tag == "settings";
+        var tab = tag is null ? null : LookRules.PhoneTab(tag);
+        foreach (var (place, item) in _tabs)
+        {
+            item.IsChecked = place == tab;
+        }
+
+        foreach (var (place, item) in _libraryTabs)
+        {
+            item.IsChecked = place == tag;
+        }
+
+        UpdateLibrarySwitcher();
+    }
+
+    /// <summary>The Library tab's switcher shows above the library's pages in the phone layout.</summary>
+    private void UpdateLibrarySwitcher() =>
+        LibrarySwitcher.Visibility = !_layout.Sidebar && _section is { } tag && _libraryTabs.ContainsKey(tag)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    /// <summary>
+    /// The layout for the window's width (ShellLayout, Jellyfesh Web's measures): the sidebar or the
+    /// phone tabs, where the bottom player floats, the fade above it, and the pages' measures. The
+    /// title bar names Jellyfesh only in the phone layout; the sidebar's wordmark does otherwise.
+    /// </summary>
+    private void ApplyLayout()
+    {
+        var width = Root.ActualWidth > 0 ? Root.ActualWidth : 1280;
+        var layout = ShellLayout.For(width, _vm.Player.HasTrack, _vm.Look.MiniPlayer);
+        var sidebarChanged = layout.Sidebar != _layout.Sidebar || !_layoutApplied;
+        _layout = layout;
+        _layoutApplied = true;
+        if (sidebarChanged)
+        {
+            SidebarColumn.Width = new GridLength(layout.Sidebar ? ShellLayout.SidebarColumn : 0);
+            Sidebar.Visibility = layout.Sidebar ? Visibility.Visible : Visibility.Collapsed;
+            Tabs.Visibility = layout.Sidebar ? Visibility.Collapsed : Visibility.Visible;
+            Optional("the title bar's name", () =>
+            {
+                AppTitleBar.Title = layout.Sidebar ? string.Empty : "Jellyfesh";
+                AppTitleBar.IconSource = layout.Sidebar ? null : TitleIcon;
+            });
+        }
+
+        Dock.Margin = new Thickness(layout.DockSide, 0, layout.DockSide, layout.DockBottom);
+        ContentFade.Height = Math.Max(1, layout.FadeHeight);
+        UpdateLibrarySwitcher();
+        AppHost.Metrics.Set(layout);
     }
 
     private void OnNavigated(object sender, NavigationEventArgs e)
@@ -674,27 +838,7 @@ public sealed partial class MainWindow : Window
         }
 
         AppTitleBar.IsBackButtonEnabled = ContentFrame.CanGoBack;
-        _syncingNav = true;
-        try
-        {
-            if (e.SourcePageType == typeof(SettingsPage))
-            {
-                Nav.SelectedItem = Nav.SettingsItem;
-            }
-            else
-            {
-                var tag = TopPages.FirstOrDefault(p => p.Value == e.SourcePageType).Key ?? Sections.GetValueOrDefault(e.SourcePageType);
-                var item = Nav.MenuItems.OfType<NavigationViewItem>().FirstOrDefault(i => (string?)i.Tag == tag);
-                if (item is not null)
-                {
-                    Nav.SelectedItem = item;
-                }
-            }
-        }
-        finally
-        {
-            _syncingNav = false;
-        }
+        MarkPlace(SectionOf(e.SourcePageType));
     }
 
     private void GoBack()
@@ -714,8 +858,6 @@ public sealed partial class MainWindow : Window
     }
 
     private void OnBackRequested(TitleBar sender, object args) => GoBack();
-
-    private void OnPaneToggleRequested(TitleBar sender, object args) => Nav.IsPaneOpen = !Nav.IsPaneOpen;
 
     private void OnRootPointerPressed(object sender, PointerRoutedEventArgs e)
     {
@@ -808,6 +950,15 @@ public sealed partial class MainWindow : Window
     private void OnVolumeUpKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _vm.Player.VolumeUpCommand.Execute);
 
     private void OnSearchKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _ => ShowSearch());
+
+    /// <summary>Ctrl+, opens Settings, unless a text box has focus.</summary>
+    private void OnSettingsKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (!IsTyping())
+        {
+            Run(args, _ => ShowSettings());
+        }
+    }
 
     private void OnBackKey(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args) => Run(args, _ => GoBack());
 

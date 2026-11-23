@@ -7,7 +7,8 @@ namespace Jellyfesh.App.Shell;
 /// <summary>
 /// <c>Jellyfesh.exe --smoke-test</c> (docs/windows.md, "When Jellyfesh does not start"): once the
 /// main window is open, wait for its first frames, open every section in turn (each page loaded and
-/// drawn), then close the window, which shuts the core down, and exit with
+/// drawn), narrow the window to the phone layout and open the tabs' places again, then close the
+/// window, which shuts the core down, and exit with
 /// <see cref="ExitCodes.Ok"/>. A failure anywhere, including one WinUI only reports through
 /// UnhandledException or a failed navigation, exits with <see cref="ExitCodes.StartupFailed"/>, and
 /// the watchdog ends a test that hangs (Startup). CI runs it on the published app.
@@ -27,11 +28,28 @@ internal static class SmokeTest
 
             foreach (var section in MainWindow.SmokeSections)
             {
-                Startup.EnterStage($"smoke test: opening {section}");
-                var page = window.ShowSection(section)
-                    ?? throw new InvalidOperationException($"no page opened for {section}");
-                await LoadedAsync(page);
-                await FramesAsync(Frames);
+                await OpenAsync(window, section);
+            }
+
+            // The phone layout (ADR-0023): narrowed below 761 epx, the window shows the tab bar and,
+            // on the library's pages, the Library switcher; their styles first load here.
+            Startup.EnterStage("smoke test: narrowing the window to the phone layout");
+            window.ResizeForSmokeTest(600, 860);
+            for (var frame = 0; frame < 300 && !window.UsesPhoneLayout; frame++)
+            {
+                await FramesAsync(1);
+            }
+
+            if (window.UsesPhoneLayout)
+            {
+                foreach (var section in MainWindow.SmokePhoneSections)
+                {
+                    await OpenAsync(window, section);
+                }
+            }
+            else
+            {
+                AppLog.Write("smoke test: the window did not narrow, so the phone layout was not opened");
             }
 
             Startup.EnterStage("smoke test: closing");
@@ -43,6 +61,16 @@ internal static class SmokeTest
         {
             Startup.Fail(e, xamlWorks: true);
         }
+    }
+
+    /// <summary>Opens a place and waits until its page has loaded and been drawn.</summary>
+    private static async Task OpenAsync(MainWindow window, string section)
+    {
+        Startup.EnterStage($"smoke test: opening {section}");
+        var page = window.ShowSection(section)
+            ?? throw new InvalidOperationException($"no page opened for {section}");
+        await LoadedAsync(page);
+        await FramesAsync(Frames);
     }
 
     private static Task LoadedAsync(FrameworkElement element)

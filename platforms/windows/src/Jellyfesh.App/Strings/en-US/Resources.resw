@@ -1049,30 +1049,6 @@
   <data name="More_Rename.Text" xml:space="preserve">
     <value>Rename…</value>
   </data>
-  <data name="Nav_Albums.Content" xml:space="preserve">
-    <value>Albums</value>
-  </data>
-  <data name="Nav_Artists.Content" xml:space="preserve">
-    <value>Artists</value>
-  </data>
-  <data name="Nav_Favorites.Content" xml:space="preserve">
-    <value>Favourites</value>
-  </data>
-  <data name="Nav_Home.Content" xml:space="preserve">
-    <value>Home</value>
-  </data>
-  <data name="Nav_Playlists.Content" xml:space="preserve">
-    <value>Playlists</value>
-  </data>
-  <data name="Nav_Search.Content" xml:space="preserve">
-    <value>Search</value>
-  </data>
-  <data name="Nav_Songs.Content" xml:space="preserve">
-    <value>Songs</value>
-  </data>
-  <data name="Nav_Sources.Content" xml:space="preserve">
-    <value>Sources</value>
-  </data>
   <data name="NowPlaying_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Back to the Library</value>
   </data>
@@ -1144,6 +1120,36 @@
   </data>
   <data name="Picker_Playlist" xml:space="preserve">
     <value>Playlist</value>
+  </data>
+  <data name="Place_Albums" xml:space="preserve">
+    <value>Albums</value>
+  </data>
+  <data name="Place_Artists" xml:space="preserve">
+    <value>Artists</value>
+  </data>
+  <data name="Place_Favourites" xml:space="preserve">
+    <value>Favourites</value>
+  </data>
+  <data name="Place_Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Place_Library" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="Place_Playlists" xml:space="preserve">
+    <value>Playlists</value>
+  </data>
+  <data name="Place_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Place_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Place_Songs" xml:space="preserve">
+    <value>Songs</value>
+  </data>
+  <data name="Place_Sources" xml:space="preserve">
+    <value>Sources</value>
   </data>
   <data name="Playback_AlbumContinuity.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Album Continuity</value>
@@ -1591,6 +1597,18 @@
   </data>
   <data name="Shelf_rediscover" xml:space="preserve">
     <value>Rediscover</value>
+  </data>
+  <data name="Sidebar_LibraryTabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Library</value>
+  </data>
+  <data name="Sidebar_OpenFiles.Text" xml:space="preserve">
+    <value>Open Files…</value>
+  </data>
+  <data name="Sidebar_Places.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Library Sections</value>
+  </data>
+  <data name="Sidebar_Tabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Library Sections</value>
   </data>
   <data name="SignIn_Browser.Text" xml:space="preserve">
     <value>Continue in your browser. Come back here when you are done.</value>

@@ -14,6 +14,9 @@ public partial class JfPage : Page
     /// <summary>The page's view model, set by the derived page before it is shown.</summary>
     protected PageViewModel? PageModel { get; set; }
 
+    /// <summary>The layout's measures (gutters, the room at the end, the title size) for the page's bindings.</summary>
+    public ShellMetrics Layout => AppHost.Metrics;
+
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
