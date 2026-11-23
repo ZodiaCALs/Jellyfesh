@@ -518,6 +518,9 @@ own conventions and must not reuse these keys.
     * Elsewhere its button is hidden and Ctrl+M does nothing.
     * Its Settings group has only Show Lyrics Line: a picture-in-picture
       window always stays on top and closes with the page.
+    * A page has one picture-in-picture window at a time, so opening the
+      mini player closes Desktop Lyrics and the other way round. The mini
+      player's lyrics line shows the line being sung.
   * Its library is folders the browser may read, picked again on each visit
     before their songs play, with no Watch Folders. **Open Files…** plays
     files for one visit without adding them.
