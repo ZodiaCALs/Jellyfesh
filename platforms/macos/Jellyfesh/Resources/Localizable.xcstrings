@@ -759,6 +759,28 @@
         }
       }
     },
+    "About": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "情報"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於"
+          }
+        }
+      }
+    },
     "About Jellyfesh": {
       "localizations": {
         "ja": {
@@ -1905,6 +1927,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "「自動」在淺色外觀下使用冰，在深色外觀下使用鋼。其他選項會在 Jellyfesh 開啟時更換 Dock 圖示，Finder 中仍顯示冰。"
+          }
+        }
+      }
+    },
+    "Back": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返回"
           }
         }
       }
@@ -4637,6 +4681,28 @@
         }
       }
     },
+    "Keyboard Shortcuts": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードショートカット"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "键盘快捷键"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鍵盤快捷鍵"
+          }
+        }
+      }
+    },
     "Label": {
       "localizations": {
         "ja": {
@@ -5611,6 +5677,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "次へ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一首"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一首"
+          }
+        }
+      }
+    },
+    "Next Song": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次の曲"
           }
         },
         "zh-Hans": {
@@ -6661,6 +6749,28 @@
         }
       }
     },
+    "Play or Pause": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生または一時停止"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放或暂停"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放或暫停"
+          }
+        }
+      }
+    },
     "Playback": {
       "localizations": {
         "ja": {
@@ -6997,6 +7107,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "前へ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一首"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一首"
+          }
+        }
+      }
+    },
+    "Previous Song": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前の曲"
           }
         },
         "zh-Hans": {
@@ -8109,6 +8241,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "伺服器位址"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定…"
           }
         }
       }
@@ -10401,6 +10577,28 @@
         }
       }
     },
+    "Volume Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量を下げる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调低音量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "調低音量"
+          }
+        }
+      }
+    },
     "Volume Levelling": {
       "localizations": {
         "ja": {
@@ -10419,6 +10617,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "音量平衡"
+          }
+        }
+      }
+    },
+    "Volume Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音量を上げる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调高音量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "調高音量"
           }
         }
       }

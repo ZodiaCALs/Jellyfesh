@@ -202,6 +202,7 @@ struct SectionPage: View {
         case .favorites: FavoritesView()
         case .search: SearchView()
         case .sources: SourcesView()
+        case .settings: SettingsPage()
         case .playlist(let id): PlaylistDetailView(playlistID: id)
         }
     }

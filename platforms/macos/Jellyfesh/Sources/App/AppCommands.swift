@@ -1,8 +1,10 @@
-// The menu bar: File (playlists, folders, plugins), View (sections, search, Now Playing, Desktop
-// Lyrics) and Controls (transport, volume, shuffle and repeat), with the keys every Jellyfesh shares
+// The menu bar: the app menu's About Jellyfesh and Settings… (pages of the main window, ADR-0023),
+// File (playlists, folders, plugins), View (sections, search, Now Playing, Desktop Lyrics) and
+// Controls (transport, volume, shuffle and repeat), with the keys every Jellyfesh shares
 // (docs/ui.md, "Keyboard"). Space (play and pause), Shift-Right and Shift-Left (skip 5 seconds)
 // and Esc (back) go through SharedKeyMonitor instead of key equivalents, so text fields keep them;
-// the skip items also answer Option-Command-arrows, as before.
+// the skip items also answer Option-Command-arrows, as before. Items that show a page open the main
+// window first, as it may be closed while music plays.
 
 import SwiftUI
 
@@ -11,7 +13,11 @@ struct AppCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            AboutMenuItem()
+            AboutMenuItem(model: model)
+        }
+
+        CommandGroup(replacing: .appSettings) {
+            SettingsMenuItem(model: model)
         }
 
         CommandGroup(replacing: .newItem) {
@@ -28,14 +34,30 @@ struct AppCommands: Commands {
     }
 }
 
-/// About Jellyfesh: opens the About window (AboutView).
+/// About Jellyfesh: Settings › About, in the main window.
 private struct AboutMenuItem: View {
+    let model: AppModel
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button("About Jellyfesh") {
-            openWindow(id: AboutView.windowID)
+            openWindow(id: JellyfeshApp.mainWindowID)
+            model.openSettings(.about)
         }
+    }
+}
+
+/// Settings… (⌘,): the Settings page, in the main window, at the section shown last.
+private struct SettingsMenuItem: View {
+    let model: AppModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Settings…") {
+            openWindow(id: JellyfeshApp.mainWindowID)
+            model.openSettings()
+        }
+        .keyboardShortcut(",")
     }
 }
 
@@ -82,6 +104,7 @@ private struct FileMenuItems: View {
 
 private struct ViewMenuItems: View {
     let model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     private struct Shortcut: Identifiable {
         var item: SidebarItem
@@ -98,6 +121,7 @@ private struct ViewMenuItems: View {
     var body: some View {
         ForEach(shortcuts) { shortcut in
             Button(shortcut.item.title) {
+                openWindow(id: JellyfeshApp.mainWindowID)
                 model.router.showNowPlaying(false, reduceMotion: true)
                 model.router.select(shortcut.item)
             }
@@ -107,6 +131,7 @@ private struct ViewMenuItems: View {
         Divider()
 
         Button("Search") {
+            openWindow(id: JellyfeshApp.mainWindowID)
             model.router.focusSearch()
         }
         .keyboardShortcut("f")

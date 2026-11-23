@@ -1,13 +1,36 @@
-// What About Jellyfesh shows (docs/ui.md, "About"): the version from the build, never typed in, and
-// the website with the third-party licences and the legal pages it publishes (Licence Agreement,
-// Privacy Policy, Terms of Sale: docs/store-release.md), where the build knows the website. The
-// same rules as the Android app's (AboutInfo in platforms/android/logic).
+// What Settings › About shows (docs/ui.md, "About"): the keys every Jellyfesh shares, the version
+// from the build, never typed in, and the website with the third-party licences and the legal pages
+// it publishes (Licence Agreement, Privacy Policy, Terms of Sale: docs/store-release.md), where the
+// build knows the website. The same rules as the Android app's (AboutInfo in platforms/android/logic).
 
 import Foundation
 
 enum AboutInfo {
     /// The page the website publishes the third-party licences on (tools/release/build_site.py).
     static let noticesPage = "THIRD_PARTY_NOTICES.html"
+
+    /// A key every Jellyfesh shares, as Settings › About lists it.
+    struct Shortcut: Equatable, Identifiable {
+        /// The keys, with the Mac's modifiers.
+        var keys: String
+        /// What they do: a key of the string catalog.
+        var action: String
+        var id: String { keys }
+    }
+
+    /// Keyboard Shortcuts (docs/ui.md, "Keyboard"): the shared keys in their order, ⌘ for Ctrl.
+    static let shortcuts: [Shortcut] = [
+        Shortcut(keys: "Space", action: "Play or Pause"),
+        Shortcut(keys: "⌘ →", action: "Next Song"),
+        Shortcut(keys: "⌘ ←", action: "Previous Song"),
+        Shortcut(keys: "⇧ →", action: "Skip Forward 5 Seconds"),
+        Shortcut(keys: "⇧ ←", action: "Skip Back 5 Seconds"),
+        Shortcut(keys: "⌘ ↑", action: "Volume Up"),
+        Shortcut(keys: "⌘ ↓", action: "Volume Down"),
+        Shortcut(keys: "⌘ F", action: "Search"),
+        Shortcut(keys: "⌘ ,", action: "Settings"),
+        Shortcut(keys: "Esc", action: "Back"),
+    ]
 
     /// The website and its pages.
     struct Links: Equatable {

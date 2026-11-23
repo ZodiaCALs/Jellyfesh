@@ -1,15 +1,19 @@
-// The app: one main window (library, Now Playing, the mini player), the Settings window, the About
-// window and the menu bar commands.
+// The app: one main window (the library, Settings, Now Playing and the player) and the menu bar
+// commands. Settings and About are pages of the main window (ADR-0023): the app menu's Settings…
+// (⌘,) and About Jellyfesh open them there.
 
 import SwiftUI
 
 @main
 struct JellyfeshApp: App {
+    /// The main window's scene id.
+    static let mainWindowID = "main"
+
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model = AppModel.shared
 
     var body: some Scene {
-        Window("Jellyfesh", id: "main") {
+        Window("Jellyfesh", id: Self.mainWindowID) {
             RootView()
                 .stores(model)
         }
@@ -19,21 +23,6 @@ struct JellyfeshApp: App {
         .commands {
             AppCommands(model: model)
         }
-
-        Settings {
-            SettingsView()
-                .stores(model)
-        }
-
-        // About Jellyfesh in the app menu opens it; it is not listed in the Window menu.
-        Window("About Jellyfesh", id: AboutView.windowID) {
-            AboutView()
-                .stores(model)
-        }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
-        .defaultPosition(.center)
-        .commandsRemoved()
     }
 }
 

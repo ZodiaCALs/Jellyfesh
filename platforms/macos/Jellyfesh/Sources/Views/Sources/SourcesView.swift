@@ -10,7 +10,6 @@ struct SourcesView: View {
     @Environment(AppModel.self) private var model
     @Environment(SourcesStore.self) private var sources
     @Environment(AppleMusicStore.self) private var appleMusic
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.palette) private var palette
     /// The service whose Connect sheet is open.
     @State private var connecting: SourcePreset?
@@ -83,7 +82,7 @@ struct SourcesView: View {
             }
             HStack {
                 Button("Sources Settings…") {
-                    model.showSettings(.sources, using: openSettings)
+                    model.openSettings(.sources)
                 }
                 .buttonStyle(.bordered)
                 Spacer(minLength: 0)

@@ -74,7 +74,20 @@ struct Sidebar: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ScanStatus()
+            VStack(alignment: .leading, spacing: 0) {
+                ScanStatus()
+                Button {
+                    router.showNowPlaying(false, reduceMotion: true)
+                    router.select(.settings)
+                } label: {
+                    Label(SidebarItem.settings.title, systemImage: SidebarItem.settings.symbol)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, Tokens.Space.s4)
+                .padding(.vertical, Tokens.Space.s3)
+            }
         }
         .alert("Rename Playlist", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Name", text: $newName)

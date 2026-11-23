@@ -100,7 +100,7 @@ private struct ProSection: View {
                 }
                 if pro.state.licenceKeys {
                     Button("Enter Licence Key…") {
-                        pro.startLicenceEntry(in: .settings)
+                        pro.startLicenceEntry(in: .main)
                     }
                 }
                 if let failure = pro.storeFailure {
@@ -148,7 +148,7 @@ private struct ExtensionRow: View {
                         .foregroundStyle(.secondary)
                     Spacer()
                     Button("Learn More…") {
-                        pro.require(in: .settings)
+                        pro.require()
                     }
                 }
             }

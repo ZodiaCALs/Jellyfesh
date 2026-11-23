@@ -17,7 +17,6 @@ struct LyricsMakingActions: View {
     @Environment(AiLyricsStore.self) private var aiLyrics
     @Environment(ProStore.self) private var pro
     @Environment(PlaybackStore.self) private var playback
-    @Environment(\.openSettings) private var openSettings
     @Environment(\.palette) private var palette
 
     var body: some View {
@@ -70,7 +69,7 @@ struct LyricsMakingActions: View {
                     note(String(localized: "Add your API key to make lyrics online."))
                     Button("Open AI Lyrics Settings") {
                         model.extensionsFocus = aiLyrics.state.plugin
-                        model.showSettings(.extensions, using: openSettings)
+                        model.openSettings(.extensions)
                     }
                 }
             case .unavailable(let reason):

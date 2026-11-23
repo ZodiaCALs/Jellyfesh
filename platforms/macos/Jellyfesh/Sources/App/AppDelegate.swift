@@ -1,6 +1,6 @@
 // Application events SwiftUI does not cover: launch and quit (the core saves the session), files
-// opened from Finder (audio plays, `.jfpkg` installs) and the Dock menu. About Jellyfesh is a window
-// of its own (AboutView).
+// opened from Finder (audio plays, `.jfpkg` installs) and the Dock menu. About Jellyfesh is Settings ›
+// About, in the main window (AppCommands).
 
 import AppKit
 

@@ -5,6 +5,8 @@ import SwiftUI
 
 enum SidebarItem: Hashable {
     case home, albums, artists, songs, playlists, favorites, search, sources
+    /// Settings, a page in the main window (ADR-0023).
+    case settings
     case playlist(Int64)
 
     static let library: [SidebarItem] = [.home, .albums, .artists, .songs, .playlists, .favorites]
@@ -19,6 +21,7 @@ enum SidebarItem: Hashable {
         case .favorites: return "Favourites"
         case .search: return "Search"
         case .sources: return "Sources"
+        case .settings: return "Settings"
         case .playlist: return "Playlist"
         }
     }
@@ -33,6 +36,7 @@ enum SidebarItem: Hashable {
         case .favorites: return "heart"
         case .search: return "magnifyingglass"
         case .sources: return "antenna.radiowaves.left.and.right"
+        case .settings: return "slider.horizontal.3"
         case .playlist: return "music.note.list"
         }
     }

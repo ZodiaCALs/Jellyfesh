@@ -1,50 +1,55 @@
-// The Settings window: Appearance (with the lyrics settings), Playback, Library, Sources and
-// Extensions.
-// Native forms (the window chrome is the platform's, Misty PLT-10); every change goes to the core
-// as a settings command, and the app applies the appearance ones.
+// Settings, a page in the main window (ADR-0023, docs/ui.md "Settings"): the title, the sections
+// Appearance, Playback, Library, Sources, Extensions and About as Jellyfesh Web's pill tabs, and
+// the chosen section's groups in a column as wide as the web's (`layout.reading`). The groups are
+// the native grouped forms over the field; the player bar floats over them like every page. ⌘,
+// and the app menu's Settings… open the page, About Jellyfesh its About section. Every change goes
+// to the core as a settings command, and the app applies the appearance ones.
 
 import SwiftUI
 
-struct SettingsView: View {
+struct SettingsPage: View {
     @Environment(AppModel.self) private var model
-    @Environment(ThemeStore.self) private var theme
-    @Environment(SettingsStore.self) private var settings
-    @Environment(SystemState.self) private var system
-    @Environment(LookStore.self) private var look
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.look) private var look
+
+    /// Settings' column, as wide as the web's (`layout.reading`).
+    static let readingWidth: CGFloat = Tokens.Layout.reading
+    /// How far a grouped form insets its groups: the groups line up with the title.
+    static let formInset: CGFloat = 20
 
     var body: some View {
         @Bindable var model = model
-        TabView(selection: $model.settingsTab) {
-            AppearanceSettings()
-                .tabItem { Label("Appearance", systemImage: "paintpalette") }
-                .tag(SettingsTab.appearance)
-            PlaybackSettings()
-                .tabItem { Label("Playback", systemImage: "play.circle") }
-                .tag(SettingsTab.playback)
-            LibrarySettings()
-                .tabItem { Label("Library", systemImage: "folder") }
-                .tag(SettingsTab.library)
-            SourcesSettings()
-                .tabItem { Label("Sources", systemImage: "antenna.radiowaves.left.and.right") }
-                .tag(SettingsTab.sources)
-            ExtensionsSettings()
-                .tabItem { Label("Extensions", systemImage: "puzzlepiece.extension") }
-                .tag(SettingsTab.extensions)
+        let margin = look.spacing(Tokens.Space.s7)
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: look.spacing(Tokens.Space.s5)) {
+                PageHeader(title: String(localized: "Settings"))
+                PillTabs(
+                    selection: $model.settingsTab,
+                    options: SettingsTab.allCases.map { PillTabs<SettingsTab>.Option(value: $0, title: $0.title) },
+                    label: "Settings"
+                )
+            }
+            .frame(maxWidth: Self.readingWidth, alignment: .leading)
+            .padding(.horizontal, margin)
+            .padding(.top, look.spacing(Tokens.Space.s6))
+
+            section(model.settingsTab)
+                .scrollContentBackground(.hidden)
+                .frame(maxWidth: Self.readingWidth + 2 * Self.formInset, maxHeight: .infinity, alignment: .top)
+                .padding(.horizontal, max(0, margin - Self.formInset))
+                .id(model.settingsTab)
         }
-        .proSheet(in: .settings)
-        .frame(width: 640, height: 560)
-        .environment(\.palette, theme.palette(for: colorScheme))
-        .environment(\.effects, Effects(
-            reduceMotion: reduceMotion,
-            solidGlass: reduceTransparency || system.lowPower || settings.current.reduceEffects
-                || settings.current.transparency <= 0.001,
-            reduceEffects: settings.current.reduceEffects,
-            windowVisible: true,
-            transparency: Double(settings.current.transparency)
-        ))
-        .environment(\.look, LookStyle(state: look.state))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .navigationTitle(Text("Settings"))
+    }
+
+    @ViewBuilder private func section(_ tab: SettingsTab) -> some View {
+        switch tab {
+        case .appearance: AppearanceSettings()
+        case .playback: PlaybackSettings()
+        case .library: LibrarySettings()
+        case .sources: SourcesSettings()
+        case .extensions: ExtensionsSettings()
+        case .about: AboutSettings()
+        }
     }
 }

@@ -6,9 +6,20 @@ import AppKit
 import Observation
 import SwiftUI
 
-/// The tabs of the Settings window, in docs/ui.md's order.
-enum SettingsTab: Hashable {
-    case appearance, playback, library, sources, extensions
+/// The sections of the Settings page, in docs/ui.md's order.
+enum SettingsTab: Hashable, CaseIterable {
+    case appearance, playback, library, sources, extensions, about
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .appearance: return "Appearance"
+        case .playback: return "Playback"
+        case .library: return "Library"
+        case .sources: return "Sources"
+        case .extensions: return "Extensions"
+        case .about: return "About"
+        }
+    }
 }
 
 @MainActor
@@ -48,7 +59,7 @@ final class AppModel {
     let answers: CoreAnswers
     /// How this build reached the person (the build flags).
     let distribution: AppDistribution
-    /// The Settings tab to show when the window opens.
+    /// The section the Settings page shows.
     var settingsTab: SettingsTab = .appearance
     /// The extension Settings › Extensions opens to (Appearance › Customize…), until it has.
     var extensionsFocus: String?
@@ -318,10 +329,12 @@ final class AppModel {
 
     // MARK: Navigation helpers
 
-    /// Opens Settings at `tab`.
-    func showSettings(_ tab: SettingsTab, using openSettings: OpenSettingsAction) {
-        settingsTab = tab
-        openSettings()
+    /// Shows the Settings page (ADR-0023: a page in the main window), at `tab` when one is given;
+    /// Now Playing closes. The menus open the main window first.
+    func openSettings(_ tab: SettingsTab? = nil) {
+        if let tab { settingsTab = tab }
+        router.showNowPlaying(false, reduceMotion: true)
+        router.select(.settings)
     }
 
     /// Shift-Right and Shift-Left: 5 seconds forward or back, while something plays.
