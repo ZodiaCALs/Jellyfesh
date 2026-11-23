@@ -609,6 +609,20 @@ impl Library {
             .collect()
     }
 
+    /// The tracks with these keys, in the order asked: `None` for a key the
+    /// library no longer has (a song kept in Favourites, a playlist or the
+    /// history after its folder went).
+    pub fn tracks_by_key(&mut self, keys: &[String]) -> Vec<Option<TrackView>> {
+        self.index();
+        let index = self.index.as_ref().expect("built above");
+        keys.iter()
+            .map(|key| {
+                let i = self.tracks.binary_search_by(|t| t.key.as_str().cmp(key)).ok()?;
+                Some(self.track_view(index, i))
+            })
+            .collect()
+    }
+
     /// Up to `limit` tracks, albums and artists matching `text`.
     pub fn search(&mut self, text: &str, limit: usize) -> SearchResults {
         let query = normalize(text);
@@ -944,6 +958,25 @@ mod tests {
         assert_eq!(library.len(), 1);
         library.remove_folder(2);
         assert!(library.is_empty());
+    }
+
+    #[test]
+    fn tracks_are_found_by_key() {
+        let mut library = Library::new();
+        library.load(vec![
+            track("1/b.flac", "B", "Aurora", Some("Sky")),
+            track("1/a.flac", "A", "Aurora", Some("Sky")),
+        ]);
+        let found = library.tracks_by_key(&["1/a.flac".into(), "9/gone.flac".into(), "1/b.flac".into()]);
+        let titles: Vec<Option<&str>> = found
+            .iter()
+            .map(|t| t.as_ref().map(|t| t.title.as_str()))
+            .collect();
+        assert_eq!(titles, [Some("A"), None, Some("B")]);
+        assert!(
+            found[0].as_ref().unwrap().album_id.is_some(),
+            "with its album, as in the lists"
+        );
     }
 
     #[test]

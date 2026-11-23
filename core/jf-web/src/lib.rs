@@ -504,6 +504,12 @@ impl Library {
     pub fn search(&mut self, text: &str, limit: usize) -> String {
         json(&self.0.search(text, limit))
     }
+
+    /// The tracks with these keys (a key list), in that order: `TrackView` or `null` each.
+    pub fn tracks_by_key(&mut self, keys: &str) -> Result<String, JsError> {
+        let keys: Vec<String> = parse(keys, "keys")?;
+        Ok(json(&self.0.tracks_by_key(&keys)))
+    }
 }
 
 /// The artists a track is credited to (`library::artists_of`), for the page to show.
