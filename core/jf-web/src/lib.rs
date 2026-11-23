@@ -10,6 +10,8 @@
 //!   crossfade, the equaliser bands, ReplayGain and the limiter;
 //! * [`sources`]: settings, the checks on plugin answers, unified search
 //!   sections and sign-in flows (`jf-plugin-model`);
+//! * [`collections`]: hearts, playlists and plays, kept in the browser with
+//!   `jf-library`'s rules;
 //! * [`lyrics`]: lyric documents and timelines (`jf-lyrics`) from plugins,
 //!   tags and lyrics files;
 //! * [`relay`]: which services refuse browsers, and the relay's address;
@@ -26,6 +28,7 @@
 //! port of `DisplayClock` and the lyric cursor.
 
 pub mod ai_lyrics;
+pub mod collections;
 pub mod details;
 pub mod discover;
 pub mod library;
@@ -308,19 +311,29 @@ impl Core {
         );
     }
 
-    /// The play in progress ended: `{"uid":…,"counted":bool}` or `null`.
+    /// The play in progress ended: `{"uid", "counted", "started_ms", "saved"}` or `null`.
+    /// `saved` is what the entry is for hearts and plays (`Saved`), `null` for a dropped file.
     pub fn finish(&mut self, played_ms: f64, natural: bool) -> String {
         #[derive(Serialize)]
-        struct Finished {
-            uid: u64,
-            counted: bool,
+        struct Ended {
+            #[serde(flatten)]
+            finished: session::Finished,
+            saved: Option<collections::Saved>,
         }
         json(
             &self
                 .session
                 .finish(played_ms.max(0.0) as u64, natural)
-                .map(|(uid, counted)| Finished { uid, counted }),
+                .map(|finished| Ended {
+                    saved: self.session.saved(finished.uid),
+                    finished,
+                }),
         )
+    }
+
+    /// What an entry is for hearts, playlists and plays (`Saved`), or `null` (a dropped file).
+    pub fn saved(&self, uid: f64) -> String {
+        json(&self.session.saved(uid as u64))
     }
 
     /// The queue for the views (`QueueSnapshot`).
@@ -818,6 +831,142 @@ impl Pro {
     /// Remove Licence….
     pub fn remove_licence(&mut self) {
         self.inner.remove_licence();
+    }
+}
+
+// ---- hearts, playlists and plays ----------------------------------------------------------
+
+/// Hearts, playlists and plays (`collections`), kept by the page in IndexedDB. Items are
+/// `Saved` (`{"plugin", "item"}`); times are milliseconds since the epoch. Refusals are errors
+/// whose message is a code: `empty-name`, `no-playlist`, `no-entry` or `not-a-song`.
+#[wasm_bindgen]
+#[derive(Debug, Default)]
+pub struct Collections {
+    inner: collections::Collections,
+}
+
+#[wasm_bindgen]
+impl Collections {
+    /// The collections saved with `state`, or empty ones.
+    #[wasm_bindgen(constructor)]
+    pub fn new(state: Option<String>) -> Collections {
+        Collections {
+            inner: state
+                .as_deref()
+                .map(collections::Collections::from_state)
+                .unwrap_or_default(),
+        }
+    }
+
+    /// Everything, for the page to keep.
+    pub fn state(&self) -> String {
+        self.inner.state()
+    }
+
+    /// A new playlist; returns its id.
+    pub fn create_playlist(&mut self, name: &str, now_ms: f64) -> Result<f64, JsError> {
+        Ok(self.inner.create_playlist(name, now_ms as i64).map_err(error)? as f64)
+    }
+
+    pub fn rename_playlist(&mut self, id: f64, name: &str, now_ms: f64) -> Result<(), JsError> {
+        self.inner
+            .rename_playlist(id as i64, name, now_ms as i64)
+            .map_err(error)
+    }
+
+    pub fn delete_playlist(&mut self, id: f64) -> Result<(), JsError> {
+        self.inner.delete_playlist(id as i64).map_err(error)
+    }
+
+    /// Every playlist by name (`PlaylistSummary` list).
+    pub fn playlists(&self) -> String {
+        json(&self.inner.playlists())
+    }
+
+    /// One playlist (`PlaylistSummary`) or `null`.
+    pub fn playlist(&self, id: f64) -> String {
+        json(&self.inner.playlist(id as i64))
+    }
+
+    /// Entries from position `offset` (`PlaylistEntry` list).
+    pub fn entries(&self, id: f64, offset: usize, limit: usize) -> String {
+        json(&self.inner.entries(id as i64, offset, limit))
+    }
+
+    /// Adds songs (`Saved` list) at `at` (appended without it); returns their entry ids.
+    pub fn add_to_playlist(
+        &mut self,
+        id: f64,
+        items: &str,
+        at: Option<usize>,
+        now_ms: f64,
+    ) -> Result<String, JsError> {
+        let items: Vec<collections::Saved> = parse(items, "items")?;
+        Ok(json(
+            &self
+                .inner
+                .add_to_playlist(id as i64, items, at, now_ms as i64)
+                .map_err(error)?,
+        ))
+    }
+
+    /// Removes entries (an id list).
+    pub fn remove_from_playlist(&mut self, id: f64, entry_ids: &str, now_ms: f64) -> Result<(), JsError> {
+        let entry_ids: Vec<i64> = parse(entry_ids, "entries")?;
+        self.inner
+            .remove_from_playlist(id as i64, &entry_ids, now_ms as i64)
+            .map_err(error)
+    }
+
+    pub fn move_playlist_entry(
+        &mut self,
+        id: f64,
+        entry_id: f64,
+        to: usize,
+        now_ms: f64,
+    ) -> Result<(), JsError> {
+        self.inner
+            .move_playlist_entry(id as i64, entry_id as i64, to, now_ms as i64)
+            .map_err(error)
+    }
+
+    /// The heart on a song (`Saved`), or not; true when it changed.
+    pub fn set_favorite(&mut self, saved: &str, favorite: bool, now_ms: f64) -> Result<bool, JsError> {
+        let saved: collections::Saved = parse(saved, "item")?;
+        self.inner
+            .set_favorite(saved, favorite, now_ms as i64)
+            .map_err(error)
+    }
+
+    pub fn is_favorite(&self, plugin: &str, id: &str) -> bool {
+        self.inner.is_favorite(plugin, id)
+    }
+
+    /// The favourites, the latest first (`ItemStats` list).
+    pub fn favorites(&self, offset: usize, limit: usize) -> String {
+        json(&self.inner.favorites(offset, limit))
+    }
+
+    pub fn favorite_count(&self) -> usize {
+        self.inner.favorite_count()
+    }
+
+    /// A play of a song (`Saved`) that started at `at_ms`, counted or a skip.
+    pub fn record_play(&mut self, saved: &str, at_ms: f64, counted: bool) -> Result<(), JsError> {
+        let saved: collections::Saved = parse(saved, "item")?;
+        self.inner
+            .record_play(saved, at_ms as i64, counted)
+            .map_err(error)
+    }
+
+    /// Recently Played (`ItemStats` list).
+    pub fn recently_played(&self, limit: usize) -> String {
+        json(&self.inner.recently_played(limit))
+    }
+
+    /// Most Played (`ItemStats` list).
+    pub fn most_played(&self, limit: usize) -> String {
+        json(&self.inner.most_played(limit))
     }
 }
 

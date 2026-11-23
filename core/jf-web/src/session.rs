@@ -16,6 +16,7 @@ use jf_plugin_model::{ImageRef, Item, ItemKind};
 use jf_session::{Advance, Queue, QueueError, QueueItem, QueueState, RepeatMode, SourceTrack, TrackRef};
 use serde::{Deserialize, Serialize};
 
+use crate::collections::{self, Saved};
 use crate::rules::{self, CrossfadeSettings, ReplayGainInfo, Transition};
 
 /// Entries the snapshot lists after the current one (as the core's slice).
@@ -164,6 +165,17 @@ impl ItemMemory {
 struct Play {
     uid: u64,
     duration_ms: Option<u64>,
+    started_ms: i64,
+}
+
+/// A play that ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct Finished {
+    pub uid: u64,
+    /// It counts as a play (`rules::play_counts`); otherwise it was a skip.
+    pub counted: bool,
+    /// When it started (wall clock, ms).
+    pub started_ms: i64,
 }
 
 /// The queue and its rules. See the module documentation.
@@ -435,15 +447,55 @@ impl Session {
         };
         let duration_ms = duration_ms.or_else(|| self.row_for(uid, &track).duration_ms);
         self.queue.record_played(track, now_ms);
-        self.play = Some(Play { uid, duration_ms });
+        self.play = Some(Play {
+            uid,
+            duration_ms,
+            started_ms: now_ms,
+        });
     }
 
     /// The play in progress ended after `played_ms`: `natural` when it
     /// reached its end. Returns whether it counts as a play (else a skip),
     /// or `None` when nothing was playing.
-    pub fn finish(&mut self, played_ms: u64, natural: bool) -> Option<(u64, bool)> {
+    pub fn finish(&mut self, played_ms: u64, natural: bool) -> Option<Finished> {
         let play = self.play.take()?;
-        Some((play.uid, rules::play_counts(played_ms, play.duration_ms, natural)))
+        Some(Finished {
+            uid: play.uid,
+            counted: rules::play_counts(played_ms, play.duration_ms, natural),
+            started_ms: play.started_ms,
+        })
+    }
+
+    /// What an entry is for hearts, playlists and plays: a source's song with
+    /// its plugin, a library song under the library's id (its key as id), or
+    /// `None` for a dropped file, which is kept nowhere.
+    pub fn saved(&self, uid: u64) -> Option<Saved> {
+        match self.queue.get(uid)? {
+            TrackRef::Source(_) => {
+                let (plugin, item) = self.source_item(uid)?;
+                Some(Saved { plugin, item })
+            }
+            TrackRef::File(path) => {
+                let id = file_id(path)?;
+                let key = id.strip_prefix(LIBRARY_ID)?;
+                let meta = self.files.get(&id);
+                let item = item_from(&SourceTrack {
+                    plugin: collections::LIBRARY.to_owned(),
+                    id: key.to_owned(),
+                    title: meta.map_or_else(|| key.to_owned(), |m| m.title.clone()),
+                    artist: meta.and_then(|m| m.artist.clone()),
+                    album: meta.and_then(|m| m.album.clone()),
+                    duration_ms: meta.and_then(|m| m.duration_ms),
+                    artwork_url: None,
+                    isrc: None,
+                });
+                Some(Saved {
+                    plugin: collections::LIBRARY.to_owned(),
+                    item,
+                })
+            }
+            _ => None,
+        }
     }
 
     /// The queue for the views.
@@ -715,13 +767,66 @@ mod tests {
         s.play(vec![source("a", "X")], 0, false).unwrap();
         let uid = s.current().unwrap().uid;
         s.started(uid, 1_700_000_000_000, None);
-        assert_eq!(s.finish(99_000, false), Some((uid, false)));
+        let skipped = Finished {
+            uid,
+            counted: false,
+            started_ms: 1_700_000_000_000,
+        };
+        assert_eq!(s.finish(99_000, false), Some(skipped));
         assert_eq!(s.finish(0, true), None, "nothing playing");
         s.started(uid, 1_700_000_100_000, None);
-        assert_eq!(s.finish(100_000, false), Some((uid, true)));
+        let counted = Finished {
+            uid,
+            counted: true,
+            started_ms: 1_700_000_100_000,
+        };
+        assert_eq!(s.finish(100_000, false), Some(counted));
         let history = s.history(10);
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].played_at_ms, 1_700_000_100_000);
+    }
+
+    #[test]
+    fn entries_say_what_they_are_for_hearts_and_plays() {
+        let mut s = Session::new(1);
+        let meta = FileMeta {
+            id: "lib:3/Album/01 Tone.flac".into(),
+            name: "01 Tone.flac".into(),
+            title: "Tone".into(),
+            artist: Some("Aurora".into()),
+            album: Some("Sky".into()),
+            duration_ms: Some(5_000),
+            replaygain: None,
+        };
+        s.add_file(meta.clone());
+        s.add_file(FileMeta {
+            id: "f1".into(),
+            ..meta.clone()
+        });
+        s.play(
+            vec![
+                source("a", "X"),
+                NewEntry::File { id: meta.id.clone() },
+                NewEntry::File { id: "f1".into() },
+            ],
+            0,
+            false,
+        )
+        .unwrap();
+        let rows = s.window(0, 3);
+        let source = s.saved(rows[0].uid).unwrap();
+        assert_eq!(
+            (source.plugin.as_str(), source.item.id.as_str()),
+            ("org.example.p", "a")
+        );
+        let library = s.saved(rows[1].uid).unwrap();
+        assert_eq!(library.plugin, "library");
+        assert_eq!(library.item.id, "3/Album/01 Tone.flac", "the library's key");
+        assert_eq!(library.item.title, "Tone");
+        assert_eq!(library.item.duration_ms, Some(5_000));
+        assert_eq!(library.item.kind, ItemKind::Track);
+        assert!(s.saved(rows[2].uid).is_none(), "a dropped file is kept nowhere");
+        assert!(s.saved(9_999).is_none());
     }
 
     #[test]
