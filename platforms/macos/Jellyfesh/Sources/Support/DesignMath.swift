@@ -278,13 +278,18 @@ enum LuminousGeometry {
     }
 
     /// Stage is v0.0.6. Artwork shows the cover and the sung line in place of the Lyrics pane, and
-    /// Queue and Info beside the cover as on the stage. Lyrics puts any pane across the window.
-    static func nowPlayingArrangement(_ layout: LookNowPlayingLayout, panel: NowPlayingPanel) -> NowPlayingArrangement {
+    /// Queue and Info beside the cover as on the stage. Lyrics puts any pane across the window. In a
+    /// narrow window (the phone layout, ADR-0023) the stage would leave the pane too little room:
+    /// the pane goes across it with the small cover, except the Artwork layout's cover.
+    static func nowPlayingArrangement(_ layout: LookNowPlayingLayout, panel: NowPlayingPanel,
+                                      narrow: Bool = false) -> NowPlayingArrangement {
+        let arrangement: NowPlayingArrangement
         switch layout {
-        case .stage: return .stage
-        case .artwork: return panel == .lyrics ? .cover : .stage
-        case .lyrics: return .widePane
+        case .stage: arrangement = .stage
+        case .artwork: arrangement = panel == .lyrics ? .cover : .stage
+        case .lyrics: arrangement = .widePane
         }
+        return narrow && arrangement == .stage ? .widePane : arrangement
     }
 
     /// The cover in the Artwork layout: up to 520 pt, as the window allows (the top bar, the dock,

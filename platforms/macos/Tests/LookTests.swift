@@ -171,6 +171,10 @@ final class LookStyleTests: XCTestCase {
         XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .lyrics), .cover)
         XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .queue), .stage)
         XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .info), .stage)
+        // The phone layout: the pane goes across the window, except the Artwork layout's cover.
+        XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.stage, panel: .lyrics, narrow: true), .widePane)
+        XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .queue, narrow: true), .widePane)
+        XCTAssertEqual(LuminousGeometry.nowPlayingArrangement(.artwork, panel: .lyrics, narrow: true), .cover)
         XCTAssertEqual(LuminousGeometry.coverArtworkSide(width: 1600, height: 1000), 520)
         XCTAssertEqual(LuminousGeometry.coverArtworkSide(width: 1180, height: 760), 340)
         XCTAssertEqual(LuminousGeometry.coverArtworkSide(width: 300, height: 300), 180, "never smaller than 180")

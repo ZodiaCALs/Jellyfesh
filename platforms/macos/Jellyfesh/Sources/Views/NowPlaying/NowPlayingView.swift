@@ -26,7 +26,8 @@ struct NowPlayingView: View {
                 let wide = width >= 1100
                 VStack(spacing: 0) {
                     NowPlayingBar()
-                    switch LuminousGeometry.nowPlayingArrangement(look.nowPlaying, panel: router.panel) {
+                    switch LuminousGeometry.nowPlayingArrangement(look.nowPlaying, panel: router.panel,
+                                                                  narrow: width <= ShellLayout.narrowMax) {
                     case .stage:
                         let side = LuminousGeometry.stageArtworkSide(width: width, height: height)
                         HStack(alignment: .center, spacing: wide ? 64 : 40) {
