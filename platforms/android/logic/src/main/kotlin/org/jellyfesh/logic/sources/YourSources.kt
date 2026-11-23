@@ -19,6 +19,18 @@ enum class SourceState {
     Ready,
 }
 
+/** What choosing a source on the Sources page does ([YourSources.opens]). */
+sealed interface SourceOpen {
+    /** Its Discover page. */
+    data class Page(val screen: Screen) : SourceOpen
+
+    /** The sign-in sheet, with its first way to sign in. */
+    data object SignIn : SourceOpen
+
+    /** Settings › Sources, where it is turned on. */
+    data object Settings : SourceOpen
+}
+
 /** Your Sources on the Sources tab (docs/ui.md, "Sources"). */
 object YourSources {
     /**
@@ -43,11 +55,16 @@ object YourSources {
     fun canBrowse(plugin: PluginSummary): Boolean = plugin.enabled && BROWSE in plugin.capabilities
 
     /**
-     * What choosing a source opens: its Discover page while it is on (docs/ui.md, "Discover";
-     * Browse is a button there), otherwise its page in Settings › Sources (Enabled, sign-in, its
-     * settings).
+     * What choosing a source on the Sources page does, as on Jellyfesh Web: its Discover page
+     * (docs/ui.md, "Discover"; Browse is a button there) while it is on and signed in or needs no
+     * sign-in; the sign-in sheet while it is on and nobody has signed in; Settings › Sources,
+     * where it is turned on, while it is off.
      */
-    fun opens(plugin: PluginSummary): Screen = if (plugin.enabled) Screen.Discover(plugin.id) else Screen.Source(plugin.id)
+    fun opens(plugin: PluginSummary): SourceOpen = when {
+        !plugin.enabled -> SourceOpen.Settings
+        plugin.account == null && plugin.authMethods.isNotEmpty() -> SourceOpen.SignIn
+        else -> SourceOpen.Page(Screen.Discover(plugin.id))
+    }
 
     /** Browse in the Discover page's header: the source's own folders, from its top level. */
     fun browse(plugin: PluginSummary): Screen? = if (canBrowse(plugin)) Screen.SourceBrowse(plugin.id, null, plugin.name) else null

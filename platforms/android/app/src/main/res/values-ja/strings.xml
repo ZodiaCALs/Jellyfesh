@@ -12,6 +12,7 @@
     <string name="section_songs">曲</string>
     <string name="section_playlists">プレイリスト</string>
     <string name="section_favourites">お気に入り</string>
+    <string name="section_downloads">ダウンロード</string>
     <string name="a11y_library_sections">ライブラリの区分</string>
     <string name="action_cancel">キャンセル</string>
     <string name="action_more">その他</string>
@@ -257,6 +258,7 @@
     <string name="settings_appearance">外観</string>
     <string name="settings_playback">再生</string>
     <string name="settings_library">ライブラリ</string>
+    <string name="settings_downloads">ダウンロード</string>
     <string name="settings_sources">ソース</string>
     <string name="settings_about">情報</string>
     <string name="settings_appearance_desc">テーマ、アクセントカラー、透明度、背景、歌詞、アプリのアイコン</string>

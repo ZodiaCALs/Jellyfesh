@@ -46,7 +46,6 @@ import org.jellyfesh.logic.core.SongRef
 import org.jellyfesh.logic.lyrics.LyricsMaking
 import org.jellyfesh.logic.lyrics.LyricsMakingModel
 import org.jellyfesh.logic.lyrics.MakeStep
-import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.settings.Extensions
 
 /**
@@ -142,7 +141,7 @@ fun LyricsMakingCard(step: LyricsMaking, lyrics: LyricsSnapshot?, modifier: Modi
                 Note(stringResource(R.string.ai_need_key))
                 JfButton(stringResource(R.string.ai_open_settings), {
                     val state = graph.store.state.value
-                    Extensions.aiLyrics(state.sources.plugins, state.aiLyrics)?.let { nav.push(Screen.Extension(it.id)) }
+                    Extensions.aiLyrics(state.sources.plugins, state.aiLyrics)?.let { nav.openExtension(it.id) }
                 })
             }
             is LyricsMaking.Unavailable -> Note(step.reason)

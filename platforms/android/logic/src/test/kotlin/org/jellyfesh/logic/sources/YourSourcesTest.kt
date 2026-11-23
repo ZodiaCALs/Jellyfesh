@@ -30,14 +30,22 @@ class YourSourcesTest {
 
     @Test
     fun choosingASourceThatIsOnOpensItsDiscoverPageWithBrowseInItsHeader() {
-        assertEquals(Screen.Discover("org.jellyfesh.subsonic"), YourSources.opens(server))
+        val signedIn = server.copy(account = "listener")
+        assertEquals(SourceOpen.Page(Screen.Discover("org.jellyfesh.subsonic")), YourSources.opens(signedIn))
+        // One that needs no sign-in opens its page at once.
+        assertEquals(SourceOpen.Page(Screen.Discover("org.jellyfesh.subsonic")), YourSources.opens(server.copy(authMethods = emptyList())))
         assertTrue(YourSources.canBrowse(server))
         assertEquals(Screen.SourceBrowse("org.jellyfesh.subsonic", null, "Subsonic"), YourSources.browse(server))
     }
 
     @Test
-    fun aSourceThatIsOffOpensItsPageAndOneThatCannotBrowseHasNoBrowse() {
-        assertEquals(Screen.Source("org.jellyfesh.subsonic"), YourSources.opens(server.copy(enabled = false)))
+    fun aSourceNobodySignedInToAsksToSignInAsOnTheWeb() {
+        assertEquals(SourceOpen.SignIn, YourSources.opens(server))
+    }
+
+    @Test
+    fun aSourceThatIsOffOpensSettingsSourcesAndOneThatCannotBrowseHasNoBrowse() {
+        assertEquals(SourceOpen.Settings, YourSources.opens(server.copy(enabled = false, account = "listener")))
         val lyricsOnly = server.copy(id = "lyrics", capabilities = listOf("lyrics"))
         assertFalse(YourSources.canBrowse(lyricsOnly))
         assertEquals(null, YourSources.browse(lyricsOnly))

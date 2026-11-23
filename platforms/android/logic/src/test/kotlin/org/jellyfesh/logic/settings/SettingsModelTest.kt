@@ -103,7 +103,15 @@ class SettingsModelTest {
     @Test
     fun sectionsAreTheSpecsWithAboutAndNoLyricsSection() {
         assertEquals(
-            listOf(SettingsSection.Appearance, SettingsSection.Playback, SettingsSection.Library, SettingsSection.Sources, SettingsSection.Extensions, SettingsSection.About),
+            listOf(
+                SettingsSection.Appearance,
+                SettingsSection.Playback,
+                SettingsSection.Library,
+                SettingsSection.Downloads,
+                SettingsSection.Sources,
+                SettingsSection.Extensions,
+                SettingsSection.About,
+            ),
             SettingsSection.entries,
         )
     }
@@ -117,19 +125,38 @@ class SettingsModelTest {
                 SettingsGroup.Transparency,
                 SettingsGroup.NowPlayingBackdrop,
                 SettingsGroup.Lyrics,
+                SettingsGroup.MiniPlayer,
                 SettingsGroup.AppIcon,
                 SettingsGroup.Customize,
             ),
             SettingsLayout.groups(SettingsSection.Appearance),
         )
         assertEquals(
-            listOf(SettingsGroup.Output, SettingsGroup.Crossfade, SettingsGroup.VolumeLevelling, SettingsGroup.Equalizer, SettingsGroup.Startup),
+            listOf(
+                SettingsGroup.Output,
+                SettingsGroup.Crossfade,
+                SettingsGroup.VolumeLevelling,
+                SettingsGroup.Equalizer,
+                SettingsGroup.Streaming,
+                SettingsGroup.Startup,
+            ),
             SettingsLayout.groups(SettingsSection.Playback),
         )
         // Android asks for access to music and offers Find Music on This Phone before the folders.
         assertEquals(
             listOf(SettingsGroup.MusicOnThisPhone, SettingsGroup.MusicFolders, SettingsGroup.WatchFolders, SettingsGroup.RescanLibrary),
             SettingsLayout.groups(SettingsSection.Library),
+        )
+        assertEquals(
+            listOf(
+                SettingsGroup.DownloadFolder,
+                SettingsGroup.DownloadQuality,
+                SettingsGroup.DownloadFileNames,
+                SettingsGroup.DownloadTags,
+                SettingsGroup.DownloadNetwork,
+                SettingsGroup.DownloadSpace,
+            ),
+            SettingsLayout.groups(SettingsSection.Downloads),
         )
         assertEquals(
             listOf(SettingsGroup.AddSource, SettingsGroup.Installed, SettingsGroup.CommunityPlugins),

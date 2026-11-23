@@ -188,6 +188,9 @@ enum class SettingsGroup {
     Transparency,
     NowPlayingBackdrop,
     Lyrics,
+
+    /** Mini Player (v0.0.8, ADR-0026 §4): on Android, Mini Player in Picture-in-Picture. */
+    MiniPlayer,
     AppIcon,
 
     /** Customize…, which opens Extensions › Customize (v0.0.7). */
@@ -198,6 +201,9 @@ enum class SettingsGroup {
     Crossfade,
     VolumeLevelling,
     Equalizer,
+
+    /** Streaming Quality (v0.0.8, ADR-0026 §1), the same setting as the bar's quality menu. */
+    Streaming,
     Startup,
 
     // Library
@@ -206,6 +212,18 @@ enum class SettingsGroup {
     MusicFolders,
     WatchFolders,
     RescanLibrary,
+
+    // Downloads (v0.0.8, ADR-0025)
+    DownloadFolder,
+    DownloadQuality,
+    DownloadFileNames,
+    DownloadTags,
+
+    /** Wi-Fi Only (Android) and Downloads at Once. */
+    DownloadNetwork,
+
+    /** Space Used and Remove All Downloads…. */
+    DownloadSpace,
 
     // Sources
     AddSource,
@@ -234,6 +252,7 @@ object SettingsLayout {
             SettingsGroup.Transparency,
             SettingsGroup.NowPlayingBackdrop,
             SettingsGroup.Lyrics,
+            SettingsGroup.MiniPlayer,
             SettingsGroup.AppIcon,
             SettingsGroup.Customize,
         )
@@ -242,6 +261,7 @@ object SettingsLayout {
             SettingsGroup.Crossfade,
             SettingsGroup.VolumeLevelling,
             SettingsGroup.Equalizer,
+            SettingsGroup.Streaming,
             SettingsGroup.Startup,
         )
         SettingsSection.Library -> listOf(
@@ -249,6 +269,14 @@ object SettingsLayout {
             SettingsGroup.MusicFolders,
             SettingsGroup.WatchFolders,
             SettingsGroup.RescanLibrary,
+        )
+        SettingsSection.Downloads -> listOf(
+            SettingsGroup.DownloadFolder,
+            SettingsGroup.DownloadQuality,
+            SettingsGroup.DownloadFileNames,
+            SettingsGroup.DownloadTags,
+            SettingsGroup.DownloadNetwork,
+            SettingsGroup.DownloadSpace,
         )
         SettingsSection.Sources -> listOf(SettingsGroup.AddSource, SettingsGroup.Installed, SettingsGroup.CommunityPlugins)
         SettingsSection.Extensions -> listOf(SettingsGroup.JellyfeshPro, SettingsGroup.InstalledExtensions)

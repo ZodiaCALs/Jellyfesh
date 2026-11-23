@@ -12,6 +12,7 @@
     <string name="section_songs">歌曲</string>
     <string name="section_playlists">歌单</string>
     <string name="section_favourites">收藏</string>
+    <string name="section_downloads">下载</string>
     <string name="a11y_library_sections">资料库分区</string>
     <string name="action_cancel">取消</string>
     <string name="action_more">更多</string>
@@ -257,6 +258,7 @@
     <string name="settings_appearance">外观</string>
     <string name="settings_playback">播放</string>
     <string name="settings_library">资料库</string>
+    <string name="settings_downloads">下载</string>
     <string name="settings_sources">来源</string>
     <string name="settings_about">关于</string>
     <string name="settings_appearance_desc">主题、强调色、透明度、背景、歌词、应用图标</string>

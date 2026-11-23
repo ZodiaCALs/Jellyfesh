@@ -103,8 +103,9 @@ data class LookStyle(val state: LookSnapshot) {
 }
 
 /**
- * The look's places on Android (docs/ui.md, Allowed differences): the four bottom tabs stay; the
- * Library tab's switcher shows the library's places the look keeps, in its order.
+ * The look's places on Android: the Library tab's switcher shows the library's places the look
+ * keeps, in its order, then Downloads, which is newer than the look's places. The tab bar and the
+ * sidebar follow the look too ([org.jellyfesh.logic.nav.PhoneTabs], [org.jellyfesh.logic.nav.Sidebar]).
  */
 object LookPlaces {
     fun section(place: Place): org.jellyfesh.logic.nav.LibrarySection? = when (place) {
@@ -116,9 +117,15 @@ object LookPlaces {
         Place.Home, Place.Search, Place.Sources -> null
     }
 
-    /** The switcher's sections: the look's library places in order; all of them when it keeps none. */
-    fun librarySections(style: LookStyle): List<org.jellyfesh.logic.nav.LibrarySection> =
-        style.places.mapNotNull(::section).ifEmpty { org.jellyfesh.logic.nav.LibrarySection.entries }
+    /**
+     * The switcher's sections: the look's library places in order (all of them when it keeps
+     * none), then Downloads.
+     */
+    fun librarySections(style: LookStyle): List<org.jellyfesh.logic.nav.LibrarySection> {
+        val downloads = org.jellyfesh.logic.nav.LibrarySection.Downloads
+        val kept = style.places.mapNotNull(::section).ifEmpty { org.jellyfesh.logic.nav.LibrarySection.entries - downloads }
+        return kept + downloads
+    }
 
     /** The section the Library tab shows: the one chosen while the switcher has it, else its first. */
     fun shown(chosen: org.jellyfesh.logic.nav.LibrarySection, sections: List<org.jellyfesh.logic.nav.LibrarySection>): org.jellyfesh.logic.nav.LibrarySection =

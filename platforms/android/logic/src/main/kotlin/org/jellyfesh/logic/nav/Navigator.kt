@@ -3,18 +3,22 @@ package org.jellyfesh.logic.nav
 import org.jellyfesh.logic.core.ArtworkRef
 import org.jellyfesh.logic.core.ItemKind
 
-/** The four tabs of the bottom bar. */
-enum class Tab { Home, Library, Search, Sources }
+/**
+ * The places of the phone layout's tab bar, up to 760 dp wide (docs/ui.md, "Navigation";
+ * ADR-0023): Home, Library, Search, Sources and Settings. From 761 dp the sidebar panel shows the
+ * same places ([Sidebar]), with the library's sections as places of their own.
+ */
+enum class Tab { Home, Library, Search, Sources, Settings }
 
-/** The library's sections (Misty's segmented control on the Library tab). */
-enum class LibrarySection { Albums, Artists, Songs, Playlists, Favorites }
+/** The library's sections: the Library tab's switcher on phones, the sidebar's places on wider windows. */
+enum class LibrarySection { Albums, Artists, Songs, Playlists, Favorites, Downloads }
 
 /**
- * Settings' sections, in the order every app lists them (docs/ui.md, "Settings"). Android keeps
- * About in Settings; the lyrics settings live in Appearance, with no section of their own.
- * Extensions (v0.0.7) holds Jellyfesh Pro and the extensions.
+ * Settings' sections, in the order every app lists them (docs/ui.md, "Settings"): one page in the
+ * main window, the section chosen at its top. The lyrics settings live in Appearance, with no
+ * section of their own; Extensions holds Jellyfesh Pro and the extensions.
  */
-enum class SettingsSection { Appearance, Playback, Library, Sources, Extensions, About }
+enum class SettingsSection { Appearance, Playback, Library, Downloads, Sources, Extensions, About }
 
 /** A screen in a tab's back stack. */
 sealed interface Screen {
@@ -44,7 +48,8 @@ sealed interface Screen {
         val subtitle: String? = null,
         val artwork: ArtworkRef? = null,
     ) : Screen
-    data class Settings(val section: SettingsSection? = null) : Screen
+    /** Settings, one page with its sections (the Settings tab's root, or the sidebar's foot). */
+    data class Settings(val section: SettingsSection = SettingsSection.Appearance) : Screen
 
     /** An extension's page in Settings › Extensions (AI Lyrics, Customize). */
     data class Extension(val pluginId: String) : Screen
@@ -69,6 +74,7 @@ data class NavState(
             Tab.Library -> Screen.Library()
             Tab.Search -> Screen.Search
             Tab.Sources -> Screen.Sources
+            Tab.Settings -> Screen.Settings()
         }
     }
 }
@@ -101,6 +107,25 @@ object Navigator {
         state.tab != Tab.Home -> state.copy(tab = Tab.Home)
         else -> null
     }
+
+    /**
+     * A library section from the switcher or the sidebar: the Library tab at that section's page,
+     * whatever was open in the tab before.
+     */
+    fun openLibrary(state: NavState, section: LibrarySection): NavState =
+        state.copy(tab = Tab.Library, stacks = state.stacks + (Tab.Library to listOf(Screen.Library(section))), nowPlayingOpen = false)
+
+    /** Settings at [section] (Sources Settings…, Open AI Lyrics Settings): the Settings tab's page. */
+    fun openSettings(state: NavState, section: SettingsSection): NavState =
+        state.copy(tab = Tab.Settings, stacks = state.stacks + (Tab.Settings to listOf(Screen.Settings(section))), nowPlayingOpen = false)
+
+    /** An extension's page (Open AI Lyrics Settings): Settings › Extensions, with the page on top. */
+    fun openExtension(state: NavState, pluginId: String): NavState =
+        push(openSettings(state, SettingsSection.Extensions), Screen.Extension(pluginId))
+
+    /** Another section at the top of the Settings page: the page stays, its section changes. */
+    fun showSettingsSection(state: NavState, section: SettingsSection): NavState =
+        if (state.screen is Screen.Settings) replaceTop(state, Screen.Settings(section)) else openSettings(state, section)
 
     fun openNowPlaying(state: NavState): NavState = state.copy(nowPlayingOpen = true)
 

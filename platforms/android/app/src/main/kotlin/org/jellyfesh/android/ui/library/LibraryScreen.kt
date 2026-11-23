@@ -34,6 +34,8 @@ import org.jellyfesh.android.QueryResult
 import org.jellyfesh.android.R
 import org.jellyfesh.android.images.ArtKey
 import org.jellyfesh.android.ui.LocalChromePadding
+import org.jellyfesh.android.ui.LocalWindowWidthDp
+import org.jellyfesh.android.ui.theme.PillTabs
 import org.jellyfesh.android.ui.actions.TrackTarget
 import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.components.AlbumCard
@@ -74,6 +76,7 @@ import org.jellyfesh.logic.format.Labels
 import org.jellyfesh.logic.images.ArtworkSizes
 import org.jellyfesh.logic.library.SortMenus
 import org.jellyfesh.logic.library.SortOrder
+import org.jellyfesh.logic.nav.Layout
 import org.jellyfesh.logic.nav.LibrarySection
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.state.CoreState
@@ -82,27 +85,30 @@ import org.jellyfesh.tokens.Tokens
 import org.jellyfesh.android.ui.theme.rounded
 
 /**
- * The Library tab: Albums, Artists, Songs, Playlists and Favourites under one segmented control,
- * in the look's order and only those the look keeps (ADR-0020; the four tabs stay).
+ * A library page (docs/ui.md, "Navigation"): Albums, Artists, Songs, Playlists, Favourites or
+ * Downloads, under its own title. In the phone layout the Library tab switches between them with
+ * Jellyfesh Web's pills above the title, in the look's order and only those the look keeps
+ * (ADR-0020); wider windows open each from the sidebar.
  */
 @Composable
 fun LibraryScreen(chosen: LibrarySection, state: CoreState) {
     val nav = LocalNav.current
     val sections = LookPlaces.librarySections(Jf.look)
     val section = LookPlaces.shown(chosen, sections)
+    val phone = !Layout.usesSidebar(LocalWindowWidthDp.current)
     val header: @Composable () -> Unit = {
         Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
-            ScreenTitle(stringResource(R.string.tab_library)) {
-                JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
+            if (phone) {
+                PillTabs(
+                    options = sections,
+                    selected = section,
+                    label = { stringResource(sectionLabel(it)) },
+                    onSelect = { nav.openLibrary(it) },
+                    description = stringResource(R.string.a11y_library_sections),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+                )
             }
-            SegmentedControl(
-                options = sections,
-                selected = section,
-                label = { stringResource(sectionLabel(it)) },
-                onSelect = { nav.replaceTop(Screen.Library(it)) },
-                description = stringResource(R.string.a11y_library_sections),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
+            ScreenTitle(stringResource(sectionLabel(section)))
         }
     }
     when (section) {
@@ -111,6 +117,7 @@ fun LibraryScreen(chosen: LibrarySection, state: CoreState) {
         LibrarySection.Songs -> SongsList(state, header)
         LibrarySection.Playlists -> PlaylistsList(state, header)
         LibrarySection.Favorites -> FavouritesList(state, header)
+        LibrarySection.Downloads -> DownloadsPage(header)
     }
 }
 
@@ -120,6 +127,20 @@ fun sectionLabel(section: LibrarySection): Int = when (section) {
     LibrarySection.Songs -> R.string.section_songs
     LibrarySection.Playlists -> R.string.section_playlists
     LibrarySection.Favorites -> R.string.section_favourites
+    LibrarySection.Downloads -> R.string.section_downloads
+}
+
+/**
+ * Downloads (ADR-0025): what downloads, then the downloaded albums and songs. The core's
+ * downloads arrive with v0.0.8's contract; until then the page says so rather than showing an
+ * empty list as if downloading worked.
+ */
+@Composable
+private fun DownloadsPage(header: @Composable () -> Unit) {
+    LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
+        item(key = "header") { header() }
+        item(key = "state") { Notice(stringResource(R.string.not_available_yet)) }
+    }
 }
 
 /** Shared bottom space: the floating chrome plus a margin. */

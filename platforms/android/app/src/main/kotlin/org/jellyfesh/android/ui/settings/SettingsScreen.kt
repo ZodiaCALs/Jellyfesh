@@ -52,10 +52,8 @@ import kotlinx.coroutines.launch
 import org.jellyfesh.android.BuildConfig
 import org.jellyfesh.android.QueryResult
 import org.jellyfesh.android.R
-import org.jellyfesh.android.ui.components.BackBar
 import org.jellyfesh.android.ui.components.ChoiceRow
 import org.jellyfesh.android.ui.components.Divider
-import org.jellyfesh.android.ui.components.InitialTile
 import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.components.LocalOverlays
@@ -68,7 +66,6 @@ import org.jellyfesh.android.ui.components.SettingRow
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.data.ok
 import org.jellyfesh.android.ui.data.rememberQuery
-import org.jellyfesh.android.ui.library.barFade
 import org.jellyfesh.android.ui.library.listPadding
 import org.jellyfesh.android.ui.library.rememberLibraryAccess
 import org.jellyfesh.android.ui.nav.LocalNav
@@ -89,9 +86,10 @@ import org.jellyfesh.android.ui.theme.JfSwitch
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.android.ui.theme.MistyField
 import org.jellyfesh.android.ui.theme.SegmentedControl
+import org.jellyfesh.android.ui.theme.PillTabs
+import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.android.ui.theme.TouchTarget
 import org.jellyfesh.android.ui.theme.VerticalBandSlider
-import org.jellyfesh.android.ui.theme.topEdgeFade
 import org.jellyfesh.logic.core.AppearancePref
 import org.jellyfesh.logic.core.BackdropStyle
 import org.jellyfesh.logic.core.Command
@@ -120,25 +118,29 @@ import org.jellyfesh.tokens.Tokens
 import org.jellyfesh.android.ui.theme.rounded
 
 /**
- * Settings. The core owns every setting: a change sends a modified copy of the slice
- * (`SetSettings`) or the narrower command the core offers (EQ, ReplayGain, crossfade, output), and
- * the screen shows the slice the core sends back. The sections and their groups come in the order
- * every app uses (docs/ui.md, "Settings"; [SettingsLayout]).
+ * Settings, one page as on Jellyfesh Web (docs/ui.md, "Settings"; ADR-0023): its title, the
+ * sections as pills at the top (Appearance, Playback, Library, Downloads, Sources, Extensions,
+ * About), then the chosen section's groups. The core owns every setting: a change sends a
+ * modified copy of the slice (`SetSettings`) or the narrower command the core offers (EQ,
+ * ReplayGain, crossfade, output), and the page shows the slice the core sends back. The groups
+ * come in the order every app uses ([SettingsLayout]).
  */
 @Composable
-fun SettingsScreen(section: SettingsSection?, state: CoreState) {
+fun SettingsScreen(section: SettingsSection, state: CoreState) {
     val nav = LocalNav.current
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
-            item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
-            item(key = "title") { ScreenTitle(stringResource(section?.let(::sectionTitle) ?: R.string.settings_title)) }
-            if (section == null) {
-                sectionList()
-            } else {
-                SettingsLayout.groups(section).forEach { group(it, state) }
-            }
+    LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
+        item(key = "title") { ScreenTitle(stringResource(R.string.settings_title), Modifier.windowInsetsPadding(WindowInsets.statusBars)) }
+        item(key = "sections") {
+            PillTabs(
+                options = SettingsSection.entries,
+                selected = section,
+                label = { stringResource(sectionTitle(it)) },
+                onSelect = nav::showSettingsSection,
+                description = stringResource(R.string.settings_title),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+            )
         }
-        BackBar(onBack = nav::back, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars))
+        SettingsLayout.groups(section).forEach { group(it, state) }
     }
 }
 
@@ -146,44 +148,10 @@ fun sectionTitle(section: SettingsSection): Int = when (section) {
     SettingsSection.Appearance -> R.string.settings_appearance
     SettingsSection.Playback -> R.string.settings_playback
     SettingsSection.Library -> R.string.settings_library
+    SettingsSection.Downloads -> R.string.settings_downloads
     SettingsSection.Sources -> R.string.settings_sources
     SettingsSection.Extensions -> R.string.settings_extensions
     SettingsSection.About -> R.string.settings_about
-}
-
-private fun sectionDescription(section: SettingsSection): Int = when (section) {
-    SettingsSection.Appearance -> R.string.settings_appearance_desc
-    SettingsSection.Playback -> R.string.settings_playback_desc
-    SettingsSection.Library -> R.string.settings_library_desc
-    SettingsSection.Sources -> R.string.settings_sources_desc
-    SettingsSection.Extensions -> R.string.settings_extensions_desc
-    SettingsSection.About -> R.string.settings_about_desc
-}
-
-private fun sectionIcon(section: SettingsSection): Int = when (section) {
-    SettingsSection.Appearance -> R.drawable.ic_palette
-    SettingsSection.Playback -> R.drawable.ic_eq
-    SettingsSection.Library -> R.drawable.ic_library
-    SettingsSection.Sources -> R.drawable.ic_sources
-    SettingsSection.Extensions -> R.drawable.ic_sparkle
-    SettingsSection.About -> R.drawable.ic_info
-}
-
-private fun LazyListScope.sectionList() {
-    item(key = "sections") {
-        val nav = LocalNav.current
-        Panel {
-            SettingsSection.entries.forEachIndexed { i, s ->
-                if (i > 0) Divider()
-                NavRow(
-                    title = stringResource(sectionTitle(s)),
-                    subtitle = stringResource(sectionDescription(s)),
-                    onClick = { nav.push(Screen.Settings(s)) },
-                    leading = { InitialTile(stringResource(sectionTitle(s)), icon = sectionIcon(s)) },
-                )
-            }
-        }
-    }
 }
 
 /** One group of a settings page: its heading (when it has a name of its own) and its panel. */
@@ -199,6 +167,9 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
             item(key = "icon") { AppIconPicker(state.settings) }
         }
         SettingsGroup.Customize -> customize(state)
+        // v0.0.8's Mini Player in Picture-in-Picture and Streaming Quality are core settings
+        // that arrive with its contract: shown from then on.
+        SettingsGroup.MiniPlayer, SettingsGroup.Streaming -> Unit
         SettingsGroup.Output -> output(state)
         SettingsGroup.Crossfade -> crossfade(state.settings)
         SettingsGroup.VolumeLevelling -> volumeLevelling(state.settings)
@@ -211,6 +182,15 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.MusicFolders -> musicFolders(state)
         SettingsGroup.WatchFolders -> watchFolders(state.settings)
         SettingsGroup.RescanLibrary -> rescan(state)
+        // Downloads (ADR-0025) needs the core's downloads, which arrive with v0.0.8's contract:
+        // until then the section says so once.
+        SettingsGroup.DownloadFolder -> item(key = "downloads-pending") { Notice(stringResource(R.string.not_available_yet)) }
+        SettingsGroup.DownloadQuality,
+        SettingsGroup.DownloadFileNames,
+        SettingsGroup.DownloadTags,
+        SettingsGroup.DownloadNetwork,
+        SettingsGroup.DownloadSpace,
+        -> Unit
         SettingsGroup.AddSource -> addSource(state)
         SettingsGroup.Installed -> installed(state)
         SettingsGroup.CommunityPlugins -> communityPlugins(state)

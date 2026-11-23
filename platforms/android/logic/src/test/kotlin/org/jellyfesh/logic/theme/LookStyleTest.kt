@@ -82,9 +82,11 @@ class LookStyleTest {
     @Test
     fun theLibrarySwitcherFollowsTheLooksPlaces() {
         val style = LookStyle(custom)
-        assertEquals(listOf(LibrarySection.Songs, LibrarySection.Albums), LookPlaces.librarySections(style))
+        // Downloads is newer than the look's places: always last.
+        assertEquals(listOf(LibrarySection.Songs, LibrarySection.Albums, LibrarySection.Downloads), LookPlaces.librarySections(style))
         assertEquals(LibrarySection.Songs, LookPlaces.shown(LibrarySection.Playlists, LookPlaces.librarySections(style)))
         assertEquals(LibrarySection.Albums, LookPlaces.shown(LibrarySection.Albums, LookPlaces.librarySections(style)))
+        assertEquals(LibrarySection.Downloads, LookPlaces.shown(LibrarySection.Downloads, LookPlaces.librarySections(style)))
         // Without any of the switcher's places, every section stays.
         assertEquals(LibrarySection.entries, LookPlaces.librarySections(LookStyle(custom.copy(sidebar = listOf(Place.Home, Place.Sources)))))
         assertEquals(LibrarySection.entries, LookPlaces.librarySections(LookStyle.Luminous))

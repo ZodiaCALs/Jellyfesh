@@ -73,6 +73,9 @@ import org.jellyfesh.logic.nav.NavState
 import org.jellyfesh.logic.nav.Navigator
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.nav.SettingsSection
+import org.jellyfesh.logic.nav.PhoneTabs
+import org.jellyfesh.logic.nav.Sidebar
+import org.jellyfesh.logic.nav.SidebarPlace
 import org.jellyfesh.logic.nav.Tab
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.RepeatMode
@@ -110,12 +113,20 @@ class NavController(private val state: MutableStateFlow<NavState>) {
 
     fun openPlaylist(id: Long, name: String) = push(Screen.Playlist(id, name))
 
-    fun openSettings(section: SettingsSection? = null) = push(Screen.Settings(section))
+    /** Settings at [section] (Sources Settings…): the Settings tab, or the sidebar's foot. */
+    fun openSettings(section: SettingsSection = SettingsSection.Appearance) = state.update { Navigator.openSettings(it, section) }
 
-    fun openLibrary(section: LibrarySection) {
-        select(Tab.Library)
-        replaceTop(Screen.Library(section))
-    }
+    /** An extension's page in Settings › Extensions (Open AI Lyrics Settings). */
+    fun openExtension(pluginId: String) = state.update { Navigator.openExtension(it, pluginId) }
+
+    /** Another section at the top of the Settings page. */
+    fun showSettingsSection(section: SettingsSection) = state.update { Navigator.showSettingsSection(it, section) }
+
+    /** A library section from the switcher or the sidebar. */
+    fun openLibrary(section: LibrarySection) = state.update { Navigator.openLibrary(it, section) }
+
+    /** A place of the sidebar panel (761 dp and wider). */
+    fun select(place: SidebarPlace) = state.update { Sidebar.select(it, place) }
 }
 
 val LocalNav = staticCompositionLocalOf<NavController> { error("NavController is missing") }
@@ -216,7 +227,7 @@ private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = 
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Tab.entries.forEach { tab ->
+            PhoneTabs.tabs(Jf.look).forEach { tab ->
                 val isSelected = tab == selected
                 val label = stringResource(tabLabel(tab))
                 Column(
@@ -247,6 +258,7 @@ fun tabLabel(tab: Tab): Int = when (tab) {
     Tab.Library -> R.string.tab_library
     Tab.Search -> R.string.tab_search
     Tab.Sources -> R.string.tab_sources
+    Tab.Settings -> R.string.settings_title
 }
 
 private fun tabIcon(tab: Tab): Int = when (tab) {
@@ -254,6 +266,7 @@ private fun tabIcon(tab: Tab): Int = when (tab) {
     Tab.Library -> R.drawable.ic_library
     Tab.Search -> R.drawable.ic_search
     Tab.Sources -> R.drawable.ic_sources
+    Tab.Settings -> R.drawable.ic_settings
 }
 
 /**

@@ -96,6 +96,7 @@ import org.jellyfesh.logic.sources.BrowseState
 import org.jellyfesh.logic.sources.Disclosure
 import org.jellyfesh.logic.sources.Links
 import org.jellyfesh.logic.sources.SourceItems
+import org.jellyfesh.logic.sources.SourceOpen
 import org.jellyfesh.logic.sources.SourceState
 import org.jellyfesh.logic.sources.YourSources
 import org.jellyfesh.logic.state.CoreState
@@ -110,6 +111,7 @@ import org.jellyfesh.logic.state.CoreState
 fun SourcesScreen(state: CoreState) {
     val nav = LocalNav.current
     val connect = rememberConnectSheet()
+    val signIn = rememberSignIn()
     // Extensions (AI Lyrics, Customize) are in Settings › Extensions, not among the sources.
     val plugins = YourSources.sources(state.sources.plugins)
     val presets = state.sources.presets
@@ -119,9 +121,7 @@ fun SourcesScreen(state: CoreState) {
                 stringResource(R.string.tab_sources),
                 Modifier.windowInsetsPadding(WindowInsets.statusBars),
                 subtitle = stringResource(R.string.sources_subtitle),
-            ) {
-                JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
-            }
+            )
         }
         // Android 17: sources on the home network need Local Network access.
         item(key = "local-network") { LocalNetworkNotice(state.sources.plugins) }
@@ -140,7 +140,14 @@ fun SourcesScreen(state: CoreState) {
             NavRow(
                 title = plugin.name,
                 subtitle = pluginStatus(plugin),
-                onClick = { nav.push(YourSources.opens(plugin)) },
+                onClick = {
+                    // As on Jellyfesh Web: its Discover page, else signing in, else Settings › Sources.
+                    when (val open = YourSources.opens(plugin)) {
+                        is SourceOpen.Page -> nav.push(open.screen)
+                        SourceOpen.SignIn -> plugin.authMethods.firstOrNull()?.let { signIn.start(plugin, it) }
+                        SourceOpen.Settings -> nav.openSettings(SettingsSection.Sources)
+                    }
+                },
                 leading = { PluginIcon(plugin.name, plugin.icon) },
             )
         }

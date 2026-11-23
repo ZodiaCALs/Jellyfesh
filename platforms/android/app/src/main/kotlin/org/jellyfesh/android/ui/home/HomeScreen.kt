@@ -41,7 +41,6 @@ import org.jellyfesh.android.ui.data.rememberQuery
 import org.jellyfesh.android.ui.library.LibraryAccessButtons
 import org.jellyfesh.android.ui.nav.LocalNav
 import org.jellyfesh.android.ui.theme.Jf
-import org.jellyfesh.android.ui.theme.JfIconButton
 import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.logic.core.AlbumSort
@@ -97,9 +96,7 @@ fun HomeScreen(state: CoreState) {
                 stringResource(R.string.tab_home),
                 modifier = Modifier.windowInsetsPadding(statusInset),
                 subtitle = if (summaryUnderTitle) librarySummary((stats as? QueryResult.Ok)?.value) else null,
-            ) {
-                JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
-            }
+            )
         }
         // Android 17: sources on the home network need Local Network access.
         item(key = "local-network") { org.jellyfesh.android.ui.sources.LocalNetworkNotice(state.sources.plugins) }
