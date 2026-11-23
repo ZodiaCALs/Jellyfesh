@@ -877,7 +877,11 @@ extension DownloadsState {
 extension SearchBatch {
     init(_ u: SearchUpdate) {
         self.init(request: u.request, query: u.query, source: u.source, items: u.items.map(SourceResult.init),
-                  error: u.error, done: u.done)
+                  error: u.error, done: u.done, merged: u.merged,
+                  groups: u.groups.map { group in
+                      SearchKindGroup(kind: ResultKind(group.kind), items: group.items.map(SourceResult.init),
+                                      next: group.next, total: group.total)
+                  })
     }
 }
 

@@ -29,6 +29,41 @@ final class SearchStoreTests: XCTestCase {
         XCTAssertFalse(store.foundNothing)
     }
 
+    func testTabsShowMoreAndTheSourcesSearchedApart() {
+        let client = FakeCoreClient()
+        let store = SearchStore(client: client, tracker: CommandTracker())
+        store.search("tide")
+        let request = client.lastCommandID
+        let song = Fixture.result("s1", source: "org.example.subsonic")
+        let spotify = Fixture.result("sp1", source: "org.example.spotify")
+        store.apply(SearchBatch(request: request, query: "tide", source: SearchStore.library,
+                                items: [Fixture.result("1", source: SearchStore.library)], error: nil, done: false))
+        store.apply(SearchBatch(request: request, query: "tide", source: "org.example.subsonic", items: [song],
+                                error: nil, done: false, merged: true,
+                                groups: [SearchKindGroup(kind: .track, items: [song], next: "c2", total: 40)]))
+        store.apply(SearchBatch(request: request, query: "tide", source: "org.example.spotify", items: [spotify],
+                                error: nil, done: true, merged: false,
+                                groups: [SearchKindGroup(kind: .track, items: [spotify], next: nil, total: 1)]))
+        XCTAssertEqual(store.tabs, [.all, .library, .source("org.example.subsonic"), .source("org.example.spotify")])
+        XCTAssertEqual(store.sourceSections.map(\.source), ["org.example.subsonic"], "From Your Sources merges only")
+        XCTAssertEqual(store.separateSections.map(\.source), ["org.example.spotify"], "linked from All")
+
+        store.showMore(source: "org.example.subsonic", kind: .track)
+        XCTAssertEqual(client.sent.last, .searchMore(plugin: "org.example.subsonic", kind: .track, cursor: "c2"))
+        XCTAssertTrue(store.loadingMore.contains(SearchStore.moreKey("org.example.subsonic", .track)))
+        let more = Fixture.result("s2", source: "org.example.subsonic")
+        store.apply(page: SearchPageBatch(request: client.lastCommandID, query: "tide", source: "org.example.subsonic",
+                                          kind: .track, items: [song, more], next: nil, error: nil))
+        let group = store.section(for: "org.example.subsonic")?.groups.first
+        XCTAssertEqual(group?.items.map(\.itemID), ["s1", "s2"], "new rows join their group once")
+        XCTAssertNil(group?.next, "no more to show")
+        XCTAssertTrue(store.loadingMore.isEmpty)
+
+        store.tab = .source("org.example.spotify")
+        store.search("harbour")
+        XCTAssertEqual(store.tab, .all, "a new search starts on All")
+    }
+
     func testARepeatedSourceReplacesItsSection() {
         let client = FakeCoreClient()
         let store = SearchStore(client: client, tracker: CommandTracker())

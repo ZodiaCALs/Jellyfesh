@@ -914,9 +914,24 @@ struct SearchBatch: Hashable, Sendable {
     var request: CommandID
     var query: String
     var source: String
+    /// The All tab's rows.
     var items: [SourceResult]
     var error: String?
     var done: Bool
+    /// Part of the merged results (the library, From Your Sources); false for a source whose terms
+    /// forbid merging, whose results stay in a section of their own (ADR-0024 §4).
+    var merged = true
+    /// The source's own results kind by kind, for its tab.
+    var groups: [SearchKindGroup] = []
+}
+
+/// One kind of a source's search results, for its tab (`SearchGroup`).
+struct SearchKindGroup: Hashable, Sendable {
+    var kind: ResultKind
+    var items: [SourceResult]
+    /// Show More's cursor; nil when there is no more.
+    var next: String?
+    var total: UInt32?
 }
 
 /// One page of a source's catalogue (`BrowseUpdate`).

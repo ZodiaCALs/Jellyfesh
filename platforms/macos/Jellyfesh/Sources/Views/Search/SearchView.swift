@@ -1,13 +1,17 @@
-// Unified search: the library's results first, then From Your Sources, one group per enabled
-// source, each appearing as it arrives, grouped by kind; Apple Music, when on, in its own group
-// after them (ADR-0010: never merged with other sources). Library albums, artists and playlists
-// open their pages; a source's containers open in Browse; an item that cannot play here but has a
-// link opens it in its service.
+// Search by source (ADR-0024 §4, docs/ui.md "Search"): the field, then the tabs All, Library and one
+// per source that answered. All: the library's results first, then From Your Sources, one group per
+// source that allows merging, each appearing as it arrives, grouped by kind; Apple Music, when on,
+// in its own group (ADR-0010: never merged with other sources); then a link to the tab of each
+// source whose terms forbid merging ("Results from Spotify"). A source's tab: its Songs, Albums,
+// Artists and Playlists, each with Show More. Library albums, artists and playlists open their
+// pages; a source's containers open in Browse; an item that cannot play here but has a link opens
+// it in its service.
 
 import SwiftUI
 
 struct SearchView: View {
     @Environment(SearchStore.self) private var search
+    @Environment(SourcesStore.self) private var sources
     @Environment(AppleMusicStore.self) private var appleMusic
     @Environment(Router.self) private var router
     @Environment(\.palette) private var palette
@@ -55,23 +59,21 @@ struct SearchView: View {
                                message: "Try other words.")
                         .frame(maxWidth: .infinity, minHeight: 320)
                 } else {
-                    if let library = search.librarySection {
-                        SearchSectionView(section: library, showsSource: false)
-                    }
-                    let fromSources = search.sourceSections
-                    if !fromSources.isEmpty {
-                        VStack(alignment: .leading, spacing: Tokens.Space.s5) {
-                            Text("From Your Sources")
-                                .lookFont(size: 22, weight: .bold)
-                                .foregroundStyle(palette[Tokens.Ink.ink90])
-                                .accessibilityAddTraits(.isHeader)
-                            ForEach(fromSources) { section in
-                                SearchSectionView(section: section, showsSource: true)
-                            }
+                    PillTabs(selection: $search.tab, options: tabOptions, label: "Search")
+                    switch search.tab {
+                    case .all:
+                        allTab
+                    case .library:
+                        if let library = search.librarySection {
+                            SearchSectionView(section: library, showsSource: false)
+                        } else {
+                            EmptyState(title: "No Results", symbol: "magnifyingglass", message: "Try other words.")
+                                .frame(maxWidth: .infinity, minHeight: 240)
                         }
-                    }
-                    if appleMusic.isAvailable {
-                        AppleMusicResultsView(search: appleMusic.unifiedSearch, showsTitle: true)
+                    case .source(let id):
+                        if let section = search.section(for: id) {
+                            SourceTabView(section: section)
+                        }
                     }
                 }
             }
@@ -91,6 +93,63 @@ struct SearchView: View {
         }
     }
 
+    /// All, Library, and each source that answered, by its name.
+    private var tabOptions: [PillTabs<SearchTab>.Option] {
+        search.tabs.map { tab in
+            switch tab {
+            case .all: return PillTabs<SearchTab>.Option(value: tab, title: "All")
+            case .library: return PillTabs<SearchTab>.Option(value: tab, title: "Library")
+            case .source(let id): return PillTabs<SearchTab>.Option(value: tab, verbatim: sources.name(of: id))
+            }
+        }
+    }
+
+    /// The library first, From Your Sources, Apple Music, then the separate sources' links.
+    @ViewBuilder private var allTab: some View {
+        if let library = search.librarySection {
+            SearchSectionView(section: library, showsSource: false)
+        }
+        let fromSources = search.sourceSections
+        if !fromSources.isEmpty {
+            VStack(alignment: .leading, spacing: Tokens.Space.s5) {
+                Text("From Your Sources")
+                    .lookFont(size: 22, weight: .bold)
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                    .accessibilityAddTraits(.isHeader)
+                ForEach(fromSources) { section in
+                    SearchSectionView(section: section, showsSource: true)
+                }
+            }
+        }
+        if appleMusic.isAvailable {
+            AppleMusicResultsView(search: appleMusic.unifiedSearch, showsTitle: true)
+        }
+        let separate = search.separateSections
+        if !separate.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(separate) { section in
+                    Button {
+                        search.tab = .source(section.source)
+                    } label: {
+                        HStack(spacing: Tokens.Space.s2) {
+                            Text("Results from \(sources.name(of: section.source))")
+                                .lookFont(size: 15, weight: .semibold)
+                                .foregroundStyle(palette[Tokens.Accent.accentText])
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(palette[Tokens.Ink.ink50])
+                        }
+                        .frame(minHeight: Tokens.Player.rowHeight)
+                        .padding(.horizontal, Tokens.Space.s4)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .surfaceCard()
+        }
+    }
+
     private var appleMusicFound: Bool {
         appleMusic.isAvailable && !appleMusic.unifiedSearch.results.isEmpty
     }
@@ -106,15 +165,8 @@ private struct SearchSectionView: View {
     var section: SearchSection
     var showsSource: Bool
 
-    @Environment(SearchStore.self) private var search
     @Environment(SourcesStore.self) private var sources
-    @Environment(PlaybackStore.self) private var playback
-    @Environment(Router.self) private var router
     @Environment(\.palette) private var palette
-
-    private let columns = [
-        GridItem(.adaptive(minimum: 140, maximum: 190), spacing: Tokens.Space.s5, alignment: .top),
-    ]
 
     var body: some View {
         if !section.items.isEmpty || section.error != nil {
@@ -136,14 +188,83 @@ private struct SearchSectionView: View {
                         .foregroundStyle(palette[Tokens.Semantic.danger])
                 }
                 ForEach(section.kinds, id: \.self) { kind in
-                    kindGroup(kind)
+                    SearchKindView(kind: kind, items: section.items(of: kind))
                 }
             }
         }
     }
+}
 
-    @ViewBuilder private func kindGroup(_ kind: ResultKind) -> some View {
-        let items = section.items(of: kind)
+/// A source's tab: its name (and credit), then its results kind by kind, each with Show More while
+/// the source has more.
+private struct SourceTabView: View {
+    var section: SearchSection
+
+    @Environment(SearchStore.self) private var search
+    @Environment(SourcesStore.self) private var sources
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s6) {
+            VStack(alignment: .leading, spacing: Tokens.Space.s1) {
+                Text(sources.name(of: section.source))
+                    .typography(Tokens.TypeRoles.section)
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                    .accessibilityAddTraits(.isHeader)
+                if let credit = sources.attribution(of: section.source) {
+                    Text(credit)
+                        .typography(Tokens.TypeRoles.listSecondary)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                }
+            }
+            if let error = section.error {
+                Text(error)
+                    .lookFont(size: 13)
+                    .foregroundStyle(palette[Tokens.Semantic.danger])
+            }
+            ForEach(section.tabGroups, id: \.kind) { group in
+                let key = SearchStore.moreKey(section.source, group.kind)
+                let loading = search.loadingMore.contains(key)
+                VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+                    SearchKindView(kind: group.kind, items: group.items)
+                    if group.next != nil || loading {
+                        HStack(spacing: Tokens.Space.s2) {
+                            Button("Show More") {
+                                search.showMore(source: section.source, kind: group.kind)
+                            }
+                            .disabled(loading)
+                            if loading {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                    }
+                    if let error = search.moreErrors[key] {
+                        Text(error)
+                            .lookFont(size: 12)
+                            .foregroundStyle(palette[Tokens.Ink.ink70])
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// One kind of results: songs as rows that play, albums as cards, the rest as rows.
+private struct SearchKindView: View {
+    var kind: ResultKind
+    var items: [SourceResult]
+
+    @Environment(SearchStore.self) private var search
+    @Environment(SourcesStore.self) private var sources
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(\.palette) private var palette
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 140, maximum: 190), spacing: Tokens.Space.s5, alignment: .top),
+    ]
+
+    var body: some View {
         VStack(alignment: .leading, spacing: Tokens.Space.s2) {
             Text(Self.title(of: kind))
                 .lookFont(size: 13, weight: .semibold)

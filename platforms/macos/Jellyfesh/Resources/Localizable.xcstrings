@@ -8355,6 +8355,28 @@
         }
       }
     },
+    "Results from %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の結果"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 %@ 的结果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "來自 %@ 的結果"
+          }
+        }
+      }
+    },
     "Resume Playback": {
       "localizations": {
         "ja": {
@@ -8769,6 +8791,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示歌詞行"
+          }
+        }
+      }
+    },
+    "Show More": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "さらに表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示更多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示更多"
           }
         }
       }

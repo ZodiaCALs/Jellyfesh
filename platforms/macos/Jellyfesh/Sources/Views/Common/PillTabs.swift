@@ -7,8 +7,19 @@ import SwiftUI
 struct PillTabs<Value: Hashable>: View {
     struct Option: Identifiable {
         var value: Value
-        var title: LocalizedStringKey
+        var title: Text
         var id: Value { value }
+
+        init(value: Value, title: LocalizedStringKey) {
+            self.value = value
+            self.title = Text(title)
+        }
+
+        /// A name shown as it is (a source's).
+        init(value: Value, verbatim: String) {
+            self.value = value
+            self.title = Text(verbatim: verbatim)
+        }
     }
 
     @Binding var selection: Value
@@ -51,7 +62,7 @@ private struct PillTabsRow<Value: Hashable>: View {
 }
 
 private struct PillTab: View {
-    var title: LocalizedStringKey
+    var title: Text
     var selected: Bool
     var stretch: Bool
     var action: () -> Void
@@ -61,7 +72,7 @@ private struct PillTab: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
+            title
                 .lookFont(size: 14, weight: .semibold)
                 .lineLimit(1)
                 .fixedSize()
