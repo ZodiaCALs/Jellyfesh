@@ -18,8 +18,13 @@ struct SongsView: View {
         let items = list.items.map { TrackItem(song: $0, favorite: favorites.contains($0.reference)) }
         List(selection: $selection) {
             PageHeader(title: String(localized: "Songs"), subtitle: subtitle) {
-                PlayShuffleButtons(disabled: list.items.isEmpty) { shuffle in
-                    songs.playAll(shuffle: shuffle, on: playback)
+                HStack(spacing: Tokens.Space.s2) {
+                    PlayShuffleButtons(disabled: list.items.isEmpty) { shuffle in
+                        songs.playAll(shuffle: shuffle, on: playback)
+                    }
+                    if !list.items.isEmpty {
+                        sortMenu
+                    }
                 }
             }
             .padding(.vertical, Tokens.Space.s4)
@@ -46,30 +51,6 @@ struct SongsView: View {
             }
         }
         .navigationTitle(Text("Songs"))
-        .toolbar {
-            ToolbarItem {
-                Menu {
-                    Picker("Sort By", selection: Binding(
-                        get: { songs.sort },
-                        set: { sort in Task { @MainActor in await songs.choose(sort, revision: library.revision) } }
-                    )) {
-                        Text("Title").tag(SongSort.title)
-                        Text("Artist").tag(SongSort.artist)
-                        Text("Album").tag(SongSort.album)
-                        Text("Year").tag(SongSort.year)
-                        Text("Recently Added").tag(SongSort.added)
-                    }
-                    .pickerStyle(.inline)
-                    Toggle("Descending", isOn: Binding(
-                        get: { songs.descending },
-                        set: { value in Task { @MainActor in await songs.setSort(songs.sort, descending: value, revision: library.revision) } }
-                    ))
-                } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
-                }
-                .help(Text("Sort Songs"))
-            }
-        }
         .task(id: library.revision) {
             await list.load(revision: library.revision)
         }
@@ -86,6 +67,31 @@ struct SongsView: View {
     private var subtitle: String? {
         guard let count = library.stats?.tracks, count > 0 else { return nil }
         return CountText.songs(Int(count))
+    }
+
+    /// Sort, after Play and Shuffle as on the web: the orders and Descending.
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort By", selection: Binding(
+                get: { songs.sort },
+                set: { sort in Task { @MainActor in await songs.choose(sort, revision: library.revision) } }
+            )) {
+                Text("Title").tag(SongSort.title)
+                Text("Artist").tag(SongSort.artist)
+                Text("Album").tag(SongSort.album)
+                Text("Year").tag(SongSort.year)
+                Text("Recently Added").tag(SongSort.added)
+            }
+            .pickerStyle(.inline)
+            Toggle("Descending", isOn: Binding(
+                get: { songs.descending },
+                set: { value in Task { @MainActor in await songs.setSort(songs.sort, descending: value, revision: library.revision) } }
+            ))
+        } label: {
+            Label("Sort", systemImage: "arrow.up.arrow.down")
+        }
+        .fixedSize()
+        .help(Text("Sort Songs"))
     }
 }
 

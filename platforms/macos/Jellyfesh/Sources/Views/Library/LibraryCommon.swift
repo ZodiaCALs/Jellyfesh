@@ -83,9 +83,9 @@ struct AlbumCard: View {
 }
 
 /// The header of an album, playlist or artist page, the library's and a source's alike (docs/ui.md,
-/// "Album, artist and playlist pages"): the artwork (240 pt, `artwork.radius-grid` on shadow-2; a
-/// circle for an artist), the kind, the title, the artist in accent text (a link when it opens the
-/// artist), the facts and a credit, then the page's actions (Play, Shuffle, More).
+/// "Album, artist and playlist pages"): Back, the artwork (240 pt, `artwork.radius-grid` on
+/// shadow-2; a circle for an artist), the kind, the title, the artist in accent text (a link when it
+/// opens the artist), the facts and a credit, then the page's actions (Play, Shuffle, More).
 struct CollectionHeader<Actions: View>: View {
     var artwork: ArtworkSource?
     var placeholder: String
@@ -104,10 +104,20 @@ struct CollectionHeader<Actions: View>: View {
     @ViewBuilder var actions: Actions
 
     @Environment(\.palette) private var palette
+    @Environment(\.showsBackButton) private var showsBackButton
 
     static var artworkSide: CGFloat { 240 }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s3) {
+            if showsBackButton {
+                BackButton()
+            }
+            content
+        }
+    }
+
+    private var content: some View {
         HStack(alignment: .bottom, spacing: Tokens.Space.s6) {
             picture
             VStack(alignment: .leading, spacing: Tokens.Space.s2) {

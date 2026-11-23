@@ -18,7 +18,11 @@ struct AlbumsView: View {
         let list = albums.list
         ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.s5) {
-                PageHeader(title: String(localized: "Albums"), subtitle: subtitle)
+                PageHeader(title: String(localized: "Albums"), subtitle: subtitle) {
+                    if !list.items.isEmpty {
+                        sortMenu
+                    }
+                }
                 LazyVGrid(columns: columns, alignment: .leading, spacing: look.spacing(Tokens.Space.s7)) {
                     ForEach(list.items) { album in
                         AlbumCard(album: album)
@@ -37,32 +41,33 @@ struct AlbumsView: View {
             }
         }
         .navigationTitle(Text("Albums"))
-        .toolbar {
-            ToolbarItem {
-                Menu {
-                    Picker("Sort By", selection: Binding(
-                        get: { albums.order },
-                        set: { order in Task { @MainActor in await albums.choose(order, revision: library.revision) } }
-                    )) {
-                        Text("Title").tag(AlbumOrder.title)
-                        Text("Artist").tag(AlbumOrder.artist)
-                        Text("Year").tag(AlbumOrder.year)
-                        Text("Recently Added").tag(AlbumOrder.added)
-                    }
-                    .pickerStyle(.inline)
-                    Toggle("Descending", isOn: Binding(
-                        get: { albums.descending },
-                        set: { value in Task { @MainActor in await albums.setOrder(albums.order, descending: value, revision: library.revision) } }
-                    ))
-                } label: {
-                    Label("Sort", systemImage: "arrow.up.arrow.down")
-                }
-                .help(Text("Sort Albums"))
-            }
-        }
         .task(id: library.revision) {
             await list.load(revision: library.revision)
         }
+    }
+
+    /// Sort, at the end of the title as on the web: the orders and Descending.
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort By", selection: Binding(
+                get: { albums.order },
+                set: { order in Task { @MainActor in await albums.choose(order, revision: library.revision) } }
+            )) {
+                Text("Title").tag(AlbumOrder.title)
+                Text("Artist").tag(AlbumOrder.artist)
+                Text("Year").tag(AlbumOrder.year)
+                Text("Recently Added").tag(AlbumOrder.added)
+            }
+            .pickerStyle(.inline)
+            Toggle("Descending", isOn: Binding(
+                get: { albums.descending },
+                set: { value in Task { @MainActor in await albums.setOrder(albums.order, descending: value, revision: library.revision) } }
+            ))
+        } label: {
+            Label("Sort", systemImage: "arrow.up.arrow.down")
+        }
+        .fixedSize()
+        .help(Text("Sort Albums"))
     }
 
     private var subtitle: String? {

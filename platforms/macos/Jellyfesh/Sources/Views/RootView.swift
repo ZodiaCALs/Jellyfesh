@@ -147,8 +147,11 @@ struct DetailColumn: View {
                 .pageEntrance()
                 .id(router.selection)
                 .navigationDestination(for: Route.self) { route in
+                    // Back is the page's own, at its top, as on the web.
                     RoutePage(route: route)
                         .pageEntrance()
+                        .environment(\.showsBackButton, true)
+                        .navigationBarBackButtonHidden(true)
                 }
         }
         .mask {

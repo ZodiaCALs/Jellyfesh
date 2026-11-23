@@ -515,31 +515,81 @@ extension CollectionMoreMenu {
     }
 }
 
-/// A section's header on library pages: a title, an optional line under it and actions.
+/// A page's header: a title, an optional line under it and actions; Back above them on a page
+/// opened from another (`showsBackButton`).
 struct PageHeader<Actions: View>: View {
     var title: String
     var subtitle: String?
     @ViewBuilder var actions: Actions
     @Environment(\.palette) private var palette
+    @Environment(\.showsBackButton) private var showsBackButton
 
     var body: some View {
-        HStack(alignment: .lastTextBaseline, spacing: Tokens.Space.s4) {
-            VStack(alignment: .leading, spacing: Tokens.Space.s1) {
-                // A large title (Luminous: `type.text-h1`, 48 pt bold) that scrolls with the page.
-                Text(title)
-                    .lookFont(size: Tokens.TypeScale.textH1.rounded(), weight: .bold)
-                    .lineLimit(2)
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .accessibilityAddTraits(.isHeader)
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .typography(Tokens.TypeRoles.listSecondary)
-                        .foregroundStyle(palette[Tokens.Ink.ink70])
-                }
+        VStack(alignment: .leading, spacing: Tokens.Space.s3) {
+            if showsBackButton {
+                BackButton()
             }
-            Spacer(minLength: 0)
-            actions
+            HStack(alignment: .lastTextBaseline, spacing: Tokens.Space.s4) {
+                VStack(alignment: .leading, spacing: Tokens.Space.s1) {
+                    // A large title (Luminous: `type.text-h1`, 48 pt bold) that scrolls with the page.
+                    Text(title)
+                        .lookFont(size: Tokens.TypeScale.textH1.rounded(), weight: .bold)
+                        .lineLimit(2)
+                        .foregroundStyle(palette[Tokens.Ink.ink90])
+                        .accessibilityAddTraits(.isHeader)
+                    if let subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .typography(Tokens.TypeRoles.listSecondary)
+                            .foregroundStyle(palette[Tokens.Ink.ink70])
+                    }
+                }
+                Spacer(minLength: 0)
+                actions
+            }
         }
+    }
+}
+
+/// Back, at the top of a page opened from another (Jellyfesh Web's): goes back a page, as Esc does.
+/// Accent text after a chevron, the chevron on the page's edge, a soft fill on hover.
+struct BackButton: View {
+    @Environment(Router.self) private var router
+    @Environment(\.palette) private var palette
+    @State private var hovering = false
+
+    var body: some View {
+        Button {
+            router.back()
+        } label: {
+            HStack(spacing: Tokens.Space.s1) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Back")
+                    .lookFont(size: 15, weight: .semibold)
+            }
+            .foregroundStyle(palette[Tokens.Accent.accentText])
+            .padding(.leading, 6)
+            .padding(.trailing, Tokens.Space.s3)
+            .frame(minHeight: 40)
+            .background(Capsule().fill(hovering ? palette[Tokens.Line.fillHover] : .clear))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PressScaleStyle(scale: 0.97))
+        .onHover { hovering = $0 }
+        .padding(.leading, -Tokens.Space.s2)
+        .help(Text("Back"))
+    }
+}
+
+private struct ShowsBackButtonKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    /// The page was opened from another: its header starts with Back.
+    var showsBackButton: Bool {
+        get { self[ShowsBackButtonKey.self] }
+        set { self[ShowsBackButtonKey.self] = newValue }
     }
 }
 
