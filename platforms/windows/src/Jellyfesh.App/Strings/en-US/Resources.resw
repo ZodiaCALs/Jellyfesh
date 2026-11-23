@@ -26,6 +26,9 @@
   <data name="About_Rights.Text" xml:space="preserve">
     <value>All rights reserved. Third-party licences are listed in the notices file next to the app.</value>
   </data>
+  <data name="About_Shortcuts.Text" xml:space="preserve">
+    <value>Keyboard Shortcuts</value>
+  </data>
   <data name="About_Tagline.Text" xml:space="preserve">
     <value>An elegant, lightweight music player.</value>
   </data>
@@ -1550,17 +1553,23 @@
   <data name="Search_Title.Text" xml:space="preserve">
     <value>Search</value>
   </data>
-  <data name="Settings_About.Text" xml:space="preserve">
+  <data name="Section_About" xml:space="preserve">
     <value>About</value>
   </data>
-  <data name="Settings_Appearance.Text" xml:space="preserve">
+  <data name="Section_Appearance" xml:space="preserve">
     <value>Appearance</value>
   </data>
-  <data name="Settings_Extensions.Text" xml:space="preserve">
+  <data name="Section_Extensions" xml:space="preserve">
     <value>Extensions</value>
   </data>
-  <data name="Settings_Library.Text" xml:space="preserve">
+  <data name="Section_Library" xml:space="preserve">
     <value>Library</value>
+  </data>
+  <data name="Section_Playback" xml:space="preserve">
+    <value>Playback</value>
+  </data>
+  <data name="Section_Sources" xml:space="preserve">
+    <value>Sources</value>
   </data>
   <data name="Settings_MoveDown.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Move Down</value>
@@ -1586,14 +1595,11 @@
   <data name="Settings_OutOfRange" xml:space="preserve">
     <value>This number is out of range.</value>
   </data>
-  <data name="Settings_Playback.Text" xml:space="preserve">
-    <value>Playback</value>
-  </data>
   <data name="Settings_Required" xml:space="preserve">
     <value>This is required.</value>
   </data>
-  <data name="Settings_Sources.Text" xml:space="preserve">
-    <value>Sources</value>
+  <data name="Settings_Sections.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Settings</value>
   </data>
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>Settings</value>
@@ -1609,6 +1615,39 @@
   </data>
   <data name="Shelf_rediscover" xml:space="preserve">
     <value>Rediscover</value>
+  </data>
+  <data name="Shortcut_Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Shortcut_MiniPlayer" xml:space="preserve">
+    <value>Open Mini Player</value>
+  </data>
+  <data name="Shortcut_NextSong" xml:space="preserve">
+    <value>Next Song</value>
+  </data>
+  <data name="Shortcut_PlayPause" xml:space="preserve">
+    <value>Play or Pause</value>
+  </data>
+  <data name="Shortcut_PreviousSong" xml:space="preserve">
+    <value>Previous Song</value>
+  </data>
+  <data name="Shortcut_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Shortcut_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Shortcut_SkipBack" xml:space="preserve">
+    <value>Skip Back 5 Seconds</value>
+  </data>
+  <data name="Shortcut_SkipForward" xml:space="preserve">
+    <value>Skip Forward 5 Seconds</value>
+  </data>
+  <data name="Shortcut_VolumeDown" xml:space="preserve">
+    <value>Volume Down</value>
+  </data>
+  <data name="Shortcut_VolumeUp" xml:space="preserve">
+    <value>Volume Up</value>
   </data>
   <data name="Sidebar_LibraryTabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Library</value>

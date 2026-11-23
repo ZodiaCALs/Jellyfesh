@@ -56,9 +56,15 @@
             </Setter>
         </Style>
 
+        <!-- A group of settings, as Jellyfesh Web draws it: a Mist card (JfCardStyle) with its heading inside, 20 by 24 epx in. -->
+        <Style x:Key="SettingsGroup" TargetType="Border" BasedOn="{StaticResource JfCardStyle}">
+            <Setter Property="Padding" Value="24,20,24,20" />
+        </Style>
+
+        <!-- A group's heading: the web's section heading (type-roles.section, 20 epx bold). -->
         <Style x:Key="CardHeading" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="{th:Token Key=Type.Section}" />
+            <Setter Property="FontWeight" Value="Bold" />
             <Setter Property="Foreground" Value="{ThemeResource JfInk90}" />
         </Style>
 
@@ -192,23 +198,35 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <TextBlock x:Uid="Settings_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Settings" />
-        <SelectorBar x:Name="Sections" Grid.Row="1" SelectionChanged="OnSectionChanged">
-            <SelectorBarItem x:Name="AppearanceItem" x:Uid="Settings_Appearance" IsSelected="True" Text="Appearance" />
-            <SelectorBarItem x:Name="PlaybackItem" x:Uid="Settings_Playback" Text="Playback" />
-            <SelectorBarItem x:Name="LibraryItem" x:Uid="Settings_Library" Text="Library" />
-            <SelectorBarItem x:Name="SourcesItem" x:Uid="Settings_Sources" Text="Sources" />
-            <SelectorBarItem x:Name="ExtensionsItem" x:Uid="Settings_Extensions" Text="Extensions" />
-            <SelectorBarItem x:Name="AboutItem" x:Uid="Settings_About" Text="About" />
-        </SelectorBar>
+        <!--
+            The sections, as on Jellyfesh Web: pills on a fill track as wide as the reading measure, the
+            current one Cloud; when they do not fit (phones) the track scrolls sideways. Made in code.
+        -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MaxWidth="704" />
+            </Grid.ColumnDefinitions>
+            <ScrollViewer
+                x:Name="SectionScroller"
+                HorizontalScrollBarVisibility="Hidden"
+                HorizontalScrollMode="Enabled"
+                SizeChanged="OnSectionScrollerSizeChanged"
+                VerticalScrollBarVisibility="Disabled"
+                VerticalScrollMode="Disabled">
+                <Border x:Name="SectionTrack" Padding="4" Background="{ThemeResource JfFill}" CornerRadius="{StaticResource JfFullRadius}">
+                    <Grid x:Name="Sections" x:Uid="Settings_Sections" AutomationProperties.Name="Settings" ColumnSpacing="4" />
+                </Border>
+            </ScrollViewer>
+        </Grid>
 
         <ScrollViewer x:Name="Scroller" Grid.Row="2">
-            <Grid MaxWidth="880" Padding="{x:Bind Layout.EndPadding, Mode=OneWay}" HorizontalAlignment="Left">
+            <Grid MaxWidth="704" Padding="{x:Bind Layout.EndPadding, Mode=OneWay}" HorizontalAlignment="Left">
 
                 <!-- ===== Appearance: Theme, Accent Colour, Transparency, Now Playing Backdrop, Lyrics, App Icon =====
                      Grouped cards after Windows Settings; every change applies at once and the core keeps it. -->
                 <StackPanel x:Name="AppearancePanel" Spacing="16">
                     <!-- Theme: a segmented control with small previews. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <Grid ColumnSpacing="16" RowSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -244,7 +262,7 @@
                     </Border>
 
                     <!-- Accent Colour: Follow the Artwork, or one of ten swatches, or a custom hue. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
@@ -281,7 +299,7 @@
                     </Border>
 
                     <!-- Transparency: Solid to Clear with a live preview; Reduce Motion and Transparency. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
@@ -330,7 +348,7 @@
                     </Border>
 
                     <!-- Now Playing Backdrop: Artwork or Misty, with previews. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <Grid ColumnSpacing="16" RowSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -366,7 +384,7 @@
                     </Border>
 
                     <!-- Lyrics: Lyrics Size, Lyrics Alignment, Show Translations, Show Romanization (they live only here). -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <TextBlock x:Uid="Appearance_Lyrics" Style="{StaticResource CardHeading}" Text="Lyrics" />
                             <Grid ColumnSpacing="16">
@@ -411,7 +429,7 @@
                     </Border>
 
                     <!-- App Icon. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Uid="Appearance_Icon" Style="{StaticResource CardHeading}" Text="App Icon" />
@@ -465,7 +483,7 @@
                 <!-- ===== Playback: Output, Crossfade, Volume Levelling, Equalizer, Startup ===== -->
                 <StackPanel x:Name="PlaybackPanel" Spacing="16" Visibility="Collapsed">
                     <!-- Output: Output Device (System Default, then the devices). -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <TextBlock x:Uid="Playback_Output" Style="{StaticResource CardHeading}" Text="Output" />
                             <ComboBox x:Name="DeviceBox" x:Uid="Playback_OutputChoice" MinWidth="280" AutomationProperties.Name="Output Device" Header="Output Device" ItemsSource="{x:Bind ViewModel.Player.Devices}" SelectionChanged="OnDeviceChanged" />
@@ -474,7 +492,7 @@
                     </Border>
 
                     <!-- Crossfade: Crossfade, Length (1–12 s), Album Continuity. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
@@ -521,7 +539,7 @@
                     </Border>
 
                     <!-- Volume Levelling: ReplayGain (Off, Track, Album) and Preamp. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Uid="Playback_ReplayGain" Style="{StaticResource CardHeading}" Text="Volume Levelling" />
@@ -544,7 +562,7 @@
                     </Border>
 
                     <!-- Equalizer: Equalizer, Preset (the core's eq_presets(); Custom once a band moves), Preamp, the bands, Reset to Flat. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
@@ -588,7 +606,7 @@
                     </Border>
 
                     <!-- Startup: Resume Playback. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <TextBlock x:Uid="Playback_Startup" Style="{StaticResource CardHeading}" Text="Startup" />
                             <Grid ColumnSpacing="16">
@@ -609,7 +627,7 @@
                 <!-- ===== Library: Music Folders, Watch Folders, Rescan Library ===== -->
                 <StackPanel x:Name="LibraryPanel" Spacing="16" Visibility="Collapsed">
                     <!-- Music Folders: each with Show in Explorer and Remove Folder… (it asks first), then Add Folder…. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Uid="Library_Folders" Style="{StaticResource CardHeading}" Text="Music Folders" />
@@ -643,7 +661,7 @@
                     </Border>
 
                     <!-- Watch Folders. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <Grid ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -658,7 +676,7 @@
                     </Border>
 
                     <!-- Rescan Library, with the scan's progress and Last Scan. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="16">
                                 <Grid.ColumnDefinitions>
@@ -687,7 +705,7 @@
                 <StackPanel x:Name="SourcesPanel" Spacing="16" Visibility="Collapsed">
                     <!-- Add a Source: the services Jellyfesh offers (SourcesState.Presets), each while its official
                          plugin is installed. A row opens "Connect to …"; the sign-in dialog then shows the steps. -->
-                    <Border Style="{StaticResource JfCardStyle}" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.SourcePresets.Count), Mode=OneWay}">
+                    <Border Style="{StaticResource SettingsGroup}" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.SourcePresets.Count), Mode=OneWay}">
                         <StackPanel Spacing="12">
                             <TextBlock x:Uid="Sources_Add" Style="{StaticResource CardHeading}" Text="Add a Source" />
                             <ItemsRepeater ItemsSource="{x:Bind ViewModel.SourcePresets}">
@@ -728,7 +746,7 @@
 
                     <!-- Installed: each source with its badge and status; Enabled, a sign-in button per method (or Sign Out),
                          its own settings, "Version · Author" and Uninstall… (it asks first). -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>
@@ -795,7 +813,7 @@
                     </Border>
 
                     <!-- Community Plugins: Allow Community Plugins shows the disclosure first. Not in store builds. -->
-                    <Border Style="{StaticResource JfCardStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanInstallPlugins), Mode=OneWay}">
+                    <Border Style="{StaticResource SettingsGroup}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanInstallPlugins), Mode=OneWay}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Uid="Sources_Community" Style="{StaticResource CardHeading}" Text="Community Plugins" />
@@ -812,7 +830,7 @@
                 <StackPanel x:Name="ExtensionsPanel" Spacing="16" Visibility="Collapsed">
                     <!-- Jellyfesh Pro: where Pro comes from; Remove Licence… (asks first); Buy and Restore Purchases
                          where this build's store sells it; Enter Licence Key… where keys are taken; the legal pages. -->
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">
                             <StackPanel Spacing="2">
                                 <TextBlock x:Uid="Pro_Heading" Style="{StaticResource CardHeading}" Text="Jellyfesh Pro" />
@@ -847,7 +865,7 @@
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:ExtensionViewModel">
-                                <Border Style="{StaticResource JfCardStyle}">
+                                <Border Style="{StaticResource SettingsGroup}">
                                     <StackPanel Spacing="12">
                                         <StackPanel Spacing="2">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -957,7 +975,32 @@
 
                 <!-- ===== About: the version (from the build), the website and the licences where the build knows them, the log folder ===== -->
                 <StackPanel x:Name="AboutPanel" Spacing="16" Visibility="Collapsed">
-                    <Border Style="{StaticResource JfCardStyle}">
+                    <!-- Keyboard Shortcuts: the keys every desktop app shares (docs/ui.md, "Keyboard"). -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="About_Shortcuts" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource CardHeading}" Text="Keyboard Shortcuts" />
+                            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Shortcuts}">
+                                <ItemsRepeater.Layout>
+                                    <StackLayout Spacing="8" />
+                                </ItemsRepeater.Layout>
+                                <ItemsRepeater.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:KeyboardShortcut">
+                                        <Grid ColumnSpacing="20">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="112" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center" Background="{ThemeResource JfFill}" BorderBrush="{ThemeResource JfLine}" BorderThickness="1" CornerRadius="{th:Token Key=Radius.Sm, Kind=Corner}">
+                                                <TextBlock FontFamily="Cascadia Mono, Consolas" FontSize="12" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Keys}" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Action}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsRepeater.ItemTemplate>
+                            </ItemsRepeater>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="16">
                                 <Image x:Name="AboutIcon" Width="64" Height="64" />
@@ -982,7 +1025,7 @@
                     </Border>
 
                     <!-- Updates (direct downloads only: the store updates store builds). -->
-                    <Border Style="{StaticResource JfCardStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Updates.IsSupported), Mode=OneWay}">
+                    <Border Style="{StaticResource SettingsGroup}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Updates.IsSupported), Mode=OneWay}">
                         <StackPanel Spacing="12">
                             <Grid ColumnSpacing="12">
                                 <Grid.ColumnDefinitions>

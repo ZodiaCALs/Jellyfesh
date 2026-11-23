@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Jellyfesh.Core;
+using Jellyfesh.Formatting;
 using Jellyfesh.Tests.Support;
 using Jellyfesh.ViewModels;
 using Xunit;
@@ -122,6 +123,17 @@ public class LayoutTests
         Assert.Equal(["songs", "albums"], LookRules.LibraryTags(custom));
         Assert.Equal("library", LookRules.PhoneTab("favorites"));
         Assert.Equal("settings", LookRules.PhoneTab("settings"));
+    }
+
+    [Fact]
+    public void Settings_lists_the_shared_keyboard_shortcuts_in_uimd_order()
+    {
+        var keys = KeyboardShortcuts.Shared.Select(s => s.Keys).ToArray();
+        Assert.Equal(["Space", "Ctrl + →", "Ctrl + ←", "Shift + →", "Shift + ←", "Ctrl + ↑", "Ctrl + ↓", "Ctrl + F", "Ctrl + M", "Ctrl + ,", "Esc"], keys);
+        var shown = KeyboardShortcuts.All(KeyLocalizer.Instance);
+        Assert.Equal("Shortcut_MiniPlayer", shown[8].Action); // the localizer's words for each key
+        using var h = new AppHarness().Started();
+        Assert.Equal(11, h.App.CreateSettings(_ => null).Shortcuts.Count);
     }
 
     [Fact]

@@ -273,6 +273,11 @@ public sealed partial class SettingsViewModel : PageViewModel
     /// <summary>Output devices live on the player (the same list as Now Playing's picker).</summary>
     public PlayerViewModel Player { get; }
 
+    /// <summary>About › Keyboard Shortcuts: the keys every desktop app shares (docs/ui.md, "Keyboard").</summary>
+    public IReadOnlyList<KeyboardShortcut> Shortcuts => _shortcuts ??= KeyboardShortcuts.All(S.L);
+
+    private IReadOnlyList<KeyboardShortcut>? _shortcuts;
+
     public ObservableCollection<AppIconChoice> Icons { get; } = [];
 
     /// <summary>The ten accent swatches (AccentChoices.SwatchHues).</summary>

@@ -26,6 +26,9 @@
   <data name="About_Rights.Text" xml:space="preserve">
     <value>著作権はすべて保有されています。サードパーティのライセンスはアプリと同じ場所にある通知ファイルに記載されています。</value>
   </data>
+  <data name="About_Shortcuts.Text" xml:space="preserve">
+    <value>キーボードショートカット</value>
+  </data>
   <data name="About_Tagline.Text" xml:space="preserve">
     <value>上品で軽やかな音楽プレーヤー。</value>
   </data>
@@ -1550,17 +1553,23 @@
   <data name="Search_Title.Text" xml:space="preserve">
     <value>検索</value>
   </data>
-  <data name="Settings_About.Text" xml:space="preserve">
+  <data name="Section_About" xml:space="preserve">
     <value>情報</value>
   </data>
-  <data name="Settings_Appearance.Text" xml:space="preserve">
+  <data name="Section_Appearance" xml:space="preserve">
     <value>外観</value>
   </data>
-  <data name="Settings_Extensions.Text" xml:space="preserve">
+  <data name="Section_Extensions" xml:space="preserve">
     <value>拡張機能</value>
   </data>
-  <data name="Settings_Library.Text" xml:space="preserve">
+  <data name="Section_Library" xml:space="preserve">
     <value>ライブラリ</value>
+  </data>
+  <data name="Section_Playback" xml:space="preserve">
+    <value>再生</value>
+  </data>
+  <data name="Section_Sources" xml:space="preserve">
+    <value>ソース</value>
   </data>
   <data name="Settings_MoveDown.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>下へ移動</value>
@@ -1586,14 +1595,11 @@
   <data name="Settings_OutOfRange" xml:space="preserve">
     <value>数値が範囲外です。</value>
   </data>
-  <data name="Settings_Playback.Text" xml:space="preserve">
-    <value>再生</value>
-  </data>
   <data name="Settings_Required" xml:space="preserve">
     <value>入力が必要です。</value>
   </data>
-  <data name="Settings_Sources.Text" xml:space="preserve">
-    <value>ソース</value>
+  <data name="Settings_Sections.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>設定</value>
   </data>
   <data name="Settings_Title.Text" xml:space="preserve">
     <value>設定</value>
@@ -1609,6 +1615,39 @@
   </data>
   <data name="Shelf_rediscover" xml:space="preserve">
     <value>再発見</value>
+  </data>
+  <data name="Shortcut_Back" xml:space="preserve">
+    <value>戻る</value>
+  </data>
+  <data name="Shortcut_MiniPlayer" xml:space="preserve">
+    <value>ミニプレーヤーを開く</value>
+  </data>
+  <data name="Shortcut_NextSong" xml:space="preserve">
+    <value>次の曲</value>
+  </data>
+  <data name="Shortcut_PlayPause" xml:space="preserve">
+    <value>再生または一時停止</value>
+  </data>
+  <data name="Shortcut_PreviousSong" xml:space="preserve">
+    <value>前の曲</value>
+  </data>
+  <data name="Shortcut_Search" xml:space="preserve">
+    <value>検索</value>
+  </data>
+  <data name="Shortcut_Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Shortcut_SkipBack" xml:space="preserve">
+    <value>5 秒戻る</value>
+  </data>
+  <data name="Shortcut_SkipForward" xml:space="preserve">
+    <value>5 秒先へ</value>
+  </data>
+  <data name="Shortcut_VolumeDown" xml:space="preserve">
+    <value>音量を下げる</value>
+  </data>
+  <data name="Shortcut_VolumeUp" xml:space="preserve">
+    <value>音量を上げる</value>
   </data>
   <data name="Sidebar_LibraryTabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>ライブラリ</value>

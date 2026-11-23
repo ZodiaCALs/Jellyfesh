@@ -31,6 +31,18 @@ public enum SettingsSection
 
 public sealed partial class SettingsPage : JfPage
 {
+    /// <summary>The sections in every app's order (docs/ui.md, "Settings") and their names' string keys.</summary>
+    private static readonly (SettingsSection Section, string Label)[] SectionLabels =
+    [
+        (SettingsSection.Appearance, "Section_Appearance"),
+        (SettingsSection.Playback, "Section_Playback"),
+        (SettingsSection.Library, "Section_Library"),
+        (SettingsSection.Sources, "Section_Sources"),
+        (SettingsSection.Extensions, "Section_Extensions"),
+        (SettingsSection.About, "Section_About"),
+    ];
+
+    private readonly Dictionary<SettingsSection, SidebarItem> _sections = [];
     private bool _syncing;
 
     public SettingsPage()
@@ -41,7 +53,9 @@ public sealed partial class SettingsPage : JfPage
         ViewModel.PropertyChanged += OnViewModelChanged;
         ViewModel.Player.PropertyChanged += OnPlayerChanged;
         ViewModel.SignInRequested += OnSignInRequested;
-        ViewModel.ExtensionsRequested += () => Sections.SelectedItem = ExtensionsItem; // Customize…
+        ViewModel.ExtensionsRequested += () => ShowSection(SettingsSection.Extensions); // Customize…
+        BuildSections();
+        ShowSection(SettingsSection.Appearance);
         Loaded += (_, _) =>
         {
             AppHost.App.ThemeChanged += OnThemeChanged;
@@ -68,15 +82,7 @@ public sealed partial class SettingsPage : JfPage
     {
         if (e.Parameter is SettingsSection section)
         {
-            Sections.SelectedItem = section switch
-            {
-                SettingsSection.Playback => PlaybackItem,
-                SettingsSection.Library => LibraryItem,
-                SettingsSection.Sources => SourcesItem,
-                SettingsSection.Extensions => ExtensionsItem,
-                SettingsSection.About => AboutItem,
-                _ => AppearanceItem,
-            };
+            ShowSection(section);
         }
 
         base.OnNavigatedTo(e);
@@ -98,22 +104,48 @@ public sealed partial class SettingsPage : JfPage
         return AboutInfo.Version(app, core, AppHost.L);
     }
 
-    private void OnSectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    /// <summary>The section pills (Controls/SidebarItem in JfLibraryTabStyle), sharing the track's width.</summary>
+    private void BuildSections()
     {
-        if (AppearancePanel is null || AboutPanel is null || Scroller is null)
+        var style = (Style)Application.Current.Resources["JfLibraryTabStyle"];
+        foreach (var (section, label) in SectionLabels)
         {
-            return; // during InitializeComponent; the XAML shows Appearance first
+            var item = new SidebarItem
+            {
+                Label = AppHost.L.Get(label),
+                GroupName = "SettingsSections",
+                Style = style,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(12, 0, 12, 0),
+            };
+            var chosen = section;
+            item.Click += (_, _) => ShowSection(chosen);
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(item, Sections.Children.Count);
+            Sections.Children.Add(item);
+            _sections[section] = item;
+        }
+    }
+
+    /// <summary>Shows one section, from its pill, a link (Sources Settings…, Customize…) or Ctrl+,.</summary>
+    public void ShowSection(SettingsSection section)
+    {
+        foreach (var (each, item) in _sections)
+        {
+            item.IsChecked = each == section;
         }
 
-        var selected = sender.SelectedItem;
-        AppearancePanel.Visibility = Bind.Visible(selected == AppearanceItem);
-        PlaybackPanel.Visibility = Bind.Visible(selected == PlaybackItem);
-        LibraryPanel.Visibility = Bind.Visible(selected == LibraryItem);
-        SourcesPanel.Visibility = Bind.Visible(selected == SourcesItem);
-        ExtensionsPanel.Visibility = Bind.Visible(selected == ExtensionsItem);
-        AboutPanel.Visibility = Bind.Visible(selected == AboutItem);
+        AppearancePanel.Visibility = Bind.Visible(section == SettingsSection.Appearance);
+        PlaybackPanel.Visibility = Bind.Visible(section == SettingsSection.Playback);
+        LibraryPanel.Visibility = Bind.Visible(section == SettingsSection.Library);
+        SourcesPanel.Visibility = Bind.Visible(section == SettingsSection.Sources);
+        ExtensionsPanel.Visibility = Bind.Visible(section == SettingsSection.Extensions);
+        AboutPanel.Visibility = Bind.Visible(section == SettingsSection.About);
         Scroller.ChangeView(null, 0, null, disableAnimation: true);
     }
+
+    /// <summary>The pills fill the track as wide as the reading measure, and scroll sideways when they do not fit.</summary>
+    private void OnSectionScrollerSizeChanged(object sender, SizeChangedEventArgs e) => SectionTrack.MinWidth = e.NewSize.Width;
 
     // ---- choices that have no two-way binding of their own (typed selections) ----
 
