@@ -18,7 +18,7 @@
 
     <ListView
         x:Name="RowList"
-        Padding="32,24,32,112"
+        Padding="{x:Bind Layout.ScrollPadding, Mode=OneWay}"
         AutomationProperties.Name="{x:Bind ViewModel.Title, Mode=OneWay}"
         IsItemClickEnabled="True"
         ItemClick="OnRowClick"
@@ -43,7 +43,7 @@
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Spacing="4">
                         <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind ViewModel.KindLabel, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.KindLabel), Mode=OneWay}" />
-                        <TextBlock AutomationProperties.HeadingLevel="Level1" MaxLines="2" Style="{StaticResource JfLargeTitleText}" Text="{x:Bind ViewModel.Title, Mode=OneWay}" TextWrapping="WrapWholeWords" />
+                        <TextBlock AutomationProperties.HeadingLevel="Level1" MaxLines="2" Style="{StaticResource JfHeaderTitleText}" Text="{x:Bind ViewModel.Title, Mode=OneWay}" TextWrapping="WrapWholeWords" />
                         <TextBlock
                             FontSize="{th:Token Key=Type.NowPlayingArtist}"
                             FontWeight="SemiBold"

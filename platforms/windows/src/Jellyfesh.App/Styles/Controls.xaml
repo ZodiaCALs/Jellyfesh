@@ -76,6 +76,14 @@
         <Setter Property="Margin" Value="0,8,0,4" />
     </Style>
 
+    <!-- An album's, artist's or playlist's name in its page's header: the web's text-h2 (30.4 epx), up to two lines. -->
+    <Style x:Key="JfHeaderTitleText" TargetType="TextBlock" BasedOn="{StaticResource JfPageTitleText}">
+        <Setter Property="FontSize" Value="{th:Token Key=Type.H2}" />
+        <Setter Property="Margin" Value="0,4" />
+        <Setter Property="TextWrapping" Value="WrapWholeWords" />
+        <Setter Property="MaxLines" Value="2" />
+    </Style>
+
     <Style x:Key="JfNowPlayingTitleText" TargetType="TextBlock" BasedOn="{StaticResource JfPageTitleText}">
         <Setter Property="TextWrapping" Value="WrapWholeWords" />
         <Setter Property="MaxLines" Value="2" />

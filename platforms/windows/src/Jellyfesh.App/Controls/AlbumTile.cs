@@ -32,7 +32,11 @@ public sealed partial class AlbumTile : StackPanel
     public static readonly DependencyProperty SubtitleProperty =
         DependencyProperty.Register(nameof(Subtitle), typeof(string), typeof(AlbumTile), new PropertyMetadata(string.Empty, (d, e) => ((AlbumTile)d)._subtitle.Text = (string)e.NewValue));
 
-    private const double CoverSize = 168;
+    public static readonly DependencyProperty CoverSizeProperty =
+        DependencyProperty.Register(nameof(CoverSize), typeof(double), typeof(AlbumTile), new PropertyMetadata(DefaultCoverSize, (d, e) => ((AlbumTile)d).SizeCover((double)e.NewValue)));
+
+    /// <summary>The cover's side in shelves; the Albums grid widens covers to fill its columns (Drawing.AlbumGrid).</summary>
+    public const double DefaultCoverSize = 168;
     private readonly Grid _cover;
     private readonly Image _image = new() { Stretch = Stretch.UniformToFill };
     private readonly Button _play;
@@ -45,15 +49,15 @@ public sealed partial class AlbumTile : StackPanel
 
     public AlbumTile()
     {
-        Width = CoverSize;
+        Width = DefaultCoverSize;
         Spacing = 8;
         var resources = Application.Current.Resources;
-        Artwork.SetDecodeSize(_image, (int)CoverSize * 2);
+        Artwork.SetDecodeSize(_image, DecodeSize(DefaultCoverSize));
         _cover = new Grid
         {
-            Width = CoverSize,
-            Height = CoverSize,
-            CenterPoint = new Vector3((float)CoverSize / 2, (float)CoverSize / 2, 0),
+            Width = DefaultCoverSize,
+            Height = DefaultCoverSize,
+            CenterPoint = new Vector3((float)DefaultCoverSize / 2, (float)DefaultCoverSize / 2, 0),
         };
         _cover.Children.Add(new Border
         {
@@ -115,6 +119,40 @@ public sealed partial class AlbumTile : StackPanel
     {
         get => (string)GetValue(SubtitleProperty);
         set => SetValue(SubtitleProperty, value);
+    }
+
+    /// <summary>The cover's side (epx); the tile is as wide.</summary>
+    public double CoverSize
+    {
+        get => (double)GetValue(CoverSizeProperty);
+        set => SetValue(CoverSizeProperty, value);
+    }
+
+    /// <summary>Covers decode at twice their side (crisp up to 200 % scaling), in 64 px steps so resizing rarely decodes again.</summary>
+    private static int DecodeSize(double cover) => (int)(Math.Ceiling(cover * 2 / 64) * 64);
+
+    private void SizeCover(double size)
+    {
+        if (!double.IsFinite(size) || size <= 0)
+        {
+            return;
+        }
+
+        Width = size;
+        _cover.Width = size;
+        _cover.Height = size;
+        _cover.CenterPoint = new Vector3((float)size / 2, (float)size / 2, 0);
+        var decode = DecodeSize(size);
+        if (decode > Artwork.GetDecodeSize(_image))
+        {
+            // A larger cover than the picture was decoded for: decode it again at the new size.
+            Artwork.SetDecodeSize(_image, decode);
+            if (ArtworkUri is { } uri)
+            {
+                Artwork.SetUri(_image, null);
+                Artwork.SetUri(_image, uri);
+            }
+        }
     }
 
     private static bool ReduceMotion => AppHost.App.ReduceMotion;

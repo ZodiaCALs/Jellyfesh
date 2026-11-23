@@ -10,13 +10,13 @@
     xmlns:controls="using:Jellyfesh.App.Controls"
     xmlns:shell="using:Jellyfesh.App.Shell">
 
-    <Grid Padding="32,24,32,0" RowSpacing="16">
+    <Grid Padding="{x:Bind Layout.PagePadding, Mode=OneWay}" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Spacing="6">
-            <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="{x:Bind ViewModel.Name, Mode=OneWay}" />
+            <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfHeaderTitleText}" Text="{x:Bind ViewModel.Name, Mode=OneWay}" />
             <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind ViewModel.Summary, Mode=OneWay}" />
             <StackPanel Margin="0,10,0,0" Orientation="Horizontal" Spacing="8">
                 <Button x:Uid="Action_PlayButton" Command="{x:Bind ViewModel.PlayCommand}" Content="Play" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.IsEmpty), Mode=OneWay}" Style="{StaticResource JfAccentPillStyle}" />
@@ -41,7 +41,7 @@
             x:Name="EntryList"
             x:Uid="Playlist_Entries"
             Grid.Row="1"
-            Padding="0,0,0,112"
+            Padding="{x:Bind Layout.EndPadding, Mode=OneWay}"
             AllowDrop="True"
             AutomationProperties.Name="Songs in this playlist"
             CanDragItems="True"

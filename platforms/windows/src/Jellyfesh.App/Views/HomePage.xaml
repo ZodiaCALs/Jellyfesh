@@ -34,9 +34,9 @@
     </Page.Resources>
 
     <ScrollViewer>
-        <StackPanel x:Name="SectionsPanel" Padding="32,24,32,112" Spacing="28">
+        <StackPanel x:Name="SectionsPanel" Padding="{x:Bind Layout.ScrollPadding, Mode=OneWay}" Spacing="28">
             <StackPanel Spacing="4">
-                <TextBlock x:Uid="Home_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Home" />
+                <TextBlock x:Uid="Home_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Home" />
                 <!-- Summary: shown while the look lists it (ADR-0020). -->
                 <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.LibrarySize, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIfTextAnd(ViewModel.LibrarySize, ViewModel.ShowsSummary), Mode=OneWay}" />
             </StackPanel>

@@ -13,13 +13,20 @@ namespace Jellyfesh.App.Shell;
 internal static class Lists
 {
     public static void Attach(ListViewBase list, double artworkSize, Action<int>? realize = null, FlyoutBase? menu = null) =>
-        Attach(list, artworkSize, realize, menu is null ? null : _ => menu);
+        Attach(list, () => artworkSize, realize, menu is null ? null : _ => menu);
 
     /// <summary>
     /// The same for a list whose rows are of more than one kind (a source's albums and songs): each
     /// realised row gets the menu <paramref name="menuFor"/> gives for it, or none.
     /// </summary>
-    public static void Attach(ListViewBase list, double artworkSize, Action<int>? realize, Func<object?, FlyoutBase?>? menuFor)
+    public static void Attach(ListViewBase list, double artworkSize, Action<int>? realize, Func<object?, FlyoutBase?>? menuFor) =>
+        Attach(list, () => artworkSize, realize, menuFor);
+
+    /// <summary>The same for a grid whose covers change size with the window (the Albums grid).</summary>
+    public static void Attach(ListViewBase list, Func<double> artworkSize, Action<int>? realize, FlyoutBase? menu) =>
+        Attach(list, artworkSize, realize, menu is null ? null : _ => menu);
+
+    private static void Attach(ListViewBase list, Func<double> artworkSize, Action<int>? realize, Func<object?, FlyoutBase?>? menuFor)
     {
         list.ContainerContentChanging += (sender, args) =>
         {
@@ -44,10 +51,10 @@ internal static class Lists
                 }
             }
 
-            if (args.Item is ArtworkItem item && artworkSize > 0)
+            if (args.Item is ArtworkItem item && artworkSize() is var size && size > 0)
             {
                 var scale = sender.XamlRoot?.RasterizationScale ?? 1.0;
-                item.RequestArtwork(AppHost.Services.Thumbnails, artworkSize * scale);
+                item.RequestArtwork(AppHost.Services.Thumbnails, size * scale);
             }
         };
     }

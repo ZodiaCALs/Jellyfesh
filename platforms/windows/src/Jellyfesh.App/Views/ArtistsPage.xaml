@@ -7,7 +7,7 @@
     xmlns:shell="using:Jellyfesh.App.Shell"
     NavigationCacheMode="Enabled">
 
-    <Grid Padding="32,24,32,0" RowSpacing="16">
+    <Grid Padding="{x:Bind Layout.PagePadding, Mode=OneWay}" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -16,7 +16,7 @@
             x:Name="ArtistList"
             x:Uid="Artists_Grid"
             Grid.RowSpan="2"
-            Padding="0,0,0,112"
+            Padding="{x:Bind Layout.EndPadding, Mode=OneWay}"
             AutomationProperties.Name="Artists"
             IsItemClickEnabled="True"
             ItemClick="OnArtistClick"
@@ -25,7 +25,7 @@
             ItemsSource="{x:Bind ViewModel.Artists.Items, Mode=OneWay}"
             SelectionMode="None">
             <ListView.Header>
-                <TextBlock Margin="0,0,0,16" x:Uid="Artists_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Artists" />
+                <TextBlock Margin="0,0,0,16" x:Uid="Artists_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Artists" />
             </ListView.Header>
         </ListView>
         <ProgressRing Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsLoading, Mode=OneWay}" />

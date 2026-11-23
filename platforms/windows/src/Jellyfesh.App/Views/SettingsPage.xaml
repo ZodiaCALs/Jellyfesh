@@ -185,13 +185,13 @@
             Toggle="{StaticResource FieldToggle}" />
     </Page.Resources>
 
-    <Grid Padding="32,24,32,0" RowSpacing="12">
+    <Grid Padding="{x:Bind Layout.PagePadding, Mode=OneWay}" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <TextBlock x:Uid="Settings_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Settings" />
+        <TextBlock x:Uid="Settings_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Settings" />
         <SelectorBar x:Name="Sections" Grid.Row="1" SelectionChanged="OnSectionChanged">
             <SelectorBarItem x:Name="AppearanceItem" x:Uid="Settings_Appearance" IsSelected="True" Text="Appearance" />
             <SelectorBarItem x:Name="PlaybackItem" x:Uid="Settings_Playback" Text="Playback" />
@@ -202,7 +202,7 @@
         </SelectorBar>
 
         <ScrollViewer x:Name="Scroller" Grid.Row="2">
-            <Grid MaxWidth="880" Padding="0,8,0,112" HorizontalAlignment="Left">
+            <Grid MaxWidth="880" Padding="{x:Bind Layout.EndPadding, Mode=OneWay}" HorizontalAlignment="Left">
 
                 <!-- ===== Appearance: Theme, Accent Colour, Transparency, Now Playing Backdrop, Lyrics, App Icon =====
                      Grouped cards after Windows Settings; every change applies at once and the core keeps it. -->

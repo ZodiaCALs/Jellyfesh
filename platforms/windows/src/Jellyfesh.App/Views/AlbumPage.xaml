@@ -14,7 +14,7 @@
     <ListView
         x:Name="TrackList"
         x:Uid="Album_Tracks"
-        Padding="32,24,32,112"
+        Padding="{x:Bind Layout.ScrollPadding, Mode=OneWay}"
         AutomationProperties.Name="Tracks"
         IsItemClickEnabled="True"
         ItemClick="OnTrackClick"
@@ -34,7 +34,7 @@
                     <Image controls:Artwork.DecodeSize="480" controls:Artwork.Uri="{x:Bind ViewModel.Header.ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Spacing="4">
-                    <TextBlock AutomationProperties.HeadingLevel="Level1" MaxLines="2" Style="{StaticResource JfLargeTitleText}" Text="{x:Bind ViewModel.Header.Title}" TextWrapping="WrapWholeWords" />
+                    <TextBlock AutomationProperties.HeadingLevel="Level1" MaxLines="2" Style="{StaticResource JfHeaderTitleText}" Text="{x:Bind ViewModel.Header.Title}" TextWrapping="WrapWholeWords" />
                     <HyperlinkButton
                         Padding="0"
                         AutomationProperties.Name="{x:Bind ViewModel.ArtistName}"

@@ -11,7 +11,7 @@
     xmlns:shell="using:Jellyfesh.App.Shell"
     NavigationCacheMode="Enabled">
 
-    <Grid Padding="32,24,32,0" RowSpacing="16">
+    <Grid Padding="{x:Bind Layout.PagePadding, Mode=OneWay}" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -20,7 +20,7 @@
             x:Name="SongList"
             x:Uid="Songs_List"
             Grid.RowSpan="2"
-            Padding="0,0,0,112"
+            Padding="{x:Bind Layout.EndPadding, Mode=OneWay}"
             AutomationProperties.Name="Songs"
             IsItemClickEnabled="True"
             ItemClick="OnSongClick"
@@ -36,7 +36,7 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock x:Uid="Songs_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Songs" />
+                    <TextBlock x:Uid="Songs_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Songs" />
                     <Button x:Uid="Action_PlayButton" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.PlayCommand}" Content="Play" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.IsEmpty), Mode=OneWay}" Style="{StaticResource JfAccentPillStyle}" />
                     <Button x:Uid="Action_ShuffleButton" Grid.Column="2" VerticalAlignment="Center" Command="{x:Bind ViewModel.ShuffleCommand}" Content="Shuffle" IsEnabled="{x:Bind shell:Bind.Not(ViewModel.IsEmpty), Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
                     <Button x:Name="SortButton" x:Uid="Songs_Sort" Grid.Column="3" Margin="8,0,0,0" VerticalAlignment="Center" AutomationProperties.Name="Sort Songs" Style="{StaticResource JfChipButtonStyle}" ToolTipService.ToolTip="Sort Songs">

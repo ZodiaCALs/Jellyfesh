@@ -10,7 +10,7 @@
     <ListView
         x:Name="SongList"
         x:Uid="Artist_Songs"
-        Padding="32,24,32,112"
+        Padding="{x:Bind Layout.ScrollPadding, Mode=OneWay}"
         AutomationProperties.Name="Songs"
         IsItemClickEnabled="True"
         ItemClick="OnSongClick"
@@ -30,7 +30,7 @@
                         <TextBlock x:Name="Monogram" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="52" FontWeight="Bold" Foreground="{ThemeResource JfAccentText}" />
                     </Grid>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="12">
-                        <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfNowPlayingTitleText}" Text="{x:Bind ViewModel.Name}" />
+                        <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfHeaderTitleText}" Text="{x:Bind ViewModel.Name}" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <Button x:Uid="Action_PlayButton" Command="{x:Bind ViewModel.PlayCommand}" Content="Play" Style="{StaticResource JfAccentPillStyle}" />
                             <Button x:Uid="Action_ShuffleButton" Command="{x:Bind ViewModel.ShuffleCommand}" Content="Shuffle" Style="{StaticResource JfChipButtonStyle}" />

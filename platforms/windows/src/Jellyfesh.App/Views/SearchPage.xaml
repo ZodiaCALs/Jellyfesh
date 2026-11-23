@@ -25,13 +25,13 @@
         </Style>
     </Page.Resources>
 
-    <Grid Padding="32,24,32,0" RowSpacing="16">
+    <Grid Padding="{x:Bind Layout.PagePadding, Mode=OneWay}" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Spacing="12">
-            <TextBlock x:Uid="Search_Title" AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="Search" />
+            <TextBlock x:Uid="Search_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Search" />
             <TextBox
                 x:Name="Box"
                 x:Uid="Search_Box"
@@ -61,7 +61,7 @@
         </StackPanel>
 
         <ScrollViewer Grid.Row="1">
-            <StackPanel Padding="0,0,0,112" Spacing="24">
+            <StackPanel Padding="{x:Bind Layout.EndPadding, Mode=OneWay}" Spacing="24">
                 <StackPanel Spacing="4" Visibility="{x:Bind shell:Bind.VisibleIfAny(ViewModel.Tracks.Count), Mode=OneWay}">
                     <TextBlock x:Uid="Search_Songs" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="Songs" />
                     <ListView x:Name="TrackList" x:Uid="Search_SongList" AutomationProperties.Name="Songs" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind ViewModel.Tracks}" Style="{StaticResource InlineListStyle}" />

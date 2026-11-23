@@ -90,6 +90,27 @@ public class LayoutTests
     }
 
     [Fact]
+    public void Album_grids_have_four_large_covers_on_a_1280_epx_window()
+    {
+        // 1280 − the sidebar's 248 − two 32 epx gutters = 968 epx of content.
+        var wide = Drawing.CoverGrid.For(968, phone: false);
+        Assert.Equal(4, wide.Columns);
+        Assert.Equal(221, wide.Cover);
+        Assert.Equal(28, wide.Spacing); // the 12 epx gap and two 8 epx card edges
+        Assert.True((wide.Columns * wide.Slot) - wide.Spacing <= 968);
+
+        // Columns never fall under 196 epx; wider windows get more of them.
+        Assert.Equal(5, Drawing.CoverGrid.For(1200, phone: false).Columns);
+        Assert.Equal(1, Drawing.CoverGrid.For(100, phone: false).Columns);
+
+        // Phones: 150 epx columns, 4 apart.
+        var phone = Drawing.CoverGrid.For(328, phone: true);
+        Assert.Equal(2, phone.Columns);
+        Assert.Equal(154, phone.Cover);
+        Assert.Equal(20, phone.Spacing);
+    }
+
+    [Fact]
     public void The_phone_tabs_put_the_library_in_one_tab_and_settings_last()
     {
         Assert.Equal(["home", "library", "search", "sources", "settings"], LookRules.PhoneTabs(LookState.Default));

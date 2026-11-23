@@ -17,7 +17,7 @@
         <shell:SourceRowTemplates x:Key="ChartRows" />
     </Page.Resources>
 
-    <Grid Padding="32,24,32,0" RowSpacing="16">
+    <Grid Padding="{x:Bind Layout.PagePadding, Mode=OneWay}" RowSpacing="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -28,14 +28,14 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Spacing="2">
-                <TextBlock AutomationProperties.HeadingLevel="Level1" Style="{StaticResource JfLargeTitleText}" Text="{x:Bind ViewModel.Title}" TextTrimming="CharacterEllipsis" />
+                <TextBlock AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="{x:Bind ViewModel.Title}" TextTrimming="CharacterEllipsis" />
                 <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Status, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.Status), Mode=OneWay}" />
             </StackPanel>
             <Button x:Uid="Discover_Browse" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.BrowseCommand}" Content="Browse" Style="{StaticResource JfChipButtonStyle}" />
         </Grid>
 
         <ScrollViewer Grid.Row="1">
-            <StackPanel Padding="0,0,0,112" Spacing="28">
+            <StackPanel Padding="{x:Bind Layout.EndPadding, Mode=OneWay}" Spacing="28">
                 <!-- While loading: placeholders the shape of two shelves. -->
                 <StackPanel Spacing="12" Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsLoading), Mode=OneWay}" AutomationProperties.AccessibilityView="Raw">
                     <Border Width="180" Height="22" HorizontalAlignment="Left" Background="{ThemeResource JfFill}" CornerRadius="6" />
