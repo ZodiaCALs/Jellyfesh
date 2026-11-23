@@ -4,9 +4,14 @@
 // cache (docs/core-api.md, "Covers"): `source_artwork` gives the path at once when it is cached,
 // otherwise an `.artwork` event brings it, and until then the placeholder shows. Files are decoded
 // and downsampled on a background task and kept in memory under a byte budget.
+//
+// A picture the core could not get is asked for again after a back-off (30 seconds, doubling up to
+// 10 minutes), at once when the core later sends it after all, and when a source signs in or out
+// (`forgetFailures`); views showing a placeholder then try again (`generation`).
 
 import AppKit
 import ImageIO
+import Observation
 
 /// Artwork a view can load: a library content hash, a file, or a source's URL.
 enum ArtworkSource: Hashable, Sendable {
@@ -28,6 +33,7 @@ enum ArtworkSource: Hashable, Sendable {
 }
 
 @MainActor
+@Observable
 final class ArtworkLoader {
     /// Thumbnail sizes the core makes (`artwork_thumbnail`).
     nonisolated static let thumbnailSizes = [64, 128, 256, 512, 1024]
@@ -35,19 +41,46 @@ final class ArtworkLoader {
     /// How long a picture the core is fetching is waited for before the placeholder stays.
     nonisolated static let sourceArtworkWait: Duration = .seconds(60)
 
-    private let client: CoreClient
-    private let cache = NSCache<NSString, NSImage>()
-    private var inFlight: [String: Task<NSImage?, Never>] = [:]
-    /// Waiting for `.artwork` events, by URL and size.
-    private var waiters: [String: [UUID: CheckedContinuation<String?, Never>]] = [:]
-    /// Pictures the core said cannot be had: not asked for again in this run.
-    private var unavailable = Set<String>()
-    /// `.artwork` events that came while nobody waited yet (the answer can overtake the query's).
-    private var arrived: [String: String] = [:]
+    /// Bumped when pictures that failed may be had now (`forgetFailures`): views that show a
+    /// placeholder load again.
+    private(set) var generation = 0
 
-    init(client: CoreClient) {
+    private let client: CoreClient
+    private let now: () -> ContinuousClock.Instant
+    private let cache = NSCache<NSString, NSImage>()
+    @ObservationIgnored private var inFlight: [String: Task<NSImage?, Never>] = [:]
+    /// Waiting for `.artwork` events, by URL and size.
+    @ObservationIgnored private var waiters: [String: [UUID: CheckedContinuation<String?, Never>]] = [:]
+    /// Pictures the core said cannot be had, by URL and size: not asked for again until their
+    /// back-off ends.
+    @ObservationIgnored private var failures: [String: Failure] = [:]
+    /// `.artwork` events that came while nobody waited yet (the answer can overtake the query's).
+    @ObservationIgnored private var arrived: [String: String] = [:]
+
+    /// A picture the core could not get: how often in a row, and when it may be asked for again.
+    private struct Failure {
+        var count: Int
+        var retryAt: ContinuousClock.Instant
+    }
+
+    init(client: CoreClient, now: @escaping () -> ContinuousClock.Instant = { ContinuousClock.now }) {
         self.client = client
+        self.now = now
         cache.totalCostLimit = 64 * 1024 * 1024
+    }
+
+    /// How long a picture that failed `count` times in a row waits before it is asked for again:
+    /// 30 seconds, then twice as long after each failure, at most 10 minutes.
+    nonisolated static func backOff(failures count: Int) -> Duration {
+        let doublings = min(max(count, 1) - 1, 5)
+        return .seconds(min(30 << doublings, 600))
+    }
+
+    /// Pictures that failed may be had now (a source signed in or out): ask for them again.
+    func forgetFailures() {
+        guard !failures.isEmpty else { return }
+        failures.removeAll()
+        generation += 1
     }
 
     /// The smallest thumbnail size that covers `pixels` device pixels.
@@ -97,14 +130,15 @@ final class ArtworkLoader {
     /// event arrives (nil when it cannot be had, or after `sourceArtworkWait`).
     private func sourceArtworkPath(url: String, size: Int) async -> String? {
         let key = "\(url)@\(size)"
-        guard !unavailable.contains(key) else { return nil }
+        guard mayAsk(key) else { return nil }
         do {
             if let path = try await client.sourceArtwork(url: url, sizePx: size) { return path }
         } catch {
             return nil
         }
         if let path = arrived.removeValue(forKey: key) { return path }
-        guard !unavailable.contains(key) else { return nil }
+        // The core may have answered while the query was on its way.
+        guard mayAsk(key) else { return nil }
         let token = UUID()
         Task { [weak self] in
             try? await Task.sleep(for: Self.sourceArtworkWait)
@@ -115,12 +149,26 @@ final class ArtworkLoader {
         }
     }
 
+    /// Whether a source picture may be asked for: never failed, or its back-off is over.
+    private func mayAsk(_ key: String) -> Bool {
+        guard let failure = failures[key] else { return true }
+        return now() >= failure.retryAt
+    }
+
     /// The core cached a source picture, or found it cannot be had.
     func artworkFetched(_ fetched: ArtworkFetched) {
         let key = "\(fetched.url)@\(fetched.sizePx)"
         if fetched.path == nil {
-            if unavailable.count > 4_000 { unavailable.removeAll() }
-            unavailable.insert(key)
+            let time = now()
+            if failures.count > 4_000 {
+                failures = failures.filter { $0.value.retryAt > time }
+                if failures.count > 4_000 { failures.removeAll() }
+            }
+            let count = (failures[key]?.count ?? 0) + 1
+            failures[key] = Failure(count: count, retryAt: time.advanced(by: Self.backOff(failures: count)))
+        } else {
+            // It can be had after all.
+            failures[key] = nil
         }
         guard let pending = waiters.removeValue(forKey: key) else {
             if let path = fetched.path {

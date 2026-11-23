@@ -248,7 +248,12 @@ final class AppModel {
             case .devices(let state):
                 playback.apply(devices: state)
             case .sources(let state):
+                let signedIn = sources.signedInSources
                 sources.apply(state)
+                // A picture a source could not give may come once it is signed in (or out).
+                if sources.signedInSources != signedIn {
+                    artwork.forgetFailures()
+                }
             case .remote(let state):
                 // A session that ended with an error says so once.
                 if let message = playback.apply(remote: state) {

@@ -1,5 +1,7 @@
 // Artwork in rows, cards and Now Playing: drawn from memory at once when it is cached, otherwise
-// loaded off the main actor by ArtworkLoader while a quiet placeholder shows.
+// loaded off the main actor by ArtworkLoader while a quiet placeholder shows. A placeholder loads
+// again when the view comes back into sight, and when the loader says pictures that failed may be
+// had now.
 
 import SwiftUI
 
@@ -56,7 +58,7 @@ struct ArtworkView: View {
             .aspectRatio(1, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: look.radius(cornerRadius), style: .continuous))
             .accessibilityHidden(true)
-            .task(id: TaskKey(source: source, pixels: pixels)) {
+            .task(id: TaskKey(source: source, pixels: pixels, generation: loader?.generation ?? 0)) {
                 await load()
             }
     }
@@ -70,6 +72,8 @@ struct ArtworkView: View {
     private struct TaskKey: Equatable {
         var source: ArtworkSource?
         var pixels: Int
+        /// Pictures that failed are asked for again when this changes.
+        var generation: Int
     }
 
     private func load() async {

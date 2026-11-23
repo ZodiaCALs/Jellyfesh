@@ -97,6 +97,11 @@ final class SourcesStore {
     /// Some source is on and signed in (Home welcomes the person only while none is).
     var hasSignedInSource: Bool { sources.plugins.contains { $0.enabled && $0.account != nil } }
 
+    /// The sources that are on and signed in, by id.
+    var signedInSources: Set<String> {
+        Set(sources.plugins.filter { $0.enabled && $0.account != nil }.map(\.id))
+    }
+
     /// The sign-in flow whose sheet `window` shows, if any.
     func signInFlow(in window: SignInWindow) -> SignInFlow? {
         signIn?.window == window ? signIn : nil

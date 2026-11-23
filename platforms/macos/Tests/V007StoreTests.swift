@@ -201,19 +201,84 @@ final class SourceCoverTests: XCTestCase {
         XCTAssertNotNil(image)
     }
 
-    func testACoverThatCannotBeHadKeepsThePlaceholder() async {
-        let client = FakeCoreClient()
-        let url = "https://img.example.com/gone.jpg"
-        let loader = ArtworkLoader(client: client)
+    /// Fails `url` once: the core answers that it cannot get the picture.
+    private func failOnce(_ url: String, loader: ArtworkLoader, client: FakeCoreClient) async {
+        let requests = client.sourceArtworkRequests.count
         let load = Task { await loader.image(.url(url), pixels: 64) }
-        await eventually { !client.sourceArtworkRequests.isEmpty }
+        await eventually { client.sourceArtworkRequests.count > requests }
         loader.artworkFetched(ArtworkFetched(url: url, sizePx: 64, path: nil))
         let image = await load.value
         XCTAssertNil(image)
+    }
+
+    func testACoverThatCannotBeHadKeepsThePlaceholderUntilItsBackOffEnds() async throws {
+        let client = FakeCoreClient()
+        let clock = TestClock()
+        let url = "https://img.example.com/gone.jpg"
+        let loader = ArtworkLoader(client: client, now: { clock.now })
+        await failOnce(url, loader: loader, client: client)
         let again = await loader.image(.url(url), pixels: 64)
         XCTAssertNil(again)
-        XCTAssertEqual(client.sourceArtworkRequests.count, 1, "not asked for again")
+        XCTAssertEqual(client.sourceArtworkRequests.count, 1, "not asked for again during its back-off")
+
+        clock.now = clock.now.advanced(by: .seconds(31))
+        client.cachedSourceArtwork[url] = try picture()
+        let later = await loader.image(.url(url), pixels: 64)
+        XCTAssertNotNil(later, "asked for again once the back-off is over")
+        XCTAssertEqual(client.sourceArtworkRequests.count, 2)
     }
+
+    func testTheBackOffDoublesUpToTenMinutes() {
+        XCTAssertEqual(ArtworkLoader.backOff(failures: 1), .seconds(30))
+        XCTAssertEqual(ArtworkLoader.backOff(failures: 2), .seconds(60))
+        XCTAssertEqual(ArtworkLoader.backOff(failures: 5), .seconds(480))
+        XCTAssertEqual(ArtworkLoader.backOff(failures: 6), .seconds(600))
+        XCTAssertEqual(ArtworkLoader.backOff(failures: 40), .seconds(600))
+    }
+
+    func testEachFailureInARowWaitsLonger() async {
+        let client = FakeCoreClient()
+        let clock = TestClock()
+        let url = "https://img.example.com/flaky.jpg"
+        let loader = ArtworkLoader(client: client, now: { clock.now })
+        await failOnce(url, loader: loader, client: client)
+        clock.now = clock.now.advanced(by: .seconds(31))
+        await failOnce(url, loader: loader, client: client)
+        clock.now = clock.now.advanced(by: .seconds(31))
+        _ = await loader.image(.url(url), pixels: 64)
+        XCTAssertEqual(client.sourceArtworkRequests.count, 2, "the second failure waits a minute")
+    }
+
+    func testACoverTheCoreSendsLaterIsShownAtOnce() async throws {
+        let client = FakeCoreClient()
+        let url = "https://img.example.com/late.jpg"
+        let loader = ArtworkLoader(client: client)
+        await failOnce(url, loader: loader, client: client)
+        let path = try picture()
+        loader.artworkFetched(ArtworkFetched(url: url, sizePx: 64, path: path))
+        let image = await loader.image(.url(url), pixels: 64)
+        XCTAssertNotNil(image, "a new answer from the core ends the back-off")
+    }
+
+    func testASignInAsksForFailedCoversAgain() async throws {
+        let client = FakeCoreClient()
+        let url = "https://img.example.com/private.jpg"
+        let loader = ArtworkLoader(client: client)
+        await failOnce(url, loader: loader, client: client)
+        let generation = loader.generation
+        loader.forgetFailures()
+        XCTAssertEqual(loader.generation, generation + 1, "placeholders load again")
+        client.cachedSourceArtwork[url] = try picture()
+        let image = await loader.image(.url(url), pixels: 64)
+        XCTAssertNotNil(image)
+        loader.forgetFailures()
+        XCTAssertEqual(loader.generation, generation + 1, "nothing to forget: nothing to load again")
+    }
+}
+
+/// A clock a test moves by hand.
+final class TestClock {
+    var now = ContinuousClock.now
 }
 
 final class BuildFlagTests: XCTestCase {
