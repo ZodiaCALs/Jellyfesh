@@ -642,6 +642,14 @@ pub fn next_quality(failed: &str) -> String {
     json(&rules::next_quality(failed))
 }
 
+/// The levels the quality menu offers for what plays, best first (`Quality` list): `policy` is the
+/// playing source's content policy (`ContentPolicy`), left out for a file.
+#[wasm_bindgen]
+pub fn offered_qualities(policy: Option<String>) -> Result<String, JsError> {
+    let policy: Option<ContentPolicy> = policy.map(|p| parse(&p, "content policy")).transpose()?;
+    Ok(json(&rules::offered_qualities(policy.as_ref())))
+}
+
 /// A MIME type for `canPlayType` from a codec hint.
 #[wasm_bindgen]
 pub fn codec_mime(codec: &str) -> Option<String> {

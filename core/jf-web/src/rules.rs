@@ -355,6 +355,17 @@ pub fn next_quality(failed: Quality) -> Option<Quality> {
     }
 }
 
+/// The levels the bar's quality menu offers for what plays (ADR-0026 §2),
+/// best first: none for a file (it plays as it is), every level for a
+/// source's stream (`policy` is its content policy; a plugin cannot list
+/// its own levels before API 1.3).
+pub fn offered_qualities(policy: Option<&jf_plugin_model::ContentPolicy>) -> Vec<Quality> {
+    match policy {
+        None => Vec::new(),
+        Some(_) => vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low],
+    }
+}
+
 /// A MIME type for `HTMLMediaElement.canPlayType` from a plugin's codec
 /// hint, when the hint names one.
 pub fn codec_mime(codec: &str) -> Option<&'static str> {
@@ -467,6 +478,16 @@ mod tests {
         assert!(limiter_needed(&[1.0], &EqSettings::bass_boost(), false));
         assert!(limiter_needed(&[], &flat, true));
         assert!(!limiter_needed(&[], &EqSettings::default(), false));
+    }
+
+    #[test]
+    fn files_offer_no_levels_and_streams_all() {
+        assert!(offered_qualities(None).is_empty());
+        let policy = jf_plugin_model::ContentPolicy::default();
+        assert_eq!(
+            offered_qualities(Some(&policy)),
+            [Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
+        );
     }
 
     #[test]
