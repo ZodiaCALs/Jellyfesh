@@ -656,6 +656,12 @@ not called); `Snapshot.aiLyrics`/`look`/`pro`/`update` and their events, `Event.
 
 ## Known gaps
 
+* v0.0.8: Settings' groups are the system's grouped forms over the field, not the web's Mist
+  cards with the heading inside, and the title and section tabs stay put while the groups scroll;
+  album and playlist songs are rows over the field rather than inside a card; the panel uses the
+  app's Clear glass (SwiftUI materials) rather than AppKit's sidebar material; the mini player has
+  no Liquid Glass on macOS 26 and does not open the main window from its cover. None of it has
+  been compiled where it was written: CI's macOS job is its first build.
 * Apple Music's results show placeholders: their pictures do not come
   through the core's cache.
 * v0.0.7: StoreKit has not met App Store Connect yet (the product, the
