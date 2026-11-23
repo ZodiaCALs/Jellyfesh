@@ -169,13 +169,15 @@ class DesignTest {
         assertEquals(min, Luminous.lyricLineSp(360f, min, max), "a phone gets the token's minimum")
         assertEquals(max, Luminous.lyricLineSp(1280f, min, max))
         assertEquals((min + max) / 2f, Luminous.lyricLineSp(780f, min, max), 1e-4f)
-        // Page titles: text-h1 (48) where the window allows, the fluid minimum (38.4) on phones.
+        // Page titles as on Jellyfesh Web: text-h2 (30.4) under 900 dp, text-h1 (48) from 900 dp.
         val h1 = token("type", "text-h1").toFloat() * 16f
-        val h1Min = fluid("type", "text-h1", "min").toFloat() * 16f
-        val vw = fluid("type", "text-h1", "vw").toFloat()
+        val h2 = token("type", "text-h2").toFloat() * 16f
         assertEquals(48f, h1, 1e-4f)
-        assertEquals(h1Min, Luminous.pageTitleSp(390f, h1Min, vw, h1), 1e-4f)
-        assertEquals(48f, Luminous.pageTitleSp(1280f, h1Min, vw, h1), 1e-4f)
+        assertEquals(30.4f, h2, 1e-4f)
+        assertEquals(h2, Luminous.pageTitleSp(390f, h2, h1), 1e-4f)
+        assertEquals(h2, Luminous.pageTitleSp(899f, h2, h1), 1e-4f)
+        assertEquals(48f, Luminous.pageTitleSp(900f, h2, h1), 1e-4f)
+        assertEquals(48f, Luminous.pageTitleSp(1280f, h2, h1), 1e-4f)
         // The Now Playing title: 25 on the reference 390 dp phone, the full 32 from 600 dp.
         assertEquals(25f, Luminous.nowPlayingTitleSp(390f, 32f), 1e-4f)
         assertEquals(32f, Luminous.nowPlayingTitleSp(800f, 32f))

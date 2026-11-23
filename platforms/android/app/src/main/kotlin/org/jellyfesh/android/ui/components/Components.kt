@@ -309,14 +309,14 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier, action: (@Composa
 }
 
 /**
- * A screen's title block: a large title (Luminous: type.text-h1, 48 where the window allows and
- * its fluid minimum on phones), a line under it and actions on the right.
+ * A page's title block, as Jellyfesh Web's: a large title (type.text-h2, 30.4, under 900 dp;
+ * type.text-h1, 48, from 900 dp), a line under it and actions on the right (a sort menu).
  */
 @Composable
 fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
     val colors = Jf.colors
     val width = LocalWindowWidthDp.current
-    val size = Luminous.pageTitleSp(width, Tokens.TypeScale.textH1Fluid.min, Tokens.TypeScale.textH1Fluid.vw ?: 0f, Tokens.TypeScale.textH1)
+    val size = Luminous.pageTitleSp(width, Tokens.TypeScale.textH2, Tokens.TypeScale.textH1)
     Row(
         modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -329,20 +329,44 @@ fun ScreenTitle(title: String, modifier: Modifier = Modifier, subtitle: String? 
     }
 }
 
-/** A detail screen's top bar: back, then the title once the header has scrolled away. */
+/**
+ * A detail page's top bar: Jellyfesh Web's Back (the chevron and "Back" in accent text), then the
+ * title once the header has scrolled away, and the page's actions.
+ */
 @Composable
 fun BackBar(onBack: () -> Unit, modifier: Modifier = Modifier, title: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(
         modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        JfIconButton(R.drawable.ic_back, stringResource(R.string.action_back), onBack, tint = Jf.colors.ink90)
+        BackButton(onBack)
         if (title != null) {
             JfText(title, style = JfType.label.copy(fontSize = JfType.body.fontSize), maxLines = 1, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
         } else {
             Spacer(Modifier.weight(1f))
         }
         actions()
+    }
+}
+
+/** Back as on Jellyfesh Web: the chevron and the word, in accent text, on a capsule that tints when pressed. */
+@Composable
+fun BackButton(onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = Jf.colors
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Row(
+        modifier
+            .heightIn(min = 48.dp)
+            .clip(CircleShape)
+            .background(if (pressed) colors.fillPress else androidx.compose.ui.graphics.Color.Transparent, CircleShape)
+            .clickable(interaction, indication = null, role = Role.Button, onClick = onBack)
+            .padding(start = 6.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        JfIcon(R.drawable.ic_back, colors.accentText, size = 18.dp)
+        JfText(stringResource(R.string.action_back), style = JfType.label.copy(fontSize = JfType.body.fontSize), color = colors.accentText, maxLines = 1)
     }
 }
 

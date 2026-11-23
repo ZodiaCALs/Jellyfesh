@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -93,7 +94,7 @@ fun LibraryScreen(chosen: LibrarySection, state: CoreState) {
     val sections = LookPlaces.librarySections(Jf.look)
     val section = LookPlaces.shown(chosen, sections)
     val phone = !Layout.usesSidebar(LocalWindowWidthDp.current)
-    val header: @Composable () -> Unit = {
+    val header: LibraryHeader = { actions ->
         Column(Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
             if (phone) {
                 PillTabs(
@@ -105,7 +106,7 @@ fun LibraryScreen(chosen: LibrarySection, state: CoreState) {
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
                 )
             }
-            ScreenTitle(stringResource(sectionLabel(section)))
+            ScreenTitle(stringResource(sectionLabel(section)), actions = actions)
         }
     }
     when (section) {
@@ -133,9 +134,9 @@ fun sectionLabel(section: LibrarySection): Int = when (section) {
  * empty list as if downloading worked.
  */
 @Composable
-private fun DownloadsPage(header: @Composable () -> Unit) {
+private fun DownloadsPage(header: LibraryHeader) {
     LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
-        item(key = "header") { header() }
+        item(key = "header") { header {} }
         item(key = "state") { Notice(stringResource(R.string.not_available_yet)) }
     }
 }
@@ -145,7 +146,7 @@ private fun DownloadsPage(header: @Composable () -> Unit) {
 fun listPadding(): PaddingValues = PaddingValues(bottom = LocalChromePadding.current.calculateBottomPadding() + 16.dp)
 
 @Composable
-private fun AlbumsGrid(state: CoreState, header: @Composable () -> Unit) {
+private fun AlbumsGrid(state: CoreState, header: LibraryHeader) {
     val nav = LocalNav.current
     val graph = LocalGraph.current
     val overlays = LocalOverlays.current
@@ -168,18 +169,19 @@ private fun AlbumsGrid(state: CoreState, header: @Composable () -> Unit) {
     ) {
         item(key = "header", span = { GridItemSpan(maxLineSpan) }) {
             Column(Modifier.bleed(12.dp)) {
-                header()
-                SortChip(sortTitle, stringResource(albumSortLabel(order.field)), order.descending) {
-                    showSortMenu(
-                        overlays,
-                        sortTitle,
-                        SortMenus.ALBUM_FIELDS,
-                        { stringResource(albumSortLabel(it)) },
-                        { SortOrder(sortField, descending) },
-                        SortMenus::album,
-                    ) { chosen ->
-                        sortField = chosen.field
-                        descending = chosen.descending
+                header {
+                    SortButton(sortTitle, stringResource(albumSortLabel(order.field)), order.descending) {
+                        showSortMenu(
+                            overlays,
+                            sortTitle,
+                            SortMenus.ALBUM_FIELDS,
+                            { stringResource(albumSortLabel(it)) },
+                            { SortOrder(sortField, descending) },
+                            SortMenus::album,
+                        ) { chosen ->
+                            sortField = chosen.field
+                            descending = chosen.descending
+                        }
                     }
                 }
             }
@@ -219,13 +221,14 @@ fun songSortLabel(sort: TrackSort): Int = when (sort) {
     TrackSort.Path -> R.string.info_file
 }
 
-/** The sort menu's button: the order in use; it opens the menu. */
+/** A library page's header: the switcher on phones and the page's title, with [actions] beside it. */
+typealias LibraryHeader = @Composable (actions: @Composable RowScope.() -> Unit) -> Unit
+
+/** The sort menu's button beside the page's title, as on Jellyfesh Web: the order in use; it opens the menu. */
 @Composable
-private fun SortChip(title: String, field: String, descending: Boolean, onClick: () -> Unit) {
+private fun SortButton(title: String, field: String, descending: Boolean, onClick: () -> Unit) {
     val spoken = listOfNotNull(title, field, stringResource(R.string.sort_descending).takeIf { descending }).joinToString(", ")
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
-        ChipButton(R.drawable.ic_sort, field, onClick, description = spoken)
-    }
+    ChipButton(R.drawable.ic_sort, field, onClick, description = spoken)
 }
 
 /**
@@ -285,13 +288,13 @@ fun LazyListScope.pagedStates(source: PagedSource<*>, icon: Int, emptyTitle: Int
 }
 
 @Composable
-private fun ArtistsList(state: CoreState, header: @Composable () -> Unit) {
+private fun ArtistsList(state: CoreState, header: LibraryHeader) {
     val nav = LocalNav.current
     val actions = rememberTrackActions()
     val listState = rememberLazyListState()
     val artists = rememberPagedSource(listState, state.libraryRevision, rowOffset = 1) { core, offset, limit -> core.artists(offset, limit) }
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
-        item(key = "header") { header() }
+        item(key = "header") { header {} }
         pagedStates(artists, R.drawable.ic_artist, R.string.artists_empty_title, R.string.artists_empty_body) { LibraryAccessButtons() }
         items(artists.count, key = { i -> artists[i]?.id ?: "pending-$i" }) { i ->
             val artist = artists[i]
@@ -309,7 +312,7 @@ private fun ArtistsList(state: CoreState, header: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
+private fun SongsList(state: CoreState, header: LibraryHeader) {
     val graph = LocalGraph.current
     val overlays = LocalOverlays.current
     val actions = rememberTrackActions()
@@ -323,15 +326,9 @@ private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
     val sortTitle = stringResource(R.string.sort_songs)
     val playing = state.nowPlaying?.track
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
-        item(key = "header") { header() }
-        item(key = "play") {
-            Column {
-                // Every song in this order, read or not: the core plays the whole library.
-                PlayButtons(
-                    onPlay = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), 0, false)) },
-                    onShuffle = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), 0, true)) },
-                )
-                SortChip(sortTitle, stringResource(songSortLabel(order.field)), order.descending) {
+        item(key = "header") {
+            header {
+                SortButton(sortTitle, stringResource(songSortLabel(order.field)), order.descending) {
                     showSortMenu(
                         overlays,
                         sortTitle,
@@ -345,6 +342,13 @@ private fun SongsList(state: CoreState, header: @Composable () -> Unit) {
                     }
                 }
             }
+        }
+        item(key = "play") {
+            // Every song in this order, read or not: the core plays the whole library.
+            PlayButtons(
+                onPlay = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), 0, false)) },
+                onShuffle = { graph.send(Command.PlayCollection(SortMenus.allSongs(order), 0, true)) },
+            )
         }
         pagedStates(songs, R.drawable.ic_song, R.string.songs_empty_title, R.string.songs_empty_body) { LibraryAccessButtons() }
         items(songs.count, key = { i -> songs[i]?.id ?: "pending-$i" }) { i ->
@@ -385,7 +389,7 @@ fun PlayButtons(onPlay: () -> Unit, onShuffle: () -> Unit, modifier: Modifier = 
  * playlists; each one's More menu adds Rename…, Export Playlist… and Delete Playlist….
  */
 @Composable
-private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
+private fun PlaylistsList(state: CoreState, header: LibraryHeader) {
     val nav = LocalNav.current
     val actions = rememberTrackActions()
     val transfer = rememberPlaylistTransfer()
@@ -393,7 +397,7 @@ private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
     val playlists by rememberQuery(state.libraryRevision) { it.playlists() }
     val newLabel = stringResource(R.string.action_new_playlist)
     LazyColumn(modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
-        item(key = "header") { header() }
+        item(key = "header") { header {} }
         item(key = "new") {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 JfButton(newLabel, playlistActions::create, icon = R.drawable.ic_add)
@@ -442,14 +446,14 @@ private fun PlaylistsList(state: CoreState, header: @Composable () -> Unit) {
 }
 
 @Composable
-private fun FavouritesList(state: CoreState, header: @Composable () -> Unit) {
+private fun FavouritesList(state: CoreState, header: LibraryHeader) {
     val graph = LocalGraph.current
     val actions = rememberTrackActions()
     val listState = rememberLazyListState()
     val favourites = rememberPagedSource(listState, state.libraryRevision, rowOffset = 2) { core, offset, limit -> core.favorites(offset, limit) }
     val playing = state.nowPlaying?.track
     LazyColumn(state = listState, modifier = Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
-        item(key = "header") { header() }
+        item(key = "header") { header {} }
         item(key = "play") {
             PlayButtons(
                 onPlay = { graph.send(Command.PlayCollection(CollectionRef.Favorites, 0, false)) },

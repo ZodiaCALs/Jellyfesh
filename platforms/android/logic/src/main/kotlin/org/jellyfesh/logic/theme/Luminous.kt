@@ -56,13 +56,13 @@ object Luminous {
     fun lyricLineSp(widthDp: Float, min: Float, max: Float): Float = fluid(widthDp, min, max, 360f, 1200f)
 
     /**
-     * Page titles (type.text-h1): Luminous sets them at [h1] (48) where the window allows; the
-     * token's fluid rule `clamp(min, vw, …)` gives phones its minimum ([min], 38.4 at 4.6 vw).
+     * Page titles as Jellyfesh Web sets them (ADR-0023; its `.page-title`): type.text-h2 ([h2],
+     * 30.4) on windows under [WIDE_DP], type.text-h1 ([h1], 48) from there.
      */
-    fun pageTitleSp(widthDp: Float, min: Float, vw: Float, h1: Float): Float {
-        if (widthDp.isNaN()) return min
-        return (widthDp * vw / 100f).coerceIn(min, maxOf(min, h1))
-    }
+    fun pageTitleSp(widthDp: Float, h2: Float, h1: Float): Float = if (!widthDp.isNaN() && widthDp >= WIDE_DP) h1 else h2
+
+    /** Where Jellyfesh Web's wide rules start (its `min-width: 900px`: the full bar, the large titles). */
+    const val WIDE_DP = 900f
 
     /**
      * The Now Playing title (type-roles.now-playing-title, 32): the reference phone screen sets it
