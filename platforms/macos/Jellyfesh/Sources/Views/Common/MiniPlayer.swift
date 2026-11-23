@@ -1,10 +1,9 @@
-// The mini player for content columns under 900 pt (docs/design-controls.md, "v0.0.4"): a floating
-// Veil capsule with `player.mini-radius` corners, the artwork, two lines of type and one control,
-// play and pause (Misty CMP-02: art, two lines, one progress indicator, one control; never
-// accent-filled, COL-04). Its progress is a straight 2 pt line along the bottom edge, inset by the
-// corners, redrawn only when it grows by a pixel. Clicking it opens Now Playing. While a remote
-// session runs it shows the session's track with "Playing on {Device}" (ADR-0018). The look's
-// Floating style makes it a smaller capsule (ADR-0020).
+// The capsule player for windows under 900 pt (docs/ui.md, "The player bar and the mini player"):
+// a floating Veil capsule with `player.mini-radius` corners, the artwork, two lines of type, play
+// and next (never accent-filled, COL-04). Its progress is a straight 2 pt line along the bottom
+// edge, inset by the corners, redrawn only when it grows by a pixel. Clicking it opens Now Playing.
+// While a remote session runs it shows the session's track with "Playing on {Device}" (ADR-0018).
+// The look's Floating style makes it a smaller capsule (ADR-0020).
 
 import SwiftUI
 
@@ -36,7 +35,17 @@ struct MiniPlayer: View {
                     .accessibilityHint(Text("Opens Now Playing"))
                     .help(Text("Show Now Playing"))
 
-                    PlayPauseButton(size: 44, glyph: 16, prominent: false)
+                    HStack(spacing: 0) {
+                        PlayPauseButton(size: 44, glyph: 16, prominent: false)
+                        Button {
+                            playback.next()
+                        } label: {
+                            Image(systemName: "forward.fill")
+                        }
+                        .buttonStyle(IconButtonStyle(size: 44, glyph: 15, prominent: true))
+                        .accessibilityLabel(Text("Next"))
+                        .help(Text("Next"))
+                    }
                 }
                 .padding(10)
                 .padding(.horizontal, floating ? Tokens.Space.s2 : 0)

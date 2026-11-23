@@ -34,6 +34,7 @@ final class SettingsPageTests: XCTestCase {
     }
 }
 
+@MainActor
 final class ShellLayoutTests: XCTestCase {
     func testTheWebsBreakpoints() {
         XCTAssertTrue(ShellLayout(width: 760).showsTabs, "up to 760 pt: the phone tabs")
@@ -50,6 +51,20 @@ final class ShellLayoutTests: XCTestCase {
         XCTAssertEqual(ShellLayout.bottomZone(playerHeight: 80, tabs: false), 96)
         XCTAssertEqual(ShellLayout.bottomZone(playerHeight: nil, tabs: true), 92, "the tabs and their margin")
         XCTAssertEqual(ShellLayout.bottomZone(playerHeight: 64, tabs: true), 172)
+    }
+
+    func testThePlayerFloatsOverEveryPageButNowPlaying() {
+        XCTAssertTrue(ShellLayout.showsPlayer(hasTrack: true, nowPlayingShown: false))
+        XCTAssertFalse(ShellLayout.showsPlayer(hasTrack: true, nowPlayingShown: true), "Now Playing has its own dock")
+        XCTAssertFalse(ShellLayout.showsPlayer(hasTrack: false, nowPlayingShown: false))
+    }
+
+    func testANarrowBarKeepsTheMuteButtonAndDropsTheVolumeLine() {
+        let narrowest = SeekGeometry.playerBarMinWidth - ShellLayout.sidebarWidth - ShellLayout.margin
+            - 2 * LuminousGeometry.playerMargin
+        XCTAssertFalse(PlayerBarLayout.showsVolumeLine(barWidth: narrowest), "a 900 pt window beside the panel")
+        XCTAssertTrue(PlayerBarLayout.showsVolumeLine(barWidth: 820))
+        XCTAssertLessThan(NowPlayingDock.compactBelow, ShellLayout.playerBarMinWidth)
     }
 
     func testTheWordmarkShowsTheChosenIcon() {

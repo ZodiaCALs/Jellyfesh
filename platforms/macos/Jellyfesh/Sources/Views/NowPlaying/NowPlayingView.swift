@@ -61,7 +61,7 @@ struct NowPlayingView: View {
                         .padding(.top, Tokens.Space.s2)
                         .padding(.bottom, Tokens.Space.s5)
                     }
-                    NowPlayingDock()
+                    NowPlayingDock(compact: width < NowPlayingDock.compactBelow)
                         .padding(.horizontal, wide ? 96 : 32)
                         .padding(.bottom, 28)
                 }
@@ -313,12 +313,18 @@ struct StageArtwork: View {
 }
 
 /// Every control in one floating Veil capsule (Luminous): shuffle, previous, play, next and repeat,
-/// the scrubber with its times, the volume (hidden for a remote device without one), and the
-/// device button and More.
+/// the scrubber with its times, the volume (hidden for a remote device without one; only its mute
+/// button in a narrow window), and the device button and More.
 struct NowPlayingDock: View {
+    /// A narrow window: the volume keeps its mute button and drops its line.
+    var compact = false
+
+    /// Windows narrower than this get the compact dock.
+    static let compactBelow: CGFloat = 820
+
     var body: some View {
         FloatingGlass(cornerRadius: LuminousGeometry.dockRadius) {
-            DockControls()
+            DockControls(compact: compact)
         }
         .elevation(Tokens.Elevation.shadow2)
         .frame(maxWidth: 1180)
@@ -326,6 +332,8 @@ struct NowPlayingDock: View {
 }
 
 private struct DockControls: View {
+    var compact: Bool
+
     @Environment(PlaybackStore.self) private var playback
     @Environment(SettingsStore.self) private var settings
 
@@ -378,8 +386,12 @@ private struct DockControls: View {
                 .frame(maxWidth: .infinity)
 
             if playback.showsVolume {
-                VolumeSlider()
-                    .frame(width: 168)
+                if !compact {
+                    VolumeSlider()
+                        .frame(width: 168)
+                } else if playback.canMute {
+                    VolumeMuteButton()
+                }
             }
 
             HStack(spacing: Tokens.Space.s1) {

@@ -32,6 +32,12 @@ struct ShellLayout: Equatable {
     /// The full player bar rather than the capsule.
     var showsPlayerBar: Bool { SeekGeometry.usesPlayerBar(width: width) }
 
+    /// The player floats over every page while something plays, and is not drawn while Now Playing
+    /// is open: Now Playing has its own dock (ADR-0023 §2).
+    static func showsPlayer(hasTrack: Bool, nowPlayingShown: Bool) -> Bool {
+        hasTrack && !nowPlayingShown
+    }
+
     /// What floats at the bottom of the pages, margins included: the player (`playerHeight`, nil
     /// while it is hidden) and, in the phone layout, the tabs. The pages fade out just above it.
     static func bottomZone(playerHeight: CGFloat?, tabs: Bool) -> CGFloat {

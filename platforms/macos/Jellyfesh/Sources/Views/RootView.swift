@@ -159,7 +159,7 @@ struct ContentColumn: View {
     var body: some View {
         @Bindable var router = router
         let player = LuminousGeometry.bottomPlayer(style: look.miniPlayer, wide: layout.showsPlayerBar)
-        let showsPlayer = playback.hasTrack && !router.nowPlayingShown
+        let showsPlayer = ShellLayout.showsPlayer(hasTrack: playback.hasTrack, nowPlayingShown: router.nowPlayingShown)
         let playerHeight: CGFloat? = showsPlayer ? (player == .bar ? SeekGeometry.barHeight : Tokens.Player.miniHeight) : nil
         NavigationStack(path: $router.path) {
             SectionPage(item: router.selection)

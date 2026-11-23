@@ -105,3 +105,22 @@ struct VolumeSlider: View {
         .font(.system(size: 13))
     }
 }
+
+/// The volume's mute button alone, where there is no room for the line (a narrow player bar or
+/// dock); ⌘↑ and ⌘↓ still change the volume.
+struct VolumeMuteButton: View {
+    var size: CGFloat = 40
+
+    @Environment(PlaybackStore.self) private var playback
+
+    var body: some View {
+        Button {
+            playback.toggleMute()
+        } label: {
+            Image(systemName: playback.muted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+        }
+        .buttonStyle(IconButtonStyle(size: size, glyph: 14))
+        .accessibilityLabel(playback.muted ? Text("Unmute") : Text("Mute"))
+        .help(playback.muted ? Text("Unmute") : Text("Mute"))
+    }
+}
