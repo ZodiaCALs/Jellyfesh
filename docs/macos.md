@@ -1,4 +1,4 @@
-# The macOS app (v0.0.7)
+# The macOS app (v0.0.8)
 
 SwiftUI on macOS 14.2 and later, over the Rust core through the UniFFI bindings
 ([`ffi.md`](ffi.md)). The app holds no business logic (ADR-0001): it shows the
@@ -8,6 +8,64 @@ networking stay in the core.
 **Status: written without a Swift toolchain.** CI's "macOS app" job on a
 `macos-15` runner is where it compiles and its tests run. The names it assumes
 from the generated bindings are listed below so they can be checked quickly.
+
+## v0.0.8: Jellyfesh Web's layout
+
+ADR-0023: the app keeps SwiftUI, its native window frame, title-bar controls, menu bar, Dock
+menu, file panels, Now Playing info and accessibility, and draws Jellyfesh Web's structure with
+them. What changed, and why:
+
+* **The shell** (`Views/RootView.swift`: `AppShell`, `ContentColumn`; the rules in
+  `Support/ShellLayout.swift`). The `NavigationSplitView` and its grouped sidebar (Library,
+  Discover, Playlists) are gone: the web has one floating panel, and the system sidebar could not
+  float on macOS 14 and 15. The window's width picks the layout at the web's breakpoints:
+  * **From 761 pt:** the floating sidebar panel (`Views/SidebarPanel.swift`), 236 pt of Clear
+    glass with r-2xl corners and shadow-1, 12 pt from the window's edges (Liquid Glass on macOS
+    26; solid Cloud when transparency is reduced): the wordmark with the app icon chosen in
+    Settings, Home, Albums, Artists, Songs, Playlists, Favourites and Downloads, a line, Search
+    and Sources, and Open Files… and Settings at its foot, as the web's 42 pt rows (the chosen one
+    in accent text on accent-soft). The scan's progress shows above the foot.
+  * **Up to 760 pt:** the web's phone tabs (`Views/PhoneTabBar.swift`), Home, Library, Search,
+    Sources and Settings in a floating Veil capsule 68 pt high. The Library tab returns to the
+    library place shown last, and its pages start with pill tabs between Albums, Artists, Songs,
+    Playlists, Favourites and Downloads (`LibrarySwitcher` in `PageHeader`). The window can be as
+    narrow as 600 pt.
+  * A customized look orders the places (without the line, as the web) and the tabs; Downloads,
+    which the look cannot place yet, follows its library places (`SidebarItem.panelEntries`,
+    `PhoneTab.tabs`).
+  * The field fills the window under a hidden title bar (`.windowStyle(.hiddenTitleBar)`); the
+    traffic lights stay the system's, above the panel.
+* **Pages.** A page opened from another starts with **Back** (accent text, as on the web),
+  which goes back a page as Esc does; the system's toolbar back button is hidden. The Albums and
+  Songs sort menus sit at the end of the page's title instead of the toolbar, so the window has
+  no toolbar. Downloads is an empty page ("No Downloads Yet") until the core's download queue
+  reaches the app.
+* **Settings is a page** (`Views/Settings/SettingsView.swift`, `SettingsPage`), with the web's
+  pill tabs over the section's grouped forms in a column as wide as the web's
+  (`layout.reading`, 704 pt); the Settings window is gone. The app menu's Settings… (⌘,) opens
+  it at the section shown last; **About Jellyfesh** opens Settings › About
+  (`Views/Settings/AboutSettings.swift`), which starts with Keyboard Shortcuts (the shared keys
+  with ⌘, `AboutInfo.shortcuts`) and holds what the About window held. Menu items that show a
+  page open the main window first, as it may be closed while music plays. The Pro sheet and
+  Enter Licence Key show in the main window.
+* **The player** floats over every page, Settings included, and is not drawn while Now Playing
+  is open (it has its own dock); before, the bar stayed under Now Playing. The window's width
+  picks the full bar (from 900 pt) or the capsule, as the web measures its viewport, not the
+  content column. The full bar has the web's order: the artwork and lines, shuffle, previous,
+  play, next and repeat over the seek bar, Lyrics, Queue, the device button (remote sources), the
+  volume, and **More** (the song's menu and Desktop Lyrics). A bar narrower than 820 pt keeps the
+  mute button and drops the volume line (`PlayerBarLayout`); so does Now Playing's dock in windows
+  under 820 pt. The capsule holds the artwork, the lines, play and **next**.
+* **Open Files…** (the panel's foot and File › Open Files…, ⌘O) plays audio files without adding
+  them to the library. View › ⌘1–⌘8 follow the panel's order (⌘7 Downloads, ⌘8 Sources).
+* **Covers that failed** (`Support/ArtworkLoader.swift`). A source picture the core could not get
+  used to be refused for the rest of the run. It is now asked for again after a back-off (30
+  seconds, doubling to 10 minutes), at once when the core later sends it, and whenever a source
+  signs in or out; views showing a placeholder then load again (`ArtworkLoader.generation`).
+
+Still to come with the core's v0.0.8 contract: the quality badge and menu, the mini player window
+and its settings, Favourites and Playlists with the sources' sections, the search tabs, the
+Downloads page and Settings › Downloads, Streaming in Settings › Playback.
 
 ## v0.0.7: Pro, AI Lyrics, Customize, Discover and the lyrics bar
 
@@ -358,8 +416,8 @@ platforms/macos/
 │       ├── Support/        artwork loader, JSON with ordered keys, schema forms, sign-in forms,
 │       │                   About's links, lyric layout, QR codes, file panels, design math
 │       │                   (seek bar, motion, swatches)
-│       └── Views/          root, sidebar, library pages, Now Playing, search, sources, settings,
-│                           About
+│       └── Views/          root (the shell), sidebar panel, phone tabs, library pages, Now
+│                           Playing, search, sources, the Settings page and its sections
 ├── Tests/                  XCTest on a fake CoreClient (+ ../shared/swift/Tests in the same target)
 └── Generated/              git-ignored, made by build.sh
 ```
@@ -381,13 +439,13 @@ platforms/macos/
   runs `TimelineView(.animation)` only while a word is being sung, on the active
   line only. Paused, or with the window minimised or covered, nothing is
   scheduled (Still mode).
-* **Window.** `NavigationSplitView` with Home, Albums (lazy grid), Artists,
-  Songs, Playlists, Favourites, Search, Sources and the person's playlists;
-  album, artist, playlist and browse pages. The mini player (columns under
-  900 pt) or the player bar (900 pt and wider) floats over the detail column
-  with an edge blur; Now Playing opens over the window (Esc or Library closes
-  it). Esc also goes back a page (`SharedKeyMonitor`, main window only, not
-  while text is edited or a sheet is open).
+* **Window.** Jellyfesh Web's layout (see v0.0.8 above): the floating sidebar panel from 761
+  pt wide, the phone tabs up to 760 pt; Home, Albums (lazy grid), Artists, Songs, Playlists,
+  Favourites, Downloads, Search, Sources and Settings; album, artist, playlist and browse pages
+  pushed on them, each starting with Back. The capsule (windows under 900 pt) or the player bar
+  (900 pt and wider) floats over every page, which fades out just above it; Now Playing opens over
+  the window (Esc or Library closes it) and hides the player. Esc also goes back a page
+  (`SharedKeyMonitor`, main window only, not while text is edited or a sheet is open).
 * **Shared UI ([`ui.md`](ui.md)).** The pages, words, settings order and
   confirmations follow the shared spec in the Mac's own mechanics:
   * Home shows the library size, Recently Added (albums), Recently Played and
@@ -417,8 +475,8 @@ platforms/macos/
     browses it) and Sources Settings…. A sign-in sheet opens in the window its
     flow started in (`SignInWindow`) and draws each step as the core and the
     plugin describe it (`SignInForm`).
-  * About Jellyfesh (the app menu, ui.md's allowed difference) is the About
-    window: the version, the website and the third-party licences.
+  * About Jellyfesh (the app menu, ui.md's allowed difference) opens Settings › About: Keyboard
+    Shortcuts, the version, the website and the third-party licences.
 * **Now Playing.** Artwork style (the core's baked backdrop, crossfading on
   dur-4, the scrubber thumb in Liquid Glass on macOS 26) or Misty style (the
   field at the artwork hue, the artwork on a Clear frame). Seek bar, transport,
@@ -433,9 +491,9 @@ platforms/macos/
   Sources, one group per source. Library artwork comes from one
   `searchLibrary` query; if the command fails, the library query alone fills
   the page.
-* **Settings.** In the order of `ui.md`. Appearance (theme, accent colour,
-  transparency, Reduce Motion and Transparency, Artwork or Misty, lyrics size,
-  alignment, translations and romanization, the app icon picker), Playback
+* **Settings.** A page of the main window, with pill tabs, in the order of `ui.md`.
+  Appearance (theme, accent colour, transparency, Reduce Motion and Transparency, Artwork or
+  Misty, lyrics size, alignment, translations and romanization, the app icon picker), Playback
   (output device; crossfade; Volume Levelling: ReplayGain and its preamp;
   equalizer with the Preset picker from the core's `eq_presets()`, showing
   Custom once a band moves, the preamp, the bands and Reset to Flat; Startup:
@@ -444,7 +502,8 @@ platforms/macos/
   Scan), Sources (Add a Source; Installed with Install from File… in its
   heading: enable, sign-in by QR code, browser or fields, settings forms from
   each plugin's JSON Schema, "Version · Author", Uninstall…; Community Plugins
-  with the ADR-0012 disclosure).
+  with the ADR-0012 disclosure), Extensions, and About (Keyboard Shortcuts, the version, the
+  links, Check for Updates in direct downloads, the credits).
 * **App icon (ADR-0017).** The bundle icon is Ice. Automatic shows Steel in the
   Dock while the system is dark; any other choice replaces the Dock icon while
   the app runs (`NSApplication.applicationIconImage`). Finder keeps Ice.
@@ -452,11 +511,12 @@ platforms/macos/
   system extrapolates from the rate), with `playbackState` on every start and
   stop; `MPRemoteCommandCenter` handles play, pause, toggle, stop, next,
   previous, position, repeat and shuffle.
-* **Menus.** Controls (Space plays and pauses outside text fields; ⌘→ ⌘← next
+* **Menus.** The app menu (About Jellyfesh and Settings… ⌘,, which open those Settings
+  pages), Controls (Space plays and pauses outside text fields; ⌘→ ⌘← next
   and previous; ⇧→ ⇧← skip 5 s outside text fields, and ⌥⌘→ ⌥⌘← from the menu;
-  ⌘↑ ⌘↓ volume; ⌥⌘↓ mute; ⌘J current song), View (⌘1–⌘7 sections, ⌘F search,
-  ⌘L Now Playing, ⌥⌘L lyrics, ⌥⌘U queue), File (⌘N New Playlist…, ⇧⌘O Add Music
-  Folder…, Import Playlist…, Install from File…). These carry the shared keys of
+  ⌘↑ ⌘↓ volume; ⌥⌘↓ mute; ⌘J current song), View (⌘1–⌘8 places, ⌘F search,
+  ⌘L Now Playing, ⌥⌘L lyrics, ⌥⌘U queue), File (⌘O Open Files…, ⌘N New Playlist…, ⇧⌘O Add
+  Music Folder…, Import Playlist…, Install from File…). These carry the shared keys of
   `ui.md`; Space, ⇧→ ⇧← and Esc (back) go through `SharedKeyMonitor` rather
   than key equivalents, which would take them from text fields.
 * **Glass (ADR-0007).** Clear, Mist and Veil on the ultra-thin, thin and
@@ -491,6 +551,9 @@ licence keys, AI Lyrics' steps, updates, answers by request, Discover, comments,
 covers through the core, Get Info's rows, schema profile 1.2, extensions and
 localised schemas, the look and its layouts, Desktop Lyrics' store and window
 frame, folder bookmarks, the build flags, and `tests/contract/lyrics-bar.json`);
+v0.0.8's layout (`LayoutTests.swift`: the web's breakpoints, the panel's places and the phone
+tabs for a look, the Library tab's memory, the player over every page but Now Playing, the narrow
+bar, the wordmark's icon, Settings and About as pages, the shared keys) and the covers' back-off;
 the v0.0.4 design math
 (`DesignTests.swift`: seek geometry, Now Playing motion and the cascade, swatches
 and the OKLCH port against `design/tokens.json`, the transparency look, the new
