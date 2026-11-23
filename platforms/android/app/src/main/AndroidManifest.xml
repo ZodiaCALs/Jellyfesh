@@ -34,11 +34,16 @@
         android:theme="@style/Theme.Jellyfesh"
         tools:targetApi="37">
 
-        <!-- The launcher entries are the icon aliases below, so the activity has none itself. -->
+        <!-- The launcher entries are the icon aliases below, so the activity has none itself.
+             The mini player is picture-in-picture (ADR-0026 §4), only while Settings › Appearance ›
+             Mini Player in Picture-in-Picture is on; the window keeps its activity through the
+             size changes that brings (PictureInPicture.kt). -->
         <activity
             android:name=".MainActivity"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
             android:exported="true"
             android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
             android:windowSoftInputMode="adjustResize">
             <!-- OAuth sign-in redirects (ADR-0004: an app link or custom scheme on Android). -->
             <intent-filter>

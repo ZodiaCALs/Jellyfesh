@@ -77,6 +77,7 @@ import org.jellyfesh.android.ui.nav.LocalNav
 import org.jellyfesh.android.ui.nav.NavController
 import org.jellyfesh.android.ui.nav.chromeHeight
 import org.jellyfesh.android.ui.player.NowPlayingScreen
+import org.jellyfesh.android.ui.player.PipPlayer
 import org.jellyfesh.android.ui.player.lyricsBarHeight
 import org.jellyfesh.android.ui.player.lyricsBarTranslates
 import org.jellyfesh.android.ui.search.SearchScreen
@@ -149,10 +150,12 @@ fun AppRoot(graph: AppGraph, authRedirects: SharedFlow<String>) {
         JfTheme(theme = state.theme, dark = dark, effects = effects, look = look) {
             val time = rememberPlaybackTime(graph)
             CompositionLocalProvider(LocalPlaybackTime provides time) {
+                val pictureInPicture by graph.pictureInPicture.collectAsStateWithLifecycle()
                 when (val s = startup) {
                     CoreStartup.Starting -> Box(Modifier.fillMaxSize()) { MistyField(Modifier.fillMaxSize()) }
                     is CoreStartup.Failed -> StartupFailed(s.message)
-                    CoreStartup.Ready -> MainUi(graph, state, overlays)
+                    // The mini player in picture-in-picture: the window shows nothing else.
+                    CoreStartup.Ready -> if (pictureInPicture) PipPlayer(state) else MainUi(graph, state, overlays)
                 }
             }
         }

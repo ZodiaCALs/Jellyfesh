@@ -150,6 +150,11 @@ data class Settings(
     val showLyricsBar: Boolean = true,
     /** Desktop Lyrics, which phones do not have; kept so a changed copy sends it back as it was. */
     val desktopLyrics: Boolean = false,
+    /**
+     * Mini Player in Picture-in-Picture (Settings › Appearance › Mini Player, ADR-0026 §4), off by
+     * default. False until the generated bindings carry the core's setting.
+     */
+    val miniPlayerPip: Boolean = false,
 ) {
     companion object {
         /** The core's default transparency: the glass tokens' own alphas. */

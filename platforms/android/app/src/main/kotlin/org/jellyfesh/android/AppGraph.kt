@@ -98,6 +98,9 @@ class AppGraph(private val app: Application) {
 
     /** Android 17's Local Network permission, asked before connecting to a source the core calls local. */
     val localNetwork = LocalNetworkPermission(app)
+
+    /** Whether the window is the mini player in picture-in-picture (ADR-0026 §4); MainActivity sets it. */
+    val pictureInPicture = MutableStateFlow(false)
     private var devices: DeviceWatcher? = null
 
     /** Starts the core on a background thread; views show a placeholder until it is ready. */

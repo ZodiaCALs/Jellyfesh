@@ -2,6 +2,7 @@ package org.jellyfesh.android
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,7 +10,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.jellyfesh.android.playback.PlaybackService
+import org.jellyfesh.android.system.PictureInPicture
 import org.jellyfesh.android.ui.AppRoot
 
 /**
@@ -20,6 +24,10 @@ import org.jellyfesh.android.ui.AppRoot
 class MainActivity : ComponentActivity() {
     private var controller: ListenableFuture<MediaController>? = null
 
+    /** The mini player as picture-in-picture (ADR-0026 §4), following the core's state. */
+    private var pictureInPicture: PictureInPicture? = null
+    private var pictureInPictureUpdates: Job? = null
+
     private val app: JellyfeshApp get() = application as JellyfeshApp
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +36,28 @@ class MainActivity : ComponentActivity() {
         handle(intent)
         // Resume on Launch, when the process started for this window (ResumeOnLaunch).
         app.graph.windowCreated(android.os.SystemClock.uptimeMillis())
+        val pip = PictureInPicture(this)
+        pictureInPicture = pip
+        pictureInPictureUpdates = app.graph.scope.launch { app.graph.store.state.collect { pip.update(it) } }
+        app.graph.pictureInPicture.value = isInPictureInPictureMode
         setContent { AppRoot(app.graph, app.authRedirects) }
+    }
+
+    override fun onDestroy() {
+        pictureInPictureUpdates?.cancel()
+        pictureInPictureUpdates = null
+        super.onDestroy()
+    }
+
+    /** Before Android 12 the mini player opens here when the person leaves while music plays. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        pictureInPicture?.onUserLeaveHint()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        app.graph.pictureInPicture.value = isInPictureInPictureMode
     }
 
     override fun onStart() {
