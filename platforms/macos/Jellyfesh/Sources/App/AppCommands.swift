@@ -4,7 +4,7 @@
 // (docs/ui.md, "Keyboard"). Space (play and pause), Shift-Right and Shift-Left (skip 5 seconds)
 // and Esc (back) go through SharedKeyMonitor instead of key equivalents, so text fields keep them;
 // the skip items also answer Option-Command-arrows, as before. Items that show a page open the main
-// window first, as it may be closed while music plays.
+// window first, as it may be closed while music plays. View › Open Mini Player is ⌥⌘M.
 
 import SwiftUI
 
@@ -31,6 +31,20 @@ struct AppCommands: Commands {
         CommandMenu("Controls") {
             ControlsMenuItems(model: model)
         }
+    }
+}
+
+/// View › Open Mini Player (⌥⌘M, as ⌘M minimises), or Close Mini Player while it is open. In the
+/// View menu, before the Window menu's Minimize All (also ⌥⌘M while Option is held), so the
+/// shortcut reaches it first.
+private struct MiniPlayerMenuItem: View {
+    let miniPlayer: MiniPlayerStore
+
+    var body: some View {
+        Button(miniPlayer.shown ? LocalizedStringKey("Close Mini Player") : LocalizedStringKey("Open Mini Player")) {
+            miniPlayer.toggle()
+        }
+        .keyboardShortcut("m", modifiers: [.command, .option])
     }
 }
 
@@ -168,6 +182,8 @@ private struct ViewMenuItems: View {
 
         DesktopLyricsMenuItems(settings: model.settings, desktop: model.desktopLyrics)
             .disabled(model.startupError != nil)
+
+        MiniPlayerMenuItem(miniPlayer: model.miniPlayer)
     }
 }
 

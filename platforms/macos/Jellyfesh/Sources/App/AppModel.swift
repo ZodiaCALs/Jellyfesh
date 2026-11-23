@@ -55,6 +55,8 @@ final class AppModel {
     let look: LookStore
     /// Desktop Lyrics' window (ADR-0022 §6).
     let desktopLyrics: DesktopLyricsStore
+    /// The mini player's window (ADR-0026 §4).
+    let miniPlayer: MiniPlayerStore
     /// Discover, details and comments answers, to whoever asked.
     let answers: CoreAnswers
     /// How this build reached the person (the build flags).
@@ -102,6 +104,7 @@ final class AppModel {
         aiLyrics = AiLyricsStore(client: client, tracker: tracker, toasts: toasts)
         look = LookStore()
         desktopLyrics = DesktopLyricsStore()
+        miniPlayer = MiniPlayerStore()
         answers = CoreAnswers(client: client, tracker: tracker)
         self.distribution = distribution
         nowPlayingCenter = NowPlayingCenter(playback: playback, artwork: artwork)
@@ -131,6 +134,9 @@ final class AppModel {
             model.movedFolders = moved
             model.desktopLyrics.attach(DesktopLyricsWindow { [unowned model] in
                 AnyView(DesktopLyricsView().stores(model))
+            })
+            model.miniPlayer.attach(MiniPlayerWindow { [unowned model] in
+                AnyView(MiniPlayerView().stores(model))
             })
             return model
         } catch {
@@ -335,6 +341,12 @@ final class AppModel {
         if let tab { settingsTab = tab }
         router.showNowPlaying(false, reduceMotion: true)
         router.select(.settings)
+    }
+
+    /// The main window closed: Open When the Window Is Closed opens the mini player while music
+    /// plays.
+    func mainWindowClosed() {
+        miniPlayer.mainWindowClosed(playing: playback.isPlaying)
     }
 
     /// Shift-Right and Shift-Left: 5 seconds forward or back, while something plays.

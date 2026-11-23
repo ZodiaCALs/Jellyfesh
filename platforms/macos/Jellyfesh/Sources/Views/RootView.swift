@@ -93,6 +93,10 @@ struct RootView: View {
         .task {
             model.start()
         }
+        .onDisappear {
+            // The window closed (minimising keeps it).
+            model.mainWindowClosed()
+        }
     }
 
     private var currentEffects: Effects {

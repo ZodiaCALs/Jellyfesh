@@ -2327,6 +2327,28 @@
         }
       }
     },
+    "Close Mini Player": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニプレーヤーを閉じる"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭迷你播放器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉迷你播放器"
+          }
+        }
+      }
+    },
     "Code %@": {
       "localizations": {
         "ja": {
@@ -5451,6 +5473,28 @@
         }
       }
     },
+    "Mini Player": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニプレーヤー"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迷你播放器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迷你播放器"
+          }
+        }
+      }
+    },
     "Misty": {
       "localizations": {
         "ja": {
@@ -6503,6 +6547,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟檔案…"
+          }
+        }
+      }
+    },
+    "Open Mini Player": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミニプレーヤーを開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开迷你播放器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟迷你播放器"
           }
         }
       }

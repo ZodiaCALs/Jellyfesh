@@ -6,7 +6,8 @@
 // * shuffle, previous, play, next and repeat (play is the only accent fill) above the seek bar with
 //   its times;
 // * Lyrics, Queue, the device button while a remote source plays, and the volume;
-// * More: the song's menu, Desktop Lyrics (NowPlayingMoreMenu).
+// * the mini player button (MiniPlayerStore) and More: the song's menu, Desktop Lyrics
+//   (NowPlayingMoreMenu).
 // A narrower bar keeps the volume's mute button and drops its line, as the web's does
 // (PlayerBarLayout). While a remote session runs the bar shows its track with "Playing on {Device}"
 // (ADR-0018). Liquid Glass on macOS 26, like the capsule (FloatingGlass).
@@ -152,13 +153,14 @@ private struct PlayerBarTransport: View {
 }
 
 /// Lyrics, Queue, the device button while a remote source plays, the volume (its line when there
-/// is room), and More.
+/// is room), the mini player button and More.
 private struct PlayerBarTools: View {
     var item: PlayingItem
     var volumeLine: Bool
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(Router.self) private var router
+    @Environment(MiniPlayerStore.self) private var miniPlayer
     @Environment(\.effects) private var effects
 
     var body: some View {
@@ -194,6 +196,15 @@ private struct PlayerBarTools: View {
                     VolumeMuteButton()
                 }
             }
+
+            Button {
+                miniPlayer.toggle()
+            } label: {
+                Image(systemName: "pip")
+            }
+            .buttonStyle(ToggleButtonStyle(isOn: miniPlayer.shown, size: 40, glyph: 15))
+            .accessibilityLabel(miniPlayer.shown ? Text("Close Mini Player") : Text("Open Mini Player"))
+            .help(miniPlayer.shown ? Text("Close Mini Player") : Text("Open Mini Player"))
 
             NowPlayingMoreMenu()
         }

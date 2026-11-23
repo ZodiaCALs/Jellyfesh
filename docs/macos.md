@@ -56,6 +56,17 @@ them. What changed, and why:
   volume, and **More** (the song's menu and Desktop Lyrics). A bar narrower than 820 pt keeps the
   mute button and drops the volume line (`PlayerBarLayout`); so does Now Playing's dock in windows
   under 820 pt. The capsule holds the artwork, the lines, play and **next**.
+* **The mini player** (ADR-0026 §4; `Stores/MiniPlayerStore.swift` behind `MiniPlayerHost`,
+  `Platform/MiniPlayerWindow.swift`, `Views/Common/MiniPlayerView.swift`) is built as Desktop
+  Lyrics is: a borderless non-activating `NSPanel` on every Space and beside full-screen apps, at
+  the floating level while Keep on Top is on (normal otherwise), dragged by its background, its
+  frame kept, first at the top right of the screen. It shows the cover, the title and the artist,
+  the lyrics bar's line (Show Lyrics Line), previous, play and next, and the progress line, on the
+  system's behind-window material with the Veil tint. The bar's mini player button and View ›
+  Open Mini Player (⌥⌘M; ⌘M minimises, and the View menu comes before the Window menu's Minimize
+  All) open it; its own button closes it. Closing the main window opens it while music plays when
+  Open When the Window Is Closed is on. The in-window capsule, which the look calls the
+  mini-player, is now `CapsulePlayer`.
 * **Open Files…** (the panel's foot and File › Open Files…, ⌘O) plays audio files without adding
   them to the library. View › ⌘1–⌘8 follow the panel's order (⌘7 Downloads, ⌘8 Sources).
 * **Covers that failed** (`Support/ArtworkLoader.swift`). A source picture the core could not get
@@ -63,9 +74,10 @@ them. What changed, and why:
   seconds, doubling to 10 minutes), at once when the core later sends it, and whenever a source
   signs in or out; views showing a placeholder then load again (`ArtworkLoader.generation`).
 
-Still to come with the core's v0.0.8 contract: the quality badge and menu, the mini player window
-and its settings, Favourites and Playlists with the sources' sections, the search tabs, the
-Downloads page and Settings › Downloads, Streaming in Settings › Playback.
+Still to come with the core's v0.0.8 contract: the quality badge and menu, the mini player's
+settings (until then Keep on Top and Show Lyrics Line are on, Open When the Window Is Closed off),
+Favourites and Playlists with the sources' sections, the search tabs, the Downloads page and
+Settings › Downloads, Streaming in Settings › Playback.
 
 ## v0.0.7: Pro, AI Lyrics, Customize, Discover and the lyrics bar
 
@@ -553,7 +565,8 @@ localised schemas, the look and its layouts, Desktop Lyrics' store and window
 frame, folder bookmarks, the build flags, and `tests/contract/lyrics-bar.json`);
 v0.0.8's layout (`LayoutTests.swift`: the web's breakpoints, the panel's places and the phone
 tabs for a look, the Library tab's memory, the player over every page but Now Playing, the narrow
-bar, the wordmark's icon, Settings and About as pages, the shared keys) and the covers' back-off;
+bar, the wordmark's icon, Settings and About as pages, the shared keys), the mini player's store
+and first frame (`MiniPlayerTests.swift`) and the covers' back-off;
 the v0.0.4 design math
 (`DesignTests.swift`: seek geometry, Now Playing motion and the cascade, swatches
 and the OKLCH port against `design/tokens.json`, the transparency look, the new

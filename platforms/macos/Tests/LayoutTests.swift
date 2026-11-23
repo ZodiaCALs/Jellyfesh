@@ -27,10 +27,11 @@ final class SettingsPageTests: XCTestCase {
 
     func testAboutListsTheSharedKeysWithCommand() {
         XCTAssertEqual(AboutInfo.shortcuts.map(\.keys),
-                       ["Space", "⌘ →", "⌘ ←", "⇧ →", "⇧ ←", "⌘ ↑", "⌘ ↓", "⌘ F", "⌘ ,", "Esc"])
+                       ["Space", "⌘ →", "⌘ ←", "⇧ →", "⇧ ←", "⌘ ↑", "⌘ ↓", "⌘ F", "⌥⌘ M", "⌘ ,", "Esc"])
         XCTAssertEqual(AboutInfo.shortcuts.map(\.action),
                        ["Play or Pause", "Next Song", "Previous Song", "Skip Forward 5 Seconds",
-                        "Skip Back 5 Seconds", "Volume Up", "Volume Down", "Search", "Settings", "Back"])
+                        "Skip Back 5 Seconds", "Volume Up", "Volume Down", "Search", "Open Mini Player",
+                        "Settings", "Back"])
     }
 }
 

@@ -48,6 +48,7 @@ extension View {
             .environment(model.aiLyrics)
             .environment(model.look)
             .environment(model.desktopLyrics)
+            .environment(model.miniPlayer)
             .environment(\.artworkLoader, model.artwork)
     }
 }

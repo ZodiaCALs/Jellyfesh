@@ -28,6 +28,7 @@ enum AboutInfo {
         Shortcut(keys: "⌘ ↑", action: "Volume Up"),
         Shortcut(keys: "⌘ ↓", action: "Volume Down"),
         Shortcut(keys: "⌘ F", action: "Search"),
+        Shortcut(keys: "⌥⌘ M", action: "Open Mini Player"),
         Shortcut(keys: "⌘ ,", action: "Settings"),
         Shortcut(keys: "Esc", action: "Back"),
     ]
