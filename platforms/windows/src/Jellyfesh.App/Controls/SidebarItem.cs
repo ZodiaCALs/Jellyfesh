@@ -35,5 +35,6 @@ public sealed partial class SidebarItem : RadioButton
     }
 
     /// <summary>Where choosing it goes: a place's tag ("albums", "library", "settings").</summary>
-    public string Place { get; init; } = string.Empty;
+    /// <remarks>A settable property, not init: WinUI's generated type information sets the public properties of types XAML names.</remarks>
+    public string Place { get; set; } = string.Empty;
 }
