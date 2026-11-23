@@ -69,6 +69,14 @@ pub struct Config {
     /// The speech-model store to use instead of `<data_dir>/speech-models`
     /// with the catalogue's models (tests bring their own models).
     pub speech_store: Option<jf_speech::ModelStore>,
+    /// The platform's default downloads folder (ADR-0025 §2): the app passes
+    /// `Jellyfesh` in the person's Music folder (`~/Music/Jellyfesh` on
+    /// macOS, `Music\Jellyfesh` on Windows, `$XDG_MUSIC_DIR/Jellyfesh` on
+    /// Linux, `Music/Jellyfesh` in Android's shared storage). `None`: the core
+    /// works it out from the environment (`$XDG_MUSIC_DIR`, else `Music` in
+    /// the home folder), else `<data_dir>/Downloads`.
+    /// [`DownloadSettings::folder`] replaces it when the person chose one.
+    pub downloads_dir: Option<PathBuf>,
 }
 
 /// Jellyfesh Pro in this build (ADR-0021).
@@ -113,6 +121,7 @@ impl std::fmt::Debug for Config {
             .field("update_url", &self.update_url)
             .field("pro", &self.pro)
             .field("speech_store", &self.speech_store)
+            .field("downloads_dir", &self.downloads_dir)
             .finish()
     }
 }
@@ -139,6 +148,7 @@ impl Config {
             update_url: RELEASES_URL.to_owned(),
             pro: ProConfig::for_this_build(),
             speech_store: None,
+            downloads_dir: None,
         }
     }
 }
@@ -527,6 +537,84 @@ pub enum Command {
         item: ItemRef,
         page: Option<String>,
     },
+
+    // ---- v0.0.8: quality, search by source, source libraries, downloads ------------------------
+    /// The network the platform reports (ADR-0025 §3, ADR-0026 §1): send it
+    /// at start and on every change. The core decides from it what `Auto`
+    /// quality asks for (High while `metered`, else Lossless) and whether
+    /// downloads run (not while offline, nor while metered with Wi-Fi Only
+    /// on). Until an app says otherwise the core takes the network as online
+    /// and not metered.
+    SetNetworkState {
+        online: bool,
+        metered: bool,
+    },
+    /// More of one kind of a source's results for the newest search
+    /// (ADR-0024 §4, Show More): `cursor` is the `next` of that source's
+    /// [`SearchGroup`] (or of the last [`SearchPage`]). Answered by
+    /// `Event::SearchPage`.
+    SearchMore {
+        plugin: String,
+        kind: ItemKind,
+        cursor: String,
+    },
+    /// Reloads a source's likes and playlists into the `SourceLibrary`
+    /// slice (ADR-0024 §2), or every source's with `None`. Send it when
+    /// Favourites or Playlists opens, or is returned to after ten minutes;
+    /// the core never polls.
+    RefreshSourceLibrary {
+        plugin: Option<String>,
+    },
+    /// The next page of one of a source's lists (`cursor`: the list's
+    /// `next`); answered by `Event::SourceLibraryPage`.
+    SourceLibraryMore {
+        plugin: String,
+        part: SourceLibraryPart,
+        cursor: String,
+    },
+    /// Save as Playlist…: a new Jellyfesh playlist named `name` with the
+    /// songs of the source's playlist `id`, as the source's items (not kept
+    /// up to date afterwards). Answered by `Event::PlaylistCreated`.
+    SavePlaylistCopy {
+        plugin: String,
+        id: String,
+        name: String,
+    },
+    /// Downloads a song, or every song of an album or playlist, from a
+    /// source that offers downloads (ADR-0025); the `Downloads` slice shows
+    /// it.
+    Download {
+        target: DownloadTarget,
+    },
+    /// Stops a download that has not finished and forgets it.
+    CancelDownload {
+        id: u64,
+    },
+    /// Tries a failed download again.
+    RetryDownload {
+        id: u64,
+    },
+    /// Remove Download…: deletes a finished download's file (ask first).
+    RemoveDownload {
+        id: u64,
+    },
+    /// Remove All Downloads…: every download, finished or not (ask first).
+    RemoveAllDownloads,
+}
+
+/// What [`Command::Download`] downloads.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum DownloadTarget {
+    /// One song: a `TrackRef::Source` (what a source item's `track` holds).
+    Track { track: TrackRef },
+    /// Every song of an album or playlist a source listed (its
+    /// `SourceItem::source`, `id` and `kind`).
+    Collection {
+        plugin: String,
+        id: String,
+        item_kind: ItemKind,
+    },
 }
 
 /// A song to make lyrics for.
@@ -598,12 +686,13 @@ pub enum Collection {
         tracks: Vec<TrackRef>,
     },
     /// An album, playlist or other container from an online source (the
-    /// `id` of a [`SourceItem`] the core listed), fetched through its plugin:
-    /// every page of it, playable tracks only (an artist plays its albums).
-    /// The queue changes once the plugin has answered.
+    /// `source`, `id` and `kind` of a [`SourceItem`]), fetched through its
+    /// plugin: playable tracks only (an artist plays its albums). The queue
+    /// starts with the first page and grows as the rest arrives.
     Source {
         plugin: String,
         id: String,
+        item_kind: ItemKind,
     },
 }
 
@@ -728,6 +817,120 @@ pub struct Settings {
     /// Desktop Lyrics (Settings › Appearance › Lyrics): the current line in
     /// a window of its own above other apps, on desktops. Off by default.
     pub desktop_lyrics: bool,
+    /// Streaming Quality (Settings › Playback › Streaming and the bar's
+    /// quality menu; ADR-0026 §1). `Auto` by default.
+    pub streaming_quality: StreamingQuality,
+    /// Settings › Downloads (ADR-0025 §2).
+    pub downloads: DownloadSettings,
+    /// Settings › Appearance › Mini Player (ADR-0026 §4).
+    pub mini_player: MiniPlayerSettings,
+}
+
+/// The streaming level asked of sources (ADR-0026 §1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StreamingQuality {
+    /// Lossless, or High on a connection the platform reports as metered.
+    #[default]
+    Auto,
+    /// The original file or lossless.
+    Lossless,
+    /// About 320 kbit/s.
+    High,
+    /// About 160–192 kbit/s.
+    Normal,
+    /// Data saver, about 96–128 kbit/s.
+    Low,
+}
+
+/// The quality downloads are asked for (ADR-0025 §2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DownloadQuality {
+    /// The file exactly as the server keeps it.
+    #[default]
+    Original,
+    /// The server's conversion at about 320 kbit/s (Opus where it can,
+    /// otherwise AAC or MP3).
+    High,
+    /// About 192 kbit/s.
+    Normal,
+    /// About 128 kbit/s.
+    Low,
+}
+
+/// Settings › Downloads (ADR-0025 §2). Saved before a field existed, it
+/// reads with the field's default.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DownloadSettings {
+    /// The folder the person chose; `None` uses the default
+    /// ([`DownloadsSnapshot::folder`] says which folder is in use).
+    pub folder: Option<PathBuf>,
+    pub quality: DownloadQuality,
+    /// File Names: a template of `{artist}`, `{album_artist}`, `{album}`,
+    /// `{title}`, `{track}`, `{disc}`, `{year}` and `{source}`, `/` between
+    /// folders. Default `{album_artist}/{album}/{track} {title}`; an empty
+    /// one uses the default. [`crate::download_preview`] shows an example.
+    pub name_template: String,
+    /// Add Missing Cover and Lyrics: without it, original files stay byte
+    /// for byte as the server keeps them. Off by default.
+    pub add_missing_cover_and_lyrics: bool,
+    /// Lyrics: the song's lyrics go in its tags (synced ones as LRC text).
+    /// On by default.
+    pub lyrics_in_tags: bool,
+    /// Save .lrc Files: synced lyrics also go in a `.lrc` file beside the
+    /// song. Off by default.
+    pub save_lrc_files: bool,
+    /// Wi-Fi Only: downloads wait while the network is metered (as an app
+    /// reports with `SetNetworkState`). On by default; apps that report a
+    /// metered network show it (Android).
+    pub wifi_only: bool,
+    /// Downloads at Once: 1–4 (the core keeps it within them), 2 by default.
+    pub at_once: u32,
+}
+
+impl Default for DownloadSettings {
+    fn default() -> Self {
+        DownloadSettings {
+            folder: None,
+            quality: DownloadQuality::Original,
+            name_template: jf_plugin_host::filenames::DEFAULT_TEMPLATE.to_owned(),
+            add_missing_cover_and_lyrics: false,
+            lyrics_in_tags: true,
+            save_lrc_files: false,
+            wifi_only: true,
+            at_once: 2,
+        }
+    }
+}
+
+/// Settings › Appearance › Mini Player (ADR-0026 §4). The apps apply them;
+/// the core keeps them.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MiniPlayerSettings {
+    /// Keep on Top: the mini player stays above other windows. On by default.
+    pub keep_on_top: bool,
+    /// Open When the Window Is Closed: closing the main window while music
+    /// plays leaves the mini player. Off by default.
+    pub open_when_window_closed: bool,
+    /// The lyrics bar's current line in the mini player. On by default.
+    pub show_lyrics_line: bool,
+    /// Android: Mini Player in Picture-in-Picture when leaving the app while
+    /// music plays. Off by default.
+    pub android_pip: bool,
+}
+
+impl Default for MiniPlayerSettings {
+    fn default() -> Self {
+        MiniPlayerSettings {
+            keep_on_top: true,
+            open_when_window_closed: false,
+            show_lyrics_line: true,
+            android_pip: false,
+        }
+    }
 }
 
 impl Default for Settings {
@@ -754,6 +957,9 @@ impl Default for Settings {
             check_for_updates: true,
             show_lyrics_bar: true,
             desktop_lyrics: false,
+            streaming_quality: StreamingQuality::Auto,
+            downloads: DownloadSettings::default(),
+            mini_player: MiniPlayerSettings::default(),
         }
     }
 }
@@ -844,6 +1050,18 @@ pub struct PluginSummary {
     pub details: bool,
     /// It shows comments (`comments`): offer a Comments pane.
     pub comments: bool,
+    /// It lists the person's likes and playlists (`library`, ADR-0024): it
+    /// joins the `SourceLibrary` slice while it is on and signed in.
+    pub library: bool,
+    /// It offers downloads (`download`, ADR-0025): offer Download.
+    pub download: bool,
+    /// The streaming levels it offers (`content_policy.qualities`), best
+    /// first; empty when the quality is set in the service.
+    pub qualities: Vec<StreamingQuality>,
+    /// Its server's address (the one the person typed) is on the local
+    /// network by Android's definition ([`crate::address_is_local`]): Android
+    /// apps targeting SDK 37 ask for `ACCESS_LOCAL_NETWORK` before using it.
+    pub local_network: bool,
 }
 
 /// Where Settings lists a plugin (ADR-0020 §5).
@@ -1038,6 +1256,9 @@ pub struct SourceItem {
     /// Go to Album for a source track: the source's id of its album, for
     /// `Browse` and `Details` the same way.
     pub album_id: Option<String>,
+    /// A source track with a finished download: it plays the file (offline
+    /// too); show the Downloaded mark.
+    pub downloaded: bool,
 }
 
 /// Results from one source for one search: its section of the results.
@@ -1065,13 +1286,49 @@ pub struct SearchUpdate {
     pub query: String,
     /// `library` or the plugin's id.
     pub source: String,
-    /// The source's section: its results less those an earlier source
-    /// shows.
+    /// The source's section for the All tab: with `merged`, its results less
+    /// those an earlier section shows; otherwise all its results.
     pub items: Vec<SourceItem>,
+    /// Whether the section is part of the merged results (the library and
+    /// the sources whose terms allow merging: From Your Sources). A section
+    /// with `merged` false (Spotify, QQ Music) is never de-duplicated against
+    /// others and never shown beside their rows: the All tab links to its own
+    /// tab ("Results from Spotify") instead (ADR-0024 §4).
+    pub merged: bool,
+    /// The source's own results, kind by kind (Songs, Albums, Artists,
+    /// Playlists), for its tab: never de-duplicated, each with the cursor of
+    /// its Show More (`SearchMore`).
+    pub groups: Vec<SearchGroup>,
     /// Why the source has no results (failed, or did not answer in time).
     pub error: Option<String>,
     /// True on the last message for this request.
     pub done: bool,
+}
+
+/// One kind of a source's search results.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchGroup {
+    pub kind: ItemKind,
+    pub items: Vec<SourceItem>,
+    /// Send `SearchMore { plugin: source, kind, cursor: next }` for more;
+    /// `None` when there are no more.
+    pub next: Option<String>,
+    /// How many there are in all, when the source says.
+    pub total: Option<u32>,
+}
+
+/// More of one kind of a source's results (`Command::SearchMore`): add
+/// `items` to that group and keep `next` as its cursor.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchPage {
+    /// The `SearchMore` command it answers.
+    pub request: CommandId,
+    pub query: String,
+    pub source: String,
+    pub kind: ItemKind,
+    pub items: Vec<SourceItem>,
+    pub next: Option<String>,
+    pub error: Option<String>,
 }
 
 /// One page of a source's catalogue.
@@ -1103,6 +1360,9 @@ pub struct TrackRow {
     pub favorite: bool,
     /// The file is gone; the row cannot play.
     pub missing: bool,
+    /// A source track with a finished download (it plays the file): show the
+    /// Downloaded mark.
+    pub downloaded: bool,
 }
 
 /// A playlist in the library.
@@ -1186,8 +1446,29 @@ pub struct NowPlaying {
     pub link: Option<String>,
     /// What is playing, as decoded (ADR-0022 §3): codec, sample rate, bit
     /// depth, channels, bitrate and the quality label, once the engine has
-    /// opened it; `None` before.
+    /// opened it; `None` before. The facts of the quality menu's format line
+    /// ("FLAC · 24-bit · 96 kHz", "AAC · 256 kbit/s"); for a source stream the
+    /// plugin's codec and bitrate fill in what the decoder does not say.
     pub quality: Option<AudioFormat>,
+    /// The levels the quality menu offers for what plays (ADR-0026 §2–3), in
+    /// the menu's order: `Auto`, then the source's levels best first. Empty
+    /// when there is no choice; `quality_note` says why.
+    pub qualities: Vec<StreamingQuality>,
+    /// Why `qualities` is empty.
+    pub quality_note: Option<QualityNote>,
+    /// The level the playing stream was asked for (`Auto` resolved: Lossless,
+    /// or High on a metered network); `None` for files.
+    pub quality_level: Option<StreamingQuality>,
+}
+
+/// Why the quality menu offers no levels; the apps word it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QualityNote {
+    /// Library songs, files and downloads: "Files play as they are."
+    FilesPlayAsTheyAre,
+    /// Remote playback, or a source that offers no levels: "Quality is set
+    /// in {service}."
+    SetInService { service: String },
 }
 
 /// What a remote device is.
@@ -1244,6 +1525,9 @@ pub struct RemoteSnapshot {
     pub devices: Vec<RemoteDevice>,
     /// What went wrong last talking to the service, until a call succeeds.
     pub error: Option<String>,
+    /// The quality menu's note while a session runs: the service sets the
+    /// quality (`SetInService`); `None` without a session.
+    pub quality_note: Option<QualityNote>,
 }
 
 /// An item an [`ExternalPlayer`] plays or reports.
@@ -1375,6 +1659,10 @@ pub struct Snapshot {
     pub pro: Arc<ProSnapshot>,
     /// Update checks (ADR-0021 §5).
     pub update: Arc<UpdateSnapshot>,
+    /// The sources' likes and playlists (ADR-0024 §2).
+    pub source_library: Arc<SourceLibrarySnapshot>,
+    /// Downloads (ADR-0025).
+    pub downloads: Arc<DownloadsSnapshot>,
 }
 
 /// What the core tells subscribers. Slices arrive whole whenever their
@@ -1435,6 +1723,14 @@ pub enum Event {
     /// A source picture asked for with [`crate::Core::source_artwork`] is in
     /// the cache (`path`), or cannot be had (`None`: stop waiting).
     Artwork(Arc<ArtworkReady>),
+    /// More of one kind of a source's search results (`Command::SearchMore`).
+    SearchPage(Arc<SearchPage>),
+    /// The `SourceLibrary` slice changed.
+    SourceLibrary(Arc<SourceLibrarySnapshot>),
+    /// More of a source's list (`Command::SourceLibraryMore`).
+    SourceLibraryPage(Arc<SourceLibraryPage>),
+    /// The `Downloads` slice changed.
+    Downloads(Arc<DownloadsSnapshot>),
 }
 
 // ---- AI Lyrics (ADR-0019) ------------------------------------------------------------------------
@@ -2011,6 +2307,163 @@ pub struct ArtworkReady {
     pub path: Option<PathBuf>,
 }
 
+// ---- source libraries (ADR-0024) -----------------------------------------------------------------
+
+/// One of a source's lists in the `SourceLibrary` slice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceLibraryPart {
+    LikedSongs,
+    LikedAlbums,
+    LikedArtists,
+    Playlists,
+}
+
+/// An entry of a source's list.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceLibraryEntry {
+    /// The song, album, artist or playlist (play and browse it as any source
+    /// item; a playlist plays with `Collection::Source`).
+    pub item: SourceItem,
+    /// Playlists: the person's own (or one they collaborate on), not one they
+    /// follow.
+    pub owned: bool,
+    /// Playlists: the source lists its songs here. When false (a Spotify
+    /// playlist the person follows) its page says "{Service} lists this
+    /// playlist's songs only in {Service}.", Play and Shuffle start it by
+    /// context and Open in {Service} opens it. True for likes.
+    pub songs_listed: bool,
+}
+
+/// One list of a source (its liked songs, albums or artists, or its
+/// playlists): the first page, kept on disk with its age.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceLibraryList {
+    pub part: SourceLibraryPart,
+    /// The first page, at most 100.
+    pub entries: Vec<SourceLibraryEntry>,
+    /// How many there are in all, when the source says.
+    pub total: Option<u32>,
+    /// `SourceLibraryMore { plugin, part, cursor: next }` loads more.
+    pub next: Option<String>,
+    /// When the list was last loaded, in ms since the Unix epoch ("Updated 5
+    /// minutes ago"); `None` before the first load.
+    pub refreshed_at_ms: Option<i64>,
+    /// A refresh is running (the entries are the last ones meanwhile).
+    pub loading: bool,
+    /// Why the last refresh failed (the entries are the cached ones).
+    pub error: Option<String>,
+}
+
+/// A source's likes and playlists. Lists the source does not keep (liked
+/// artists, say) are left out once it has said so.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceLibrary {
+    pub plugin: String,
+    /// The source's name.
+    pub name: String,
+    /// Attribution its views must show ("Content from Spotify"), if any.
+    pub attribution: Option<String>,
+    /// In the order Liked Songs, Liked Albums, Liked Artists, Playlists.
+    pub lists: Vec<SourceLibraryList>,
+}
+
+/// The `SourceLibrary` slice: every enabled, signed-in source with the
+/// `library` capability (ADR-0024 §2), in the `Sources` slice's order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceLibrarySnapshot {
+    pub version: u64,
+    pub sources: Vec<SourceLibrary>,
+}
+
+/// More of a source's list (`Command::SourceLibraryMore`): add `entries`
+/// to the list and keep `next` as its cursor.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SourceLibraryPage {
+    /// The `SourceLibraryMore` command it answers.
+    pub request: CommandId,
+    pub plugin: String,
+    pub part: SourceLibraryPart,
+    pub entries: Vec<SourceLibraryEntry>,
+    pub next: Option<String>,
+    pub error: Option<String>,
+}
+
+// ---- downloads (ADR-0025) -------------------------------------------------------------------------
+
+/// Why downloads wait.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DownloadsPaused {
+    /// The platform reports no network.
+    Offline,
+    /// The network is metered and Wi-Fi Only is on ("Waiting for Wi-Fi").
+    Metered,
+}
+
+/// Why a download failed; the apps word it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DownloadError {
+    /// The server does not let this account download: "Your {service}
+    /// server doesn't allow downloads for this account."
+    NotAllowed { service: String },
+    /// The source offers no downloads, or its terms keep no audio.
+    NotOffered { service: String },
+    /// The connection failed after the retries.
+    Network { message: String },
+    /// The file could not be written (a full disk, a folder that cannot be
+    /// written to).
+    Storage { message: String },
+    /// Anything else.
+    Other { message: String },
+}
+
+/// Where a download is.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DownloadState {
+    /// Waiting for its turn, or for the network
+    /// ([`DownloadsSnapshot::paused`]).
+    Queued,
+    /// Fetching (`bytes_done` of `bytes_total`), then tagging.
+    Downloading,
+    /// In the downloads folder and the library.
+    Done,
+    /// Try Again sends `RetryDownload`.
+    Failed { error: DownloadError },
+}
+
+/// One download.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DownloadItem {
+    pub id: u64,
+    /// The song: its source, id, title, artist, album and picture.
+    pub track: jf_session::SourceTrack,
+    pub state: DownloadState,
+    pub bytes_done: u64,
+    pub bytes_total: Option<u64>,
+    /// The file, once finished.
+    pub path: Option<PathBuf>,
+    /// Its library track, once finished.
+    pub library_id: Option<i64>,
+    /// The file is the server's original rather than a conversion.
+    pub original: bool,
+}
+
+/// The `Downloads` slice (ADR-0025 §3–4).
+#[derive(Debug, Clone, PartialEq)]
+pub struct DownloadsSnapshot {
+    pub version: u64,
+    /// Where downloads go: the folder the person chose, or the default one.
+    pub folder: PathBuf,
+    /// Downloads in progress (in queue order), then the finished ones by
+    /// album.
+    pub items: Vec<DownloadItem>,
+    /// The space the finished downloads take, in bytes.
+    pub bytes_used: u64,
+    /// Why queued downloads do not run now.
+    pub paused: Option<DownloadsPaused>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2034,5 +2487,39 @@ mod tests {
         );
         assert!(read.show_lyrics_bar);
         assert!(!read.desktop_lyrics);
+    }
+
+    #[test]
+    fn v0_0_7_settings_read_with_the_v0_0_8_defaults() {
+        let mut saved = serde_json::to_value(Settings::default()).unwrap();
+        let fields = saved.as_object_mut().unwrap();
+        for field in ["streaming_quality", "downloads", "mini_player"] {
+            fields.remove(field);
+        }
+        let read: Settings = serde_json::from_value(saved).unwrap();
+        assert_eq!(read.streaming_quality, StreamingQuality::Auto);
+        assert_eq!(read.downloads, DownloadSettings::default());
+        assert_eq!(
+            read.downloads.name_template,
+            "{album_artist}/{album}/{track} {title}"
+        );
+        assert_eq!(read.downloads.at_once, 2);
+        assert!(read.downloads.wifi_only && read.downloads.lyrics_in_tags);
+        assert!(!read.downloads.add_missing_cover_and_lyrics && !read.downloads.save_lrc_files);
+        assert_eq!(read.mini_player, MiniPlayerSettings::default());
+        assert!(read.mini_player.keep_on_top && read.mini_player.show_lyrics_line);
+        assert!(!read.mini_player.open_when_window_closed && !read.mini_player.android_pip);
+        // A nested object saved with only some of its fields keeps them.
+        let partial: Settings = serde_json::from_value(serde_json::json!({
+            "streaming_quality": "high",
+            "downloads": { "quality": "low", "at_once": 4 },
+            "mini_player": { "keep_on_top": false }
+        }))
+        .unwrap();
+        assert_eq!(partial.streaming_quality, StreamingQuality::High);
+        assert_eq!(partial.downloads.quality, DownloadQuality::Low);
+        assert_eq!(partial.downloads.at_once, 4);
+        assert!(partial.downloads.wifi_only);
+        assert!(!partial.mini_player.keep_on_top && partial.mini_player.show_lyrics_line);
     }
 }

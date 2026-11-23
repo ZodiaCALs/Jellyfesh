@@ -67,6 +67,7 @@ pub fn collection_of(data: &ItemData) -> Option<Collection> {
             (None, Some(s)) if s.kind != jf_core::ItemKind::Track && s.playable => Some(Collection::Source {
                 plugin: s.source.clone(),
                 id: s.id.clone(),
+                item_kind: s.kind,
             }),
             _ => None,
         },

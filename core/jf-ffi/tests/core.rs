@@ -36,6 +36,7 @@ fn config(dir: &Path, output: OutputKind) -> CoreConfig {
         resume_on_start: true,
         bundled_plugins: Vec::new(),
         distribution: Distribution::Source,
+        downloads_dir: Some(dir.join("downloads").to_string_lossy().into_owned()),
     }
 }
 

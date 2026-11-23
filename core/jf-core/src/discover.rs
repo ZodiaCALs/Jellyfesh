@@ -155,6 +155,7 @@ fn track_row(track: &jf_library::Track) -> SourceItem {
         link: None,
         artist_id: None,
         album_id: None,
+        downloaded: false,
     }
 }
 
@@ -175,6 +176,7 @@ fn album_row(album: &jf_library::Album) -> SourceItem {
         link: None,
         artist_id: None,
         album_id: None,
+        downloaded: false,
     }
 }
 

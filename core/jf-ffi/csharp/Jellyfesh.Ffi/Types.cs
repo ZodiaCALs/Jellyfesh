@@ -38,7 +38,8 @@ public sealed record CoreConfig(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     IReadOnlyList<string>? BundledPlugins = null,
     Distribution Distribution = Distribution.Source,
-    bool ResumeOnStart = true);
+    bool ResumeOnStart = true,
+    string? DownloadsDir = null);
 
 /// <summary>How this build of the app reached the person.</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<Distribution>))]
@@ -158,6 +159,16 @@ public abstract record OutputKind
 [JsonDerivedType(typeof(Command.Discover), "Discover")]
 [JsonDerivedType(typeof(Command.Details), "Details")]
 [JsonDerivedType(typeof(Command.Comments), "Comments")]
+[JsonDerivedType(typeof(Command.SetNetworkState), "SetNetworkState")]
+[JsonDerivedType(typeof(Command.SearchMore), "SearchMore")]
+[JsonDerivedType(typeof(Command.RefreshSourceLibrary), "RefreshSourceLibrary")]
+[JsonDerivedType(typeof(Command.SourceLibraryMore), "SourceLibraryMore")]
+[JsonDerivedType(typeof(Command.SavePlaylistCopy), "SavePlaylistCopy")]
+[JsonDerivedType(typeof(Command.Download), "Download")]
+[JsonDerivedType(typeof(Command.CancelDownload), "CancelDownload")]
+[JsonDerivedType(typeof(Command.RetryDownload), "RetryDownload")]
+[JsonDerivedType(typeof(Command.RemoveDownload), "RemoveDownload")]
+[JsonDerivedType(typeof(Command.RemoveAllDownloads), "RemoveAllDownloads")]
 public abstract record Command
 {
     private Command() { }
@@ -326,6 +337,55 @@ public abstract record Command
 
     /// <summary>A page of comments (null Page is the first); answered by Event.Comments.</summary>
     public sealed record Comments(ItemRef Item, string? Page) : Command;
+
+    /// <summary>The network the platform reports (at start and on every change): Auto quality
+    /// asks High while metered; downloads wait offline, and while metered with Wi-Fi Only on.</summary>
+    public sealed record SetNetworkState(bool Online, bool Metered) : Command;
+
+    /// <summary>Show More: more of one kind of a source's results for the newest search
+    /// (Cursor: the group's Next); answered by Event.SearchPage.</summary>
+    public sealed record SearchMore(string Plugin, ItemKind Kind, string Cursor) : Command;
+
+    /// <summary>Reloads a source's likes and playlists (null: every source), when Favourites or
+    /// Playlists opens or is returned to after ten minutes.</summary>
+    public sealed record RefreshSourceLibrary(string? Plugin) : Command;
+
+    /// <summary>The next page of a source's list; answered by Event.SourceLibraryPage.</summary>
+    public sealed record SourceLibraryMore(string Plugin, SourceLibraryPart Part, string Cursor) : Command;
+
+    /// <summary>Save as Playlist…: a Jellyfesh playlist of a source playlist's songs; answered by
+    /// Event.PlaylistCreated.</summary>
+    public sealed record SavePlaylistCopy(string Plugin, string Id, string Name) : Command;
+
+    /// <summary>Downloads a song, or every song of an album or playlist.</summary>
+    public sealed record Download(DownloadTarget Target) : Command;
+
+    /// <summary>Stops an unfinished download and forgets it.</summary>
+    public sealed record CancelDownload(ulong Id) : Command;
+
+    /// <summary>Tries a failed download again.</summary>
+    public sealed record RetryDownload(ulong Id) : Command;
+
+    /// <summary>Remove Download…: deletes a finished download's file (ask first).</summary>
+    public sealed record RemoveDownload(ulong Id) : Command;
+
+    /// <summary>Remove All Downloads… (ask first).</summary>
+    public sealed record RemoveAllDownloads : Command;
+}
+
+/// <summary>What Command.Download downloads.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(DownloadTarget.Track), "Track")]
+[JsonDerivedType(typeof(DownloadTarget.Collection), "Collection")]
+public abstract record DownloadTarget
+{
+    private DownloadTarget() { }
+
+    /// <summary>One song: a TrackRef.Source (the Rust field is `track`).</summary>
+    public sealed record Track([property: JsonPropertyName("track")] TrackRef Value) : DownloadTarget;
+
+    /// <summary>Every song of an album or playlist a source listed.</summary>
+    public sealed record Collection(string Plugin, string Id, ItemKind ItemKind) : DownloadTarget;
 }
 
 /// <summary>A song to make lyrics for.</summary>
@@ -450,8 +510,9 @@ public abstract record Collection
     /// <summary>A list of tracks (the Rust field is `tracks`).</summary>
     public sealed record Tracks([property: JsonPropertyName("tracks")] IReadOnlyList<TrackRef> Value) : Collection;
 
-    /// <summary>An album, playlist or other container from an online source.</summary>
-    public sealed record Source(string Plugin, string Id) : Collection;
+    /// <summary>An album, playlist or other container from an online source: a SourceItem's
+    /// Source, Id and Kind.</summary>
+    public sealed record Source(string Plugin, string Id, ItemKind ItemKind) : Collection;
 }
 
 /// <summary>Where a search looks.</summary>
@@ -566,7 +627,52 @@ public sealed record Settings(
     bool AllowCommunityPlugins,
     bool CheckForUpdates = true,
     bool ShowLyricsBar = true,
-    bool DesktopLyrics = false);
+    bool DesktopLyrics = false,
+    StreamingQuality StreamingQuality = StreamingQuality.Auto,
+    DownloadSettings? Downloads = null,
+    MiniPlayerSettings? MiniPlayer = null);
+
+/// <summary>The streaming level asked of sources (ADR-0026 §1).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<StreamingQuality>))]
+public enum StreamingQuality
+{
+    /// <summary>Lossless, or High on a connection the platform reports as metered.</summary>
+    Auto,
+    Lossless,
+    High,
+    Normal,
+    Low,
+}
+
+/// <summary>The quality downloads are asked for (ADR-0025 §2).</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<DownloadQuality>))]
+public enum DownloadQuality
+{
+    /// <summary>The file exactly as the server keeps it.</summary>
+    Original,
+    High,
+    Normal,
+    Low,
+}
+
+/// <summary>Settings › Downloads (ADR-0025 §2). Null Folder uses the default
+/// (DownloadsSnapshot.Folder); DownloadPreview shows what NameTemplate makes.</summary>
+public sealed record DownloadSettings(
+    string? Folder = null,
+    DownloadQuality Quality = DownloadQuality.Original,
+    string NameTemplate = "{album_artist}/{album}/{track} {title}",
+    bool AddMissingCoverAndLyrics = false,
+    bool LyricsInTags = true,
+    bool SaveLrcFiles = false,
+    bool WifiOnly = true,
+    uint AtOnce = 2);
+
+/// <summary>Settings › Appearance › Mini Player (ADR-0026 §4).</summary>
+public sealed record MiniPlayerSettings(
+    bool KeepOnTop = true,
+    bool OpenWhenWindowClosed = false,
+    bool ShowLyricsLine = true,
+    bool AndroidPip = false);
 
 [JsonConverter(typeof(JsonStringEnumConverter<ReplayGainMode>))]
 public enum ReplayGainMode
@@ -643,7 +749,11 @@ public sealed record PluginSummary(
     IReadOnlyList<string>? Permissions = null,
     bool Discover = false,
     bool Details = false,
-    bool Comments = false);
+    bool Comments = false,
+    bool Library = false,
+    bool Download = false,
+    IReadOnlyList<StreamingQuality>? Qualities = null,
+    bool LocalNetwork = false);
 
 /// <summary>Where Settings lists a plugin: Sources, or Extensions (AI Lyrics, Customize).</summary>
 [JsonConverter(typeof(JsonStringEnumConverter<PluginKind>))]
@@ -788,16 +898,37 @@ public sealed record SourceItem(
     IReadOnlyList<string> AlsoIn,
     string? Link = null,
     string? ArtistId = null,
-    string? AlbumId = null);
+    string? AlbumId = null,
+    bool Downloaded = false);
 
 /// <summary>Results from one source for one search; Done on the last.</summary>
+/// <param name="Items">The section for the All tab: with Merged, less what earlier sections show;
+/// otherwise all its results.</param>
+/// <param name="Merged">Part of the merged results; false for sources whose terms forbid merging
+/// (never de-duplicated, never shown beside other rows: the All tab links to their tab).</param>
+/// <param name="Groups">The source's own results kind by kind, for its tab, with Show More.</param>
 public sealed record SearchUpdate(
     ulong Request,
     string Query,
     string Source,
     IReadOnlyList<SourceItem> Items,
     string? Error,
-    bool Done);
+    bool Done,
+    bool Merged = true,
+    IReadOnlyList<SearchGroup>? Groups = null);
+
+/// <summary>One kind of a source's search results; Next is Show More's cursor.</summary>
+public sealed record SearchGroup(ItemKind Kind, IReadOnlyList<SourceItem> Items, string? Next, uint? Total);
+
+/// <summary>More of one kind of a source's results (Command.SearchMore).</summary>
+public sealed record SearchPage(
+    ulong Request,
+    string Query,
+    string Source,
+    ItemKind Kind,
+    IReadOnlyList<SourceItem> Items,
+    string? Next,
+    string? Error);
 
 /// <summary>One page of a source's catalogue.</summary>
 public sealed record BrowseUpdate(
@@ -821,7 +952,8 @@ public sealed record TrackRow(
     ArtworkRef? Artwork,
     string? ArtworkHash,
     bool Favorite,
-    bool Missing);
+    bool Missing,
+    bool Downloaded = false);
 
 public sealed record PlaylistSummary(
     long Id,
@@ -1001,7 +1133,25 @@ public sealed record NowPlaying(
     ArtworkRef? Artwork,
     TrackInfo? Format,
     string? Link = null,
-    AudioFormat? Quality = null);
+    AudioFormat? Quality = null,
+    IReadOnlyList<StreamingQuality>? Qualities = null,
+    QualityNote? QualityNote = null,
+    StreamingQuality? QualityLevel = null);
+
+/// <summary>Why the quality menu offers no levels; the apps word it.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(QualityNote.FilesPlayAsTheyAre), "FilesPlayAsTheyAre")]
+[JsonDerivedType(typeof(QualityNote.SetInService), "SetInService")]
+public abstract record QualityNote
+{
+    private QualityNote() { }
+
+    /// <summary>"Files play as they are."</summary>
+    public sealed record FilesPlayAsTheyAre : QualityNote;
+
+    /// <summary>"Quality is set in {Service}."</summary>
+    public sealed record SetInService(string Service) : QualityNote;
+}
 
 // ---- remote sessions ------------------------------------------------------------------------
 
@@ -1045,7 +1195,8 @@ public sealed record RemoteSnapshot(
     RepeatMode Repeat,
     RemoteDevice? Device,
     IReadOnlyList<RemoteDevice> Devices,
-    string? Error);
+    string? Error,
+    QualityNote? QualityNote = null);
 
 // ---- lyrics ---------------------------------------------------------------------------------
 
@@ -1205,7 +1356,9 @@ public sealed record Snapshot(
     AiLyricsSnapshot? AiLyrics = null,
     LookSnapshot? Look = null,
     ProSnapshot? Pro = null,
-    UpdateSnapshot? Update = null);
+    UpdateSnapshot? Update = null,
+    SourceLibrarySnapshot? SourceLibrary = null,
+    DownloadsSnapshot? Downloads = null);
 
 /// <summary>What the core tells the listener. Slice events carry the slice as Snapshot.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
@@ -1235,6 +1388,10 @@ public sealed record Snapshot(
 [JsonDerivedType(typeof(Event.Details), "Details")]
 [JsonDerivedType(typeof(Event.Comments), "Comments")]
 [JsonDerivedType(typeof(Event.Artwork), "Artwork")]
+[JsonDerivedType(typeof(Event.SearchPage), "SearchPage")]
+[JsonDerivedType(typeof(Event.SourceLibrary), "SourceLibrary")]
+[JsonDerivedType(typeof(Event.SourceLibraryPage), "SourceLibraryPage")]
+[JsonDerivedType(typeof(Event.Downloads), "Downloads")]
 public abstract record Event
 {
     private Event() { }
@@ -1305,6 +1462,18 @@ public abstract record Event
 
     /// <summary>A picture asked for with SourceArtwork is cached (Ready.Path), or cannot be had (null).</summary>
     public sealed record Artwork(ArtworkReady Ready) : Event;
+
+    /// <summary>More of one kind of a source's search results (Command.SearchMore).</summary>
+    public sealed record SearchPage(global::Jellyfesh.Ffi.SearchPage Page) : Event;
+
+    /// <summary>The SourceLibrary slice changed.</summary>
+    public sealed record SourceLibrary(SourceLibrarySnapshot Snapshot) : Event;
+
+    /// <summary>More of a source's list (Command.SourceLibraryMore).</summary>
+    public sealed record SourceLibraryPage(global::Jellyfesh.Ffi.SourceLibraryPage Page) : Event;
+
+    /// <summary>The Downloads slice changed.</summary>
+    public sealed record Downloads(DownloadsSnapshot Snapshot) : Event;
 }
 
 // ---- AI Lyrics (ADR-0019) -------------------------------------------------------------------
@@ -1739,3 +1908,132 @@ public sealed record ArtworkReady(string Url, uint SizePx, string? Path);
 /// <summary>What the lyrics bar shows at a time (JellyfeshMethods.LyricsBar): the line, the next
 /// line, each word's progress (0–1) and, for lines without word timing, the line's progress.</summary>
 public sealed record LyricsBar(uint? Line, uint? Next, IReadOnlyList<float> Words, float LineProgress);
+
+// ---- v0.0.8: source libraries and downloads (ADR-0024, ADR-0025) ------------------------------
+
+/// <summary>One of a source's lists.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<SourceLibraryPart>))]
+public enum SourceLibraryPart
+{
+    LikedSongs,
+    LikedAlbums,
+    LikedArtists,
+    Playlists,
+}
+
+/// <summary>An entry of a source's list.</summary>
+/// <param name="Owned">Playlists: the person's own (or collaborative), not followed.</param>
+/// <param name="SongsListed">Playlists: the source lists its songs here; when false the page says
+/// "{Service} lists this playlist's songs only in {Service}." and Play starts it by context.</param>
+public sealed record SourceLibraryEntry(SourceItem Item, bool Owned, bool SongsListed);
+
+/// <summary>One list of a source: the first page (at most 100), kept with its age.</summary>
+/// <param name="Next">SourceLibraryMore's cursor.</param>
+/// <param name="RefreshedAtMs">When it was last loaded ("Updated 5 minutes ago").</param>
+public sealed record SourceLibraryList(
+    SourceLibraryPart Part,
+    IReadOnlyList<SourceLibraryEntry> Entries,
+    uint? Total,
+    string? Next,
+    long? RefreshedAtMs,
+    bool Loading,
+    string? Error);
+
+/// <summary>A source's likes and playlists, in the order Liked Songs, Liked Albums, Liked
+/// Artists, Playlists; lists it does not keep are left out.</summary>
+public sealed record SourceLibrary(string Plugin, string Name, string? Attribution, IReadOnlyList<SourceLibraryList> Lists);
+
+/// <summary>The SourceLibrary slice: every enabled, signed-in source with the library
+/// capability.</summary>
+public sealed record SourceLibrarySnapshot(ulong Version, IReadOnlyList<SourceLibrary> Sources);
+
+/// <summary>More of a source's list (Command.SourceLibraryMore).</summary>
+public sealed record SourceLibraryPage(
+    ulong Request,
+    string Plugin,
+    SourceLibraryPart Part,
+    IReadOnlyList<SourceLibraryEntry> Entries,
+    string? Next,
+    string? Error);
+
+/// <summary>Why downloads wait.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter<DownloadsPaused>))]
+public enum DownloadsPaused
+{
+    /// <summary>No network.</summary>
+    Offline,
+    /// <summary>Metered with Wi-Fi Only on ("Waiting for Wi-Fi").</summary>
+    Metered,
+}
+
+/// <summary>Why a download failed; the apps word it.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(DownloadError.NotAllowed), "NotAllowed")]
+[JsonDerivedType(typeof(DownloadError.NotOffered), "NotOffered")]
+[JsonDerivedType(typeof(DownloadError.Network), "Network")]
+[JsonDerivedType(typeof(DownloadError.Storage), "Storage")]
+[JsonDerivedType(typeof(DownloadError.Other), "Other")]
+public abstract record DownloadError
+{
+    private DownloadError() { }
+
+    /// <summary>"Your {Service} server doesn't allow downloads for this account."</summary>
+    public sealed record NotAllowed(string Service) : DownloadError;
+
+    /// <summary>The source offers no downloads.</summary>
+    public sealed record NotOffered(string Service) : DownloadError;
+
+    /// <summary>The connection failed after the retries.</summary>
+    public sealed record Network(string Message) : DownloadError;
+
+    /// <summary>The file could not be written.</summary>
+    public sealed record Storage(string Message) : DownloadError;
+
+    public sealed record Other(string Message) : DownloadError;
+}
+
+/// <summary>Where a download is.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(DownloadState.Queued), "Queued")]
+[JsonDerivedType(typeof(DownloadState.Downloading), "Downloading")]
+[JsonDerivedType(typeof(DownloadState.Done), "Done")]
+[JsonDerivedType(typeof(DownloadState.Failed), "Failed")]
+public abstract record DownloadState
+{
+    private DownloadState() { }
+
+    /// <summary>Waiting for its turn, or for the network (DownloadsSnapshot.Paused).</summary>
+    public sealed record Queued : DownloadState;
+
+    public sealed record Downloading : DownloadState;
+
+    public sealed record Done : DownloadState;
+
+    /// <summary>Try Again sends RetryDownload.</summary>
+    public sealed record Failed(DownloadError Error) : DownloadState;
+}
+
+/// <summary>One download.</summary>
+/// <param name="Path">The file, once finished.</param>
+/// <param name="LibraryId">Its library track, once finished.</param>
+/// <param name="Original">The server's original rather than a conversion.</param>
+public sealed record DownloadItem(
+    ulong Id,
+    SourceTrack Track,
+    DownloadState State,
+    ulong BytesDone,
+    ulong? BytesTotal,
+    string? Path,
+    long? LibraryId,
+    bool Original);
+
+/// <summary>The Downloads slice.</summary>
+/// <param name="Folder">Where downloads go: the person's folder, or the default one.</param>
+/// <param name="Items">In progress (queue order), then finished by album.</param>
+/// <param name="BytesUsed">Space the finished downloads take.</param>
+public sealed record DownloadsSnapshot(
+    ulong Version,
+    string Folder,
+    IReadOnlyList<DownloadItem> Items,
+    ulong BytesUsed,
+    DownloadsPaused? Paused);

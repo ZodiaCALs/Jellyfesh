@@ -259,6 +259,7 @@ pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::
                 let collection = Collection::Source {
                     plugin: folder.source.clone(),
                     id: folder.id.clone(),
+                    item_kind: folder.kind,
                 };
                 play.connect_clicked(glib::clone!(
                     #[strong]
@@ -454,6 +455,7 @@ fn container_header(item: &SourceItem, facts: browse::PageFacts) -> Header {
     let collection = Collection::Source {
         plugin: item.source.clone(),
         id: item.id.clone(),
+        item_kind: item.kind,
     };
     header.play.set_visible(facts.plays);
     header.shuffle.set_visible(facts.plays);

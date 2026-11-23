@@ -461,6 +461,25 @@ pub fn lyrics_bar(timeline: LyricTimeline, t_ms: u32) -> LyricsBar {
     jf::lyrics_bar(&timeline.into(), t_ms).into()
 }
 
+/// Whether a server address (a URL such as `http://192.168.1.20:4533`, or a host with an
+/// optional port) is on the local network by Android's definition: private IPv4 (10/8,
+/// 172.16/12, 192.168/16), shared 100.64/10, link-local 169.254/16 and fe80::/10, unique local
+/// fc00::/7, multicast and broadcast, and `.local` names. Loopback is not; other host names count
+/// as not local (they would need a lookup). Android apps targeting SDK 37 ask for
+/// ACCESS_LOCAL_NETWORK before connecting to such a server (Add a Source checks the address typed
+/// with it; `PluginSummary.local_network` says it for saved sources).
+#[uniffi::export]
+pub fn address_is_local(address: String) -> bool {
+    jf::address_is_local(&address)
+}
+
+/// What a download's file would be called with `template` (Settings › Downloads › File Names,
+/// the live preview): "Album Artist/Album/01 Title.flac".
+#[uniffi::export]
+pub fn download_preview(template: String) -> String {
+    jf::download_preview(&template)
+}
+
 /// The version of this library (`jf-ffi`, released with the core).
 #[uniffi::export]
 pub fn library_version() -> String {

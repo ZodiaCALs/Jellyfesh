@@ -472,3 +472,48 @@ fn the_apps_secret_store_over_callbacks() {
         assert_eq!(keychain.requests.lock().unwrap().len(), count);
     }
 }
+
+/// The v0.0.8 free functions over JSON, as C# calls them: the local-network rule (Android's
+/// definition) and the download name preview; NULL and bad JSON are errors, never a crash.
+#[test]
+fn stateless_v0_0_8_functions_over_json() {
+    let call = |f: unsafe extern "C" fn(*const c_char) -> *mut c_char, args: Value| -> Value {
+        let args = c(&args.to_string());
+        // SAFETY: `args` outlives the call; the result is taken (and freed) at once.
+        serde_json::from_str(&take(unsafe { f(args.as_ptr()) })).unwrap()
+    };
+    for (address, local) in [
+        ("http://192.168.1.20:4533", true),
+        ("http://[fe80::1]:8096", true),
+        ("nas.local", true),
+        ("100.64.0.1", true),
+        ("http://127.0.0.1:4533", false),
+        ("https://demo.navidrome.org", false),
+    ] {
+        assert_eq!(
+            call(jf_address_is_local, json!({ "address": address })),
+            json!({ "ok": local }),
+            "{address}"
+        );
+        assert_eq!(
+            jf_ffi::address_is_local(address.into()),
+            local,
+            "UniFFI: {address}"
+        );
+    }
+    assert_eq!(
+        call(jf_download_preview, json!({ "template": "{artist} - {title}" })),
+        json!({ "ok": "Artist - Title.flac" })
+    );
+    assert_eq!(
+        jf_ffi::download_preview(String::new()),
+        "Album Artist/Album/01 Title.flac"
+    );
+    for f in [jf_address_is_local, jf_download_preview] {
+        // SAFETY: NULL is allowed and answered with an error.
+        let null: Value = serde_json::from_str(&take(unsafe { f(ptr::null()) })).unwrap();
+        assert_eq!(null["error"]["kind"], "InvalidArgument", "{null}");
+        let bad = call(f, json!({ "nothing": 1 }));
+        assert_eq!(bad["error"]["kind"], "InvalidArgument", "{bad}");
+    }
+}

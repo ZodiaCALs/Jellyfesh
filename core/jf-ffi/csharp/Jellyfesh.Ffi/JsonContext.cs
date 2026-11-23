@@ -109,6 +109,29 @@ namespace Jellyfesh.Ffi;
 [JsonSerializable(typeof(Command.Discover), TypeInfoPropertyName = "CommandDiscover")]
 [JsonSerializable(typeof(Command.Details), TypeInfoPropertyName = "CommandDetails")]
 [JsonSerializable(typeof(Command.Comments), TypeInfoPropertyName = "CommandComments")]
+[JsonSerializable(typeof(Command.SetNetworkState), TypeInfoPropertyName = "CommandSetNetworkState")]
+[JsonSerializable(typeof(Command.SearchMore), TypeInfoPropertyName = "CommandSearchMore")]
+[JsonSerializable(typeof(Command.RefreshSourceLibrary), TypeInfoPropertyName = "CommandRefreshSourceLibrary")]
+[JsonSerializable(typeof(Command.SourceLibraryMore), TypeInfoPropertyName = "CommandSourceLibraryMore")]
+[JsonSerializable(typeof(Command.SavePlaylistCopy), TypeInfoPropertyName = "CommandSavePlaylistCopy")]
+[JsonSerializable(typeof(Command.Download), TypeInfoPropertyName = "CommandDownload")]
+[JsonSerializable(typeof(Command.CancelDownload), TypeInfoPropertyName = "CommandCancelDownload")]
+[JsonSerializable(typeof(Command.RetryDownload), TypeInfoPropertyName = "CommandRetryDownload")]
+[JsonSerializable(typeof(Command.RemoveDownload), TypeInfoPropertyName = "CommandRemoveDownload")]
+[JsonSerializable(typeof(Command.RemoveAllDownloads), TypeInfoPropertyName = "CommandRemoveAllDownloads")]
+[JsonSerializable(typeof(DownloadTarget.Track), TypeInfoPropertyName = "DownloadTargetTrack")]
+[JsonSerializable(typeof(DownloadTarget.Collection), TypeInfoPropertyName = "DownloadTargetCollection")]
+[JsonSerializable(typeof(QualityNote.FilesPlayAsTheyAre), TypeInfoPropertyName = "QualityNoteFilesPlayAsTheyAre")]
+[JsonSerializable(typeof(QualityNote.SetInService), TypeInfoPropertyName = "QualityNoteSetInService")]
+[JsonSerializable(typeof(DownloadError.NotAllowed), TypeInfoPropertyName = "DownloadErrorNotAllowed")]
+[JsonSerializable(typeof(DownloadError.NotOffered), TypeInfoPropertyName = "DownloadErrorNotOffered")]
+[JsonSerializable(typeof(DownloadError.Network), TypeInfoPropertyName = "DownloadErrorNetwork")]
+[JsonSerializable(typeof(DownloadError.Storage), TypeInfoPropertyName = "DownloadErrorStorage")]
+[JsonSerializable(typeof(DownloadError.Other), TypeInfoPropertyName = "DownloadErrorOther")]
+[JsonSerializable(typeof(DownloadState.Queued), TypeInfoPropertyName = "DownloadStateQueued")]
+[JsonSerializable(typeof(DownloadState.Downloading), TypeInfoPropertyName = "DownloadStateDownloading")]
+[JsonSerializable(typeof(DownloadState.Done), TypeInfoPropertyName = "DownloadStateDone")]
+[JsonSerializable(typeof(DownloadState.Failed), TypeInfoPropertyName = "DownloadStateFailed")]
 [JsonSerializable(typeof(SongRef.Current), TypeInfoPropertyName = "SongRefCurrent")]
 [JsonSerializable(typeof(SongRef.Library), TypeInfoPropertyName = "SongRefLibrary")]
 [JsonSerializable(typeof(ItemRef.Track), TypeInfoPropertyName = "ItemRefTrack")]
@@ -177,6 +200,10 @@ namespace Jellyfesh.Ffi;
 [JsonSerializable(typeof(Event.Details), TypeInfoPropertyName = "EventDetails")]
 [JsonSerializable(typeof(Event.Comments), TypeInfoPropertyName = "EventComments")]
 [JsonSerializable(typeof(Event.Artwork), TypeInfoPropertyName = "EventArtwork")]
+[JsonSerializable(typeof(Event.SearchPage), TypeInfoPropertyName = "EventSearchPage")]
+[JsonSerializable(typeof(Event.SourceLibrary), TypeInfoPropertyName = "EventSourceLibrary")]
+[JsonSerializable(typeof(Event.SourceLibraryPage), TypeInfoPropertyName = "EventSourceLibraryPage")]
+[JsonSerializable(typeof(Event.Downloads), TypeInfoPropertyName = "EventDownloads")]
 [JsonSerializable(typeof(AiLyricsNeed.Nothing), TypeInfoPropertyName = "AiLyricsNeedNothing")]
 [JsonSerializable(typeof(AiLyricsNeed.Pro), TypeInfoPropertyName = "AiLyricsNeedPro")]
 [JsonSerializable(typeof(AiLyricsNeed.SignIn), TypeInfoPropertyName = "AiLyricsNeedSignIn")]
@@ -240,6 +267,8 @@ public partial class JellyfeshJsonContext : JsonSerializerContext
 [JsonSerializable(typeof(SchemaArgs))]
 [JsonSerializable(typeof(ArtworkArgs))]
 [JsonSerializable(typeof(LyricsBarArgs))]
+[JsonSerializable(typeof(AddressArgs))]
+[JsonSerializable(typeof(TemplateArgs))]
 [JsonSerializable(typeof(ErrorJson))]
 [JsonSerializable(typeof(SecretRequest))]
 [JsonSerializable(typeof(SecretAnswer))]
@@ -284,6 +313,10 @@ internal sealed record SchemaArgs(string Plugin, string Language);
 internal sealed record ArtworkArgs(string Url, uint SizePx);
 
 internal sealed record LyricsBarArgs(LyricTimeline Timeline, [property: JsonPropertyName("t_ms")] uint TMs);
+
+internal sealed record AddressArgs(string Address);
+
+internal sealed record TemplateArgs(string Template);
 
 /// <summary>A secret store request from the core: op is get, set or delete.</summary>
 internal sealed record SecretRequest(string Op, string Key, string? Value);

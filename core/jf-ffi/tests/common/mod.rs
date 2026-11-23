@@ -100,6 +100,12 @@ pub fn collections() -> Vec<jf::Collection> {
         jf::Collection::Source {
             plugin: "org.jellyfesh.jellyfin".into(),
             id: "album-9".into(),
+            item_kind: jf::ItemKind::Album,
+        },
+        jf::Collection::Source {
+            plugin: "org.jellyfesh.spotify".into(),
+            id: "playlist-3".into(),
+            item_kind: jf::ItemKind::Playlist,
         },
     ]
 }
@@ -146,6 +152,23 @@ pub fn settings() -> jf::Settings {
         check_for_updates: false,
         show_lyrics_bar: false,
         desktop_lyrics: true,
+        streaming_quality: jf::StreamingQuality::High,
+        downloads: jf::DownloadSettings {
+            folder: Some("/home/listener/Music/Jellyfesh".into()),
+            quality: jf::DownloadQuality::Normal,
+            name_template: "{artist}/{album}/{disc}-{track} {title}".into(),
+            add_missing_cover_and_lyrics: true,
+            lyrics_in_tags: false,
+            save_lrc_files: true,
+            wifi_only: false,
+            at_once: 3,
+        },
+        mini_player: jf::MiniPlayerSettings {
+            keep_on_top: false,
+            open_when_window_closed: true,
+            show_lyrics_line: false,
+            android_pip: true,
+        },
     }
 }
 
@@ -385,7 +408,157 @@ pub fn commands() -> Vec<jf::Command> {
         item: jf::ItemRef::Track { id: 42 },
         page: None,
     });
+    out.extend([
+        SetNetworkState {
+            online: true,
+            metered: true,
+        },
+        SearchMore {
+            plugin: "org.x".into(),
+            kind: jf::ItemKind::Album,
+            cursor: "20".into(),
+        },
+        RefreshSourceLibrary { plugin: None },
+        RefreshSourceLibrary {
+            plugin: Some("org.x".into()),
+        },
+        SourceLibraryMore {
+            plugin: "org.x".into(),
+            part: jf::SourceLibraryPart::LikedSongs,
+            cursor: "100".into(),
+        },
+        SavePlaylistCopy {
+            plugin: "org.x".into(),
+            id: "pl:1".into(),
+            name: "Evening (copy)".into(),
+        },
+        Download {
+            target: jf::DownloadTarget::Track {
+                track: jf::TrackRef::Source(source_track()),
+            },
+        },
+        Download {
+            target: jf::DownloadTarget::Collection {
+                plugin: "org.jellyfesh.jellyfin".into(),
+                id: "album-9".into(),
+                item_kind: jf::ItemKind::Album,
+            },
+        },
+        CancelDownload { id: 4 },
+        RetryDownload { id: 5 },
+        RemoveDownload { id: 6 },
+        RemoveAllDownloads,
+    ]);
     out
+}
+
+/// Every kind of source library list, with a playlist the source lists only in its own app.
+pub fn source_library() -> jf::SourceLibrarySnapshot {
+    let entry = |item: jf::SourceItem, owned, songs_listed| jf::SourceLibraryEntry {
+        item,
+        owned,
+        songs_listed,
+    };
+    let playlist = jf::SourceItem {
+        source: "org.x".into(),
+        kind: jf::ItemKind::Playlist,
+        id: "pl:1".into(),
+        track: None,
+        ..source_item()
+    };
+    jf::SourceLibrarySnapshot {
+        version: 3,
+        sources: vec![jf::SourceLibrary {
+            plugin: "org.x".into(),
+            name: "Example Source".into(),
+            attribution: Some("Example".into()),
+            lists: vec![
+                jf::SourceLibraryList {
+                    part: jf::SourceLibraryPart::LikedSongs,
+                    entries: vec![entry(source_item(), false, true)],
+                    total: Some(250),
+                    next: Some("100".into()),
+                    refreshed_at_ms: Some(1_700_000_000_000),
+                    loading: true,
+                    error: Some("the service did not answer".into()),
+                },
+                jf::SourceLibraryList {
+                    part: jf::SourceLibraryPart::Playlists,
+                    entries: vec![entry(playlist.clone(), true, true), entry(playlist, false, false)],
+                    total: None,
+                    next: None,
+                    refreshed_at_ms: None,
+                    loading: false,
+                    error: None,
+                },
+            ],
+        }],
+    }
+}
+
+/// Downloads in every state.
+pub fn downloads() -> jf::DownloadsSnapshot {
+    let item = |id, state| jf::DownloadItem {
+        id,
+        track: source_track(),
+        state,
+        bytes_done: 1_024,
+        bytes_total: Some(4_096),
+        path: Some("/home/listener/Music/Jellyfesh/Sample Artist/Night Swim/01 Lantern.flac".into()),
+        library_id: Some(42),
+        original: true,
+    };
+    jf::DownloadsSnapshot {
+        version: 7,
+        folder: "/home/listener/Music/Jellyfesh".into(),
+        items: vec![
+            item(1, jf::DownloadState::Queued),
+            item(2, jf::DownloadState::Downloading),
+            item(3, jf::DownloadState::Done),
+            item(
+                4,
+                jf::DownloadState::Failed {
+                    error: jf::DownloadError::NotAllowed {
+                        service: "Jellyfin".into(),
+                    },
+                },
+            ),
+            item(
+                5,
+                jf::DownloadState::Failed {
+                    error: jf::DownloadError::NotOffered {
+                        service: "Spotify".into(),
+                    },
+                },
+            ),
+            item(
+                6,
+                jf::DownloadState::Failed {
+                    error: jf::DownloadError::Network {
+                        message: "connection reset".into(),
+                    },
+                },
+            ),
+            item(
+                7,
+                jf::DownloadState::Failed {
+                    error: jf::DownloadError::Storage {
+                        message: "the disk is full".into(),
+                    },
+                },
+            ),
+            item(
+                8,
+                jf::DownloadState::Failed {
+                    error: jf::DownloadError::Other {
+                        message: "the file was empty".into(),
+                    },
+                },
+            ),
+        ],
+        bytes_used: 52_428_800,
+        paused: Some(jf::DownloadsPaused::Metered),
+    }
 }
 
 /// Every kind of item reference.
@@ -752,6 +925,7 @@ pub fn track_row() -> jf::TrackRow {
         artwork_hash: Some("ab12cd".into()),
         favorite: true,
         missing: false,
+        downloaded: true,
     }
 }
 
@@ -772,6 +946,7 @@ pub fn source_item() -> jf::SourceItem {
         link: Some("https://music.example.com/song/42".into()),
         artist_id: Some("ar:1".into()),
         album_id: Some("al:1".into()),
+        downloaded: true,
     }
 }
 
@@ -899,6 +1074,15 @@ pub fn now_playing() -> jf::NowPlaying {
         }),
         link: None,
         quality: Some(audio_format()),
+        qualities: vec![
+            jf::StreamingQuality::Auto,
+            jf::StreamingQuality::Lossless,
+            jf::StreamingQuality::High,
+            jf::StreamingQuality::Normal,
+            jf::StreamingQuality::Low,
+        ],
+        quality_note: Some(jf::QualityNote::FilesPlayAsTheyAre),
+        quality_level: Some(jf::StreamingQuality::High),
     }
 }
 
@@ -941,6 +1125,9 @@ pub fn remote() -> jf::RemoteSnapshot {
         device: Some(phone.clone()),
         devices: vec![desk, phone],
         error: Some("the service asked to slow down".into()),
+        quality_note: Some(jf::QualityNote::SetInService {
+            service: "Example Source".into(),
+        }),
     }
 }
 
@@ -1010,6 +1197,10 @@ pub fn sources() -> jf::SourcesSnapshot {
             discover: true,
             details: true,
             comments: true,
+            library: true,
+            download: true,
+            qualities: vec![jf::StreamingQuality::Lossless, jf::StreamingQuality::Low],
+            local_network: true,
         }],
         presets: vec![jf::SourcePreset {
             id: "navidrome".into(),
@@ -1046,6 +1237,8 @@ pub fn snapshot() -> jf::Snapshot {
         look: Arc::new(look()),
         pro: Arc::new(pro()),
         update: Arc::new(update()),
+        source_library: Arc::new(source_library()),
+        downloads: Arc::new(downloads()),
     }
 }
 
@@ -1144,8 +1337,39 @@ pub fn events() -> Vec<jf::Event> {
             query: "harbor".into(),
             source: "library".into(),
             items: vec![source_item()],
+            merged: true,
+            groups: vec![jf::SearchGroup {
+                kind: jf::ItemKind::Track,
+                items: vec![source_item()],
+                next: Some("20".into()),
+                total: Some(41),
+            }],
             error: Some("one source timed out".into()),
             done: true,
+        })),
+        SearchPage(Arc::new(jf::SearchPage {
+            request: jf::CommandId(24),
+            query: "harbor".into(),
+            source: "org.x".into(),
+            kind: jf::ItemKind::Track,
+            items: vec![source_item()],
+            next: None,
+            error: Some("the service did not answer".into()),
+        })),
+        SourceLibrary(Arc::new(source_library())),
+        SourceLibraryPage(Arc::new(jf::SourceLibraryPage {
+            request: jf::CommandId(25),
+            plugin: "org.x".into(),
+            part: jf::SourceLibraryPart::LikedAlbums,
+            entries: source_library().sources[0].lists[0].entries.clone(),
+            next: Some("200".into()),
+            error: None,
+        })),
+        Downloads(Arc::new(downloads())),
+        Downloads(Arc::new(jf::DownloadsSnapshot {
+            items: Vec::new(),
+            paused: Some(jf::DownloadsPaused::Offline),
+            ..downloads()
         })),
         BrowsePage(Arc::new(jf::BrowseUpdate {
             request: jf::CommandId(22),
@@ -1296,6 +1520,7 @@ pub fn config() -> jf::Config {
         resume_on_start: false,
         bundled_plugins: vec!["/app/plugins/subsonic.jfpkg".into()],
         distribution: jf::Distribution::Direct,
+        downloads_dir: Some("/home/listener/Music/Jellyfesh".into()),
         ..jf::Config::new("/data/jellyfesh", "/cache/jellyfesh")
     }
 }

@@ -697,6 +697,7 @@ fn plays_and_queues_whole_source_collections() {
             collection: Collection::Source {
                 plugin: CATALOG.into(),
                 id: "al1".into(),
+                item_kind: ItemKind::Album,
             },
             start: 1,
             shuffle: false,
@@ -726,6 +727,7 @@ fn plays_and_queues_whole_source_collections() {
             collection: Collection::Source {
                 plugin: CATALOG.into(),
                 id: "al1".into(),
+                item_kind: ItemKind::Album,
             },
             play_next: false,
         },
@@ -736,6 +738,7 @@ fn plays_and_queues_whole_source_collections() {
         collection: Collection::Source {
             plugin: CATALOG.into(),
             id: "al2".into(),
+            item_kind: ItemKind::Album,
         },
         start: 0,
         shuffle: false,

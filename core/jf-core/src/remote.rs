@@ -424,6 +424,7 @@ pub(crate) fn ended(version: u64, error: Option<String>) -> RemoteSnapshot {
         device: None,
         devices: Vec::new(),
         error,
+        quality_note: None,
     }
 }
 
@@ -853,6 +854,9 @@ fn snapshot(version: u64, source: &Source, model: &Model) -> RemoteSnapshot {
         device: state.and_then(|s| s.device.clone()).map(device),
         devices: model.devices.iter().cloned().map(device).collect(),
         error: model.error.clone(),
+        quality_note: Some(crate::types::QualityNote::SetInService {
+            service: source.name.clone(),
+        }),
     }
 }
 

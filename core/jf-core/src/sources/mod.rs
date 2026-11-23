@@ -61,7 +61,7 @@ pub(crate) fn item_kind(kind: HostKind) -> crate::types::ItemKind {
 pub(crate) fn bare_item(id: &str, kind: HostKind) -> Item {
     convert::bare(id, kind, id)
 }
-pub(crate) use search::SearchJob;
+pub(crate) use search::{SearchJob, groups as search_groups};
 
 use crate::CoreError;
 use crate::actor::{Msg, Shared};
@@ -82,6 +82,8 @@ const CALL_WAIT: Duration = Duration::from_secs(25);
 const LOGOUT_WAIT: Duration = Duration::from_secs(45);
 /// Items per browse page.
 const BROWSE_PAGE: u32 = 100;
+/// Results per Show More page (ADR-0024 §4: 20 per kind).
+const SEARCH_MORE_PAGE: u32 = 20;
 /// Pages fetched to reach a page whose cursor is not known yet.
 const MAX_CATCH_UP: usize = 20;
 /// Items per page, pages and items when fetching a whole collection, and
@@ -108,13 +110,6 @@ const NODE_KINDS: &[HostKind] = &[
     HostKind::Artist,
     HostKind::Folder,
     HostKind::Track,
-];
-/// Kinds a played collection is, most likely first.
-const COLLECTION_KINDS: &[HostKind] = &[
-    HostKind::Album,
-    HostKind::Playlist,
-    HostKind::Folder,
-    HostKind::Artist,
 ];
 
 /// What source helpers tell the actor.
@@ -215,6 +210,8 @@ pub(crate) struct Ctx {
     items: Mutex<ItemCache>,
     cursors: Mutex<HashMap<BrowseKey, Vec<Option<String>>>>,
     latest_search: AtomicU64,
+    /// The newest search's query, which Show More continues.
+    latest_query: Mutex<String>,
     search_timeout: Duration,
 }
 
@@ -615,6 +612,7 @@ impl Sources {
             items: Mutex::new(ItemCache::default()),
             cursors: Mutex::new(HashMap::new()),
             latest_search: AtomicU64::new(0),
+            latest_query: Mutex::new(String::new()),
             search_timeout: config.sources.search_timeout,
         });
         match search::spawn(ctx.clone()) {
@@ -742,11 +740,17 @@ impl Sources {
         Ok(self.require()?.track_item(track))
     }
 
-    /// The listed container `node` of a remote source, to play as a context.
-    pub(crate) fn remote_node(&self, plugin: &str, node: &str) -> Result<Item, CoreError> {
-        Ok(self
-            .require()?
-            .node(plugin, node, COLLECTION_KINDS, HostKind::Album))
+    /// The container `node` of a remote source, of `kind` (the app says
+    /// which: the id alone is ambiguous, and a bare item of the wrong kind
+    /// plays nothing), to play as a context.
+    pub(crate) fn remote_node(
+        &self,
+        plugin: &str,
+        node: &str,
+        kind: crate::types::ItemKind,
+    ) -> Result<Item, CoreError> {
+        let kind = crate::remote::host_kind(kind);
+        Ok(self.require()?.node(plugin, node, &[kind], kind))
     }
 
     // ---- the slice ------------------------------------------------------
@@ -1148,9 +1152,70 @@ impl Sources {
 
     // ---- search and browse ------------------------------------------------
 
-    /// Plugins a search of everything asks: on, callable, searchable, and
-    /// whose terms allow merging their results with others.
-    pub(crate) fn unified_search_plugins(&self) -> Vec<String> {
+    /// Plugins a search of everything asks: on, callable and searchable,
+    /// each with whether its terms allow merging its results with others'
+    /// (ADR-0024 §4: the others answer in sections of their own).
+    pub(crate) fn search_plugins(&self) -> Vec<(String, bool)> {
+        let Some(ctx) = &self.ctx else {
+            return Vec::new();
+        };
+        let community = ctx.host.allow_community();
+        ctx.host
+            .plugins()
+            .into_iter()
+            .filter(|p| {
+                p.enabled && (p.official || community) && p.capabilities.contains(&Capability::Search)
+            })
+            .map(|p| (p.id, p.content_policy.unified_search))
+            .collect()
+    }
+
+    /// Whether a plugin's results may merge with others' (its terms).
+    pub(crate) fn merges(&self, plugin: &str) -> bool {
+        self.ctx
+            .as_ref()
+            .and_then(|ctx| ctx.host.plugin(plugin))
+            .is_none_or(|info| info.content_policy.unified_search)
+    }
+
+    /// The levels the quality menu offers while one of `plugin`'s songs
+    /// plays (ADR-0026 §2): `Auto` and the manifest's levels, best first; or
+    /// none, with the note "Quality is set in {Service}." when it declares
+    /// none.
+    pub(crate) fn offered_qualities(
+        &self,
+        plugin: &str,
+    ) -> (
+        Vec<crate::types::StreamingQuality>,
+        Option<crate::types::QualityNote>,
+    ) {
+        let info = self.ctx.as_ref().and_then(|ctx| ctx.host.plugin(plugin));
+        let levels: Vec<crate::types::StreamingQuality> = info
+            .as_ref()
+            .map(|info| {
+                info.content_policy
+                    .qualities
+                    .iter()
+                    .map(|q| convert::streaming_quality(*q))
+                    .collect()
+            })
+            .unwrap_or_default();
+        if levels.is_empty() {
+            let service = info.map_or_else(|| plugin.to_owned(), |info| info.name);
+            return (
+                Vec::new(),
+                Some(crate::types::QualityNote::SetInService { service }),
+            );
+        }
+        let mut qualities = vec![crate::types::StreamingQuality::Auto];
+        qualities.extend(levels);
+        (qualities, None)
+    }
+
+    /// The sources the `SourceLibrary` slice covers (ADR-0024 §2), in the
+    /// `Sources` order: on, callable, signed in (or without sign-in) and
+    /// declaring `library`. Each as (id, name, attribution).
+    pub(crate) fn library_sources(&self) -> Vec<(String, String, Option<String>)> {
         let Some(ctx) = &self.ctx else {
             return Vec::new();
         };
@@ -1161,10 +1226,10 @@ impl Sources {
             .filter(|p| {
                 p.enabled
                     && (p.official || community)
-                    && p.capabilities.contains(&Capability::Search)
-                    && p.content_policy.unified_search
+                    && p.capabilities.contains(&Capability::Library)
+                    && (p.account.is_some() || !p.capabilities.contains(&Capability::Auth))
             })
-            .map(|p| p.id)
+            .map(|p| (p.id, p.name, p.content_policy.attribution))
             .collect()
     }
 
@@ -1175,10 +1240,67 @@ impl Sources {
 
     /// Makes `request` the newest search: results of older ones still on
     /// their way are dropped.
-    pub(crate) fn begin_search(&self, request: CommandId) {
+    pub(crate) fn begin_search(&self, request: CommandId, query: &str) {
         if let Some(ctx) = &self.ctx {
             ctx.latest_search.store(request.0, Ordering::SeqCst);
+            query.clone_into(&mut lock(&ctx.latest_query));
         }
+    }
+
+    /// Show More: the next page of one kind of a source's results for the
+    /// newest search, answered by `Event::SearchPage`.
+    pub(crate) fn search_more(
+        &self,
+        request: CommandId,
+        plugin: String,
+        kind: crate::types::ItemKind,
+        cursor: String,
+    ) -> Result<(), CoreError> {
+        self.usable(&plugin, Capability::Search)?;
+        let ctx = self.require()?.clone();
+        let query = lock(&ctx.latest_query).clone();
+        std::thread::Builder::new()
+            .name("jf-search-more".into())
+            .spawn(move || {
+                let reply = ctx.host.search(
+                    &plugin,
+                    &query,
+                    jf_plugin_host::SearchFilters {
+                        kinds: vec![crate::remote::host_kind(kind)],
+                    },
+                    PageRequest {
+                        cursor: Some(cursor),
+                        limit: SEARCH_MORE_PAGE,
+                    },
+                );
+                let (items, next, error) = match wait(&reply, CALL_WAIT) {
+                    Ok(page) => {
+                        ctx.remember(&plugin, &page.items);
+                        let links = ctx.links(&plugin);
+                        let items = page
+                            .items
+                            .iter()
+                            .filter(|i| convert::kind(i.kind) == kind)
+                            .map(|i| convert::source_item(&plugin, i, &links))
+                            .collect();
+                        (items, page.next, None)
+                    }
+                    Err(error) => {
+                        ctx.note(&error);
+                        (Vec::new(), None, Some(error.to_string()))
+                    }
+                };
+                ctx.emit(Event::SearchPage(Arc::new(crate::types::SearchPage {
+                    request,
+                    query,
+                    source: plugin,
+                    kind,
+                    items,
+                    next,
+                    error,
+                })));
+            })?;
+        Ok(())
     }
 
     /// Publishes search results (the library's answer) unless a newer
@@ -1220,17 +1342,21 @@ impl Sources {
         Ok(())
     }
 
-    /// Fetches every page of a source container, then tells the actor.
+    /// Fetches every page of a source container of `kind` (the app says
+    /// which; the listed item, when the core still has it, is passed back
+    /// whole), then tells the actor.
     pub(crate) fn fetch_collection(
         &self,
         id: CommandId,
         plugin: String,
         node: String,
+        kind: crate::types::ItemKind,
         then: Then,
     ) -> Result<(), CoreError> {
         self.usable(&plugin, Capability::Browse)?;
         let ctx = self.require()?.clone();
-        let item = ctx.node(&plugin, &node, COLLECTION_KINDS, HostKind::Album);
+        let kind = crate::remote::host_kind(kind);
+        let item = ctx.node(&plugin, &node, &[kind], kind);
         std::thread::Builder::new()
             .name("jf-collection".into())
             .spawn(move || {

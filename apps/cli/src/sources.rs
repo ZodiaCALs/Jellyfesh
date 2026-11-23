@@ -886,6 +886,7 @@ pub fn source_play(core: &Core, plugin: &str, query: &str) -> Result<SourcePlay>
             return Ok(SourcePlay::Collection(Collection::Source {
                 plugin: p.id.clone(),
                 id: whole.id.clone(),
+                item_kind: whole.kind,
             }));
         }
     }

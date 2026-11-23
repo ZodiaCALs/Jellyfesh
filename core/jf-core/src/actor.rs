@@ -28,9 +28,11 @@ use crate::CoreError;
 use crate::remote::{self, Op};
 use crate::sources::{self, Answer, Bundled, Ctx, Done, SearchJob, Sources, SourcesMsg, Then};
 use crate::types::{
-    ArtworkRef, Collection, Command, CommandId, Config, DevicesSnapshot, Event, ExternalPlayer, HueSource,
-    LyricsSnapshot, LyricsSource, NowPlaying, PlaybackSnapshot, QueueSnapshot, RemoteAction, ScanStatus,
-    SearchScope, SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UP_NEXT_WINDOW,
+    ArtworkRef, Collection, Command, CommandId, Config, DevicesSnapshot, DownloadsPaused, DownloadsSnapshot,
+    Event, ExternalPlayer, HueSource, LyricsSnapshot, LyricsSource, NowPlaying, PlaybackSnapshot,
+    QualityNote, QueueSnapshot, RemoteAction, ScanStatus, SearchScope, SearchUpdate, Settings, Snapshot,
+    SourceLibrary, SourceLibrarySnapshot, SourcesSnapshot, Status, StreamingQuality, ThemeSnapshot,
+    UP_NEXT_WINDOW,
 };
 use crate::{items, lyrics, theme};
 
@@ -227,6 +229,18 @@ pub(crate) struct Actor {
     auto_lyrics: Option<u64>,
     /// For helper threads the actor starts (the look).
     tx: Sender<Msg>,
+    /// The network as the app last reported it (`SetNetworkState`).
+    network: Network,
+    /// Versions of the v0.0.8 slices.
+    source_library_version: u64,
+    downloads_version: u64,
+}
+
+/// The network the platform reports.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Network {
+    online: bool,
+    metered: bool,
 }
 
 /// What the `Look` slice is made from.
@@ -312,6 +326,17 @@ impl Shared {
                     last_checked_ms: None,
                     auto: false,
                     error: None,
+                }),
+                source_library: Arc::new(SourceLibrarySnapshot {
+                    version: 0,
+                    sources: Vec::new(),
+                }),
+                downloads: Arc::new(DownloadsSnapshot {
+                    version: 0,
+                    folder: PathBuf::new(),
+                    items: Vec::new(),
+                    bytes_used: 0,
+                    paused: None,
                 }),
             }),
             subscribers: Mutex::new(Vec::new()),
@@ -536,6 +561,12 @@ impl Actor {
             update,
             auto_lyrics: None,
             tx: actor_tx,
+            network: Network {
+                online: true,
+                metered: false,
+            },
+            source_library_version: 0,
+            downloads_version: 0,
         };
         let revision = actor.library.revision().unwrap_or(0);
         actor.library_revision = revision;
@@ -552,6 +583,7 @@ impl Actor {
         actor.publish_pro();
         actor.publish_sources(true);
         actor.ai.publish(&actor.shared);
+        actor.publish_downloads();
         Ok((actor, shared))
     }
 
@@ -798,15 +830,20 @@ impl Actor {
             }
             Command::Rescan => self.library_job(LibraryJob::Scan(id))?,
             Command::PlayCollection {
-                collection: Collection::Source { plugin, id: node },
+                collection:
+                    Collection::Source {
+                        plugin,
+                        id: node,
+                        item_kind,
+                    },
                 start,
                 shuffle,
             } => {
                 if self.is_remote(&plugin) {
                     let context = if self.external(&plugin).is_some() {
-                        sources::bare_item(&node, jf_plugin_host::ItemKind::Album)
+                        sources::bare_item(&node, crate::remote::host_kind(item_kind))
                     } else {
-                        self.sources.remote_node(&plugin, &node)?
+                        self.sources.remote_node(&plugin, &node, item_kind)?
                     };
                     let op = Op::Play {
                         context: Some(Box::new(context)),
@@ -817,17 +854,22 @@ impl Actor {
                     return self.start_remote(&plugin, op);
                 }
                 self.sources
-                    .fetch_collection(id, plugin, node, Then::Play { start, shuffle })?;
+                    .fetch_collection(id, plugin, node, item_kind, Then::Play { start, shuffle })?;
             }
             Command::EnqueueCollection {
-                collection: Collection::Source { plugin, id: node },
+                collection:
+                    Collection::Source {
+                        plugin,
+                        id: node,
+                        item_kind,
+                    },
                 play_next,
             } => {
                 if self.is_remote(&plugin) {
                     return Err(self.remote_queue_refusal(&plugin));
                 }
                 self.sources
-                    .fetch_collection(id, plugin, node, Then::Enqueue { play_next })?;
+                    .fetch_collection(id, plugin, node, item_kind, Then::Enqueue { play_next })?;
             }
             Command::PlayCollection {
                 collection,
@@ -1053,6 +1095,31 @@ impl Actor {
             Command::Discover { source } => self.discover(id, source)?,
             Command::Details { item } => self.details(id, item)?,
             Command::Comments { item, page } => self.comments(id, item, page)?,
+            Command::SetNetworkState { online, metered } => {
+                self.network = Network { online, metered };
+                self.publish_downloads();
+            }
+            Command::SearchMore { plugin, kind, cursor } => {
+                self.sources.search_more(id, plugin, kind, cursor)?;
+            }
+            // M1 stub (v0.0.8 contract): the slice lists the sources with empty lists until the
+            // refresh, cache and paging land in M2.
+            Command::RefreshSourceLibrary { plugin } => self.refresh_source_library(plugin.as_deref())?,
+            // M1 stubs (v0.0.8 contract): answered "not available yet" until M2.
+            Command::SourceLibraryMore { .. } | Command::SavePlaylistCopy { .. } => {
+                return Err(CoreError::Other(
+                    "sources' likes and playlists are not available in this build yet".into(),
+                ));
+            }
+            Command::Download { .. }
+            | Command::CancelDownload { .. }
+            | Command::RetryDownload { .. }
+            | Command::RemoveDownload { .. }
+            | Command::RemoveAllDownloads => {
+                return Err(CoreError::Other(
+                    "downloads are not available in this build yet".into(),
+                ));
+            }
         }
         Ok(())
     }
@@ -1312,6 +1379,8 @@ impl Actor {
         } else {
             0.5
         };
+        settings.downloads.at_once = settings.downloads.at_once.clamp(1, 4);
+        let downloads_changed = settings.downloads != self.settings.downloads;
         if let Some(engine) = &self.engine {
             if settings.eq != self.settings.eq {
                 engine.set_eq(settings.eq.clone());
@@ -1362,6 +1431,9 @@ impl Actor {
             }
             self.publish_sources(true);
         }
+        if downloads_changed {
+            self.publish_downloads();
+        }
         if devices_changed {
             let selected = self.settings.output_device.clone();
             self.devices_version += 1;
@@ -1404,13 +1476,13 @@ impl Actor {
         let plugins = match scope {
             SearchScope::Library => Vec::new(),
             SearchScope::All if query.trim().is_empty() => Vec::new(),
-            SearchScope::All => self.sources.unified_search_plugins(),
+            SearchScope::All => self.sources.search_plugins(),
             SearchScope::Plugin { id: plugin } => {
                 self.sources.check_search(plugin)?;
-                vec![plugin.clone()]
+                vec![(plugin.clone(), self.sources.merges(plugin))]
             }
         };
-        self.sources.begin_search(id);
+        self.sources.begin_search(id, &query);
         let library = match scope {
             SearchScope::Plugin { .. } => None,
             SearchScope::All | SearchScope::Library => {
@@ -1429,6 +1501,8 @@ impl Actor {
                 query: query.clone(),
                 source: sources::LIBRARY.into(),
                 items: answer.rows.clone(),
+                merged: true,
+                groups: sources::search_groups(&answer.rows),
                 error: None,
                 done: plugins.is_empty(),
             };
@@ -1943,7 +2017,13 @@ impl Actor {
                     ctx.links(&track.plugin)
                         .url_for(jf_plugin_host::ItemKind::Track, &track.id)
                 });
-                Ok(source_now_playing(item, track, link))
+                let mut now = source_now_playing(item, track, link);
+                let (qualities, note) = self.sources.offered_qualities(&track.plugin);
+                now.qualities = qualities;
+                now.quality_note = note;
+                // M1: sources are still always asked for lossless (M2 passes the level).
+                now.quality_level = Some(StreamingQuality::Lossless);
+                Ok(now)
             }
             TrackRef::Library(_) | TrackRef::File(_) => Ok(self.resolve_local(item)?.1),
         }
@@ -1991,6 +2071,9 @@ impl Actor {
                     format: None,
                     link: None,
                     quality: None,
+                    qualities: Vec::new(),
+                    quality_note: Some(QualityNote::FilesPlayAsTheyAre),
+                    quality_level: None,
                 };
                 Ok((play, now))
             }
@@ -2035,6 +2118,9 @@ impl Actor {
                     format: None,
                     link: None,
                     quality: None,
+                    qualities: Vec::new(),
+                    quality_note: Some(QualityNote::FilesPlayAsTheyAre),
+                    quality_level: None,
                 };
                 Ok((play, now))
             }
@@ -2471,6 +2557,110 @@ fn source_play_item(uid: u64, track: &SourceTrack, source: HttpSource) -> PlayIt
             track.artist.as_deref(),
         ),
         replaygain: None,
+    }
+}
+
+// ---- v0.0.8: source libraries and downloads -----------------------------
+
+impl Actor {
+    /// The folder downloads go to: the one the person chose, else the app's
+    /// default, else one the core works out.
+    fn downloads_folder(&self) -> PathBuf {
+        self.settings
+            .downloads
+            .folder
+            .clone()
+            .or_else(|| self.config.downloads_dir.clone())
+            .unwrap_or_else(|| default_downloads_dir(&self.config.data_dir))
+    }
+
+    /// Publishes the `Downloads` slice.
+    ///
+    /// M1 stub (v0.0.8 contract): no downloads yet; the folder and the
+    /// network's effect are real.
+    fn publish_downloads(&mut self) {
+        self.downloads_version += 1;
+        let paused = if !self.network.online {
+            Some(DownloadsPaused::Offline)
+        } else if self.network.metered && self.settings.downloads.wifi_only {
+            Some(DownloadsPaused::Metered)
+        } else {
+            None
+        };
+        let snapshot = Arc::new(DownloadsSnapshot {
+            version: self.downloads_version,
+            folder: self.downloads_folder(),
+            items: Vec::new(),
+            bytes_used: 0,
+            paused,
+        });
+        if self
+            .shared
+            .snapshot
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .downloads
+            .as_ref()
+            == snapshot.as_ref()
+        {
+            return;
+        }
+        self.shared.update(|s| s.downloads = snapshot.clone());
+        self.shared.emit(Event::Downloads(snapshot));
+    }
+
+    /// `RefreshSourceLibrary`.
+    ///
+    /// M1 stub (v0.0.8 contract): lists the sources that join the slice, with
+    /// no lists yet; M2 loads, caches and pages them.
+    fn refresh_source_library(&mut self, plugin: Option<&str>) -> Result<(), CoreError> {
+        let sources: Vec<SourceLibrary> = self
+            .sources
+            .library_sources()
+            .into_iter()
+            .map(|(plugin, name, attribution)| SourceLibrary {
+                plugin,
+                name,
+                attribution,
+                lists: Vec::new(),
+            })
+            .collect();
+        if let Some(plugin) = plugin
+            && !sources.iter().any(|s| s.plugin == plugin)
+        {
+            return Err(CoreError::Other(format!(
+                "{} has no likes or playlists to show (it is off, signed out, or does not list them)",
+                self.sources.display_name(plugin)
+            )));
+        }
+        self.source_library_version += 1;
+        let snapshot = Arc::new(SourceLibrarySnapshot {
+            version: self.source_library_version,
+            sources,
+        });
+        self.shared.update(|s| s.source_library = snapshot.clone());
+        self.shared.emit(Event::SourceLibrary(snapshot));
+        Ok(())
+    }
+}
+
+/// The downloads folder when the app passes none: `Jellyfesh` in
+/// `$XDG_MUSIC_DIR`, else in `Music` in the home folder, else
+/// `<data_dir>/Downloads`.
+fn default_downloads_dir(data_dir: &Path) -> PathBuf {
+    let music = std::env::var_os("XDG_MUSIC_DIR")
+        .map(PathBuf::from)
+        .filter(|p| p.is_absolute())
+        .or_else(|| {
+            std::env::var_os("HOME")
+                .or_else(|| std::env::var_os("USERPROFILE"))
+                .map(PathBuf::from)
+                .filter(|p| p.is_absolute())
+                .map(|home| home.join("Music"))
+        });
+    match music {
+        Some(music) => music.join("Jellyfesh"),
+        None => data_dir.join("Downloads"),
     }
 }
 
@@ -3007,6 +3197,9 @@ fn source_now_playing(item: &QueueItem, track: &SourceTrack, link: Option<String
         format: None,
         link,
         quality: None,
+        qualities: Vec::new(),
+        quality_note: None,
+        quality_level: None,
     }
 }
 

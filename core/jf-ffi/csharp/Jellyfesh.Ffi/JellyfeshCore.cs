@@ -399,6 +399,22 @@ public static class JellyfeshMethods
         Results.Unwrap(
             Native.TakeString(Native.jf_lyrics_bar(JsonSerializer.Serialize(new LyricsBarArgs(timeline, tMs), InteropJsonContext.Default.LyricsBarArgs))),
             JellyfeshJsonContext.Default.LyricsBar)!;
+
+    /// <summary>Whether a server address (a URL, or a host with an optional port) is on the local
+    /// network by Android's definition (private and shared IPv4, link-local, unique local IPv6,
+    /// multicast and broadcast, .local names; not loopback, and other names count as not
+    /// local).</summary>
+    public static bool AddressIsLocal(string address) =>
+        Results.Unwrap(
+            Native.TakeString(Native.jf_address_is_local(JsonSerializer.Serialize(new AddressArgs(address), InteropJsonContext.Default.AddressArgs))),
+            JellyfeshJsonContext.Default.Boolean);
+
+    /// <summary>What a download's file would be called with template (Settings › Downloads ›
+    /// File Names, the live preview): "Album Artist/Album/01 Title.flac".</summary>
+    public static string DownloadPreview(string template) =>
+        Results.Unwrap(
+            Native.TakeString(Native.jf_download_preview(JsonSerializer.Serialize(new TemplateArgs(template), InteropJsonContext.Default.TemplateArgs))),
+            JellyfeshJsonContext.Default.String) ?? "";
 }
 
 /// <summary>Reads {"ok": value} or {"error": {kind, message}}.</summary>

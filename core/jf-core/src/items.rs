@@ -102,6 +102,7 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             artwork_hash: None,
             favorite,
             missing: false,
+            downloaded: false,
             track: reference,
         };
     }
@@ -115,6 +116,7 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             artwork_hash: t.artwork_hash.clone(),
             favorite,
             missing: false,
+            downloaded: false,
             track: reference,
         },
         None => {
@@ -131,6 +133,7 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
                 artwork_hash: None,
                 favorite,
                 missing,
+                downloaded: false,
                 track: reference,
             }
         }

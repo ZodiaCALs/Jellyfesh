@@ -27,6 +27,7 @@ mod items;
 mod look;
 pub mod lyrics;
 mod made;
+mod network;
 pub mod paths;
 mod pro;
 mod remote;
@@ -60,6 +61,7 @@ pub use jf_plugin_host::{
     HostOptions, Limits, MemorySecretStore, SecretError, SecretStore, trust::TrustList,
 };
 pub use jf_session::{HistoryEntry, QueueItem, RepeatMode, SourceTrack, TrackRef};
+pub use network::address_is_local;
 pub use timing::{DisplayClock, LyricsBar, lyrics_bar};
 pub use types::*;
 
@@ -420,6 +422,30 @@ pub fn output_devices() -> Result<Vec<DeviceInfo>, CoreError> {
     Ok(jf_engine::list_devices()?)
 }
 
+/// What a download's file would be called with `template` (Settings ›
+/// Downloads › File Names, its live preview): the folders and the file,
+/// joined with `/`, for an example song whose fields are named after
+/// themselves ("Album Artist/Album/01 Title.flac"). An empty template shows
+/// the default one's.
+pub fn download_preview(template: &str) -> String {
+    use jf_plugin_host::filenames::{NameFields, file_name, render};
+    let example = NameFields {
+        artist: Some("Artist".into()),
+        album_artist: Some("Album Artist".into()),
+        album: Some("Album".into()),
+        title: "Title".into(),
+        track: Some(1),
+        disc: Some(1),
+        year: Some(2026),
+        source: Some("Source".into()),
+    };
+    let mut parts = render(template, &example);
+    if let Some(last) = parts.pop() {
+        parts.push(file_name(&last, "flac"));
+    }
+    parts.join("/")
+}
+
 /// The equalizer presets every app offers, in their order. Applying one sets
 /// [`Settings::eq`] to its settings (keeping the person's preamp is up to the app).
 pub fn eq_presets() -> Vec<EqPreset> {
@@ -435,5 +461,18 @@ pub fn eq_presets() -> Vec<EqPreset> {
 impl Drop for Core {
     fn drop(&mut self) {
         self.stop();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn the_file_name_preview_follows_the_template() {
+        assert_eq!(super::download_preview(""), "Album Artist/Album/01 Title.flac");
+        assert_eq!(
+            super::download_preview("{source}/{year}/{artist} - {title}"),
+            "Source/2026/Artist - Title.flac"
+        );
+        assert_eq!(super::download_preview("{album}: {title}?"), "Album_ Title_.flac");
     }
 }

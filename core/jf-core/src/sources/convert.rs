@@ -106,6 +106,7 @@ pub(crate) fn source_item(plugin: &str, item: &Item, links: &Links) -> SourceIte
         link: links.url_for(item.kind, &item.id),
         artist_id: item.artist_id.clone(),
         album_id: item.album_id.clone(),
+        downloaded: false,
     }
 }
 
@@ -183,6 +184,7 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             link: None,
             artist_id: None,
             album_id: None,
+            downloaded: false,
         });
     }
     for a in &results.albums {
@@ -205,6 +207,7 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             link: None,
             artist_id: None,
             album_id: None,
+            downloaded: false,
         });
     }
     for a in &results.artists {
@@ -225,6 +228,7 @@ pub(crate) fn library_answer(results: &SearchResults) -> (Vec<Item>, Vec<SourceI
             link: None,
             artist_id: None,
             album_id: None,
+            downloaded: false,
         });
     }
     (items, rows)
@@ -420,7 +424,38 @@ pub(crate) fn summary(
         discover: info.capabilities.contains(&Capability::Discover),
         details: info.capabilities.contains(&Capability::Details),
         comments: info.capabilities.contains(&Capability::Comments),
+        library: info.capabilities.contains(&Capability::Library),
+        download: info.capabilities.contains(&Capability::Download),
+        qualities: info
+            .content_policy
+            .qualities
+            .iter()
+            .map(|q| streaming_quality(*q))
+            .collect(),
+        local_network: server_is_local(info),
     }
+}
+
+/// The core's level for a plugin's quality.
+pub(crate) fn streaming_quality(quality: jf_plugin_host::Quality) -> crate::types::StreamingQuality {
+    use crate::types::StreamingQuality;
+    match quality {
+        jf_plugin_host::Quality::Lossless => StreamingQuality::Lossless,
+        jf_plugin_host::Quality::High => StreamingQuality::High,
+        jf_plugin_host::Quality::Normal => StreamingQuality::Normal,
+        jf_plugin_host::Quality::Low => StreamingQuality::Low,
+    }
+}
+
+/// Whether a server address the person set for the plugin (a setting its
+/// allowlist names, `${settings.server_url}`) is on the local network.
+pub(crate) fn server_is_local(info: &PluginInfo) -> bool {
+    info.server_settings.iter().any(|key| {
+        info.settings
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .is_some_and(crate::network::address_is_local)
+    })
 }
 
 /// A login step as the UI renders it.

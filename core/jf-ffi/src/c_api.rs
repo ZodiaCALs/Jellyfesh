@@ -533,6 +533,61 @@ pub unsafe extern "C" fn jf_lyrics_bar(args_json: *const c_char) -> *mut c_char 
     into_c(envelope(result))
 }
 
+/// `{"address"}` → `{"ok": bool}`: whether the address is on the local network
+/// (`address_is_local` in `docs/ffi.md`).
+///
+/// # Safety
+///
+/// `args_json` must be NULL or a NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn jf_address_is_local(args_json: *const c_char) -> *mut c_char {
+    #[derive(serde::Deserialize)]
+    struct Args {
+        address: String,
+    }
+    let result = guard(
+        || {
+            if args_json.is_null() {
+                return Err(CoreFfiError::InvalidArgument(
+                    "address_is_local needs an address".into(),
+                ));
+            }
+            // SAFETY: forwarded from the caller's contract.
+            let args: Args = unsafe { parse(args_json) }?;
+            Ok(crate::api::address_is_local(args.address))
+        },
+        || Err(panicked()),
+    );
+    into_c(envelope(result))
+}
+
+/// `{"template"}` → `{"ok": "Album Artist/Album/01 Title.flac"}` (`download_preview`).
+///
+/// # Safety
+///
+/// `args_json` must be NULL or a NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn jf_download_preview(args_json: *const c_char) -> *mut c_char {
+    #[derive(serde::Deserialize)]
+    struct Args {
+        template: String,
+    }
+    let result = guard(
+        || {
+            if args_json.is_null() {
+                return Err(CoreFfiError::InvalidArgument(
+                    "download_preview needs a template".into(),
+                ));
+            }
+            // SAFETY: forwarded from the caller's contract.
+            let args: Args = unsafe { parse(args_json) }?;
+            Ok(crate::api::download_preview(args.template))
+        },
+        || Err(panicked()),
+    );
+    into_c(envelope(result))
+}
+
 /// Parses the arguments, runs one query and wraps the result in `{"ok"}` or `{"error"}`.
 ///
 /// # Safety

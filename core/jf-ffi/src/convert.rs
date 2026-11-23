@@ -225,6 +225,7 @@ impl From<CoreConfig> for jf::Config {
             resume_on_start: value.resume_on_start,
             bundled_plugins: value.bundled_plugins.conv(),
             distribution: value.distribution.conv(),
+            downloads_dir: value.downloads_dir.conv(),
             ..jf::Config::new(value.data_dir, value.cache_dir)
         }
     }
@@ -243,6 +244,7 @@ impl From<jf::Config> for CoreConfig {
             resume_on_start: value.resume_on_start,
             bundled_plugins: value.bundled_plugins.conv(),
             distribution: value.distribution.conv(),
+            downloads_dir: value.downloads_dir.conv(),
         }
     }
 }
@@ -324,6 +326,22 @@ mirror_enum!(CoreCommand => Command {
     Discover { source },
     Details { item },
     Comments { item, page },
+    SetNetworkState { online, metered },
+    SearchMore { plugin, kind, cursor },
+    RefreshSourceLibrary { plugin },
+    SourceLibraryMore { plugin, part, cursor },
+    SavePlaylistCopy { plugin, id, name },
+    Download { target },
+    CancelDownload { id },
+    RetryDownload { id },
+    RemoveDownload { id },
+    RemoveAllDownloads,
+});
+
+use jf::DownloadTarget as CoreDownloadTarget;
+mirror_enum!(CoreDownloadTarget => DownloadTarget {
+    Track { track },
+    Collection { plugin, id, item_kind },
 });
 
 use jf::SongRef as CoreSongRef;
@@ -386,7 +404,7 @@ mirror_enum!(CoreCollection => Collection {
     Favorites,
     Songs { sort, descending },
     Tracks { tracks },
-    Source { plugin, id },
+    Source { plugin, id, item_kind },
 });
 
 use jf::SearchScope as CoreSearchScope;
@@ -439,6 +457,33 @@ mirror_struct!(jf::Settings => Settings {
     check_for_updates,
     show_lyrics_bar,
     desktop_lyrics,
+    streaming_quality,
+    downloads,
+    mini_player,
+});
+
+use jf::StreamingQuality as CoreStreamingQuality;
+mirror_enum!(CoreStreamingQuality => StreamingQuality { Auto, Lossless, High, Normal, Low });
+
+use jf::DownloadQuality as CoreDownloadQuality;
+mirror_enum!(CoreDownloadQuality => DownloadQuality { Original, High, Normal, Low });
+
+mirror_struct!(jf::DownloadSettings => DownloadSettings {
+    folder,
+    quality,
+    name_template,
+    add_missing_cover_and_lyrics,
+    lyrics_in_tags,
+    save_lrc_files,
+    wifi_only,
+    at_once,
+});
+
+mirror_struct!(jf::MiniPlayerSettings => MiniPlayerSettings {
+    keep_on_top,
+    open_when_window_closed,
+    show_lyrics_line,
+    android_pip,
 });
 
 use jf::ReplayGainMode as CoreReplayGainMode;
@@ -485,6 +530,10 @@ mirror_struct!(jf::PluginSummary => PluginSummary {
     discover,
     details,
     comments,
+    library,
+    download,
+    qualities,
+    local_network,
 });
 
 use jf::PluginKind as CorePluginKind;
@@ -572,6 +621,7 @@ mirror_struct!(jf::SourceItem => SourceItem {
     link,
     artist_id,
     album_id,
+    downloaded,
 });
 
 impl Conv<u64> for jf::CommandId {
@@ -586,7 +636,18 @@ impl Conv<jf::CommandId> for u64 {
     }
 }
 
-mirror_struct!(jf::SearchUpdate => SearchUpdate { request, query, source, items, error, done });
+mirror_struct!(jf::SearchUpdate => SearchUpdate {
+    request,
+    query,
+    source,
+    items,
+    merged,
+    groups,
+    error,
+    done,
+});
+mirror_struct!(jf::SearchGroup => SearchGroup { kind, items, next, total });
+mirror_struct!(jf::SearchPage => SearchPage { request, query, source, kind, items, next, error });
 mirror_struct!(jf::BrowseUpdate => BrowseUpdate { request, plugin, node, items, next_page, error });
 mirror_struct!(jf::TrackRow => TrackRow {
     track,
@@ -598,6 +659,7 @@ mirror_struct!(jf::TrackRow => TrackRow {
     artwork_hash,
     favorite,
     missing,
+    downloaded,
 });
 mirror_struct!(jf::PlaylistSummary => PlaylistSummary {
     id,
@@ -741,7 +803,13 @@ mirror_struct!(jf::NowPlaying => NowPlaying {
     format,
     link,
     quality,
+    qualities,
+    quality_note,
+    quality_level,
 });
+
+use jf::QualityNote as CoreQualityNote;
+mirror_enum!(CoreQualityNote => QualityNote { FilesPlayAsTheyAre, SetInService { service } });
 
 // ---- remote sessions ----------------------------------------------------------------------------
 
@@ -763,6 +831,7 @@ mirror_struct!(jf::RemoteSnapshot => RemoteSnapshot {
     device,
     devices,
     error,
+    quality_note,
 });
 
 // ---- lyrics -------------------------------------------------------------------------------------
@@ -874,6 +943,10 @@ into_arc!(
     DetailsPage => jf::DetailsPage,
     CommentsPage => jf::CommentsPage,
     ArtworkReady => jf::ArtworkReady,
+    SearchPage => jf::SearchPage,
+    SourceLibrarySnapshot => jf::SourceLibrarySnapshot,
+    SourceLibraryPage => jf::SourceLibraryPage,
+    DownloadsSnapshot => jf::DownloadsSnapshot,
 );
 
 // ---- AI Lyrics, the look, Pro and updates (ADR-0019 – ADR-0021) ---------------------------------
@@ -1068,6 +1141,50 @@ mirror_struct!(jf::CommentsPage => CommentsPage {
 });
 mirror_struct!(jf::ArtworkReady => ArtworkReady { url, size_px, path });
 
+// ---- v0.0.8: source libraries and downloads -----------------------------------------------------
+
+use jf::SourceLibraryPart as CoreSourceLibraryPart;
+mirror_enum!(CoreSourceLibraryPart => SourceLibraryPart { LikedSongs, LikedAlbums, LikedArtists, Playlists });
+mirror_struct!(jf::SourceLibraryEntry => SourceLibraryEntry { item, owned, songs_listed });
+mirror_struct!(jf::SourceLibraryList => SourceLibraryList {
+    part,
+    entries,
+    total,
+    next,
+    refreshed_at_ms,
+    loading,
+    error,
+});
+mirror_struct!(jf::SourceLibrary => SourceLibrary { plugin, name, attribution, lists });
+mirror_struct!(jf::SourceLibrarySnapshot => SourceLibrarySnapshot { version, sources });
+mirror_struct!(jf::SourceLibraryPage => SourceLibraryPage { request, plugin, part, entries, next, error });
+
+use jf::DownloadsPaused as CoreDownloadsPaused;
+mirror_enum!(CoreDownloadsPaused => DownloadsPaused { Offline, Metered });
+
+use jf::DownloadError as CoreDownloadError;
+mirror_enum!(CoreDownloadError => DownloadError {
+    NotAllowed { service },
+    NotOffered { service },
+    Network { message },
+    Storage { message },
+    Other { message },
+});
+
+use jf::DownloadState as CoreDownloadState;
+mirror_enum!(CoreDownloadState => DownloadState { Queued, Downloading, Done, Failed { error } });
+mirror_struct!(jf::DownloadItem => DownloadItem {
+    id,
+    track,
+    state,
+    bytes_done,
+    bytes_total,
+    path,
+    library_id,
+    original,
+});
+mirror_struct!(jf::DownloadsSnapshot => DownloadsSnapshot { version, folder, items, bytes_used, paused });
+
 impl From<jf::LyricsBar> for LyricsBar {
     fn from(value: jf::LyricsBar) -> Self {
         LyricsBar {
@@ -1098,6 +1215,8 @@ impl From<jf::Snapshot> for Snapshot {
             look: value.look.conv(),
             pro: value.pro.conv(),
             update: value.update.conv(),
+            source_library: value.source_library.conv(),
+            downloads: value.downloads.conv(),
         }
     }
 }
@@ -1121,6 +1240,8 @@ impl From<Snapshot> for jf::Snapshot {
             look: value.look.conv(),
             pro: value.pro.conv(),
             update: value.update.conv(),
+            source_library: value.source_library.conv(),
+            downloads: value.downloads.conv(),
         }
     }
 }
@@ -1191,6 +1312,14 @@ impl From<jf::Event> for Event {
             jf::Event::Details(page) => Event::Details { page: page.conv() },
             jf::Event::Comments(page) => Event::Comments { page: page.conv() },
             jf::Event::Artwork(ready) => Event::Artwork { ready: ready.conv() },
+            jf::Event::SearchPage(page) => Event::SearchPage { page: page.conv() },
+            jf::Event::SourceLibrary(snapshot) => Event::SourceLibrary {
+                snapshot: snapshot.conv(),
+            },
+            jf::Event::SourceLibraryPage(page) => Event::SourceLibraryPage { page: page.conv() },
+            jf::Event::Downloads(snapshot) => Event::Downloads {
+                snapshot: snapshot.conv(),
+            },
         }
     }
 }
@@ -1230,6 +1359,10 @@ impl From<Event> for jf::Event {
             Event::Details { page } => jf::Event::Details(page.conv()),
             Event::Comments { page } => jf::Event::Comments(page.conv()),
             Event::Artwork { ready } => jf::Event::Artwork(ready.conv()),
+            Event::SearchPage { page } => jf::Event::SearchPage(page.conv()),
+            Event::SourceLibrary { snapshot } => jf::Event::SourceLibrary(snapshot.conv()),
+            Event::SourceLibraryPage { page } => jf::Event::SourceLibraryPage(page.conv()),
+            Event::Downloads { snapshot } => jf::Event::Downloads(snapshot.conv()),
         }
     }
 }
