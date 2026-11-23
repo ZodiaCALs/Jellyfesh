@@ -1,7 +1,7 @@
-// Playback, in the order of docs/ui.md: where the sound goes, crossfade, volume levelling
-// (ReplayGain), the equalizer with the core's presets, and resuming at startup. The core applies
-// them (docs/core-api.md, "Playback output"); sliders send while they move, at most every 100 ms,
-// and once more when let go.
+// Playback, in the order of docs/ui.md, as the web's cards (SettingsCards): where the sound goes,
+// crossfade, volume levelling (ReplayGain), the equalizer with the core's presets, and resuming at
+// startup. The core applies them (docs/core-api.md, "Playback output"); sliders send while they
+// move, at most every 100 ms, and once more when let go.
 
 import SwiftUI
 
@@ -12,102 +12,117 @@ struct PlaybackSettings: View {
     @State private var preampDraft: Double?
 
     var body: some View {
-        let current = settings.current
-        Form {
-            Section("Output") {
-                Picker(selection: Binding<String?>(get: { playback.devices.selected }, set: { playback.selectOutput($0) })) {
+        SettingsCardsColumn {
+            outputCard
+            crossfadeCard
+            levellingCard
+            EqualizerSection()
+            startupCard
+        }
+    }
+
+    private var outputCard: some View {
+        SettingsCard(title: "Output") {
+            SettingsRow("Output Device", help: "Where the sound goes.") {
+                Picker("Output Device", selection: Binding<String?>(get: { playback.devices.selected },
+                                                                    set: { playback.selectOutput($0) })) {
                     Text("System Default").tag(String?.none)
                     ForEach(playback.devices.devices) { device in
                         Text(device.name).tag(String?.some(device.id))
                     }
-                } label: {
-                    Text("Output Device")
-                    Text("Where the sound goes.")
                 }
+                .labelsHidden()
+                .fixedSize()
             }
+        }
+    }
 
-            Section("Crossfade") {
-                Toggle(isOn: Binding(get: { current.crossfade.enabled }, set: { value in
+    private var crossfadeCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Crossfade") {
+            SettingsToggleRow("Crossfade", help: "Blend the end of a song into the next.", isOn: Binding(
+                get: { current.crossfade.enabled },
+                set: { value in
                     var fade = current.crossfade
                     fade.enabled = value
                     settings.setCrossfade(fade)
-                })) {
-                    Text("Crossfade")
-                    Text("Blend the end of a song into the next.")
                 }
-                if current.crossfade.enabled {
-                    let seconds = crossfadeDraft ?? Double(current.crossfade.durationMs) / 1000
-                    LabeledContent("Length") {
-                        HStack {
-                            Slider(value: Binding(get: { seconds }, set: { crossfadeDraft = $0 }), in: 1...12, step: 1,
-                                   onEditingChanged: { editing in
-                                       guard !editing, let value = crossfadeDraft else { return }
-                                       var fade = settings.current.crossfade
-                                       fade.durationMs = UInt32(value * 1000)
-                                       settings.setCrossfade(fade)
-                                       crossfadeDraft = nil
-                                   })
-                            .frame(maxWidth: 240)
-                            Text("\(Int(seconds)) s")
-                                .monospacedDigit()
-                                .frame(width: 40, alignment: .trailing)
-                        }
+            ))
+            if current.crossfade.enabled {
+                let seconds = crossfadeDraft ?? Double(current.crossfade.durationMs) / 1000
+                SettingsDivider()
+                SettingsRow("Length") {
+                    HStack {
+                        Slider(value: Binding(get: { seconds }, set: { crossfadeDraft = $0 }), in: 1...12, step: 1,
+                               onEditingChanged: { editing in
+                                   guard !editing, let value = crossfadeDraft else { return }
+                                   var fade = settings.current.crossfade
+                                   fade.durationMs = UInt32(value * 1000)
+                                   settings.setCrossfade(fade)
+                                   crossfadeDraft = nil
+                               })
+                        .frame(width: 220)
+                        .accessibilityLabel(Text("Length"))
+                        Text("\(Int(seconds)) s")
+                            .monospacedDigit()
+                            .frame(width: 40, alignment: .trailing)
                     }
-                    Toggle(isOn: Binding(get: { current.crossfade.albumContinuity }, set: { value in
+                }
+                SettingsDivider()
+                SettingsToggleRow("Album Continuity", help: "Songs of the same album join without a fade.", isOn: Binding(
+                    get: { current.crossfade.albumContinuity },
+                    set: { value in
                         var fade = current.crossfade
                         fade.albumContinuity = value
                         settings.setCrossfade(fade)
-                    })) {
-                        Text("Album Continuity")
-                        Text("Songs of the same album join without a fade.")
                     }
-                }
+                ))
             }
+        }
+    }
 
-            Section {
+    private var levellingCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Volume Levelling",
+                            note: Text("Evens out loudness using the ReplayGain tags in your files.")) {
+            SettingsRow("ReplayGain") {
                 Picker("ReplayGain", selection: Binding(get: { current.replayGain }, set: { settings.setReplayGain($0) })) {
                     Text("Off").tag(ReplayGainOption.off)
                     Text("Track").tag(ReplayGainOption.track)
                     Text("Album").tag(ReplayGainOption.album)
                 }
                 .pickerStyle(.segmented)
-                if current.replayGain != .off {
-                    let db = preampDraft ?? Double(current.preampDb)
-                    LabeledContent("Preamp") {
-                        HStack {
-                            Slider(value: Binding(get: { db }, set: { preampDraft = $0 }), in: -15...15, step: 0.5,
-                                   onEditingChanged: { editing in
-                                       guard !editing, let value = preampDraft else { return }
-                                       settings.setPreamp(Float(value))
-                                       preampDraft = nil
-                                   })
-                            .frame(maxWidth: 240)
-                            Text(DecibelText.format(db))
-                                .monospacedDigit()
-                                .frame(width: 64, alignment: .trailing)
-                        }
+                .labelsHidden()
+                .fixedSize()
+            }
+            if current.replayGain != .off {
+                let db = preampDraft ?? Double(current.preampDb)
+                SettingsDivider()
+                SettingsRow("Preamp") {
+                    HStack {
+                        Slider(value: Binding(get: { db }, set: { preampDraft = $0 }), in: -15...15, step: 0.5,
+                               onEditingChanged: { editing in
+                                   guard !editing, let value = preampDraft else { return }
+                                   settings.setPreamp(Float(value))
+                                   preampDraft = nil
+                               })
+                        .frame(width: 220)
+                        .accessibilityLabel(Text("Preamp"))
+                        Text(DecibelText.format(db))
+                            .monospacedDigit()
+                            .frame(width: 64, alignment: .trailing)
                     }
                 }
-            } header: {
-                Text("Volume Levelling")
-            } footer: {
-                Text("Evens out loudness using the ReplayGain tags in your files.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            EqualizerSection()
-
-            Section {
-                Toggle(isOn: Binding(get: { current.resumeOnLaunch }, set: { settings.setResumeOnLaunch($0) })) {
-                    Text("Resume Playback")
-                    Text("Start playing where you left off when Jellyfesh opens.")
-                }
-            } header: {
-                Text("Startup")
             }
         }
-        .formStyle(.grouped)
+    }
+
+    private var startupCard: some View {
+        SettingsCard(title: "Startup") {
+            SettingsToggleRow("Resume Playback", help: "Start playing where you left off when Jellyfesh opens.",
+                              isOn: Binding(get: { settings.current.resumeOnLaunch },
+                                            set: { settings.setResumeOnLaunch($0) }))
+        }
     }
 }
 
@@ -125,16 +140,20 @@ private struct EqualizerSection: View {
 
     var body: some View {
         let eq = draft ?? settings.current.eq
-        Section {
-            Toggle("Equalizer", isOn: Binding(get: { eq.enabled }, set: { value in
+        SettingsCard(title: "Equalizer") {
+            SettingsToggleRow("Equalizer", isOn: Binding(get: { eq.enabled }, set: { value in
                 var next = settings.current.eq
                 next.enabled = value
                 settings.setEqualizer(next)
             }))
             if !settings.equalizerPresets.isEmpty {
-                presetPicker(matched: settings.equalizerPreset(matching: eq))
+                SettingsDivider()
+                SettingsRow("Preset") {
+                    presetPicker(matched: settings.equalizerPreset(matching: eq))
+                }
             }
             if !eq.bands.isEmpty {
+                SettingsDivider()
                 bandRow(label: String(localized: "Preamp"), value: Double(eq.preampDb)) { value in
                     edit { $0.preampDb = Float(value) }
                 } done: { finish() }
@@ -153,9 +172,8 @@ private struct EqualizerSection: View {
                     }
                     .disabled(eq.preampDb == 0 && eq.bands.allSatisfy { $0.gainDb == 0 })
                 }
+                .padding(.vertical, Tokens.Space.s3)
             }
-        } header: {
-            Text("Equalizer")
         }
     }
 
@@ -175,6 +193,8 @@ private struct EqualizerSection: View {
                 Text("Custom").tag(Self.custom)
             }
         }
+        .labelsHidden()
+        .fixedSize()
     }
 
     /// A preset replaces whatever a slider was still sending.
@@ -187,20 +207,19 @@ private struct EqualizerSection: View {
 
     private func bandRow(label: String, value: Double, change: @escaping (Double) -> Void,
                          done: @escaping () -> Void) -> some View {
-        LabeledContent {
-            HStack {
-                Slider(value: Binding(get: { value }, set: change), in: Self.range, step: 0.5,
-                       onEditingChanged: { editing in if !editing { done() } })
-                    .frame(maxWidth: 260)
-                Text(DecibelText.format(value))
-                    .monospacedDigit()
-                    .frame(width: 64, alignment: .trailing)
-            }
-        } label: {
+        HStack(spacing: Tokens.Space.s3) {
             Text(label)
+                .lookFont(size: 13, weight: .semibold)
                 .monospacedDigit()
+                .frame(width: 56, alignment: .leading)
+            Slider(value: Binding(get: { value }, set: change), in: Self.range, step: 0.5,
+                   onEditingChanged: { editing in if !editing { done() } })
+                .accessibilityLabel(Text(label))
+            Text(DecibelText.format(value))
+                .monospacedDigit()
+                .frame(width: 64, alignment: .trailing)
         }
-        .accessibilityElement(children: .combine)
+        .padding(.vertical, Tokens.Space.s1)
     }
 
     /// Changes the draft and sends it, at most every 100 ms while a slider moves.

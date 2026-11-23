@@ -1,4 +1,4 @@
-// Preferences → Appearance (docs/design-controls.md, "v0.0.4"), grouped like System Settings: the
+// Settings › Appearance (docs/design-controls.md, "v0.0.4"), as the web's cards (SettingsCards): the
 // theme with small previews; the accent colour (follow the artwork, ten swatches or a custom hue
 // on a hue track); transparency from Solid to Clear with a live preview; Reduce motion and
 // transparency; the Now Playing background with previews; the lyrics' size, alignment,
@@ -19,165 +19,176 @@ struct AppearanceSettings: View {
     @State private var transparencyDraft: Double?
 
     var body: some View {
+        SettingsCardsColumn {
+            themeCard
+            accentCard
+            transparencyCard
+            backdropCard
+            lyricsCard
+            appIconCard
+            customizeCard
+        }
+    }
+
+    private var themeCard: some View {
         let current = settings.current
-        Form {
-            Section {
-                LabeledContent {
-                    ThemeChoices(selection: current.appearance) { settings.setAppearance($0) }
-                } label: {
-                    Text("Theme")
-                    Text("Light, dark, or the same as macOS.")
-                }
-            }
+        return SettingsCard(title: "Theme", note: Text("Light, dark, or the same as macOS.")) {
+            ThemeChoices(selection: current.appearance) { settings.setAppearance($0) }
+                .padding(.vertical, Tokens.Space.s3)
+        }
+    }
 
-            Section {
-                Toggle(isOn: Binding(
-                    get: { current.hueSource == .artwork },
-                    set: { follow in
-                        // Turning it off keeps the colour shown now.
-                        settings.setHueSource(follow ? .artwork : .fixed(hue: AccentChoices.normalize(theme.hue)))
-                    }
-                )) {
-                    Text("Follow the Artwork")
-                    Text("The colour of buttons, selections and the Misty field.")
+    private var accentCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Accent Colour") {
+            SettingsToggleRow("Follow the Artwork", help: "The colour of buttons, selections and the Misty field.",
+                              isOn: Binding(
+                                  get: { current.hueSource == .artwork },
+                                  set: { follow in
+                                      // Turning it off keeps the colour shown now.
+                                      settings.setHueSource(follow ? .artwork
+                                          : .fixed(hue: AccentChoices.normalize(theme.hue)))
+                                  }
+                              ))
+            if case .fixed(let hue) = current.hueSource {
+                SettingsDivider()
+                AccentSwatches(selected: AccentChoices.swatchIndex(current.hueSource)) { swatch in
+                    hueDraft = nil
+                    settings.setHueSource(.fixed(hue: swatch))
                 }
-                if case .fixed(let hue) = current.hueSource {
-                    AccentSwatches(selected: AccentChoices.swatchIndex(current.hueSource)) { swatch in
-                        hueDraft = nil
-                        settings.setHueSource(.fixed(hue: swatch))
-                    }
-                    LabeledContent {
-                        HStack(spacing: Tokens.Space.s3) {
-                            HueSlider(hue: Binding(get: { hueDraft ?? Double(hue) }, set: { hueDraft = $0 })) { value in
-                                settings.setHueSource(.fixed(hue: AccentChoices.normalize(Float(value))))
-                                hueDraft = nil
-                            }
-                            AccentPreview(hue: Float(hueDraft ?? Double(hue)))
-                        }
-                    } label: {
-                        Text("Custom")
-                    }
-                }
-            } header: {
-                Text("Accent Colour")
-            }
-
-            Section {
-                let transparency = transparencyDraft ?? Double(current.transparency)
-                VStack(alignment: .leading, spacing: Tokens.Space.s3) {
-                    LabeledContent {
-                        Text(transparency, format: .percent.precision(.fractionLength(0)))
-                            .monospacedDigit()
-                    } label: {
-                        Text("Transparency")
-                        Text("How much of the background shows through the glass.")
-                    }
+                .padding(.vertical, Tokens.Space.s2)
+                SettingsDivider()
+                SettingsRow("Custom") {
                     HStack(spacing: Tokens.Space.s3) {
-                        Text("Solid")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Slider(value: Binding(get: { transparency }, set: { transparencyDraft = $0 }),
-                               in: 0...1, step: 0.05,
-                               onEditingChanged: { editing in
-                                   if !editing, let value = transparencyDraft {
-                                       settings.setTransparency(Float(value))
-                                       transparencyDraft = nil
-                                   }
-                               })
-                        .accessibilityLabel(Text("Transparency"))
-                        Text(String(localized: "Appearance.Transparency.Clear", defaultValue: "Clear",
-                                    comment: "The clear end of the Transparency slider (glass, not erase)"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        HueSlider(hue: Binding(get: { hueDraft ?? Double(hue) }, set: { hueDraft = $0 })) { value in
+                            settings.setHueSource(.fixed(hue: AccentChoices.normalize(Float(value))))
+                            hueDraft = nil
+                        }
+                        AccentPreview(hue: Float(hueDraft ?? Double(hue)))
                     }
-                    TransparencyPreview(transparency: transparency, reduceEffects: current.reduceEffects)
-                }
-                Toggle(isOn: Binding(get: { current.reduceEffects }, set: { settings.setReduceEffects($0) })) {
-                    Text("Reduce Motion and Transparency")
-                    Text("Solid surfaces instead of glass, and short fades instead of movement.")
                 }
             }
+        }
+    }
 
-            Section {
-                LabeledContent {
-                    BackdropChoices(selection: current.style) { settings.setStyle($0) }
-                } label: {
-                    Text("Now Playing Backdrop")
-                    Text("The artwork, blurred, or the Misty field in its colour.")
+    private var transparencyCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Transparency", note: Text("How much of the background shows through the glass.")) {
+            let transparency = transparencyDraft ?? Double(current.transparency)
+            VStack(alignment: .leading, spacing: Tokens.Space.s3) {
+                HStack(spacing: Tokens.Space.s3) {
+                    Text("Solid")
+                        .lookFont(size: 13)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                    Slider(value: Binding(get: { transparency }, set: { transparencyDraft = $0 }),
+                           in: 0...1, step: 0.05,
+                           onEditingChanged: { editing in
+                               if !editing, let value = transparencyDraft {
+                                   settings.setTransparency(Float(value))
+                                   transparencyDraft = nil
+                               }
+                           })
+                    .accessibilityLabel(Text("Transparency"))
+                    Text(String(localized: "Appearance.Transparency.Clear", defaultValue: "Clear",
+                                comment: "The clear end of the Transparency slider (glass, not erase)"))
+                        .lookFont(size: 13)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                    Text(transparency, format: .percent.precision(.fractionLength(0)))
+                        .lookFont(size: 13, weight: .semibold)
+                        .monospacedDigit()
+                        .frame(minWidth: 44, alignment: .trailing)
                 }
+                TransparencyPreview(transparency: transparency, reduceEffects: current.reduceEffects)
             }
+            .padding(.vertical, Tokens.Space.s3)
+            SettingsDivider()
+            SettingsToggleRow("Reduce Motion and Transparency",
+                              help: "Solid surfaces instead of glass, and short fades instead of movement.",
+                              isOn: Binding(get: { current.reduceEffects }, set: { settings.setReduceEffects($0) }))
+        }
+    }
 
-            Section {
+    private var backdropCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Now Playing Backdrop", note: Text("The artwork, blurred, or the Misty field in its colour.")) {
+            BackdropChoices(selection: current.style) { settings.setStyle($0) }
+                .padding(.vertical, Tokens.Space.s3)
+        }
+    }
+
+    private var lyricsCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Lyrics", note: Text("Lyrics come from the song's tags or from an .lrc, .ttml or .vtt file with the same name beside it. Jellyfesh never transliterates: romanization shows only when the lyrics carry it.")) {
+            SettingsRow("Lyrics Size") {
                 Picker("Lyrics Size", selection: Binding(get: { current.lyricsSize }, set: { settings.setLyricsSize($0) })) {
                     Text("Small").tag(LyricsSizeOption.small)
                     Text("Medium").tag(LyricsSizeOption.medium)
                     Text("Large").tag(LyricsSizeOption.large)
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            SettingsDivider()
+            SettingsRow("Lyrics Alignment") {
                 Picker("Lyrics Alignment", selection: Binding(get: { current.lyricsAlign }, set: { settings.setLyricsAlign($0) })) {
                     Text("Start").tag(LyricsAlignOption.start)
                     Text("Centre").tag(LyricsAlignOption.center)
                 }
                 .pickerStyle(.segmented)
-                Toggle(isOn: Binding(get: { current.showTranslation }, set: { settings.setShowTranslation($0) })) {
-                    Text("Show Translations")
-                    Text("A line in another language under each lyric line, when the lyrics have one.")
-                }
-                Toggle(isOn: Binding(get: { current.showRomanization }, set: { settings.setShowRomanization($0) })) {
-                    Text("Show Romanization")
-                    Text("How each line reads in Latin letters, when the lyrics have it.")
-                }
-                Toggle(isOn: Binding(get: { current.showLyricsBar }, set: { settings.setShowLyricsBar($0) })) {
-                    Text("Show Lyrics Bar")
-                    Text("The line being sung, under the song's title in the player bar.")
-                }
-                Toggle(isOn: Binding(get: { current.desktopLyrics }, set: { settings.setDesktopLyrics($0) })) {
-                    Text("Desktop Lyrics")
-                    Text("The line being sung and the next one, in a window that stays above other apps.")
-                }
-            } header: {
-                Text("Lyrics")
-            } footer: {
-                Text("Lyrics come from the song's tags or from an .lrc, .ttml or .vtt file with the same name beside it. Jellyfesh never transliterates: romanization shows only when the lyrics carry it.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                .labelsHidden()
+                .fixedSize()
             }
-
-            Section {
-                AppIconPicker()
-            } header: {
-                Text("App Icon")
-            } footer: {
-                Text("Automatic uses Ice in light appearance and Steel in dark appearance. Other choices change the Dock icon while Jellyfesh is open; Finder keeps Ice.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                Button {
-                    model.extensionsFocus = LookStore.customizeID
-                    model.settingsTab = .extensions
-                } label: {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Customize…")
-                            Text("Corners, glass, type, lyrics style and layout.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if !pro.isActive {
-                            ProBadge()
-                        }
-                        Image(systemName: "chevron.right")
-                            .foregroundStyle(.tertiary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
+            SettingsDivider()
+            SettingsToggleRow("Show Translations",
+                              help: "A line in another language under each lyric line, when the lyrics have one.",
+                              isOn: Binding(get: { current.showTranslation }, set: { settings.setShowTranslation($0) }))
+            SettingsDivider()
+            SettingsToggleRow("Show Romanization", help: "How each line reads in Latin letters, when the lyrics have it.",
+                              isOn: Binding(get: { current.showRomanization }, set: { settings.setShowRomanization($0) }))
+            SettingsDivider()
+            SettingsToggleRow("Show Lyrics Bar", help: "The line being sung, under the song's title in the player bar.",
+                              isOn: Binding(get: { current.showLyricsBar }, set: { settings.setShowLyricsBar($0) }))
+            SettingsDivider()
+            SettingsToggleRow("Desktop Lyrics",
+                              help: "The line being sung and the next one, in a window that stays above other apps.",
+                              isOn: Binding(get: { current.desktopLyrics }, set: { settings.setDesktopLyrics($0) }))
         }
-        .formStyle(.grouped)
+    }
+
+    private var appIconCard: some View {
+        SettingsCard(title: "App Icon", note: Text("Automatic uses Ice in light appearance and Steel in dark appearance. Other choices change the Dock icon while Jellyfesh is open; Finder keeps Ice.")) {
+            AppIconPicker()
+        }
+    }
+
+    private var customizeCard: some View {
+        SettingsCard {
+            Button {
+                model.extensionsFocus = LookStore.customizeID
+                model.settingsTab = .extensions
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Customize…")
+                            .lookFont(size: 15, weight: .semibold)
+                            .foregroundStyle(palette[Tokens.Ink.ink90])
+                        Text("Corners, glass, type, lyrics style and layout.")
+                            .lookFont(size: 13)
+                            .foregroundStyle(palette[Tokens.Ink.ink70])
+                    }
+                    Spacer()
+                    if !pro.isActive {
+                        ProBadge()
+                    }
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(palette[Tokens.Ink.ink50])
+                }
+                .frame(minHeight: 60)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
     }
 }
 
