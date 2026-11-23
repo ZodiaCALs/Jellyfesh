@@ -71,6 +71,8 @@ final class AppModel {
     private let keys: SharedKeyMonitor
     @ObservationIgnored private var deviceWatcher: DeviceWatcher?
     @ObservationIgnored private var started = false
+    /// The app is quitting: its windows closing is not the person closing the main window.
+    @ObservationIgnored private var quitting = false
     /// Music folders that moved since the last launch (sandboxed builds), passed to the core once
     /// it has started.
     @ObservationIgnored private var movedFolders: [FolderAccess.Move] = []
@@ -191,6 +193,7 @@ final class AppModel {
 
     /// Saves the session and stops the core (the app is quitting).
     func shutdown() {
+        quitting = true
         deviceWatcher?.stop()
         keys.stop()
         client.shutdown()
@@ -346,6 +349,7 @@ final class AppModel {
     /// The main window closed: Open When the Window Is Closed opens the mini player while music
     /// plays.
     func mainWindowClosed() {
+        guard !quitting else { return }
         miniPlayer.mainWindowClosed(playing: playback.isPlaying)
     }
 
