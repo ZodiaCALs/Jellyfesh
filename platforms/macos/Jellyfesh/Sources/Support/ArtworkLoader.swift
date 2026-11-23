@@ -13,6 +13,12 @@ import AppKit
 import ImageIO
 import Observation
 
+/// A decoded image on its way from the decoding task to the main actor. NSImage is not Sendable,
+/// but this one is never changed once made, and only the main actor uses it.
+struct DecodedImage: @unchecked Sendable {
+    let image: NSImage
+}
+
 /// Artwork a view can load: a library content hash, a file, or a source's URL.
 enum ArtworkSource: Hashable, Sendable {
     case hash(String)
@@ -48,7 +54,7 @@ final class ArtworkLoader {
     private let client: CoreClient
     private let now: () -> ContinuousClock.Instant
     private let cache = NSCache<NSString, NSImage>()
-    @ObservationIgnored private var inFlight: [String: Task<NSImage?, Never>] = [:]
+    @ObservationIgnored private var inFlight: [String: Task<DecodedImage?, Never>] = [:]
     /// Waiting for `.artwork` events, by URL and size.
     @ObservationIgnored private var waiters: [String: [UUID: CheckedContinuation<String?, Never>]] = [:]
     /// Pictures the core said cannot be had, by URL and size: not asked for again until their
@@ -98,9 +104,9 @@ final class ArtworkLoader {
         let size = Self.thumbnailSize(for: pixels)
         let key = Self.key(source, size)
         if let hit = cache.object(forKey: key as NSString) { return hit }
-        if let running = inFlight[key] { return await running.value }
+        if let running = inFlight[key] { return await running.value?.image }
         let client = self.client
-        let task = Task<NSImage?, Never> {
+        let task = Task<DecodedImage?, Never> {
             let path: String?
             switch source {
             case .hash(let hash):
@@ -114,7 +120,7 @@ final class ArtworkLoader {
             return await Self.decode(path: path, maxPixels: size)
         }
         inFlight[key] = task
-        let image = await task.value
+        let image = await task.value?.image
         inFlight[key] = nil
         if let image {
             cache.setObject(image, forKey: key as NSString, cost: size * size * 4)
@@ -189,8 +195,8 @@ final class ArtworkLoader {
     }
 
     /// Decodes and downsamples an image file on a background task.
-    nonisolated static func decode(path: String, maxPixels: Int) async -> NSImage? {
-        await Task.detached(priority: .utility) { () -> NSImage? in
+    nonisolated static func decode(path: String, maxPixels: Int) async -> DecodedImage? {
+        await Task.detached(priority: .utility) { () -> DecodedImage? in
             let url = URL(fileURLWithPath: path)
             guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
             let options: [CFString: Any] = [
@@ -202,7 +208,7 @@ final class ArtworkLoader {
             guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
                 return nil
             }
-            return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+            return DecodedImage(image: NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height)))
         }.value
     }
 }

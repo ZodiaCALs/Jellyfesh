@@ -65,7 +65,7 @@ final class ShellLayoutTests: XCTestCase {
             - 2 * LuminousGeometry.playerMargin
         XCTAssertFalse(PlayerBarLayout.showsVolumeLine(barWidth: narrowest), "a 900 pt window beside the panel")
         XCTAssertTrue(PlayerBarLayout.showsVolumeLine(barWidth: 820))
-        XCTAssertLessThan(NowPlayingDock.compactBelow, ShellLayout.playerBarMinWidth)
+        XCTAssertLessThan(NowPlayingDock.compactBelow, SeekGeometry.playerBarMinWidth)
     }
 
     func testTheWordmarkShowsTheChosenIcon() {

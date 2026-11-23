@@ -24,7 +24,7 @@ final class NetworkMonitor {
     private var reported: NetworkState?
 
     /// Calls `changed` with the network's state now and whenever it changes.
-    func start(_ changed: @escaping @MainActor (NetworkState) -> Void) {
+    func start(_ changed: @escaping @MainActor @Sendable (NetworkState) -> Void) {
         guard monitor == nil else { return }
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { [weak self] path in

@@ -31,9 +31,9 @@ struct SearchSection: Identifiable, Equatable {
 @Observable
 final class SearchStore {
     /// The source id the core gives the local library.
-    static let library = "library"
+    nonisolated static let library = "library"
     /// How many results per kind the core returns from the library (its `search(query, 50)`).
-    static let libraryLimit = 50
+    nonisolated static let libraryLimit = 50
 
     let client: CoreClient
     private let tracker: CommandTracker
