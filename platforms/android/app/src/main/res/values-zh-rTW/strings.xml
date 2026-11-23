@@ -559,4 +559,7 @@
     <string name="local_network_off_many">在你允許「鄰近裝置」權限之前，Jellyfesh 無法連線到家用網路中的來源。</string>
     <string name="local_network_allow">允許…</string>
     <string name="local_network_denied">沒有區域網路存取權限，Jellyfesh 可能無法連線到 %1$s。</string>
+    <!-- Open Files… at the sidebar's foot (wide windows) -->
+    <string name="action_open_files">開啟檔案…</string>
+    <string name="open_files_none">Jellyfesh 無法讀取這些檔案。</string>
 </resources>

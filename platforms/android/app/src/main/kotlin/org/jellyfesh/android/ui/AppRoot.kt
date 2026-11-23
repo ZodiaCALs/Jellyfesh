@@ -14,6 +14,18 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.windowInsetsPadding
+import org.jellyfesh.android.ui.nav.SidebarPanel
+import org.jellyfesh.android.ui.nav.SidebarWidth
+import org.jellyfesh.logic.nav.Layout
+import org.jellyfesh.logic.nav.Sidebar
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -192,14 +204,20 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
         // Android 17: Local Network access before connecting to a source on the home network.
         ProvideLocalNetwork(state.sources.plugins) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
-                // From 900 dp (tablets, desktop mode) the player bar replaces the mini-player.
-                val wide = SeekGeometry.usesPlayerBar(maxWidth.value)
                 val windowWidth = maxWidth.value
-                // The floating chrome above the system navigation bar: the tab bar capsule, and the
-                // mini-player pill (or the player bar) when something plays.
-                // The look's mini-player style (ADR-0020): v0.0.6's Bar unless an appearance plugin chose another.
+                // ADR-0023: the sidebar panel from 761 dp, the phone layout's tab bar below that.
+                val sidebar = Layout.usesSidebar(windowWidth)
+                // From 900 dp (tablets, desktop mode) the full player bar replaces the capsule.
+                val wide = SeekGeometry.usesPlayerBar(windowWidth)
+                // The look's player style (ADR-0020): v0.0.6's Bar unless an appearance plugin chose another.
                 val playerKind = NowPlayingLayouts.miniPlayer(Jf.look.miniPlayer, wide)
-                val chromeHeight: Dp = chromeHeight(hasPlayer, playerKind, lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar })
+                // The bar floats over every page, Settings included, and hides only under Now Playing.
+                val showsPlayer = hasPlayer && !navState.nowPlayingOpen
+                val chromeHeight: Dp = chromeHeight(
+                    tabs = !sidebar,
+                    player = playerKind.takeIf { showsPlayer },
+                    lyricsBar = lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar && showsPlayer },
+                )
                 // Library screens and their chrome. Hidden from accessibility while a layer covers them.
                 val covered = navState.nowPlayingOpen || overlays.isOpen
                 GlassBackdrop(
@@ -207,45 +225,66 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
                     invalidateKey = state.theme,
                 ) {
                     MistyField(Modifier.fillMaxSize())
-                    CompositionLocalProvider(
-                        LocalChromePadding provides PaddingValues(bottom = chromeHeight + navigationInset),
-                        LocalWindowWidthDp provides windowWidth,
-                    ) {
-                        val screen = navState.screen
-                        // Pages fade in and rise 8 dp (dur-2 Fluid); going back fades (dur-1); under reduced
-                        // motion both are a short fade.
-                        AnimatedContent(
-                            targetState = Triple(navState.tab, screen, navState.stack.size),
-                            transitionSpec = {
-                                val back = targetState.first == initialState.first && targetState.third < initialState.third
-                                when {
-                                    reduce -> fadeIn(JfMotion.fade(Tokens.Motion.dur1Ms, true)) togetherWith fadeOut(JfMotion.fadeOut(Tokens.Motion.dur1Ms, true))
-                                    back -> fadeIn(JfMotion.fluid(Tokens.Motion.dur1Ms, false)) togetherWith fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
-                                    else -> (fadeIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) + slideIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) { IntOffset(0, rise) }) togetherWith
-                                        fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
+                    Row(Modifier.fillMaxSize()) {
+                        if (sidebar) {
+                            SidebarPanel(
+                                selected = Sidebar.selected(navState),
+                                appIcon = state.settings.appIcon,
+                                onSelect = nav::select,
+                                modifier = Modifier
+                                    .width(SidebarWidth)
+                                    .fillMaxHeight()
+                                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Start + WindowInsetsSides.Vertical)),
+                            )
+                        }
+                        Box(Modifier.weight(1f).fillMaxHeight()) {
+                            CompositionLocalProvider(
+                                LocalChromePadding provides PaddingValues(bottom = chromeHeight + navigationInset),
+                                LocalWindowWidthDp provides windowWidth,
+                            ) {
+                                // Pages fade in and rise 8 dp (dur-2 Fluid); going back fades (dur-1); under
+                                // reduced motion both are a short fade. Settings' sections change in place.
+                                AnimatedContent(
+                                    targetState = Triple(navState.tab, navState.screen, navState.stack.size),
+                                    contentKey = { (tab, screen, depth) -> Triple(tab, if (screen is Screen.Settings) SETTINGS_PAGE else screen, depth) },
+                                    transitionSpec = {
+                                        val back = targetState.first == initialState.first && targetState.third < initialState.third
+                                        when {
+                                            reduce -> fadeIn(JfMotion.fade(Tokens.Motion.dur1Ms, true)) togetherWith fadeOut(JfMotion.fadeOut(Tokens.Motion.dur1Ms, true))
+                                            back -> fadeIn(JfMotion.fluid(Tokens.Motion.dur1Ms, false)) togetherWith fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
+                                            else -> (fadeIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) + slideIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) { IntOffset(0, rise) }) togetherWith
+                                                fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
+                                        }
+                                    },
+                                    label = "screen",
+                                    // The content fades out just above the floating chrome (Luminous), and
+                                    // beside the sidebar its sides follow the web's fluid gutter.
+                                    modifier = Modifier
+                                        .fadeOutAbove(chromeHeight + navigationInset)
+                                        .then(if (sidebar) Modifier.padding(horizontal = pageInset(windowWidth), vertical = 0.dp).padding(top = Tokens.Space.s4.dp) else Modifier),
+                                ) { (tab, target, _) ->
+                                    saveable.SaveableStateProvider("${tab.name}/$target") {
+                                        ScreenContent(target, state)
+                                    }
                                 }
-                            },
-                            label = "screen",
-                            // The content fades out just above the floating chrome (Luminous).
-                            modifier = Modifier.fadeOutAbove(chromeHeight + navigationInset),
-                        ) { (tab, target, _) ->
-                            saveable.SaveableStateProvider("${tab.name}/$target") {
-                                ScreenContent(target, state)
                             }
+                            BottomChrome(
+                                state = state,
+                                tab = navState.tab,
+                                kind = playerKind,
+                                tabs = !sidebar,
+                                player = showsPlayer,
+                                onSelect = nav::select,
+                                lyricsBar = lyricsBar,
+                                sides = if (sidebar) gutter(windowWidth) else null,
+                                onOpenNowPlaying = { panel ->
+                                    requestedPanel = panel
+                                    nav.openNowPlaying()
+                                },
+                                modifier = Modifier.align(Alignment.BottomCenter),
+                            )
                         }
                     }
-                    BottomChrome(
-                        state = state,
-                        tab = navState.tab,
-                        kind = playerKind,
-                        onSelect = nav::select,
-                        lyricsBar = lyricsBar,
-                        onOpenNowPlaying = { panel ->
-                            requestedPanel = panel
-                            nav.openNowPlaying()
-                        },
-                        modifier = Modifier.align(Alignment.BottomCenter),
-                    )
                 }
                 AnimatedVisibility(
                     visible = navState.nowPlayingOpen,
@@ -265,6 +304,16 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
         }
     }
 }
+
+/** Settings' page, whatever section it shows: changing sections is no page change. */
+private object SETTINGS_PAGE
+
+/** Jellyfesh Web's fluid gutter beside the sidebar: 4 % of the window, from 18 to 32 dp. */
+private fun gutter(windowWidthDp: Float): Dp =
+    (windowWidthDp * (Tokens.Layout.gutterFluid.vw ?: 4f) / 100f).coerceIn(Tokens.Layout.gutterFluid.min, Tokens.Layout.gutterFluid.max).dp
+
+/** What the pages add to their own 16 dp sides so they sit on the gutter beside the sidebar. */
+private fun pageInset(windowWidthDp: Float): Dp = (gutter(windowWidthDp) - 16.dp).coerceAtLeast(0.dp)
 
 @Composable
 private fun ScreenContent(screen: Screen, state: CoreState) {

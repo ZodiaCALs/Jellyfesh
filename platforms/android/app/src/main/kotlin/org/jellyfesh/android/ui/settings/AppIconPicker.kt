@@ -164,7 +164,7 @@ private fun IconTile(id: String, selected: Boolean, modifier: Modifier, onClick:
  * rendered into a bitmap off the main thread. Compose's painterResource cannot read adaptive icons.
  */
 @Composable
-private fun rememberLauncherIcon(mipmap: Int, sizeDp: Int): ImageBitmap? {
+internal fun rememberLauncherIcon(mipmap: Int, sizeDp: Int): ImageBitmap? {
     val context = LocalContext.current
     val px = with(LocalDensity.current) { sizeDp.dp.roundToPx() }
     val image by produceState<ImageBitmap?>(null, mipmap, px) {

@@ -23,6 +23,11 @@ class ActivityResultContracts private constructor() {
         override fun parseResult(resultCode: Int, intent: Intent?): Uri? = TODO()
     }
 
+    open class OpenMultipleDocuments : ActivityResultContract<Array<String>, List<@JvmSuppressWildcards Uri>>() {
+        override fun createIntent(context: Context, input: Array<String>): Intent = TODO()
+        override fun parseResult(resultCode: Int, intent: Intent?): List<Uri> = TODO()
+    }
+
     open class CreateDocument(mimeType: String) : ActivityResultContract<String, Uri?>() {
         override fun createIntent(context: Context, input: String): Intent = TODO()
         override fun parseResult(resultCode: Int, intent: Intent?): Uri? = TODO()

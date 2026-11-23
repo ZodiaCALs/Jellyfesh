@@ -559,4 +559,7 @@
     <string name="local_network_off_many">「付近のデバイス」へのアクセスを許可するまで、Jellyfesh はホームネットワーク上のソースに接続できません。</string>
     <string name="local_network_allow">許可…</string>
     <string name="local_network_denied">ローカルネットワークへのアクセスがないと、Jellyfesh は %1$s に接続できない場合があります。</string>
+    <!-- Open Files… at the sidebar's foot (wide windows) -->
+    <string name="action_open_files">ファイルを開く…</string>
+    <string name="open_files_none">Jellyfesh はこれらのファイルを読み込めませんでした。</string>
 </resources>

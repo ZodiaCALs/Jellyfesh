@@ -559,4 +559,7 @@
     <string name="local_network_off_many">在你允许“附近的设备”权限之前，Jellyfesh 无法连接家庭网络中的来源。</string>
     <string name="local_network_allow">允许…</string>
     <string name="local_network_denied">没有本地网络访问权限，Jellyfesh 可能无法连接 %1$s。</string>
+    <!-- Open Files… at the sidebar's foot (wide windows) -->
+    <string name="action_open_files">打开文件…</string>
+    <string name="open_files_none">Jellyfesh 无法读取这些文件。</string>
 </resources>

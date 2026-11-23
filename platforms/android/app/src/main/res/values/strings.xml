@@ -602,4 +602,7 @@
     <string name="local_network_off_many">Jellyfesh can’t reach your sources on your home network until you allow access to nearby devices.</string>
     <string name="local_network_allow">Allow…</string>
     <string name="local_network_denied">Without local network access, Jellyfesh may not reach %1$s.</string>
+    <!-- Open Files… at the sidebar's foot (wide windows) -->
+    <string name="action_open_files">Open Files…</string>
+    <string name="open_files_none">Jellyfesh couldn’t read these files.</string>
 </resources>

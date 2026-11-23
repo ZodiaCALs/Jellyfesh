@@ -20,6 +20,7 @@ import org.jellyfesh.android.R
 import org.jellyfesh.android.valueOrNull
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.library.LibraryRoots
+import org.jellyfesh.logic.library.OpenedFiles
 import org.jellyfesh.logic.playlist.PlaylistFiles
 
 /**
@@ -154,6 +155,34 @@ class LibraryAccess(private val context: Context, private val graph: AppGraph) {
         } finally {
             temp.delete()
         }
+    }
+
+    /**
+     * Open Files… (the sidebar's foot, as on Jellyfesh Web): plays the picked files without adding
+     * them to the library ([OpenedFiles]). Each plays where it is when the core can read it there,
+     * else from a copy in the cache, which the next Open Files… replaces. Returns how many play.
+     */
+    suspend fun playFiles(documents: List<Uri>): Int = withContext(Dispatchers.IO) {
+        val parent = File(context.cacheDir, "opened")
+        val folder = File(parent, System.currentTimeMillis().toString()).apply { mkdirs() }
+        val paths = documents.mapIndexedNotNull { index, document ->
+            val inPlace = runCatching { DocumentsContract.getDocumentId(document) }.getOrNull()
+                ?.let { PlaylistFiles.pathOfDocument(it, primaryVolume()) }
+                ?.takeIf { File(it).canRead() }
+            inPlace ?: copyOpened(document, File(folder, OpenedFiles.copyName(index, displayName(document))))
+        }
+        val command = OpenedFiles.command(paths) ?: return@withContext 0
+        graph.send(command)
+        // Copies from an earlier Open Files… leave the queue with this one.
+        parent.listFiles()?.filter { it != folder }?.forEach { it.deleteRecursively() }
+        paths.size
+    }
+
+    private fun copyOpened(document: Uri, target: File): String? {
+        val copied = runCatching {
+            context.contentResolver.openInputStream(document)?.use { input -> target.outputStream().use { input.copyTo(it) } } != null
+        }.getOrDefault(false)
+        return target.path.takeIf { copied }
     }
 
     /** Storage volume roots (`/storage/emulated/0`, SD cards), from the app's own folders on them. */

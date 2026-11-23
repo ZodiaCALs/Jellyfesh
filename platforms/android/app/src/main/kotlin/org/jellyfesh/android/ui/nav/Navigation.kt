@@ -158,22 +158,27 @@ private val ChromeGap = 8.dp
 /** Below the tab bar capsule, above the system navigation bar. */
 private val ChromeBottom = 10.dp
 
-/**
- * How much of the screen's bottom the floating chrome covers (the system navigation bar not
- * included): the tab bar, the mini-player or the player bar when something plays, and the lyrics
- * bar above it when it shows ([lyricsBar], its height). Screens leave this free under their last
- * rows, and their content fades out just above it.
- */
-fun chromeHeight(hasPlayer: Boolean, kind: MiniPlayerKind, lyricsBar: Dp? = null): Dp =
-    ChromeBottom + TabBarHeight +
-        (if (!hasPlayer) 0.dp else ChromeGap + playerHeight(kind)) +
-        (if (hasPlayer && lyricsBar != null) ChromeGap + lyricsBar else 0.dp)
+/** Below the bar beside the sidebar, where no tab bar is (Jellyfesh Web's dock: 16). */
+private val DockBottom = Tokens.Space.s4.dp
 
 /**
- * The floating chrome at the bottom of the library screens (Luminous): the mini-player pill (when
- * something plays; the player bar from 900 dp, tablets and desktop mode) above the tab bar
- * capsule, each a floating Veil glass layer: the two live blur layers Android's budget allows
- * (Tokens.GlassBudget.liveLayersMobile).
+ * How much of the screen's bottom the floating chrome covers (the system navigation bar not
+ * included): the tab bar in the phone layout ([tabs]), the bar when it shows ([player], its kind),
+ * and the lyrics bar above it ([lyricsBar], its height). Screens leave this free under their last
+ * rows, and their content fades out just above it.
+ */
+fun chromeHeight(tabs: Boolean, player: MiniPlayerKind?, lyricsBar: Dp? = null): Dp {
+    val floor = if (tabs) ChromeBottom + TabBarHeight + ChromeGap else DockBottom
+    if (player == null) return if (tabs) ChromeBottom + TabBarHeight else 0.dp
+    return floor + playerHeight(player) + (if (lyricsBar != null) ChromeGap + lyricsBar else 0.dp)
+}
+
+/**
+ * The floating chrome at the bottom of every page (Luminous; ADR-0023 §2): the bar (when something
+ * plays and Now Playing is closed, [player]: the full bar from 900 dp, else the capsule) above the
+ * phone layout's tab bar capsule ([tabs]), each a floating Veil glass layer: the two live blur
+ * layers Android's budget allows (Tokens.GlassBudget.liveLayersMobile). Beside the sidebar there
+ * is no tab bar, and the bar keeps the page's gutter ([sides]).
  */
 @Composable
 fun BottomChrome(
@@ -183,17 +188,20 @@ fun BottomChrome(
     onSelect: (Tab) -> Unit,
     onOpenNowPlaying: (NowPlayingPanel?) -> Unit,
     modifier: Modifier = Modifier,
+    tabs: Boolean = true,
+    player: Boolean = true,
     lyricsBar: Boolean = false,
+    sides: Dp? = null,
 ) {
     Column(
         modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
-            .padding(start = ChromeSide, end = ChromeSide, bottom = ChromeBottom),
+            .padding(start = sides ?: ChromeSide, end = sides ?: ChromeSide, bottom = if (tabs) ChromeBottom else DockBottom),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(ChromeGap),
     ) {
-        if (PlayerModel.track(state) != null) {
+        if (player && PlayerModel.track(state) != null) {
             // The line being sung, above the player (Show Lyrics Bar).
             if (lyricsBar) LyricsBarStrip(state, { onOpenNowPlaying(NowPlayingPanel.Lyrics) }, Modifier.widthIn(max = 600.dp))
             // The look's mini-player style: the bar (wide windows), the pill, or a floating capsule.
@@ -205,7 +213,7 @@ fun BottomChrome(
                 }
             }
         }
-        TabBar(tab, onSelect, Modifier.widthIn(max = 600.dp))
+        if (tabs) TabBar(tab, onSelect, Modifier.widthIn(max = 600.dp))
     }
 }
 

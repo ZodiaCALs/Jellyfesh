@@ -124,7 +124,7 @@ object PlaylistFiles {
     }
 
     /** Characters file systems and document providers refuse, and control characters, become `_`. */
-    private fun safeName(name: String): String =
+    internal fun safeName(name: String): String =
         name.map { c -> if (c in FORBIDDEN || c.isISOControl()) '_' else c }.joinToString("").trim().trim('.').trim()
 
     private const val FORBIDDEN = "/\\:*?\"<>|"
