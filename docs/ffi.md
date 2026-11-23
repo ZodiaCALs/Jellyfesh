@@ -1,4 +1,4 @@
-# The FFI layer (v0.0.7)
+# The FFI layer (v0.0.8)
 
 How the macOS (Swift), Android (Kotlin) and Windows (C#) shells reach
 `jf-core`: one crate, `core/jf-ffi`, exposes the core API of
@@ -97,14 +97,22 @@ presets every app lists: `flat`, `bass_boost`, `vocal`, `treble`, shown as
 "Flat", "Bass Boost", "Vocal", "Treble"), `monotonic_now_ns()`,
 `default_data_dir()`, `default_cache_dir()`, `library_version()`,
 `lyrics_bar(timeline, t_ms) -> LyricsBar` (the lyrics bar at a time; views
-that draw every frame port it instead, see "Drawing-time ports").
+that draw every frame port it instead, see "Drawing-time ports"); from v0.0.8
+`address_is_local(address) -> bool` (whether a server address is on the
+local network by Android's definition; Android apps ask for
+`ACCESS_LOCAL_NETWORK` first; `core-api.md`, "The local network") and
+`download_preview(template) -> String` (the File Names setting's live preview,
+"Album Artist/Album/01 Title.flac").
 
 **Config:** `CoreConfig { data_dir, cache_dir, output: OutputKind, buffer_ms
 (200), restore_session (true), persist_session (true), watch_folders (true),
-bundled_plugins ([]), distribution: Distribution, resume_on_start (true) }`
-(defaults in Swift, Kotlin and C# constructors; in JSON `bundled_plugins`,
-`distribution` and `resume_on_start` may be left out, and `distribution` is
-then `Source`). `resume_on_start` lets the person's Resume on Launch start
+bundled_plugins ([]), distribution: Distribution, resume_on_start (true),
+downloads_dir (None) }` (defaults in Swift, Kotlin and C# constructors; in
+JSON `bundled_plugins`, `distribution`, `resume_on_start` and `downloads_dir`
+may be left out, and `distribution` is then `Source`). `downloads_dir` is the
+platform's default downloads folder, `Jellyfesh` in the person's Music folder
+(Android: `Music/Jellyfesh` in shared storage); `None` lets the core work one
+out (ADR-0025 §2). `resume_on_start` lets the person's Resume on Launch start
 playback when the core starts: an app started without its window (Android:
 a media button, or the system restarting the process) passes false, so no
 audio starts before its media session exists, and sends `Play` itself when it
@@ -130,7 +138,7 @@ with the same type and field names (`Command`, `Event`, `Snapshot`,
 | `CommandId` | `u64` (the value `send` returned) |
 | `usize` (counts, indices, limits) | `u32` (larger values saturate) |
 | tuple variants | named fields: `TrackRef::Library { id }`, `File { path }`, `Source { track }`; `ArtworkRef::File { path }`, `Url { url }`; `LyricsSource::Sidecar { path }`, `Plugin { id }`; `ScanStatus::Progress { progress }`, `Finished { report }`, `Failed { message }` |
-| `Event` tuple variants | slice events carry `snapshot` (`Playback`, `Queue`, `NowPlaying`, `Lyrics`, `Theme`, `Settings`, `Devices`, `Sources`, `Remote`, `AiLyrics`, `Look`, `Pro`, `Update`); `Scan { status }`; `Auth`, `SearchResults`, `BrowsePage` carry `update`; `Discover`, `Details`, `Comments` carry `page`; `Artwork` carries `ready` |
+| `Event` tuple variants | slice events carry `snapshot` (`Playback`, `Queue`, `NowPlaying`, `Lyrics`, `Theme`, `Settings`, `Devices`, `Sources`, `Remote`, `AiLyrics`, `Look`, `Pro`, `Update`, `SourceLibrary`, `Downloads`); `Scan { status }`; `Auth`, `SearchResults`, `BrowsePage` carry `update`; `Discover`, `Details`, `Comments`, `SearchPage`, `SourceLibraryPage` carry `page`; `Artwork` carries `ready` |
 | `LyricsSource::Made { plugin, engine }` | the same, named fields |
 | `LyricsBar.line`, `next` (`usize`) | `u32` |
 | `ScanReport.errors: Vec<(PathBuf, String)>` | `Vec<ScanError { path, message }>` |
@@ -149,7 +157,8 @@ abstract records with one nested record per variant (`TrackRef.Library`,
 
 **C# exceptions to the names**, because C# forbids a member named like its
 type: `Collection.Tracks.Value`, `ArtworkRef.Url.Value`,
-`ScanStatus.Progress.Value`, `Event.Buffering.Value`, `ProSource.Store.Value`;
+`ScanStatus.Progress.Value`, `Event.Buffering.Value`, `ProSource.Store.Value`,
+`DownloadTarget.Track.Value` (Rust `track`);
 `Event.UpdateStatus` (Rust `Event::Update`, whose name `Update` is a member of
 `Event.Auth`, `SearchResults` and `BrowsePage`), `LyricsSource.Made.PluginId`
 (Rust `plugin`) and `FactKey.Other.Text` (Rust `label`), whose names are
@@ -352,6 +361,8 @@ char *jf_eq_presets(void);                                   /* {"ok": [EqPreset
 uint64_t jf_monotonic_now_ns(void);
 char *jf_default_data_dir(void);  char *jf_default_cache_dir(void);  char *jf_library_version(void);
 char *jf_lyrics_bar(const char *args_json);  /* {"timeline", "t_ms"} -> {"ok": LyricsBar} */
+char *jf_address_is_local(const char *args_json);  /* {"address"} -> {"ok": bool} */
+char *jf_download_preview(const char *args_json);  /* {"template"} -> {"ok": string} */
 void jf_string_free(char *s);
 ```
 
@@ -363,7 +374,10 @@ void jf_string_free(char *s);
   `jf_core_set_store_entitlement` (`{"entitlement": StoreEntitlement}` →
   null), `jf_core_localized_settings_schema` (`{"plugin", "language"}` →
   text or null) and `jf_core_source_artwork` (`{"url", "size_px"}` → path or
-  null). Results are `{"ok": <value>}` or
+  null). v0.0.8 adds the free functions `jf_address_is_local`
+  (`{"address"}` → `{"ok": bool}`; C# `JellyfeshMethods.AddressIsLocal`) and
+  `jf_download_preview` (`{"template"}` → `{"ok": "…"}`; C#
+  `JellyfeshMethods.DownloadPreview`). Results are `{"ok": <value>}` or
   `{"error": {"kind": "...", "message": "..."}}`; `jf_core_new` writes the
   error object to `*error_json`.
 * The handle may be used from any thread at once, but `jf_core_free` must not
@@ -394,7 +408,7 @@ sorted. `tests/contract/ffi-types.json` holds one sample of every root type.
 
 | What | Command | Here |
 | --- | --- | --- |
-| Rust: conversions both ways (every v0.0.7 command, event and slice included), JSON round trips, the JSON contract, the lyrics-bar contract, the listener's guarantees, the C ABI (JSON, callback, freeing, the v0.0.7 queries), the app's secret store (UniFFI and C callback, working and locked), the shared scenario twice | `cargo test -p jf-ffi` | see `cargo test` |
+| Rust: conversions both ways (every v0.0.8 command, event and slice included), JSON round trips, the JSON contract, the lyrics-bar contract, the listener's guarantees, the C ABI (JSON, callback, freeing, the v0.0.7 queries), the app's secret store (UniFFI and C callback, working and locked), the shared scenario twice | `cargo test -p jf-ffi` | see `cargo test` |
 | Kotlin on the JVM: the ports against the three contracts, the UniFFI bindings against the shared scenario, a Kotlin `SecretStore`, the Android-context JNI path, the generated tokens | `cargo xtask bindings --lang kotlin && cargo xtask tokens --target kotlin && gradle -p platforms/shared/kotlin test` | 8 pass |
 | C# on .NET 10: the ports against the three contracts, every `ffi-types.json` sample, the binding against the shared scenario, listener errors, a C# `SecretStore` (working and locked), the generated tokens | `cargo build -p jf-ffi && cargo xtask tokens --target csharp && dotnet test --project platforms/shared/csharp/Jellyfesh.Tests` | 11 pass |
 | Swift: the ports against the three contracts | add `platforms/shared/swift/Tests` to an Xcode test target | not run |

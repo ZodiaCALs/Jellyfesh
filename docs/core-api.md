@@ -1,4 +1,4 @@
-# The core API (v0.0.7)
+# The core API (v0.0.8)
 
 Every UI (the Linux app in Rust, the macOS, Windows and Android apps through
 the FFI bindings, and the `jf` CLI) talks to `jf-core` the same way, and
@@ -52,6 +52,8 @@ Whisper; `None` makes the on-device mode unavailable).
 | `look: LookSnapshot` | `Look` | the look, every value resolved (ADR-0020); see "The look" |
 | `pro: ProSnapshot` | `Pro` | Jellyfesh Pro (ADR-0021); see "Jellyfesh Pro" |
 | `update: UpdateSnapshot` | `Update` | update checks for direct downloads; see "Updates" |
+| `source_library: SourceLibrarySnapshot` | `SourceLibrary` | each signed-in source's likes and playlists (ADR-0024); see "Sources' likes and playlists" |
+| `downloads: DownloadsSnapshot` | `Downloads` | the downloads folder, downloads in progress and finished, why they wait (ADR-0025); see "Downloads" |
 
 Other events: `PlaylistCreated { request, id }` (after `CreatePlaylist` and
 `ImportPlaylist`), `Auth(AuthUpdate)` (sign-in steps),
@@ -60,7 +62,9 @@ on the last), `BrowsePage`, `Buffering`, `CommandFailed`, `Error`; and from
 v0.0.7 `Discover(DiscoverPage)`, `Details(DetailsPage)`,
 `Comments(CommentsPage)` (answers to the commands of those names, each with
 the `request` id `send` returned) and `Artwork(ArtworkReady)` (a source
-picture is cached, see "Covers").
+picture is cached, see "Covers"); and from v0.0.8 `SearchPage(SearchPage)`
+(Show More, see "Search by source") and `SourceLibraryPage(SourceLibraryPage)`
+(more of a source's list).
 
 ## Commands
 
@@ -99,6 +103,11 @@ picture is cached, see "Covers").
   `CheckForUpdates`.
 * **Discover, details, comments:** `Discover { source }`, `Details { item }`,
   `Comments { item, page }`.
+* **v0.0.8:** `SetNetworkState { online, metered }` (see "Streaming quality"),
+  `SearchMore { plugin, kind, cursor }`, `RefreshSourceLibrary { plugin }`,
+  `SourceLibraryMore { plugin, part, cursor }`, `SavePlaylistCopy { plugin, id,
+  name }`, `Download { target }`, `CancelDownload { id }`, `RetryDownload { id
+  }`, `RemoveDownload { id }`, `RemoveAllDownloads`.
 
 ## Queries (synchronous, on the caller's thread)
 
@@ -109,8 +118,9 @@ picture is cached, see "Covers").
 `export_playlist(id, path)`, `roots`, `stats`, `queue_window`, `history`,
 `tracks_for_query`, `localized_settings_schema(plugin, language)` and
 `source_artwork(url, size_px)` (see "Covers"); free functions
-`output_devices()`, `eq_presets()` and `lyrics_bar(timeline, t_ms)` (see
-"Drawing time"). They are cheap enough for list views but are not for
+`output_devices()`, `eq_presets()`, `lyrics_bar(timeline, t_ms)` (see
+"Drawing time"), and from v0.0.8 `address_is_local(address)` (see "The local
+network") and `download_preview(template)` (see "Downloads"). They are cheap enough for list views but are not for
 per-frame use; call them off the UI thread. `set_store_entitlement(entitlement)`
 reports a store purchase (see "Jellyfesh Pro").
 
@@ -139,10 +149,19 @@ allow_community_plugins, check_for_updates (direct downloads: at most one
 check a day; on by default), show_lyrics_bar (Show Lyrics Bar in Settings ›
 Appearance › Lyrics: the one-line lyrics bar, on by default) and
 desktop_lyrics (Desktop Lyrics: the current line in a window of its own
-above other apps, off by default). The core applies playback, library and
-source settings; shells apply the appearance ones, the lyrics bar and
-Desktop Lyrics among them. Settings saved before a field existed read with
-its default.
+above other apps, off by default), and from v0.0.8 streaming_quality (`Auto`,
+`Lossless`, `High`, `Normal`, `Low`; see "Streaming quality"), downloads
+(`DownloadSettings`: `folder` (`None`: the default, which the `Downloads`
+slice names), `quality` (`Original` by default, `High`, `Normal`, `Low`),
+`name_template` (default `{album_artist}/{album}/{track} {title}`),
+`add_missing_cover_and_lyrics` (off), `lyrics_in_tags` (on), `save_lrc_files`
+(off), `wifi_only` (on), `at_once` (1–4, 2; the core keeps it within them))
+and mini_player (`MiniPlayerSettings`: `keep_on_top` (on),
+`open_when_window_closed` (off), `show_lyrics_line` (on), `android_pip`
+(off); the apps apply them). The core applies playback, library, source and
+download settings; shells apply the appearance ones, the lyrics bar, Desktop
+Lyrics and the mini player among them. Settings saved before a field existed
+read with its default (nested objects field by field).
 
 Transparency scales the alpha of the glass grades: `jf_palette::glass_alpha`
 (token alpha at 0.5, opaque at 0, half the token alpha at 1) or
@@ -253,8 +272,9 @@ or hanging plugin never holds up a command or a snapshot.
   is `SessionOnly` and an `Error` says so (once a plugin that signs in is
   installed). Passwords are never stored anywhere.
 * **Search.** `Search { query, scope }` with `SearchScope::All` answers with
-  the library at once, then asks every enabled source that can search (and
-  whose terms allow merging) in parallel, each within the search deadline.
+  the library at once, then asks every enabled source that can search in
+  parallel, each within the search deadline (v0.0.8: sources whose terms
+  forbid merging too, in sections of their own; see "Search by source").
   Each `SearchUpdate` is one source's section: its results less those an
   earlier source shows (same ISRC, else the same normalised title, primary
   artist and duration within 2 s), in its own order. Such an item appears
@@ -269,9 +289,11 @@ or hanging plugin never holds up a command or a snapshot.
 * **Browsing.** `Browse { plugin, node, page }`: `node` `None` is the
   source's root, otherwise the `id` of an item the core listed for that
   plugin; pages count from 0 and `BrowseUpdate::next_page` names the next.
-  `PlayCollection`/`EnqueueCollection` with `Collection::Source { plugin, id }`
-  fetch every page of an album or playlist (an artist plays its albums) and
-  queue the playable tracks; the queue changes once the plugin answered.
+  `PlayCollection`/`EnqueueCollection` with `Collection::Source { plugin, id,
+  item_kind }` (a `SourceItem`'s `source`, `id` and `kind`: the kind travels
+  with the id, since an id alone is ambiguous) fetch the pages of an album or
+  playlist (an artist plays its albums) and queue the playable tracks; the
+  queue changes once the plugin answered.
 * **Playing.** A `TrackRef::Source` resolves its stream URL on a worker; the
   entry shows as starting with `Buffering { uid, buffering: true }` until
   the audio flows. The entry after it is resolved ahead, so gapless joins
@@ -555,7 +577,118 @@ failed check counts too), and on `CheckForUpdates`, which other builds refuse.
 Pre-releases count while Jellyfesh is in beta; drafts never. Nothing is
 downloaded or installed, and the request carries nothing about the person.
 
+## Streaming quality (ADR-0026)
+
+`Settings::streaming_quality` is the level asked of sources: `Auto` (Lossless,
+or High while the network is metered), `Lossless`, `High`, `Normal`, `Low`.
+Apps report the network with `SetNetworkState { online, metered }` at start
+and on every change (Android always; Windows when it says a connection is
+metered; the others may send `online` alone); until then the core takes the
+network as online and not metered.
+
+`NowPlaying` carries the quality menu:
+
+* `qualities`: the levels to offer for what plays, in the menu's order:
+  `Auto`, then the source's levels best first (the plugin's
+  `content_policy.qualities`). Check `Settings::streaming_quality`.
+* `quality_note` when `qualities` is empty: `FilesPlayAsTheyAre` ("Files play
+  as they are.": library songs, files, downloads) or `SetInService { service
+  }` ("Quality is set in {service}.": a source that offers no levels).
+  `RemoteSnapshot::quality_note` is `SetInService` while a remote session
+  runs (Spotify).
+* `quality_level`: the level the playing stream was asked for (`Auto`
+  resolved); `None` for files.
+* `quality` (`AudioFormat`) has the format line's facts ("FLAC · 24-bit · 96
+  kHz", "AAC · 256 kbit/s").
+
+`PluginSummary::qualities` lists a source's levels for Settings.
+
+## Search by source (ADR-0024 §4)
+
+Every `SearchUpdate` is one source's section: `items` (the All tab's rows),
+`merged` and `groups`.
+
+* `merged` true: the library and the sources whose terms allow merging, as
+  before (From Your Sources): `items` less what an earlier section shows, with
+  `also_in`.
+* `merged` false: a source whose terms forbid merging (Spotify, QQ Music),
+  searched with `SearchScope::All` too: `items` are all its results, never
+  de-duplicated and never shown beside other rows. The All tab links to its
+  own tab ("Results from Spotify").
+* `groups`: the source's own results kind by kind (`SearchGroup { kind,
+  items, next, total }`: Songs, Albums, Artists, Playlists), for its tab.
+  `next` is Show More's cursor: `SearchMore { plugin: source, kind, cursor }`
+  answers with `Event::SearchPage(SearchPage { request, query, source, kind,
+  items, next, error })`; add `items` to the group and keep `next`. Show More
+  continues the newest search.
+
+## Sources' likes and playlists (ADR-0024 §2)
+
+The `SourceLibrary` slice lists every enabled, signed-in source with the
+`library` capability (`PluginSummary::library`): `SourceLibrary { plugin,
+name, attribution, lists }`, each `SourceLibraryList { part, entries, total,
+next, refreshed_at_ms, loading, error }` in the order `LikedSongs`,
+`LikedAlbums`, `LikedArtists`, `Playlists` (lists a source does not keep are
+left out). An entry is `SourceLibraryEntry { item, owned, songs_listed }`:
+play and browse `item` like any source item; a playlist with `songs_listed`
+false shows "{Service} lists this playlist's songs only in {Service}." and
+plays as a whole.
+
+* `RefreshSourceLibrary { plugin }` (`None`: every source) when Favourites or
+  Playlists opens, or is returned to after ten minutes; the core never polls.
+  The lists come from a cache on disk at once, with `refreshed_at_ms` ("Updated
+  5 minutes ago").
+* `SourceLibraryMore { plugin, part, cursor: next }` answers with
+  `Event::SourceLibraryPage { request, plugin, part, entries, next, error }`.
+* `SavePlaylistCopy { plugin, id, name }` makes a Jellyfesh playlist of the
+  source playlist's songs (as the source's items), answered by
+  `PlaylistCreated`.
+
+## Downloads (ADR-0025)
+
+Sources with `PluginSummary::download` (Jellyfin, Subsonic/Navidrome) offer
+Download. `Download { target }` takes `DownloadTarget::Track { track }` (a
+`TrackRef::Source`) or `DownloadTarget::Collection { plugin, id, item_kind }`
+(an album or playlist). The `Downloads` slice: `folder` (the person's folder,
+else `Config::downloads_dir`, the app's default `Jellyfesh` folder in Music,
+else one the core works out), `items` (in progress in queue order, then the
+finished ones by album), `bytes_used` and `paused` (`Offline`, or `Metered`
+with Wi-Fi Only on). A `DownloadItem` has `id`, `track` (`SourceTrack`),
+`state` (`Queued`, `Downloading`, `Done`, `Failed { error }`), `bytes_done`,
+`bytes_total`, `path`, `library_id` and `original`. `DownloadError`:
+`NotAllowed { service }` ("Your {service} server doesn't allow downloads for
+this account."), `NotOffered { service }`, `Network`, `Storage`, `Other`
+(with a `message`). `CancelDownload`, `RetryDownload`, `RemoveDownload`
+(deletes the file; ask first) and `RemoveAllDownloads` (ask first) take an
+item's `id`. `SourceItem::downloaded` and `TrackRow::downloaded` mark source
+songs with a finished download (they play the file, offline too).
+
+File names follow `DownloadSettings::name_template`; `download_preview(template)`
+gives the live preview ("Album Artist/Album/01 Title.flac"). The template and
+the safe-name rules are `jf_plugin_model::filenames` (`render`, `safe_part`,
+`file_name`, `unique_file_name`), shared with Jellyfesh Web.
+
+## The local network (Android SDK 37)
+
+`PluginSummary::local_network` says a source's server (the address the person
+typed) is on the local network, so Android apps targeting SDK 37 ask for
+`ACCESS_LOCAL_NETWORK` before using it; `address_is_local(address)` answers
+the same for an address not saved yet (Add a Source). The rule is Android's:
+IPv4 10/8, 172.16/12, 192.168/16, 100.64/10 and link-local 169.254/16; IPv6
+link-local fe80::/10 and unique local fc00::/7; multicast and broadcast;
+`.local` names. Loopback is not local; other host names count as not local
+(they would need a DNS lookup).
+
 ## Status in this release's development
+
+v0.0.8 (in progress): the types and commands of the sections above are the
+contract. Working now: the settings, `SetNetworkState`, `Collection::Source`
+with its kind, search sections (`merged`, `groups`; per-kind cursors and
+20-per-kind queries come next), `SearchMore`, the quality menu's fields (the
+level reaches sources next), the local-network flag and the downloads folder.
+`RefreshSourceLibrary` lists the sources without their lists yet;
+`SourceLibraryMore`, `SavePlaylistCopy` and the download commands answer
+"not available in this build yet" until their implementation lands.
 
 New in v0.0.7: AI Lyrics, the look, Jellyfesh Pro and store builds, the
 update check, Discover, details and comments, source pictures through the
