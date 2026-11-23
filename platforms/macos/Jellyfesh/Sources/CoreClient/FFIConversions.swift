@@ -827,6 +827,15 @@ extension SourceLibraryPageBatch {
     }
 }
 
+extension DownloadRequest {
+    var ffi: DownloadTarget {
+        switch self {
+        case .track(let song): return .track(track: .source(track: song.ffi))
+        case .collection(let plugin, let id, let kind): return .collection(plugin: plugin, id: id, itemKind: kind.ffi)
+        }
+    }
+}
+
 extension DownloadProblem {
     init(_ e: DownloadError) {
         switch e {
@@ -1382,6 +1391,18 @@ extension CoreCommand {
         case .discover(let source): return .discover(source: source)
         case .details(let item): return .details(item: item.ffi)
         case .comments(let item, let page): return .comments(item: item.ffi, page: page)
+        case .setNetworkState(let online, let metered): return .setNetworkState(online: online, metered: metered)
+        case .searchMore(let plugin, let kind, let cursor):
+            return .searchMore(plugin: plugin, kind: kind.ffi, cursor: cursor)
+        case .refreshSourceLibrary(let plugin): return .refreshSourceLibrary(plugin: plugin)
+        case .sourceLibraryMore(let plugin, let part, let cursor):
+            return .sourceLibraryMore(plugin: plugin, part: part.ffi, cursor: cursor)
+        case .savePlaylistCopy(let plugin, let id, let name): return .savePlaylistCopy(plugin: plugin, id: id, name: name)
+        case .download(let request): return .download(target: request.ffi)
+        case .cancelDownload(let id): return .cancelDownload(id: id)
+        case .retryDownload(let id): return .retryDownload(id: id)
+        case .removeDownload(let id): return .removeDownload(id: id)
+        case .removeAllDownloads: return .removeAllDownloads
         }
     }
 }

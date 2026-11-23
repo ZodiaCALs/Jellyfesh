@@ -249,6 +249,18 @@ final class RemoteConversionTests: XCTestCase {
         XCTAssertEqual(CoreEvent(Event.remote(snapshot: snapshot())), .remote(session))
     }
 
+    func testTheNewCommandsConvert() {
+        XCTAssertEqual(CoreCommand.setNetworkState(online: true, metered: true).ffi,
+                       Command.setNetworkState(online: true, metered: true))
+        XCTAssertEqual(CoreCommand.searchMore(plugin: "p", kind: .album, cursor: "c2").ffi,
+                       Command.searchMore(plugin: "p", kind: .album, cursor: "c2"))
+        XCTAssertEqual(CoreCommand.refreshSourceLibrary(plugin: nil).ffi, Command.refreshSourceLibrary(plugin: nil))
+        XCTAssertEqual(CoreCommand.download(.collection(plugin: "p", id: "a1", kind: .playlist)).ffi,
+                       Command.download(target: .collection(plugin: "p", id: "a1", itemKind: .playlist)))
+        XCTAssertEqual(CollectionReference.source(plugin: "p", id: "pl", kind: .playlist).ffi,
+                       JellyfeshFFI.Collection.source(plugin: "p", id: "pl", itemKind: .playlist))
+    }
+
     func testRemoteCommandsConvert() {
         XCTAssertEqual(CoreCommand.remote(.refresh).ffi, Command.remote(action: .refresh))
         XCTAssertEqual(CoreCommand.remote(.transfer(device: "k")).ffi, Command.remote(action: .transfer(device: "k")))

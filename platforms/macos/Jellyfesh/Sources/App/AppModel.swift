@@ -69,6 +69,8 @@ final class AppModel {
     private let nowPlayingCenter: NowPlayingCenter
     private let dockIcon: DockIcon
     private let keys: SharedKeyMonitor
+    /// The network, for the core's Auto quality and downloads (ADR-0026 §1, ADR-0025 §3).
+    private let network = NetworkMonitor()
     @ObservationIgnored private var deviceWatcher: DeviceWatcher?
     @ObservationIgnored private var started = false
     /// The app is quitting: its windows closing is not the person closing the main window.
@@ -177,6 +179,9 @@ final class AppModel {
                 await pro.attach(StoreKitPurchases())
             }
         }
+        network.start { [weak self] state in
+            self?.client.send(.setNetworkState(online: state.online, metered: state.metered))
+        }
         let watcher = DeviceWatcher { [weak self] in
             self?.playback.refreshDevices()
         }
@@ -194,6 +199,7 @@ final class AppModel {
     /// Saves the session and stops the core (the app is quitting).
     func shutdown() {
         quitting = true
+        network.stop()
         deviceWatcher?.stop()
         keys.stop()
         client.shutdown()

@@ -578,6 +578,14 @@ struct DownloadOptions: Hashable, Sendable {
 
 // MARK: - Downloads (ADR-0025)
 
+/// What `download` downloads (`DownloadTarget`).
+enum DownloadRequest: Hashable, Sendable {
+    /// One song from a source.
+    case track(SourceSong)
+    /// Every song of a source's album or playlist.
+    case collection(plugin: String, id: String, kind: ResultKind)
+}
+
 /// Why downloads wait (`DownloadsPaused`).
 enum DownloadsPause: Hashable, Sendable {
     /// No network.
@@ -1560,4 +1568,21 @@ enum CoreCommand: Equatable, Sendable {
     case details(ItemReference)
     /// `page` nil is the first page, else the previous page's `next`.
     case comments(ItemReference, page: String?)
+    // v0.0.8: the network, search by source, the sources' likes and playlists, downloads
+    /// Online, and metered (Auto quality and downloads follow it); at start and on every change.
+    case setNetworkState(online: Bool, metered: Bool)
+    /// Show More: more of one kind of a source's results for the newest search.
+    case searchMore(plugin: String, kind: ResultKind, cursor: String)
+    /// Reloads a source's likes and playlists (nil: every source's).
+    case refreshSourceLibrary(plugin: String?)
+    case sourceLibraryMore(plugin: String, part: SourceListPart, cursor: String)
+    /// Save as Playlist…: a Jellyfesh playlist of a source playlist's songs.
+    case savePlaylistCopy(plugin: String, id: String, name: String)
+    case download(DownloadRequest)
+    case cancelDownload(id: UInt64)
+    case retryDownload(id: UInt64)
+    /// Remove Download… (asked first).
+    case removeDownload(id: UInt64)
+    /// Remove All Downloads… (asked first).
+    case removeAllDownloads
 }
