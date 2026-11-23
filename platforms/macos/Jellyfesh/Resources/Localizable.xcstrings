@@ -365,6 +365,28 @@
         }
       }
     },
+    "%lld kbit/s": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kbit/s"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kbit/s"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld kbit/s"
+          }
+        }
+      }
+    },
     "%lld kbps": {
       "localizations": {
         "ja": {
@@ -1883,6 +1905,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "音訊"
+          }
+        }
+      }
+    },
+    "Auto": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
           }
         }
       }
@@ -3691,6 +3735,28 @@
         }
       }
     },
+    "Files play as they are.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルはそのまま再生されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件按原样播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案按原樣播放。"
+          }
+        }
+      }
+    },
     "Files that could not be read: %lld": {
       "localizations": {
         "ja": {
@@ -5231,6 +5297,28 @@
         }
       }
     },
+    "Low": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低"
+          }
+        }
+      }
+    },
     "Lyricist": {
       "localizations": {
         "ja": {
@@ -6085,6 +6173,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "不需要登入"
+          }
+        }
+      }
+    },
+    "Normal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标准"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準"
           }
         }
       }
@@ -7449,6 +7559,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "音質"
+          }
+        }
+      }
+    },
+    "Quality is set in %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音質は %@ で設定します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音质在 %@ 中设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音質在 %@ 中設定。"
+          }
+        }
+      }
+    },
+    "Quality: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音質：%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音质：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音質：%@"
           }
         }
       }
@@ -9473,6 +9627,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止控制"
+          }
+        }
+      }
+    },
+    "Streaming Quality": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーミング品質"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "串流音质"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "串流音質"
           }
         }
       }
