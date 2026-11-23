@@ -526,7 +526,7 @@ private fun CompactTitle(state: CoreState, track: PlayerTrack) {
  * session runs, Open in {Service} and Stop Controlling (`Remote { End }`: the service keeps playing).
  */
 @Composable
-private fun MoreButton(state: CoreState, track: PlayerTrack) {
+internal fun MoreButton(state: CoreState, track: PlayerTrack, size: Dp = 44.dp) {
     val graph = LocalGraph.current
     val overlays = LocalOverlays.current
     val actions = rememberTrackActions()
@@ -562,12 +562,12 @@ private fun MoreButton(state: CoreState, track: PlayerTrack) {
                 },
             )
         }
-    }, tint = Jf.colors.ink90)
+    }, tint = Jf.colors.ink90, size = size, iconSize = if (size < 44.dp) 20.dp else 22.dp)
 }
 
 /** The volume in the dock: the engine's, or the playing remote device's (hidden when it has none). */
 @Composable
-private fun DockVolume(state: CoreState, modifier: Modifier) {
+internal fun DockVolume(state: CoreState, modifier: Modifier) {
     if (!PlayerModel.isRemote(state)) {
         PlayerVolume(state, modifier)
         return

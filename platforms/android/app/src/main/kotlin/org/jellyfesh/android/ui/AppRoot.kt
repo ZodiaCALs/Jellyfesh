@@ -98,6 +98,7 @@ import org.jellyfesh.android.ui.theme.MistyField
 import org.jellyfesh.android.ui.theme.fadeOutAbove
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.rememberPlaybackTime
+import org.jellyfesh.logic.player.MiniPlayerKind
 import org.jellyfesh.logic.player.NowPlayingLayouts
 import org.jellyfesh.logic.player.NowPlayingPanel
 import org.jellyfesh.logic.lyrics.LyricsBars
@@ -216,7 +217,8 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
                 val chromeHeight: Dp = chromeHeight(
                     tabs = !sidebar,
                     player = playerKind.takeIf { showsPlayer },
-                    lyricsBar = lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar && showsPlayer },
+                    // The strip above the capsule; the full bar shows the line under the title.
+                    lyricsBar = lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar && showsPlayer && playerKind != MiniPlayerKind.Bar },
                 )
                 // Library screens and their chrome. Hidden from accessibility while a layer covers them.
                 val covered = navState.nowPlayingOpen || overlays.isOpen

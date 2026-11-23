@@ -127,6 +127,55 @@ fun LyricsBarStrip(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Mo
 }
 
 /**
+ * The lyrics bar's line inside the full player bar (docs/ui.md, "The player bar and the mini
+ * player"): under the song's title instead of its artist, as on Jellyfesh Web, the line filling
+ * word by word in the highlight colour with its translation when Show Translations is on. Phones
+ * show the strip above the capsule instead ([LyricsBarStrip]).
+ */
+@Composable
+fun BarLyricsLine(state: CoreState, modifier: Modifier = Modifier) {
+    val lyrics = state.currentLyrics ?: return
+    val doc = lyrics.doc ?: return
+    val timeline = lyrics.timeline ?: return
+    val colors = Jf.colors
+    val time = LocalPlaybackTime.current
+    val reduce = Jf.effects.systemReducesMotion
+    val words = doc.timing == Timing.Word
+    val playing = PlayerModel.isPlaying(state.playback.status)
+    TimeDemandEffect(TimeDemand.Lyrics(timeline, sweep = words && playing && !reduce))
+    val translates = lyricsBarTranslates(state)
+    val rows = remember(doc, translates) { LyricsLayout.rows(doc, translates, false) }
+    val line by remember(timeline) { derivedStateOf { LyricsBars.shownLine(timeline.bar(Math.floorDiv(time.positionUs, 1_000L))) } }
+    val row = line?.let { rows.getOrNull(it) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        if (row == null || row.isGap) {
+            BasicText("• • •", style = JfType.listSecondary.copy(color = colors.ink50), maxLines = 1)
+        } else {
+            val look = Jf.look
+            val style = JfType.listSecondary.copy(
+                fontSize = 13.sp,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                fontFamily = look.fontFamily(),
+            )
+            val sung = if (look.sungInk == org.jellyfesh.logic.theme.SungInk.Token) colors.accentText else sungInk()
+            val rtl = row.direction == TextDir.Rtl || LocalLayoutDirection.current == LayoutDirection.Rtl && row.direction == TextDir.Auto
+            SweepText(
+                row,
+                { LyricsLayout.barSweep(row, timeline.bar(Math.floorDiv(time.positionUs, 1_000L)), reduceMotion = reduce || !words) },
+                style,
+                sung = sung,
+                unsung = colors.ink70,
+                rtl = rtl,
+                maxLines = 1,
+            )
+            row.translation?.let {
+                BasicText(it, style = JfType.caption.copy(fontSize = 11.sp, color = colors.ink70), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/**
  * The look's Artwork layout (ADR-0020): the line being sung under the cover, large, filling word
  * by word in the highlight colour, with its translation when Show Translations is on; nothing
  * without timed lyrics.

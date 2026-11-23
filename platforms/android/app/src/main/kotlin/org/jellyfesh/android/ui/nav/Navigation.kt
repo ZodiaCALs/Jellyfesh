@@ -61,8 +61,10 @@ import org.jellyfesh.android.ui.theme.PlayPauseButton
 import org.jellyfesh.android.ui.theme.PlayPauseGlyph
 import org.jellyfesh.android.ui.theme.TouchTarget
 import org.jellyfesh.android.ui.player.DeviceButton
+import org.jellyfesh.android.ui.player.MoreButton
+import org.jellyfesh.android.ui.player.DockVolume
+import org.jellyfesh.android.ui.player.BarLyricsLine
 import org.jellyfesh.android.ui.player.LyricsBarStrip
-import org.jellyfesh.android.ui.player.PlayerVolume
 import org.jellyfesh.android.ui.player.SeekWithTimes
 import org.jellyfesh.android.ui.time.LocalPlaybackTime
 import org.jellyfesh.android.ui.time.TimeDemandEffect
@@ -142,7 +144,11 @@ val PlayerBarHeight = Tokens.Player.barHeight.dp
 
 /** The look's Floating mini-player: a smaller capsule at the trailing side (ADR-0020). */
 val FloatingPlayerHeight = 52.dp
-private val FloatingPlayerWidth = 280.dp
+private val FloatingPlayerWidth = 320.dp
+
+/** The capsule's and the full bar's widest (Jellyfesh Web's 560 and 1280). */
+private val CapsuleMaxWidth = 560.dp
+private val BarMaxWidth = 1280.dp
 
 /** The player's height for its kind. */
 fun playerHeight(kind: MiniPlayerKind): Dp = when (kind) {
@@ -202,13 +208,13 @@ fun BottomChrome(
         verticalArrangement = Arrangement.spacedBy(ChromeGap),
     ) {
         if (player && PlayerModel.track(state) != null) {
-            // The line being sung, above the player (Show Lyrics Bar).
-            if (lyricsBar) LyricsBarStrip(state, { onOpenNowPlaying(NowPlayingPanel.Lyrics) }, Modifier.widthIn(max = 600.dp))
-            // The look's mini-player style: the bar (wide windows), the pill, or a floating capsule.
+            // The line being sung above the capsule (Show Lyrics Bar); the full bar shows it under the title.
+            if (lyricsBar && kind != MiniPlayerKind.Bar) LyricsBarStrip(state, { onOpenNowPlaying(NowPlayingPanel.Lyrics) }, Modifier.widthIn(max = CapsuleMaxWidth))
+            // The look's style: the full bar (from 900 dp), the capsule, or a floating capsule.
             when (kind) {
-                MiniPlayerKind.Bar -> PlayerBar(state, onOpenNowPlaying, Modifier.widthIn(max = 1240.dp))
-                MiniPlayerKind.Mini -> MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = 600.dp))
-                MiniPlayerKind.Floating -> Box(Modifier.fillMaxWidth().widthIn(max = 600.dp), contentAlignment = Alignment.CenterEnd) {
+                MiniPlayerKind.Bar -> PlayerBar(state, onOpenNowPlaying, Modifier.widthIn(max = BarMaxWidth), lyricsLine = lyricsBar)
+                MiniPlayerKind.Mini -> MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = CapsuleMaxWidth))
+                MiniPlayerKind.Floating -> Box(Modifier.fillMaxWidth().widthIn(max = CapsuleMaxWidth), contentAlignment = Alignment.CenterEnd) {
                     MiniPlayer(state, { onOpenNowPlaying(null) }, Modifier.widthIn(max = FloatingPlayerWidth), floating = true)
                 }
             }
@@ -286,11 +292,11 @@ fun playerSecondLine(track: PlayerTrack, remote: RemoteSession?): String? =
     remote?.device?.let { stringResource(R.string.remote_playing_on, it.name) } ?: track.subtitle
 
 /**
- * The mini-player under 900 dp (Luminous): a floating Veil pill with round artwork, two lines of
- * type ("Playing on {Device}" for a remote session, its error in a quieter third line) and one
- * control, play or pause (Misty CMP-02, never accent-filled, COL-04), and a straight 2 dp progress
- * line along its bottom edge, inset by its round ends, redrawn only when it grows by a pixel.
- * Tapping or swiping it up opens Now Playing.
+ * The capsule under 900 dp (docs/ui.md, "The player bar and the mini player"; Luminous): a
+ * floating Veil pill with round artwork, two lines of type ("Playing on {Device}" for a remote
+ * session, its error in a quieter third line), play or pause (never accent-filled, COL-04) and
+ * next, and a straight 2 dp progress line along its bottom edge, inset by its round ends, redrawn
+ * only when it grows by a pixel. Tapping or swiping it up opens Now Playing.
  */
 @Composable
 fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifier, floating: Boolean = false) {
@@ -348,9 +354,9 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
                         true
                     }
                 }
-                .padding(start = 10.dp, end = 10.dp),
+                .padding(start = 10.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ArtworkImage(ArtKey.of(track.artwork), track.title, if (floating) 36.dp else 44.dp, CircleShape)
             Column(Modifier.weight(1f)) {
@@ -359,6 +365,7 @@ fun MiniPlayer(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Modifi
                 remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
             }
             MiniPlayButton(playing, buttonLabel) { graph.send(PlayerModel.playPause(status)) }
+            JfIconButton(R.drawable.ic_next, stringResource(R.string.a11y_next), { graph.send(Command.Next) }, tint = colors.ink90, size = 44.dp, iconSize = 20.dp)
         }
         MiniProgressLine(fraction, Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp), inset = height / 2 + 2.dp)
     }
@@ -382,14 +389,15 @@ private fun MiniPlayButton(playing: Boolean, description: String, onClick: () ->
 }
 
 /**
- * The player bar from 900 dp (tablets, desktop mode; docs/design-controls.md, "v0.0.4"), after
- * Media Player and Apple Music: a floating Veil bar 80 dp high with r-xl corners. Start: the
- * artwork and two lines (they open Now Playing); middle: the transport capsule (shuffle,
- * previous, play, next, repeat; play is the only accent fill) above the seek bar with its times;
- * end: Lyrics, Queue and the volume. It bends CMP-02 on purpose; phones keep the capsule.
+ * The full player bar from 900 dp (docs/ui.md, "The player bar and the mini player"; Jellyfesh
+ * Web's): a floating Veil bar 80 dp high with r-2xl corners. Start: the artwork and two lines, or
+ * the lyrics bar's line under the title ([lyricsLine]); they open Now Playing. Middle: shuffle,
+ * previous, play (the only accent fill), next and repeat above the scrubber with its times. End:
+ * Lyrics, Queue, the device button while a remote source plays, the volume, and More. The quality
+ * badge and the mini player button join with the core's v0.0.8 contract.
  */
 @Composable
-fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Modifier = Modifier) {
+fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Modifier = Modifier, lyricsLine: Boolean = false) {
     val track = PlayerModel.track(state) ?: return
     val remote = RemoteModel.session(state)
     val graph = LocalGraph.current
@@ -406,26 +414,32 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
         floating = true,
     ) {
         Row(
-            Modifier.fillMaxWidth().height(PlayerBarHeight).padding(start = 10.dp, end = 12.dp),
+            Modifier.fillMaxWidth().height(PlayerBarHeight).padding(start = Tokens.Space.s2.dp, end = Tokens.Space.s4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4.dp),
         ) {
             Row(
                 Modifier
                     .weight(1f)
+                    .height(68.dp)
                     .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.Button) { onOpen(null) }
-                    .semantics(mergeDescendants = true) { contentDescription = openLabel },
+                    .semantics(mergeDescendants = true) { contentDescription = openLabel }
+                    .padding(start = 6.dp, end = Tokens.Space.s2.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s3.dp),
             ) {
-                ArtworkImage(ArtKey.of(track.artwork), track.title, 48.dp, rounded(Tokens.Radius.rMd.dp))
-                Column(Modifier.weight(1f)) {
-                    JfText(track.title, style = JfType.listTitle.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
-                    playerSecondLine(track, remote)?.let { JfText(it, style = JfType.listSecondary, color = colors.ink70, maxLines = 1) }
-                    remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
+                ArtworkImage(ArtKey.of(track.artwork), track.title, 56.dp, rounded(Tokens.Radius.rLg.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    JfText(track.title, style = JfType.listTitle.copy(fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
+                    if (lyricsLine && remote == null) {
+                        BarLyricsLine(state)
+                    } else {
+                        playerSecondLine(track, remote)?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 12.5.sp), color = colors.ink70, maxLines = 1) }
+                        remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
+                    }
                 }
             }
-            Column(Modifier.weight(2f).widthIn(max = 560.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.weight(1.4f).widthIn(min = 260.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     JfToggleIconButton(
                         R.drawable.ic_shuffle,
@@ -455,11 +469,13 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
                 }
                 SeekWithTimes(state, Modifier.height(28.dp))
             }
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
                 JfIconButton(R.drawable.ic_lyrics, stringResource(R.string.np_lyrics), { onOpen(NowPlayingPanel.Lyrics) }, size = 40.dp, iconSize = 20.dp)
                 JfIconButton(R.drawable.ic_queue, stringResource(R.string.np_queue), { onOpen(NowPlayingPanel.Queue) }, size = 40.dp, iconSize = 20.dp)
-                DeviceButton(state, size = 40.dp)
-                PlayerVolume(state, Modifier.widthIn(max = 200.dp))
+                // The device button while a remote source plays (its devices; Stop Controlling is in More).
+                if (remote != null) DeviceButton(state, size = 40.dp)
+                DockVolume(state, Modifier.weight(1f, fill = false).widthIn(max = 160.dp))
+                MoreButton(state, track, size = 40.dp)
             }
         }
     }
