@@ -10,6 +10,7 @@
 //!   crossfade, the equaliser bands, ReplayGain and the limiter;
 //! * [`sources`]: settings, the checks on plugin answers, unified search
 //!   sections and sign-in flows (`jf-plugin-model`);
+//! * [`search`]: search by source, the library first (ADR-0024 §4);
 //! * [`collections`]: hearts, playlists and plays, kept in the browser with
 //!   `jf-library`'s rules;
 //! * [`lyrics`]: lyric documents and timelines (`jf-lyrics`) from plugins,
@@ -38,6 +39,7 @@ pub mod pro;
 pub mod qr;
 pub mod relay;
 pub mod rules;
+pub mod search;
 pub mod session;
 pub mod settings;
 pub mod sources;
@@ -967,6 +969,74 @@ impl Collections {
     /// Most Played (`ItemStats` list).
     pub fn most_played(&self, limit: usize) -> String {
         json(&self.inner.most_played(limit))
+    }
+}
+
+// ---- search ------------------------------------------------------------------------------------
+
+/// What to ask each source: `{"kinds": [ItemKind…], "limit", "library_limit"}`.
+#[wasm_bindgen]
+pub fn search_plan() -> String {
+    json(&search::plan())
+}
+
+/// One query's results by source (ADR-0024 §4; `search`).
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct SearchResults {
+    inner: search::Search,
+}
+
+#[wasm_bindgen]
+impl SearchResults {
+    /// A search with the library's answer (an `Item` list: its songs, albums and artists).
+    #[wasm_bindgen(constructor)]
+    pub fn new(library: &str) -> Result<SearchResults, JsError> {
+        Ok(SearchResults {
+            inner: search::Search::new(parse(library, "library")?),
+        })
+    }
+
+    /// A source is being asked.
+    pub fn asking(&mut self, source: &str, name: &str) {
+        self.inner.asking(source, name);
+    }
+
+    /// A source's answer: its content policy (`ContentPolicy`) and `[[ItemKind, ItemPage], …]`.
+    pub fn answer(&mut self, source: &str, policy: &str, pages: &str) -> Result<(), JsError> {
+        let policy: ContentPolicy = parse(policy, "content policy")?;
+        let pages: Vec<(ItemKind, ItemPage)> = parse(pages, "pages")?;
+        self.inner.answer(source, &policy, pages);
+        Ok(())
+    }
+
+    /// A source failed or ran out of time.
+    pub fn fail(&mut self, source: &str, error: &str) {
+        self.inner.fail(source, error);
+    }
+
+    /// The cursor for Show More of a source's kind (`"Track"`, `"Album"`, …), or `undefined`.
+    pub fn cursor(&self, source: &str, kind: &str) -> Option<String> {
+        let kind: ItemKind = serde_json::from_value(Value::String(kind.to_owned())).ok()?;
+        self.inner.cursor(source, kind)
+    }
+
+    /// Show More: the next page (`ItemPage`) of a source's kind.
+    pub fn more(&mut self, source: &str, kind: &str, page: &str) -> Result<(), JsError> {
+        let kind: ItemKind = parse(&format!("\"{kind}\""), "kind")?;
+        let page: ItemPage = parse(page, "page")?;
+        self.inner.more(source, kind, page);
+        Ok(())
+    }
+
+    /// The All and Library tabs and the list of tabs (`search::View`).
+    pub fn view(&self) -> String {
+        json(&self.inner.view())
+    }
+
+    /// A source's tab (`search::Tab`), or `null`.
+    pub fn tab(&self, source: &str) -> String {
+        json(&self.inner.tab(source))
     }
 }
 
