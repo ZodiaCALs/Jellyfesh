@@ -1,5 +1,6 @@
-// Library, in the order of docs/ui.md: the music folders (show, remove, add), watching folders for
-// changes, and rescanning with the scan's progress and what the last scan did.
+// Library, in the order of docs/ui.md, as the web's cards (SettingsCards): the music folders (show,
+// remove, add), watching folders for changes, and rescanning with the scan's progress and what the
+// last scan did.
 
 import AppKit
 import SwiftUI
@@ -7,41 +8,23 @@ import SwiftUI
 struct LibrarySettings: View {
     @Environment(LibraryStore.self) private var library
     @Environment(SettingsStore.self) private var settings
+    @Environment(\.palette) private var palette
     @State private var removing: String?
 
     var body: some View {
-        Form {
-            Section {
+        SettingsCardsColumn {
+            SettingsCard(title: "Music Folders", note: Text("Jellyfesh reads every audio file in these folders.")) {
                 if library.roots.isEmpty {
                     Text("No Folders Yet")
-                        .foregroundStyle(.secondary)
+                        .lookFont(size: 14)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                        .padding(.vertical, Tokens.Space.s3)
                 }
-                ForEach(library.roots, id: \.self) { root in
-                    HStack(spacing: Tokens.Space.s2) {
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                        Text(root)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .help(root)
-                        Spacer()
-                        Button {
-                            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: root)])
-                        } label: {
-                            Image(systemName: "magnifyingglass")
-                        }
-                        .buttonStyle(.borderless)
-                        .help(Text("Show in Finder"))
-                        .accessibilityLabel(Text("Show in Finder"))
-                        Button {
-                            removing = root
-                        } label: {
-                            Image(systemName: "minus.circle")
-                        }
-                        .buttonStyle(.borderless)
-                        .help(Text("Remove Folder…"))
-                        .accessibilityLabel(Text("Remove Folder…"))
+                ForEach(Array(library.roots.enumerated()), id: \.element) { index, root in
+                    if index > 0 {
+                        SettingsDivider()
                     }
+                    folderRow(root)
                 }
                 HStack {
                     Spacer()
@@ -51,34 +34,26 @@ struct LibrarySettings: View {
                         }
                     }
                 }
-            } header: {
-                Text("Music Folders")
-            } footer: {
-                Text("Jellyfesh reads every audio file in these folders.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                .padding(.vertical, Tokens.Space.s3)
             }
 
-            Section {
-                Toggle(isOn: Binding(get: { settings.current.watchFolders }, set: { settings.setWatchFolders($0) })) {
-                    Text("Watch Folders")
-                    Text("Update the library when files change.")
-                }
+            SettingsCard {
+                SettingsToggleRow("Watch Folders", help: "Update the library when files change.", isOn: Binding(
+                    get: { settings.current.watchFolders },
+                    set: { settings.setWatchFolders($0) }
+                ))
             }
 
-            Section {
-                LabeledContent {
+            SettingsCard(title: "Rescan Library") {
+                SettingsRow("Rescan Library", help: "Look for new, changed and removed files.") {
                     Button("Rescan Library") {
                         library.rescan()
                     }
                     .disabled(library.scanning || library.roots.isEmpty)
-                } label: {
-                    Text("Look for new, changed and removed files.")
                 }
                 scanStatus
             }
         }
-        .formStyle(.grouped)
         .confirmationDialog(
             Text("Remove “\(removingName)” from the library?"),
             isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
@@ -96,6 +71,27 @@ struct LibrarySettings: View {
         }
     }
 
+    /// A folder: its name and where it is, Show in Finder and Remove Folder….
+    private func folderRow(_ root: String) -> some View {
+        SettingsRow(title: Text(verbatim: (root as NSString).lastPathComponent),
+                    help: Text(verbatim: (root as NSString).deletingLastPathComponent)) {
+            HStack(spacing: Tokens.Space.s2) {
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: root)])
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+                .buttonStyle(.borderless)
+                .help(Text("Show in Finder"))
+                .accessibilityLabel(Text("Show in Finder"))
+                Button("Remove Folder…") {
+                    removing = root
+                }
+            }
+        }
+        .help(root)
+    }
+
     private var removingName: String {
         guard let removing else { return "" }
         return (removing as NSString).lastPathComponent
@@ -104,21 +100,22 @@ struct LibrarySettings: View {
     @ViewBuilder private var scanStatus: some View {
         switch library.scan {
         case .progress(let seen, let changed, let current)?:
-            LabeledContent("Scanning") {
+            SettingsDivider()
+            SettingsRow(title: Text("Scanning"), help: Text(verbatim: current)) {
                 VStack(alignment: .trailing, spacing: 2) {
-                    ProgressView().controlSize(.small)
+                    ProgressView()
+                        .controlSize(.small)
                     Text("Files checked: \(seen), changed: \(changed)")
+                        .lookFont(size: 12)
                         .monospacedDigit()
-                    Text(current)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
                 }
             }
         case .finished(let report)?:
-            LabeledContent("Last Scan") {
-                Text("Added \(report.added), updated \(report.updated), removed \(report.removed)")
-                    .monospacedDigit()
+            SettingsDivider()
+            SettingsRow(title: Text("Last Scan"),
+                        help: Text("Added \(report.added), updated \(report.updated), removed \(report.removed)")) {
+                EmptyView()
             }
             if !report.errors.isEmpty {
                 DisclosureGroup {
@@ -130,16 +127,18 @@ struct LibrarySettings: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(.secondary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .help(issue.path)
                     }
                 } label: {
                     Text("Files that could not be read: \(report.errors.count)")
                 }
+                .padding(.bottom, Tokens.Space.s3)
             }
         case .failed(let message)?:
-            LabeledContent("Last Scan") {
-                Text(message)
-                    .foregroundStyle(.red)
+            SettingsDivider()
+            SettingsRow(title: Text("Last Scan"), help: Text(verbatim: message)) {
+                EmptyView()
             }
         case nil:
             EmptyView()

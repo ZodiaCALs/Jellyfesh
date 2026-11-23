@@ -9,26 +9,32 @@ import SwiftUI
 
 struct AboutSettings: View {
     @Environment(UpdatesStore.self) private var updates
+    @Environment(\.palette) private var palette
 
     private let links = AboutInfo.links(website: AboutInfo.buildWebsite())
     private let version = AboutInfo.version(app: AboutInfo.appVersion(), core: FFICoreClient.coreVersion)
 
     var body: some View {
-        Form {
-            Section {
-                ForEach(AboutInfo.shortcuts) { shortcut in
-                    LabeledContent {
-                        KeyCaps(keys: shortcut.keys)
-                    } label: {
-                        Text(LocalizedStringKey(shortcut.action))
+        SettingsCardsColumn {
+            SettingsCard(title: "Keyboard Shortcuts") {
+                ForEach(Array(AboutInfo.shortcuts.enumerated()), id: \.element.id) { index, shortcut in
+                    if index > 0 {
+                        SettingsDivider()
                     }
+                    HStack(spacing: Tokens.Space.s4) {
+                        KeyCaps(keys: shortcut.keys)
+                            .frame(minWidth: 72, alignment: .leading)
+                        Text(LocalizedStringKey(shortcut.action))
+                            .lookFont(size: 14)
+                            .foregroundStyle(palette[Tokens.Ink.ink90])
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 10)
                     .accessibilityElement(children: .combine)
                 }
-            } header: {
-                Text("Keyboard Shortcuts")
             }
 
-            Section {
+            SettingsCard(title: "About Jellyfesh") {
                 HStack(spacing: Tokens.Space.s4) {
                     Image(nsImage: NSApplication.shared.applicationIconImage)
                         .resizable()
@@ -36,49 +42,48 @@ struct AboutSettings: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(verbatim: "Jellyfesh")
-                            .font(.system(size: 17, weight: .bold))
+                            .lookFont(size: 17, weight: .bold)
+                            .foregroundStyle(palette[Tokens.Ink.ink90])
                             .accessibilityAddTraits(.isHeader)
                         Text("Version \(version)")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
+                            .lookFont(size: 12)
+                            .foregroundStyle(palette[Tokens.Ink.ink70])
                             .textSelection(.enabled)
                         Text("An elegant, lightweight music player.")
-                            .font(.system(size: 13))
+                            .lookFont(size: 13)
+                            .foregroundStyle(palette[Tokens.Ink.ink90])
                     }
                 }
-                .padding(.vertical, Tokens.Space.s1)
+                .padding(.vertical, Tokens.Space.s3)
                 if let links {
+                    SettingsDivider()
                     HStack(spacing: Tokens.Space.s4) {
                         Link("Website", destination: links.website)
                         Link("Third-Party Licences", destination: links.licences)
                         Link("Licence Agreement", destination: links.licenceAgreement)
                         Link("Privacy Policy", destination: links.privacyPolicy)
                     }
+                    .lookFont(size: 13)
+                    .padding(.vertical, Tokens.Space.s3)
                 }
-            } header: {
-                Text("About Jellyfesh")
-            }
-
-            if updates.state.supported {
-                Section {
+                if updates.state.supported {
+                    SettingsDivider()
                     UpdateCheck()
                 }
             }
 
-            Section {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Designed with the Misty design language.")
-                    Text("Design tokens derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0.")
-                    if let copyright = AboutInfo.copyright() {
-                        Text(copyright)
-                    }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Designed with the Misty design language.")
+                Text("Design tokens derived from the Misty Design Language 1.1 tokens, © 2026 ZodiaCALs, Apache License 2.0.")
+                if let copyright = AboutInfo.copyright() {
+                    Text(copyright)
                 }
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
             }
+            .lookFont(size: 11)
+            .foregroundStyle(palette[Tokens.Ink.ink70])
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, Tokens.Space.s6)
         }
-        .formStyle(.grouped)
     }
 }
 
@@ -109,39 +114,38 @@ private struct UpdateCheck: View {
     var body: some View {
         let state = updates.state
         if let release = state.available {
-            LabeledContent {
+            SettingsRow(title: Text(verbatim: UpdatesStore.availableTitle(release))) {
                 if let url = UpdatesStore.releaseURL(release) {
                     Button("View Release") {
                         openURL(url)
                     }
                 }
-            } label: {
-                Text(UpdatesStore.availableTitle(release))
-                    .font(.system(size: 13, weight: .semibold))
+            }
+            SettingsDivider()
+        }
+        SettingsRow(title: Text("Check for Updates"), help: checkHelp(state)) {
+            HStack(spacing: Tokens.Space.s2) {
+                if state.checking {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+                Button("Check for Updates") {
+                    updates.check()
+                }
+                .disabled(state.checking)
             }
         }
-        HStack(spacing: Tokens.Space.s2) {
-            Button("Check for Updates") {
-                updates.check()
-            }
-            .disabled(state.checking)
-            if state.checking {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Checking…")
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 0)
-        }
-        if let error = updates.failure ?? state.error, !state.checking {
-            Text(error)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        Toggle("Check for Updates Automatically", isOn: Binding(
+        SettingsDivider()
+        SettingsToggleRow("Check for Updates Automatically", isOn: Binding(
             get: { settings.current.checkForUpdates },
             set: { settings.setCheckForUpdates($0) }
         ))
+    }
+
+    /// "Checking…" while it runs; afterwards why it failed, if it did.
+    private func checkHelp(_ state: UpdateState) -> Text? {
+        if state.checking { return Text("Checking…") }
+        if let error = updates.failure ?? state.error { return Text(verbatim: error) }
+        return nil
     }
 }
