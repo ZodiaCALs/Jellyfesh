@@ -307,6 +307,22 @@ impl Session {
         Ok(())
     }
 
+    /// Replaces the queue with `entries`, shuffled, starting on a random
+    /// one (Shuffle on an album, playlist or list: docs/ui.md, "Shuffle
+    /// starts on a random song"). The order comes from the queue's seed.
+    pub fn play_shuffled(&mut self, entries: Vec<NewEntry>) -> Result<(), QueueError> {
+        let tracks: Vec<TrackRef> = entries.into_iter().filter_map(|e| self.track_ref(e)).collect();
+        if tracks.is_empty() {
+            return Err(QueueError::InvalidState("nothing to play".into()));
+        }
+        self.queue.set_shuffle(true);
+        self.queue.set_items(tracks, None)?;
+        if let Some(first) = self.queue.item_at(0) {
+            self.queue.jump_to(first.uid)?;
+        }
+        Ok(())
+    }
+
     /// Play Next (`next`) or Play Last. Returns the new entries' uids.
     pub fn enqueue(&mut self, entries: Vec<NewEntry>, next: bool) -> Vec<u64> {
         let tracks: Vec<TrackRef> = entries.into_iter().filter_map(|e| self.track_ref(e)).collect();
@@ -784,6 +800,24 @@ mod tests {
         let history = s.history(10);
         assert_eq!(history.len(), 2);
         assert_eq!(history[0].played_at_ms, 1_700_000_100_000);
+    }
+
+    #[test]
+    fn shuffle_starts_on_a_random_entry() {
+        let entries = || (0..20).map(|i| source(&i.to_string(), "X")).collect::<Vec<_>>();
+        let mut firsts = std::collections::HashSet::new();
+        for seed in 0..12 {
+            let mut s = Session::new(seed);
+            s.play_shuffled(entries()).unwrap();
+            let snapshot = s.snapshot();
+            assert!(snapshot.shuffle);
+            assert_eq!(snapshot.position, Some(0));
+            assert_eq!(snapshot.length, 20);
+            firsts.insert(s.current().unwrap().id);
+        }
+        assert!(firsts.len() > 3, "not always the same first song: {firsts:?}");
+        let mut empty = Session::new(1);
+        assert!(empty.play_shuffled(Vec::new()).is_err());
     }
 
     #[test]

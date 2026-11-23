@@ -210,6 +210,13 @@ impl Core {
         Ok(self.snapshot())
     }
 
+    /// Replaces the queue (`NewEntry` list), shuffled, starting on a random entry (Shuffle).
+    pub fn play_shuffled(&mut self, entries: &str) -> Result<String, JsError> {
+        let entries: Vec<NewEntry> = parse(entries, "entries")?;
+        self.session.play_shuffled(entries).map_err(error)?;
+        Ok(self.snapshot())
+    }
+
     /// Play Next (`next`) or Play Last; returns the snapshot.
     pub fn enqueue(&mut self, entries: &str, next: bool) -> Result<String, JsError> {
         let entries: Vec<NewEntry> = parse(entries, "entries")?;
