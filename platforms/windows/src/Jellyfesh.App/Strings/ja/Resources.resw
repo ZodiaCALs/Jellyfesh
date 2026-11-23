@@ -1517,6 +1517,9 @@
   <data name="Search_LibrarySource" xml:space="preserve">
     <value>ライブラリ</value>
   </data>
+  <data name="Search_NoAnswer" xml:space="preserve">
+    <value>ソースから応答がありません: {0}</value>
+  </data>
   <data name="Search_NothingFound.Text" xml:space="preserve">
     <value>結果はありません</value>
   </data>
@@ -1525,6 +1528,9 @@
   </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>ソースから</value>
+  </data>
+  <data name="Search_Searching.Text" xml:space="preserve">
+    <value>検索しています…</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>曲</value>

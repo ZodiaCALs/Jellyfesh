@@ -1517,6 +1517,9 @@
   <data name="Search_LibrarySource" xml:space="preserve">
     <value>资料库</value>
   </data>
+  <data name="Search_NoAnswer" xml:space="preserve">
+    <value>该来源没有响应：{0}</value>
+  </data>
   <data name="Search_NothingFound.Text" xml:space="preserve">
     <value>没有结果</value>
   </data>
@@ -1525,6 +1528,9 @@
   </data>
   <data name="Search_Online.Text" xml:space="preserve">
     <value>来自你的来源</value>
+  </data>
+  <data name="Search_Searching.Text" xml:space="preserve">
+    <value>正在搜索…</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌曲</value>

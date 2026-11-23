@@ -183,7 +183,7 @@ public class SourceBrowseTests
         var song = Song("s1", 1_000) with { AlsoIn = ["org.jelly", "org.sub"] };
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", sub.Id, [song], null, true)));
 
-        Assert.Equal("Also in Jelly", Assert.Single(Assert.Single(search.OnlineGroups).Tracks).Origin);
+        Assert.Equal("Also in Jelly", Assert.Single(search.OnlineGroups.Single(g => g.Source == sub.Id).Tracks).Origin);
         search.Deactivate();
     }
 

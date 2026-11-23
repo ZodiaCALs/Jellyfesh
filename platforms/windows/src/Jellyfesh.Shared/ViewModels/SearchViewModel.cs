@@ -6,27 +6,21 @@ using Jellyfesh.Formatting;
 
 namespace Jellyfesh.ViewModels;
 
-/// <summary>How one online source is doing with the current search.</summary>
-public sealed partial class SourceSearchState(string source, string name) : ObservableObject
+/// <summary>
+/// From Your Sources: one source's section (docs/ui.md, "Search", as Jellyfesh Web shows it): its
+/// name, "Searching…" until it answers, why it did not answer, or its results in the core's merged
+/// order. A source that answered with nothing has no section.
+/// </summary>
+public sealed partial class SourceResultGroup(string source, string name, string? attribution = null) : ObservableObject
 {
     [ObservableProperty]
-    private bool _isDone;
+    [NotifyPropertyChangedFor(nameof(IsShown))]
+    private bool _isSearching;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError), nameof(IsShown))]
     private string? _error;
 
-    public string Source { get; } = source;
-
-    public string Name { get; } = name;
-
-    public bool HasError => Error is not null;
-
-    partial void OnErrorChanged(string? value) => OnPropertyChanged(nameof(HasError));
-}
-
-/// <summary>From Your Sources: one source's results (docs/ui.md, "Search"), in the core's merged order.</summary>
-public sealed class SourceResultGroup(string source, string name, string? attribution = null)
-{
     public string Source { get; } = source;
 
     /// <summary>The source's name, the group's heading.</summary>
@@ -46,15 +40,30 @@ public sealed class SourceResultGroup(string source, string name, string? attrib
     public bool HasTracks => Tracks.Count > 0;
 
     public bool HasEntries => Entries.Count > 0;
+
+    /// <summary>The source did not answer: <see cref="Error"/> says why.</summary>
+    public bool HasError => Error is not null;
+
+    /// <summary>The section shows while the source is searching, when it failed, or when it found something.</summary>
+    public bool IsShown => IsSearching || HasError || HasTracks || HasEntries;
+
+    /// <summary>Tells the view its results changed (after they were refilled).</summary>
+    internal void Refreshed()
+    {
+        OnPropertyChanged(nameof(HasTracks));
+        OnPropertyChanged(nameof(HasEntries));
+        OnPropertyChanged(nameof(IsShown));
+    }
 }
 
 /// <summary>
-/// Unified search. As you type, the library answers at once (SearchLibrary, a fast synchronous
-/// query); the same text goes to every enabled source (Command.Search). Each SearchResults update
-/// carries the whole list so far, merged and de-duplicated by the core across the library and the
-/// sources that answered, so the newest update replaces the online results shown; entries the
-/// library has stay in the library section, with the other sources named on them. Library results
-/// come first (Songs, Albums, Artists), then From Your Sources, one group per source.
+/// Unified search, as Jellyfesh Web shows it. As you type, the library answers at once
+/// (SearchLibrary, a fast synchronous query); the same text goes to every enabled source
+/// (Command.Search), each with its section under From Your Sources from the start, saying
+/// "Searching…" until the source answers. Each SearchResults update carries the whole list so far,
+/// merged and de-duplicated by the core across the library and the sources that answered, so the
+/// newest update refills the sections; entries the library has stay in the library section, with
+/// the other sources named on them. Library results come first (Songs, Albums, Artists).
 /// </summary>
 public sealed partial class SearchViewModel(ShellServices services) : PageViewModel(services)
 {
@@ -89,11 +98,8 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
 
     public ObservableCollection<ArtistItem> Artists { get; } = [];
 
-    /// <summary>From Your Sources: the online results, one group per source (each item under the source that gave it).</summary>
+    /// <summary>From Your Sources: a section per source searched (each item under the source that gave it).</summary>
     public ObservableCollection<SourceResultGroup> OnlineGroups { get; } = [];
-
-    /// <summary>Each enabled source and whether it has answered (or why not).</summary>
-    public ObservableCollection<SourceSearchState> SourceStates { get; } = [];
 
     /// <summary>The text the shown results are for.</summary>
     public string SearchedText => _searched;
@@ -121,12 +127,13 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
             case CoreEvent.CommandFailed f when f.Id == _request && _request != 0:
                 IsSearchingSources = false;
                 SourcesNotAvailable = IsNotAvailableMessage(f.Message);
-                foreach (var state in SourceStates.Where(s => !s.IsDone))
+                foreach (var group in OnlineGroups.Where(g => g.IsSearching))
                 {
-                    state.IsDone = true;
-                    state.Error = SourcesNotAvailable ? null : f.Message;
+                    group.IsSearching = false;
+                    group.Error = SourcesNotAvailable ? null : f.Message;
                 }
 
+                UpdateHasResults();
                 break;
         }
     }
@@ -173,27 +180,21 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
     {
         if (u.Source != LibrarySource)
         {
-            var state = SourceStates.FirstOrDefault(s => s.Source == u.Source);
-            if (state is null)
-            {
-                state = new SourceSearchState(u.Source, SourceName(u.Source));
-                SourceStates.Add(state);
-            }
-
-            state.IsDone = true;
-            state.Error = u.Error;
+            var answered = GroupFor(u.Source);
+            answered.IsSearching = false;
+            answered.Error = u.Error;
         }
 
-        // The update is the merged list so far: it replaces what is shown.
-        OnlineGroups.Clear();
+        // The update is the merged list so far: it refills the sections.
+        foreach (var group in OnlineGroups)
+        {
+            group.Tracks.Clear();
+            group.Entries.Clear();
+        }
+
         foreach (var item in u.Items.Where(i => i.Source != LibrarySource))
         {
-            var group = OnlineGroups.FirstOrDefault(g => g.Source == item.Source);
-            if (group is null)
-            {
-                group = new SourceResultGroup(item.Source, SourceName(item.Source), ItemLinks.Attribution(S.Hub.State.Sources, item.Source, S.L));
-                OnlineGroups.Add(group);
-            }
+            var group = GroupFor(item.Source);
 
             if (item.Kind == ItemKind.Track)
             {
@@ -220,13 +221,31 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         if (u.Done)
         {
             IsSearchingSources = false;
-            foreach (var late in SourceStates.Where(s => !s.IsDone))
+            foreach (var late in OnlineGroups.Where(g => g.IsSearching))
             {
-                late.IsDone = true;
+                late.IsSearching = false;
             }
         }
 
+        foreach (var group in OnlineGroups)
+        {
+            group.Refreshed();
+        }
+
         UpdateHasResults();
+    }
+
+    /// <summary>The section of a source, made at the end for one that was not searched from the start.</summary>
+    private SourceResultGroup GroupFor(string source)
+    {
+        var group = OnlineGroups.FirstOrDefault(g => g.Source == source);
+        if (group is null)
+        {
+            group = new SourceResultGroup(source, SourceName(source), ItemLinks.Attribution(S.Hub.State.Sources, source, S.L));
+            OnlineGroups.Add(group);
+        }
+
+        return group;
     }
 
     /// <summary>
@@ -317,7 +336,7 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
             ClearOnline();
             foreach (var plugin in enabled)
             {
-                SourceStates.Add(new SourceSearchState(plugin.Id, plugin.Name));
+                OnlineGroups.Add(new SourceResultGroup(plugin.Id, plugin.Name, ItemLinks.Attribution(S.Hub.State.Sources, plugin.Id, S.L)) { IsSearching = true });
             }
 
             IsSearchingSources = true;
@@ -327,15 +346,15 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
         UpdateHasResults();
     }
 
-    private void ClearOnline()
-    {
-        OnlineGroups.Clear();
-        SourceStates.Clear();
-    }
+    private void ClearOnline() => OnlineGroups.Clear();
 
+    /// <summary>
+    /// From Your Sources shows while any section does (a source searching, failed or with results);
+    /// "No Results" counts only what was found.
+    /// </summary>
     private void UpdateHasResults()
     {
-        HasOnlineResults = OnlineGroups.Count > 0;
-        HasResults = Tracks.Count > 0 || Albums.Count > 0 || Artists.Count > 0 || HasOnlineResults;
+        HasOnlineResults = OnlineGroups.Any(g => g.IsShown);
+        HasResults = Tracks.Count > 0 || Albums.Count > 0 || Artists.Count > 0 || OnlineGroups.Any(g => g.HasTracks || g.HasEntries);
     }
 }

@@ -538,24 +538,26 @@ public class ViewModelTests
         var request = h.Core.LastSent<CoreCommand.Search>();
         Assert.Equal("harbour", request.Query);
         Assert.True(search.IsSearchingSources);
-        Assert.Equal(["Sub", "Jelly"], search.SourceStates.Select(s => s.Name));
-        Assert.All(search.SourceStates, s => Assert.False(s.IsDone));
+
+        // From Your Sources: every source searched has its section from the start, "Searching…" (the web's).
+        Assert.Equal(["Sub", "Jelly"], search.OnlineGroups.Select(g => g.Name));
+        Assert.All(search.OnlineGroups, g => Assert.True(g.IsSearching && g.IsShown));
+        Assert.True(search.HasOnlineResults);
         var id = (ulong)h.Core.Sent.Count;
 
         // The library answers first; its rows stay in the library section.
         var library = new SourceItem("library", ItemKind.Track, "1", "Harbour Lights", "Band", null, 180_000, null, true, null,
             new TrackRef.Library(1), []);
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "library", [library], null, false)));
-        Assert.Empty(search.OnlineGroups);
-        Assert.False(search.HasOnlineResults);
+        Assert.All(search.OnlineGroups, g => Assert.False(g.HasTracks || g.HasEntries));
 
         // Each source's update carries the whole merged list so far, so it replaces the last one.
         var live = Live("org.sub", []);
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [library, live], null, false)));
-        var first = Assert.Single(Assert.Single(search.OnlineGroups).Tracks);
+        var first = Assert.Single(search.OnlineGroups[0].Tracks);
         Assert.Null(first.Origin); // its group names its source; no other has it
-        Assert.True(search.SourceStates[0].IsDone);
-        Assert.False(search.SourceStates[1].IsDone);
+        Assert.False(search.OnlineGroups[0].IsSearching);
+        Assert.True(search.OnlineGroups[1].IsSearching);
 
         var merged = Live("org.sub", ["org.jelly"]);
         var withLibrary = library with { AlsoIn = ["org.jelly"] };
@@ -570,17 +572,24 @@ public class ViewModelTests
         Assert.Equal("Harbour", Assert.Single(search.OnlineGroups[1].Entries).Title);
         Assert.False(search.OnlineGroups[1].HasTracks);
         Assert.Equal("Search_AlsoIn", search.Tracks[0].Origin);
-        Assert.Equal("slow", search.SourceStates[1].Error);
+        Assert.Equal("slow", search.OnlineGroups[1].Error); // shown as "This Source Did Not Answer"
+        Assert.True(search.OnlineGroups[1].IsShown);
         Assert.False(search.IsSearchingSources);
+
+        // A source that answered with nothing has no section.
+        h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [withLibrary, album], null, true)));
+        Assert.False(search.OnlineGroups[0].IsShown);
 
         // A failure of the search command is the page's to show, not a generic error.
         search.Query = "tide";
         await search.SubmitCommand.ExecuteAsync(null);
         var next = (ulong)h.Core.Sent.Count;
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [live], null, true))); // an old request
-        Assert.Empty(search.OnlineGroups);
+        Assert.All(search.OnlineGroups, g => Assert.False(g.HasTracks || g.HasEntries));
         h.Emit(new CoreEvent.CommandFailed(next, "sources are not available in this build yet"));
         Assert.True(search.SourcesNotAvailable);
+        Assert.All(search.OnlineGroups, g => Assert.False(g.IsShown)); // not an error of each source
+        Assert.False(search.HasOnlineResults);
         Assert.Empty(h.App.Notifications.Items);
         search.Deactivate();
 

@@ -1,4 +1,5 @@
 using Jellyfesh.Core;
+using Jellyfesh.Formatting;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
@@ -94,6 +95,9 @@ public static class Bind
 
     /// <summary>A localised string for a key held by a view model (form errors, labels).</summary>
     public static string Text(string? key) => string.IsNullOrEmpty(key) ? string.Empty : AppHost.L.Get(key);
+
+    /// <summary>A localised message with <paramref name="value"/> in it, or nothing without a value ("This Source Did Not Answer: …").</summary>
+    public static string Format(string key, string? value) => string.IsNullOrEmpty(value) ? string.Empty : AppHost.L.Format(key, value);
 
     public static string Glyph(string key) =>
         Application.Current.Resources.TryGetValue(key, out var value) && value is string path ? path : string.Empty;
