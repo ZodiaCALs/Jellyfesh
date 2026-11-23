@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Jellyfesh.Appearance;
 using Jellyfesh.Core;
 using Jellyfesh.Drawing;
@@ -144,6 +145,21 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
     public SourceBrowseViewModel CreateSourceBrowse(SourceTarget target) => new(Services, target);
 
     public SettingsViewModel CreateSettings(Func<string, string?> iconPreview) => new(Services, Player, iconPreview, Pro);
+
+    /// <summary>
+    /// Open Files… (the sidebar's foot, ADR-0023): plays the files picked, in the order picked,
+    /// without adding them to the library. Any file can be picked; one the core cannot play is
+    /// reported as any song that fails.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenFilesAsync()
+    {
+        var files = await Services.Platform.PickFilesAsync([]);
+        if (files.Count > 0)
+        {
+            Services.Send(new CoreCommand.PlayTracks([.. files.Select(f => new TrackRef.File(f))], 0));
+        }
+    }
 
     private void OnChanged(SliceChange changes)
     {

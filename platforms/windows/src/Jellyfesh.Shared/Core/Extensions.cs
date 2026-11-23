@@ -356,6 +356,20 @@ public static class LookRules
     public static bool IsLibraryTag(string tag) => tag is not ("search" or "sources");
 
     /// <summary>
+    /// The tab a place belongs to in the phone layout (docs/ui.md, "Navigation"): Home, Search,
+    /// Sources and Settings are tabs of their own; the library's places share the Library tab.
+    /// </summary>
+    public static string PhoneTab(string tag) => tag is "home" or "search" or "sources" or "settings" ? tag : "library";
+
+    /// <summary>The phone layout's tabs: the slice's places in its order, the library's places as one Library tab, then Settings.</summary>
+    public static IReadOnlyList<string> PhoneTabs(LookState look) =>
+        SidebarTags(look).Select(PhoneTab).Distinct().Append("settings").ToArray();
+
+    /// <summary>What the Library tab switches between: the slice's library places in its order (Home is a tab of its own).</summary>
+    public static IReadOnlyList<string> LibraryTags(LookState look) =>
+        SidebarTags(look).Where(t => PhoneTab(t) == "library").ToArray();
+
+    /// <summary>
     /// The face for a typeface: Segoe UI Variable, then Cascadia Mono for mono and Georgia for serif
     /// (ADR-0020 §2; no bundled fonts). Windows has no rounded face: Rounded keeps the system's.
     /// </summary>

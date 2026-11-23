@@ -36,6 +36,23 @@ internal sealed class ShellPlatform(Window window, ILocalizer l) : IShellPlatfor
         return result?.Path;
     }
 
+    public async Task<IReadOnlyList<string>> PickFilesAsync(IReadOnlyList<string> extensions)
+    {
+        var picker = new FileOpenPicker(window.AppWindow.Id) { SuggestedStartLocation = PickerLocationId.MusicLibrary };
+        foreach (var ext in extensions)
+        {
+            picker.FileTypeFilter.Add(ext);
+        }
+
+        if (picker.FileTypeFilter.Count == 0)
+        {
+            picker.FileTypeFilter.Add("*");
+        }
+
+        var results = await picker.PickMultipleFilesAsync();
+        return results is null ? [] : results.Select(r => r.Path).Where(p => !string.IsNullOrEmpty(p)).ToList();
+    }
+
     public async Task<string?> PickSaveFileAsync(string suggestedName, string extension)
     {
         var picker = new FileSavePicker(window.AppWindow.Id)

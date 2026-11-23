@@ -15,6 +15,9 @@ internal sealed class FakePlatform : IShellPlatform
 
     public string? SavePath { get; set; } = "/tmp/list.m3u8";
 
+    /// <summary>What Open Files… picks.</summary>
+    public List<string> Files { get; } = [];
+
     public bool Confirm { get; set; } = true;
 
     public string? Prompt { get; set; } = "Road trip";
@@ -33,6 +36,8 @@ internal sealed class FakePlatform : IShellPlatform
     public Task<string?> PickFolderAsync() => Task.FromResult(Folder);
 
     public Task<string?> PickFileAsync(IReadOnlyList<string> extensions) => Task.FromResult(File);
+
+    public Task<IReadOnlyList<string>> PickFilesAsync(IReadOnlyList<string> extensions) => Task.FromResult<IReadOnlyList<string>>([.. Files]);
 
     public Task<string?> PickSaveFileAsync(string suggestedName, string extension) => Task.FromResult(SavePath);
 

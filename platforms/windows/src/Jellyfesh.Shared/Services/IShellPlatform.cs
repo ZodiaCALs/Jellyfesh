@@ -9,6 +9,12 @@ public interface IShellPlatform
     /// <summary>A file to open with one of <paramref name="extensions"/> (".m3u8"), or null.</summary>
     Task<string?> PickFileAsync(IReadOnlyList<string> extensions);
 
+    /// <summary>
+    /// Files to open, in the order picked; empty when cancelled. With no <paramref name="extensions"/>
+    /// any file can be picked.
+    /// </summary>
+    Task<IReadOnlyList<string>> PickFilesAsync(IReadOnlyList<string> extensions);
+
     /// <summary>A file to save, or null.</summary>
     Task<string?> PickSaveFileAsync(string suggestedName, string extension);
 
