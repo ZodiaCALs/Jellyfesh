@@ -1,4 +1,5 @@
-// The capsule player for windows under 900 pt (docs/ui.md, "The player bar and the mini player"):
+// The capsule player for windows under 900 pt (docs/ui.md, "The player bar and the mini player";
+// the look calls it the mini-player, which is not the mini player window, MiniPlayerView):
 // a floating Veil capsule with `player.mini-radius` corners, the artwork, two lines of type, play
 // and next (never accent-filled, COL-04). Its progress is a straight 2 pt line along the bottom
 // edge, inset by the corners, redrawn only when it grows by a pixel. Clicking it opens Now Playing.
@@ -7,7 +8,7 @@
 
 import SwiftUI
 
-struct MiniPlayer: View {
+struct CapsulePlayer: View {
     /// A smaller capsule, for the look's Floating style.
     var floating = false
 
@@ -31,7 +32,7 @@ struct MiniPlayer: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(Text(MiniPlayer.label(for: item)))
+                    .accessibilityLabel(Text(CapsulePlayer.label(for: item)))
                     .accessibilityHint(Text("Opens Now Playing"))
                     .help(Text("Show Now Playing"))
 

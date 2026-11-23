@@ -184,8 +184,8 @@ struct ContentColumn: View {
                     ZStack(alignment: player == .floating ? .bottomTrailing : .bottom) {
                         switch player {
                         case .bar: PlayerBar()
-                        case .mini: MiniPlayer()
-                        case .floating: MiniPlayer(floating: true)
+                        case .mini: CapsulePlayer()
+                        case .floating: CapsulePlayer(floating: true)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: player == .floating ? .trailing : .center)

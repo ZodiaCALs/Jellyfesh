@@ -97,7 +97,7 @@ private struct PlayerBarNowPlaying: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .accessibilityLabel(Text(MiniPlayer.label(for: item)))
+        .accessibilityLabel(Text(CapsulePlayer.label(for: item)))
         .accessibilityHint(Text("Opens Now Playing"))
         .help(Text("Show Now Playing"))
     }
