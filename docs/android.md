@@ -11,6 +11,50 @@ and tested here (`:logic`), the FFI adapter is compiled and run against the real
 JVM (`:ffi-check`), and the whole app except the Media3 session is compiled on the JVM against
 stand-ins (`:ui-check`). The first CI build is the first real compile; see "Risks" below.
 
+## v0.0.8: Jellyfesh Web's layout (ADR-0023)
+
+The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; the rules are in
+`:logic` (`nav/Navigator.kt`, `nav/Places.kt`, tested) and the views draw them.
+
+* **Phones (up to 760 dp): the web's five tabs**, Home, Library, Search, Sources and Settings,
+  in a floating Veil capsule. The Library tab switches between Albums, Artists, Songs, Playlists,
+  Favourites and Downloads with the web's pills above each page's own title
+  (`theme/PillTabs.kt`: the choices share the width when they fit and scroll sideways when they
+  do not). A customized look orders the tabs and the Library pills (ADR-0020); Settings stays
+  last and Downloads, newer than the look's places, comes after the look's library places.
+* **Tablets and wide windows (from 761 dp): the web's sidebar panel** (`nav/SidebarPanel.kt`), a
+  floating panel of Clear glass: the wordmark with the chosen app icon, Home, Albums, Artists,
+  Songs, Playlists, Favourites and Downloads, a separator, Search and Sources, then Open Files…
+  and Settings at its foot. Pages sit on the web's fluid gutter beside it (4 % of the window, 18
+  to 32 dp). **Open Files…** plays picked audio files without adding them to the library, as on
+  the web: in place when the core can read the path, else from a copy in the cache that the next
+  Open Files… replaces (`library/OpenedFiles.kt`).
+* **The bar floats over every page**, Settings included, and is not drawn while Now Playing is
+  open. Under 900 dp it is the capsule: the artwork, the title, play and next, with the lyrics
+  bar's strip above it. From 900 dp it is the full bar with the web's measures: the artwork and
+  two lines (the lyrics bar's line under the title when Show Lyrics Bar is on), the transport over
+  the scrubber, Lyrics, Queue, the device button while a remote source plays, the volume and More
+  (Now Playing's). The quality badge and the mini player button join with the core's v0.0.8
+  contract.
+* **Settings is one page**: its title, the sections as pills (Appearance, Playback, Library,
+  Downloads, Sources, Extensions, About), then the section's groups as the web's cards, each a
+  Mist card with its heading inside, kept to the web's reading width (704). Sources Settings… and
+  Open AI Lyrics Settings open the Settings tab at their place. Settings › Sources lists each
+  source inline, as the web does: icon, name and badge with Enabled, Version · Author, whether it
+  is signed in, then Sign In (a choice when it offers several ways) or Sign Out, Settings (its
+  form, with Save, in a sheet) and Uninstall…; the page each source had of its own is gone.
+  Choosing a source on the Sources page opens its Discover page, the sign-in sheet while nobody
+  has signed in, or Settings › Sources while it is off (`YourSources.opens`).
+* **Search has the web's tabs**: All (the library, then From Your Sources), Library, and one per
+  source that answered, in the order they did (`search/SearchModel.kt`). Show More and the links
+  to sources that keep their results apart come with the core's search by source (ADR-0024).
+* **Measures**: page titles are type.text-h2 (30.4) under 900 dp and type.text-h1 (48) from
+  900 dp, as on the web; Back is the web's (the chevron and the word in accent text); Albums and
+  Songs put their sort menu beside the title.
+* **Not yet**: Downloads (the page and Settings › Downloads) say they are not in this build yet,
+  and Appearance › Mini Player and Playback › Streaming are not shown, until the core's v0.0.8
+  contract lands.
+
 ## v0.0.8: Android 17's Local Network permission
 
 The app targets API 37, and on Android 17 such an app reaches servers on the home network only
@@ -454,10 +498,11 @@ Steel, vectors for the other eight. The results are committed.
   `DeviceWatcher` sends `RefreshDevices` on Android's device callbacks.
 * **App icon.** One `activity-alias` per icon (ADR-0017), Ice enabled by default; Automatic is
   Ice. The picker confirms before switching and states the launchers' limits.
-* **Navigation.** Four tabs (Home, Library, Search, Sources), each with its own back stack kept
-  in `AppGraph` (so it survives the activity being recreated), Now Playing over everything, and
-  Settings from the gear on Home, Library and Sources (Sources also has Sources Settings…, which
-  opens Settings › Sources). Back closes sheets, then Now Playing, then pops the stack.
+* **Navigation.** Five places (Home, Library, Search, Sources, Settings): the phone layout's tabs,
+  or the sidebar panel from 761 dp, where the library's sections are places of their own. Each
+  keeps its own back stack in `AppGraph` (so it survives the activity being recreated, and a
+  rotation between the layouts), with Now Playing over everything. Back closes sheets, then Now
+  Playing, then pops the stack.
 * **Accessibility.** Every control has a TalkBack label and state; lyrics are a list with the
   current line selected; the queue offers Move up and Move down; text is in sp; the seek bar and
   volume take keyboard focus and steps; reduced motion (the system's "remove animations", or
