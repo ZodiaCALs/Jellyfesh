@@ -35,21 +35,21 @@ struct QualityMenuContent: Equatable {
     /// Why there are no levels.
     var note: String?
 
-    /// `offered`: the levels the core offers for what plays (`NowPlaying.qualities`); `service`:
-    /// the source that sets the quality itself (a remote source), if any.
+    /// `offered`: the levels the core offers for what plays (`NowPlaying.qualities`); `note`: why
+    /// it offers none (`QualityNote`).
     init(playing format: AudioQuality?, offered: [StreamingQualityOption], chosen: StreamingQualityOption,
-         service: String?) {
+         note: QualityNoteOption?) {
         badge = format?.label.map(InfoWords.quality) ?? chosen.title
         formatLine = format.flatMap(Self.formatLine)
         let levels = offered.filter { $0 != .auto }
         self.levels = levels.isEmpty ? [] : [.auto] + levels
         self.chosen = chosen
         if !levels.isEmpty {
-            note = nil
-        } else if let service, !service.isEmpty {
-            note = String(localized: "Quality is set in \(service).")
+            self.note = nil
+        } else if case .setInService(let service)? = note, !service.isEmpty {
+            self.note = String(localized: "Quality is set in \(service).")
         } else {
-            note = String(localized: "Files play as they are.")
+            self.note = String(localized: "Files play as they are.")
         }
     }
 

@@ -1931,6 +1931,28 @@
         }
       }
     },
+    "Auto plays lossless, or High on a metered connection.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「自動」はロスレスで再生し、従量制の接続では「高」で再生します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“自动”以无损播放，在按流量计费的网络上以“高”播放。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「自動」以無損播放，在計量制連線上以「高」播放。"
+          }
+        }
+      }
+    },
     "Automatic": {
       "localizations": {
         "ja": {
@@ -4813,6 +4835,50 @@
         }
       }
     },
+    "Keep on Top": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常に手前に表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持在最前"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持在最上層"
+          }
+        }
+      }
+    },
+    "Keep the mini player when you close the window while music plays.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音楽の再生中にウインドウを閉じても、ミニプレーヤーを残します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放音乐时关闭窗口，保留迷你播放器。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放音樂時關閉視窗，保留迷你播放器。"
+          }
+        }
+      }
+    },
     "Keyboard Shortcuts": {
       "localizations": {
         "ja": {
@@ -6679,6 +6745,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟迷你播放器"
+          }
+        }
+      }
+    },
+    "Open When the Window Is Closed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウインドウを閉じたときに開く"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭窗口时打开"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉視窗時開啟"
           }
         }
       }
@@ -8663,6 +8751,28 @@
         }
       }
     },
+    "Show Lyrics Line": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歌詞の行を表示"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示歌词行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示歌詞行"
+          }
+        }
+      }
+    },
     "Show Now Playing": {
       "localizations": {
         "ja": {
@@ -9627,6 +9737,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止控制"
+          }
+        }
+      }
+    },
+    "Streaming": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストリーミング"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流媒体"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "串流"
           }
         }
       }

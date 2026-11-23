@@ -324,8 +324,8 @@ final class AppModel {
 
     // MARK: Settings the app applies
 
-    /// Appearance, the Dock icon and Desktop Lyrics are the shell's to apply (docs/core-api.md,
-    /// "Settings").
+    /// Appearance, the Dock icon, Desktop Lyrics and the mini player are the shell's to apply
+    /// (docs/core-api.md, "Settings").
     private func applyAppSettings(_ value: AppSettings) {
         if value.appearance != appliedAppearance {
             appliedAppearance = value.appearance
@@ -337,6 +337,9 @@ final class AppModel {
         }
         dockIcon.apply(value.appIcon)
         desktopLyrics.apply(enabled: value.desktopLyrics)
+        miniPlayer.apply(keepOnTop: value.miniPlayer.keepOnTop,
+                         opensWhenWindowCloses: value.miniPlayer.openWhenWindowClosed,
+                         showsLyricsLine: value.miniPlayer.showLyricsLine)
     }
 
     // MARK: Navigation helpers

@@ -1,6 +1,6 @@
 // Playback, in the order of docs/ui.md, as the web's cards (SettingsCards): where the sound goes,
-// crossfade, volume levelling (ReplayGain), the equalizer with the core's presets, and resuming at
-// startup. The core applies them (docs/core-api.md, "Playback output"); sliders send while they
+// crossfade, volume levelling (ReplayGain), the equalizer with the core's presets, Streaming
+// Quality (ADR-0026 §1), and resuming at startup. The core applies them (docs/core-api.md, "Playback output"); sliders send while they
 // move, at most every 100 ms, and once more when let go.
 
 import SwiftUI
@@ -17,6 +17,7 @@ struct PlaybackSettings: View {
             crossfadeCard
             levellingCard
             EqualizerSection()
+            streamingCard
             startupCard
         }
     }
@@ -113,6 +114,24 @@ struct PlaybackSettings: View {
                             .frame(width: 64, alignment: .trailing)
                     }
                 }
+            }
+        }
+    }
+
+    /// Streaming Quality (ADR-0026 §1), the same setting as the bar's quality menu.
+    private var streamingCard: some View {
+        SettingsCard(title: "Streaming") {
+            SettingsRow("Streaming Quality", help: "Auto plays lossless, or High on a metered connection.") {
+                Picker("Streaming Quality", selection: Binding(
+                    get: { settings.current.streamingQuality },
+                    set: { value in settings.update { $0.streamingQuality = value } }
+                )) {
+                    ForEach(StreamingQualityOption.allCases, id: \.self) { level in
+                        Text(level.title).tag(level)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
             }
         }
     }

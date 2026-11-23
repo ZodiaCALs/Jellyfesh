@@ -2,7 +2,8 @@
 // theme with small previews; the accent colour (follow the artwork, ten swatches or a custom hue
 // on a hue track); transparency from Solid to Clear with a live preview; Reduce motion and
 // transparency; the Now Playing background with previews; the lyrics' size, alignment,
-// translation and romanization, the lyrics bar and Desktop Lyrics (ADR-0022 §6); the app icon
+// translation and romanization, the lyrics bar and Desktop Lyrics (ADR-0022 §6); the mini player
+// (ADR-0026 §4: Keep on Top, Open When the Window Is Closed, Show Lyrics Line); the app icon
 // (ADR-0017); and Customize…, which opens Settings › Extensions › Customize (ADR-0020). Every change
 // applies at once and the core keeps it (SetSettings); sliders send their value when they are let
 // go.
@@ -25,6 +26,7 @@ struct AppearanceSettings: View {
             transparencyCard
             backdropCard
             lyricsCard
+            miniPlayerCard
             appIconCard
             customizeCard
         }
@@ -153,6 +155,28 @@ struct AppearanceSettings: View {
             SettingsToggleRow("Desktop Lyrics",
                               help: "The line being sung and the next one, in a window that stays above other apps.",
                               isOn: Binding(get: { current.desktopLyrics }, set: { settings.setDesktopLyrics($0) }))
+        }
+    }
+
+    private var miniPlayerCard: some View {
+        let current = settings.current
+        return SettingsCard(title: "Mini Player") {
+            SettingsToggleRow("Keep on Top", isOn: Binding(
+                get: { current.miniPlayer.keepOnTop },
+                set: { value in settings.update { $0.miniPlayer.keepOnTop = value } }
+            ))
+            SettingsDivider()
+            SettingsToggleRow("Open When the Window Is Closed",
+                              help: "Keep the mini player when you close the window while music plays.",
+                              isOn: Binding(
+                                  get: { current.miniPlayer.openWhenWindowClosed },
+                                  set: { value in settings.update { $0.miniPlayer.openWhenWindowClosed = value } }
+                              ))
+            SettingsDivider()
+            SettingsToggleRow("Show Lyrics Line", isOn: Binding(
+                get: { current.miniPlayer.showLyricsLine },
+                set: { value in settings.update { $0.miniPlayer.showLyricsLine = value } }
+            ))
         }
     }
 

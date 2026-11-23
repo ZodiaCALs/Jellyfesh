@@ -5,22 +5,27 @@
 //   (LyricsBarView); they open Now Playing;
 // * shuffle, previous, play, next and repeat (play is the only accent fill) above the seek bar with
 //   its times;
+// * the quality badge and its menu (QualityBadge, ADR-0026 §3);
 // * Lyrics, Queue, the device button while a remote source plays, and the volume;
 // * the mini player button (MiniPlayerStore) and More: the song's menu, Desktop Lyrics
 //   (NowPlayingMoreMenu).
-// A narrower bar keeps the volume's mute button and drops its line, as the web's does
-// (PlayerBarLayout). While a remote session runs the bar shows its track with "Playing on {Device}"
+// A narrower bar keeps the volume's mute button and drops its line, as the web's does, and the
+// narrowest drops Lyrics and Queue too (PlayerBarLayout). While a remote session runs the bar shows its track with "Playing on {Device}"
 // (ADR-0018). Liquid Glass on macOS 26, like the capsule (FloatingGlass).
 
 import SwiftUI
 
-/// What the player bar has room for, by its own width.
+/// What the player bar has room for, by its own width (beside the sidebar it is the window's width
+/// less 280 pt).
 enum PlayerBarLayout {
-    /// The bar is this wide or wider: the volume line shows beside the mute button (in windows of
-    /// about 1100 pt, beside the sidebar; the web keeps the button alone under about 1040 px).
-    static let volumeLineMinWidth: CGFloat = 820
+    /// The volume line shows beside the mute button from here (the default window's bar); the web
+    /// keeps the button alone in narrower windows too.
+    static let volumeLineMinWidth: CGFloat = 900
+    /// Lyrics and Queue show from here; narrower, Now Playing still has them (⌥⌘L, ⌥⌘U).
+    static let paneButtonsMinWidth: CGFloat = 720
 
     static func showsVolumeLine(barWidth: CGFloat) -> Bool { barWidth >= volumeLineMinWidth }
+    static func showsPaneButtons(barWidth: CGFloat) -> Bool { barWidth >= paneButtonsMinWidth }
 }
 
 struct PlayerBar: View {
@@ -60,7 +65,8 @@ struct PlayerBar: View {
             }
             .frame(minWidth: 220, maxWidth: 560)
 
-            PlayerBarTools(item: item, volumeLine: PlayerBarLayout.showsVolumeLine(barWidth: width))
+            PlayerBarTools(item: item, volumeLine: PlayerBarLayout.showsVolumeLine(barWidth: width),
+                           paneButtons: PlayerBarLayout.showsPaneButtons(barWidth: width))
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(.leading, Tokens.Space.s2)
@@ -152,36 +158,47 @@ private struct PlayerBarTransport: View {
     }
 }
 
-/// Lyrics, Queue, the device button while a remote source plays, the volume (its line when there
-/// is room), the mini player button and More.
+/// The quality badge, Lyrics and Queue (when there is room), the device button while a remote
+/// source plays, the volume (its line when there is room), the mini player button and More.
 private struct PlayerBarTools: View {
     var item: PlayingItem
     var volumeLine: Bool
+    var paneButtons: Bool
 
     @Environment(PlaybackStore.self) private var playback
+    @Environment(SettingsStore.self) private var settings
     @Environment(Router.self) private var router
     @Environment(MiniPlayerStore.self) private var miniPlayer
     @Environment(\.effects) private var effects
 
     var body: some View {
         HStack(spacing: 2) {
-            Button {
-                router.showNowPlaying(true, panel: .lyrics, reduceMotion: !effects.animates)
-            } label: {
-                Image(systemName: "quote.bubble")
+            if let menu = playback.qualityMenu(chosen: settings.current.streamingQuality) {
+                QualityBadge(content: menu) { level in
+                    settings.update { $0.streamingQuality = level }
+                }
+                .padding(.trailing, Tokens.Space.s1)
             }
-            .buttonStyle(IconButtonStyle(size: 40, glyph: 15))
-            .accessibilityLabel(Text("Lyrics"))
-            .help(Text("Lyrics"))
 
-            Button {
-                router.showNowPlaying(true, panel: .queue, reduceMotion: !effects.animates)
-            } label: {
-                Image(systemName: "list.bullet")
+            if paneButtons {
+                Button {
+                    router.showNowPlaying(true, panel: .lyrics, reduceMotion: !effects.animates)
+                } label: {
+                    Image(systemName: "quote.bubble")
+                }
+                .buttonStyle(IconButtonStyle(size: 40, glyph: 15))
+                .accessibilityLabel(Text("Lyrics"))
+                .help(Text("Lyrics"))
+
+                Button {
+                    router.showNowPlaying(true, panel: .queue, reduceMotion: !effects.animates)
+                } label: {
+                    Image(systemName: "list.bullet")
+                }
+                .buttonStyle(IconButtonStyle(size: 40, glyph: 15))
+                .accessibilityLabel(Text("Queue"))
+                .help(Text("Queue"))
             }
-            .buttonStyle(IconButtonStyle(size: 40, glyph: 15))
-            .accessibilityLabel(Text("Queue"))
-            .help(Text("Queue"))
 
             if item.isRemote {
                 RemoteDevicesButton(size: 40, glyph: 15)

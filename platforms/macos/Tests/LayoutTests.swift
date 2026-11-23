@@ -64,7 +64,10 @@ final class ShellLayoutTests: XCTestCase {
         let narrowest = SeekGeometry.playerBarMinWidth - ShellLayout.sidebarWidth - ShellLayout.margin
             - 2 * LuminousGeometry.playerMargin
         XCTAssertFalse(PlayerBarLayout.showsVolumeLine(barWidth: narrowest), "a 900 pt window beside the panel")
-        XCTAssertTrue(PlayerBarLayout.showsVolumeLine(barWidth: 820))
+        XCTAssertFalse(PlayerBarLayout.showsPaneButtons(barWidth: narrowest), "Now Playing still has them")
+        XCTAssertTrue(PlayerBarLayout.showsPaneButtons(barWidth: 720))
+        let defaultWindow = 1180 - ShellLayout.sidebarWidth - ShellLayout.margin - 2 * LuminousGeometry.playerMargin
+        XCTAssertTrue(PlayerBarLayout.showsVolumeLine(barWidth: defaultWindow), "the default window has it all")
         XCTAssertLessThan(NowPlayingDock.compactBelow, SeekGeometry.playerBarMinWidth)
     }
 

@@ -396,6 +396,12 @@ private struct DockControls: View {
             }
 
             HStack(spacing: Tokens.Space.s1) {
+                if !compact, let menu = playback.qualityMenu(chosen: settings.current.streamingQuality) {
+                    QualityBadge(content: menu) { level in
+                        settings.update { $0.streamingQuality = level }
+                    }
+                    .padding(.trailing, Tokens.Space.s1)
+                }
                 if playback.isRemote {
                     RemoteDevicesButton(size: 40, glyph: 17)
                 } else {

@@ -212,6 +212,17 @@ final class PlaybackStore {
                            link: now.link, source: source, uid: now.uid, track: now.track, remote: nil)
     }
 
+    /// The quality badge and its menu for what plays (ADR-0026 §3): the core's levels and note,
+    /// with `chosen`, the Streaming Quality setting. Nil with nothing playing.
+    func qualityMenu(chosen: StreamingQualityOption) -> QualityMenuContent? {
+        if isRemote {
+            return QualityMenuContent(playing: nil, offered: [], chosen: chosen,
+                                      note: remote.qualityNote ?? .setInService(remoteService))
+        }
+        guard let now = nowPlaying else { return nil }
+        return QualityMenuContent(playing: now.quality, offered: now.qualities, chosen: chosen, note: now.qualityNote)
+    }
+
     /// Shuffle as the player shows it: the remote session's, else the queue's.
     var shuffle: Bool { isRemote ? remote.shuffle : queue.shuffle }
 
