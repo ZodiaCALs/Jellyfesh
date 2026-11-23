@@ -76,7 +76,7 @@ final class AppleMusicMappingTests: XCTestCase {
         XCTAssertEqual(track.plugin, "apple-music")
         XCTAssertEqual(track.id, "1")
         let album = AppleMusicAlbum(id: "123", title: "Album", artist: nil, artworkURL: nil, link: nil)
-        XCTAssertEqual(album.collection, .source(plugin: "apple-music", id: "123"))
+        XCTAssertEqual(album.collection, .source(plugin: "apple-music", id: "123", kind: .album))
     }
 }
 

@@ -258,7 +258,7 @@ struct SourceContainerActions: View {
 
     var body: some View {
         if item.playable && item.kind != .track {
-            let collection = CollectionReference.source(plugin: item.source, id: item.itemID)
+            let collection = CollectionReference.source(plugin: item.source, id: item.itemID, kind: item.kind)
             Button("Play") { playback.play(collection) }
             Button("Shuffle") { playback.play(collection, shuffle: true) }
             if !sources.isRemote(item.source) {

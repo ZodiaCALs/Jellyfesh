@@ -46,7 +46,8 @@ extension CollectionReference {
         case .favorites: return .favorites
         case .songs(let sort, let descending): return .songs(sort: sort.ffi, descending: descending)
         case .tracks(let tracks): return .tracks(tracks: tracks.map(\.ffi))
-        case .source(let plugin, let id): return .source(plugin: plugin, id: id)
+        // The kind reaches the core once its `Collection::Source` carries `item_kind` (v0.0.8).
+        case .source(let plugin, let id, _): return .source(plugin: plugin, id: id)
         }
     }
 }

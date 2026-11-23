@@ -327,7 +327,7 @@ final class LibraryStoreTests: XCTestCase {
         let tracks = try await store.tracks(of: .playlist(id: 3))
         XCTAssertEqual(tracks.count, 1_200)
         XCTAssertEqual(tracks.last, .library(id: 1_199))
-        let none = try await store.tracks(of: .source(plugin: "p", id: "x"))
+        let none = try await store.tracks(of: .source(plugin: "p", id: "x", kind: .playlist))
         XCTAssertTrue(none.isEmpty, "a source's container has no tracks to add")
     }
 

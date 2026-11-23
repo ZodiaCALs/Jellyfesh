@@ -343,7 +343,7 @@ struct BrowseView: View {
     /// Play and Shuffle while the container plays here, else Open in {Service} as its main action;
     /// then More.
     @ViewBuilder private func actions(for item: SourceResult, songs: [SourceResult]) -> some View {
-        let collection = CollectionReference.source(plugin: plugin, id: item.itemID)
+        let collection = CollectionReference.source(plugin: plugin, id: item.itemID, kind: item.kind)
         let playable = SourcePage.canPlay(item: item, songs: songs, complete: model?.isComplete ?? false)
         let tracks = model?.isComplete == true ? (model?.playableTracks ?? []) : []
         if playable {

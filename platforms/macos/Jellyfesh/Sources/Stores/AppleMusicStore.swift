@@ -36,7 +36,7 @@ struct AppleMusicAlbum: Identifiable, Hashable, Sendable {
     var link: String?
 
     /// What plays it: the album as a source container of the app's own player.
-    var collection: CollectionReference { .source(plugin: AppleMusicIDs.source, id: id) }
+    var collection: CollectionReference { .source(plugin: AppleMusicIDs.source, id: id, kind: .album) }
 }
 
 struct AppleMusicResults: Hashable, Sendable {

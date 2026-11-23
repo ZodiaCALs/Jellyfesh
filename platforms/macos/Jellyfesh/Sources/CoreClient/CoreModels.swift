@@ -38,7 +38,8 @@ enum CollectionReference: Hashable, Sendable {
     /// Every song in the library, in the Songs page's order (`Collection::Songs`).
     case songs(sort: SongSort, descending: Bool)
     case tracks([TrackReference])
-    case source(plugin: String, id: String)
+    /// A source's album, playlist or other container: its `SourceItem`'s source, id and kind.
+    case source(plugin: String, id: String, kind: ResultKind)
 }
 
 /// A song to make lyrics for (`SongRef`).
