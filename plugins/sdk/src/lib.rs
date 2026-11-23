@@ -1,9 +1,10 @@
 //! Write Jellyfesh plugins in Rust.
 //!
-//! A plugin is a WebAssembly component for the `jellyfesh:plugin@1.2`
+//! A plugin is a WebAssembly component for the `jellyfesh:plugin@1.3`
 //! world `plugin` (`plugins/wit`): the `source` world of API 1.0, the
-//! `remote` interface of 1.1, and the 1.2 imports (`audio`, `speech`) and
-//! exports (`maker`, `appearance`, `discover`, `details`, `comments`). This
+//! `remote` interface of 1.1, the 1.2 imports (`audio`, `speech`) and
+//! exports (`maker`, `appearance`, `discover`, `details`, `comments`), and
+//! the 1.3 exports (`library`, `download`). This
 //! crate generates the bindings, turns a [`Plugin`] implementation into the
 //! world's exports, and wraps the host imports in small helpers. Plugins
 //! build for `wasm32-unknown-unknown` and end up with **no WASI imports at
@@ -16,7 +17,8 @@
 //! capability and `[links]` (ADR-0018), and `"1.2"` for the capabilities
 //! `make_lyrics`, `appearance`, `discover`, `details` and `comments`, the
 //! permissions `audio` and `speech`, and settings schema profile 1.2
-//! (ADR-0019, ADR-0020).
+//! (ADR-0019, ADR-0020); and `"1.3"` for the capabilities `library` and
+//! `download` and `content_policy.qualities` (ADR-0024 to ADR-0026).
 //!
 //! # A plugin
 //!
@@ -135,6 +137,8 @@ pub use bindings::exports::jellyfesh::plugin::catalog::SearchFilters;
 pub use bindings::exports::jellyfesh::plugin::comments::{Comment, CommentPage};
 pub use bindings::exports::jellyfesh::plugin::details::{Fact, FactKey, ItemDetails};
 pub use bindings::exports::jellyfesh::plugin::discover::{Shelf, ShelfStyle};
+pub use bindings::exports::jellyfesh::plugin::download::{DownloadInfo, DownloadQuality};
+pub use bindings::exports::jellyfesh::plugin::library::{PlaylistEntry, PlaylistPage};
 pub use bindings::exports::jellyfesh::plugin::lyrics::{LyricFormat, LyricPayload};
 pub use bindings::exports::jellyfesh::plugin::maker::{
     Made, MakerPlan, Mode as MakerMode, Need as MakerNeed, Song,
@@ -156,13 +160,14 @@ pub type Result<T, E = PluginError> = core::result::Result<T, E>;
 /// Everything a plugin usually needs.
 pub mod prelude {
     pub use crate::{
-        AuthKind, Capability, CodeDisplay, Comment, CommentPage, Density, Fact, FactKey, FieldKind,
-        FieldSpec, FieldValue, Flow, FlowStep, Header, Highlight, HomeSection, ImageRef, Item, ItemDetails,
-        ItemKind, ItemPage, Look, LyricFormat, LyricPayload, LyricsWeight, Made, MakerMode, MakerNeed,
-        MakerPlan, MiniPlayerStyle, NowPlayingLayout, OauthRequest, OpenUrl, PageRequest, Place, Plugin,
-        PluginError, QrCode, Quality, RedirectCapture, RemoteDevice, RemoteDeviceKind, RemoteRepeat,
-        RemoteState, Result, SearchFilters, Shelf, ShelfStyle, Song, Step, StreamInfo, TrackHandle, Typeface,
-        Unplayable, UnplayableReason, audio, clock, crypto, http, kv, speech,
+        AuthKind, Capability, CodeDisplay, Comment, CommentPage, Density, DownloadInfo, DownloadQuality,
+        Fact, FactKey, FieldKind, FieldSpec, FieldValue, Flow, FlowStep, Header, Highlight, HomeSection,
+        ImageRef, Item, ItemDetails, ItemKind, ItemPage, Look, LyricFormat, LyricPayload, LyricsWeight, Made,
+        MakerMode, MakerNeed, MakerPlan, MiniPlayerStyle, NowPlayingLayout, OauthRequest, OpenUrl,
+        PageRequest, Place, PlaylistEntry, PlaylistPage, Plugin, PluginError, QrCode, Quality,
+        RedirectCapture, RemoteDevice, RemoteDeviceKind, RemoteRepeat, RemoteState, Result, SearchFilters,
+        Shelf, ShelfStyle, Song, Step, StreamInfo, TrackHandle, Typeface, Unplayable, UnplayableReason,
+        audio, clock, crypto, http, kv, speech,
     };
 }
 
@@ -373,6 +378,30 @@ macro_rules! export_plugin {
                 ) -> Result<$crate::CommentPage, PluginError> {
                     $crate::__private::enter();
                     <$plugin as $crate::Plugin>::comments(item, page)
+                }
+            }
+
+            impl jf::library::Guest for $plugin {
+                fn likes(
+                    kind: $crate::ItemKind,
+                    page: $crate::PageRequest,
+                ) -> Result<$crate::ItemPage, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::library_likes(kind, page)
+                }
+                fn playlists(page: $crate::PageRequest) -> Result<$crate::PlaylistPage, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::library_playlists(page)
+                }
+            }
+
+            impl jf::download::Guest for $plugin {
+                fn download(
+                    item: $crate::Item,
+                    quality: $crate::DownloadQuality,
+                ) -> Result<$crate::DownloadInfo, PluginError> {
+                    $crate::__private::enter();
+                    <$plugin as $crate::Plugin>::download(item, quality)
                 }
             }
         };

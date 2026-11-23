@@ -812,23 +812,25 @@ fn components_import_audio_and_speech_only_when_they_use_them() {
         "discover",
         "details",
         "comments",
+        "library",
+        "download",
         "remote",
         "meta",
     ] {
         assert!(
             exports
                 .iter()
-                .any(|e| e.starts_with(&format!("jellyfesh:plugin/{export}@1.2"))),
-            "SDK 1.2 exports {export}: {exports:?}"
+                .any(|e| e.starts_with(&format!("jellyfesh:plugin/{export}@1.3"))),
+            "SDK 1.3 exports {export}: {exports:?}"
         );
     }
     let (imports, _) = interfaces("maker");
     assert!(
-        imports.iter().any(|i| i == "jellyfesh:plugin/audio@1.2.0"),
+        imports.iter().any(|i| i == "jellyfesh:plugin/audio@1.3.0"),
         "{imports:?}"
     );
     assert!(
-        imports.iter().any(|i| i == "jellyfesh:plugin/speech@1.2.0"),
+        imports.iter().any(|i| i == "jellyfesh:plugin/speech@1.3.0"),
         "{imports:?}"
     );
 }

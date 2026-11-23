@@ -1,0 +1,105 @@
+package jellyfesh:plugin@1.2.0;
+
+/// A source plugin: one online service, server or lyrics provider.
+///
+/// A plugin is a WebAssembly component built for this world (the SDK,
+/// `plugins/sdk`, does it from Rust) and packed with its manifest into a
+/// `.jfpkg` (ADR-0004). It has no WASI imports at all: no files, sockets,
+/// environment or arguments; everything goes through the imports below.
+///
+/// Every export must be present. Capabilities a plugin does not implement
+/// return `plugin-error.unsupported` (the SDK does this for you), and the host
+/// never calls a capability the manifest does not declare.
+///
+/// Versioning: the manifest's `api_version` names the package `major.minor`
+/// the plugin targets. The major version must match the host's; a plugin
+/// built for an older minor runs on a newer host. 1.1 added the `remote`
+/// interface (world `remote-source`) and manifest links; every 1.0 interface
+/// is unchanged, so 1.0 plugins load in 1.1 hosts (ADR-0018). 1.2 added the
+/// world `plugin` (ADR-0019, ADR-0020); 1.0 and 1.1 plugins load unchanged.
+world source {
+    import http;
+    import kv;
+    import crypto;
+    import clock;
+    import log;
+
+    export meta;
+    export auth;
+    export catalog;
+    export playback;
+    export lyrics;
+    export artwork;
+    export recommendations;
+}
+
+/// A source plugin built with API 1.1: everything in `source`, plus remote
+/// control. The SDK builds this world; `remote` answers `unsupported` unless
+/// the plugin implements it and its manifest declares the `remote` capability.
+world remote-source {
+    include source;
+    export remote;
+}
+
+/// The remote-control part of a 1.1 plugin, which hosts look up on its own
+/// for plugins that declare `remote` (1.0 plugins do not export it).
+world remote-control {
+    export remote;
+}
+
+/// A plugin built with API 1.2: everything in `remote-source`, the song's
+/// audio and on-device speech recognition for making lyrics, and the new
+/// exports. The SDK builds this world and answers `unsupported` for every
+/// export a plugin does not implement. A host calls an export only when the
+/// manifest declares its capability (`make_lyrics`, `appearance`,
+/// `discover`, `details`, `comments`), and serves `audio` and `speech` only
+/// to plugins whose manifest declares the permission of that name; to the
+/// others they answer `not-declared`.
+///
+/// Packages that use any of it declare `api_version = "1.2"`. A plugin built
+/// with SDK 1.2 that uses none of it may keep an older `api_version`, so it
+/// also loads in older hosts.
+world plugin {
+    include remote-source;
+
+    import audio;
+    import speech;
+
+    export maker;
+    export appearance;
+    export discover;
+    export details;
+    export comments;
+}
+
+/// The making-lyrics part of `plugin`: what a host links and looks up for
+/// plugins that declare `make_lyrics` (older plugins do not export it).
+world maker-part {
+    import audio;
+    import speech;
+    export maker;
+}
+
+/// The appearance part of `plugin`, looked up for plugins that declare
+/// `appearance`.
+world appearance-part {
+    export appearance;
+}
+
+/// The Discover part of `plugin`, looked up for plugins that declare
+/// `discover`.
+world discover-part {
+    export discover;
+}
+
+/// The details part of `plugin`, looked up for plugins that declare
+/// `details`.
+world details-part {
+    export details;
+}
+
+/// The comments part of `plugin`, looked up for plugins that declare
+/// `comments`.
+world comments-part {
+    export comments;
+}

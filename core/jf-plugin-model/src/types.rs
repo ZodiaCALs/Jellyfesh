@@ -133,6 +133,11 @@ pub enum Capability {
     Details,
     /// What people say about an item (API 1.2, `comments`).
     Comments,
+    /// The person's likes and playlists on the service (API 1.3, the
+    /// `library` export).
+    Library,
+    /// Files from the person's own server (API 1.3, the `download` export).
+    Download,
 }
 
 impl Capability {
@@ -153,6 +158,8 @@ impl Capability {
                 | Capability::Discover
                 | Capability::Details
                 | Capability::Comments
+                | Capability::Library
+                | Capability::Download
         )
     }
 
@@ -738,6 +745,49 @@ pub struct CommentPage {
     pub next: Option<String>,
 }
 
+// ---- library and download (API 1.3) -------------------------------------------------------------
+
+/// `library.playlist-entry`: a playlist in the person's library.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PlaylistEntry {
+    pub item: Item,
+    /// The person's own playlist (or one they collaborate on).
+    pub owned: bool,
+    /// `catalog.browse` lists its songs; false for a playlist the service
+    /// lists only in its own app.
+    pub songs_listed: bool,
+}
+
+/// `library.playlist-page`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PlaylistPage {
+    pub entries: Vec<PlaylistEntry>,
+    pub next: Option<String>,
+    pub total: Option<u32>,
+}
+
+/// `download.download-quality`: the quality a download is asked for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DownloadQuality {
+    Original,
+    High,
+    Normal,
+    Low,
+}
+
+/// `download.download-info`: where the host fetches a file, checked (the
+/// URL is on the plugin's allowlist, `container` a short lowercase
+/// extension, `file_name` a bare name).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct DownloadInfo {
+    pub url: String,
+    pub headers: Vec<Header>,
+    pub container: String,
+    pub size: Option<u64>,
+    pub original: bool,
+    pub file_name: Option<String>,
+}
+
 // ---- the host's side -------------------------------------------------------------------------
 
 // ---- remote control (API 1.1) -------------------------------------------------------------------
@@ -811,6 +861,11 @@ pub struct ContentPolicy {
     pub lyrics_sync: bool,
     /// Attribution the views must show, if any (for example `"spotify"`).
     pub attribution: Option<String>,
+    /// The streaming levels `resolve-stream` honours (API 1.3), best first;
+    /// empty when the plugin offers no choice (the apps then say the quality
+    /// is set in the service).
+    #[serde(default)]
+    pub qualities: Vec<Quality>,
 }
 
 impl Default for ContentPolicy {
@@ -822,6 +877,7 @@ impl Default for ContentPolicy {
             metadata_ttl_secs: None,
             lyrics_sync: true,
             attribution: None,
+            qualities: Vec::new(),
         }
     }
 }
@@ -916,6 +972,10 @@ pub struct PluginInfo {
     /// API 1.2), such as `zh-Hans`.
     #[serde(default)]
     pub languages: Vec<String>,
+    /// The settings whose values are servers the plugin may reach: the keys
+    /// its allowlist (and cookie import) name as `${settings.<key>}`.
+    #[serde(default)]
+    pub server_settings: Vec<String>,
 }
 
 /// One step of a login flow, for the UI to render natively.
@@ -990,6 +1050,8 @@ pub fn capability_name(capability: Capability) -> &'static str {
         Capability::Discover => "discover",
         Capability::Details => "details",
         Capability::Comments => "comments",
+        Capability::Library => "library",
+        Capability::Download => "download",
     }
 }
 

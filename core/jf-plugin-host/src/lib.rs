@@ -75,6 +75,10 @@
 //! [`PluginHost::set_speech_models`] and
 //! [`PluginHost::localized_settings_schema`].
 //!
+//! API 1.3 (ADR-0024, ADR-0025): [`PluginHost::library_likes`],
+//! [`PluginHost::library_playlists`] and [`PluginHost::download`], each only
+//! for plugins whose manifest declares `library` or `download`.
+//!
 //! Unified search: [`merge::merge`] merges per-source result lists (ISRC,
 //! then normalised title + primary artist + duration within 2 s), keeping
 //! each source's order. Fanning out and deadlines are the caller's.
@@ -154,7 +158,9 @@ pub mod types;
 pub(crate) use jf_plugin_model::allow;
 /// The checks on what plugins return, for hosts of other answers (the core's external players).
 pub use jf_plugin_model::sanitize;
-pub use jf_plugin_model::{install, l10n, links, manifest, merge, package, presets, schema, trust};
+pub use jf_plugin_model::{
+    filenames, install, l10n, links, manifest, merge, package, presets, schema, trust,
+};
 
 /// The host API's errors (defined in `jf-plugin-model`).
 pub(crate) mod error {

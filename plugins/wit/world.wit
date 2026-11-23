@@ -1,4 +1,4 @@
-package jellyfesh:plugin@1.2.0;
+package jellyfesh:plugin@1.3.0;
 
 /// A source plugin: one online service, server or lyrics provider.
 ///
@@ -17,6 +17,10 @@ package jellyfesh:plugin@1.2.0;
 /// interface (world `remote-source`) and manifest links; every 1.0 interface
 /// is unchanged, so 1.0 plugins load in 1.1 hosts (ADR-0018). 1.2 added the
 /// world `plugin` (ADR-0019, ADR-0020); 1.0 and 1.1 plugins load unchanged.
+/// 1.3 added the `library` and `download` exports to `plugin` and the
+/// manifest's `content_policy.qualities` (ADR-0024, ADR-0025, ADR-0026); no
+/// earlier record, enum or function changed, so 1.0–1.2 plugins load
+/// unchanged.
 world source {
     import http;
     import kv;
@@ -59,6 +63,11 @@ world remote-control {
 /// Packages that use any of it declare `api_version = "1.2"`. A plugin built
 /// with SDK 1.2 that uses none of it may keep an older `api_version`, so it
 /// also loads in older hosts.
+///
+/// API 1.3 adds the exports `library` (capability `library`: the person's
+/// likes and playlists, ADR-0024) and `download` (capability `download`:
+/// files from the person's own server, ADR-0025). Packages that declare
+/// either, or `content_policy.qualities`, declare `api_version = "1.3"`.
 world plugin {
     include remote-source;
 
@@ -70,6 +79,8 @@ world plugin {
     export discover;
     export details;
     export comments;
+    export library;
+    export download;
 }
 
 /// The making-lyrics part of `plugin`: what a host links and looks up for
@@ -102,4 +113,16 @@ world details-part {
 /// `comments`.
 world comments-part {
     export comments;
+}
+
+/// The library part of `plugin` (API 1.3), looked up for plugins that
+/// declare `library`.
+world library-part {
+    export library;
+}
+
+/// The download part of `plugin` (API 1.3), looked up for plugins that
+/// declare `download`.
+world download-part {
+    export download;
 }

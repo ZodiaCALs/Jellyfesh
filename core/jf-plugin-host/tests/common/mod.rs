@@ -33,9 +33,11 @@ pub const PLUGINS: &[&str] = &[
     "remote",
     "compat-1-0",
     "compat-1-1",
+    "compat-1-2",
     "maker",
     "appearance",
     "discover",
+    "library",
 ];
 
 /// The cargo target directory this test binary was built in.

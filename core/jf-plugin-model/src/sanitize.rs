@@ -12,9 +12,10 @@ use url::Url;
 
 use crate::error::CallError;
 use crate::types::{
-    Comment, CommentPage, Fact, FactKey, Header, HomeSection, ImageRef, Item, ItemDetails, ItemPage, Look,
-    LyricFormat, LyricPayload, Made, MakerNeed, MakerPlan, Place, RemoteDevice, RemoteState, Shelf,
-    SpeechSegment, SpeechWord, StreamInfo, Transcript, Unplayable, UnplayableReason,
+    Comment, CommentPage, DownloadInfo, Fact, FactKey, Header, HomeSection, ImageRef, Item, ItemDetails,
+    ItemKind, ItemPage, Look, LyricFormat, LyricPayload, Made, MakerNeed, MakerPlan, Place, PlaylistEntry,
+    PlaylistPage, RemoteDevice, RemoteState, Shelf, SpeechSegment, SpeechWord, StreamInfo, Transcript,
+    Unplayable, UnplayableReason,
 };
 
 const MAX_ID: usize = 1024;
@@ -649,11 +650,90 @@ pub fn comments(page: CommentPage, checker: &Checker<'_>) -> CommentPage {
     }
 }
 
+/// A page of liked items (`library.likes`) of `kind`: cut to `limit`,
+/// invalid items and items of another kind dropped.
+pub fn likes(page: ItemPage, kind: ItemKind, limit: u32, checker: &Checker<'_>) -> ItemPage {
+    let mut checked = self::page(page, limit, checker);
+    checked.items.retain(|i| i.kind == kind);
+    checked
+}
+
+/// A page of playlists (`library.playlists`): cut to `limit`, entries
+/// whose item is unusable or not a playlist dropped.
+pub fn playlists(page: PlaylistPage, limit: u32, checker: &Checker<'_>) -> PlaylistPage {
+    let limit = limit.clamp(1, MAX_PAGE) as usize;
+    PlaylistPage {
+        entries: page
+            .entries
+            .into_iter()
+            .take(limit)
+            .filter(|e| e.item.kind == ItemKind::Playlist)
+            .filter_map(|e| {
+                Some(PlaylistEntry {
+                    item: item(e.item, checker)?,
+                    owned: e.owned,
+                    songs_listed: e.songs_listed,
+                })
+            })
+            .collect(),
+        next: page.next.filter(|c| !c.is_empty() && c.len() <= MAX_CURSOR),
+        total: page.total,
+    }
+}
+
+/// Longest `download-info.container` (an extension, without the dot).
+const MAX_CONTAINER: usize = 8;
+/// Longest `download-info.file-name` (bytes).
+const MAX_FILE_NAME: usize = 255;
+
+/// A file extension: 1–[`MAX_CONTAINER`] ASCII letters and digits, lowercase.
+fn extension(text: &str) -> Option<String> {
+    let text = text.trim().trim_start_matches('.');
+    (!text.is_empty() && text.len() <= MAX_CONTAINER && text.bytes().all(|b| b.is_ascii_alphanumeric()))
+        .then(|| text.to_ascii_lowercase())
+}
+
+/// Where to fetch a download (`download.download`): the URL must be on the
+/// allowlist and the headers valid; `container` is a short extension (taken
+/// from `file_name` when the plugin gave none); `file_name` keeps only its
+/// last path part.
+pub fn download(info: DownloadInfo, checker: &Checker<'_>) -> Result<DownloadInfo, CallError> {
+    let url = fetchable(&info.url, checker).map_err(CallError::InvalidResponse)?;
+    let headers = headers(info.headers).map_err(CallError::InvalidResponse)?;
+    let file_name = info
+        .file_name
+        .map(|name| {
+            let last = name.rsplit(['/', '\\']).next().unwrap_or_default().to_owned();
+            text(&last, MAX_FILE_NAME)
+        })
+        .filter(|name| !name.is_empty() && name != "." && name != "..");
+    let container = extension(&info.container)
+        .or_else(|| {
+            let name = file_name.as_deref()?;
+            let (stem, ext) = name.rsplit_once('.')?;
+            (!stem.is_empty()).then(|| extension(ext)).flatten()
+        })
+        .ok_or_else(|| {
+            CallError::InvalidResponse(format!(
+                "the download's container {:?} is not a file extension",
+                info.container
+            ))
+        })?;
+    Ok(DownloadInfo {
+        url: url.into(),
+        headers,
+        container,
+        size: info.size,
+        original: info.original,
+        file_name,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::types::{
-        Density, Highlight, ItemKind, MakerMode, NowPlayingLayout, RemoteDeviceKind, RemoteRepeat, ShelfStyle,
+        Density, Highlight, MakerMode, NowPlayingLayout, RemoteDeviceKind, RemoteRepeat, ShelfStyle,
     };
 
     fn device(id: &str, name: &str, active: bool) -> RemoteDevice {
@@ -1064,5 +1144,137 @@ mod tests {
     fn cleans_text() {
         assert_eq!(text("  a\u{0}b\nc  ", 100), "abc");
         assert_eq!(text("ééé", 5), "éé");
+    }
+
+    #[test]
+    fn checks_likes_and_playlists() {
+        let anything = |_: &Url| true;
+        let checker = Checker::new("test", &anything);
+        let mut album = a_track("al");
+        album.kind = ItemKind::Album;
+        let mut nameless = a_track("t-nameless");
+        nameless.title = " ".into();
+        let liked = likes(
+            ItemPage {
+                items: vec![
+                    a_track("t1"),
+                    album.clone(),
+                    nameless,
+                    a_track(&"x".repeat(2000)),
+                    a_track("t2"),
+                ],
+                next: Some("c".repeat(MAX_CURSOR + 1)),
+                total: Some(9),
+            },
+            ItemKind::Track,
+            10,
+            &checker,
+        );
+        let ids: Vec<&str> = liked.items.iter().map(|i| i.id.as_str()).collect();
+        assert_eq!(
+            ids,
+            ["t1", "t2"],
+            "other kinds, untitled items and overlong ids go"
+        );
+        assert_eq!((liked.next, liked.total), (None, Some(9)));
+        let cut = likes(
+            ItemPage {
+                items: (0..300).map(|i| a_track(&i.to_string())).collect(),
+                next: Some("2".into()),
+                total: None,
+            },
+            ItemKind::Track,
+            500,
+            &checker,
+        );
+        assert_eq!(cut.items.len(), MAX_PAGE as usize);
+        assert_eq!(cut.next.as_deref(), Some("2"));
+
+        let mut list = a_track("pl1");
+        list.kind = ItemKind::Playlist;
+        list.title = format!("{}\u{7}", "L".repeat(5000));
+        let entry = |item: Item, owned: bool| PlaylistEntry {
+            item,
+            owned,
+            songs_listed: !owned,
+        };
+        let page = playlists(
+            PlaylistPage {
+                entries: vec![
+                    entry(list.clone(), true),
+                    entry(album, false),
+                    entry(list.clone(), false),
+                ],
+                next: Some(String::new()),
+                total: Some(2),
+            },
+            2,
+            &checker,
+        );
+        assert_eq!(
+            page.entries.len(),
+            1,
+            "cut to the limit first, then the album dropped"
+        );
+        assert_eq!(page.entries[0].item.title.len(), MAX_TEXT, "titles are cut");
+        assert!(page.entries[0].owned && !page.entries[0].songs_listed);
+        assert_eq!(page.next, None);
+    }
+
+    #[test]
+    fn checks_downloads() {
+        let allow_server = |url: &Url| url.host_str() == Some("music.example.com");
+        let checker = Checker::new("test", &allow_server);
+        let info = |url: &str, container: &str, file_name: Option<&str>| DownloadInfo {
+            url: url.into(),
+            headers: vec![Header {
+                name: "x-token".into(),
+                value: "abc".into(),
+            }],
+            container: container.into(),
+            size: Some(1234),
+            original: true,
+            file_name: file_name.map(str::to_owned),
+        };
+        let checked = download(
+            info(
+                "https://music.example.com/rest/download?id=1",
+                " FLAC ",
+                Some("../../etc/Song.flac"),
+            ),
+            &checker,
+        )
+        .unwrap();
+        assert_eq!(checked.container, "flac");
+        assert_eq!(
+            checked.file_name.as_deref(),
+            Some("Song.flac"),
+            "only the last part of a path"
+        );
+        assert_eq!((checked.size, checked.original), (Some(1234), true));
+        let from_name = download(
+            info("https://music.example.com/a", "", Some("C:\\Music\\Track.Opus")),
+            &checker,
+        )
+        .unwrap();
+        assert_eq!(from_name.container, "opus", "the extension of the file name");
+        for (url, container, name) in [
+            ("https://elsewhere.example/a.flac", "flac", None),
+            ("ftp://music.example.com/a.flac", "flac", None),
+            ("https://music.example.com/a", "fl/ac", None),
+            ("https://music.example.com/a", "", Some("no-extension")),
+            ("https://music.example.com/a", "verylongext", None),
+        ] {
+            assert!(
+                matches!(
+                    download(info(url, container, name), &checker),
+                    Err(CallError::InvalidResponse(_))
+                ),
+                "{url} {container:?} {name:?}"
+            );
+        }
+        let mut bad_header = info("https://music.example.com/a", "mp3", None);
+        bad_header.headers[0].value = "a\r\nb".into();
+        assert!(download(bad_header, &checker).is_err());
     }
 }

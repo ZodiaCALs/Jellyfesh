@@ -41,6 +41,12 @@
 //! permissions = ["audio", "speech"]  # API 1.2: host imports the plugin uses
 //! ```
 //!
+//! API 1.3 adds the capabilities `library` (the person's likes and
+//! playlists, ADR-0024) and `download` (files from the person's own server,
+//! ADR-0025; only with `library_storage = "full"`), and
+//! `content_policy.qualities`, the streaming levels `resolve-stream` honours
+//! (`["lossless", "high", "normal", "low"]`, any of them; ADR-0026).
+//!
 //! API 1.2 adds the capabilities `make_lyrics` and `appearance` (Jellyfesh
 //! Pro, ADR-0019, ADR-0020), `discover`, `details` and `comments`, and the
 //! top-level `permissions` (`audio`, `speech`): an import the manifest does
@@ -63,7 +69,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::HostError;
 use crate::links::Links;
-use crate::types::{AuthKind, Capability, ContentPolicy, LibraryStorage, Permission, PlaybackMode};
+use crate::types::{AuthKind, Capability, ContentPolicy, LibraryStorage, Permission, PlaybackMode, Quality};
 use crate::{API_MAJOR, API_MINOR};
 
 /// Most entries allowed in `network.allow`.
@@ -231,6 +237,17 @@ enum RawCapability {
     Discover,
     Details,
     Comments,
+    Library,
+    Download,
+}
+
+#[derive(Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum RawQuality {
+    Lossless,
+    High,
+    Normal,
+    Low,
 }
 
 #[derive(Deserialize)]
@@ -294,6 +311,8 @@ struct RawContentPolicy {
     lyrics_sync: Option<bool>,
     #[serde(default)]
     attribution: Option<String>,
+    #[serde(default)]
+    qualities: Option<Vec<RawQuality>>,
 }
 
 #[derive(Deserialize)]
@@ -352,6 +371,8 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
             RawCapability::Discover => Capability::Discover,
             RawCapability::Details => Capability::Details,
             RawCapability::Comments => Capability::Comments,
+            RawCapability::Library => Capability::Library,
+            RawCapability::Download => Capability::Download,
         };
         if capabilities.contains(&cap) {
             return Err(bad(format!("capability {cap} is listed twice")));
@@ -379,6 +400,12 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
         }
         Ok(())
     };
+    let needs_1_3 = |what: &str| -> Result<(), HostError> {
+        if api_version.major == 1 && api_version.minor < 3 {
+            return Err(bad(format!("{what} needs api_version 1.3")));
+        }
+        Ok(())
+    };
     for capability in &capabilities {
         if matches!(
             capability,
@@ -389,6 +416,9 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
                 | Capability::Comments
         ) {
             needs_1_2(&format!("capability {capability}"))?;
+        }
+        if matches!(capability, Capability::Library | Capability::Download) {
+            needs_1_3(&format!("capability {capability}"))?;
         }
     }
     let mut permissions = Vec::new();
@@ -493,10 +523,23 @@ pub fn parse(text: &str) -> Result<Manifest, HostError> {
                     Some(a) => Some(display_text("content_policy.attribution", &a, 64)?),
                     None => None,
                 },
+                qualities: match raw.qualities {
+                    Some(levels) => {
+                        needs_1_3("content_policy.qualities")?;
+                        qualities(&levels)?
+                    }
+                    None => Vec::new(),
+                },
             }
         }
         None => ContentPolicy::default(),
     };
+    if capabilities.contains(&Capability::Download) && content_policy.library_storage != LibraryStorage::Full
+    {
+        return Err(bad(
+            "capability download needs content_policy.library_storage = \"full\" (downloads keep audio)",
+        ));
+    }
 
     let cookie_import = match raw.cookie_import {
         Some(raw) => {
@@ -674,6 +717,27 @@ impl AllowRule {
             }
         }
     }
+}
+
+/// `content_policy.qualities`, best first, each once.
+fn qualities(levels: &[RawQuality]) -> Result<Vec<Quality>, HostError> {
+    let mut found = Vec::new();
+    for level in levels {
+        if found.contains(level) {
+            return Err(bad("content_policy.qualities lists a level twice"));
+        }
+        found.push(*level);
+    }
+    Ok([
+        (RawQuality::Lossless, Quality::Lossless),
+        (RawQuality::High, Quality::High),
+        (RawQuality::Normal, Quality::Normal),
+        (RawQuality::Low, Quality::Low),
+    ]
+    .into_iter()
+    .filter(|(raw, _)| found.contains(raw))
+    .map(|(_, quality)| quality)
+    .collect())
 }
 
 fn parse_api_version(text: &str) -> Result<ApiVersion, HostError> {
@@ -1014,7 +1078,8 @@ attribution = "spotify"
             ("1.0", true),
             ("1.1", true),
             ("1.2", true),
-            ("1.3", false),
+            ("1.3", true),
+            ("1.4", false),
             ("2.0", false),
             ("0.9", false),
         ] {
@@ -1126,6 +1191,48 @@ attribution = "spotify"
             "unknown"
         );
         assert!(parse(MINIMAL).unwrap().permissions.is_empty());
+    }
+
+    #[test]
+    fn api_1_3_capabilities_and_qualities_need_api_1_3() {
+        for capability in ["library", "download"] {
+            let text = MINIMAL.replace("[\"search\"]", &format!("[\"search\", \"{capability}\"]"));
+            let err = parse(&text).unwrap_err().to_string();
+            assert!(err.contains("needs api_version 1.3"), "{capability}: {err}");
+            let m = parse(&text.replace("api_version = \"1.0\"", "api_version = \"1.3\"")).unwrap();
+            assert_eq!(m.capabilities[1].to_string(), capability);
+            assert!(m.capabilities[1].manifest_only() && m.capabilities[1].is_source());
+        }
+        let v13 = MINIMAL.replace("api_version = \"1.0\"", "api_version = \"1.3\"");
+        let levels = format!("{v13}[content_policy]\nqualities = [\"low\", \"lossless\", \"high\"]\n");
+        assert_eq!(
+            parse(&levels).unwrap().content_policy.qualities,
+            vec![Quality::Lossless, Quality::High, Quality::Low],
+            "best first"
+        );
+        assert!(parse(MINIMAL).unwrap().content_policy.qualities.is_empty());
+        let on_1_2 = levels.replace("api_version = \"1.3\"", "api_version = \"1.2\"");
+        assert!(
+            parse(&on_1_2)
+                .unwrap_err()
+                .to_string()
+                .contains("content_policy.qualities needs api_version 1.3")
+        );
+        assert!(parse(&levels.replace("\"high\"]", "\"low\"]")).is_err(), "twice");
+        assert!(
+            parse(&levels.replace("\"high\"]", "\"ultra\"]")).is_err(),
+            "unknown"
+        );
+        // Downloads keep audio: only from sources whose terms let the library keep everything.
+        let download = v13.replace("[\"search\"]", "[\"search\", \"download\"]");
+        assert!(parse(&download).is_ok());
+        for storage in ["none", "metadata"] {
+            let text = format!("{download}[content_policy]\nlibrary_storage = \"{storage}\"\n");
+            assert!(
+                parse(&text).unwrap_err().to_string().contains("library_storage"),
+                "{storage}"
+            );
+        }
     }
 
     #[test]

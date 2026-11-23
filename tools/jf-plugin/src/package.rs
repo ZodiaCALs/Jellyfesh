@@ -201,9 +201,10 @@ pub fn verify(bytes: &[u8], trust: &TrustList) -> Result<Verified> {
 }
 
 /// A manifest that declares a capability added after 1.0 needs a component
-/// that exports its interface, and a component that imports `audio` or
-/// `speech` needs the manifest's permission (the app answers
-/// `not-declared` otherwise).
+/// that exports its interface (`remote` from 1.1; `maker`, `appearance`,
+/// `discover`, `details` and `comments` from 1.2; `library` and `download`
+/// from 1.3), and a component that imports `audio` or `speech` needs the
+/// manifest's permission (the app answers `not-declared` otherwise).
 fn check_parts(manifest: &Manifest, found: &jf_plugin_build::Interfaces) -> Result<()> {
     if manifest.capabilities.contains(&Capability::Remote) {
         ensure!(
@@ -224,6 +225,18 @@ fn check_parts(manifest: &Manifest, found: &jf_plugin_build::Interfaces) -> Resu
                 jf_plugin_build::exports_since(found, interface, 2),
                 "the manifest declares {capability}, but plugin.wasm does not export \
                  jellyfesh:plugin/{interface}@1.2 (build it with SDK 1.2 or later)"
+            );
+        }
+    }
+    for (capability, interface) in [
+        (Capability::Library, "library"),
+        (Capability::Download, "download"),
+    ] {
+        if manifest.capabilities.contains(&capability) {
+            ensure!(
+                jf_plugin_build::exports_since(found, interface, 3),
+                "the manifest declares {capability}, but plugin.wasm does not export \
+                 jellyfesh:plugin/{interface}@1.3 (build it with SDK 1.3 or later)"
             );
         }
     }
@@ -600,6 +613,45 @@ mod tests {
         assert!(require(&community, true, false).is_ok());
         assert!(require(&community, false, true).is_err());
         assert!(require(&trusted, true, true).is_ok());
+    }
+
+    #[test]
+    fn api_1_3_capabilities_need_their_1_3_exports() {
+        let manifest = |capabilities: &str| {
+            jf_plugin_host::manifest::parse(&format!(
+                "id = \"org.example.music\"\nname = \"Example\"\nversion = \"1.0.0\"\n\
+                 api_version = \"1.3\"\nauthor = \"Example\"\ncapabilities = [{capabilities}]\n\
+                 playback_mode = \"stream\"\n"
+            ))
+            .unwrap()
+        };
+        let exports = |names: &[&str]| jf_plugin_build::Interfaces {
+            imports: Vec::new(),
+            exports: names.iter().map(|n| (*n).to_owned()).collect(),
+        };
+        let both = manifest("\"browse\", \"library\", \"download\"");
+        assert!(
+            check_parts(
+                &both,
+                &exports(&[
+                    "jellyfesh:plugin/library@1.3.0",
+                    "jellyfesh:plugin/download@1.3.0"
+                ])
+            )
+            .is_ok()
+        );
+        let error = check_parts(&both, &exports(&["jellyfesh:plugin/library@1.3.0"]))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("jellyfesh:plugin/download@1.3"), "{error}");
+        let error = check_parts(&both, &exports(&["jellyfesh:plugin/download@1.3.0"]))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("jellyfesh:plugin/library@1.3"), "{error}");
+        // An export of 1.2 is not enough (there was none), and a plugin that declares neither
+        // needs neither.
+        assert!(check_parts(&both, &exports(&["jellyfesh:plugin/library@1.2.0"])).is_err());
+        assert!(check_parts(&manifest("\"browse\""), &exports(&[])).is_ok());
     }
 
     #[test]

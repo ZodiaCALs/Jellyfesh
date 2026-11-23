@@ -1,8 +1,8 @@
 //! Constructors and builder methods for the WIT records plugins return most.
 
 use crate::{
-    FieldKind, FieldSpec, FlowStep, Header, ImageRef, Item, ItemKind, ItemPage, LyricFormat, LyricPayload,
-    Step, StreamInfo, Unplayable, UnplayableReason,
+    DownloadInfo, FieldKind, FieldSpec, FlowStep, Header, ImageRef, Item, ItemKind, ItemPage, LyricFormat,
+    LyricPayload, PlaylistEntry, PlaylistPage, Step, StreamInfo, Unplayable, UnplayableReason,
 };
 
 impl Item {
@@ -188,6 +188,61 @@ impl Header {
         Header {
             name: name.into(),
             value: value.into(),
+        }
+    }
+}
+
+impl PlaylistEntry {
+    /// One of the person's own playlists, whose songs `browse` lists.
+    pub fn owned(item: Item) -> PlaylistEntry {
+        PlaylistEntry {
+            item,
+            owned: true,
+            songs_listed: true,
+        }
+    }
+
+    /// A playlist the person follows, whose songs `browse` lists.
+    pub fn followed(item: Item) -> PlaylistEntry {
+        PlaylistEntry {
+            item,
+            owned: false,
+            songs_listed: true,
+        }
+    }
+}
+
+impl PlaylistPage {
+    /// A last page.
+    pub fn new(entries: Vec<PlaylistEntry>) -> PlaylistPage {
+        PlaylistPage {
+            entries,
+            next: None,
+            total: None,
+        }
+    }
+
+    /// A page followed by another one at `cursor`.
+    pub fn with_next(entries: Vec<PlaylistEntry>, cursor: impl Into<String>) -> PlaylistPage {
+        PlaylistPage {
+            entries,
+            next: Some(cursor.into()),
+            total: None,
+        }
+    }
+}
+
+impl DownloadInfo {
+    /// The original file at `url`, whose container is `container` (`flac`,
+    /// `mp3`, …), without headers or a known size.
+    pub fn original(url: impl Into<String>, container: impl Into<String>) -> DownloadInfo {
+        DownloadInfo {
+            url: url.into(),
+            headers: Vec::new(),
+            container: container.into(),
+            size: None,
+            original: true,
+            file_name: None,
         }
     }
 }

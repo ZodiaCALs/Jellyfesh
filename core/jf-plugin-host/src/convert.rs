@@ -13,8 +13,10 @@ use crate::bindings::appearance::exports::jellyfesh::plugin::appearance;
 use crate::bindings::comments::exports::jellyfesh::plugin::comments;
 use crate::bindings::details::exports::jellyfesh::plugin::details;
 use crate::bindings::discover::exports::jellyfesh::plugin::discover;
+use crate::bindings::download::exports::jellyfesh::plugin::download;
 use crate::bindings::exports::jellyfesh::plugin::{auth, catalog, lyrics, meta, playback};
 use crate::bindings::jellyfesh::plugin::{crypto, types};
+use crate::bindings::library::exports::jellyfesh::plugin::library;
 use crate::bindings::maker::exports::jellyfesh::plugin::maker;
 use crate::bindings::maker::jellyfesh::plugin::{audio, lyrics as maker_lyrics, speech};
 use crate::bindings::remote::exports::jellyfesh::plugin::remote;
@@ -693,6 +695,47 @@ impl From<comments::CommentPage> for model::CommentPage {
             comments: list(p.comments),
             total: p.total,
             next: p.next,
+        }
+    }
+}
+
+// ---- library and download (API 1.3) -------------------------------------------------------------
+
+impl From<library::PlaylistEntry> for model::PlaylistEntry {
+    fn from(e: library::PlaylistEntry) -> Self {
+        model::PlaylistEntry {
+            item: e.item.into(),
+            owned: e.owned,
+            songs_listed: e.songs_listed,
+        }
+    }
+}
+
+impl From<library::PlaylistPage> for model::PlaylistPage {
+    fn from(p: library::PlaylistPage) -> Self {
+        model::PlaylistPage {
+            entries: list(p.entries),
+            next: p.next,
+            total: p.total,
+        }
+    }
+}
+
+same_enum!(
+    download::DownloadQuality,
+    model::DownloadQuality,
+    [Original, High, Normal, Low]
+);
+
+impl From<download::DownloadInfo> for model::DownloadInfo {
+    fn from(d: download::DownloadInfo) -> Self {
+        model::DownloadInfo {
+            url: d.url,
+            headers: list(d.headers),
+            container: d.container,
+            size: d.size,
+            original: d.original,
+            file_name: d.file_name,
         }
     }
 }

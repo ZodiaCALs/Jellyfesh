@@ -21,6 +21,8 @@
 //! * [`links`]: links that open an item in its service (API 1.1).
 //! * [`l10n`]: package translations of the settings schema (API 1.2).
 //! * [`crypto`] (feature `crypto`): the `crypto` import's primitives.
+//! * [`filenames`]: download file names, from the person's template, safe on
+//!   every platform (ADR-0025; the core and Jellyfesh Web share them).
 //! * [`HostError`], [`CallError`]: the host API's errors.
 
 pub mod allow;
@@ -28,6 +30,7 @@ pub mod auth;
 #[cfg(feature = "crypto")]
 pub mod crypto;
 mod error;
+pub mod filenames;
 pub mod http;
 pub mod install;
 pub mod l10n;
@@ -50,5 +53,6 @@ pub const API_MAJOR: u64 = 1;
 /// interface and manifest links (ADR-0018); 1.2 the `audio` and `speech`
 /// imports, the `maker`, `appearance`, `discover`, `details` and `comments`
 /// exports, manifest permissions, settings schema profile 1.2 and package
-/// translations (ADR-0019, ADR-0020).
-pub const API_MINOR: u64 = 2;
+/// translations (ADR-0019, ADR-0020); 1.3 the `library` and `download`
+/// exports and `content_policy.qualities` (ADR-0024, ADR-0025, ADR-0026).
+pub const API_MINOR: u64 = 3;

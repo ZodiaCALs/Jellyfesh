@@ -36,6 +36,8 @@ use crate::bindings::appearance::{AppearancePart, AppearancePartIndices};
 use crate::bindings::comments::{CommentsPart, CommentsPartIndices};
 use crate::bindings::details::{DetailsPart, DetailsPartIndices};
 use crate::bindings::discover::{DiscoverPart, DiscoverPartIndices};
+use crate::bindings::download::{DownloadPart, DownloadPartIndices};
+use crate::bindings::library::{LibraryPart, LibraryPartIndices};
 use crate::bindings::maker::{MakerPart, MakerPartIndices};
 use crate::bindings::remote::{RemoteControl, RemoteControlIndices};
 use crate::bindings::{Source, SourceIndices};
@@ -374,7 +376,8 @@ impl Runtime {
     /// host does not provide (WASI, another WIT version) or lack an export.
     /// The exports added after 1.0 are looked up only for the capabilities
     /// the manifest declares (`remote`, API 1.1; `make_lyrics`, `appearance`,
-    /// `discover`, `details` and `comments`, API 1.2); others never are.
+    /// `discover`, `details` and `comments`, API 1.2; `library` and
+    /// `download`, API 1.3); others never are.
     pub(crate) fn prepare(&self, wasm: &[u8], capabilities: &[Capability]) -> Result<Prepared, HostError> {
         let component =
             Component::new(&self.engine, wasm).map_err(|e| HostError::InvalidComponent(format!("{e:#}")))?;
@@ -406,6 +409,12 @@ impl Runtime {
                 .transpose()?,
             comments: declares(Capability::Comments)
                 .then(|| CommentsPartIndices::new(&pre).map_err(|e| missing("comments", e)))
+                .transpose()?,
+            library: declares(Capability::Library)
+                .then(|| LibraryPartIndices::new(&pre).map_err(|e| missing("library", e)))
+                .transpose()?,
+            download: declares(Capability::Download)
+                .then(|| DownloadPartIndices::new(&pre).map_err(|e| missing("download", e)))
                 .transpose()?,
             pre,
         })
@@ -499,6 +508,8 @@ pub(crate) struct Prepared {
     discover: Option<DiscoverPartIndices>,
     details: Option<DetailsPartIndices>,
     comments: Option<CommentsPartIndices>,
+    library: Option<LibraryPartIndices>,
+    download: Option<DownloadPartIndices>,
 }
 
 impl Prepared {
@@ -521,6 +532,8 @@ impl Prepared {
             discover: part!(discover),
             details: part!(details),
             comments: part!(comments),
+            library: part!(library),
+            download: part!(download),
         })
     }
 }
@@ -536,6 +549,9 @@ pub(crate) struct Exports {
     pub discover: Option<DiscoverPart>,
     pub details: Option<DetailsPart>,
     pub comments: Option<CommentsPart>,
+    /// API 1.3's exports, for plugins that declare their capability.
+    pub library: Option<LibraryPart>,
+    pub download: Option<DownloadPart>,
 }
 
 /// A live plugin instance.

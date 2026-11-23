@@ -24,9 +24,9 @@ use crate::services::{Services, effective_settings};
 use crate::storage::{PluginPaths, PluginState, read_json, write_atomic, write_json};
 use crate::trust::TrustList;
 use crate::types::{
-    Capability, CommentPage, ImageRef, Item, ItemDetails, ItemPage, Look, LyricPayload, Made, MakerPlan,
-    PageRequest, PluginInfo, Quality, RemoteDevice, RemoteRepeat, RemoteState, Reply, SearchFilters, Shelf,
-    SignatureStatus, SpeechModel, StreamInfo,
+    Capability, CommentPage, DownloadInfo, DownloadQuality, ImageRef, Item, ItemDetails, ItemKind, ItemPage,
+    Look, LyricPayload, Made, MakerPlan, PageRequest, PlaylistPage, PluginInfo, Quality, RemoteDevice,
+    RemoteRepeat, RemoteState, Reply, SearchFilters, Shelf, SignatureStatus, SpeechModel, StreamInfo,
 };
 
 /// What every plugin's imports share across the host: whether Jellyfesh Pro
@@ -351,6 +351,11 @@ impl PluginHost {
             has_icon: plugin.icon.is_some(),
             permissions: manifest.permissions.clone(),
             languages: plugin.translations.iter().map(|t| t.language.clone()).collect(),
+            server_settings: manifest
+                .referenced_settings()
+                .into_iter()
+                .map(str::to_owned)
+                .collect(),
         }
     }
 
@@ -940,6 +945,99 @@ impl PluginHost {
                 page.into(),
                 &Checker::new(&services.id, &allows),
             ))
+        })
+    }
+
+    // ---- API 1.3 ----------------------------------------------------------------------------
+
+    /// `library.likes`: the person's liked tracks, albums or artists
+    /// (`kind`; playlists and folders answer `unsupported` without asking
+    /// the plugin), checked like any page: cut to the limit, unusable items
+    /// and items of another kind dropped, images only from the allowlist.
+    pub fn library_likes(&self, id: &str, kind: ItemKind, page: PageRequest) -> Reply<ItemPage> {
+        if !matches!(kind, ItemKind::Track | ItemKind::Album | ItemKind::Artist) {
+            let (tx, rx) = crossbeam_channel::bounded(1);
+            let _ = tx.send(Err(CallError::Plugin(crate::types::PluginError::Unsupported)));
+            return rx;
+        }
+        let page = clamp_page(page);
+        self.call(id, Some(Capability::Library), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let (wit_kind, request) = (wit::ItemKind::from(kind), wit::PageRequest::from(page.clone()));
+            let result = ctx.call_part(
+                budget,
+                "library",
+                |exports| exports.library.as_ref(),
+                |library, store| {
+                    library
+                        .jellyfesh_plugin_library()
+                        .call_likes(store, wit_kind, &request)
+                },
+            )?;
+            let answer = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            Ok(sanitize::likes(
+                answer.into(),
+                kind,
+                page.limit,
+                &Checker::new(&services.id, &allows),
+            ))
+        })
+    }
+
+    /// `library.playlists`: the person's own and followed playlists,
+    /// checked: cut to the limit, entries that are not usable playlists
+    /// dropped, images only from the allowlist.
+    pub fn library_playlists(&self, id: &str, page: PageRequest) -> Reply<PlaylistPage> {
+        let page = clamp_page(page);
+        self.call(id, Some(Capability::Library), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let request = wit::PageRequest::from(page.clone());
+            let result = ctx.call_part(
+                budget,
+                "library",
+                |exports| exports.library.as_ref(),
+                |library, store| library.jellyfesh_plugin_library().call_playlists(store, &request),
+            )?;
+            let answer = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            Ok(sanitize::playlists(
+                answer.into(),
+                page.limit,
+                &Checker::new(&services.id, &allows),
+            ))
+        })
+    }
+
+    /// `download.download`: where to fetch `item` at `quality` (ADR-0025).
+    /// Only for plugins whose manifest declares `download` (the host refuses
+    /// the others with [`CallError::NotDeclared`]); the URL must be on the
+    /// plugin's allowlist, `container` is a short extension. A plugin answers
+    /// `unsupported` when the server does not let the account download.
+    pub fn download(&self, id: &str, item: Item, quality: DownloadQuality) -> Reply<DownloadInfo> {
+        self.call(id, Some(Capability::Download), move |ctx| {
+            let budget = Budget::call(&ctx.runtime.limits);
+            let item = wit::Item::from(item);
+            let quality =
+                crate::bindings::download::exports::jellyfesh::plugin::download::DownloadQuality::from(
+                    quality,
+                );
+            let result = ctx.call_part(
+                budget,
+                "download",
+                |exports| exports.download.as_ref(),
+                |download, store| {
+                    download
+                        .jellyfesh_plugin_download()
+                        .call_download(store, &item, quality)
+                },
+            )?;
+            let info = result.map_err(|e| CallError::Plugin(e.into()))?;
+            let services = &ctx.plugin.services;
+            let allows = |url: &url::Url| services.allows(url);
+            sanitize::download(info.into(), &Checker::new(&services.id, &allows))
         })
     }
 

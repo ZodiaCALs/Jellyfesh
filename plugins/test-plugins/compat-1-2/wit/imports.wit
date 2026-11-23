@@ -1,0 +1,406 @@
+package jellyfesh:plugin@1.2.0;
+
+/// Outgoing HTTP, limited to the plugin's network allowlist.
+///
+/// Requests are synchronous from the plugin's point of view: the call returns
+/// when the whole response has arrived. There are no streaming bodies in v1.
+///
+/// The host enforces, on the first request and again on every redirect hop:
+///
+/// * the URL's origin must be covered by `[network] allow` in the manifest:
+///   a fixed host (`api.example.com`, https only) or a settings-derived
+///   origin (`${settings.server_url}`, the scheme the person entered);
+/// * the host name is resolved once and the connection goes to the checked
+///   address (no second lookup, so DNS rebinding cannot swap it); private,
+///   loopback, link-local and other non-public addresses are refused unless
+///   the origin is the person's own configured server;
+/// * at most `max_rps` requests per second (manifest, capped at 20);
+/// * at most 16 MiB per response body and 64 MiB per plugin call;
+/// * the call's remaining time bounds the request's timeout.
+///
+/// Cookies live in a jar private to the plugin, persisted encrypted. They are
+/// added to matching requests and updated from `set-cookie` automatically.
+interface http {
+    use types.{header};
+
+    /// Request method.
+    enum method {
+        get,
+        head,
+        post,
+        put,
+        patch,
+        delete,
+        options,
+    }
+
+    /// An outgoing request.
+    record request {
+        method: method,
+        /// Absolute `http` or `https` URL without user information.
+        url: string,
+        /// Request headers. The host sets `host`, `content-length`,
+        /// `transfer-encoding`, `connection` and the `proxy-*` headers itself
+        /// and refuses them here. A `cookie` header is sent after the jar's
+        /// cookies for the URL.
+        headers: list<header>,
+        /// Request body; empty for none.
+        body: list<u8>,
+        /// Timeout for the whole request in milliseconds: connecting, sending,
+        /// receiving and every redirect hop. None means the host's maximum
+        /// (30 s). Always capped by the time left in the current plugin call.
+        timeout-ms: option<u32>,
+        /// Follow `3xx` redirects (at most 5 hops), each one re-checked as
+        /// above. When false a redirect response is returned as it is.
+        follow-redirects: bool,
+    }
+
+    /// A complete response.
+    record response {
+        /// HTTP status code. Error statuses (4xx, 5xx) are responses, not
+        /// `http-error`s.
+        status: u16,
+        /// Response headers in the order received; names in lowercase.
+        headers: list<header>,
+        /// The whole body (gzip is not decoded: the host does not send
+        /// `accept-encoding` unless the plugin does).
+        body: list<u8>,
+        /// The URL that answered, after any redirects.
+        url: string,
+    }
+
+    /// Why a request produced no response.
+    variant http-error {
+        /// The URL, or a redirect target, is not covered by the allowlist or
+        /// uses a scheme the allowlist entry does not allow.
+        not-allowed(string),
+        /// The host name resolved to an address this origin may not reach
+        /// (private, loopback, link-local, …).
+        blocked-address(string),
+        /// The request itself is invalid: a malformed URL, a forbidden header,
+        /// a body over the size limit.
+        invalid-request(string),
+        /// The per-plugin request rate left no room before the call's deadline.
+        rate-limited,
+        /// The request did not finish in time.
+        timeout,
+        /// The response body exceeds the per-response or per-call limit.
+        too-large,
+        /// More than 5 redirect hops.
+        too-many-redirects,
+        /// The host name could not be resolved.
+        dns(string),
+        /// Connecting, TLS or the exchange itself failed.
+        connection(string),
+    }
+
+    /// Sends a request and waits for the complete response.
+    send: func(req: request) -> result<response, http-error>;
+}
+
+/// Small persistent storage, private to the plugin.
+///
+/// Plain values live in the host's data directory, at most 1 MiB per plugin
+/// (keys and values together). Secrets (tokens, API keys) go to the operating
+/// system's keystore under `jellyfesh/<plugin-id>/<name>`; a plugin can only
+/// reach names in its own namespace.
+///
+/// Passwords are never stored: while a `password-exchange` login is being
+/// submitted, the host refuses to store any value that contains a password
+/// field the person typed (`forbidden`). Exchange it for a token instead.
+interface kv {
+    /// Why a storage call failed.
+    variant kv-error {
+        /// Keys are 1–128 bytes of printable ASCII; secret names are 1–64
+        /// characters from `a-z 0-9 . _ -`, starting with a letter or digit.
+        invalid-key(string),
+        /// The plugin's plain values would exceed 1 MiB.
+        quota-exceeded,
+        /// The host refused the value (see the interface notes).
+        forbidden(string),
+        /// The store or the keystore failed or is locked.
+        unavailable(string),
+    }
+
+    /// Reads a plain value.
+    get: func(key: string) -> result<option<list<u8>>, kv-error>;
+    /// Writes a plain value, replacing any previous one.
+    set: func(key: string, value: list<u8>) -> result<_, kv-error>;
+    /// Removes a plain value; removing a missing key is not an error.
+    delete: func(key: string) -> result<_, kv-error>;
+    /// Stores a secret in the keystore.
+    set-secret: func(name: string, value: string) -> result<_, kv-error>;
+    /// Reads a secret from the keystore.
+    get-secret: func(name: string) -> result<option<string>, kv-error>;
+    /// Removes a secret; removing a missing name is not an error.
+    delete-secret: func(name: string) -> result<_, kv-error>;
+}
+
+/// Cryptography done by the host, so plugins stay small and fast.
+///
+/// Inputs are limited to 16 MiB per call. These primitives exist for service
+/// compatibility (request signing, legacy schemes); several of them (MD5,
+/// SHA-1, AES-ECB) are weak and must not be used to protect anything new.
+/// The only private-key operation, `rsa-sign-pkcs1-sha256` (API 1.1), uses a
+/// key the host reads from the plugin's keystore, never one the plugin holds.
+interface crypto {
+    /// Hash function for `digest` and `hmac`.
+    enum hash-algorithm {
+        md5,
+        sha1,
+        sha256,
+        sha512,
+    }
+
+    /// Parameters for AES-GCM.
+    record gcm-params {
+        /// The nonce: 12 bytes.
+        nonce: list<u8>,
+        /// Additional authenticated data; may be empty.
+        aad: list<u8>,
+    }
+
+    /// AES mode. The key length picks AES-128, AES-192 or AES-256 (16, 24 or
+    /// 32 bytes).
+    variant aes-mode {
+        /// CBC with PKCS#7 padding; the payload is the 16-byte IV.
+        cbc(list<u8>),
+        /// GCM; encryption appends the 16-byte tag to the ciphertext, and
+        /// decryption expects it there.
+        gcm(gcm-params),
+        /// ECB with PKCS#7 padding. Insecure; only for services that need it.
+        ecb,
+    }
+
+    /// RSA encryption padding.
+    enum rsa-padding {
+        /// PKCS #1 v1.5.
+        pkcs1v15,
+        /// OAEP with SHA-1 (and MGF1-SHA-1).
+        oaep-sha1,
+        /// OAEP with SHA-256 (and MGF1-SHA-256).
+        oaep-sha256,
+    }
+
+    /// An RSA public key.
+    variant rsa-public-key {
+        /// PEM text: `BEGIN PUBLIC KEY` (SubjectPublicKeyInfo) or
+        /// `BEGIN RSA PUBLIC KEY` (PKCS #1).
+        pem(string),
+        /// The same structures DER-encoded.
+        der(list<u8>),
+        /// The raw modulus and public exponent, big-endian.
+        components(rsa-components),
+    }
+
+    /// The raw numbers of an RSA public key.
+    record rsa-components {
+        /// Modulus, big-endian, 1024 to 8192 bits.
+        modulus: list<u8>,
+        /// Public exponent, big-endian (usually 65537: `[1, 0, 1]`).
+        exponent: list<u8>,
+    }
+
+    /// Why a crypto call failed.
+    variant crypto-error {
+        /// The key (or IV, nonce) has the wrong length or cannot be parsed.
+        invalid-key(string),
+        /// The input cannot be processed: bad padding, too long for the key.
+        invalid-input(string),
+        /// Decryption failed: wrong key or a tampered GCM ciphertext.
+        decrypt-failed,
+        /// The input exceeds 16 MiB, or more than 64 KiB of random bytes.
+        too-large,
+    }
+
+    /// Hashes `data`.
+    digest: func(algorithm: hash-algorithm, data: list<u8>) -> result<list<u8>, crypto-error>;
+    /// HMAC of `data` under `key`.
+    hmac: func(algorithm: hash-algorithm, key: list<u8>, data: list<u8>) -> result<list<u8>, crypto-error>;
+    /// Encrypts with AES.
+    aes-encrypt: func(mode: aes-mode, key: list<u8>, plaintext: list<u8>) -> result<list<u8>, crypto-error>;
+    /// Decrypts with AES.
+    aes-decrypt: func(mode: aes-mode, key: list<u8>, ciphertext: list<u8>) -> result<list<u8>, crypto-error>;
+    /// Encrypts with an RSA public key.
+    rsa-encrypt: func(key: rsa-public-key, padding: rsa-padding, data: list<u8>) -> result<list<u8>, crypto-error>;
+    /// Signs `data` with RSASSA-PKCS1-v1_5 and SHA-256 (RFC 8017) using the
+    /// RSA private key stored in the plugin's secret `secret` (`kv`), and
+    /// returns the signature, as long as the key's modulus (API 1.1).
+    ///
+    /// The host reads the key from the keystore itself, so after the plugin
+    /// stores it once (when the person enters it at sign-in) the key never
+    /// enters the plugin's memory again; a plugin should not read it back.
+    /// The secret holds PEM (`BEGIN PRIVATE KEY`, PKCS #8, or
+    /// `BEGIN RSA PRIVATE KEY`, PKCS #1) or the same DER in base64 without
+    /// the armour lines; encrypted keys are refused. Keys of 1024 to 8192
+    /// bits. Errors: `invalid-key` when the secret name is invalid, no such
+    /// secret is stored, or it holds no usable key (the message never quotes
+    /// the key); `too-large` for more than 16 MiB of data. Jellyfesh Web
+    /// answers `invalid-input` ("not supported in the browser").
+    rsa-sign-pkcs1-sha256: func(secret: string, data: list<u8>) -> result<list<u8>, crypto-error>;
+    /// Cryptographically secure random bytes from the operating system, at
+    /// most 64 KiB per call. The SDK's `getrandom` backend uses this.
+    random-bytes: func(len: u32) -> result<list<u8>, crypto-error>;
+}
+
+/// Time. `std::time::SystemTime::now()` does not work in a plugin; the SDK's
+/// clock helpers use this instead.
+interface clock {
+    /// Wall-clock time: milliseconds since the Unix epoch, UTC. May jump when
+    /// the system clock is changed.
+    now-utc-ms: func() -> u64;
+    /// Monotonic time in milliseconds from an unspecified start; never goes
+    /// backwards. Use it to measure intervals.
+    monotonic-ms: func() -> u64;
+}
+
+/// Diagnostics into the host's log (`tracing`, target `jf_plugin`).
+///
+/// Rate-limited per plugin (bursts of 100, then 20 lines a second; dropped
+/// lines are counted and reported). Messages are cut at 2 KiB and control
+/// characters are escaped. Never log secrets: the host masks the password
+/// fields of a login being submitted, nothing else.
+interface log {
+    /// Severity.
+    enum level {
+        trace,
+        debug,
+        info,
+        warn,
+        error,
+    }
+
+    /// Writes one line.
+    log: func(level: level, message: string);
+}
+
+/// The audio of the song a `maker.make` call is about (permission `audio`,
+/// API 1.2, ADR-0019).
+///
+/// Only inside `maker.make`, and only for the track handle that call
+/// received: a handle means nothing outside its call. The host decodes the
+/// song itself (a library file, or the source's stream) and hands out
+/// 16 kHz mono 16-bit PCM WAV, so a plugin never sees the file or its URL.
+///
+/// Consent: `wav` answers `no-consent` unless the person has allowed
+/// sending this song's audio to at least one origin for this plugin (the
+/// app asks once per plugin and origin, from the plan's `upload-to`). Once a
+/// call has read audio, the rest of that call may send HTTP requests only to
+/// the allowed origins (`http-error.not-allowed` otherwise) and may not
+/// write to `kv` (`kv-error.forbidden`). The on-device mode needs no audio
+/// here: `speech.transcribe` reads the song in the host.
+interface audio {
+    /// A song in one `maker.make` call; meaningless outside that call.
+    type track-handle = u64;
+
+    /// What the host knows about the song.
+    record clip-info {
+        /// Its length in milliseconds.
+        duration-ms: u64,
+    }
+
+    /// Why there is no audio.
+    variant audio-error {
+        /// The manifest does not declare the `audio` permission.
+        not-declared,
+        /// The person has not allowed sending audio to these origins (the
+        /// plan's `upload-to`, when the host knows it).
+        no-consent(list<string>),
+        /// The song cannot be read: another device plays it, its source gives
+        /// no audio, the request is out of range, or the handle is not this
+        /// call's. The text says which.
+        unavailable(string),
+        /// The person cancelled the job: return quickly.
+        cancelled,
+    }
+
+    /// The song's length.
+    info: func(track: track-handle) -> result<clip-info, audio-error>;
+
+    /// The song as 16 kHz mono 16-bit PCM WAV, from `start-ms` for
+    /// `length-ms` (cut at the song's end). At most 8 minutes (480 000 ms)
+    /// per call: read longer songs in parts. The first call shows the person
+    /// "Reading Audio".
+    wav: func(track: track-handle, start-ms: u64, length-ms: u64) -> result<list<u8>, audio-error>;
+}
+
+/// Speech recognition in the app (permission `speech`, API 1.2): Whisper,
+/// running natively on the device with a model the person downloads in the
+/// app (ADR-0019). Nothing leaves the device. Jellyfesh Web has no on-device
+/// recognition and answers `unavailable`.
+interface speech {
+    use audio.{track-handle};
+
+    /// A recognition model the app offers.
+    record model {
+        /// Stable id: `tiny`, `base`, `small` or `large-v3-turbo-q5_0`.
+        id: string,
+        /// The name people see ("Base").
+        name: string,
+        /// Its download size in bytes.
+        bytes: u64,
+        /// Downloaded, verified and ready to use.
+        ready: bool,
+    }
+
+    /// How to recognise.
+    record options {
+        /// A model id from `models`.
+        model: string,
+        /// A BCP 47 language hint; none detects the language.
+        language: option<string>,
+        /// Text that steers recognition, such as the lyrics being timed
+        /// (the host uses at most its first 4 KiB).
+        prompt: option<string>,
+    }
+
+    /// A recognised word and when it is sung.
+    record word {
+        text: string,
+        start-ms: u32,
+        end-ms: u32,
+        /// 0–1.
+        confidence: f32,
+    }
+
+    /// A stretch of recognised speech (about a line).
+    record segment {
+        text: string,
+        start-ms: u32,
+        end-ms: u32,
+        /// Its words in order; may be empty when the engine gave no word times.
+        words: list<word>,
+    }
+
+    /// Everything recognised in a song.
+    record transcript {
+        /// The detected (or given) language, BCP 47.
+        language: option<string>,
+        segments: list<segment>,
+    }
+
+    /// Why there is no transcript.
+    variant speech-error {
+        /// The manifest does not declare the `speech` permission.
+        not-declared,
+        /// This model is not downloaded (the id); the plan should say `need.model`.
+        model-missing(string),
+        /// Recognition is not available here (Jellyfesh Web, a build without
+        /// it), or the song cannot be read; the text says why.
+        unavailable(string),
+        /// The person cancelled the job: return quickly.
+        cancelled,
+        /// Recognition failed; the text says why.
+        failed(string),
+    }
+
+    /// The models the app offers and whether each is ready. Empty without
+    /// the `speech` permission. Cheap: plans call it.
+    models: func() -> list<model>;
+
+    /// Recognises the song of this `maker.make` call. Takes as long as it
+    /// takes (minutes for a long song with a large model); the time spent
+    /// here never counts against the plugin's CPU budget, and the person sees
+    /// "Recognising…" with the engine's progress.
+    transcribe: func(track: track-handle, opts: options) -> result<transcript, speech-error>;
+}

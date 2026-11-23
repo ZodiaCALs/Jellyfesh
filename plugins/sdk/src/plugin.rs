@@ -1,9 +1,10 @@
 //! The [`Plugin`] trait.
 
 use crate::{
-    Capability, CommentPage, FieldValue, Flow, FlowStep, ImageRef, Item, ItemDetails, ItemPage, Look,
-    LyricPayload, Made, MakerPlan, PageRequest, PluginError, Quality, RemoteDevice, RemoteRepeat,
-    RemoteState, Result, SearchFilters, Shelf, Song, StreamInfo,
+    Capability, CommentPage, DownloadInfo, DownloadQuality, FieldValue, Flow, FlowStep, ImageRef, Item,
+    ItemDetails, ItemKind, ItemPage, Look, LyricPayload, Made, MakerPlan, PageRequest, PlaylistPage,
+    PluginError, Quality, RemoteDevice, RemoteRepeat, RemoteState, Result, SearchFilters, Shelf, Song,
+    StreamInfo,
 };
 
 /// A plugin: implement what the manifest declares, leave the rest.
@@ -208,6 +209,31 @@ pub trait Plugin {
     /// `comments`); `hot` only on the first page.
     fn comments(item: Item, page: PageRequest) -> Result<CommentPage> {
         let _ = (item, page);
+        Err(PluginError::Unsupported)
+    }
+
+    /// The person's liked tracks, albums or artists (`kind`; API 1.3,
+    /// capability `library`), newest first where the service keeps that
+    /// order. Answer [`PluginError::Unsupported`] for a kind the service
+    /// does not keep.
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        let _ = (kind, page);
+        Err(PluginError::Unsupported)
+    }
+
+    /// The person's own and followed playlists (API 1.3, capability
+    /// `library`); their songs come from [`Plugin::browse`].
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        let _ = page;
+        Err(PluginError::Unsupported)
+    }
+
+    /// Where to fetch a track's file at `quality` (API 1.3, capability
+    /// `download`). Answer [`PluginError::Unsupported`] when the server does
+    /// not let the account download it; never hand out a stream URL that
+    /// skips the server's download policy.
+    fn download(item: Item, quality: DownloadQuality) -> Result<DownloadInfo> {
+        let _ = (item, quality);
         Err(PluginError::Unsupported)
     }
 }

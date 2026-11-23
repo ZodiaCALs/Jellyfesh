@@ -5,7 +5,8 @@
 //! it). The exports added later live in worlds of their own, looked up only
 //! for plugins whose manifest declares them, as ADR-0018 did for `remote`:
 //! `remote-control` (1.1), `maker-part`, `appearance-part`, `discover-part`,
-//! `details-part` and `comments-part` (1.2). `maker-part` also imports
+//! `details-part` and `comments-part` (1.2), `library-part` and
+//! `download-part` (1.3). `maker-part` also imports
 //! `audio` and `speech`, the imports 1.2 added; the runtime links them for
 //! every plugin.
 //!
@@ -83,6 +84,28 @@ pub mod details {
 pub mod comments {
     wasmtime::component::bindgen!({
         world: "comments-part",
+        path: "../../plugins/wit",
+        with: {
+            "jellyfesh:plugin/types": super::jellyfesh::plugin::types,
+        },
+    });
+}
+
+/// The `library` export of 1.3 plugins (world `library-part`, ADR-0024).
+pub mod library {
+    wasmtime::component::bindgen!({
+        world: "library-part",
+        path: "../../plugins/wit",
+        with: {
+            "jellyfesh:plugin/types": super::jellyfesh::plugin::types,
+        },
+    });
+}
+
+/// The `download` export of 1.3 plugins (world `download-part`, ADR-0025).
+pub mod download {
+    wasmtime::component::bindgen!({
+        world: "download-part",
         path: "../../plugins/wit",
         with: {
             "jellyfesh:plugin/types": super::jellyfesh::plugin::types,
