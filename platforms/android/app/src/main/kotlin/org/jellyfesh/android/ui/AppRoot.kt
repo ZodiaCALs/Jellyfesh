@@ -86,7 +86,6 @@ import org.jellyfesh.android.ui.signals.SignalMessages
 import org.jellyfesh.android.ui.sources.SourceBrowseScreen
 import org.jellyfesh.android.ui.sources.DiscoverScreen
 import org.jellyfesh.android.ui.sources.ProvideLocalNetwork
-import org.jellyfesh.android.ui.sources.SourceScreen
 import org.jellyfesh.android.ui.sources.SourcesScreen
 import org.jellyfesh.android.ui.theme.GlassBackdrop
 import org.jellyfesh.android.ui.theme.Jf
@@ -327,7 +326,6 @@ private fun ScreenContent(screen: Screen, state: CoreState) {
         is Screen.Album -> AlbumScreen(screen.id, screen.title, state)
         is Screen.Artist -> ArtistScreen(screen.id, screen.name, state)
         is Screen.Playlist -> PlaylistScreen(screen.id, screen.name, state)
-        is Screen.Source -> SourceScreen(screen.pluginId, state)
         is Screen.Discover -> DiscoverScreen(screen.pluginId, state)
         is Screen.SourceBrowse -> SourceBrowseScreen(screen, state)
         is Screen.Settings -> SettingsScreen(screen.section, state)

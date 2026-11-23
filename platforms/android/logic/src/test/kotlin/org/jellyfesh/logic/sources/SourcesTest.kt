@@ -212,6 +212,10 @@ class SettingsSchemaTest {
     fun anUnreadableSchemaHasNoFields() {
         assertTrue(SettingsSchema.parse("not json").isEmpty())
         assertTrue(SettingsSchema.parse("{}").isEmpty())
+        // Settings › Sources offers Settings only for a plugin with fields of its own.
+        assertFalse(SettingsSchema.hasFields("{}"))
+        assertFalse(SettingsSchema.hasFields("""{"type":"object","properties":{}}"""))
+        assertTrue(SettingsSchema.hasFields("""{"type":"object","properties":{"server":{"type":"string","title":"Server"}}}"""))
     }
 }
 

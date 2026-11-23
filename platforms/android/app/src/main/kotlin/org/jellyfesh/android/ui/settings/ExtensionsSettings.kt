@@ -71,12 +71,11 @@ import org.jellyfesh.logic.state.CoreState
  * Policy and the Terms of Sale.
  */
 internal fun LazyListScope.jellyfeshPro(state: CoreState) {
-    item(key = "pro-h") { SectionHeader(stringResource(R.string.pro_title)) }
     item(key = "pro") {
         val graph = LocalGraph.current
         val sheets = rememberProSheets()
         val pro = state.pro
-        Panel {
+        SettingsCard(stringResource(R.string.pro_title)) {
             when (val line = ProModel.line(pro)) {
                 ProLine.Preview -> SettingRow(stringResource(R.string.pro_preview))
                 ProLine.Purchased -> SettingRow(stringResource(R.string.pro_purchased))
@@ -93,7 +92,7 @@ internal fun LazyListScope.jellyfeshPro(state: CoreState) {
     item(key = "pro-links") {
         val context = LocalContext.current
         val links = remember { AboutInfo.links(BuildConfig.WEBSITE) } ?: return@item
-        Panel {
+        SettingsCard(null) {
             LinkRow(stringResource(R.string.about_licence_agreement)) { openLink(context, links.licenceAgreement) }
             Divider()
             LinkRow(stringResource(R.string.about_privacy_policy)) { openLink(context, links.privacyPolicy) }
@@ -109,20 +108,14 @@ internal fun LazyListScope.jellyfeshPro(state: CoreState) {
  * inactive.
  */
 internal fun LazyListScope.installedExtensions(state: CoreState) {
-    item(key = "ext-h") {
-        if (state.sources.canInstallPlugins) {
-            val install = rememberPluginInstaller()
-            SectionHeader(stringResource(R.string.sources_installed)) {
-                JfButton(stringResource(R.string.action_install_plugin), install, style = ButtonStyle.Quiet, icon = R.drawable.ic_add)
-            }
-        } else {
-            SectionHeader(stringResource(R.string.sources_installed))
-        }
-    }
     item(key = "ext") {
         val nav = LocalNav.current
         val extensions = Extensions.list(state.sources.plugins)
-        Panel {
+        val install = if (state.sources.canInstallPlugins) rememberPluginInstaller() else null
+        SettingsCard(
+            stringResource(R.string.sources_installed),
+            action = install?.let { { JfButton(stringResource(R.string.action_install_plugin), it, style = ButtonStyle.Quiet, icon = R.drawable.ic_add) } },
+        ) {
             if (extensions.isEmpty()) SettingRow(stringResource(R.string.extensions_empty))
             extensions.forEachIndexed { i, plugin ->
                 if (i > 0) Divider()
@@ -150,7 +143,7 @@ internal fun LazyListScope.customize(state: CoreState) {
     val plugin = Extensions.customize(state.sources.plugins, state.look) ?: return
     item(key = "customize") {
         val nav = LocalNav.current
-        Panel {
+        SettingsCard(null) {
             NavRow(
                 title = stringResource(R.string.customize_row),
                 subtitle = stringResource(R.string.customize_row_desc),

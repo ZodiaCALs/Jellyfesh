@@ -65,6 +65,7 @@ import org.jellyfesh.logic.core.ShelfStyle
 import org.jellyfesh.logic.core.SourceItem
 import org.jellyfesh.logic.images.ArtworkSizes
 import org.jellyfesh.logic.nav.Screen
+import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.sources.DiscoverModel
 import org.jellyfesh.logic.sources.DiscoverState
 import org.jellyfesh.logic.sources.KnownShelf
@@ -143,7 +144,7 @@ fun DiscoverScreen(pluginId: String, state: CoreState) {
             }
         }
         BackBar(onBack = nav::back, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
-            JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.push(Screen.Source(pluginId)) }, tint = Jf.colors.ink90)
+            JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings(SettingsSection.Sources) }, tint = Jf.colors.ink90)
         }
     }
 }

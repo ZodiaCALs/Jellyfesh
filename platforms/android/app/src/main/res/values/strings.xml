@@ -53,6 +53,7 @@
     <string name="action_install_plugin">Install from File…</string>
     <string name="action_uninstall">Uninstall</string>
     <string name="action_uninstall_ask">Uninstall…</string>
+    <string name="action_sign_in">Sign In</string>
     <string name="action_sign_out">Sign Out</string>
     <string name="action_new_playlist">New Playlist…</string>
     <string name="action_import_playlist">Import Playlist…</string>

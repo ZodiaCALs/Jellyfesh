@@ -137,6 +137,9 @@ data class FieldGroup(val title: String?, val fields: List<SchemaField>)
 object SettingsSchema {
     private val json = Json { ignoreUnknownKeys = true }
 
+    /** Whether the plugin has settings of its own to show (its Settings button in Settings › Sources). */
+    fun hasFields(schemaJson: String): Boolean = parse(schemaJson).isNotEmpty()
+
     /** The form's fields, in the schema's order; an unreadable schema gives no fields. */
     fun parse(schemaJson: String): List<SchemaField> {
         val root = runCatching { json.parseToJsonElement(schemaJson).jsonObject }.getOrNull() ?: return emptyList()

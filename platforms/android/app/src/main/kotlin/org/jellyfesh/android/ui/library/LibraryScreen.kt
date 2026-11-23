@@ -63,9 +63,7 @@ import org.jellyfesh.android.ui.theme.ButtonStyle
 import org.jellyfesh.android.ui.theme.ChipButton
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfButton
-import org.jellyfesh.android.ui.theme.JfIconButton
 import org.jellyfesh.android.ui.theme.JfSwitch
-import org.jellyfesh.android.ui.theme.SegmentedControl
 import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.logic.core.AlbumSort
 import org.jellyfesh.logic.core.CollectionRef
@@ -78,7 +76,6 @@ import org.jellyfesh.logic.library.SortMenus
 import org.jellyfesh.logic.library.SortOrder
 import org.jellyfesh.logic.nav.Layout
 import org.jellyfesh.logic.nav.LibrarySection
-import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.theme.LookPlaces
 import org.jellyfesh.tokens.Tokens

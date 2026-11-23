@@ -40,7 +40,6 @@ import org.jellyfesh.android.R
 import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.components.LocalOverlays
-import org.jellyfesh.android.ui.components.Panel
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfType
@@ -91,8 +90,7 @@ fun AppIconPicker(settings: Settings) {
     val confirmLabel = stringResource(R.string.app_icon_confirm)
     val options: List<String> = listOf(AppIcons.AUTOMATIC) + AppIcon.entries.map { it.id }
     val selected = settings.appIcon.takeIf { s -> options.contains(s) } ?: AppIcons.AUTOMATIC
-    Panel {
-        // The group's heading (App Icon) is above the panel.
+    SettingsCard(stringResource(R.string.app_icon)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             JfText(stringResource(R.string.app_icon_desc), style = JfType.small, color = Jf.colors.ink70)
             BoxWithConstraints(Modifier.fillMaxWidth()) {

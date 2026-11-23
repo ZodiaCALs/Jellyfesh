@@ -45,6 +45,7 @@
     <string name="action_install_plugin">ファイルからインストール…</string>
     <string name="action_uninstall">アンインストール</string>
     <string name="action_uninstall_ask">アンインストール…</string>
+    <string name="action_sign_in">サインイン</string>
     <string name="action_sign_out">サインアウト</string>
     <string name="action_new_playlist">新規プレイリスト…</string>
     <string name="action_import_playlist">プレイリストを読み込む…</string>

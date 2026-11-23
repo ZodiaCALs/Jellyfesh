@@ -10,6 +10,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import org.jellyfesh.android.ui.theme.spaced
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -57,11 +61,8 @@ import org.jellyfesh.android.ui.components.Divider
 import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.components.LocalOverlays
-import org.jellyfesh.android.ui.components.NavRow
 import org.jellyfesh.android.ui.components.Notice
-import org.jellyfesh.android.ui.components.Panel
 import org.jellyfesh.android.ui.components.ScreenTitle
-import org.jellyfesh.android.ui.components.SectionHeader
 import org.jellyfesh.android.ui.components.SettingRow
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.data.ok
@@ -69,9 +70,8 @@ import org.jellyfesh.android.ui.data.rememberQuery
 import org.jellyfesh.android.ui.library.listPadding
 import org.jellyfesh.android.ui.library.rememberLibraryAccess
 import org.jellyfesh.android.ui.nav.LocalNav
-import org.jellyfesh.android.ui.sources.PluginIcon
+import org.jellyfesh.android.ui.sources.InstalledSource
 import org.jellyfesh.android.ui.sources.PresetRow
-import org.jellyfesh.android.ui.sources.pluginStatus
 import org.jellyfesh.android.ui.sources.rememberConnectSheet
 import org.jellyfesh.android.ui.sources.rememberDisclosures
 import org.jellyfesh.android.ui.sources.rememberPluginInstaller
@@ -99,7 +99,6 @@ import org.jellyfesh.logic.core.LyricsSize
 import org.jellyfesh.logic.core.ReplayGainMode
 import org.jellyfesh.logic.core.ScanStatus
 import org.jellyfesh.logic.core.Settings
-import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.settings.AboutInfo
@@ -129,7 +128,7 @@ import org.jellyfesh.android.ui.theme.rounded
 fun SettingsScreen(section: SettingsSection, state: CoreState) {
     val nav = LocalNav.current
     LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
-        item(key = "title") { ScreenTitle(stringResource(R.string.settings_title), Modifier.windowInsetsPadding(WindowInsets.statusBars)) }
+        item(key = "title") { ScreenTitle(stringResource(R.string.settings_title), Modifier.windowInsetsPadding(WindowInsets.statusBars).readingWidth()) }
         item(key = "sections") {
             PillTabs(
                 options = SettingsSection.entries,
@@ -137,10 +136,45 @@ fun SettingsScreen(section: SettingsSection, state: CoreState) {
                 label = { stringResource(sectionTitle(it)) },
                 onSelect = nav::showSettingsSection,
                 description = stringResource(R.string.settings_title),
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                modifier = Modifier.readingWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
             )
         }
         SettingsLayout.groups(section).forEach { group(it, state) }
+    }
+}
+
+/** Settings keep to Jellyfesh Web's reading width (layout.reading, 704) and its 16 dp sides. */
+internal fun Modifier.readingWidth(): Modifier = widthIn(max = Tokens.Layout.reading.dp + 32.dp)
+
+/**
+ * A group of Settings as Jellyfesh Web draws it (Luminous): a card of Mist glass, without a live
+ * blur layer of its own, with the group's heading inside ([title]; an [action] at its end, such as
+ * Install from File…), then its rows.
+ */
+@Composable
+internal fun SettingsCard(
+    title: String?,
+    modifier: Modifier = Modifier,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = rounded(Tokens.Radius.r2xl.dp)
+    GlassSurface(
+        modifier.readingWidth().fillMaxWidth().padding(horizontal = 16.dp, vertical = spaced(10.dp)),
+        grade = GlassGrade.Mist,
+        shape = shape,
+        blur = false,
+        raised = true,
+    ) {
+        Column(Modifier.fillMaxWidth().clip(shape).padding(start = 8.dp, end = 8.dp, top = if (title != null) 16.dp else 4.dp, bottom = 8.dp)) {
+            if (title != null) {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    JfText(title, style = JfType.section, maxLines = 2, modifier = Modifier.weight(1f).semantics { heading() })
+                    action?.invoke()
+                }
+            }
+            content()
+        }
     }
 }
 
@@ -162,10 +196,7 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.Transparency -> transparency(state.settings)
         SettingsGroup.NowPlayingBackdrop -> backdrop(state.settings)
         SettingsGroup.Lyrics -> lyrics(state.settings)
-        SettingsGroup.AppIcon -> {
-            item(key = "icon-h") { SectionHeader(stringResource(R.string.app_icon)) }
-            item(key = "icon") { AppIconPicker(state.settings) }
-        }
+        SettingsGroup.AppIcon -> item(key = "icon") { AppIconPicker(state.settings) }
         SettingsGroup.Customize -> customize(state)
         // v0.0.8's Mini Player in Picture-in-Picture and Streaming Quality are core settings
         // that arrive with its contract: shown from then on.
@@ -173,10 +204,7 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.Output -> output(state)
         SettingsGroup.Crossfade -> crossfade(state.settings)
         SettingsGroup.VolumeLevelling -> volumeLevelling(state.settings)
-        SettingsGroup.Equalizer -> {
-            item(key = "eq-h") { SectionHeader(stringResource(R.string.eq_title)) }
-            item(key = "eq") { Equalizer(state.settings) }
-        }
+        SettingsGroup.Equalizer -> item(key = "eq") { Equalizer(state.settings) }
         SettingsGroup.Startup -> startup(state.settings)
         SettingsGroup.MusicOnThisPhone -> musicOnThisPhone()
         SettingsGroup.MusicFolders -> musicFolders(state)
@@ -213,10 +241,9 @@ private fun rememberEdit(settings: Settings): (Settings.() -> Settings) -> Unit 
 
 private fun LazyListScope.theme(state: CoreState) {
     val settings = state.settings
-    item(key = "mode-h") { SectionHeader(stringResource(R.string.appearance_theme)) }
     item(key = "mode") {
         val edit = rememberEdit(settings)
-        Panel {
+        SettingsCard(stringResource(R.string.appearance_theme)) {
             SettingColumn(null, stringResource(R.string.appearance_theme_desc)) {
                 Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     AppearancePref.entries.forEach { pref ->
@@ -238,7 +265,6 @@ private fun LazyListScope.theme(state: CoreState) {
 }
 
 private fun LazyListScope.accentColour(settings: Settings) {
-    item(key = "colour-h") { SectionHeader(stringResource(R.string.accent_title)) }
     item(key = "colour") {
         val edit = rememberEdit(settings)
         val fixed = settings.hueSource as? HueSource.Fixed
@@ -246,7 +272,7 @@ private fun LazyListScope.accentColour(settings: Settings) {
         val themeHue = Jf.colors.hue
         var hue by remember(fixed?.hue) { mutableStateOf(fixed?.hue ?: themeHue) }
         val chosen = AccentChoices.swatchIndex(settings.hueSource)
-        Panel {
+        SettingsCard(stringResource(R.string.accent_title)) {
             SettingRow(stringResource(R.string.accent_follow_artwork), description = stringResource(R.string.accent_desc)) {
                 JfSwitch(fixed == null, { follow -> edit { copy(hueSource = SettingsEdits.hue(if (follow) null else hue)) } })
             }
@@ -305,11 +331,10 @@ private fun swatchName(id: String): Int = when (id) {
 }
 
 private fun LazyListScope.transparency(settings: Settings) {
-    item(key = "transparency-h") { SectionHeader(stringResource(R.string.transparency_title)) }
     item(key = "transparency") {
         val edit = rememberEdit(settings)
         var percent by remember(settings.transparency) { mutableStateOf(SettingsEdits.transparencyPercent(settings.transparency).toFloat()) }
-        Panel {
+        SettingsCard(stringResource(R.string.transparency_title)) {
             SettingColumn(null, stringResource(R.string.transparency_desc)) {
                 TransparencyPreview()
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -337,10 +362,9 @@ private fun LazyListScope.transparency(settings: Settings) {
 }
 
 private fun LazyListScope.backdrop(settings: Settings) {
-    item(key = "background-h") { SectionHeader(stringResource(R.string.style_title)) }
     item(key = "background") {
         val edit = rememberEdit(settings)
-        Panel {
+        SettingsCard(stringResource(R.string.style_title)) {
             SettingColumn(null, stringResource(R.string.style_desc)) {
                 Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     BackdropStyle.entries.forEach { style ->
@@ -357,10 +381,9 @@ private fun LazyListScope.backdrop(settings: Settings) {
 
 /** Appearance › Lyrics: the only place the lyrics settings live (docs/ui.md). */
 private fun LazyListScope.lyrics(settings: Settings) {
-    item(key = "lyrics-h") { SectionHeader(stringResource(R.string.np_lyrics)) }
     item(key = "lyrics") {
         val edit = rememberEdit(settings)
-        Panel {
+        SettingsCard(stringResource(R.string.np_lyrics)) {
             SettingColumn(stringResource(R.string.lyrics_size), null) {
                 SegmentedControl(
                     options = LyricsSize.entries,
@@ -481,12 +504,11 @@ private fun TransparencyPreview() {
 // ---- Playback -------------------------------------------------------------------------------------
 
 private fun LazyListScope.output(state: CoreState) {
-    item(key = "output-h") { SectionHeader(stringResource(R.string.output_title)) }
     item(key = "output") {
         val graph = LocalGraph.current
         LaunchedEffect(Unit) { graph.send(Command.RefreshDevices) }
         val devices = state.devices
-        Panel {
+        SettingsCard(stringResource(R.string.output_title)) {
             SettingColumn(stringResource(R.string.np_output_device), stringResource(R.string.output_desc)) {}
             Column(Modifier.selectableGroup()) {
                 DeviceChoice(stringResource(R.string.np_system_default), PlayerModel.isSelected(devices, null)) { graph.send(Command.SetOutputDevice(null)) }
@@ -500,12 +522,11 @@ private fun LazyListScope.output(state: CoreState) {
 }
 
 private fun LazyListScope.crossfade(settings: Settings) {
-    item(key = "crossfade-h") { SectionHeader(stringResource(R.string.crossfade_title)) }
     item(key = "crossfade") {
         val graph = LocalGraph.current
         val cf = settings.crossfade
         var seconds by remember(cf.durationMs) { mutableStateOf(cf.durationMs / 1_000f) }
-        Panel {
+        SettingsCard(stringResource(R.string.crossfade_title)) {
             SettingRow(stringResource(R.string.crossfade_title), description = stringResource(R.string.crossfade_desc)) {
                 JfSwitch(cf.enabled, { graph.send(Command.SetCrossfade(cf.copy(enabled = it))) })
             }
@@ -536,11 +557,10 @@ private fun LazyListScope.crossfade(settings: Settings) {
 
 /** Volume Levelling: the ReplayGain control and its preamp. */
 private fun LazyListScope.volumeLevelling(settings: Settings) {
-    item(key = "rg-h") { SectionHeader(stringResource(R.string.replaygain_title)) }
     item(key = "rg") {
         val graph = LocalGraph.current
         var preamp by remember(settings.preampDb) { mutableStateOf(settings.preampDb) }
-        Panel {
+        SettingsCard(stringResource(R.string.replaygain_title)) {
             SettingColumn(stringResource(R.string.replaygain_control), stringResource(R.string.replaygain_desc)) {
                 SegmentedControl(
                     options = ReplayGainMode.entries,
@@ -571,10 +591,9 @@ private fun LazyListScope.volumeLevelling(settings: Settings) {
 }
 
 private fun LazyListScope.startup(settings: Settings) {
-    item(key = "startup-h") { SectionHeader(stringResource(R.string.startup_title)) }
     item(key = "startup") {
         val edit = rememberEdit(settings)
-        Panel {
+        SettingsCard(stringResource(R.string.startup_title)) {
             SettingRow(stringResource(R.string.resume_title), description = stringResource(R.string.resume_desc)) {
                 JfSwitch(settings.resumeOnLaunch, { on -> edit { copy(resumeOnLaunch = on) } })
             }
@@ -636,7 +655,7 @@ private fun Equalizer(settings: Settings) {
         }
     }
     val presetTitle = stringResource(R.string.eq_preset)
-    Panel {
+    SettingsCard(stringResource(R.string.eq_title)) {
         SettingRow(stringResource(R.string.eq_title)) {
             JfSwitch(eq.enabled, {
                 eq = eq.copy(enabled = it)
@@ -731,14 +750,13 @@ private fun eqChoiceLabel(choice: EqChoice): String = when (choice) {
 
 /** Android's own first group (an allowed difference): access to music, and Find Music on This Phone. */
 private fun LazyListScope.musicOnThisPhone() {
-    item(key = "access-h") { SectionHeader(stringResource(R.string.music_access_title)) }
     item(key = "access") {
         val graph = LocalGraph.current
         val access = rememberLibraryAccess()
         val overlays = LocalOverlays.current
         val context = LocalContext.current
         val scope = rememberCoroutineScope()
-        Panel {
+        SettingsCard(stringResource(R.string.music_access_title)) {
             if (!access.hasMusicPermission) {
                 SettingRow(stringResource(R.string.action_allow_music), description = stringResource(R.string.music_access_desc)) {
                     JfButton(stringResource(R.string.action_allow), access.requestMusic, style = ButtonStyle.Accent)
@@ -767,7 +785,6 @@ private fun LazyListScope.musicOnThisPhone() {
 
 /** Music Folders: each folder with Remove Folder… (asks first), then Add Folder…. */
 private fun LazyListScope.musicFolders(state: CoreState) {
-    item(key = "folders-h") { SectionHeader(stringResource(R.string.folders_title)) }
     item(key = "folders") {
         val graph = LocalGraph.current
         val overlays = LocalOverlays.current
@@ -777,7 +794,7 @@ private fun LazyListScope.musicFolders(state: CoreState) {
         val removeAsk = stringResource(R.string.action_remove_folder_ask)
         val removeLabel = stringResource(R.string.action_remove_folder)
         val context = LocalContext.current
-        Panel {
+        SettingsCard(stringResource(R.string.folders_title)) {
             JfText(stringResource(R.string.folders_desc), style = JfType.small, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             when (val r = roots) {
                 QueryResult.Loading -> Unit
@@ -811,7 +828,7 @@ private fun LazyListScope.musicFolders(state: CoreState) {
 private fun LazyListScope.watchFolders(settings: Settings) {
     item(key = "watch") {
         val edit = rememberEdit(settings)
-        Panel {
+        SettingsCard(null) {
             SettingRow(stringResource(R.string.watch_title), description = stringResource(R.string.watch_desc)) {
                 JfSwitch(settings.watchFolders, { on -> edit { copy(watchFolders = on) } })
             }
@@ -826,7 +843,7 @@ private fun LazyListScope.watchFolders(settings: Settings) {
 private fun LazyListScope.rescan(state: CoreState) {
     item(key = "scan") {
         val graph = LocalGraph.current
-        Panel {
+        SettingsCard(null) {
             val progress = state.lastScan as? ScanStatus.Progress
             SettingRow(
                 stringResource(R.string.rescan_desc),
@@ -855,10 +872,9 @@ private fun LazyListScope.addSource(state: CoreState) {
     item(key = "local-network") { org.jellyfesh.android.ui.sources.LocalNetworkNotice(state.sources.plugins) }
     val presets = state.sources.presets
     if (presets.isEmpty()) return
-    item(key = "add-h") { SectionHeader(stringResource(R.string.sources_add)) }
     item(key = "add") {
         val connect = rememberConnectSheet()
-        Panel {
+        SettingsCard(stringResource(R.string.sources_add)) {
             presets.forEachIndexed { i, preset ->
                 if (i > 0) Divider()
                 PresetRow(preset, state.sources.plugins) { connect.open(preset) }
@@ -868,31 +884,24 @@ private fun LazyListScope.addSource(state: CoreState) {
 }
 
 /**
- * Installed, with Install from File… in its heading: each source opens its own page. Store builds
- * install no plugins from files (the core's `can_install_plugins`), so their heading has no
- * button (docs/ui.md, Allowed differences).
+ * Installed, with Install from File… in its heading (docs/ui.md, Settings › Sources): each source
+ * inline, as on Jellyfesh Web ([InstalledSource]). Store builds install no plugins from files (the
+ * core's `can_install_plugins`), so their heading has no button (docs/ui.md, Allowed differences).
  */
 private fun LazyListScope.installed(state: CoreState) {
-    item(key = "installed-h") {
-        if (state.sources.canInstallPlugins) {
-            val install = rememberPluginInstaller()
-            SectionHeader(stringResource(R.string.sources_installed)) {
-                JfButton(stringResource(R.string.action_install_plugin), install, style = ButtonStyle.Quiet, icon = R.drawable.ic_add)
-            }
-        } else {
-            SectionHeader(stringResource(R.string.sources_installed))
-        }
-    }
     item(key = "installed") {
-        val nav = LocalNav.current
+        val install = if (state.sources.canInstallPlugins) rememberPluginInstaller() else null
         val sources = YourSources.sources(state.sources.plugins)
-        Panel {
+        SettingsCard(
+            stringResource(R.string.sources_installed),
+            action = install?.let { { JfButton(stringResource(R.string.action_install_plugin), it, style = ButtonStyle.Quiet, icon = R.drawable.ic_add) } },
+        ) {
             if (sources.isEmpty()) {
                 SettingRow(stringResource(R.string.sources_empty_title), description = stringResource(R.string.sources_empty_body))
             }
             sources.forEachIndexed { i, plugin ->
                 if (i > 0) Divider()
-                NavRow(plugin.name, pluginStatus(plugin), onClick = { nav.push(Screen.Source(plugin.id)) }, leading = { PluginIcon(plugin.name, plugin.icon) })
+                InstalledSource(plugin)
             }
         }
     }
@@ -905,11 +914,10 @@ private fun LazyListScope.installed(state: CoreState) {
 private fun LazyListScope.communityPlugins(state: CoreState) {
     if (!state.sources.canInstallPlugins) return
     val settings = state.settings
-    item(key = "community-h") { SectionHeader(stringResource(R.string.community_plugins)) }
     item(key = "community") {
         val edit = rememberEdit(settings)
         val disclosures = rememberDisclosures()
-        Panel {
+        SettingsCard(stringResource(R.string.community_plugins)) {
             SettingRow(stringResource(R.string.allow_community), description = stringResource(R.string.allow_community_desc)) {
                 JfSwitch(settings.allowCommunityPlugins, { on ->
                     if (Disclosure.needsDisclosureToAllow(on)) {
@@ -935,7 +943,7 @@ private fun LazyListScope.about() {
         val context = LocalContext.current
         val core = rememberQuery(Unit) { it.libraryVersion() }
         val links = remember { AboutInfo.links(BuildConfig.WEBSITE) }
-        Panel {
+        SettingsCard(null) {
             SettingRow(stringResource(R.string.about_version_title)) {
                 JfText(AboutInfo.version(BuildConfig.VERSION_NAME, core.ok), style = JfType.small, color = Jf.colors.ink70)
             }
@@ -966,12 +974,11 @@ private fun LazyListScope.about() {
 private fun LazyListScope.updates(state: CoreState) {
     val update = state.update
     if (!update.supported) return
-    item(key = "updates-h") { SectionHeader(stringResource(R.string.update_title)) }
     item(key = "updates") {
         val graph = LocalGraph.current
         val context = LocalContext.current
         val edit = rememberEdit(state.settings)
-        Panel {
+        SettingsCard(stringResource(R.string.update_title)) {
             val available = update.available
             if (available != null) {
                 SettingRow(stringResource(R.string.update_available, available.version)) {

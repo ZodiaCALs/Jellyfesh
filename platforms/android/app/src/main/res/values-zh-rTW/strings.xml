@@ -45,6 +45,7 @@
     <string name="action_install_plugin">從檔案安裝…</string>
     <string name="action_uninstall">解除安裝</string>
     <string name="action_uninstall_ask">解除安裝…</string>
+    <string name="action_sign_in">登入</string>
     <string name="action_sign_out">登出</string>
     <string name="action_new_playlist">新增播放清單…</string>
     <string name="action_import_playlist">匯入播放清單…</string>

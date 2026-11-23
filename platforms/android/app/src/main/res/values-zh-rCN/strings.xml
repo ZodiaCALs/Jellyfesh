@@ -45,6 +45,7 @@
     <string name="action_install_plugin">从文件安装…</string>
     <string name="action_uninstall">卸载</string>
     <string name="action_uninstall_ask">卸载…</string>
+    <string name="action_sign_in">登录</string>
     <string name="action_sign_out">退出登录</string>
     <string name="action_new_playlist">新建歌单…</string>
     <string name="action_import_playlist">导入歌单…</string>

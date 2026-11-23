@@ -39,13 +39,18 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.jellyfesh.logic.sources.SettingsSchema
+import org.jellyfesh.android.ui.components.WrapRow
+import org.jellyfesh.android.ui.components.SheetAction
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import org.jellyfesh.android.R
 import org.jellyfesh.android.images.ArtKey
 import org.jellyfesh.android.images.rememberArtwork
 import org.jellyfesh.android.ui.components.BackBar
-import org.jellyfesh.android.ui.components.Divider
 import org.jellyfesh.android.ui.components.EmptyState
 import org.jellyfesh.android.ui.components.InitialTile
 import org.jellyfesh.android.ui.components.JfText
@@ -54,10 +59,8 @@ import org.jellyfesh.android.ui.components.LocalOverlays
 import org.jellyfesh.android.ui.components.NavRow
 import org.jellyfesh.android.ui.components.Notice
 import org.jellyfesh.android.ui.components.Overlays
-import org.jellyfesh.android.ui.components.Panel
 import org.jellyfesh.android.ui.components.ScreenTitle
 import org.jellyfesh.android.ui.components.SectionHeader
-import org.jellyfesh.android.ui.components.SettingRow
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.library.AlbumHeader
 import org.jellyfesh.android.ui.library.PlayButtons
@@ -341,117 +344,81 @@ private fun ConnectContent(preset: SourcePreset, dismiss: () -> Unit, connect: (
 }
 
 /**
- * One source (docs/ui.md, Settings › Sources › Installed): its name, badge and whether it is
- * signed in; then Enabled, the sign-in buttons (or Sign Out), its own settings, browsing it,
- * "Version 1.2.0 · Author" and Uninstall…, which asks first.
+ * One installed source in Settings › Sources › Installed, inline as on Jellyfesh Web (docs/ui.md,
+ * "Settings"): its icon, name and badge with Enabled; "Version 1.2.0 · Author"; "Signed in as …"
+ * or "Not signed in"; then Sign In (each way it offers) or Sign Out, Settings (its own settings,
+ * with Save, in a sheet) and Uninstall…, which asks first. Turning on a community plugin shows the
+ * disclosure first, and a source the core calls local asks for Local Network access (Android 17).
  */
 @Composable
-fun SourceScreen(pluginId: String, state: CoreState) {
+fun InstalledSource(plugin: PluginSummary, modifier: Modifier = Modifier) {
     val graph = LocalGraph.current
-    val nav = LocalNav.current
     val overlays = LocalOverlays.current
     val disclosures = rememberDisclosures()
     val localNetwork = LocalLocalNetwork.current
-    val plugin = state.sources.plugins.firstOrNull { it.id == pluginId }
-    val uninstallTitle = plugin?.let { stringResource(R.string.source_uninstall_title, it.name) }
+    val signIn = rememberSignIn()
+    val colors = Jf.colors
+    val uninstallTitle = stringResource(R.string.source_uninstall_title, plugin.name)
     val uninstallBody = stringResource(R.string.source_uninstall_body)
-    val uninstallAsk = stringResource(R.string.action_uninstall_ask)
     val uninstallLabel = stringResource(R.string.action_uninstall)
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
-            item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
-            if (plugin == null) {
-                item(key = "gone") { EmptyState(R.drawable.ic_sources, stringResource(R.string.source_gone), null) }
-                return@LazyColumn
-            }
-            item(key = "header") {
-                Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    JfText(plugin.name, style = JfType.title)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Badge(
-                            stringResource(if (plugin.badge == PluginBadge.Official) R.string.badge_official else R.string.badge_community),
-                            warning = plugin.badge == PluginBadge.Community,
-                        )
-                        val account = plugin.account
-                        val signedIn = when {
-                            account != null -> stringResource(R.string.source_signed_in, account)
-                            plugin.authMethods.isNotEmpty() -> stringResource(R.string.source_not_signed_in)
-                            else -> null
-                        }
-                        if (signedIn != null) JfText(signedIn, style = JfType.caption, color = Jf.colors.ink70, maxLines = 1)
-                    }
-                }
-            }
-            if (plugin.vendorPlayback) item(key = "vendor") { Notice(stringResource(R.string.source_vendor_playback)) }
-            item(key = "local-network") { LocalNetworkNotice(listOf(plugin)) }
-            item(key = "enable") {
-                // Turning on a source the core calls local asks for Local Network access first (Android 17).
-                fun turnOn(commands: List<Command>) {
-                    val send = { commands.forEach(graph::send) }
-                    if (localNetwork == null) send() else localNetwork.beforeConnecting(plugin.name, plugin.localNetwork, send)
-                }
-                Panel {
-                    SettingRow(stringResource(R.string.source_enabled)) {
-                        JfSwitch(plugin.enabled, { on ->
-                            when {
-                                !on -> graph.send(Command.SetPluginEnabled(plugin.id, false))
-                                Disclosure.needsDisclosureToEnable(plugin, true) -> disclosures.enable(plugin) { turnOn(Disclosure.acceptedFor(plugin)) }
-                                else -> turnOn(listOf(Command.SetPluginEnabled(plugin.id, true)))
-                            }
-                        })
-                    }
-                }
-            }
-            item(key = "account-h") { SectionHeader(stringResource(R.string.source_account)) }
-            item(key = "account") { AccountPanel(plugin) }
-            item(key = "settings") { PluginSettingsPanel(plugin) }
-            if (YourSources.canBrowse(plugin)) {
-                item(key = "browse") {
-                    Panel {
-                        SettingRow(stringResource(R.string.source_browse), onClick = { nav.push(Screen.SourceBrowse(plugin.id, null, plugin.name)) })
-                    }
-                }
-            }
-            item(key = "version") {
-                JfText(
-                    stringResource(R.string.source_version, plugin.version, plugin.author),
-                    style = JfType.caption,
-                    color = Jf.colors.ink50,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp),
+    val enabledLabel = stringResource(R.string.source_enabled)
+    val signInTitle = stringResource(R.string.sign_in_title, plugin.name)
+    val methodLabels = plugin.authMethods.map { stringResource(signInLabel(it)) }
+    fun turnOn(commands: List<Command>) {
+        val send = { commands.forEach(graph::send) }
+        if (localNetwork == null) send() else localNetwork.beforeConnecting(plugin.name, plugin.localNetwork, send)
+    }
+    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PluginIcon(plugin.name, plugin.icon)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                JfText(plugin.name, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize, fontWeight = FontWeight.SemiBold), maxLines = 2)
+                Badge(
+                    stringResource(if (plugin.badge == PluginBadge.Official) R.string.badge_official else R.string.badge_community),
+                    warning = plugin.badge == PluginBadge.Community,
                 )
             }
-            item(key = "uninstall") {
-                Row(Modifier.padding(16.dp)) {
-                    JfButton(uninstallAsk, {
-                        overlays.confirm(uninstallTitle ?: uninstallLabel, uninstallBody, uninstallLabel, destructive = true) {
-                            graph.send(Command.UninstallPlugin(plugin.id))
-                            nav.back()
-                        }
-                    }, style = ButtonStyle.Danger, icon = R.drawable.ic_trash)
-                }
-            }
+            JfSwitch(
+                plugin.enabled,
+                { on ->
+                    when {
+                        !on -> graph.send(Command.SetPluginEnabled(plugin.id, false))
+                        Disclosure.needsDisclosureToEnable(plugin, true) -> disclosures.enable(plugin) { turnOn(Disclosure.acceptedFor(plugin)) }
+                        else -> turnOn(listOf(Command.SetPluginEnabled(plugin.id, true)))
+                    }
+                },
+                Modifier.semantics { contentDescription = enabledLabel },
+            )
         }
-        BackBar(onBack = nav::back, title = plugin?.name, modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars))
-    }
-}
-
-@Composable
-private fun AccountPanel(plugin: PluginSummary) {
-    val graph = LocalGraph.current
-    val signIn = rememberSignIn()
-    Panel {
+        JfText(stringResource(R.string.source_version, plugin.version, plugin.author), style = JfType.caption, color = colors.ink50)
         val account = plugin.account
         when {
-            account != null -> SettingRow(stringResource(R.string.source_signed_in, account)) {
-                JfButton(stringResource(R.string.action_sign_out), { graph.send(Command.Logout(plugin.id)) }, style = ButtonStyle.Quiet, icon = R.drawable.ic_logout)
+            account != null -> JfText(stringResource(R.string.source_signed_in, account), style = JfType.small, color = colors.ink70)
+            plugin.authMethods.isNotEmpty() -> JfText(stringResource(R.string.source_not_signed_in), style = JfType.small, color = colors.ink70)
+        }
+        if (plugin.vendorPlayback) JfText(stringResource(R.string.source_vendor_playback), style = JfType.small, color = colors.ink70)
+        WrapRow(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            when {
+                account != null -> JfButton(stringResource(R.string.action_sign_out), { graph.send(Command.Logout(plugin.id)) }, icon = R.drawable.ic_logout)
+                plugin.authMethods.size == 1 -> JfButton(stringResource(R.string.action_sign_in), { signIn.start(plugin, plugin.authMethods.single()) }, style = ButtonStyle.Accent)
+                plugin.authMethods.isNotEmpty() -> JfButton(stringResource(R.string.action_sign_in), {
+                    overlays.showActions(
+                        signInTitle,
+                        null,
+                        plugin.authMethods.mapIndexed { i, method -> SheetAction(methodLabels[i], signInIcon(method)) { signIn.start(plugin, method) } },
+                    )
+                }, style = ButtonStyle.Accent)
             }
-            plugin.authMethods.isEmpty() -> SettingRow(stringResource(R.string.source_no_sign_in))
-            else -> plugin.authMethods.forEachIndexed { i, method ->
-                if (i > 0) Divider()
-                SettingRow(stringResource(signInLabel(method)), onClick = { signIn.start(plugin, method) }) {
-                    org.jellyfesh.android.ui.components.JfIcon(signInIcon(method), Jf.colors.ink50, size = 20.dp)
+            if (SettingsSchema.hasFields(plugin.settingsSchemaJson)) {
+                JfButton(stringResource(R.string.source_settings), {
+                    overlays.showSheet(plugin.name) { PluginSettingsPanel(plugin) }
+                }, icon = R.drawable.ic_settings)
+            }
+            JfButton(stringResource(R.string.action_uninstall_ask), {
+                overlays.confirm(uninstallTitle, uninstallBody, uninstallLabel, destructive = true) {
+                    graph.send(Command.UninstallPlugin(plugin.id))
                 }
-            }
+            }, style = ButtonStyle.Danger)
         }
     }
 }

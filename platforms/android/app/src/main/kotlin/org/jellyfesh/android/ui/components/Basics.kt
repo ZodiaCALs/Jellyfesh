@@ -49,3 +49,33 @@ fun JfIcon(id: Int, tint: Color, modifier: Modifier = Modifier, size: Dp = 24.dp
         colorFilter = ColorFilter.tint(tint),
     )
 }
+
+/**
+ * Buttons in a row that wraps onto more lines when they do not fit (a source's Sign In, Settings
+ * and Uninstall… on a narrow phone), [gap] apart both ways.
+ */
+@Composable
+fun WrapRow(modifier: Modifier = Modifier, gap: Dp = 8.dp, content: @Composable () -> Unit) {
+    androidx.compose.ui.layout.Layout(content, modifier) { measurables, constraints ->
+        val gapPx = gap.roundToPx()
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0, minHeight = 0)) }
+        var x = 0
+        var y = 0
+        var line = 0
+        val positions = placeables.map { p ->
+            if (x > 0 && x + p.width > constraints.maxWidth) {
+                x = 0
+                y += line + gapPx
+                line = 0
+            }
+            val position = x to y
+            x += p.width + gapPx
+            line = maxOf(line, p.height)
+            position
+        }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else placeables.sumOf { it.width }
+        layout(width, y + line) {
+            placeables.forEachIndexed { i, p -> p.placeRelative(positions[i].first, positions[i].second) }
+        }
+    }
+}
