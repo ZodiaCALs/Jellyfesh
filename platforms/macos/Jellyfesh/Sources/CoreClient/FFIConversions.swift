@@ -46,8 +46,7 @@ extension CollectionReference {
         case .favorites: return .favorites
         case .songs(let sort, let descending): return .songs(sort: sort.ffi, descending: descending)
         case .tracks(let tracks): return .tracks(tracks: tracks.map(\.ffi))
-        // The kind reaches the core once its `Collection::Source` carries `item_kind` (v0.0.8).
-        case .source(let plugin, let id, _): return .source(plugin: plugin, id: id)
+        case .source(let plugin, let id, let kind): return .source(plugin: plugin, id: id, itemKind: kind.ffi)
         }
     }
 }
@@ -322,7 +321,40 @@ extension NowPlayingInfo {
         self.init(uid: n.uid, track: TrackReference(n.track), path: n.path, title: n.title,
                   artist: n.artist, album: n.album, durationMs: n.durationMs,
                   artwork: n.artwork.map(ArtworkLocation.init), format: n.format.map(StreamFormat.init),
-                  link: n.link, quality: n.quality.map(AudioQuality.init))
+                  link: n.link, quality: n.quality.map(AudioQuality.init),
+                  qualities: n.qualities.map(StreamingQualityOption.init),
+                  qualityNote: n.qualityNote.map(QualityNoteOption.init))
+    }
+}
+
+extension StreamingQualityOption {
+    init(_ q: StreamingQuality) {
+        switch q {
+        case .auto: self = .auto
+        case .lossless: self = .lossless
+        case .high: self = .high
+        case .normal: self = .normal
+        case .low: self = .low
+        }
+    }
+
+    var ffi: StreamingQuality {
+        switch self {
+        case .auto: return .auto
+        case .lossless: return .lossless
+        case .high: return .high
+        case .normal: return .normal
+        case .low: return .low
+        }
+    }
+}
+
+extension QualityNoteOption {
+    init(_ n: QualityNote) {
+        switch n {
+        case .filesPlayAsTheyAre: self = .filesPlayAsTheyAre
+        case .setInService(let service): self = .setInService(service)
+        }
     }
 }
 
@@ -502,7 +534,10 @@ extension AppSettings {
             allowCommunityPlugins: s.allowCommunityPlugins,
             checkForUpdates: s.checkForUpdates,
             showLyricsBar: s.showLyricsBar,
-            desktopLyrics: s.desktopLyrics
+            desktopLyrics: s.desktopLyrics,
+            streamingQuality: StreamingQualityOption(s.streamingQuality),
+            downloads: DownloadOptions(s.downloads),
+            miniPlayer: MiniPlayerOptions(s.miniPlayer)
         )
     }
 
@@ -550,8 +585,57 @@ extension AppSettings {
             allowCommunityPlugins: allowCommunityPlugins,
             checkForUpdates: checkForUpdates,
             showLyricsBar: showLyricsBar,
-            desktopLyrics: desktopLyrics
+            desktopLyrics: desktopLyrics,
+            streamingQuality: streamingQuality.ffi,
+            downloads: downloads.ffi,
+            miniPlayer: miniPlayer.ffi
         )
+    }
+}
+
+extension DownloadQualityOption {
+    init(_ q: DownloadQuality) {
+        switch q {
+        case .original: self = .original
+        case .high: self = .high
+        case .normal: self = .normal
+        case .low: self = .low
+        }
+    }
+
+    var ffi: DownloadQuality {
+        switch self {
+        case .original: return .original
+        case .high: return .high
+        case .normal: return .normal
+        case .low: return .low
+        }
+    }
+}
+
+extension DownloadOptions {
+    init(_ d: DownloadSettings) {
+        self.init(folder: d.folder, quality: DownloadQualityOption(d.quality), nameTemplate: d.nameTemplate,
+                  addMissingCoverAndLyrics: d.addMissingCoverAndLyrics, lyricsInTags: d.lyricsInTags,
+                  saveLrcFiles: d.saveLrcFiles, wifiOnly: d.wifiOnly, atOnce: d.atOnce)
+    }
+
+    var ffi: DownloadSettings {
+        DownloadSettings(folder: folder, quality: quality.ffi, nameTemplate: nameTemplate,
+                         addMissingCoverAndLyrics: addMissingCoverAndLyrics, lyricsInTags: lyricsInTags,
+                         saveLrcFiles: saveLrcFiles, wifiOnly: wifiOnly, atOnce: atOnce)
+    }
+}
+
+extension MiniPlayerOptions {
+    init(_ m: MiniPlayerSettings) {
+        self.init(keepOnTop: m.keepOnTop, openWhenWindowClosed: m.openWhenWindowClosed,
+                  showLyricsLine: m.showLyricsLine, androidPip: m.androidPip)
+    }
+
+    var ffi: MiniPlayerSettings {
+        MiniPlayerSettings(keepOnTop: keepOnTop, openWhenWindowClosed: openWhenWindowClosed,
+                           showLyricsLine: showLyricsLine, androidPip: androidPip)
     }
 }
 
@@ -680,7 +764,104 @@ extension SourceResult {
                   subtitle: i.subtitle, album: i.album, durationMs: i.durationMs,
                   artwork: i.artwork.map(ArtworkLocation.init), playable: i.playable,
                   unplayableReason: i.unplayableReason, track: i.track.map(TrackReference.init),
-                  alsoIn: i.alsoIn, link: i.link, artistID: i.artistId, albumID: i.albumId)
+                  alsoIn: i.alsoIn, link: i.link, artistID: i.artistId, albumID: i.albumId,
+                  downloaded: i.downloaded)
+    }
+}
+
+extension SearchPageBatch {
+    init(_ p: SearchPage) {
+        self.init(request: p.request, query: p.query, source: p.source, kind: ResultKind(p.kind),
+                  items: p.items.map(SourceResult.init), next: p.next, error: p.error)
+    }
+}
+
+// MARK: - The sources' likes and playlists, and downloads
+
+extension SourceListPart {
+    init(_ p: SourceLibraryPart) {
+        switch p {
+        case .likedSongs: self = .likedSongs
+        case .likedAlbums: self = .likedAlbums
+        case .likedArtists: self = .likedArtists
+        case .playlists: self = .playlists
+        }
+    }
+
+    var ffi: SourceLibraryPart {
+        switch self {
+        case .likedSongs: return .likedSongs
+        case .likedAlbums: return .likedAlbums
+        case .likedArtists: return .likedArtists
+        case .playlists: return .playlists
+        }
+    }
+}
+
+extension SourceListEntry {
+    init(_ e: SourceLibraryEntry) {
+        self.init(item: SourceResult(e.item), owned: e.owned, songsListed: e.songsListed)
+    }
+}
+
+extension SourceList {
+    init(_ l: SourceLibraryList) {
+        self.init(part: SourceListPart(l.part), entries: l.entries.map(SourceListEntry.init), total: l.total,
+                  next: l.next, refreshedAtMs: l.refreshedAtMs, loading: l.loading, error: l.error)
+    }
+}
+
+extension SourceLibraryState {
+    init(_ s: SourceLibrarySnapshot) {
+        self.init(version: s.version, sources: s.sources.map { library in
+            SourceLibraryInfo(plugin: library.plugin, name: library.name, attribution: library.attribution,
+                              lists: library.lists.map(SourceList.init))
+        })
+    }
+}
+
+extension SourceLibraryPageBatch {
+    init(_ p: SourceLibraryPage) {
+        self.init(request: p.request, plugin: p.plugin, part: SourceListPart(p.part),
+                  entries: p.entries.map(SourceListEntry.init), next: p.next, error: p.error)
+    }
+}
+
+extension DownloadProblem {
+    init(_ e: DownloadError) {
+        switch e {
+        case .notAllowed(let service): self = .notAllowed(service: service)
+        case .notOffered(let service): self = .notOffered(service: service)
+        case .network(let message): self = .network(message)
+        case .storage(let message): self = .storage(message)
+        case .other(let message): self = .other(message)
+        }
+    }
+}
+
+extension DownloadPhase {
+    init(_ s: DownloadState) {
+        switch s {
+        case .queued: self = .queued
+        case .downloading: self = .downloading
+        case .done: self = .done
+        case .failed(let error): self = .failed(DownloadProblem(error))
+        }
+    }
+}
+
+extension DownloadsState {
+    init(_ s: DownloadsSnapshot) {
+        self.init(version: s.version, folder: s.folder, items: s.items.map { item in
+            DownloadEntry(id: item.id, track: SourceSong(item.track), phase: DownloadPhase(item.state),
+                          bytesDone: item.bytesDone, bytesTotal: item.bytesTotal, path: item.path,
+                          libraryID: item.libraryId, original: item.original)
+        }, bytesUsed: s.bytesUsed, paused: s.paused.map { paused in
+            switch paused {
+            case .offline: return DownloadsPause.offline
+            case .metered: return DownloadsPause.metered
+            }
+        })
     }
 }
 
@@ -741,7 +922,7 @@ extension RemoteSession {
                   item: r.item.map(SourceResult.init), context: r.context.map(SourceResult.init),
                   anchor: Anchor(r.anchor), shuffle: r.shuffle, repeatMode: RepeatOption(r.`repeat`),
                   device: r.device.map(ServiceDevice.init), devices: r.devices.map(ServiceDevice.init),
-                  error: r.error)
+                  error: r.error, qualityNote: r.qualityNote.map(QualityNoteOption.init))
     }
 }
 
@@ -1089,7 +1270,8 @@ extension CoreState {
                   scanning: s.scanning, settings: AppSettings(s.settings), devices: DevicesState(s.devices),
                   sources: SourcesState(s.sources), muted: s.muted, remote: RemoteSession(s.remote),
                   aiLyrics: AiLyricsState(s.aiLyrics), look: LookState(s.look), pro: ProState(s.pro),
-                  update: UpdateState(s.update))
+                  update: UpdateState(s.update), sourceLibrary: SourceLibraryState(s.sourceLibrary),
+                  downloads: DownloadsState(s.downloads))
     }
 }
 
@@ -1122,6 +1304,10 @@ extension CoreEvent {
         case .details(let page): self = .details(DetailsAnswer(page))
         case .comments(let page): self = .comments(CommentsAnswer(page))
         case .artwork(let ready): self = .artwork(ArtworkFetched(url: ready.url, sizePx: ready.sizePx, path: ready.path))
+        case .searchPage(let page): self = .searchPage(SearchPageBatch(page))
+        case .sourceLibrary(let snapshot): self = .sourceLibrary(SourceLibraryState(snapshot))
+        case .sourceLibraryPage(let page): self = .sourceLibraryPage(SourceLibraryPageBatch(page))
+        case .downloads(let snapshot): self = .downloads(DownloadsState(snapshot))
         }
     }
 }

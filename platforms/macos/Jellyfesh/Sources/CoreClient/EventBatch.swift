@@ -23,7 +23,7 @@ enum EventBatch {
 
     private enum SliceKind: Hashable {
         case playback, queue, nowPlaying, lyrics, theme, settings, devices, sources, remote, scanProgress, library
-        case aiLyrics, look, pro, update
+        case aiLyrics, look, pro, update, sourceLibrary, downloads
 
         init?(_ event: CoreEvent) {
             switch event {
@@ -44,8 +44,11 @@ enum EventBatch {
             case .look: self = .look
             case .pro: self = .pro
             case .update: self = .update
+            case .sourceLibrary: self = .sourceLibrary
+            case .downloads: self = .downloads
             case .scan, .playlistCreated, .signIn, .searchResults, .browsePage, .buffering,
-                 .commandFailed, .error, .discover, .details, .comments, .artwork:
+                 .commandFailed, .error, .discover, .details, .comments, .artwork, .searchPage,
+                 .sourceLibraryPage:
                 return nil
             }
         }

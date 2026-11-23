@@ -312,6 +312,9 @@ final class AppModel {
                 answers.apply(comments: answer)
             case .artwork(let fetched):
                 artwork.artworkFetched(fetched)
+            case .searchPage, .sourceLibrary, .sourceLibraryPage, .downloads:
+                // v0.0.8's search tabs, source sections and Downloads take these (next commits).
+                break
             }
         }
         if mediaChanged {

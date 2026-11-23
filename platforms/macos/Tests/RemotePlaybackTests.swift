@@ -217,7 +217,8 @@ final class RemoteConversionTests: XCTestCase {
         let item = SourceItem(source: "org.example.spotify", kind: .track, id: "t1", title: "Song", subtitle: "Artist",
                               album: "Album", durationMs: 200_000, artwork: .url(url: "https://img.example.com/a.jpg"),
                               playable: true, unplayableReason: nil, track: nil, alsoIn: [],
-                              link: "https://open.example.com/track/t1", artistId: "ar1", albumId: "al1")
+                              link: "https://open.example.com/track/t1", artistId: "ar1", albumId: "al1",
+                              downloaded: false)
         let kitchen = RemoteDevice(id: "k", name: "Kitchen", kind: .speaker, active: true, volumePercent: 30)
         return RemoteSnapshot(version: 7, source: "org.example.spotify", sourceName: "Spotify", status: .paused,
                               item: item, context: nil,
@@ -226,7 +227,7 @@ final class RemoteConversionTests: XCTestCase {
                               shuffle: true, repeat: .all, device: kitchen,
                               devices: [kitchen, RemoteDevice(id: "c", name: "Car", kind: .car, active: false,
                                                               volumePercent: nil)],
-                              error: "Slow")
+                              error: "Slow", qualityNote: nil)
     }
 
     func testTheRemoteSliceConverts() {

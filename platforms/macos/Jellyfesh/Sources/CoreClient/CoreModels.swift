@@ -352,6 +352,18 @@ struct NowPlayingInfo: Hashable, Sendable {
     var link: String? = nil
     /// What plays as decoded, with the core's quality label, once the engine has opened it.
     var quality: AudioQuality? = nil
+    /// The levels the quality menu offers, Auto first (ADR-0026 §2); empty when there is no
+    /// choice, and `qualityNote` says why.
+    var qualities: [StreamingQualityOption] = []
+    var qualityNote: QualityNoteOption? = nil
+}
+
+/// Why the quality menu offers no levels (`QualityNote`); the app words it.
+enum QualityNoteOption: Hashable, Sendable {
+    /// "Files play as they are." (library songs, files, downloads)
+    case filesPlayAsTheyAre
+    /// "Quality is set in {service}." (remote playback, sources that offer no levels)
+    case setInService(String)
 }
 
 /// A sound output (`DeviceInfo`).
@@ -524,6 +536,187 @@ struct AppSettings: Hashable, Sendable {
     var showLyricsBar: Bool = true
     /// Desktop Lyrics: the current and next line in a floating panel above other apps.
     var desktopLyrics: Bool = false
+    /// Streaming Quality (ADR-0026 §1), the same setting as the bar's quality menu.
+    var streamingQuality: StreamingQualityOption = .auto
+    /// Settings › Downloads (ADR-0025 §2).
+    var downloads: DownloadOptions = .defaults
+    /// Settings › Appearance › Mini Player (ADR-0026 §4).
+    var miniPlayer: MiniPlayerOptions = .defaults
+}
+
+/// The quality downloads are asked for (`DownloadQuality`): the server's original file, or its
+/// conversion.
+enum DownloadQualityOption: Hashable, Sendable, CaseIterable {
+    case original, high, normal, low
+}
+
+/// Settings › Downloads (`DownloadSettings`).
+struct DownloadOptions: Hashable, Sendable {
+    /// The folder the person chose; nil keeps the default (`~/Music/Jellyfesh`).
+    var folder: String?
+    var quality: DownloadQualityOption
+    /// File Names: `{artist}`, `{album_artist}`, `{album}`, `{title}`, `{track}`, `{disc}`,
+    /// `{year}`, `{source}`, with `/` between folders.
+    var nameTemplate: String
+    /// Add Missing Cover and Lyrics (off: original files stay byte for byte).
+    var addMissingCoverAndLyrics: Bool
+    /// Lyrics in the tags.
+    var lyricsInTags: Bool
+    /// Save .lrc Files beside the songs.
+    var saveLrcFiles: Bool
+    /// Wi-Fi Only (Android's); kept as the core has it.
+    var wifiOnly: Bool
+    /// Downloads at Once, 1–4.
+    var atOnce: UInt32
+
+    /// The core's defaults (ADR-0025 §2).
+    static let defaults = DownloadOptions(folder: nil, quality: .original,
+                                          nameTemplate: "{album_artist}/{album}/{track} {title}",
+                                          addMissingCoverAndLyrics: false, lyricsInTags: true, saveLrcFiles: false,
+                                          wifiOnly: true, atOnce: 2)
+}
+
+// MARK: - Downloads (ADR-0025)
+
+/// Why downloads wait (`DownloadsPaused`).
+enum DownloadsPause: Hashable, Sendable {
+    /// No network.
+    case offline
+    /// A metered network with Wi-Fi Only on.
+    case metered
+}
+
+/// Why a download failed (`DownloadError`); the app words it.
+enum DownloadProblem: Hashable, Sendable {
+    case notAllowed(service: String)
+    case notOffered(service: String)
+    case network(String)
+    case storage(String)
+    case other(String)
+}
+
+/// Where a download is (`DownloadState`).
+enum DownloadPhase: Hashable, Sendable {
+    /// Waiting for its turn, or for the network.
+    case queued
+    case downloading
+    case done
+    case failed(DownloadProblem)
+}
+
+/// One download (`DownloadItem`).
+struct DownloadEntry: Identifiable, Hashable, Sendable {
+    var id: UInt64
+    var track: SourceSong
+    var phase: DownloadPhase
+    var bytesDone: UInt64
+    var bytesTotal: UInt64?
+    /// The file, once finished.
+    var path: String?
+    /// Its library track, once finished.
+    var libraryID: Int64?
+    /// The server's original rather than a conversion.
+    var original: Bool
+}
+
+/// The `Downloads` slice.
+struct DownloadsState: Hashable, Sendable {
+    var version: UInt64
+    /// Where downloads go: the person's folder, or the default one.
+    var folder: String
+    /// In progress (queue order), then finished by album.
+    var items: [DownloadEntry]
+    /// Space the finished downloads take, in bytes.
+    var bytesUsed: UInt64
+    var paused: DownloadsPause?
+
+    static let empty = DownloadsState(version: 0, folder: "", items: [], bytesUsed: 0, paused: nil)
+}
+
+// MARK: - The sources' likes and playlists (ADR-0024)
+
+/// One of a source's lists (`SourceLibraryPart`).
+enum SourceListPart: Hashable, Sendable {
+    case likedSongs, likedAlbums, likedArtists, playlists
+}
+
+/// An entry of a source's list (`SourceLibraryEntry`).
+struct SourceListEntry: Hashable, Sendable, Identifiable {
+    var item: SourceResult
+    /// Playlists: the person's own (or collaborative), not followed.
+    var owned: Bool
+    /// Playlists: the source lists its songs here; otherwise only Play by context and Open in
+    /// {Service}.
+    var songsListed: Bool
+
+    var id: String { item.id }
+}
+
+/// One list of a source (`SourceLibraryList`): its first page, kept with its age.
+struct SourceList: Hashable, Sendable {
+    var part: SourceListPart
+    var entries: [SourceListEntry]
+    var total: UInt32?
+    /// `SourceLibraryMore`'s cursor; nil when there is no more.
+    var next: String?
+    /// When it was last loaded, in ms since the Unix epoch ("Updated 5 minutes ago").
+    var refreshedAtMs: Int64?
+    var loading: Bool
+    var error: String?
+}
+
+/// A source's likes and playlists (`SourceLibrary`).
+struct SourceLibraryInfo: Hashable, Sendable, Identifiable {
+    var plugin: String
+    var name: String
+    var attribution: String?
+    /// Liked Songs, Liked Albums, Liked Artists, Playlists, in that order; lists it does not keep
+    /// are left out.
+    var lists: [SourceList]
+
+    var id: String { plugin }
+}
+
+/// The `SourceLibrary` slice.
+struct SourceLibraryState: Hashable, Sendable {
+    var version: UInt64
+    var sources: [SourceLibraryInfo]
+
+    static let empty = SourceLibraryState(version: 0, sources: [])
+}
+
+/// More of a source's list (`SourceLibraryPage`).
+struct SourceLibraryPageBatch: Hashable, Sendable {
+    var request: CommandID
+    var plugin: String
+    var part: SourceListPart
+    var entries: [SourceListEntry]
+    var next: String?
+    var error: String?
+}
+
+/// More of one kind of a source's search results (`SearchPage`).
+struct SearchPageBatch: Hashable, Sendable {
+    var request: CommandID
+    var query: String
+    var source: String
+    var kind: ResultKind
+    var items: [SourceResult]
+    var next: String?
+    var error: String?
+}
+
+/// Settings › Appearance › Mini Player (`MiniPlayerSettings`).
+struct MiniPlayerOptions: Hashable, Sendable {
+    var keepOnTop: Bool
+    var openWhenWindowClosed: Bool
+    var showLyricsLine: Bool
+    /// Android's Mini Player in Picture-in-Picture; kept as the core has it.
+    var androidPip: Bool
+
+    /// The core's defaults (ADR-0026 §4).
+    static let defaults = MiniPlayerOptions(keepOnTop: true, openWhenWindowClosed: false, showLyricsLine: true,
+                                            androidPip: false)
 }
 
 // MARK: - Sources
@@ -689,6 +882,8 @@ struct SourceResult: Identifiable, Hashable, Sendable {
     var artistID: String? = nil
     /// Go to Album for a source's track: the source's id of its album.
     var albumID: String? = nil
+    /// A source track with a finished download (it plays the file): the Downloaded mark.
+    var downloaded = false
 
     var id: String { "\(source)\u{1F}\(kind)\u{1F}\(itemID)" }
 
@@ -773,6 +968,8 @@ struct RemoteSession: Equatable, Sendable {
     /// What went wrong last talking to the service; on a slice without a source, why the session
     /// ended.
     var error: String?
+    /// The quality menu's note while the session runs ("Quality is set in {service}.").
+    var qualityNote: QualityNoteOption? = nil
 
     static let idle = RemoteSession(version: 0, source: nil, sourceName: nil, status: .stopped, item: nil,
                                     context: nil, anchor: .zero, shuffle: false, repeatMode: .off, device: nil,
@@ -1244,6 +1441,10 @@ struct CoreState: Equatable, Sendable {
     var look: LookState = .luminous
     var pro: ProState = .inactive
     var update: UpdateState = .unsupported
+    /// The sources' likes and playlists (ADR-0024).
+    var sourceLibrary: SourceLibraryState = .empty
+    /// Downloads (ADR-0025).
+    var downloads: DownloadsState = .empty
 }
 
 /// What the core reports (`Event`).
@@ -1277,6 +1478,12 @@ enum CoreEvent: Equatable, Sendable {
     case comments(CommentsAnswer)
     /// A source picture asked for with `sourceArtwork` is cached, or cannot be had.
     case artwork(ArtworkFetched)
+    /// More of one kind of a source's search results (`SearchMore`).
+    case searchPage(SearchPageBatch)
+    case sourceLibrary(SourceLibraryState)
+    /// More of a source's list (`SourceLibraryMore`).
+    case sourceLibraryPage(SourceLibraryPageBatch)
+    case downloads(DownloadsState)
 }
 
 /// What a view can ask the core to do (`Command`). Failures come back as `.commandFailed`.
