@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The mini player under 900 px (docs/design-controls.md, "v0.0.4"): a floating Veil capsule with
-    player.mini-radius corners, the artwork, two lines of type and exactly one control, play/pause
-    (Misty CMP-02), never accent-filled (COL-04). Its progress is a straight 2 px line along the
-    bottom edge, inset by the corners, drawn at whole-pixel steps only. Selecting the capsule opens
+    The capsule under 900 epx (docs/ui.md, "The player bar and the mini player"), Jellyfesh Web's:
+    a floating Veil pill player.mini-height high with the round artwork, two lines of type, play
+    (never accent-filled, COL-04) and next. Its progress is a straight 2 epx line along the bottom
+    edge between the pill's round ends, drawn at whole-pixel steps only. Selecting the capsule opens
     Now Playing. In a remote session the second line is Playing on {Device}.
 -->
 <UserControl
@@ -17,34 +17,37 @@
     <Grid
         x:Name="Capsule"
         Height="{th:Token Key=Player.MiniHeight}"
-        MinWidth="300"
         MaxWidth="560"
         SizeChanged="OnCapsuleSizeChanged">
-        <Border CornerRadius="{th:Token Key=Player.MiniRadius, Kind=Corner}" Style="{StaticResource JfVeilCapsuleStyle}" />
-        <Grid Padding="10" ColumnSpacing="8">
+        <Border CornerRadius="{th:Token Key=Radius.Full, Kind=Corner}" Style="{StaticResource JfVeilCapsuleStyle}" />
+        <Grid Padding="8,0" ColumnSpacing="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button
                 x:Name="OpenButton"
                 x:Uid="Mini_Open"
+                Height="52"
                 HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                Padding="4,0,8,0"
                 AutomationProperties.Name="Open Now Playing"
                 Click="OnOpenClick"
-                CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}"
+                CornerRadius="{th:Token Key=Radius.Full, Kind=Corner}"
                 Style="{StaticResource JfBareButtonStyle}"
                 ToolTipService.ToolTip="Open Now Playing">
                 <Grid ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="44" />
+                        <ColumnDefinition Width="{th:Token Key=Artwork.SizeMini, Kind=Pixels}" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="Art" Width="44" Height="44" CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}" Background="{ThemeResource JfFill}">
-                        <Image controls:Artwork.DecodeSize="88" controls:Artwork.Uri="{x:Bind Player.ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+                    <Border x:Name="Art" Width="{th:Token Key=Artwork.SizeMini}" Height="{th:Token Key=Artwork.SizeMini}" VerticalAlignment="Center" Background="{ThemeResource JfFill}" CornerRadius="{th:Token Key=Radius.Full, Kind=Corner}">
+                        <Image controls:Artwork.DecodeSize="80" controls:Artwork.Uri="{x:Bind Player.ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
                     </Border>
                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock FontSize="14.5" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                         <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" Visibility="{x:Bind shell:Bind.Collapsed(Player.IsRemote), Mode=OneWay}" />
                         <TextBlock Style="{StaticResource JfRemoteLineText}" Text="{x:Bind Player.RemoteDeviceText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}" />
                     </StackPanel>
@@ -52,17 +55,33 @@
             </Button>
             <Button
                 Grid.Column="1"
+                VerticalAlignment="Center"
                 AutomationProperties.Name="{x:Bind Player.PlayPauseLabel, Mode=OneWay}"
+                Background="{ThemeResource JfFillHover}"
                 Command="{x:Bind Player.PlayPauseCommand}"
+                Foreground="{ThemeResource JfInk90}"
                 Style="{StaticResource JfIconButtonStyle}"
                 ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
-                <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="18" />
+                <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="22" />
+            </Button>
+            <Button
+                x:Uid="Player_NextButton"
+                Grid.Column="2"
+                VerticalAlignment="Center"
+                AutomationProperties.Name="Next"
+                Command="{x:Bind Player.NextCommand}"
+                IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}"
+                Style="{StaticResource JfTransportButtonStyle}"
+                Width="44"
+                Height="44"
+                ToolTipService.ToolTip="Next (Ctrl+→)">
+                <controls:StrokeIcon Data="{StaticResource IconNext}" Size="20" />
             </Button>
         </Grid>
-        <!-- The progress line: the rest faint, the played part ink-90 (player.mini-progress). -->
+        <!-- The progress line between the pill's round ends (half its height in): the rest ink-10, the played part ink-70. -->
         <Border
             Height="{th:Token Key=Player.MiniProgress}"
-            Margin="{th:Token Key=Player.MiniRadius, Kind=Thickness, Sides=LR}"
+            Margin="32,0"
             VerticalAlignment="Bottom"
             Background="{ThemeResource JfInk10}"
             CornerRadius="1"
@@ -71,11 +90,11 @@
             x:Name="ProgressLine"
             Width="0"
             Height="{th:Token Key=Player.MiniProgress}"
-            Margin="{th:Token Key=Player.MiniRadius, Kind=Thickness, Sides=L}"
+            Margin="32,0,0,0"
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom"
             AutomationProperties.AccessibilityView="Raw"
-            Background="{ThemeResource JfInk90}"
+            Background="{ThemeResource JfInk70}"
             CornerRadius="1"
             IsHitTestVisible="False" />
     </Grid>

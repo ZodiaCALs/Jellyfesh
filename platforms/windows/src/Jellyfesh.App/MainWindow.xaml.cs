@@ -195,6 +195,7 @@ public sealed partial class MainWindow : Window
         NowPlaying.ViewsChanged += (_, _) => UpdateActivity();
         Mini.OpenRequested += (_, _) => OpenNowPlaying();
         Bar.OpenRequested += (_, panel) => OpenNowPlaying(panel);
+        Bar.MiniPlayerRequested += (_, _) => EnterCompact();
 
         _ui.ColorValuesChanged += (_, _) => queue.TryEnqueue(ReadSystemPreferences);
         // Either may be refused in a desktop app (both are logged): ColorValuesChanged above still
@@ -488,7 +489,6 @@ public sealed partial class MainWindow : Window
         var floating = player.HasTrack && !_nowPlayingOpen && !_compact;
         var mini = floating && !ShowsBar;
         var bar = floating && ShowsBar;
-        Mini.Stretched = LookRules.StretchesCapsule(_vm.Look.MiniPlayer);
         Mini.Visibility = mini ? Visibility.Visible : Visibility.Collapsed;
         Bar.Visibility = bar ? Visibility.Visible : Visibility.Collapsed;
         ContentFade.Visibility = _layout.FadeHeight > 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -821,7 +821,9 @@ public sealed partial class MainWindow : Window
         }
 
         Dock.Margin = new Thickness(layout.DockSide, 0, layout.DockSide, layout.DockBottom);
+        Mini.Place(_vm.Look.MiniPlayer, width - (layout.Sidebar ? ShellLayout.SidebarColumn : 0) - (2 * layout.DockSide));
         ContentFade.Height = Math.Max(1, layout.FadeHeight);
+        Bar.ShowsVolumeLine = layout.VolumeLine;
         UpdateLibrarySwitcher();
         AppHost.Metrics.Set(layout);
     }

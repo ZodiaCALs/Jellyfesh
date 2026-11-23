@@ -29,6 +29,7 @@ public class DesignTests
         Assert.Equal(SeekGeometry.Thumb, Dim("player", "scrubber-thumb"));
         Assert.Equal(SeekGeometry.MiniProgress, Dim("player", "mini-progress"));
         Assert.Equal(SeekGeometry.MiniRadius, Dim("player", "mini-radius"));
+        Assert.Equal(SeekGeometry.MiniHeight, Dim("player", "mini-height"));
         Assert.Equal(SeekGeometry.BarHeight, Dim("player", "bar-height"));
         Assert.Equal(NowPlayingMotion.ArtworkPausedScale, Num("player", "artwork-paused-scale"));
         Assert.Equal(NowPlayingMotion.InactiveLineScale, Num("lyrics", "scale-inactive"));
@@ -73,10 +74,10 @@ public class DesignTests
         Assert.Equal(200, SeekGeometry.Steps(214, 1, touch: false));
         Assert.Equal(300, SeekGeometry.Steps(214, 1.5, touch: false));
         Assert.Equal(200, SeekGeometry.Steps(214, double.NaN, touch: false));
-        // The mini-player's line runs between the capsule's corners: 360 − 2 × 16.
-        Assert.Equal(328, SeekGeometry.MiniTrackLength(360));
-        Assert.Equal(82, SeekGeometry.MiniProgressLength(0.25, 360));
-        Assert.Equal(656, SeekGeometry.MiniSteps(360, 2));
+        // The capsule's line runs between the pill's round ends: 360 − 2 × 32 (half its 64 px height).
+        Assert.Equal(296, SeekGeometry.MiniTrackLength(360));
+        Assert.Equal(74, SeekGeometry.MiniProgressLength(0.25, 360));
+        Assert.Equal(592, SeekGeometry.MiniSteps(360, 2));
         // The compact player's line spans its glass strip.
         Assert.Equal(77, SeekGeometry.LineLength(0.25, 308));
         Assert.Equal(0, SeekGeometry.LineLength(double.NaN, 308));

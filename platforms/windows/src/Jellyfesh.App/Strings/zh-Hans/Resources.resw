@@ -401,6 +401,12 @@
   <data name="Bar_Lyrics.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>歌词</value>
   </data>
+  <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>打开迷你播放器</value>
+  </data>
+  <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>打开迷你播放器 (Ctrl+M)</value>
+  </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>播放队列</value>
   </data>
@@ -1056,10 +1062,10 @@
     <value>评论</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>迷你播放器</value>
+    <value>打开迷你播放器</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>迷你播放器 (Ctrl+M)</value>
+    <value>打开迷你播放器 (Ctrl+M)</value>
   </data>
   <data name="NowPlaying_GetInfo.Content" xml:space="preserve">
     <value>显示简介</value>

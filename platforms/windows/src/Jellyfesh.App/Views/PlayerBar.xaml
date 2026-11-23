@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The player bar for windows 900 px and wider (docs/design-controls.md, "v0.0.4"), after Media
-    Player and Apple Music: a floating Veil bar 80 px high with r-xl corners (Luminous: the content
-    fades out just above it). Start: the artwork and two lines of type (they open Now Playing), and
-    in a remote session Playing on {Device} with the session's error, quieter, after it. Middle: the
-    transport capsule (shuffle, previous, play, next, repeat; play is the only accent fill) above
-    the seek bar with its times. End: Lyrics, Queue, the device button (output devices, or Devices
-    in a remote session), the volume (hidden when a remote device has none) and More (Open in
-    {Service}, Stop Controlling). It bends CMP-02 (one control) on purpose, for desktop use.
+    The player bar for windows 900 epx and wider (docs/ui.md, "The player bar and the mini player"),
+    Jellyfesh Web's dock: a floating Veil bar 80 epx high with r-2xl corners over every page (the
+    content fades out just above it). In this order: the artwork and two lines of type (they open
+    Now Playing; in a remote session Playing on {Device} with the session's error, quieter, after
+    it); shuffle, previous, play, next and repeat above the seek bar with its times (play is the only
+    accent fill); then Lyrics, Queue, the device button while a remote source plays (Devices), the
+    volume (hidden when a remote device has none; narrow bars keep only its mute button), the mini
+    player button and More (Open in {Service}, Stop Controlling, Desktop Lyrics). It bends CMP-02
+    (one control) on purpose, for desktop use.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.PlayerBar"
@@ -18,37 +19,39 @@
     xmlns:th="using:Jellyfesh.App.Theming">
 
     <Grid Height="{th:Token Key=Player.BarHeight}">
-        <Border CornerRadius="{th:Token Key=Radius.Xl, Kind=Corner}" Style="{StaticResource JfVeilCapsuleStyle}" />
-        <Grid Padding="10,6,14,6" ColumnSpacing="16">
+        <Border CornerRadius="{th:Token Key=Radius.2xl, Kind=Corner}" Style="{StaticResource JfVeilCapsuleStyle}" />
+        <Grid Padding="8,0,16,0" ColumnSpacing="16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="180" />
-                <ColumnDefinition Width="2*" MaxWidth="560" />
-                <ColumnDefinition Width="*" MinWidth="280" />
+                <ColumnDefinition Width="*" MinWidth="160" />
+                <ColumnDefinition Width="1.4*" MinWidth="260" MaxWidth="560" />
+                <ColumnDefinition Width="*" MinWidth="200" />
             </Grid.ColumnDefinitions>
 
-            <!-- Start: what is playing; opens Now Playing. -->
+            <!-- What is playing; opens Now Playing. -->
             <Button
                 x:Name="OpenButton"
                 x:Uid="Mini_Open"
+                Height="68"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Center"
+                Padding="6,0,8,0"
                 AutomationProperties.Name="Open Now Playing"
                 Click="OnOpenClick"
-                CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}"
+                CornerRadius="{th:Token Key=Radius.Xl, Kind=Corner}"
                 Style="{StaticResource JfBareButtonStyle}"
                 ToolTipService.ToolTip="Open Now Playing">
-                <Grid Padding="4" ColumnSpacing="12">
+                <Grid ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="48" />
+                        <ColumnDefinition Width="56" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-                    <Border x:Name="Art" Width="48" Height="48" CornerRadius="{th:Token Key=Radius.Md, Kind=Corner}" Background="{ThemeResource JfFill}">
-                        <Image controls:Artwork.DecodeSize="96" controls:Artwork.Uri="{x:Bind Player.ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+                    <Border x:Name="Art" Width="56" Height="56" VerticalAlignment="Center" Background="{ThemeResource JfFill}" BorderBrush="{ThemeResource JfLineSoft}" BorderThickness="1" CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}">
+                        <Image controls:Artwork.DecodeSize="112" controls:Artwork.Uri="{x:Bind Player.ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
                     </Border>
-                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                        <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                         <!-- The lyrics bar (Show Lyrics Bar): the line being sung, filling word by word, in place of the artist. -->
-                        <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" Visibility="{x:Bind shell:Bind.CollapsedIfAll(Shell.Settings.ShowLyricsBar, Shell.LyricsBar.HasLine), Mode=OneWay}" />
+                        <TextBlock FontSize="12.5" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" Visibility="{x:Bind shell:Bind.CollapsedIfAll(Shell.Settings.ShowLyricsBar, Shell.LyricsBar.HasLine), Mode=OneWay}" />
                         <controls:LyricsBarLine x:Name="BarLine" LineFontSize="13" Visibility="{x:Bind shell:Bind.VisibleIfAll(Shell.Settings.ShowLyricsBar, Shell.LyricsBar.HasLine), Mode=OneWay}" />
                         <!-- A remote session: Playing on {Device}, and its error quieter after it. -->
                         <TextBlock Style="{StaticResource JfRemoteLineText}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}">
@@ -58,45 +61,43 @@
                 </Grid>
             </Button>
 
-            <!-- Middle: the transport capsule above the seek bar. -->
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="0">
-                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="4">
+            <!-- The transport above the seek bar. -->
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
                     <ToggleButton
-                        Width="36"
-                        Height="36"
                         VerticalAlignment="Center"
                         AutomationProperties.Name="{x:Bind Player.ShuffleLabel, Mode=OneWay}"
                         Command="{x:Bind Player.ToggleShuffleCommand}"
                         IsChecked="{x:Bind Player.Shuffle, Mode=OneWay}"
                         Style="{StaticResource JfToggleIconButtonStyle}"
                         ToolTipService.ToolTip="{x:Bind Player.ShuffleLabel, Mode=OneWay}">
-                        <controls:StrokeIcon Data="{StaticResource IconShuffle}" Size="16" />
+                        <controls:StrokeIcon Data="{StaticResource IconShuffle}" Size="18" />
                     </ToggleButton>
-                    <Button x:Uid="Player_PreviousButton" Width="36" Height="36" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+←)">
-                        <controls:StrokeIcon Data="{StaticResource IconPrevious}" Size="18" />
-                    </Button>
-                    <Button
-                        Width="40"
-                        Height="40"
-                        AutomationProperties.Name="{x:Bind Player.PlayPauseLabel, Mode=OneWay}"
-                        Command="{x:Bind Player.PlayPauseCommand}"
-                        Style="{StaticResource JfPlayButtonStyle}"
-                        ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
-                        <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="18" />
-                    </Button>
-                    <Button x:Uid="Player_NextButton" Width="36" Height="36" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+→)">
-                        <controls:StrokeIcon Data="{StaticResource IconNext}" Size="18" />
-                    </Button>
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button x:Uid="Player_PreviousButton" Width="44" Height="44" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+←)">
+                            <controls:StrokeIcon Data="{StaticResource IconPrevious}" Size="20" />
+                        </Button>
+                        <Button
+                            Width="44"
+                            Height="44"
+                            AutomationProperties.Name="{x:Bind Player.PlayPauseLabel, Mode=OneWay}"
+                            Command="{x:Bind Player.PlayPauseCommand}"
+                            Style="{StaticResource JfPlayButtonStyle}"
+                            ToolTipService.ToolTip="{x:Bind Player.PlayPauseLabel, Mode=OneWay}">
+                            <controls:PlayPauseGlyph IsPlaying="{x:Bind Player.IsPlaying, Mode=OneWay}" ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}" Size="22" />
+                        </Button>
+                        <Button x:Uid="Player_NextButton" Width="44" Height="44" AutomationProperties.Name="Next" Command="{x:Bind Player.NextCommand}" IsEnabled="{x:Bind Player.CanGoNext, Mode=OneWay}" Style="{StaticResource JfTransportButtonStyle}" ToolTipService.ToolTip="Next (Ctrl+→)">
+                            <controls:StrokeIcon Data="{StaticResource IconNext}" Size="20" />
+                        </Button>
+                    </StackPanel>
                     <ToggleButton
-                        Width="36"
-                        Height="36"
                         VerticalAlignment="Center"
                         AutomationProperties.Name="{x:Bind Player.RepeatLabel, Mode=OneWay}"
                         Command="{x:Bind Player.CycleRepeatCommand}"
                         IsChecked="{x:Bind shell:Bind.RepeatOn(Player.Repeat), Mode=OneWay}"
                         Style="{StaticResource JfToggleIconButtonStyle}"
                         ToolTipService.ToolTip="{x:Bind Player.RepeatLabel, Mode=OneWay}">
-                        <controls:StrokeIcon Data="{x:Bind shell:Bind.RepeatGlyph(Player.Repeat), Mode=OneWay}" Size="16" />
+                        <controls:StrokeIcon Data="{x:Bind shell:Bind.RepeatGlyph(Player.Repeat), Mode=OneWay}" Size="18" />
                     </ToggleButton>
                 </StackPanel>
                 <Grid ColumnSpacing="10">
@@ -105,7 +106,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock MinWidth="36" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.BarProgress.PositionText, Mode=OneWay}" TextAlignment="Right" AutomationProperties.AccessibilityView="Raw" />
+                    <TextBlock MinWidth="36" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" Foreground="{ThemeResource JfInk70}" Style="{StaticResource JfTimeText}" Text="{x:Bind Player.BarProgress.PositionText, Mode=OneWay}" TextAlignment="Right" />
                     <controls:SeekBar
                         x:Name="Seek"
                         x:Uid="NowPlaying_Seek"
@@ -114,25 +115,26 @@
                         AutomationProperties.Name="Position"
                         ReduceMotion="{x:Bind Shell.ReduceMotion, Mode=OneWay}"
                         ValueText="{x:Bind Player.BarProgress.AccessibleText, Mode=OneWay}" />
-                    <TextBlock Grid.Column="2" MinWidth="36" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.BarProgress.RemainingText, Mode=OneWay}" AutomationProperties.AccessibilityView="Raw" />
+                    <TextBlock Grid.Column="2" MinWidth="36" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" Foreground="{ThemeResource JfInk70}" Style="{StaticResource JfTimeText}" Text="{x:Bind Player.BarProgress.RemainingText, Mode=OneWay}" />
                 </Grid>
             </StackPanel>
 
-            <!-- End: Lyrics, Queue, the device button, the volume and More. -->
+            <!-- Lyrics, Queue, the device button (remote sources), the volume, the mini player and More. -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" Spacing="2">
                 <Button x:Uid="Bar_Lyrics" AutomationProperties.Name="Lyrics" Click="OnLyricsClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Lyrics">
-                    <controls:StrokeIcon Data="{StaticResource IconLyrics}" Size="18" />
+                    <controls:StrokeIcon Data="{StaticResource IconLyrics}" Size="20" />
                 </Button>
                 <Button x:Uid="Bar_Queue" AutomationProperties.Name="Queue" Click="OnQueueClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Queue">
-                    <controls:StrokeIcon Data="{StaticResource IconQueue}" Size="18" />
+                    <controls:StrokeIcon Data="{StaticResource IconQueue}" Size="20" />
                 </Button>
                 <Button
                     x:Name="DeviceButton"
                     AutomationProperties.Name="{x:Bind Player.OutputLabel, Mode=OneWay}"
                     Click="OnDeviceClick"
                     Style="{StaticResource JfIconButtonStyle}"
-                    ToolTipService.ToolTip="{x:Bind Player.OutputName, Mode=OneWay}">
-                    <controls:StrokeIcon Data="{x:Bind shell:Bind.Glyph(Player.OutputGlyph), Mode=OneWay}" Size="18" />
+                    ToolTipService.ToolTip="{x:Bind Player.OutputName, Mode=OneWay}"
+                    Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}">
+                    <controls:StrokeIcon Data="{x:Bind shell:Bind.Glyph(Player.OutputGlyph), Mode=OneWay}" Size="20" />
                 </Button>
                 <Button
                     AutomationProperties.Name="{x:Bind Player.MuteLabel, Mode=OneWay}"
@@ -140,27 +142,29 @@
                     Style="{StaticResource JfIconButtonStyle}"
                     ToolTipService.ToolTip="{x:Bind Player.MuteLabel, Mode=OneWay}"
                     Visibility="{x:Bind shell:Bind.Visible(Player.CanMute), Mode=OneWay}">
-                    <controls:StrokeIcon Data="{x:Bind shell:Bind.VolumeGlyph(Player.Volume, Player.IsMuted), Mode=OneWay}" Size="18" />
+                    <controls:StrokeIcon Data="{x:Bind shell:Bind.VolumeGlyph(Player.Volume, Player.IsMuted), Mode=OneWay}" Size="20" />
                 </Button>
                 <Slider
                     x:Name="VolumeSlider"
                     x:Uid="NowPlaying_Volume"
-                    Width="96"
+                    Width="112"
                     VerticalAlignment="Center"
                     AutomationProperties.Name="Volume"
                     Style="{StaticResource JfThinSliderStyle}"
                     Value="{x:Bind Player.Volume, Mode=OneWay}"
                     ValueChanged="OnVolumeChanged"
-                    Visibility="{x:Bind shell:Bind.Visible(Player.ShowsVolume), Mode=OneWay}" />
+                    Visibility="{x:Bind shell:Bind.VisibleIfAll(Player.ShowsVolume, ShowsVolumeLine), Mode=OneWay}" />
+                <Button x:Uid="Bar_MiniPlayer" AutomationProperties.Name="Open Mini Player" Click="OnMiniPlayerClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Open Mini Player (Ctrl+M)">
+                    <controls:StrokeIcon Data="{StaticResource IconMiniPlayer}" Size="20" />
+                </Button>
                 <Button
                     x:Name="MoreButton"
                     x:Uid="More_Button"
                     AutomationProperties.Name="More"
                     Click="OnMoreClick"
                     Style="{StaticResource JfIconButtonStyle}"
-                    ToolTipService.ToolTip="More"
-                    Visibility="{x:Bind shell:Bind.Visible(Player.HasMore), Mode=OneWay}">
-                    <controls:StrokeIcon Data="{StaticResource IconMore}" Size="18" />
+                    ToolTipService.ToolTip="More">
+                    <controls:StrokeIcon Data="{StaticResource IconMore}" Size="20" />
                 </Button>
             </StackPanel>
         </Grid>

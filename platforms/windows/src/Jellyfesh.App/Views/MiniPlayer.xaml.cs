@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Jellyfesh.App.Shell;
+using Jellyfesh.Core;
 using Jellyfesh.Drawing;
 using Jellyfesh.ViewModels;
 using Microsoft.UI.Xaml;
@@ -41,16 +42,25 @@ public sealed partial class MiniPlayer : UserControl
     public void UpdateSteps() =>
         Player.MiniProgress.Steps = SeekGeometry.MiniSteps(Capsule.ActualWidth, XamlRoot?.RasterizationScale ?? 1);
 
-    /// <summary>The look's Compact mini-player: the capsule as a bar across the window (as wide as the player bar).</summary>
-    public bool Stretched
+    /// <summary>
+    /// Where the capsule sits for the look's bottom-player style (ADR-0020), as in Jellyfesh Web: as
+    /// wide as it may be up to 560 epx, centred; Compact as a bar as wide as the player bar; Floating
+    /// 360 epx at the end corner. <paramref name="available"/> is the room the dock has.
+    /// </summary>
+    public void Place(MiniPlayerStyle style, double available)
     {
-        get => HorizontalAlignment == HorizontalAlignment.Stretch;
-        set
+        HorizontalAlignment = style == MiniPlayerStyle.Floating ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        Width = style == MiniPlayerStyle.Floating ? Math.Max(0, Math.Min(FloatingWidth, available)) : double.NaN;
+        Capsule.MaxWidth = style switch
         {
-            HorizontalAlignment = value ? HorizontalAlignment.Stretch : HorizontalAlignment.Center;
-            Capsule.MaxWidth = value ? 1240 : 560;
-        }
+            MiniPlayerStyle.Compact => 1280,
+            MiniPlayerStyle.Floating => double.PositiveInfinity,
+            _ => 560,
+        };
     }
+
+    /// <summary>The Floating style's capsule (the web's 360 px).</summary>
+    private const double FloatingWidth = 360;
 
     private void OnCapsuleSizeChanged(object sender, SizeChangedEventArgs e)
     {

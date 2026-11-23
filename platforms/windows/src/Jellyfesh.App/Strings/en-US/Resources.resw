@@ -401,6 +401,12 @@
   <data name="Bar_Lyrics.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Lyrics</value>
   </data>
+  <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Open Mini Player</value>
+  </data>
+  <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Open Mini Player (Ctrl+M)</value>
+  </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Queue</value>
   </data>
@@ -1056,10 +1062,10 @@
     <value>Comments</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>Mini Player</value>
+    <value>Open Mini Player</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>Mini Player (Ctrl+M)</value>
+    <value>Open Mini Player (Ctrl+M)</value>
   </data>
   <data name="NowPlaying_GetInfo.Content" xml:space="preserve">
     <value>Get Info</value>

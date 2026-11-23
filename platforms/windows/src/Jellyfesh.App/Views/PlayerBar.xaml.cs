@@ -18,6 +18,9 @@ public enum NowPlayingPanel
 
 public sealed partial class PlayerBar : UserControl
 {
+    public static readonly DependencyProperty ShowsVolumeLineProperty =
+        DependencyProperty.Register(nameof(ShowsVolumeLine), typeof(bool), typeof(PlayerBar), new PropertyMetadata(true));
+
     public PlayerBar()
     {
         Shell = AppHost.App;
@@ -63,16 +66,28 @@ public sealed partial class PlayerBar : UserControl
     /// <summary>The person asked for Now Playing (and which panel).</summary>
     public event EventHandler<NowPlayingPanel>? OpenRequested;
 
+    /// <summary>The person asked for the mini player (the bar's button).</summary>
+    public event EventHandler? MiniPlayerRequested;
+
+    /// <summary>The volume line beside the mute button; narrow bars leave it out (the web's 1040 px).</summary>
+    public bool ShowsVolumeLine
+    {
+        get => (bool)GetValue(ShowsVolumeLineProperty);
+        set => SetValue(ShowsVolumeLineProperty, value);
+    }
+
     private void OnOpenClick(object sender, RoutedEventArgs e) => OpenRequested?.Invoke(this, NowPlayingPanel.Default);
 
     private void OnLyricsClick(object sender, RoutedEventArgs e) => OpenRequested?.Invoke(this, NowPlayingPanel.Lyrics);
 
     private void OnQueueClick(object sender, RoutedEventArgs e) => OpenRequested?.Invoke(this, NowPlayingPanel.Queue);
 
-    /// <summary>The output devices, or Devices in a remote session.</summary>
+    /// <summary>Devices, while a remote source plays.</summary>
     private void OnDeviceClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowDevices(DeviceButton, Player, Shell.Services);
 
-    /// <summary>More: Open in {Service}, Stop Controlling.</summary>
+    private void OnMiniPlayerClick(object sender, RoutedEventArgs e) => MiniPlayerRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>More: Open in {Service}, Stop Controlling, Desktop Lyrics.</summary>
     private void OnMoreClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowMore(MoreButton, Player, Shell.Services);
 
     private void OnProgressChanged(object? sender, PropertyChangedEventArgs e)

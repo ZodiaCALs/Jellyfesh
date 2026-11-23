@@ -150,10 +150,7 @@
 
                 <!-- The player floats over every page: the capsule, or the player bar from 900 epx. -->
                 <Grid x:Name="Dock" Grid.Row="1" Margin="32,0,32,16" VerticalAlignment="Bottom">
-                    <views:MiniPlayer
-                        x:Name="Mini"
-                        HorizontalAlignment="Center"
-                        Visibility="Collapsed" />
+                    <views:MiniPlayer x:Name="Mini" Visibility="Collapsed" />
                     <views:PlayerBar
                         x:Name="Bar"
                         MaxWidth="1280"

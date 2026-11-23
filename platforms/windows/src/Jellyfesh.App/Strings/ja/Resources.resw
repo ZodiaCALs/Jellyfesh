@@ -401,6 +401,12 @@
   <data name="Bar_Lyrics.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>歌詞</value>
   </data>
+  <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>ミニプレーヤーを開く</value>
+  </data>
+  <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>ミニプレーヤーを開く (Ctrl+M)</value>
+  </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>キュー</value>
   </data>
@@ -1056,10 +1062,10 @@
     <value>コメント</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
-    <value>ミニプレーヤー</value>
+    <value>ミニプレーヤーを開く</value>
   </data>
   <data name="NowPlaying_Compact.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
-    <value>ミニプレーヤー (Ctrl+M)</value>
+    <value>ミニプレーヤーを開く (Ctrl+M)</value>
   </data>
   <data name="NowPlaying_GetInfo.Content" xml:space="preserve">
     <value>情報を見る</value>

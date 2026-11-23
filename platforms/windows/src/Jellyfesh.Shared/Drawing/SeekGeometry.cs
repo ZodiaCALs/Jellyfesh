@@ -65,8 +65,17 @@ public static class SeekGeometry
     /// <summary>player.mini-progress: the mini-player's progress line.</summary>
     public const double MiniProgress = 2;
 
-    /// <summary>player.mini-radius: the capsule's corners, which inset its progress line.</summary>
+    /// <summary>player.mini-radius: the floating mini-player's corners (Misty r-xl).</summary>
     public const double MiniRadius = 16;
+
+    /// <summary>player.mini-height: the capsule under 900 epx.</summary>
+    public const double MiniHeight = 64;
+
+    /// <summary>
+    /// How far the capsule's progress line is inset from each end: the capsule is a pill (r-full,
+    /// as in Jellyfesh Web), so its straight bottom edge starts half its height in.
+    /// </summary>
+    public const double CapsuleInset = MiniHeight / 2;
 
     /// <summary>player.bar-height: the desktop player bar.</summary>
     public const double BarHeight = 80;
@@ -145,12 +154,12 @@ public static class SeekGeometry
         return Math.Clamp(target, 0, Math.Max(0, duration));
     }
 
-    /// <summary>The mini-player's progress line at <paramref name="fraction"/>: along the bottom edge, inset by the corners.</summary>
+    /// <summary>The capsule's progress line at <paramref name="fraction"/>: along the bottom edge, between its round ends.</summary>
     public static double MiniProgressLength(double fraction, double width) =>
         Clamp01(fraction) * MiniTrackLength(width);
 
-    /// <summary>The full length of the mini-player's progress line.</summary>
-    public static double MiniTrackLength(double width) => Math.Max(0, width - (2 * MiniRadius));
+    /// <summary>The full length of the capsule's progress line.</summary>
+    public static double MiniTrackLength(double width) => Math.Max(0, width - (2 * CapsuleInset));
 
     /// <summary>Visibly different positions of the mini-player's line (one per device pixel).</summary>
     public static int MiniSteps(double width, double rasterizationScale) =>
