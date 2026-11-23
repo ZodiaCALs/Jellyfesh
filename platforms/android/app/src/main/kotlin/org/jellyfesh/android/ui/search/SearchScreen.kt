@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import org.jellyfesh.logic.search.SourceSection
+import org.jellyfesh.logic.search.SearchTab
+import org.jellyfesh.logic.core.SearchResults
+import org.jellyfesh.android.ui.theme.PillTabs
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -152,93 +157,155 @@ fun SearchScreen(state: CoreState) {
             }
             return@LazyColumn
         }
+        // The tabs: All, Library, then each source that answered (docs/ui.md, "Search").
+        val tab = SearchModel.shownTab(search)
+        item(key = "tabs") {
+            PillTabs(
+                options = SearchModel.tabs(search),
+                selected = tab,
+                label = { searchTabLabel(it, state) },
+                onSelect = { search = SearchModel.selectTab(search, it) },
+                description = stringResource(R.string.tab_search),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
         val library = search.library
-        if (search.libraryQuery == search.query && !search.hasResults && search.done) {
-            item(key = "none") { EmptyState(R.drawable.ic_search, stringResource(R.string.search_no_results), stringResource(R.string.search_no_results_body)) }
-        }
-        if (library.tracks.isNotEmpty()) {
-            item(key = "lib-tracks-h") { SectionHeader(stringResource(R.string.kind_tracks)) }
-            val refs = library.tracks.map { TrackRef.Library(it.id) }
-            itemsIndexed(library.tracks, key = { _, t -> "lt-${t.id}" }) { index, track ->
-                val ref = TrackRef.Library(track.id)
-                val subtitle = Labels.artistAlbum(track.artist, track.album)
-                TrackRow(
-                    title = track.title,
-                    subtitle = subtitle,
-                    art = ArtKey.ofHash(track.artworkHash),
-                    durationMs = track.durationMs,
-                    playing = ref == playing,
-                    onClick = { graph.send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
-                    onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album, artist = track.artist)) },
-                )
-            }
-        }
-        if (library.albums.isNotEmpty()) {
-            item(key = "lib-albums-h") { SectionHeader(stringResource(R.string.kind_albums)) }
-            item(key = "lib-albums") {
-                LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    items(library.albums, key = { it.id }) { album ->
-                        AlbumCard(
-                            album.title,
-                            album.albumArtist,
-                            ArtKey.ofHash(album.artworkHash),
-                            ArtworkSizes.bucket(cardPx),
-                            onClick = { nav.openAlbum(album.id, album.title) },
-                            modifier = Modifier.width(148.dp),
-                        )
-                    }
-                }
-            }
-        }
-        if (library.artists.isNotEmpty()) {
-            item(key = "lib-artists-h") { SectionHeader(stringResource(R.string.kind_artists)) }
-            items(library.artists, key = { "la-${it.id}" }) { artist ->
-                NavRow(
-                    artist.name,
-                    pluralStringResource(R.plurals.count_songs, artist.trackCount, artist.trackCount),
-                    onClick = { nav.openArtist(artist.id, artist.name) },
-                    leading = { InitialTile(artist.name) },
-                )
-            }
-        }
-        // Then From Your Sources, one group per source, as each answers (docs/ui.md, "Search").
         val sourcesUnavailable = search.sourcesUnavailable && YourSources.anyOn(state.sources.plugins)
-        if (sourcesUnavailable || search.sources.isNotEmpty()) {
-            item(key = "src-h") { SectionHeader(stringResource(R.string.search_from_sources)) }
-        }
-        if (sourcesUnavailable) {
-            item(key = "src-unavailable") { Notice(stringResource(R.string.search_sources_unavailable)) }
-        }
-        search.sources.forEach { section ->
-            val plugin = state.sources.plugins.firstOrNull { it.id == section.source }
-            val name = plugin?.name ?: section.source
-            item(key = "src-${section.source}-h") {
-                Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
-                    JfText(name, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize), modifier = Modifier.semantics { heading() })
-                    // "Content from {Service}" under a source whose terms ask for the credit.
-                    Links.attributedService(state.sources, section.source)?.let {
-                        JfText(stringResource(R.string.source_attribution, it), style = JfType.listSecondary, color = Jf.colors.ink70)
-                    }
+        when (tab) {
+            SearchTab.All -> {
+                if (search.libraryQuery == search.query && !search.hasResults && search.done) {
+                    item(key = "none") { EmptyState(R.drawable.ic_search, stringResource(R.string.search_no_results), stringResource(R.string.search_no_results_body)) }
                 }
+                libraryResults(library, playing, cardPx, graph::send, nav, actions)
+                // Then From Your Sources, one group per source, as each answers.
+                if (sourcesUnavailable || search.sources.isNotEmpty()) {
+                    item(key = "src-h") { SectionHeader(stringResource(R.string.search_from_sources)) }
+                }
+                if (sourcesUnavailable) {
+                    item(key = "src-unavailable") { Notice(stringResource(R.string.search_sources_unavailable)) }
+                }
+                search.sources.forEach { section -> sourceGroup(section, state, playing, graph::send, nav, actions, withName = true) }
             }
-            section.error?.let { error ->
-                item(key = "src-${section.source}-e") { Notice(stringResource(R.string.search_source_failed, name, error), warning = true) }
+            SearchTab.Library -> {
+                if (search.libraryQuery == search.query && library.isEmpty) {
+                    item(key = "none") { EmptyState(R.drawable.ic_search, stringResource(R.string.search_no_results), stringResource(R.string.search_no_results_body)) }
+                }
+                libraryResults(library, playing, cardPx, graph::send, nav, actions)
             }
-            SearchModel.byKind(section.items).forEach { (kind, items) ->
-                item(key = "src-${section.source}-$kind") {
-                    JfText(stringResource(kindLabel(kind)), style = JfType.label, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            is SearchTab.Source -> SearchModel.sourceTab(search, tab.source)?.let { section ->
+                if (section.items.isEmpty() && section.error == null) {
+                    item(key = "none") { EmptyState(R.drawable.ic_search, stringResource(R.string.search_no_results), null) }
                 }
-                itemsIndexed(items, key = { i, it -> "src-${section.source}-$kind-$i-${it.id}" }) { _, item ->
-                    val action = SourceItems.mainAction(item, items)
-                    SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
-                        runItemAction(action, graph::send, nav::push, actions::openLink)
-                    }
-                }
+                sourceGroup(section, state, playing, graph::send, nav, actions, withName = false)
             }
         }
-        if (!search.done) {
+        if (!search.done && tab !is SearchTab.Library) {
             item(key = "searching") {
                 JfText(stringResource(R.string.search_searching), style = JfType.small, color = Jf.colors.ink50, modifier = Modifier.padding(16.dp))
+            }
+        }
+    }
+}
+
+/** A tab's name: All, Library, or the source's own name. */
+@Composable
+private fun searchTabLabel(tab: SearchTab, state: CoreState): String = when (tab) {
+    SearchTab.All -> stringResource(R.string.search_tab_all)
+    SearchTab.Library -> stringResource(R.string.tab_library)
+    is SearchTab.Source -> state.sources.plugins.firstOrNull { it.id == tab.source }?.name ?: tab.source
+}
+
+/** The library's results: Songs, Albums and Artists. */
+private fun LazyListScope.libraryResults(
+    library: SearchResults,
+    playing: TrackRef?,
+    cardPx: Int,
+    send: (Command) -> Long,
+    nav: org.jellyfesh.android.ui.nav.NavController,
+    actions: TrackActions,
+) {
+    if (library.tracks.isNotEmpty()) {
+        item(key = "lib-tracks-h") { SectionHeader(stringResource(R.string.kind_tracks)) }
+        val refs = library.tracks.map { TrackRef.Library(it.id) }
+        itemsIndexed(library.tracks, key = { _, t -> "lt-${t.id}" }) { index, track ->
+            val ref = TrackRef.Library(track.id)
+            val subtitle = Labels.artistAlbum(track.artist, track.album)
+            TrackRow(
+                title = track.title,
+                subtitle = subtitle,
+                art = ArtKey.ofHash(track.artworkHash),
+                durationMs = track.durationMs,
+                playing = ref == playing,
+                onClick = { send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
+                onMore = { actions.showFor(TrackTarget(ref, track.title, subtitle, track.albumId, track.album, artist = track.artist)) },
+            )
+        }
+    }
+    if (library.albums.isNotEmpty()) {
+        item(key = "lib-albums-h") { SectionHeader(stringResource(R.string.kind_albums)) }
+        item(key = "lib-albums") {
+            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(library.albums, key = { it.id }) { album ->
+                    AlbumCard(
+                        album.title,
+                        album.albumArtist,
+                        ArtKey.ofHash(album.artworkHash),
+                        ArtworkSizes.bucket(cardPx),
+                        onClick = { nav.openAlbum(album.id, album.title) },
+                        modifier = Modifier.width(148.dp),
+                    )
+                }
+            }
+        }
+    }
+    if (library.artists.isNotEmpty()) {
+        item(key = "lib-artists-h") { SectionHeader(stringResource(R.string.kind_artists)) }
+        items(library.artists, key = { "la-${it.id}" }) { artist ->
+            NavRow(
+                artist.name,
+                pluralStringResource(R.plurals.count_songs, artist.trackCount, artist.trackCount),
+                onClick = { nav.openArtist(artist.id, artist.name) },
+                leading = { InitialTile(artist.name) },
+            )
+        }
+    }
+}
+
+/**
+ * One source's results: its name ([withName], on the All tab) with "Content from {Service}" when
+ * its terms ask for the credit, its error, then its results by kind.
+ */
+private fun LazyListScope.sourceGroup(
+    section: SourceSection,
+    state: CoreState,
+    playing: TrackRef?,
+    send: (Command) -> Long,
+    nav: org.jellyfesh.android.ui.nav.NavController,
+    actions: TrackActions,
+    withName: Boolean,
+) {
+    val plugin = state.sources.plugins.firstOrNull { it.id == section.source }
+    val name = plugin?.name ?: section.source
+    val credit = Links.attributedService(state.sources, section.source)
+    if (withName || credit != null) {
+        item(key = "src-${section.source}-h") {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)) {
+                if (withName) JfText(name, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize), modifier = Modifier.semantics { heading() })
+                credit?.let { JfText(stringResource(R.string.source_attribution, it), style = JfType.listSecondary, color = Jf.colors.ink70) }
+            }
+        }
+    }
+    section.error?.let { error ->
+        item(key = "src-${section.source}-e") { Notice(stringResource(R.string.search_source_failed, name, error), warning = true) }
+    }
+    SearchModel.byKind(section.items).forEach { (kind, items) ->
+        item(key = "src-${section.source}-$kind") {
+            JfText(stringResource(kindLabel(kind)), style = JfType.label, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        }
+        itemsIndexed(items, key = { i, it -> "src-${section.source}-$kind-$i-${it.id}" }) { _, item ->
+            val action = SourceItems.mainAction(item, items)
+            SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
+                runItemAction(action, send, nav::push, actions::openLink)
             }
         }
     }

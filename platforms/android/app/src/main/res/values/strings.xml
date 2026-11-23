@@ -145,6 +145,7 @@
     <string name="search_empty_body">Find songs, albums and artists in your library and in your sources.</string>
     <string name="search_no_results">No Results</string>
     <string name="search_no_results_body">Try other words.</string>
+    <string name="search_tab_all">All</string>
     <string name="search_from_sources">From Your Sources</string>
     <string name="search_sources_unavailable">Searching your sources is not available in this build yet.</string>
     <string name="search_source_failed">%1$s did not answer: %2$s</string>

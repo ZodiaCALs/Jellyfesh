@@ -113,6 +113,7 @@
     <string name="search_empty_body">在资料库和各个来源中查找歌曲、专辑和艺人。</string>
     <string name="search_no_results">没有结果</string>
     <string name="search_no_results_body">换个关键词试试。</string>
+    <string name="search_tab_all">全部</string>
     <string name="search_from_sources">来自你的来源</string>
     <string name="search_sources_unavailable">此版本暂不支持搜索来源。</string>
     <string name="search_source_failed">%1$s 没有响应：%2$s</string>

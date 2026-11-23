@@ -113,6 +113,7 @@
     <string name="search_empty_body">ライブラリと各ソースから、曲、アルバム、アーティストを探します。</string>
     <string name="search_no_results">結果はありません</string>
     <string name="search_no_results_body">別の言葉で試してください。</string>
+    <string name="search_tab_all">すべて</string>
     <string name="search_from_sources">あなたのソースから</string>
     <string name="search_sources_unavailable">このビルドではソースの検索はまだ使えません。</string>
     <string name="search_source_failed">%1$s から応答がありません：%2$s</string>

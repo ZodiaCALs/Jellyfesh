@@ -24,6 +24,35 @@ class SearchModelTest {
     }
 
     @Test
+    fun theTabsAreAllLibraryThenEachSourceThatAnswered() {
+        var state = SearchModel.requestSent(SearchModel.queryChanged(SearchState(), "tide"), "tide", 7)
+        assertEquals(listOf<SearchTab>(SearchTab.All, SearchTab.Library), SearchModel.tabs(state))
+        state = SearchModel.onUpdate(state, update(7, "org.jellyfesh.subsonic", listOf(item("s", ItemKind.Track, "1"))))
+        state = SearchModel.onUpdate(state, update(7, "org.jellyfesh.jellyfin", emptyList(), error = "timeout"))
+        assertEquals(
+            listOf(SearchTab.All, SearchTab.Library, SearchTab.Source("org.jellyfesh.subsonic"), SearchTab.Source("org.jellyfesh.jellyfin")),
+            SearchModel.tabs(state),
+        )
+        assertEquals("timeout", SearchModel.sourceTab(state, "org.jellyfesh.jellyfin")?.error)
+    }
+
+    @Test
+    fun aChosenSourceTabWaitsForItsSourceAndFallsBackToAll() {
+        var state = SearchModel.requestSent(SearchModel.queryChanged(SearchState(), "tide"), "tide", 7)
+        state = SearchModel.onUpdate(state, update(7, "org.jellyfesh.subsonic", listOf(item("s", ItemKind.Track, "1"))))
+        state = SearchModel.selectTab(state, SearchTab.Source("org.jellyfesh.subsonic"))
+        assertEquals(SearchTab.Source("org.jellyfesh.subsonic"), SearchModel.shownTab(state))
+        // A new query: until the source answers again, All shows; then its tab comes back.
+        state = SearchModel.requestSent(SearchModel.queryChanged(state, "tides"), "tides", 8)
+        assertEquals(SearchTab.All, SearchModel.shownTab(state))
+        state = SearchModel.onUpdate(state, update(8, "org.jellyfesh.subsonic", listOf(item("s", ItemKind.Album, "2"))))
+        assertEquals(SearchTab.Source("org.jellyfesh.subsonic"), SearchModel.shownTab(state))
+        // Library stays chosen across queries.
+        state = SearchModel.selectTab(state, SearchTab.Library)
+        assertEquals(SearchTab.Library, SearchModel.shownTab(SearchModel.queryChanged(state, "")))
+    }
+
+    @Test
     fun staleLibraryAnswersAreDropped() {
         var state = SearchModel.queryChanged(SearchState(), "tid")
         state = SearchModel.queryChanged(state, "tide")

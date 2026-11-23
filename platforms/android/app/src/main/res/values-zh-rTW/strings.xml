@@ -113,6 +113,7 @@
     <string name="search_empty_body">在資料庫與各個來源中尋找歌曲、專輯和藝人。</string>
     <string name="search_no_results">沒有結果</string>
     <string name="search_no_results_body">換個關鍵字試試。</string>
+    <string name="search_tab_all">全部</string>
     <string name="search_from_sources">來自你的來源</string>
     <string name="search_sources_unavailable">這個版本尚未支援搜尋來源。</string>
     <string name="search_source_failed">%1$s 沒有回應：%2$s</string>

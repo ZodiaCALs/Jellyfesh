@@ -9,6 +9,21 @@ import org.jellyfesh.logic.core.SourceItem
 data class SourceSection(val source: String, val items: List<SourceItem>, val error: String?)
 
 /**
+ * A tab of the Search page (docs/ui.md, "Search"; ADR-0024 §4): All, Library, and one per source
+ * that answered.
+ */
+sealed interface SearchTab {
+    /** The library's results, then From Your Sources. */
+    data object All : SearchTab
+
+    /** The library's results alone. */
+    data object Library : SearchTab
+
+    /** One source's results by kind. */
+    data class Source(val source: String) : SearchTab
+}
+
+/**
  * The search screen: library results from the fast synchronous query (`searchLibrary`) as the
  * person types, and every enabled source's results from `Command.Search`, merged and
  * de-duplicated by the core and shown in the order they arrive. The shell only keeps the latest
@@ -26,6 +41,8 @@ data class SearchState(
     val done: Boolean = true,
     /** Online search answered "not available in this build yet" (or failed). */
     val sourcesUnavailable: Boolean = false,
+    /** The tab the person chose; [SearchModel.shownTab] is the one shown. */
+    val tab: SearchTab = SearchTab.All,
 ) {
     val isBlank: Boolean get() = query.isBlank()
 
@@ -40,7 +57,19 @@ object SearchModel {
     const val LIBRARY_LIMIT: Int = 25
 
     fun queryChanged(state: SearchState, text: String): SearchState =
-        if (text.isBlank()) SearchState(query = text) else state.copy(query = text)
+        if (text.isBlank()) SearchState(query = text, tab = state.tab) else state.copy(query = text)
+
+    /** The tabs over the results: All, Library, then each source that answered, in the order they did. */
+    fun tabs(state: SearchState): List<SearchTab> =
+        listOf(SearchTab.All, SearchTab.Library) + state.sources.map { SearchTab.Source(it.source) }
+
+    /** The tab shown: the one chosen while it is still there (a source answers each query anew), else All. */
+    fun shownTab(state: SearchState): SearchTab = state.tab.takeIf { it in tabs(state) } ?: SearchTab.All
+
+    fun selectTab(state: SearchState, tab: SearchTab): SearchState = state.copy(tab = tab)
+
+    /** A source's tab: its results by kind, Songs, Albums, Artists and Playlists first. */
+    fun sourceTab(state: SearchState, source: String): SourceSection? = state.sources.firstOrNull { it.source == source }
 
     /** The library's results for [query]; stale answers (the person typed on) are dropped. */
     fun libraryResults(state: SearchState, query: String, results: SearchResults): SearchState =
