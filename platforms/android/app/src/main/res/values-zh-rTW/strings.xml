@@ -543,4 +543,18 @@
     <string name="comments_popular">熱門</string>
     <string name="comments_latest">最新</string>
     <string name="comments_none">還沒有留言</string>
+    <!-- Local Network access (Android 17, ACCESS_LOCAL_NETWORK in the Nearby devices group) -->
+    <string name="local_network_ask_title">允許存取區域網路？</string>
+    <string name="local_network_reason_one">%1$s 位於你的家用網路中。Android 會在應用程式連線到其中的裝置前先詢問你，因此 Jellyfesh 需要「鄰近裝置」權限才能連線到它。</string>
+    <string name="local_network_reason_many">你的部分來源位於家用網路中。Android 會在應用程式連線到其中的裝置前先詢問你，因此 Jellyfesh 需要「鄰近裝置」權限才能連線到它們。</string>
+    <string name="local_network_reason_full_one">沒有「鄰近裝置」權限，Jellyfesh 就無法連線到 %1$s，也就無法瀏覽、搜尋或播放其中的音樂。Jellyfesh 只會連線到你加入的伺服器，不會尋找你網路中的其他任何裝置。</string>
+    <string name="local_network_reason_full_many">沒有「鄰近裝置」權限，Jellyfesh 就無法連線到家用網路中的來源，也就無法瀏覽、搜尋或播放其中的音樂。Jellyfesh 只會連線到你加入的伺服器，不會尋找你網路中的其他任何裝置。</string>
+    <string name="local_network_blocked">Android 不會再在這裡詢問。請開啟 Jellyfesh 的設定，在「權限」中開啟「鄰近裝置」。</string>
+    <string name="local_network_continue">繼續</string>
+    <string name="local_network_open_settings">開啟設定</string>
+    <string name="local_network_off_title">區域網路存取已關閉</string>
+    <string name="local_network_off_one">在你允許「鄰近裝置」權限之前，Jellyfesh 無法連線到家用網路中的 %1$s。</string>
+    <string name="local_network_off_many">在你允許「鄰近裝置」權限之前，Jellyfesh 無法連線到家用網路中的來源。</string>
+    <string name="local_network_allow">允許…</string>
+    <string name="local_network_denied">沒有區域網路存取權限，Jellyfesh 可能無法連線到 %1$s。</string>
 </resources>

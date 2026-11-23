@@ -116,6 +116,8 @@ fun DiscoverScreen(pluginId: String, state: CoreState) {
                     }
                 }
             }
+            // Android 17: a source on the home network needs Local Network access.
+            item(key = "local-network") { LocalNetworkNotice(listOfNotNull(plugin)) }
             when {
                 error != null && shelves.isEmpty() -> item(key = "error") {
                     Notice(

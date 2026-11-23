@@ -123,6 +123,8 @@ fun SourcesScreen(state: CoreState) {
                 JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
             }
         }
+        // Android 17: sources on the home network need Local Network access.
+        item(key = "local-network") { LocalNetworkNotice(state.sources.plugins) }
         // The services Jellyfesh offers, each while its official plugin is installed.
         if (presets.isNotEmpty()) {
             item(key = "add-h") { SectionHeader(stringResource(R.string.sources_add)) }
@@ -342,6 +344,7 @@ fun SourceScreen(pluginId: String, state: CoreState) {
     val nav = LocalNav.current
     val overlays = LocalOverlays.current
     val disclosures = rememberDisclosures()
+    val localNetwork = LocalLocalNetwork.current
     val plugin = state.sources.plugins.firstOrNull { it.id == pluginId }
     val uninstallTitle = plugin?.let { stringResource(R.string.source_uninstall_title, it.name) }
     val uninstallBody = stringResource(R.string.source_uninstall_body)
@@ -373,14 +376,20 @@ fun SourceScreen(pluginId: String, state: CoreState) {
                 }
             }
             if (plugin.vendorPlayback) item(key = "vendor") { Notice(stringResource(R.string.source_vendor_playback)) }
+            item(key = "local-network") { LocalNetworkNotice(listOf(plugin)) }
             item(key = "enable") {
+                // Turning on a source the core calls local asks for Local Network access first (Android 17).
+                fun turnOn(commands: List<Command>) {
+                    val send = { commands.forEach(graph::send) }
+                    if (localNetwork == null) send() else localNetwork.beforeConnecting(plugin.name, plugin.localNetwork, send)
+                }
                 Panel {
                     SettingRow(stringResource(R.string.source_enabled)) {
                         JfSwitch(plugin.enabled, { on ->
-                            if (Disclosure.needsDisclosureToEnable(plugin, on)) {
-                                disclosures.enable(plugin) { Disclosure.acceptedFor(plugin).forEach(graph::send) }
-                            } else {
-                                graph.send(Command.SetPluginEnabled(plugin.id, on))
+                            when {
+                                !on -> graph.send(Command.SetPluginEnabled(plugin.id, false))
+                                Disclosure.needsDisclosureToEnable(plugin, true) -> disclosures.enable(plugin) { turnOn(Disclosure.acceptedFor(plugin)) }
+                                else -> turnOn(listOf(Command.SetPluginEnabled(plugin.id, true)))
                             }
                         })
                     }
@@ -504,6 +513,7 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
     val headerGone by remember { derivedStateOf { listState.firstVisibleItemIndex > 1 } }
     val playing = state.nowPlaying?.track
     val moreLabel = stringResource(R.string.action_more)
+    val source = state.sources.plugins.filter { it.id == pluginId }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(state = listState, modifier = Modifier.fillMaxSize().topEdgeFade(Jf.colors.sky, barFade()), contentPadding = listPadding()) {
             item(key = "bar-space") { Box(Modifier.windowInsetsPadding(WindowInsets.statusBars).padding(top = 56.dp)) }
@@ -553,6 +563,9 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
                 // "Content from {Service}" for a source whose terms ask for the credit.
                 item(key = "title") { ScreenTitle(screen.title, subtitle = credit) }
             }
+            // Android 17: a source on the home network needs Local Network access (after the
+            // header, which the top bar's title follows).
+            item(key = "local-network") { LocalNetworkNotice(source) }
             details.page?.description?.takeIf { it.isNotBlank() }?.let { text ->
                 item(key = "blurb") { Blurb(text, Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
             }

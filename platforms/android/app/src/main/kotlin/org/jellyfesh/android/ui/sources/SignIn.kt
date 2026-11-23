@@ -64,19 +64,34 @@ import org.jellyfesh.logic.sources.FieldInput
  * whose secrets go to the core once and are never kept (ADR-0015), a wait and the result.
  */
 @Stable
-class SignIn internal constructor(private val overlays: Overlays, private val context: android.content.Context) {
-    /** Signs in to an installed plugin (the sign-in rows on its page). */
+class SignIn internal constructor(
+    private val overlays: Overlays,
+    private val context: android.content.Context,
+    private val localNetwork: LocalNetworkGate?,
+    private val addressIsLocal: (String) -> Boolean,
+) {
+    /**
+     * Signs in to an installed plugin (the sign-in rows on its page), after asking for Local
+     * Network access when the core calls its address local (Android 17).
+     */
     fun start(plugin: PluginSummary, method: AuthMethod) {
-        show(plugin.name, AuthFlow.begin(plugin.id, method))
+        beforeConnecting(plugin.name, plugin.localNetwork) { show(plugin.name, AuthFlow.begin(plugin.id, method)) }
     }
 
     /**
      * Connects to a service from Add a Source with the address typed for it: the same sheet and
      * steps, begun with `ConnectSource` for the service's plugin. Nothing opens while the service
-     * needs an address and none was typed, as the core would only fail the command.
+     * needs an address and none was typed, as the core would only fail the command. The core
+     * says whether the typed address is local, which asks for Local Network access first.
      */
     fun connect(preset: SourcePreset, address: String, method: AuthMethod) {
-        AuthFlow.connect(preset, address, method)?.let { show(preset.name, it) }
+        val start = AuthFlow.connect(preset, address, method) ?: return
+        val local = preset.needsAddress && addressIsLocal(address.trim())
+        beforeConnecting(preset.name, local) { show(preset.name, start) }
+    }
+
+    private fun beforeConnecting(name: String, local: Boolean, connect: () -> Unit) {
+        if (localNetwork == null) connect() else localNetwork.beforeConnecting(name, local, connect)
     }
 
     /** [name] is what the person chose (a plugin or a service); [start] begins the flow, and again on Retry. */
@@ -91,7 +106,11 @@ class SignIn internal constructor(private val overlays: Overlays, private val co
 fun rememberSignIn(): SignIn {
     val overlays = LocalOverlays.current
     val context = LocalContext.current
-    return remember(overlays, context) { SignIn(overlays, context) }
+    val graph = LocalGraph.current
+    val localNetwork = LocalLocalNetwork.current
+    return remember(overlays, context, localNetwork) {
+        SignIn(overlays, context, localNetwork) { address -> runCatching { graph.client?.addressIsLocal(address) == true }.getOrDefault(false) }
+    }
 }
 
 @Composable

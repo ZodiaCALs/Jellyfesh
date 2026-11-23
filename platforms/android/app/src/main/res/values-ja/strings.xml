@@ -543,4 +543,18 @@
     <string name="comments_popular">人気</string>
     <string name="comments_latest">新着</string>
     <string name="comments_none">コメントはまだありません</string>
+    <!-- Local Network access (Android 17, ACCESS_LOCAL_NETWORK in the Nearby devices group) -->
+    <string name="local_network_ask_title">ローカルネットワークへのアクセスを許可しますか？</string>
+    <string name="local_network_reason_one">%1$s はホームネットワーク上にあります。Android はアプリがその中のデバイスに接続する前に確認するため、Jellyfesh が接続するには「付近のデバイス」の権限が必要です。</string>
+    <string name="local_network_reason_many">一部のソースはホームネットワーク上にあります。Android はアプリがその中のデバイスに接続する前に確認するため、Jellyfesh が接続するには「付近のデバイス」の権限が必要です。</string>
+    <string name="local_network_reason_full_one">「付近のデバイス」の権限がないと、Jellyfesh は %1$s に接続できず、その音楽をブラウズ、検索、再生できません。Jellyfesh が接続するのは追加したサーバーだけで、ネットワーク上のほかのものは探しません。</string>
+    <string name="local_network_reason_full_many">「付近のデバイス」の権限がないと、Jellyfesh はホームネットワーク上のソースに接続できず、その音楽をブラウズ、検索、再生できません。Jellyfesh が接続するのは追加したサーバーだけで、ネットワーク上のほかのものは探しません。</string>
+    <string name="local_network_blocked">Android はここではもう確認しません。Jellyfesh の設定を開き、「権限」で「付近のデバイス」をオンにしてください。</string>
+    <string name="local_network_continue">続ける</string>
+    <string name="local_network_open_settings">設定を開く</string>
+    <string name="local_network_off_title">ローカルネットワークへのアクセスがオフです</string>
+    <string name="local_network_off_one">「付近のデバイス」へのアクセスを許可するまで、Jellyfesh はホームネットワーク上の %1$s に接続できません。</string>
+    <string name="local_network_off_many">「付近のデバイス」へのアクセスを許可するまで、Jellyfesh はホームネットワーク上のソースに接続できません。</string>
+    <string name="local_network_allow">許可…</string>
+    <string name="local_network_denied">ローカルネットワークへのアクセスがないと、Jellyfesh は %1$s に接続できない場合があります。</string>
 </resources>

@@ -21,6 +21,7 @@ import org.jellyfesh.android.library.LibraryAccess
 import org.jellyfesh.android.plugins.BundledPlugins
 import org.jellyfesh.android.system.DeviceWatcher
 import org.jellyfesh.android.system.IconSwitcher
+import org.jellyfesh.android.system.LocalNetworkPermission
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreClient
 import org.jellyfesh.logic.core.CoreException
@@ -94,6 +95,9 @@ class AppGraph(private val app: Application) {
     val images = ArtworkLoader(app, this)
     val icons = IconSwitcher(app)
     val library = LibraryAccess(app, this)
+
+    /** Android 17's Local Network permission, asked before connecting to a source the core calls local. */
+    val localNetwork = LocalNetworkPermission(app)
     private var devices: DeviceWatcher? = null
 
     /** Starts the core on a background thread; views show a placeholder until it is ready. */

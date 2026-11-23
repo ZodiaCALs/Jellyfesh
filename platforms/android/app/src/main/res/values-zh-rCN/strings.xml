@@ -543,4 +543,18 @@
     <string name="comments_popular">热门</string>
     <string name="comments_latest">最新</string>
     <string name="comments_none">还没有评论</string>
+    <!-- Local Network access (Android 17, ACCESS_LOCAL_NETWORK in the Nearby devices group) -->
+    <string name="local_network_ask_title">允许访问本地网络？</string>
+    <string name="local_network_reason_one">%1$s 位于你的家庭网络中。Android 会在应用连接其中的设备前先询问你，因此 Jellyfesh 需要“附近的设备”权限才能连接它。</string>
+    <string name="local_network_reason_many">你的部分来源位于家庭网络中。Android 会在应用连接其中的设备前先询问你，因此 Jellyfesh 需要“附近的设备”权限才能连接它们。</string>
+    <string name="local_network_reason_full_one">没有“附近的设备”权限，Jellyfesh 就无法连接 %1$s，也就无法浏览、搜索或播放其中的音乐。Jellyfesh 只连接你添加的服务器，不会查找你网络中的其他任何设备。</string>
+    <string name="local_network_reason_full_many">没有“附近的设备”权限，Jellyfesh 就无法连接家庭网络中的来源，也就无法浏览、搜索或播放其中的音乐。Jellyfesh 只连接你添加的服务器，不会查找你网络中的其他任何设备。</string>
+    <string name="local_network_blocked">Android 不会再在这里询问。请打开 Jellyfesh 的设置，在“权限”中开启“附近的设备”。</string>
+    <string name="local_network_continue">继续</string>
+    <string name="local_network_open_settings">打开设置</string>
+    <string name="local_network_off_title">本地网络访问已关闭</string>
+    <string name="local_network_off_one">在你允许“附近的设备”权限之前，Jellyfesh 无法连接家庭网络中的 %1$s。</string>
+    <string name="local_network_off_many">在你允许“附近的设备”权限之前，Jellyfesh 无法连接家庭网络中的来源。</string>
+    <string name="local_network_allow">允许…</string>
+    <string name="local_network_denied">没有本地网络访问权限，Jellyfesh 可能无法连接 %1$s。</string>
 </resources>

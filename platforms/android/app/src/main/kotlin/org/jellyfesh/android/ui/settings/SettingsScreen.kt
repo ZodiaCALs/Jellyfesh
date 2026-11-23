@@ -871,6 +871,8 @@ private fun LazyListScope.rescan(state: CoreState) {
 
 /** Add a Source: the core's services, as on the Sources tab; choosing one asks for its address and sign-in. */
 private fun LazyListScope.addSource(state: CoreState) {
+    // Android 17: sources on the home network need Local Network access.
+    item(key = "local-network") { org.jellyfesh.android.ui.sources.LocalNetworkNotice(state.sources.plugins) }
     val presets = state.sources.presets
     if (presets.isEmpty()) return
     item(key = "add-h") { SectionHeader(stringResource(R.string.sources_add)) }

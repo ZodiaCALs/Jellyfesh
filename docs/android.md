@@ -1,4 +1,4 @@
-# The Android app (v0.0.7)
+# The Android app (v0.0.8)
 
 Kotlin and Jetpack Compose over the Rust core through the UniFFI Kotlin bindings
 (docs/ffi.md). minSdk 26 (cpal's AAudio output, ADR-0009), compileSdk and targetSdk 37.
@@ -10,6 +10,34 @@ APK has never been built and the app has never run. The parts that need no Andro
 and tested here (`:logic`), the FFI adapter is compiled and run against the real core on the
 JVM (`:ffi-check`), and the whole app except the Media3 session is compiled on the JVM against
 stand-ins (`:ui-check`). The first CI build is the first real compile; see "Risks" below.
+
+## v0.0.8: Android 17's Local Network permission
+
+The app targets API 37, and on Android 17 such an app reaches servers on the home network only
+with the runtime permission `ACCESS_LOCAL_NETWORK` (Nearby devices group): without it TCP
+connections time out and UDP fails with EPERM, so Jellyfin and Navidrome at home failed
+(developer.android.com/privacy-and-security/local-network-permission). Earlier Android versions
+grant it with `INTERNET`.
+
+* **Declared** in the manifest; asked only on Android 17 and later.
+* **The core decides what is local**, by Android's definition: `PluginSummary.localNetwork` for
+  saved sources, and `CoreClient.addressIsLocal` for the address typed in Add a Source before it
+  is saved. Both are false until the generated bindings carry the core's flag and function; the
+  one gate, `LocalNetwork.needsPermission` in `:logic` (`sources/LocalNetwork.kt`, tested), is
+  what they feed.
+* **Asked before connecting**: Add a Source with a local address, Sign In on a local source's
+  page, and turning a local source on show a sheet (why, Not Now, Continue), then Android's
+  dialog. Jellyfesh also asks once by itself when it opens with enabled local sources and has
+  never asked. The answer is advice: the action goes ahead whatever it is, because a server
+  reached through a VPN needs no permission (`ui/sources/LocalNetworkUi.kt`).
+* **Denied or revoked**: "Local Network Access Is Off" names the sources on Home, the Sources
+  page, Settings › Sources and the source's own pages, with **Allow…**. After a denial the sheet
+  gives the fuller reason and asks again, which Android's permission request reset counter
+  allows; once Android stops showing its dialog (`shouldShowRequestPermissionRationale` false
+  after an ask), the button is **Open Settings** (the app's page, Permissions › Nearby devices).
+  The state is read again whenever the window comes back to the front.
+* Whether Jellyfesh has asked, and whether it explained it once at start, are kept in the app's
+  own preferences (`system/LocalNetworkPermission.kt`).
 
 ## v0.0.7: Pro, extensions, the look, AI Lyrics, Discover and details
 

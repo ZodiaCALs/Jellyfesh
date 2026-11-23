@@ -73,6 +73,13 @@ interface CoreClient {
     /** The version of the core library the app runs (the free function `library_version()`). */
     fun libraryVersion(): String
 
+    /**
+     * Whether [address], typed in Add a Source before it is saved, is on the local network by the
+     * core's rule (the free function `address_is_local`; [PluginSummary.localNetwork] says it for
+     * saved sources). The app never decides it. False until the generated bindings have it.
+     */
+    fun addressIsLocal(address: String): Boolean = false
+
     /** The clock anchors are stamped with, in nanoseconds. Not for per-frame use. */
     fun monotonicNowNs(): Long
 

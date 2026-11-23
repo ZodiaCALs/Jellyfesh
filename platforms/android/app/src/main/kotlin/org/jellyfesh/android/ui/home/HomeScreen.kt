@@ -101,6 +101,8 @@ fun HomeScreen(state: CoreState) {
                 JfIconButton(R.drawable.ic_settings, stringResource(R.string.action_settings), { nav.openSettings() }, tint = Jf.colors.ink90)
             }
         }
+        // Android 17: sources on the home network need Local Network access.
+        item(key = "local-network") { org.jellyfesh.android.ui.sources.LocalNetworkNotice(state.sources.plugins) }
         if (HomeModel.showsWelcome((stats as? QueryResult.Ok)?.value, state.scanning, state.sources)) {
             item(key = "welcome") {
                 EmptyState(

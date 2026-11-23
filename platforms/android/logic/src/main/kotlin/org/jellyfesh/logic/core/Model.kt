@@ -206,6 +206,13 @@ data class PluginSummary(
     val details: Boolean = false,
     /** It shows comments: Now Playing offers a Comments pane. */
     val comments: Boolean = false,
+    /**
+     * The core's word that the source's address is on the local network (Android's definition:
+     * private, CGNAT and link-local addresses, multicast and `.local` names). On Android 17 the
+     * app reaches it only with the Local Network permission ([org.jellyfesh.logic.sources.LocalNetwork]).
+     * False until the generated bindings carry the core's flag.
+     */
+    val localNetwork: Boolean = false,
 )
 
 /**

@@ -73,6 +73,7 @@ import org.jellyfesh.android.ui.settings.SettingsScreen
 import org.jellyfesh.android.ui.signals.SignalMessages
 import org.jellyfesh.android.ui.sources.SourceBrowseScreen
 import org.jellyfesh.android.ui.sources.DiscoverScreen
+import org.jellyfesh.android.ui.sources.ProvideLocalNetwork
 import org.jellyfesh.android.ui.sources.SourceScreen
 import org.jellyfesh.android.ui.sources.SourcesScreen
 import org.jellyfesh.android.ui.theme.GlassBackdrop
@@ -188,76 +189,79 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
     CompositionLocalProvider(LocalNav provides nav, LocalPlaybackRunning provides (PlayerModel.isPlaying(state.playback.status) && !PlayerModel.isRemote(state))) {
         BackHandler(enabled = navState.canGoBack && !overlays.isOpen) { nav.back() }
         val saveable = rememberSaveableStateHolder()
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            // From 900 dp (tablets, desktop mode) the player bar replaces the mini-player.
-            val wide = SeekGeometry.usesPlayerBar(maxWidth.value)
-            val windowWidth = maxWidth.value
-            // The floating chrome above the system navigation bar: the tab bar capsule, and the
-            // mini-player pill (or the player bar) when something plays.
-            // The look's mini-player style (ADR-0020): v0.0.6's Bar unless an appearance plugin chose another.
-            val playerKind = NowPlayingLayouts.miniPlayer(Jf.look.miniPlayer, wide)
-            val chromeHeight: Dp = chromeHeight(hasPlayer, playerKind, lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar })
-            // Library screens and their chrome. Hidden from accessibility while a layer covers them.
-            val covered = navState.nowPlayingOpen || overlays.isOpen
-            GlassBackdrop(
-                Modifier.fillMaxSize().then(if (covered) Modifier.clearAndSetSemantics {} else Modifier),
-                invalidateKey = state.theme,
-            ) {
-                MistyField(Modifier.fillMaxSize())
-                CompositionLocalProvider(
-                    LocalChromePadding provides PaddingValues(bottom = chromeHeight + navigationInset),
-                    LocalWindowWidthDp provides windowWidth,
+        // Android 17: Local Network access before connecting to a source on the home network.
+        ProvideLocalNetwork(state.sources.plugins) {
+            BoxWithConstraints(Modifier.fillMaxSize()) {
+                // From 900 dp (tablets, desktop mode) the player bar replaces the mini-player.
+                val wide = SeekGeometry.usesPlayerBar(maxWidth.value)
+                val windowWidth = maxWidth.value
+                // The floating chrome above the system navigation bar: the tab bar capsule, and the
+                // mini-player pill (or the player bar) when something plays.
+                // The look's mini-player style (ADR-0020): v0.0.6's Bar unless an appearance plugin chose another.
+                val playerKind = NowPlayingLayouts.miniPlayer(Jf.look.miniPlayer, wide)
+                val chromeHeight: Dp = chromeHeight(hasPlayer, playerKind, lyricsBarHeight(lyricsBarTranslates(state)).takeIf { lyricsBar })
+                // Library screens and their chrome. Hidden from accessibility while a layer covers them.
+                val covered = navState.nowPlayingOpen || overlays.isOpen
+                GlassBackdrop(
+                    Modifier.fillMaxSize().then(if (covered) Modifier.clearAndSetSemantics {} else Modifier),
+                    invalidateKey = state.theme,
                 ) {
-                    val screen = navState.screen
-                    // Pages fade in and rise 8 dp (dur-2 Fluid); going back fades (dur-1); under reduced
-                    // motion both are a short fade.
-                    AnimatedContent(
-                        targetState = Triple(navState.tab, screen, navState.stack.size),
-                        transitionSpec = {
-                            val back = targetState.first == initialState.first && targetState.third < initialState.third
-                            when {
-                                reduce -> fadeIn(JfMotion.fade(Tokens.Motion.dur1Ms, true)) togetherWith fadeOut(JfMotion.fadeOut(Tokens.Motion.dur1Ms, true))
-                                back -> fadeIn(JfMotion.fluid(Tokens.Motion.dur1Ms, false)) togetherWith fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
-                                else -> (fadeIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) + slideIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) { IntOffset(0, rise) }) togetherWith
-                                    fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
+                    MistyField(Modifier.fillMaxSize())
+                    CompositionLocalProvider(
+                        LocalChromePadding provides PaddingValues(bottom = chromeHeight + navigationInset),
+                        LocalWindowWidthDp provides windowWidth,
+                    ) {
+                        val screen = navState.screen
+                        // Pages fade in and rise 8 dp (dur-2 Fluid); going back fades (dur-1); under reduced
+                        // motion both are a short fade.
+                        AnimatedContent(
+                            targetState = Triple(navState.tab, screen, navState.stack.size),
+                            transitionSpec = {
+                                val back = targetState.first == initialState.first && targetState.third < initialState.third
+                                when {
+                                    reduce -> fadeIn(JfMotion.fade(Tokens.Motion.dur1Ms, true)) togetherWith fadeOut(JfMotion.fadeOut(Tokens.Motion.dur1Ms, true))
+                                    back -> fadeIn(JfMotion.fluid(Tokens.Motion.dur1Ms, false)) togetherWith fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
+                                    else -> (fadeIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) + slideIn(JfMotion.fluid(Tokens.Motion.dur2Ms, false)) { IntOffset(0, rise) }) togetherWith
+                                        fadeOut(JfMotion.exit(Tokens.Motion.dur1Ms, false))
+                                }
+                            },
+                            label = "screen",
+                            // The content fades out just above the floating chrome (Luminous).
+                            modifier = Modifier.fadeOutAbove(chromeHeight + navigationInset),
+                        ) { (tab, target, _) ->
+                            saveable.SaveableStateProvider("${tab.name}/$target") {
+                                ScreenContent(target, state)
                             }
+                        }
+                    }
+                    BottomChrome(
+                        state = state,
+                        tab = navState.tab,
+                        kind = playerKind,
+                        onSelect = nav::select,
+                        lyricsBar = lyricsBar,
+                        onOpenNowPlaying = { panel ->
+                            requestedPanel = panel
+                            nav.openNowPlaying()
                         },
-                        label = "screen",
-                        // The content fades out just above the floating chrome (Luminous).
-                        modifier = Modifier.fadeOutAbove(chromeHeight + navigationInset),
-                    ) { (tab, target, _) ->
-                        saveable.SaveableStateProvider("${tab.name}/$target") {
-                            ScreenContent(target, state)
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    )
+                }
+                AnimatedVisibility(
+                    visible = navState.nowPlayingOpen,
+                    enter = slideInVertically(JfMotion.fluid(JfMotion.OPEN_NOW_PLAYING_MS, reduce)) { it / 6 } +
+                        fadeIn(JfMotion.fade(JfMotion.OPEN_NOW_PLAYING_MS, reduce)),
+                    exit = slideOutVertically(JfMotion.exit(JfMotion.CLOSE_NOW_PLAYING_MS, reduce)) { it / 6 } +
+                        fadeOut(JfMotion.fadeOut(JfMotion.CLOSE_NOW_PLAYING_MS, reduce)),
+                ) {
+                    Box(Modifier.fillMaxSize().then(if (overlays.isOpen) Modifier.clearAndSetSemantics {} else Modifier)) {
+                        CompositionLocalProvider(LocalWindowWidthDp provides windowWidth) {
+                            NowPlayingScreen(state, onClose = nav::closeNowPlaying, requestedPanel = requestedPanel)
                         }
                     }
                 }
-                BottomChrome(
-                    state = state,
-                    tab = navState.tab,
-                    kind = playerKind,
-                    onSelect = nav::select,
-                    lyricsBar = lyricsBar,
-                    onOpenNowPlaying = { panel ->
-                        requestedPanel = panel
-                        nav.openNowPlaying()
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
+                OverlayHost(overlays, bottomInset = if (navState.nowPlayingOpen) 0.dp else chromeHeight)
             }
-            AnimatedVisibility(
-                visible = navState.nowPlayingOpen,
-                enter = slideInVertically(JfMotion.fluid(JfMotion.OPEN_NOW_PLAYING_MS, reduce)) { it / 6 } +
-                    fadeIn(JfMotion.fade(JfMotion.OPEN_NOW_PLAYING_MS, reduce)),
-                exit = slideOutVertically(JfMotion.exit(JfMotion.CLOSE_NOW_PLAYING_MS, reduce)) { it / 6 } +
-                    fadeOut(JfMotion.fadeOut(JfMotion.CLOSE_NOW_PLAYING_MS, reduce)),
-            ) {
-                Box(Modifier.fillMaxSize().then(if (overlays.isOpen) Modifier.clearAndSetSemantics {} else Modifier)) {
-                    CompositionLocalProvider(LocalWindowWidthDp provides windowWidth) {
-                        NowPlayingScreen(state, onClose = nav::closeNowPlaying, requestedPanel = requestedPanel)
-                    }
-                }
-            }
-            OverlayHost(overlays, bottomInset = if (navState.nowPlayingOpen) 0.dp else chromeHeight)
         }
     }
 }
