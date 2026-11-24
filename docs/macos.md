@@ -38,11 +38,13 @@ them. What changed, and why:
 * **Pages.** A page opened from another starts with **Back** (accent text, as on the web),
   which goes back a page as Esc does; the system's toolbar back button is hidden. The Albums and
   Songs sort menus sit at the end of the page's title instead of the toolbar, so the window has
-  no toolbar. Downloads is an empty page ("No Downloads Yet") until the core's download queue
-  reaches the app.
+  no toolbar.
 * **Settings is a page** (`Views/Settings/SettingsView.swift`, `SettingsPage`), with the web's
-  pill tabs over the section's grouped forms in a column as wide as the web's
-  (`layout.reading`, 704 pt); the Settings window is gone. The app menu's Settings… (⌘,) opens
+  pill tabs over the section in a column as wide as the web's (`layout.reading`, 704 pt); the
+  Settings window is gone. Appearance, Playback, Library, Downloads and About are drawn as the
+  web's cards (`Views/Settings/SettingsCards.swift`: Mist cards with the heading inside, rows of a
+  label, a line of help and the control at the end); Sources and Extensions are still grouped
+  forms. The app menu's Settings… (⌘,) opens
   it at the section shown last; **About Jellyfesh** opens Settings › About
   (`Views/Settings/AboutSettings.swift`), which starts with Keyboard Shortcuts (the shared keys
   with ⌘, `AboutInfo.shortcuts`) and holds what the About window held. Menu items that show a
@@ -74,10 +76,65 @@ them. What changed, and why:
   seconds, doubling to 10 minutes), at once when the core later sends it, and whenever a source
   signs in or out; views showing a placeholder then load again (`ArtworkLoader.generation`).
 
-Still to come with the core's v0.0.8 contract: the quality badge and menu, the mini player's
-settings (until then Keep on Top and Show Lyrics Line are on, Open When the Window Is Closed off),
-Favourites and Playlists with the sources' sections, the search tabs, the Downloads page and
-Settings › Downloads, Streaming in Settings › Playback.
+## v0.0.8: the core's contract
+
+The core's v0.0.8 contract (M1: da8e9f7, 7ee495f, 0565e2b) reached the app through the
+hand-written adapters (`CoreClient/FFIConversions.swift`, `CoreModels.swift`; 948a2a6). What it
+brought, and where:
+
+* **The quality badge and menu** (ADR-0026 §3; `Support/QualityMenu.swift`,
+  `Views/Common/QualityBadge.swift`, `PlaybackStore.qualityMenu(chosen:)`). A capsule in the
+  player bar and in Now Playing's dock shows the core's label for what plays ("Hi-Res Lossless")
+  or, before the format is known, the level chosen. It opens a native menu: the format line
+  ("FLAC · 24-bit · 96 kHz", or "AAC · 256 kbit/s"), then **Streaming Quality** with Auto and the
+  levels the source offers (`NowPlaying.qualities`), or, when the level isn't the app's to choose,
+  the core's note ("Quality is set in Spotify.", "Files play as they are."; a remote session's
+  `qualityNote`). The same setting is **Streaming** in Settings › Playback ("Auto plays lossless,
+  or High on a metered connection.").
+* **The network** (`Platform/NetworkMonitor.swift`). `NWPathMonitor` tells the core whether the
+  Mac is online and whether the connection is metered (expensive or constrained), for Auto
+  quality and downloads (`SetNetworkState`). It runs from launch to quit and costs nothing while
+  nothing changes.
+* **The mini player's settings** (Settings › Appearance › Mini Player): Keep on Top, Open When the
+  Window Is Closed and Show Lyrics Line, kept by the core (`Settings.miniPlayer`).
+* **Search by source** (ADR-0024 §4; `Stores/SearchStore.swift`, `Views/Search/SearchView.swift`).
+  Tabs All, Library and one per source that answered. All shows the library's results, then
+  **From Your Sources** (the sources that allow merging), Apple Music, and a link to each
+  separate source's tab ("Results from Spotify"). A source's tab shows its Songs, Albums, Artists
+  and Playlists, each with **Show More** (`SearchMore`, answered by `Event.searchPage`).
+* **The sources' likes and playlists** (ADR-0024 §3; `Stores/SourceLibraryStore.swift`,
+  `Views/Library/SourceLibraryViews.swift`). Favourites and Playlists add one section per
+  signed-in source after the library's own: its name, its credit where its terms ask for one, when
+  the cached lists were updated ("Updated 5 minutes ago"), then songs as rows that play, albums as
+  cards and artists and playlists as rows that open their pages, each list with Show More. The
+  lists refresh when either page opens, at most every ten minutes. A source playlist has **Save as
+  Playlist…** in its More menu, which asks for the name and opens the new playlist when the core
+  has made it; a playlist whose songs its service doesn't list says so and still plays there.
+  Source collections carry their kind (`Collection.source(plugin, id, itemKind)`).
+* **Downloads** (ADR-0025; `Stores/DownloadsStore.swift`):
+  * **The Downloads page** (`Views/Library/DownloadsView.swift`): Play and Shuffle, the songs
+    and the space used at the top, and why downloads wait ("Downloads wait until you're
+    online."); the downloads in progress, each with its progress or why it failed, Try Again
+    after a failure, and Cancel; then the downloaded songs by album. Each album and song has
+    **Remove Download…**, which asks first. A downloaded song plays its library track, or the
+    source's song, which plays the file, offline too. The rows sit in lazy stacks.
+  * **Settings › Downloads** (`Views/Settings/DownloadsSettings.swift`), between Library and
+    Sources: Folder with Show in Finder and Change…, Quality (Original, High, Normal, Low), File
+    Names with its fields and a live preview from the core's rules (`downloadPreview`), the Tags
+    switches, Downloads at Once (1 to 4), and Space Used with **Remove All Downloads…** (asked
+    first). Wi-Fi Only is Android's.
+  * **The folder.** The core is told `~/Music/Jellyfesh` (`CoreConfig.downloadsDir`; the real
+    Music folder, not the sandbox container's). The App Store build may now write to Music
+    (`com.apple.security.assets.music.read-write` instead of read-only). A folder chosen with
+    Change… is kept there with a security-scoped bookmark under its own key
+    (`FolderAccess.downloadsKey`), held from launch before the core downloads into it; one that
+    moved is passed to the core at its new path.
+  * **Download** is in the menus of the albums, playlists and songs of a source that offers
+    downloads (`PluginSummary.download`): a source page's More, a card's or row's menu, and the
+    song menu for the songs not downloaded yet. A downloaded source song shows the Downloaded
+    mark in its row (`SourceItem.downloaded`, `TrackRow.downloaded`).
+* **Shuffle** sends the collection with `start` 0 and `shuffle`, which the core reads as no song
+  chosen, so any song can come first.
 
 ## v0.0.7: Pro, AI Lyrics, Customize, Discover and the lyrics bar
 
@@ -479,9 +536,10 @@ platforms/macos/
   * New Playlist… (⌘N, the sidebar's +, Playlists, Add to Playlist…) asks for
     the name in an alert before anything is created (`LibraryStore.newPlaylist`).
   * The song menu is Play Next, Play Last, Add to Playlist…, Add to or Remove
-    from Favourites, Go to Album, Go to Artist and Show in Finder; rows that do
-    not carry a library song's album or file look them up when chosen, and Go
-    to Artist opens the library's artist of that name.
+    from Favourites, Download (a source's songs, where it offers downloads), Go
+    to Album, Go to Artist and Show in Finder; rows that do not carry a library
+    song's album or file look them up when chosen, and Go to Artist opens the
+    library's artist of that name.
   * The Sources page: what sources are, Add a Source (the core's services, the
     same rows and Connect sheet as Settings), Your Sources (status; choosing one
     browses it) and Sources Settings…. A sign-in sheet opens in the window its
@@ -499,19 +557,22 @@ platforms/macos/
   Clear Queue asks first; "Nothing Up Next" when empty), info (About This
   Song: title, artist, album, year, length, format, lyrics and the file).
 * **Search.** One `Search` command for the library and every source; results
-  appear per source as they arrive: the library's first, then From Your
-  Sources, one group per source. Library artwork comes from one
+  appear per source as they arrive, under the tabs All, Library and one per
+  source: All shows the library's first, then From Your Sources (one group per
+  source that allows merging) and links to the separate sources' tabs; a
+  source's tab has Show More for each kind. Library artwork comes from one
   `searchLibrary` query; if the command fails, the library query alone fills
   the page.
 * **Settings.** A page of the main window, with pill tabs, in the order of `ui.md`.
   Appearance (theme, accent colour, transparency, Reduce Motion and Transparency, Artwork or
-  Misty, lyrics size, alignment, translations and romanization, the app icon picker), Playback
-  (output device; crossfade; Volume Levelling: ReplayGain and its preamp;
+  Misty, lyrics size, alignment, translations and romanization, the Mini Player group, the app
+  icon picker), Playback (output device; crossfade; Volume Levelling: ReplayGain and its preamp;
   equalizer with the Preset picker from the core's `eq_presets()`, showing
-  Custom once a band moves, the preamp, the bands and Reset to Flat; Startup:
+  Custom once a band moves, the preamp, the bands and Reset to Flat; Streaming; Startup:
   Resume Playback), Library (folders with Show in Finder, Remove Folder… and
   Add Folder…; Watch Folders; Rescan Library with the scan's progress and Last
-  Scan), Sources (Add a Source; Installed with Install from File… in its
+  Scan), Downloads (folder, quality, file names, tags, downloads at once, space used and Remove
+  All Downloads…), Sources (Add a Source; Installed with Install from File… in its
   heading: enable, sign-in by QR code, browser or fields, settings forms from
   each plugin's JSON Schema, "Version · Author", Uninstall…; Community Plugins
   with the ADR-0012 disclosure), Extensions, and About (Keyboard Shortcuts, the version, the
@@ -566,7 +627,11 @@ frame, folder bookmarks, the build flags, and `tests/contract/lyrics-bar.json`);
 v0.0.8's layout (`LayoutTests.swift`: the web's breakpoints, the panel's places and the phone
 tabs for a look, the Library tab's memory, the player over every page but Now Playing, the narrow
 bar, the wordmark's icon, Settings and About as pages, the shared keys), the mini player's store
-and first frame (`MiniPlayerTests.swift`) and the covers' back-off;
+and first frame (`MiniPlayerTests.swift`) and the covers' back-off; v0.0.8's contract
+(`V008Tests.swift`: the network state, the quality badge and menu, the sources' likes and
+playlists with their refresh and Save as Playlist…, the downloads store's lists, words and
+commands, Download for albums and playlists, the Downloaded mark), the search tabs and Show More,
+the downloads folder's bookmark (`FolderAccessTests.swift`) and v0.0.8's commands converted;
 the v0.0.4 design math
 (`DesignTests.swift`: seek geometry, Now Playing motion and the cascade, swatches
 and the OKLCH port against `design/tokens.json`, the transparency look, the new
@@ -632,6 +697,27 @@ message instead; `import JellyfeshFFIFFI` is behind `#if canImport`, so a wrong
 include path shows up as missing `RustBuffer` declarations rather than a
 missing module.
 
+**v0.0.8 additions** (assumed from `core/jf-ffi` at the M1 commits, not yet checked against a
+generated file): `Settings.streamingQuality: StreamingQuality` (`.auto`, `.lossless`, `.high`,
+`.normal`, `.low`), `Settings.downloads: DownloadSettings` (`folder`, `quality`, `nameTemplate`,
+`addMissingCoverAndLyrics`, `lyricsInTags`, `saveLrcFiles`, `wifiOnly`, `atOnce`) and
+`Settings.miniPlayer` (`keepOnTop`, `openWhenWindowClosed`, `showLyricsLine`, `androidPip`);
+`CoreConfig.downloadsDir: String?`; `NowPlaying.qualities`/`qualityNote`/`qualityLevel`,
+`RemoteSnapshot.qualityNote` and `QualityNote.setInService(service:)`, `.filesPlayAsTheyAre`;
+`Collection.source(plugin:id:itemKind:)`; `Command.setNetworkState(online:metered:)`,
+`.searchMore(plugin:kind:cursor:)`, `.refreshSourceLibrary(plugin:)`,
+`.sourceLibraryMore(plugin:part:cursor:)`, `.savePlaylistCopy(plugin:id:name:)`,
+`.download(target:)` with `DownloadTarget.track(track:)` and `.collection(plugin:id:itemKind:)`,
+`.cancelDownload(id:)`, `.retryDownload(id:)`, `.removeDownload(id:)`, `.removeAllDownloads`;
+`Event.searchPage`, `.sourceLibrary`, `.sourceLibraryPage`, `.downloads` and
+`Snapshot.sourceLibrary`/`downloads`; `SearchPage`, `SourceLibrarySnapshot`, `SourceLibraryList`,
+`SourceLibraryEntry` (`owned`, `songsListed`), `SourceLibraryPart`, `SourceLibraryPage`,
+`DownloadsSnapshot` (`folder`, `items`, `bytesUsed`, `paused`), `DownloadItem` (`bytesDone`,
+`bytesTotal`, `path`, `libraryId`, `original`, `state`), `DownloadState`, `DownloadError`
+(`.notAllowed(service:)`, `.notOffered(service:)`, `.network`, `.storage`, `.other`),
+`DownloadsPaused`; `PluginSummary.library`/`download`/`qualities`/`localNetwork`;
+`SourceItem.downloaded`, `TrackRow.downloaded`; the free function `downloadPreview(template:)`.
+
 **v0.0.7 additions** (checked against `Generated/JellyfeshFFI.swift` generated after the core's
 M3, 432d68f): `CoreConfig(dataDir:cacheDir:output:distribution:)` and `Distribution`;
 `JellyfeshCore.sourceArtwork(url:sizePx:)`, `localizedSettingsSchema(plugin:language:)`,
@@ -656,12 +742,15 @@ not called); `Snapshot.aiLyrics`/`look`/`pro`/`update` and their events, `Event.
 
 ## Known gaps
 
-* v0.0.8: Settings' groups are the system's grouped forms over the field, not the web's Mist
-  cards with the heading inside, and the title and section tabs stay put while the groups scroll;
-  album and playlist songs are rows over the field rather than inside a card; the panel uses the
-  app's Clear glass (SwiftUI materials) rather than AppKit's sidebar material; the mini player has
-  no Liquid Glass on macOS 26 and does not open the main window from its cover. None of it has
-  been compiled where it was written: CI's macOS job is its first build.
+* v0.0.8: Settings › Sources and Extensions are still the system's grouped forms, not the web's
+  Mist cards, and the title and section tabs stay put while the groups scroll; album and playlist
+  songs are rows over the field rather than inside a card; the panel uses the app's Clear glass
+  (SwiftUI materials) rather than AppKit's sidebar material; the mini player has no Liquid Glass
+  on macOS 26 and does not open the main window from its cover. The Downloads page lists a
+  download's song with the source's cover, which needs the network; an album's Remove Download…
+  sends one command per song. The M1 core answers Download, Show More on the sources' lists and
+  Save as Playlist… with "not available in this build yet", which the app shows as a notice. None
+  of it has been compiled where it was written: CI's macOS job is its first build.
 * Apple Music's results show placeholders: their pictures do not come
   through the core's cache.
 * v0.0.7: StoreKit has not met App Store Connect yet (the product, the
