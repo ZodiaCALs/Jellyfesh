@@ -60,20 +60,20 @@ final class DownloadsStore {
     }
 
     /// How far a download is, 0–1, when its size is known.
-    static func progress(_ entry: DownloadEntry) -> Double? {
+    nonisolated static func progress(_ entry: DownloadEntry) -> Double? {
         guard let total = entry.bytesTotal, total > 0 else { return nil }
         return min(max(Double(entry.bytesDone) / Double(total), 0), 1)
     }
 
     /// What a finished download plays: its library track once the library has it, else the
     /// source's song, which plays the file too (ADR-0025 §4).
-    static func track(_ entry: DownloadEntry) -> TrackReference {
+    nonisolated static func track(_ entry: DownloadEntry) -> TrackReference {
         if let id = entry.libraryID { return .library(id: id) }
         return .source(entry.track)
     }
 
     /// Why a download failed, in the app's words.
-    static func problem(_ problem: DownloadProblem) -> String {
+    nonisolated static func problem(_ problem: DownloadProblem) -> String {
         switch problem {
         case .notAllowed(let service): return String(localized: "Your \(service) server doesn't allow downloads for this account.")
         case .notOffered(let service): return String(localized: "\(service) doesn't offer downloads.")
@@ -82,7 +82,7 @@ final class DownloadsStore {
     }
 
     /// Why downloads wait.
-    static func paused(_ pause: DownloadsPause) -> String {
+    nonisolated static func paused(_ pause: DownloadsPause) -> String {
         switch pause {
         case .offline: return String(localized: "Downloads wait until you're online.")
         case .metered: return String(localized: "Downloads wait for Wi-Fi.")
