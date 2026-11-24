@@ -229,6 +229,35 @@ public class FfiMappingTests
         Assert.Equal(0.5f, M.AppSettings.Default.Transparency);
         Assert.Equal(M.LyricsSize.Medium, M.AppSettings.Default.LyricsSize);
         Assert.Equal(M.LyricsAlign.Start, M.AppSettings.Default.LyricsAlign);
+        Assert.Equal(M.StreamingQuality.Auto, M.AppSettings.Default.StreamingQuality);
+
+        // The binding's defaults are the core's (tests/contract/ffi-types.json's default SetSettings).
+        Assert.Equal(new F.DownloadSettings(), FfiMapping.ToFfi(M.DownloadSettings.Default));
+        Assert.Equal(new F.MiniPlayerSettings(), FfiMapping.ToFfi(M.MiniPlayerSettings.Default));
+    }
+
+    [Fact]
+    public void Settings_never_send_the_core_a_null_downloads_or_mini_player()
+    {
+        // The core refuses "downloads": null; a record built without them sends its defaults.
+        Assert.Equal((M.DownloadSettings.Default, M.MiniPlayerSettings.Default), (M.AppSettings.Default.Downloads, M.AppSettings.Default.MiniPlayer));
+        var without = M.AppSettings.Default with { Downloads = null, MiniPlayer = null };
+        var json = JsonSerializer.Serialize(FfiMapping.ToFfi(new M.CoreCommand.SetSettings(without)), F.JellyfeshJsonContext.Default.Command);
+        Assert.DoesNotContain("\"downloads\":null", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"mini_player\":null", json, StringComparison.Ordinal);
+        var sent = Assert.IsType<F.Command.SetSettings>(JsonSerializer.Deserialize(json, F.JellyfeshJsonContext.Default.Command)).Settings;
+        Assert.Equal((new F.DownloadSettings(), new F.MiniPlayerSettings()), (sent.Downloads, sent.MiniPlayer));
+
+        var chosen = M.AppSettings.Default with
+        {
+            StreamingQuality = M.StreamingQuality.Low,
+            Downloads = M.DownloadSettings.Default with { WifiOnly = false, AtOnce = 9 },
+            MiniPlayer = M.MiniPlayerSettings.Default with { KeepOnTop = false },
+        };
+        var back = FfiMapping.ToModel(FfiMapping.ToFfi(chosen));
+        Assert.Equal(M.StreamingQuality.Low, back.StreamingQuality);
+        Assert.Equal(M.DownloadSettings.Default with { WifiOnly = false, AtOnce = M.DownloadSettings.MaxAtOnce }, back.Downloads);
+        Assert.Equal(M.MiniPlayerSettings.Default with { KeepOnTop = false }, back.MiniPlayer);
     }
 
     [Fact]
@@ -330,6 +359,21 @@ public class FfiMappingTests
         F.Command.Discover d => new M.CoreCommand.Discover(d.Source),
         F.Command.Details d => new M.CoreCommand.Details(FfiMapping.ToModel(d.Item)),
         F.Command.Comments x => new M.CoreCommand.Comments(FfiMapping.ToModel(x.Item), x.Page),
+        F.Command.SetNetworkState n => new M.CoreCommand.SetNetworkState(n.Online, n.Metered),
+        F.Command.SearchMore m => new M.CoreCommand.SearchMore(m.Plugin, FfiMapping.ToModel(m.Kind), m.Cursor),
+        F.Command.RefreshSourceLibrary r => new M.CoreCommand.RefreshSourceLibrary(r.Plugin),
+        F.Command.SourceLibraryMore m => new M.CoreCommand.SourceLibraryMore(m.Plugin, FfiMapping.ToModel(m.Part), m.Cursor),
+        F.Command.SavePlaylistCopy s => new M.CoreCommand.SavePlaylistCopy(s.Plugin, s.Id, s.Name),
+        F.Command.Download d => new M.CoreCommand.Download(d.Target switch
+        {
+            F.DownloadTarget.Track track => new M.DownloadTarget.Track(FfiMapping.ToModel(track.Value)),
+            F.DownloadTarget.Collection col => new M.DownloadTarget.Collection(col.Plugin, col.Id, FfiMapping.ToModel(col.ItemKind)),
+            _ => throw new Xunit.Sdk.XunitException("unknown download target"),
+        }),
+        F.Command.CancelDownload x => new M.CoreCommand.CancelDownload(x.Id),
+        F.Command.RetryDownload r => new M.CoreCommand.RetryDownload(r.Id),
+        F.Command.RemoveDownload r => new M.CoreCommand.RemoveDownload(r.Id),
+        F.Command.RemoveAllDownloads => new M.CoreCommand.RemoveAllDownloads(),
         _ => throw new Xunit.Sdk.XunitException($"no model command for {c.GetType().Name}"),
     };
 
@@ -341,7 +385,7 @@ public class FfiMappingTests
         F.Collection.Favorites => new M.Collection.Favorites(),
         F.Collection.Songs s => new M.Collection.Songs(FfiMapping.ToModel(s.Sort), s.Descending),
         F.Collection.Tracks t => new M.Collection.Tracks(t.Value.Select(FfiMapping.ToModel).ToArray()),
-        F.Collection.Source s => new M.Collection.Source(s.Plugin, s.Id),
+        F.Collection.Source s => new M.Collection.Source(s.Plugin, s.Id, FfiMapping.ToModel(s.ItemKind)),
         _ => throw new Xunit.Sdk.XunitException("unknown collection"),
     };
 

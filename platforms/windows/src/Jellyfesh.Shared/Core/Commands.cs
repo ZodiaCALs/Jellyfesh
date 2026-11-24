@@ -179,6 +179,38 @@ public abstract record CoreCommand
 
     /// <summary>A page of comments (null <paramref name="Page"/> is the first), answered by <see cref="CoreEvent.Comments"/>.</summary>
     public sealed record Comments(ItemRef Item, string? Page) : CoreCommand;
+
+    // ---- v0.0.8 (ADR-0024 to ADR-0026) ----
+
+    /// <summary>The network the platform reports, at start and on every change: Auto quality asks High while metered; downloads wait offline.</summary>
+    public sealed record SetNetworkState(bool Online, bool Metered) : CoreCommand;
+
+    /// <summary>Show More: more of one kind of a source's results for the newest search, answered by <see cref="CoreEvent.SearchPage"/>.</summary>
+    public sealed record SearchMore(string Plugin, ItemKind Kind, string Cursor) : CoreCommand;
+
+    /// <summary>Reloads a source's likes and playlists (null: every source), when Favourites or Playlists opens.</summary>
+    public sealed record RefreshSourceLibrary(string? Plugin) : CoreCommand;
+
+    /// <summary>The next page of a source's list, answered by <see cref="CoreEvent.SourceLibraryPage"/>.</summary>
+    public sealed record SourceLibraryMore(string Plugin, SourceLibraryPart Part, string Cursor) : CoreCommand;
+
+    /// <summary>Save as Playlist…: a Jellyfesh playlist of a source playlist's songs, answered by <see cref="CoreEvent.PlaylistCreated"/>.</summary>
+    public sealed record SavePlaylistCopy(string Plugin, string Id, string Name) : CoreCommand;
+
+    /// <summary>Downloads a song, or every song of an album or playlist.</summary>
+    public sealed record Download(DownloadTarget Target) : CoreCommand;
+
+    /// <summary>Stops an unfinished download and forgets it.</summary>
+    public sealed record CancelDownload(ulong Id) : CoreCommand;
+
+    /// <summary>Tries a failed download again.</summary>
+    public sealed record RetryDownload(ulong Id) : CoreCommand;
+
+    /// <summary>Remove Download…: deletes a finished download's file (asks first).</summary>
+    public sealed record RemoveDownload(ulong Id) : CoreCommand;
+
+    /// <summary>Remove All Downloads… (asks first).</summary>
+    public sealed record RemoveAllDownloads : CoreCommand;
 }
 
 /// <summary>What <see cref="CoreCommand.Remote"/> asks of the remote session.</summary>

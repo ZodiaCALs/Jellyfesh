@@ -43,7 +43,10 @@ public sealed record NowPlayingInfo(
     ArtworkRef? Artwork,
     TrackFormat? Format,
     string? Link = null,
-    AudioFormat? Quality = null);
+    AudioFormat? Quality = null,
+    IReadOnlyList<StreamingQuality>? Qualities = null,
+    QualityNote? QualityNote = null,
+    StreamingQuality? QualityLevel = null);
 
 public enum LyricTiming
 {
@@ -226,7 +229,8 @@ public sealed record RemoteState(
     RepeatMode Repeat,
     RemoteDevice? Device,
     IReadOnlyList<RemoteDevice> Devices,
-    string? Error)
+    string? Error,
+    QualityNote? QualityNote = null)
 {
     public static RemoteState Initial { get; } =
         new(0, null, null, PlaybackStatus.Stopped, null, null, default, false, RepeatMode.Off, null, [], null);
@@ -252,10 +256,13 @@ public sealed record CoreSnapshot(
     AiLyricsState AiLyrics,
     LookState Look,
     ProState Pro,
-    UpdateState Update)
+    UpdateState Update,
+    SourceLibraryState SourceLibrary,
+    DownloadsState Downloads)
 {
     public static CoreSnapshot Initial { get; } = new(
         PlaybackState.Initial, QueueState.Initial, null, null, null, 0, false,
         AppSettings.Default, DevicesState.Initial, SourcesState.Initial, false, RemoteState.Initial,
-        AiLyricsState.Initial, LookState.Default, ProState.Initial, UpdateState.Initial);
+        AiLyricsState.Initial, LookState.Default, ProState.Initial, UpdateState.Initial,
+        SourceLibraryState.Initial, DownloadsState.Initial);
 }

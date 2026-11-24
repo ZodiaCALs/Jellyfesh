@@ -30,7 +30,9 @@ public static class FfiMapping
         s.AiLyrics is null ? M.AiLyricsState.Initial : ToModel(s.AiLyrics),
         s.Look is null ? M.LookState.Default : ToModel(s.Look),
         s.Pro is null ? M.ProState.Initial : ToModel(s.Pro),
-        s.Update is null ? M.UpdateState.Initial : ToModel(s.Update));
+        s.Update is null ? M.UpdateState.Initial : ToModel(s.Update),
+        s.SourceLibrary is null ? M.SourceLibraryState.Initial : ToModel(s.SourceLibrary),
+        s.Downloads is null ? M.DownloadsState.Initial : ToModel(s.Downloads));
 
     public static M.CoreEvent ToModel(F.Event e) => e switch
     {
@@ -60,6 +62,10 @@ public static class FfiMapping
         F.Event.Details dt => new M.CoreEvent.Details(ToModel(dt.Page)),
         F.Event.Comments cm => new M.CoreEvent.Comments(ToModel(cm.Page)),
         F.Event.Artwork aw => new M.CoreEvent.Artwork(new M.ArtworkReady(aw.Ready.Url, aw.Ready.SizePx, aw.Ready.Path)),
+        F.Event.SearchPage sp => new M.CoreEvent.SearchPage(ToModel(sp.Page)),
+        F.Event.SourceLibrary sl => new M.CoreEvent.SourceLibrary(ToModel(sl.Snapshot)),
+        F.Event.SourceLibraryPage lp => new M.CoreEvent.SourceLibraryPage(ToModel(lp.Page)),
+        F.Event.Downloads dl => new M.CoreEvent.Downloads(ToModel(dl.Snapshot)),
         _ => new M.CoreEvent.Error($"unknown core event {e.GetType().Name}"),
     };
 
@@ -130,7 +136,10 @@ public static class FfiMapping
             n.Format.Codec, n.Format.SampleRate, n.Format.Channels, n.Format.DurationUs, n.Format.Gapless, n.Format.Bitrate,
             n.Format.BitsPerSample),
         n.Link,
-        n.Quality is null ? null : ToModel(n.Quality));
+        n.Quality is null ? null : ToModel(n.Quality),
+        n.Qualities is null ? null : List(n.Qualities, ToModel),
+        n.QualityNote is null ? null : ToModel(n.QualityNote),
+        n.QualityLevel is { } level ? ToModel(level) : null);
 
     public static M.ArtworkRef ToModel(F.ArtworkRef a) => a switch
     {
@@ -231,7 +240,10 @@ public static class FfiMapping
         s.AllowCommunityPlugins,
         s.CheckForUpdates,
         s.ShowLyricsBar,
-        s.DesktopLyrics);
+        s.DesktopLyrics,
+        ToModel(s.StreamingQuality),
+        s.Downloads is null ? M.DownloadSettings.Default : ToModel(s.Downloads),
+        s.MiniPlayer is null ? M.MiniPlayerSettings.Default : ToModel(s.MiniPlayer));
 
     public static M.DevicesState ToModel(F.DevicesSnapshot d) => new(d.Version, List(d.Devices, ToModel), d.Selected);
 
@@ -255,7 +267,11 @@ public static class FfiMapping
         p.Discover,
         p.Details,
         p.Comments,
-        string.IsNullOrWhiteSpace(p.Description) ? null : p.Description);
+        string.IsNullOrWhiteSpace(p.Description) ? null : p.Description,
+        p.Library,
+        p.Download,
+        p.Qualities is null ? null : List(p.Qualities, ToModel),
+        p.LocalNetwork);
 
     public static M.AuthMethod ToModel(F.AuthMethod a) => a switch
     {
@@ -295,7 +311,11 @@ public static class FfiMapping
         f.Help);
 
     public static M.SearchUpdate ToModel(F.SearchUpdate u) =>
-        new(u.Request, u.Query, u.Source, List(u.Items, ToModel), u.Error, u.Done);
+        new(u.Request, u.Query, u.Source, List(u.Items, ToModel), u.Error, u.Done, u.Merged,
+            u.Groups is null ? null : List(u.Groups, g => new M.SearchGroup(ToModel(g.Kind), List(g.Items, ToModel), g.Next, g.Total)));
+
+    public static M.SearchMorePage ToModel(F.SearchPage p) =>
+        new(p.Request, p.Query, p.Source, ToModel(p.Kind), List(p.Items, ToModel), p.Next, p.Error);
 
     public static M.BrowseUpdate ToModel(F.BrowseUpdate u) =>
         new(u.Request, u.Plugin, u.Node, List(u.Items, ToModel), u.NextPage, u.Error);
@@ -310,7 +330,8 @@ public static class FfiMapping
         i.AlsoIn.ToArray(),
         i.Link,
         string.IsNullOrEmpty(i.ArtistId) ? null : i.ArtistId,
-        string.IsNullOrEmpty(i.AlbumId) ? null : i.AlbumId);
+        string.IsNullOrEmpty(i.AlbumId) ? null : i.AlbumId,
+        i.Downloaded);
 
     public static M.ItemKind ToModel(F.ItemKind k) => k switch
     {
@@ -333,7 +354,8 @@ public static class FfiMapping
         ToModel(r.Repeat),
         r.Device is null ? null : ToModel(r.Device),
         List(r.Devices, ToModel),
-        r.Error);
+        r.Error,
+        r.QualityNote is null ? null : ToModel(r.QualityNote));
 
     public static M.RemoteDevice ToModel(F.RemoteDevice d) => new(
         d.Id,
@@ -370,7 +392,7 @@ public static class FfiMapping
 
     public static M.TrackRow ToModel(F.TrackRow r) => new(
         ToModel(r.Track), r.Title, r.Artist, r.Album, r.DurationMs,
-        r.Artwork is null ? null : ToModel(r.Artwork), r.ArtworkHash, r.Favorite, r.Missing);
+        r.Artwork is null ? null : ToModel(r.Artwork), r.ArtworkHash, r.Favorite, r.Missing, r.Downloaded);
 
     public static M.PlaylistSummary ToModel(F.PlaylistSummary p) =>
         new(p.Id, p.Name, p.EntryCount, p.DurationMs, p.UpdatedAtMs, p.ArtworkHash);
@@ -601,6 +623,125 @@ public static class FfiMapping
         _ => throw new ArgumentOutOfRangeException(nameof(i), i, "unknown item reference"),
     };
 
+    // ---- v0.0.8 (ADR-0024 to ADR-0026) -----------------------------------------------------------
+
+    public static M.StreamingQuality ToModel(F.StreamingQuality q) => q switch
+    {
+        F.StreamingQuality.Lossless => M.StreamingQuality.Lossless,
+        F.StreamingQuality.High => M.StreamingQuality.High,
+        F.StreamingQuality.Normal => M.StreamingQuality.Normal,
+        F.StreamingQuality.Low => M.StreamingQuality.Low,
+        _ => M.StreamingQuality.Auto,
+    };
+
+    public static M.DownloadQuality ToModel(F.DownloadQuality q) => q switch
+    {
+        F.DownloadQuality.High => M.DownloadQuality.High,
+        F.DownloadQuality.Normal => M.DownloadQuality.Normal,
+        F.DownloadQuality.Low => M.DownloadQuality.Low,
+        _ => M.DownloadQuality.Original,
+    };
+
+    public static M.DownloadSettings ToModel(F.DownloadSettings d) => new(
+        d.Folder, ToModel(d.Quality), d.NameTemplate, d.AddMissingCoverAndLyrics, d.LyricsInTags, d.SaveLrcFiles, d.WifiOnly, d.AtOnce);
+
+    public static M.MiniPlayerSettings ToModel(F.MiniPlayerSettings m) =>
+        new(m.KeepOnTop, m.OpenWhenWindowClosed, m.ShowLyricsLine, m.AndroidPip);
+
+    public static M.QualityNote ToModel(F.QualityNote n) => n switch
+    {
+        F.QualityNote.SetInService s => new M.QualityNote.SetInService(s.Service),
+        _ => new M.QualityNote.FilesPlayAsTheyAre(),
+    };
+
+    public static M.SourceLibraryPart ToModel(F.SourceLibraryPart p) => p switch
+    {
+        F.SourceLibraryPart.LikedAlbums => M.SourceLibraryPart.LikedAlbums,
+        F.SourceLibraryPart.LikedArtists => M.SourceLibraryPart.LikedArtists,
+        F.SourceLibraryPart.Playlists => M.SourceLibraryPart.Playlists,
+        _ => M.SourceLibraryPart.LikedSongs,
+    };
+
+    public static M.SourceLibraryEntry ToModel(F.SourceLibraryEntry e) => new(ToModel(e.Item), e.Owned, e.SongsListed);
+
+    public static M.SourceLibraryState ToModel(F.SourceLibrarySnapshot s) => new(
+        s.Version,
+        List(s.Sources, source => new M.SourceLibrary(
+            source.Plugin,
+            source.Name,
+            string.IsNullOrWhiteSpace(source.Attribution) ? null : source.Attribution,
+            List(source.Lists, l => new M.SourceLibraryList(ToModel(l.Part), List(l.Entries, ToModel), l.Total, l.Next, l.RefreshedAtMs, l.Loading, l.Error)))));
+
+    public static M.SourceLibraryMorePage ToModel(F.SourceLibraryPage p) =>
+        new(p.Request, p.Plugin, ToModel(p.Part), List(p.Entries, ToModel), p.Next, p.Error);
+
+    public static M.DownloadsState ToModel(F.DownloadsSnapshot d) => new(
+        d.Version,
+        d.Folder,
+        List(d.Items, i => new M.DownloadItem(i.Id, ToModel(i.Track), ToModel(i.State), i.BytesDone, i.BytesTotal, i.Path, i.LibraryId, i.Original)),
+        d.BytesUsed,
+        d.Paused switch
+        {
+            F.DownloadsPaused.Offline => M.DownloadsPaused.Offline,
+            F.DownloadsPaused.Metered => M.DownloadsPaused.Metered,
+            _ => null,
+        });
+
+    public static M.DownloadState ToModel(F.DownloadState s) => s switch
+    {
+        F.DownloadState.Downloading => new M.DownloadState.Downloading(),
+        F.DownloadState.Done => new M.DownloadState.Done(),
+        F.DownloadState.Failed f => new M.DownloadState.Failed(f.Error switch
+        {
+            F.DownloadError.NotAllowed n => new M.DownloadError.NotAllowed(n.Service),
+            F.DownloadError.NotOffered n => new M.DownloadError.NotOffered(n.Service),
+            F.DownloadError.Network n => new M.DownloadError.Network(n.Message),
+            F.DownloadError.Storage n => new M.DownloadError.Storage(n.Message),
+            F.DownloadError.Other o => new M.DownloadError.Other(o.Message),
+            _ => new M.DownloadError.Other(string.Empty),
+        }),
+        _ => new M.DownloadState.Queued(),
+    };
+
+    public static F.StreamingQuality ToFfi(M.StreamingQuality q) => q switch
+    {
+        M.StreamingQuality.Lossless => F.StreamingQuality.Lossless,
+        M.StreamingQuality.High => F.StreamingQuality.High,
+        M.StreamingQuality.Normal => F.StreamingQuality.Normal,
+        M.StreamingQuality.Low => F.StreamingQuality.Low,
+        _ => F.StreamingQuality.Auto,
+    };
+
+    public static F.DownloadQuality ToFfi(M.DownloadQuality q) => q switch
+    {
+        M.DownloadQuality.High => F.DownloadQuality.High,
+        M.DownloadQuality.Normal => F.DownloadQuality.Normal,
+        M.DownloadQuality.Low => F.DownloadQuality.Low,
+        _ => F.DownloadQuality.Original,
+    };
+
+    public static F.DownloadSettings ToFfi(M.DownloadSettings d) => new(
+        d.Folder, ToFfi(d.Quality), d.NameTemplate, d.AddMissingCoverAndLyrics, d.LyricsInTags, d.SaveLrcFiles, d.WifiOnly,
+        Math.Clamp(d.AtOnce, M.DownloadSettings.MinAtOnce, M.DownloadSettings.MaxAtOnce));
+
+    public static F.MiniPlayerSettings ToFfi(M.MiniPlayerSettings m) =>
+        new(m.KeepOnTop, m.OpenWhenWindowClosed, m.ShowLyricsLine, m.AndroidPip);
+
+    public static F.SourceLibraryPart ToFfi(M.SourceLibraryPart p) => p switch
+    {
+        M.SourceLibraryPart.LikedAlbums => F.SourceLibraryPart.LikedAlbums,
+        M.SourceLibraryPart.LikedArtists => F.SourceLibraryPart.LikedArtists,
+        M.SourceLibraryPart.Playlists => F.SourceLibraryPart.Playlists,
+        _ => F.SourceLibraryPart.LikedSongs,
+    };
+
+    public static F.DownloadTarget ToFfi(M.DownloadTarget t) => t switch
+    {
+        M.DownloadTarget.Track track => new F.DownloadTarget.Track(ToFfi(track.Value)),
+        M.DownloadTarget.Collection c => new F.DownloadTarget.Collection(c.Plugin, c.Id, ToFfi(c.Kind)),
+        _ => throw new ArgumentOutOfRangeException(nameof(t), t, "unknown download target"),
+    };
+
     // ---- to the core --------------------------------------------------------------------------
 
     public static F.Command ToFfi(M.CoreCommand c) => c switch
@@ -670,6 +811,16 @@ public static class FfiMapping
         M.CoreCommand.Discover d => new F.Command.Discover(d.Source),
         M.CoreCommand.Details d => new F.Command.Details(ToFfi(d.Item)),
         M.CoreCommand.Comments x => new F.Command.Comments(ToFfi(x.Item), x.Page),
+        M.CoreCommand.SetNetworkState n => new F.Command.SetNetworkState(n.Online, n.Metered),
+        M.CoreCommand.SearchMore m => new F.Command.SearchMore(m.Plugin, ToFfi(m.Kind), m.Cursor),
+        M.CoreCommand.RefreshSourceLibrary r => new F.Command.RefreshSourceLibrary(r.Plugin),
+        M.CoreCommand.SourceLibraryMore m => new F.Command.SourceLibraryMore(m.Plugin, ToFfi(m.Part), m.Cursor),
+        M.CoreCommand.SavePlaylistCopy s => new F.Command.SavePlaylistCopy(s.Plugin, s.Id, s.Name),
+        M.CoreCommand.Download d => new F.Command.Download(ToFfi(d.Target)),
+        M.CoreCommand.CancelDownload x => new F.Command.CancelDownload(x.Id),
+        M.CoreCommand.RetryDownload r => new F.Command.RetryDownload(r.Id),
+        M.CoreCommand.RemoveDownload r => new F.Command.RemoveDownload(r.Id),
+        M.CoreCommand.RemoveAllDownloads => new F.Command.RemoveAllDownloads(),
         _ => throw new ArgumentOutOfRangeException(nameof(c), c, "unknown command"),
     };
 
@@ -734,7 +885,7 @@ public static class FfiMapping
         M.Collection.Favorites => new F.Collection.Favorites(),
         M.Collection.Songs s => new F.Collection.Songs(ToFfi(s.Sort), s.Descending),
         M.Collection.Tracks t => new F.Collection.Tracks(List(t.Items, ToFfi)),
-        M.Collection.Source s => new F.Collection.Source(s.Plugin, s.Id),
+        M.Collection.Source s => new F.Collection.Source(s.Plugin, s.Id, ToFfi(s.Kind)),
         _ => throw new ArgumentOutOfRangeException(nameof(c), c, "unknown collection"),
     };
 
@@ -811,7 +962,11 @@ public static class FfiMapping
         s.AllowCommunityPlugins,
         s.CheckForUpdates,
         s.ShowLyricsBar,
-        s.DesktopLyrics);
+        s.DesktopLyrics,
+        ToFfi(s.StreamingQuality),
+        // The core refuses a null here: a record built without them sends the core's defaults.
+        ToFfi(s.Downloads ?? M.DownloadSettings.Default),
+        ToFfi(s.MiniPlayer ?? M.MiniPlayerSettings.Default));
 
     public static F.TrackQuery ToFfi(M.TrackQuery q) => new(q.Offset, q.Limit, ToFfi(q.Sort), q.Descending, q.AlbumId, q.ArtistId);
 

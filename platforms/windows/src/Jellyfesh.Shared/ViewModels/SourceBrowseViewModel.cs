@@ -138,6 +138,12 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     /// <summary>An album's songs are numbered.</summary>
     public bool IsNumbered => Target.Kind == ItemKind.Album;
 
+    /// <summary>
+    /// The kind the core fetches this page's node by when it plays: the listed item's, or a folder
+    /// for a node that is only a listing (a Discover shelf's more), whose pages the core browses.
+    /// </summary>
+    private ItemKind TargetKind => Target.Kind ?? ItemKind.Folder;
+
     /// <summary>The item opens in its service (More › Open in {Service}).</summary>
     public string? Link { get; }
 
@@ -264,7 +270,7 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     {
         if (CanQueue && Target.Node is { } node)
         {
-            CollectionActions.PlayNext(S, new Collection.Source(Target.Plugin, node));
+            CollectionActions.PlayNext(S, new Collection.Source(Target.Plugin, node, TargetKind));
         }
     }
 
@@ -273,7 +279,7 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     {
         if (CanQueue && Target.Node is { } node)
         {
-            CollectionActions.PlayLast(S, new Collection.Source(Target.Plugin, node));
+            CollectionActions.PlayLast(S, new Collection.Source(Target.Plugin, node, TargetKind));
         }
     }
 
@@ -301,7 +307,7 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
         {
             // The core fetches every page and queues what plays here, in the source's order (an
             // artist plays its albums).
-            CollectionActions.Play(S, new Collection.Source(Target.Plugin, node), shuffle);
+            CollectionActions.Play(S, new Collection.Source(Target.Plugin, node, TargetKind), shuffle);
         }
     }
 
@@ -310,7 +316,7 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
         if (IsCollection && Target.Node is { } node && track.SourceIndex is { } index)
         {
             // The whole album or playlist, starting at this song (the core counts in the source's order).
-            S.Send(new CoreCommand.PlayCollection(new Collection.Source(Target.Plugin, node), (uint)index, false));
+            S.Send(new CoreCommand.PlayCollection(new Collection.Source(Target.Plugin, node, TargetKind), (uint)index, false));
             return;
         }
 

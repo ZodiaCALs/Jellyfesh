@@ -109,6 +109,37 @@ public class CoreHubTests
     }
 
     [Fact]
+    public void The_v008_slices_apply_by_version_and_their_pages_are_notifications()
+    {
+        var core = new FakeCore();
+        var ui = new QueueDispatcher();
+        using var hub = new CoreHub(core, ui);
+        hub.Start();
+        var changes = new List<SliceChange>();
+        var seen = new List<CoreEvent>();
+        hub.Changed += c => changes.Add(c);
+        hub.Notification += e => seen.Add(e);
+
+        var library = new SourceLibrary("spotify", "Spotify", null, []);
+        core.Emit(new CoreEvent.SourceLibrary(new SourceLibraryState(2, [library])));
+        core.Emit(new CoreEvent.SourceLibrary(new SourceLibraryState(1, []))); // older: dropped
+        core.Emit(new CoreEvent.Downloads(DownloadsState.Initial with { Version = 5, Folder = "/music/Jellyfesh", Paused = DownloadsPaused.Metered }));
+        core.Emit(new CoreEvent.SearchPage(new SearchMorePage(3, "blue", "spotify", ItemKind.Album, [], null, null)));
+        core.Emit(new CoreEvent.SourceLibraryPage(new SourceLibraryMorePage(4, "spotify", SourceLibraryPart.Playlists, [], null, null)));
+        ui.RunAll();
+
+        Assert.Equal(SliceChange.SourceLibrary | SliceChange.Downloads, Assert.Single(changes));
+        Assert.Equal(library, Assert.Single(hub.State.SourceLibrary.Sources));
+        Assert.Equal(("/music/Jellyfesh", DownloadsPaused.Metered), (hub.State.Downloads.Folder, hub.State.Downloads.Paused));
+        Assert.Collection(seen, e => Assert.IsType<CoreEvent.SearchPage>(e), e => Assert.IsType<CoreEvent.SourceLibraryPage>(e));
+
+        core.Emit(new CoreEvent.Downloads(DownloadsState.Initial with { Version = 4 }));
+        ui.RunAll();
+        Assert.Equal(5ul, hub.State.Downloads.Version);
+        Assert.Single(changes);
+    }
+
+    [Fact]
     public void Library_revisions_only_move_forward()
     {
         var core = new FakeCore();

@@ -57,6 +57,9 @@ public sealed record CrossfadeSettings(bool Enabled, uint DurationMs, bool Album
 /// <param name="CheckForUpdates">Direct downloads: check at most once a day.</param>
 /// <param name="ShowLyricsBar">The one-line lyrics bar in the player bar.</param>
 /// <param name="DesktopLyrics">The current line in a window of its own above other apps.</param>
+/// <param name="StreamingQuality">The level asked of sources (ADR-0026), also the bar's quality menu.</param>
+/// <param name="Downloads">Settings › Downloads (ADR-0025). The core always sends it; null (a record built without it) reads as <see cref="DownloadSettings.Default"/>.</param>
+/// <param name="MiniPlayer">Settings › Appearance › Mini Player (ADR-0026). Null (a record built without it) reads as <see cref="MiniPlayerSettings.Default"/>.</param>
 public sealed record AppSettings(
     AppearancePreference Appearance,
     BackdropStyle Style,
@@ -78,7 +81,10 @@ public sealed record AppSettings(
     bool AllowCommunityPlugins,
     bool CheckForUpdates = true,
     bool ShowLyricsBar = true,
-    bool DesktopLyrics = false)
+    bool DesktopLyrics = false,
+    StreamingQuality StreamingQuality = StreamingQuality.Auto,
+    DownloadSettings? Downloads = null,
+    MiniPlayerSettings? MiniPlayer = null)
 {
     /// <summary>How see-through glass is by default: the tokens' own alphas (0 solid … 1 clearest).</summary>
     public const float DefaultTransparency = 0.5f;
@@ -104,5 +110,8 @@ public sealed record AppSettings(
         AllowCommunityPlugins: false,
         CheckForUpdates: true,
         ShowLyricsBar: true,
-        DesktopLyrics: false);
+        DesktopLyrics: false,
+        StreamingQuality.Auto,
+        DownloadSettings.Default,
+        MiniPlayerSettings.Default);
 }

@@ -227,7 +227,8 @@ public sealed record TrackRow(
     ArtworkRef? Artwork,
     string? ArtworkHash,
     bool Favorite,
-    bool Missing);
+    bool Missing,
+    bool Downloaded = false);
 
 /// <summary>A queue entry that started playing.</summary>
 public sealed record HistoryEntry(TrackRef Track, long PlayedAtMs);
@@ -325,7 +326,11 @@ public sealed record PluginInfo(
     bool Discover = false,
     bool Details = false,
     bool Comments = false,
-    string? Description = null);
+    string? Description = null,
+    bool Library = false,
+    bool Download = false,
+    IReadOnlyList<StreamingQuality>? Qualities = null,
+    bool LocalNetwork = false);
 
 /// <summary>
 /// A music service offered in Settings → Sources → Add a Source, listed while its official plugin
@@ -424,16 +429,22 @@ public sealed record SourceItem(
     IReadOnlyList<string> AlsoIn,
     string? Link = null,
     string? ArtistId = null,
-    string? AlbumId = null);
+    string? AlbumId = null,
+    bool Downloaded = false);
 
 /// <summary>Results from one source for one search.</summary>
+/// <param name="Items">The section for the All tab: with Merged, less what earlier sections show; otherwise all its results.</param>
+/// <param name="Merged">Part of the merged results; false for sources whose terms forbid merging (never de-duplicated, never shown beside other rows: the All tab links to their tab).</param>
+/// <param name="Groups">The source's own results kind by kind, for its tab, with Show More.</param>
 public sealed record SearchUpdate(
     ulong Request,
     string Query,
     string Source,
     IReadOnlyList<SourceItem> Items,
     string? Error,
-    bool Done);
+    bool Done,
+    bool Merged = true,
+    IReadOnlyList<SearchGroup>? Groups = null);
 
 /// <summary>One page of a source's catalogue.</summary>
 public sealed record BrowseUpdate(
@@ -462,7 +473,8 @@ public abstract record Collection
 
     public sealed record Tracks(IReadOnlyList<TrackRef> Items) : Collection;
 
-    public sealed record Source(string Plugin, string Id) : Collection;
+    /// <summary>An album, playlist or other container from a source: a <see cref="SourceItem"/>'s Source, Id and Kind, which the core fetches it by.</summary>
+    public sealed record Source(string Plugin, string Id, ItemKind Kind) : Collection;
 }
 
 /// <summary>Where a search looks.</summary>

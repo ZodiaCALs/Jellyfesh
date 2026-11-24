@@ -30,7 +30,9 @@ public enum SliceChange
     Look = 1 << 13,
     Pro = 1 << 14,
     Update = 1 << 15,
-    All = (1 << 16) - 1,
+    SourceLibrary = 1 << 16,
+    Downloads = 1 << 17,
+    All = (1 << 18) - 1,
 }
 
 /// <summary>
@@ -216,6 +218,8 @@ public sealed class CoreHub : IDisposable
         public LookState? Look;
         public ProState? Pro;
         public UpdateState? Update;
+        public SourceLibraryState? SourceLibrary;
+        public DownloadsState? Downloads;
         public readonly List<CoreEvent> Notifications = [];
 
         public void Add(CoreEvent e)
@@ -274,8 +278,15 @@ public sealed class CoreHub : IDisposable
                 case CoreEvent.UpdateStatus u when Update is null || u.State.Version >= Update.Version:
                     Update = u.State;
                     break;
+                case CoreEvent.SourceLibrary sl when SourceLibrary is null || sl.State.Version >= SourceLibrary.Version:
+                    SourceLibrary = sl.State;
+                    break;
+                case CoreEvent.Downloads dl when Downloads is null || dl.State.Version >= Downloads.Version:
+                    Downloads = dl.State;
+                    break;
                 case CoreEvent.Playback or CoreEvent.Queue or CoreEvent.Devices or CoreEvent.Sources or CoreEvent.Remote
-                    or CoreEvent.AiLyrics or CoreEvent.Look or CoreEvent.Pro or CoreEvent.UpdateStatus:
+                    or CoreEvent.AiLyrics or CoreEvent.Look or CoreEvent.Pro or CoreEvent.UpdateStatus
+                    or CoreEvent.SourceLibrary or CoreEvent.Downloads:
                     break; // an older version than one already pending
                 default:
                     Notifications.Add(e);
@@ -383,6 +394,18 @@ public sealed class CoreHub : IDisposable
             {
                 s = s with { Update = up };
                 changes |= SliceChange.Update;
+            }
+
+            if (SourceLibrary is { } library && library.Version >= s.SourceLibrary.Version)
+            {
+                s = s with { SourceLibrary = library };
+                changes |= SliceChange.SourceLibrary;
+            }
+
+            if (Downloads is { } downloads && downloads.Version >= s.Downloads.Version)
+            {
+                s = s with { Downloads = downloads };
+                changes |= SliceChange.Downloads;
             }
 
             return (s, changes);

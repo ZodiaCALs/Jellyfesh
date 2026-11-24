@@ -67,18 +67,18 @@ public class SourceBrowseTests
 
         // Play and Shuffle play the whole album through the core, which fetches every page.
         page.PlayCommand.Execute(null);
-        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source(sub.Id, "al1"), 0, false), h.Core.Sent[^1]);
+        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source(sub.Id, "al1", ItemKind.Album), 0, false), h.Core.Sent[^1]);
         page.ShuffleCommand.Execute(null);
-        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source(sub.Id, "al1"), 0, true), h.Core.Sent[^1]);
+        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source(sub.Id, "al1", ItemKind.Album), 0, true), h.Core.Sent[^1]);
 
         // A song plays the album from itself: its place counts everything the source listed (the folder too).
         page.OpenCommand.Execute(page.Tracks.ElementAt(1));
-        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source(sub.Id, "al1"), 2, false), h.Core.Sent[^1]);
+        Assert.Equal(new CoreCommand.PlayCollection(new Collection.Source(sub.Id, "al1", ItemKind.Album), 2, false), h.Core.Sent[^1]);
 
         page.PlayNextCommand.Execute(null);
-        Assert.Equal(new CoreCommand.EnqueueCollection(new Collection.Source(sub.Id, "al1"), true), h.Core.Sent[^1]);
+        Assert.Equal(new CoreCommand.EnqueueCollection(new Collection.Source(sub.Id, "al1", ItemKind.Album), true), h.Core.Sent[^1]);
         page.PlayLastCommand.Execute(null);
-        Assert.Equal(new CoreCommand.EnqueueCollection(new Collection.Source(sub.Id, "al1"), false), h.Core.Sent[^1]);
+        Assert.Equal(new CoreCommand.EnqueueCollection(new Collection.Source(sub.Id, "al1", ItemKind.Album), false), h.Core.Sent[^1]);
         page.Deactivate();
     }
 

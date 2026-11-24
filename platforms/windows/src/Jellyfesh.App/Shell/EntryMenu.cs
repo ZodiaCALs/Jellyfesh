@@ -26,7 +26,7 @@ internal sealed class EntryMenu
         {
             if (_item is { CanPlay: true } item)
             {
-                CollectionActions.Play(_s, new Collection.Source(item.Item.Source, item.Item.Id));
+                CollectionActions.Play(_s, new Collection.Source(item.Item.Source, item.Item.Id, item.Item.Kind));
             }
         };
         _open = new MenuFlyoutItem();

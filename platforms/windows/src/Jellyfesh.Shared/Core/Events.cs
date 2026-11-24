@@ -66,4 +66,16 @@ public abstract record CoreEvent
 
     /// <summary>A source picture asked for with <see cref="ICoreClient.SourceArtwork"/> is cached, or cannot be had.</summary>
     public sealed record Artwork(ArtworkReady Ready) : CoreEvent;
+
+    /// <summary>More of one kind of a source's search results (<see cref="CoreCommand.SearchMore"/>).</summary>
+    public sealed record SearchPage(SearchMorePage Page) : CoreEvent;
+
+    /// <summary>The SourceLibrary slice changed.</summary>
+    public sealed record SourceLibrary(SourceLibraryState State) : CoreEvent;
+
+    /// <summary>More of a source's list (<see cref="CoreCommand.SourceLibraryMore"/>).</summary>
+    public sealed record SourceLibraryPage(SourceLibraryMorePage Page) : CoreEvent;
+
+    /// <summary>The Downloads slice changed.</summary>
+    public sealed record Downloads(DownloadsState State) : CoreEvent;
 }
