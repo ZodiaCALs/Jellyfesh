@@ -32,6 +32,13 @@ object MiniPlayerPip {
     fun opensOnLeave(state: CoreState, settingOn: Boolean, supported: Boolean): Boolean =
         settingOn && supported && PlayerModel.track(state) != null && PlayerModel.isPlaying(PlayerModel.status(state))
 
+    /**
+     * Whether the full bar shows the mini player button, which opens the window at once: only with
+     * the setting on and a device able to, as the web hides it where it has no mini player.
+     */
+    fun showsButton(state: CoreState, settingOn: Boolean, supported: Boolean): Boolean =
+        settingOn && supported && PlayerModel.track(state) != null
+
     /** The title and artist the window carries, or null with nothing to play. */
     fun caption(state: CoreState): PipCaption? {
         val track = PlayerModel.track(state) ?: return null

@@ -36,6 +36,12 @@ class PictureInPicture(private val activity: Activity) {
         runCatching { activity.setPictureInPictureParams(params()) }
     }
 
+    /** The full bar's mini player button: the window opens at once. */
+    fun open() {
+        if (!supported) return
+        runCatching { activity.enterPictureInPictureMode(params()) }
+    }
+
     /** The person is leaving (Home, Recents): before Android 12 the activity enters the window itself. */
     fun onUserLeaveHint() {
         if (Build.VERSION.SDK_INT >= MiniPlayerPip.AUTO_ENTER_SDK || !opensOnLeave) return

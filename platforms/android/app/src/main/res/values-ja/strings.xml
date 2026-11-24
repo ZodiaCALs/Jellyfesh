@@ -564,4 +564,23 @@
     <!-- Open Files… at the sidebar's foot (wide windows) -->
     <string name="action_open_files">ファイルを開く…</string>
     <string name="open_files_none">Jellyfesh はこれらのファイルを読み込めませんでした。</string>
+
+    <!-- v0.0.8: the quality badge and menu, Streaming Quality and the mini player (ADR-0026) -->
+    <string name="streaming_title">ストリーミング</string>
+    <string name="streaming_quality">ストリーミング品質</string>
+    <string name="streaming_quality_desc">「自動」はロスレスで再生し、従量制の接続では「高」で再生します。</string>
+    <string name="streaming_auto">自動</string>
+    <string name="streaming_lossless">ロスレス</string>
+    <string name="streaming_high">高</string>
+    <string name="streaming_normal">標準</string>
+    <string name="streaming_low">低</string>
+    <string name="quality_files_as_they_are">ファイルはそのまま再生されます。</string>
+    <string name="quality_set_in_service">音質は %1$s で設定します。</string>
+    <string name="quality_badge_a11y">音質：%1$s</string>
+    <string name="quality_kbits">%1$d kbit/s</string>
+    <string name="mini_player_title">ミニプレーヤー</string>
+    <string name="mini_player_pip">ミニプレーヤーをピクチャー イン ピクチャーで表示</string>
+    <string name="mini_player_pip_desc">音楽の再生中に Jellyfesh を離れたときに、ミニプレーヤーを表示します。</string>
+    <string name="mini_player_pip_unsupported">このデバイスはピクチャー イン ピクチャーに対応していません。</string>
+    <string name="mini_player_open">ミニプレーヤーを開く</string>
 </resources>

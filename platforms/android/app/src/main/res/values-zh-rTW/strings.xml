@@ -564,4 +564,23 @@
     <!-- Open Files… at the sidebar's foot (wide windows) -->
     <string name="action_open_files">開啟檔案…</string>
     <string name="open_files_none">Jellyfesh 無法讀取這些檔案。</string>
+
+    <!-- v0.0.8: the quality badge and menu, Streaming Quality and the mini player (ADR-0026) -->
+    <string name="streaming_title">串流</string>
+    <string name="streaming_quality">串流音質</string>
+    <string name="streaming_quality_desc">「自動」以無損播放，在計量制連線上以「高」播放。</string>
+    <string name="streaming_auto">自動</string>
+    <string name="streaming_lossless">無損</string>
+    <string name="streaming_high">高</string>
+    <string name="streaming_normal">標準</string>
+    <string name="streaming_low">低</string>
+    <string name="quality_files_as_they_are">檔案按原樣播放。</string>
+    <string name="quality_set_in_service">音質在 %1$s 中設定。</string>
+    <string name="quality_badge_a11y">音質：%1$s</string>
+    <string name="quality_kbits">%1$d kbit/s</string>
+    <string name="mini_player_title">迷你播放器</string>
+    <string name="mini_player_pip">以子母畫面顯示迷你播放器</string>
+    <string name="mini_player_pip_desc">播放音樂時離開 Jellyfesh，顯示迷你播放器。</string>
+    <string name="mini_player_pip_unsupported">此裝置不支援子母畫面。</string>
+    <string name="mini_player_open">開啟迷你播放器</string>
 </resources>

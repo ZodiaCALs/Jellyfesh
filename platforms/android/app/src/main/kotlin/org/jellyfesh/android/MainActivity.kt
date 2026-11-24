@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
     /** The mini player as picture-in-picture (ADR-0026 §4), following the core's state. */
     private var pictureInPicture: PictureInPicture? = null
     private var pictureInPictureUpdates: Job? = null
+    private val openMiniPlayer: () -> Unit = { pictureInPicture?.open() }
 
     private val app: JellyfeshApp get() = application as JellyfeshApp
 
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
         val pip = PictureInPicture(this)
         pictureInPicture = pip
         pictureInPictureUpdates = app.graph.scope.launch { app.graph.store.state.collect { pip.update(it) } }
+        app.graph.miniPlayerOpener = openMiniPlayer
         app.graph.pictureInPicture.value = isInPictureInPictureMode
         setContent { AppRoot(app.graph, app.authRedirects) }
     }
@@ -46,6 +48,8 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         pictureInPictureUpdates?.cancel()
         pictureInPictureUpdates = null
+        // A newer activity may already have set its own.
+        if (app.graph.miniPlayerOpener === openMiniPlayer) app.graph.miniPlayerOpener = null
         super.onDestroy()
     }
 

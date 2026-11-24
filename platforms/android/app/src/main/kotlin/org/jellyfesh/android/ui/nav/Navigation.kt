@@ -5,6 +5,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import org.jellyfesh.logic.player.PlayerBarLayout
+import org.jellyfesh.logic.player.MiniPlayerPip
+import org.jellyfesh.android.ui.player.QualityBadge
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -390,11 +397,13 @@ private fun MiniPlayButton(playing: Boolean, description: String, onClick: () ->
 
 /**
  * The full player bar from 900 dp (docs/ui.md, "The player bar and the mini player"; Jellyfesh
- * Web's): a floating Veil bar 80 dp high with r-2xl corners. Start: the artwork and two lines, or
- * the lyrics bar's line under the title ([lyricsLine]); they open Now Playing. Middle: shuffle,
- * previous, play (the only accent fill), next and repeat above the scrubber with its times. End:
- * Lyrics, Queue, the device button while a remote source plays, the volume, and More. The quality
- * badge and the mini player button join with the core's v0.0.8 contract.
+ * Web's): a floating Veil bar 80 dp high with r-2xl corners, in the web's three columns
+ * ([BarColumns]). Start: the artwork and two lines, or the lyrics bar's line under the title
+ * ([lyricsLine]); they open Now Playing. Middle: shuffle, previous, play (the only accent fill),
+ * next and repeat above the scrubber with its times. End: the quality badge, Lyrics and Queue, the
+ * device button while a remote source plays, the volume, the mini player button (with Mini Player
+ * in Picture-in-Picture on, where the device has it) and More. A narrower bar drops the volume's
+ * line, then Lyrics and Queue, then the mute button ([PlayerBarLayout]).
  */
 @Composable
 fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Modifier = Modifier, lyricsLine: Boolean = false) {
@@ -413,70 +422,125 @@ fun PlayerBar(state: CoreState, onOpen: (NowPlayingPanel?) -> Unit, modifier: Mo
         shape = rounded(Tokens.Radius.r2xl.dp),
         floating = true,
     ) {
-        Row(
-            Modifier.fillMaxWidth().height(PlayerBarHeight).padding(start = Tokens.Space.s2.dp, end = Tokens.Space.s4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s4.dp),
-        ) {
-            Row(
-                Modifier
-                    .weight(1f)
-                    .height(68.dp)
-                    .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.Button) { onOpen(null) }
-                    .semantics(mergeDescendants = true) { contentDescription = openLabel }
-                    .padding(start = 6.dp, end = Tokens.Space.s2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s3.dp),
-            ) {
-                ArtworkImage(ArtKey.of(track.artwork), track.title, 56.dp, rounded(Tokens.Radius.rLg.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    JfText(track.title, style = JfType.listTitle.copy(fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
-                    if (lyricsLine && remote == null) {
-                        BarLyricsLine(state)
-                    } else {
-                        playerSecondLine(track, remote)?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 12.5.sp), color = colors.ink70, maxLines = 1) }
-                        remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
+        BoxWithConstraints(Modifier.fillMaxWidth().height(PlayerBarHeight)) {
+            val tools = PlayerBarLayout.tools(maxWidth.value)
+            BarColumns(
+                Modifier.fillMaxSize().padding(start = Tokens.Space.s2.dp, end = Tokens.Space.s4.dp),
+                gap = Tokens.Space.s4.dp,
+                start = {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(68.dp)
+                            .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.Button) { onOpen(null) }
+                            .semantics(mergeDescendants = true) { contentDescription = openLabel }
+                            .padding(start = 6.dp, end = Tokens.Space.s2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Tokens.Space.s3.dp),
+                    ) {
+                        ArtworkImage(ArtKey.of(track.artwork), track.title, 56.dp, rounded(Tokens.Radius.rLg.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            JfText(track.title, style = JfType.listTitle.copy(fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
+                            if (lyricsLine && remote == null) {
+                                BarLyricsLine(state)
+                            } else {
+                                playerSecondLine(track, remote)?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 12.5.sp), color = colors.ink70, maxLines = 1) }
+                                remote?.error?.let { JfText(it, style = JfType.listSecondary.copy(fontSize = 11.sp), color = colors.ink70, maxLines = 1) }
+                            }
+                        }
                     }
-                }
-            }
-            Column(Modifier.weight(1.4f).widthIn(min = 260.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    JfToggleIconButton(
-                        R.drawable.ic_shuffle,
-                        stringResource(R.string.a11y_shuffle),
-                        stringResource(if (shuffle) R.string.state_on else R.string.state_off),
-                        shuffle,
-                        { graph.send(Command.SetShuffle(it)) },
-                        size = 36.dp,
-                    )
-                    JfIconButton(R.drawable.ic_previous, stringResource(R.string.a11y_previous), { graph.send(Command.Previous) }, tint = colors.ink90, size = 36.dp, iconSize = 20.dp)
-                    PlayPauseButton(playing, stringResource(if (playing) R.string.a11y_pause else R.string.a11y_play), { graph.send(PlayerModel.playPause(status)) }, size = 40.dp)
-                    JfIconButton(R.drawable.ic_next, stringResource(R.string.a11y_next), { graph.send(Command.Next) }, tint = colors.ink90, size = 36.dp, iconSize = 20.dp)
-                    JfToggleIconButton(
-                        if (repeat == RepeatMode.One) R.drawable.ic_repeat_one else R.drawable.ic_repeat,
-                        stringResource(R.string.a11y_repeat),
-                        stringResource(
-                            when (repeat) {
-                                RepeatMode.Off -> R.string.state_off
-                                RepeatMode.All -> R.string.repeat_all
-                                RepeatMode.One -> R.string.repeat_one
-                            },
-                        ),
-                        repeat != RepeatMode.Off,
-                        { graph.send(Command.SetRepeat(PlayerModel.nextRepeat(repeat))) },
-                        size = 36.dp,
-                    )
-                }
-                SeekWithTimes(state, Modifier.height(28.dp))
-            }
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                JfIconButton(R.drawable.ic_lyrics, stringResource(R.string.np_lyrics), { onOpen(NowPlayingPanel.Lyrics) }, size = 40.dp, iconSize = 20.dp)
-                JfIconButton(R.drawable.ic_queue, stringResource(R.string.np_queue), { onOpen(NowPlayingPanel.Queue) }, size = 40.dp, iconSize = 20.dp)
-                // The device button while a remote source plays (its devices; Stop Controlling is in More).
-                if (remote != null) DeviceButton(state, size = 40.dp)
-                DockVolume(state, Modifier.weight(1f, fill = false).widthIn(max = 160.dp))
-                MoreButton(state, track, size = 40.dp)
-            }
+                },
+                middle = {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            JfToggleIconButton(
+                                R.drawable.ic_shuffle,
+                                stringResource(R.string.a11y_shuffle),
+                                stringResource(if (shuffle) R.string.state_on else R.string.state_off),
+                                shuffle,
+                                { graph.send(Command.SetShuffle(it)) },
+                                size = 36.dp,
+                            )
+                            JfIconButton(R.drawable.ic_previous, stringResource(R.string.a11y_previous), { graph.send(Command.Previous) }, tint = colors.ink90, size = 36.dp, iconSize = 20.dp)
+                            PlayPauseButton(playing, stringResource(if (playing) R.string.a11y_pause else R.string.a11y_play), { graph.send(PlayerModel.playPause(status)) }, size = 40.dp)
+                            JfIconButton(R.drawable.ic_next, stringResource(R.string.a11y_next), { graph.send(Command.Next) }, tint = colors.ink90, size = 36.dp, iconSize = 20.dp)
+                            JfToggleIconButton(
+                                if (repeat == RepeatMode.One) R.drawable.ic_repeat_one else R.drawable.ic_repeat,
+                                stringResource(R.string.a11y_repeat),
+                                stringResource(
+                                    when (repeat) {
+                                        RepeatMode.Off -> R.string.state_off
+                                        RepeatMode.All -> R.string.repeat_all
+                                        RepeatMode.One -> R.string.repeat_one
+                                    },
+                                ),
+                                repeat != RepeatMode.Off,
+                                { graph.send(Command.SetRepeat(PlayerModel.nextRepeat(repeat))) },
+                                size = 36.dp,
+                            )
+                        }
+                        SeekWithTimes(state, Modifier.height(28.dp))
+                    }
+                },
+                end = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        QualityBadge(state, Modifier.padding(end = Tokens.Space.s1.dp))
+                        if (tools.paneButtons) {
+                            JfIconButton(R.drawable.ic_lyrics, stringResource(R.string.np_lyrics), { onOpen(NowPlayingPanel.Lyrics) }, size = 40.dp, iconSize = 20.dp)
+                            JfIconButton(R.drawable.ic_queue, stringResource(R.string.np_queue), { onOpen(NowPlayingPanel.Queue) }, size = 40.dp, iconSize = 20.dp)
+                        }
+                        // The device button while a remote source plays (its devices; Stop Controlling is in More).
+                        if (remote != null) DeviceButton(state, size = 40.dp)
+                        if (tools.volume) {
+                            DockVolume(state, if (tools.volumeLine) Modifier.width(PlayerBarLayout.VOLUME_DP.dp) else Modifier, line = tools.volumeLine)
+                        }
+                        if (MiniPlayerPip.showsButton(state, state.settings.miniPlayer.androidPip, graph.pictureInPictureSupported)) {
+                            JfIconButton(R.drawable.ic_mini_player, stringResource(R.string.mini_player_open), graph::openMiniPlayer, size = 40.dp, iconSize = 20.dp)
+                        }
+                        MoreButton(state, track, size = 40.dp)
+                    }
+                },
+            )
+        }
+    }
+}
+
+/**
+ * The full bar's three columns as Jellyfesh Web's grid lays them out (`minmax(112px, 1fr)
+ * minmax(232px, 340px) auto`): the tools as wide as they need, the transport as much of 232 to
+ * 340 dp as leaves the title 112 dp ([PlayerBarLayout.middleWidth]), the title the rest. Each slot
+ * is one layout node; right to left, the columns mirror.
+ */
+@Composable
+private fun BarColumns(
+    modifier: Modifier,
+    gap: Dp,
+    start: @Composable () -> Unit,
+    middle: @Composable () -> Unit,
+    end: @Composable () -> Unit,
+) {
+    Layout(
+        content = {
+            start()
+            middle()
+            end()
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val (startPart, middlePart, endPart) = measurables
+        val width = constraints.maxWidth
+        val height = constraints.maxHeight
+        val gapPx = gap.roundToPx()
+        val tools = endPart.measure(Constraints(maxWidth = width, maxHeight = height))
+        val free = (width - tools.width - 2 * gapPx).coerceAtLeast(0)
+        val middleWidth = PlayerBarLayout.middleWidth(free.toDp().value).dp.roundToPx().coerceAtMost(free)
+        val transport = middlePart.measure(Constraints(minWidth = middleWidth, maxWidth = middleWidth, maxHeight = height))
+        val startWidth = (free - middleWidth).coerceAtLeast(0)
+        val title = startPart.measure(Constraints(minWidth = startWidth, maxWidth = startWidth, maxHeight = height))
+        layout(width, height) {
+            title.placeRelative(0, (height - title.height) / 2)
+            transport.placeRelative(startWidth + gapPx, (height - transport.height) / 2)
+            tools.placeRelative(width - tools.width, (height - tools.height) / 2)
         }
     }
 }

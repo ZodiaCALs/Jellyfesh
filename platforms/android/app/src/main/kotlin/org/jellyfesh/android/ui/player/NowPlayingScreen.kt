@@ -472,7 +472,8 @@ private fun Favourite(state: CoreState, track: PlayerTrack) {
 /**
  * The dock (Luminous): every control in one floating Veil surface. On phones a rounded card: (with
  * a panel open, a small title row), the scrubber with its times, the transport, then the volume,
- * the device button and More. On wide windows one 80 dp bar with a 40 dp radius.
+ * the device button, the quality badge and More. On wide windows one 80 dp bar with a 40 dp
+ * radius. The quality badge sits beside More, as in Jellyfesh Web's dock.
  */
 @Composable
 private fun Dock(state: CoreState, track: PlayerTrack, wide: Boolean, modifier: Modifier = Modifier, withTitle: Boolean = false) {
@@ -488,6 +489,7 @@ private fun Dock(state: CoreState, track: PlayerTrack, wide: Boolean, modifier: 
                 SeekWithTimes(state, Modifier.weight(1f))
                 DockVolume(state, Modifier.width(180.dp))
                 DeviceButton(state)
+                QualityBadge(state)
                 MoreButton(state, track)
             }
         } else {
@@ -498,6 +500,7 @@ private fun Dock(state: CoreState, track: PlayerTrack, wide: Boolean, modifier: 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     DockVolume(state, Modifier.weight(1f))
                     DeviceButton(state)
+                    QualityBadge(state, Modifier.padding(start = 4.dp))
                     MoreButton(state, track)
                 }
             }
@@ -565,15 +568,21 @@ internal fun MoreButton(state: CoreState, track: PlayerTrack, size: Dp = 44.dp) 
     }, tint = Jf.colors.ink90, size = size, iconSize = if (size < 44.dp) 20.dp else 22.dp)
 }
 
-/** The volume in the dock: the engine's, or the playing remote device's (hidden when it has none). */
+/**
+ * The volume in the dock: the engine's, or the playing remote device's (hidden when it has none).
+ * Without its [line], only the mute button (a narrow player bar).
+ */
 @Composable
-internal fun DockVolume(state: CoreState, modifier: Modifier) {
+internal fun DockVolume(state: CoreState, modifier: Modifier, line: Boolean = true) {
     if (!PlayerModel.isRemote(state)) {
-        PlayerVolume(state, modifier)
+        PlayerVolume(state, modifier, line)
         return
     }
     val volume = RemoteModel.session(state)?.volume
-    if (volume != null) RemoteVolume(volume, modifier) else Spacer(modifier)
+    when {
+        volume != null && line -> RemoteVolume(volume, modifier)
+        line -> Spacer(modifier)
+    }
 }
 
 /**
@@ -727,7 +736,7 @@ private fun Transport(state: CoreState, playSize: Dp, spaced: Boolean) {
 
 /** Volume, sent at most every 50 ms while dragging and once more when the finger lifts. Also the player bar's. */
 @Composable
-fun PlayerVolume(state: CoreState, modifier: Modifier = Modifier) {
+fun PlayerVolume(state: CoreState, modifier: Modifier = Modifier, line: Boolean = true) {
     val graph = LocalGraph.current
     var local by remember { mutableStateOf<Float?>(null) }
     var lastSent by remember { mutableStateOf(0L) }
@@ -753,5 +762,6 @@ fun PlayerVolume(state: CoreState, modifier: Modifier = Modifier) {
         },
         onToggleMute = { graph.send(Command.SetMuted(!state.muted)) },
         modifier = modifier,
+        line = line,
     )
 }

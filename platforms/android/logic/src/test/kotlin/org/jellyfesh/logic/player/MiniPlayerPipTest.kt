@@ -27,6 +27,16 @@ class MiniPlayerPipTest {
     }
 
     @Test
+    fun theFullBarShowsTheMiniPlayerButtonOnlyWhereTheMiniPlayerExists() {
+        // Paused too: the button opens the window at once.
+        val paused = playing.copy(playback = playing.playback.copy(status = Status.Paused))
+        assertTrue(MiniPlayerPip.showsButton(paused, settingOn = true, supported = true))
+        assertFalse(MiniPlayerPip.showsButton(playing, settingOn = false, supported = true))
+        assertFalse(MiniPlayerPip.showsButton(playing, settingOn = true, supported = false))
+        assertFalse(MiniPlayerPip.showsButton(CoreState(ready = true), settingOn = true, supported = true))
+    }
+
+    @Test
     fun theWindowCarriesTheTitleAndArtist() {
         assertEquals(PipCaption("Morning Harbour", "Glass Harbour"), MiniPlayerPip.caption(playing))
         assertNull(MiniPlayerPip.caption(CoreState(ready = true)))

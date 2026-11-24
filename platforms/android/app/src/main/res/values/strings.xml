@@ -607,4 +607,23 @@
     <!-- Open Files… at the sidebar's foot (wide windows) -->
     <string name="action_open_files">Open Files…</string>
     <string name="open_files_none">Jellyfesh couldn’t read these files.</string>
+
+    <!-- v0.0.8: the quality badge and menu, Streaming Quality and the mini player (ADR-0026) -->
+    <string name="streaming_title">Streaming</string>
+    <string name="streaming_quality">Streaming Quality</string>
+    <string name="streaming_quality_desc">Auto plays lossless, or High on a metered connection.</string>
+    <string name="streaming_auto">Auto</string>
+    <string name="streaming_lossless">Lossless</string>
+    <string name="streaming_high">High</string>
+    <string name="streaming_normal">Normal</string>
+    <string name="streaming_low">Low</string>
+    <string name="quality_files_as_they_are">Files play as they are.</string>
+    <string name="quality_set_in_service">Quality is set in %1$s.</string>
+    <string name="quality_badge_a11y">Quality: %1$s</string>
+    <string name="quality_kbits">%1$d kbit/s</string>
+    <string name="mini_player_title">Mini Player</string>
+    <string name="mini_player_pip">Mini Player in Picture-in-Picture</string>
+    <string name="mini_player_pip_desc">Show the mini player when you leave Jellyfesh while music plays.</string>
+    <string name="mini_player_pip_unsupported">This device doesn\'t have picture-in-picture.</string>
+    <string name="mini_player_open">Open Mini Player</string>
 </resources>

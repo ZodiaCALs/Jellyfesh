@@ -99,6 +99,8 @@ import org.jellyfesh.logic.core.LyricsSize
 import org.jellyfesh.logic.core.ReplayGainMode
 import org.jellyfesh.logic.core.ScanStatus
 import org.jellyfesh.logic.core.Settings
+import org.jellyfesh.logic.core.StreamingQuality
+import org.jellyfesh.android.ui.player.streamingQualityName
 import org.jellyfesh.logic.nav.SettingsSection
 import org.jellyfesh.logic.player.PlayerModel
 import org.jellyfesh.logic.settings.AboutInfo
@@ -198,9 +200,8 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.Lyrics -> lyrics(state.settings)
         SettingsGroup.AppIcon -> item(key = "icon") { AppIconPicker(state.settings) }
         SettingsGroup.Customize -> customize(state)
-        // v0.0.8's Mini Player in Picture-in-Picture and Streaming Quality are core settings
-        // that arrive with its contract: shown from then on.
-        SettingsGroup.MiniPlayer, SettingsGroup.Streaming -> Unit
+        SettingsGroup.MiniPlayer -> miniPlayer(state.settings)
+        SettingsGroup.Streaming -> streaming(state.settings)
         SettingsGroup.Output -> output(state)
         SettingsGroup.Crossfade -> crossfade(state.settings)
         SettingsGroup.VolumeLevelling -> volumeLevelling(state.settings)
@@ -380,6 +381,29 @@ private fun LazyListScope.backdrop(settings: Settings) {
 }
 
 /** Appearance › Lyrics: the only place the lyrics settings live (docs/ui.md). */
+/**
+ * Settings › Appearance › Mini Player (ADR-0026 §4): on Android, Mini Player in Picture-in-Picture,
+ * off by default. A device without picture-in-picture (low-RAM devices) says so.
+ */
+private fun LazyListScope.miniPlayer(settings: Settings) {
+    item(key = "mini-player") {
+        val edit = rememberEdit(settings)
+        val supported = LocalGraph.current.pictureInPictureSupported
+        SettingsCard(stringResource(R.string.mini_player_title)) {
+            SettingRow(
+                stringResource(R.string.mini_player_pip),
+                description = stringResource(if (supported) R.string.mini_player_pip_desc else R.string.mini_player_pip_unsupported),
+            ) {
+                JfSwitch(
+                    settings.miniPlayer.androidPip && supported,
+                    { on -> edit { copy(miniPlayer = miniPlayer.copy(androidPip = on)) } },
+                    enabled = supported,
+                )
+            }
+        }
+    }
+}
+
 private fun LazyListScope.lyrics(settings: Settings) {
     item(key = "lyrics") {
         val edit = rememberEdit(settings)
@@ -586,6 +610,27 @@ private fun LazyListScope.volumeLevelling(settings: Settings) {
                 onChange = { preamp = SettingsEdits.preamp(it) },
                 onChangeFinished = { graph.send(Command.SetReplayGain(settings.replaygainMode, preamp)) },
             )
+        }
+    }
+}
+
+/**
+ * Settings › Playback › Streaming (ADR-0026 §1): Streaming Quality, the same setting as the bar's
+ * quality menu. Auto is Lossless, or High on a metered connection; the core decides.
+ */
+private fun LazyListScope.streaming(settings: Settings) {
+    item(key = "streaming") {
+        val edit = rememberEdit(settings)
+        SettingsCard(stringResource(R.string.streaming_title)) {
+            SettingColumn(stringResource(R.string.streaming_quality), stringResource(R.string.streaming_quality_desc)) {}
+            Column(Modifier.selectableGroup()) {
+                StreamingQuality.entries.forEachIndexed { i, level ->
+                    if (i > 0) Divider()
+                    ChoiceRow(stringResource(streamingQualityName(level)), level == settings.streamingQuality, {
+                        if (level != settings.streamingQuality) edit { copy(streamingQuality = level) }
+                    }, inset = 16.dp)
+                }
+            }
         }
     }
 }

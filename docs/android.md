@@ -33,9 +33,21 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   open. Under 900 dp it is the capsule: the artwork, the title, play and next, with the lyrics
   bar's strip above it. From 900 dp it is the full bar with the web's measures: the artwork and
   two lines (the lyrics bar's line under the title when Show Lyrics Bar is on), the transport over
-  the scrubber, Lyrics, Queue, the device button while a remote source plays, the volume and More
-  (Now Playing's). The quality badge and the mini player button join with the core's v0.0.8
-  contract.
+  the scrubber, the quality badge, Lyrics, Queue, the device button while a remote source plays,
+  the volume, the mini player button and More (Now Playing's), in the web's three columns (the
+  title at least 112 dp, the transport 232 to 340, the tools as wide as they need). A narrower bar
+  drops the volume's line, then Lyrics and Queue, then the mute button, at the web's widths
+  (`player/PlayerBarLayout.kt`).
+* **The quality badge and menu** (ADR-0026 §3) are in the full bar and Now Playing's dock, beside
+  More as in the web's: the core's label for what plays, else the chosen level. The menu is a sheet
+  with the format line ("FLAC · 24-bit · 96 kHz", "AAC · 256 kbit/s") and the levels the core
+  offers with Streaming Quality checked, or "Files play as they are." or "Quality is set in
+  {Service}." (also while a remote session runs). Choosing a level is the same SetSettings as
+  Settings › Playback › Streaming (`player/QualityMenu.kt`).
+* **The mini player** is picture-in-picture (ADR-0026 §4): with Settings › Appearance › Mini
+  Player in Picture-in-Picture on, leaving Jellyfesh while music plays opens it, and the full
+  bar's mini player button opens it at once. Devices without picture-in-picture (low-RAM ones)
+  show the switch off and say so.
 * **Settings is one page**: its title, the sections as pills (Appearance, Playback, Library,
   Downloads, Sources, Extensions, About), then the section's groups as the web's cards, each a
   Mist card with its heading inside, kept to the web's reading width (704). Sources Settings… and
@@ -51,9 +63,7 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
 * **Measures**: page titles are type.text-h2 (30.4) under 900 dp and type.text-h1 (48) from
   900 dp, as on the web; Back is the web's (the chevron and the word in accent text); Albums and
   Songs put their sort menu beside the title.
-* **Not yet**: Downloads (the page and Settings › Downloads) say they are not in this build yet,
-  and Appearance › Mini Player and Playback › Streaming are not shown, until the core's v0.0.8
-  contract lands.
+* **Not yet**: Downloads (the page and Settings › Downloads) say they are not in this build yet.
 
 ## v0.0.8: Android 17's Local Network permission
 

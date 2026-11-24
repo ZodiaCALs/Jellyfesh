@@ -1,6 +1,7 @@
 package org.jellyfesh.android
 
 import android.app.Application
+import android.content.pm.PackageManager
 import android.os.Environment
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -102,6 +103,16 @@ class AppGraph(private val app: Application) {
 
     /** Whether the window is the mini player in picture-in-picture (ADR-0026 §4); MainActivity sets it. */
     val pictureInPicture = MutableStateFlow(false)
+
+    /** Whether this device has picture-in-picture, Android's mini player (low-RAM devices have none). */
+    val pictureInPictureSupported: Boolean = app.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)
+
+    /** Opens the mini player at once (the full bar's button); MainActivity sets it while it exists. */
+    var miniPlayerOpener: (() -> Unit)? = null
+
+    fun openMiniPlayer() {
+        miniPlayerOpener?.invoke()
+    }
     private var devices: DeviceWatcher? = null
 
     /** Starts the core on a background thread; views show a placeholder until it is ready. */

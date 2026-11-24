@@ -410,8 +410,17 @@ fun VolumeBar(
     onVolumeEnd: () -> Unit,
     onToggleMute: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    line: Boolean = true,
 ) {
     val colors = Jf.colors
+    // Without its line (a narrow player bar) only the mute button is left, and nothing for a
+    // remote device, which has no mute.
+    if (!line) {
+        if (muteDescription != null && onToggleMute != null) {
+            JfIconButton(R.drawable.ic_volume_low, muteDescription, onToggleMute, modifier, tint = colors.ink50, size = 40.dp, iconSize = 18.dp)
+        }
+        return
+    }
     val reduce = Jf.effects.reduceMotion
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val shown = if (muted) 0f else volume.coerceIn(0f, 1f)
