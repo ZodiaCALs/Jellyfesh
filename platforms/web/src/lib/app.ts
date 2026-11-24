@@ -89,7 +89,7 @@ export async function createApp(): Promise<App> {
   player.onPlayed = (play) => {
     if (play.saved) collections.recordPlay(play.saved, play.started_ms, play.counted);
   };
-  const search = new Search(jf, sources);
+  const search = new Search(jf, sources, library);
   const nav = new Nav();
   const desktopLyrics = new DesktopLyricsWindow();
   const miniPlayer = new MiniPlayerWindow();

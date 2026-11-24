@@ -29,6 +29,7 @@ import type {
   ImageRef,
   Item,
   ItemDetails,
+  ItemKind,
   ItemPage,
   Look,
   Lyrics,
@@ -47,6 +48,7 @@ import {
   detailsFromJco,
   imageFromJco,
   itemToJco,
+  kebab,
   lookFromJco,
   lyricsFromJco,
   madeFromJco,
@@ -631,8 +633,10 @@ export class Plugin {
     return this.source?.link(item.kind, item.id) ?? null;
   }
 
-  async search(query: string, limit = 50, wallMs = SEARCH_MS): Promise<ItemPage> {
-    const page = await this.call('catalog.search', [query, { kinds: [] }, pageRequestToJco(null, limit)], { wallMs });
+  /** A page of search results: of the given kinds (all when none), from `cursor` (Show More). */
+  async search(query: string, limit = 50, wallMs = SEARCH_MS, kinds: ItemKind[] = [], cursor: string | null = null): Promise<ItemPage> {
+    const filters = { kinds: kinds.map((kind) => kebab(kind)) };
+    const page = await this.call('catalog.search', [query, filters, pageRequestToJco(cursor, limit)], { wallMs });
     return JSON.parse(this.checker().check_page(JSON.stringify(pageFromJco(page)), limit));
   }
 

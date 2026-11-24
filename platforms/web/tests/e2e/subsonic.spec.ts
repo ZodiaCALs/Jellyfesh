@@ -79,6 +79,26 @@ test('searches the server', async () => {
   await expect(page.getByRole('heading', { name: 'No Results' })).toBeVisible();
 });
 
+test('searches by source: the All tab, and the server’s own tab kind by kind', async () => {
+  await nav(page, 'Search').click();
+  await page.getByRole('searchbox', { name: 'Search' }).fill('lantern');
+  const tabs = page.getByRole('tablist', { name: 'Results' });
+  await expect(tabs.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+  // Subsonic merges with the library: its group is on the All tab, under From Your Sources.
+  await expect(page.getByRole('heading', { name: 'From Your Sources' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Subsonic' }).getByRole('button', { name: 'Play Lanterns' })).toBeVisible();
+  // Its tab lists what it found, kind by kind.
+  await tabs.getByRole('tab', { name: 'Subsonic' }).click();
+  await expect(tabs.getByRole('tab', { name: 'Subsonic' })).toHaveAttribute('aria-selected', 'true');
+  const panel = page.getByRole('tabpanel');
+  await expect(panel.getByRole('region', { name: 'Songs' }).getByRole('button', { name: 'Play Lanterns' })).toBeVisible();
+  await expect(panel.getByRole('region', { name: 'Albums' }).getByRole('button', { name: 'Open Paper Lanterns' })).toBeVisible();
+  await expect(panel.getByRole('heading', { name: 'From Your Sources' })).toBeHidden();
+  // ← goes back to All.
+  await tabs.getByRole('tab', { name: 'Subsonic' }).press('ArrowLeft');
+  await expect(tabs.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+});
+
 test('joins songs gaplessly with crossfade off, and measures the gap', async () => {
   await setCrossfade(page, false);
   await openAlbum(page, 'Subsonic', 'Slow Tide');
