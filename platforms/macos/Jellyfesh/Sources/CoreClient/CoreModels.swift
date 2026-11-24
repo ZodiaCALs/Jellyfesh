@@ -120,6 +120,8 @@ struct SongRow: Hashable, Sendable {
     var artworkHash: String?
     var favorite: Bool
     var missing: Bool
+    /// A source song with a finished download (it plays the file): the Downloaded mark.
+    var downloaded = false
 }
 
 /// A playlist in the library (`PlaylistSummary`).

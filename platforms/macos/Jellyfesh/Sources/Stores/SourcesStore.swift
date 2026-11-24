@@ -131,6 +131,12 @@ final class SourcesStore {
         return false
     }
 
+    /// Whether a source offers downloads from the person's server (ADR-0025): Download in the
+    /// menus of its songs, albums and playlists.
+    func offersDownloads(_ source: String) -> Bool {
+        plugin(source)?.offersDownloads == true
+    }
+
     /// "Content from {Service}" for a source whose terms ask its views to credit it (a blank
     /// attribution asks nothing, as in the other apps).
     func attribution(of source: String) -> String? {

@@ -252,19 +252,6 @@ private struct DownloadedRow: View {
     }
 }
 
-/// The Downloaded mark: a song whose file is on this device.
-struct DownloadedMark: View {
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-        Image(systemName: "arrow.down.circle.fill")
-            .font(.system(size: 12))
-            .foregroundStyle(palette[Tokens.Ink.ink50])
-            .accessibilityLabel(Text("Downloaded"))
-            .help(Text("Downloaded"))
-    }
-}
-
 /// A row's or album's More menu (an ellipsis).
 private struct DownloadMoreMenu<Content: View>: View {
     @ViewBuilder var content: Content

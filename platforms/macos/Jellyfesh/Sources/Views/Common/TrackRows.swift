@@ -37,6 +37,8 @@ struct TrackItem: Identifiable, Hashable {
     /// A source song's artist and album, as the source names them (Go to Artist, Go to Album).
     var sourceArtistID: String? = nil
     var sourceAlbumID: String? = nil
+    /// A source song whose file is on this device: the Downloaded mark (ADR-0025).
+    var downloaded = false
 
     var canPlay: Bool { playable && !missing && track != nil }
 
@@ -57,6 +59,7 @@ extension TrackItem {
         self.init(id: id, track: row.track, title: row.title, artist: row.artist, album: row.album,
                   durationMs: row.durationMs, artwork: ArtworkSource(hash: row.artworkHash, location: row.artwork),
                   favorite: row.favorite, missing: row.missing)
+        downloaded = row.downloaded
     }
 
     init(result: SourceResult, artwork: ArtworkSource?) {
@@ -66,6 +69,7 @@ extension TrackItem {
                   source: result.source == SearchStore.library ? nil : result.source)
         sourceArtistID = result.artistID
         sourceAlbumID = result.albumID
+        downloaded = result.downloaded
     }
 
     /// The song the engine plays (Now Playing's More).
@@ -128,6 +132,9 @@ struct TrackRowView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(palette[Tokens.Accent.accentText])
                     .accessibilityHidden(true)
+            }
+            if item.downloaded {
+                DownloadedMark()
             }
             if let reason = unplayableNote {
                 Image(systemName: "exclamationmark.circle")
@@ -222,8 +229,22 @@ struct TrackRowView: View {
         if let duration = item.durationMs { parts.append(TimeText.spoken(microseconds: Int64(clamping: duration) * 1_000)) }
         if isCurrent { parts.append(isPlaying ? String(localized: "Playing") : String(localized: "Paused")) }
         if item.favorite == true { parts.append(String(localized: "Favourite")) }
+        if item.downloaded { parts.append(String(localized: "Downloaded")) }
         if let note = unplayableNote { parts.append(note) }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// The Downloaded mark (ADR-0025): a song whose file is on this device, which plays offline too.
+struct DownloadedMark: View {
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        Image(systemName: "arrow.down.circle.fill")
+            .font(.system(size: 12))
+            .foregroundStyle(palette[Tokens.Ink.ink50])
+            .accessibilityLabel(Text("Downloaded"))
+            .help(Text("Downloaded"))
     }
 }
 
@@ -274,9 +295,10 @@ private struct LevelBars: View {
 }
 
 /// A song's menu (docs/ui.md): Play Next, Play Last, Add to Playlist…, Add to or Remove from
-/// Favourites, Go to Album, Go to Artist (a source's songs open the source's album and artist
-/// pages), Create Synced Lyrics (library songs, while AI Lyrics is offered), Open in {Service}, Show
-/// in Finder and Get Info. A remote source's
+/// Favourites, Download (a source's songs, when it offers downloads; ADR-0025), Go to Album, Go to
+/// Artist (a source's songs open the source's album and artist pages), Create Synced Lyrics
+/// (library songs, while AI Lyrics is offered), Open in {Service}, Show in Finder and Get Info. A
+/// remote source's
 /// songs never join the queue, playlists or favourites (ADR-0018), so they offer only what opens
 /// elsewhere. Rows that do not carry a library song's album or file look them up when chosen.
 struct TrackActionsMenu: View {
@@ -292,10 +314,21 @@ struct TrackActionsMenu: View {
     @Environment(Router.self) private var router
     @Environment(AiLyricsStore.self) private var aiLyrics
     @Environment(ProStore.self) private var pro
+    @Environment(DownloadsStore.self) private var downloads
 
     /// The rows' tracks that can join the queue and playlists: playable, not a remote source's.
     private var tracks: [TrackReference] {
         items.filter { $0.canPlay && !sources.isRemote($0.track) }.compactMap(\.track)
+    }
+
+    /// The rows' source songs that can download: from a source that offers downloads, and not
+    /// downloaded yet.
+    private var downloadable: [SourceSong] {
+        items.compactMap { item -> SourceSong? in
+            guard !item.downloaded, case .source(let song)? = item.track, sources.offersDownloads(song.plugin)
+            else { return nil }
+            return song
+        }
     }
 
     var body: some View {
@@ -322,6 +355,12 @@ struct TrackActionsMenu: View {
                         for track in tracks { library.setFavorite(track, true) }
                     }
                 }
+            }
+        }
+        let songs = downloadable
+        if !songs.isEmpty {
+            Button("Download") {
+                for song in songs { downloads.download(.track(song)) }
             }
         }
         if items.count == 1, let item = items.first {

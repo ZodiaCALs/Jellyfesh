@@ -224,4 +224,31 @@ final class DownloadsStoreTests: XCTestCase {
         let store = DownloadsStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
         XCTAssertEqual(store.preview("{album}/{title}"), "Preview/{album}/{title}", "the core's rules make the path")
     }
+
+    private func result(_ kind: ResultKind) -> SourceResult {
+        SourceResult(source: "p", kind: kind, itemID: "x", title: "X", subtitle: nil, album: nil, durationMs: nil,
+                     artwork: nil, playable: true, unplayableReason: nil, track: nil, alsoIn: [])
+    }
+
+    func testDownloadIsOfferedForASourcesAlbumsAndPlaylists() {
+        XCTAssertEqual(SourcePage.downloadRequest(plugin: "p", item: result(.album), offered: true),
+                       .collection(plugin: "p", id: "x", kind: .album))
+        XCTAssertEqual(SourcePage.downloadRequest(plugin: "p", item: result(.playlist), offered: true),
+                       .collection(plugin: "p", id: "x", kind: .playlist))
+        XCTAssertNil(SourcePage.downloadRequest(plugin: "p", item: result(.artist), offered: true))
+        XCTAssertNil(SourcePage.downloadRequest(plugin: "p", item: result(.album), offered: false),
+                     "not from a source that offers no downloads")
+    }
+
+    func testRowsCarryTheDownloadedMark() {
+        var song = result(.track)
+        song.downloaded = true
+        XCTAssertTrue(TrackItem(result: song, artwork: nil).downloaded)
+        XCTAssertFalse(TrackItem(result: result(.track), artwork: nil).downloaded)
+        let row = SongRow(track: .source(SourceSong(plugin: "p", id: "t", title: "T", artist: nil, album: nil,
+                                                    durationMs: nil, artworkURL: nil, isrc: nil)),
+                          title: "T", artist: nil, album: nil, durationMs: nil, artwork: nil, artworkHash: nil,
+                          favorite: false, missing: false, downloaded: true)
+        XCTAssertTrue(TrackItem(row: row, id: "r1").downloaded)
+    }
 }

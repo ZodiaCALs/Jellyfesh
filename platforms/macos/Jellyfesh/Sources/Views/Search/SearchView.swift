@@ -370,12 +370,14 @@ struct SourceCard: View {
 }
 
 /// A source container's menu: Play, Shuffle, Play Next and Play Last (not for a remote source,
-/// whose songs never join the queue), then Open in {Service}.
+/// whose songs never join the queue), Download (an album or playlist of a source that offers
+/// downloads), then Open in {Service}.
 struct SourceContainerActions: View {
     var item: SourceResult
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(SourcesStore.self) private var sources
+    @Environment(DownloadsStore.self) private var downloads
 
     var body: some View {
         if item.playable && item.kind != .track {
@@ -387,6 +389,10 @@ struct SourceContainerActions: View {
                 Button("Play Next") { playback.enqueue(collection, next: true) }
                 Button("Play Last") { playback.enqueue(collection, next: false) }
             }
+        }
+        if let download = SourcePage.downloadRequest(plugin: item.source, item: item,
+                                                     offered: sources.offersDownloads(item.source)) {
+            Button("Download") { downloads.download(download) }
         }
         OpenInServiceButton(link: item.link, source: item.source)
     }

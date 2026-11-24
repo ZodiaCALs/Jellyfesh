@@ -120,7 +120,7 @@ extension SongRow {
     init(_ r: TrackRow) {
         self.init(track: TrackReference(r.track), title: r.title, artist: r.artist, album: r.album,
                   durationMs: r.durationMs, artwork: r.artwork.map(ArtworkLocation.init),
-                  artworkHash: r.artworkHash, favorite: r.favorite, missing: r.missing)
+                  artworkHash: r.artworkHash, favorite: r.favorite, missing: r.missing, downloaded: r.downloaded)
     }
 }
 

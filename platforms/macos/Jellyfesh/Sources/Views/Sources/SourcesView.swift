@@ -392,10 +392,14 @@ struct BrowseView: View {
             ? InfoRequest.container(item, sourceName: sources.name(of: plugin)) : nil
         // Save as Playlist… for a source playlist whose songs are listed (ADR-0024 §3).
         let savesCopy = item.kind == .playlist && songsListed && node != nil
+        // Download for an album or playlist of a source that offers downloads (ADR-0025).
+        let download = SourcePage.downloadRequest(plugin: plugin, item: item,
+                                                  offered: sources.offersDownloads(plugin))
         if SourcePageMoreMenu.hasItems(remote: sources.isRemote(plugin), playable: playable, link: link)
-            || info != nil || savesCopy {
+            || info != nil || savesCopy || download != nil {
             SourcePageMoreMenu(plugin: plugin, collection: playable ? collection : nil, tracks: tracks, link: link,
-                               info: info, saveCopy: saveCopyAction(for: item, offered: savesCopy))
+                               info: info, saveCopy: saveCopyAction(for: item, offered: savesCopy),
+                               download: download)
         }
     }
 
@@ -499,6 +503,13 @@ enum SourcePage {
                      unplayableReason: nil, track: nil, alsoIn: [])
     }
 
+    /// Download, for an album or a playlist of a source that offers downloads (ADR-0025): every
+    /// song of it, which the core lists and queues.
+    static func downloadRequest(plugin: String, item: SourceResult, offered: Bool) -> DownloadRequest? {
+        guard offered, item.kind == .album || item.kind == .playlist else { return nil }
+        return .collection(plugin: plugin, id: item.itemID, kind: item.kind)
+    }
+
     /// A song of the page as its row shows it; numbered on an album.
     static func trackItem(_ entry: SourceResult, artwork: ArtworkSource?, number: UInt32?) -> TrackItem {
         var shown = TrackItem(result: entry, artwork: artwork)
@@ -508,8 +519,8 @@ enum SourcePage {
 }
 
 /// More on a source's page: Play Next and Play Last for a container whose songs may join the queue
-/// (not a remote source's), Add to Playlist… once every page of its songs is in, and Open in
-/// {Service}.
+/// (not a remote source's), Add to Playlist… once every page of its songs is in, Save as Playlist…
+/// and Download where offered, and Open in {Service}.
 private struct SourcePageMoreMenu: View {
     var plugin: String
     /// The container to queue; nil when it cannot play here.
@@ -521,8 +532,11 @@ private struct SourcePageMoreMenu: View {
     var info: InfoRequest? = nil
     /// Save as Playlist…, for a source playlist.
     var saveCopy: (() -> Void)? = nil
+    /// Download, for an album or playlist of a source that offers downloads.
+    var download: DownloadRequest? = nil
 
     @Environment(PlaybackStore.self) private var playback
+    @Environment(DownloadsStore.self) private var downloads
     @Environment(SourcesStore.self) private var sources
     @Environment(Router.self) private var router
 
@@ -545,6 +559,11 @@ private struct SourcePageMoreMenu: View {
             }
             if let saveCopy {
                 Button("Save as Playlist…", action: saveCopy)
+            }
+            if let download {
+                Button("Download") {
+                    downloads.download(download)
+                }
             }
             OpenInServiceButton(link: link, source: plugin)
             if let info {
