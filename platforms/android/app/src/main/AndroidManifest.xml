@@ -15,6 +15,9 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Online sources (plugins) and their artwork. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Whether the network is metered or gone, told to the core (NetworkWatcher.kt): Auto quality
+         and downloads (Wi-Fi Only) follow it. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Android 17 (API 37): servers on the home network (Jellyfin, Navidrome) are reachable only
          with this runtime permission of the Nearby devices group. The app asks before connecting
          to a source whose address the core calls local (LocalNetworkUi.kt); earlier versions

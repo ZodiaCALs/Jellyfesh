@@ -22,6 +22,7 @@ import org.jellyfesh.android.images.ArtworkLoader
 import org.jellyfesh.android.library.LibraryAccess
 import org.jellyfesh.android.plugins.BundledPlugins
 import org.jellyfesh.android.system.DeviceWatcher
+import org.jellyfesh.android.system.NetworkWatcher
 import org.jellyfesh.android.system.IconSwitcher
 import org.jellyfesh.android.system.LocalNetworkPermission
 import org.jellyfesh.logic.core.Command
@@ -115,6 +116,9 @@ class AppGraph(private val app: Application) {
     }
     private var devices: DeviceWatcher? = null
 
+    /** The network as Android reports it, told to the core (Auto quality, whether downloads wait). */
+    private var network: NetworkWatcher? = null
+
     /** Starts the core on a background thread; views show a placeholder until it is ready. */
     fun start() {
         scope.launch(Dispatchers.IO) {
@@ -145,6 +149,7 @@ class AppGraph(private val app: Application) {
             _startup.value = CoreStartup.Ready
             withContext(Dispatchers.Main) {
                 devices = DeviceWatcher(app) { send(Command.RefreshDevices) }.also { it.start() }
+                network = NetworkWatcher(app) { send(it) }.also { it.start() }
                 followAppIcon()
                 // What Google Play says about Pro, now that the core can hear it.
                 play?.start()

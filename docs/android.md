@@ -48,6 +48,11 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   Player in Picture-in-Picture on, leaving Jellyfesh while music plays opens it, and the full
   bar's mini player button opens it at once. Devices without picture-in-picture (low-RAM ones)
   show the switch off and say so.
+* **The network reaches the core**: `SetNetworkState` at start and on every change of the default
+  network (ConnectivityManager's callback, `system/NetworkWatcher.kt`): online when it reaches the
+  internet, metered unless Android says it is not (Android 11's temporarily unmetered counts as
+  unmetered). The core decides Auto quality (High while metered) and whether downloads wait
+  (`state/NetworkReport.kt`).
 * **Settings is one page**: its title, the sections as pills (Appearance, Playback, Library,
   Downloads, Sources, Extensions, About), then the section's groups as the web's cards, each a
   Mist card with its heading inside, kept to the web's reading width (704). Sources Settings… and
