@@ -10,7 +10,7 @@
   import ExtensionsSettings from './ExtensionsSettings.svelte';
   import SourcesSettings from './SourcesSettings.svelte';
   import { useApp } from '../lib/app';
-  import type { EqSettings, Quality, Themes, WebSettings } from '../lib/core/types';
+  import type { EqSettings, StreamingQuality, Themes, WebSettings } from '../lib/core/types';
   import { LANGUAGES, pt, t } from '../lib/i18n/index.svelte';
   import { cssColour, type Rgba } from '../lib/state/glass';
   import type { SettingsSection } from '../lib/state/nav.svelte';
@@ -368,6 +368,21 @@
       )}
     </div>
   </section>
+  {#if app.miniPlayer.supported}
+    <!-- The mini player is a picture-in-picture window: always above other windows, closed with
+         the page, so Keep on Top and Open When the Window Is Closed are not offered here. -->
+    <section class="group" aria-labelledby="g-mini-player">
+      <h2 id="g-mini-player" class="section">{t('Mini Player')}</h2>
+      <div class="card">
+        {@render toggle(
+          t('Show Lyrics Line'),
+          t('The line being sung, under the song in the mini player.'),
+          s.mini_player.show_lyrics_line,
+          (on) => set((d) => (d.mini_player.show_lyrics_line = on)),
+        )}
+      </div>
+    </section>
+  {/if}
   <section class="group" aria-labelledby="g-language">
     <h2 id="g-language" class="section">{t('Language')}</h2>
     <div class="card">
@@ -520,13 +535,20 @@
       <div class="row">
         <label class="text" for="quality">
           <span class="label">{t('Streaming Quality')}</span>
-          <span class="help">{t('What to ask servers for. Jellyfesh steps down when this browser cannot play a format.')}</span>
+          <span class="help"
+            >{t('Auto asks for lossless, or High on mobile data or with Data Saver on. Jellyfesh steps down when this browser cannot play a format.')}</span
+          >
         </label>
-        <select id="quality" value={s.quality} onchange={(event) => set((d) => (d.quality = value(event) as Quality))}>
-          <option value="Lossless">{t('Lossless')}</option>
-          <option value="High">{t('High')}</option>
-          <option value="Normal">{t('Normal')}</option>
-          <option value="Low">{t('Low')}</option>
+        <select
+          id="quality"
+          value={s.streaming_quality}
+          onchange={(event) => set((d) => (d.streaming_quality = value(event) as StreamingQuality))}
+        >
+          <option value="auto">{t('Auto')}</option>
+          <option value="lossless">{t('Lossless')}</option>
+          <option value="high">{t('High')}</option>
+          <option value="normal">{t('Normal')}</option>
+          <option value="low">{t('Low')}</option>
         </select>
       </div>
     </div>

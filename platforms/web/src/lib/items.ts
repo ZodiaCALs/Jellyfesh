@@ -3,9 +3,11 @@
 // else as a source's tracks.
 
 import type { App } from './app';
-import type { Item, NewEntry, Row } from './core/types';
+import type { Item, NewEntry, Row, Saved } from './core/types';
 import { t, tn } from './i18n/index.svelte';
+import { refusalText } from './state/collections.svelte';
 import { LIBRARY, LIBRARY_ID } from './state/library.svelte';
+import { sheets } from './state/sheets.svelte';
 
 /** One entry of a "More" menu. */
 export interface MenuEntry {
@@ -43,6 +45,39 @@ function openInEntry(link: ItemLink): MenuEntry {
 export function entryOf(plugin: string, item: Item): NewEntry {
   if (plugin === LIBRARY) return { kind: 'file', id: `${LIBRARY_ID}${item.id}` };
   return { kind: 'source', plugin, item };
+}
+
+/** A song as hearts and playlists keep it. */
+export function savedOf(plugin: string, item: Item): Saved {
+  return { plugin, item };
+}
+
+/** Songs kept by hearts and playlists (each with its own source) as queue entries, and where the
+ *  one at `index` is among them. */
+export function savedEntries(rows: Saved[], index?: number): { entries: NewEntry[]; start: number } {
+  const playable = rows.map((row, i) => ({ row, i })).filter(({ row }) => row.item.kind === 'Track' && row.item.playable);
+  const start = index === undefined ? 0 : Math.max(0, playable.findIndex(({ i }) => i === index));
+  return { entries: playable.map(({ row }) => entryOf(row.plugin, row.item)), start };
+}
+
+/** Add to Favourites or Remove from Favourites, for a song. */
+export function heartEntry(app: App, plugin: string, item: Item, toast: (text: string) => void): MenuEntry {
+  const on = app.collections.isFavorite(plugin, item.id);
+  return {
+    label: on ? t('Remove from Favourites') : t('Add to Favourites'),
+    action: () => {
+      try {
+        app.collections.setFavorite(savedOf(plugin, item), !on);
+      } catch (error) {
+        toast(refusalText(error));
+      }
+    },
+  };
+}
+
+/** Add to Playlist…: picks a playlist for `songs`. */
+export function addToPlaylistEntry(songs: () => Promise<Saved[]>, disabled = false): MenuEntry {
+  return { label: t('Add to Playlist…'), disabled, action: () => (sheets.picking = { songs }) };
 }
 
 /** The tracks of a list as queue entries, and where `item` is among them. */
@@ -117,16 +152,17 @@ export function artistOf(item: Item): Item | null {
 }
 
 /**
- * The "More" menu of a row or page: Play Next and Play Last (left out with `queue: false`, for a
- * page with nothing to play), Go to Album, Go to Artist, then Open in {Service} when the item has
- * a link.
+ * The "More" menu of a row or page (docs/ui.md, "Song menu"): Play Next and Play Last (left out
+ * with `queue: false`, for a page with nothing to play), Add to Playlist…, the heart (songs), Go to
+ * Album, Go to Artist, Get Info, then Open in {Service} when the item has a link. `extra` comes
+ * after Add to Playlist… (a playlist's own entries).
  */
 export function itemMenu(
   app: App,
   plugin: string,
   item: Item,
   toast: (text: string) => void,
-  { queue = true }: { queue?: boolean } = {},
+  { queue = true, extra = [] }: { queue?: boolean; extra?: MenuEntry[] } = {},
 ): MenuEntry[] {
   const menu: MenuEntry[] = [];
   if (item.kind === 'Track') {
@@ -147,6 +183,9 @@ export function itemMenu(
           toast(t('Added to the queue'));
         },
       },
+      addToPlaylistEntry(async () => [savedOf(plugin, item)]),
+      ...extra,
+      heartEntry(app, plugin, item, toast),
     );
     const album = albumOf(item);
     if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
@@ -154,7 +193,11 @@ export function itemMenu(
     menu.push(
       { label: t('Play Next'), action: () => void queueContainer(app, plugin, item, true, toast) },
       { label: t('Play Last'), action: () => void queueContainer(app, plugin, item, false, toast) },
+      addToPlaylistEntry(async () => (await songsOf(app, plugin, item)).map((song) => savedOf(plugin, song))),
+      ...extra,
     );
+  } else {
+    menu.push(...extra);
   }
   const artist = item.kind !== 'Artist' ? artistOf(item) : null;
   if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
@@ -172,12 +215,26 @@ function offersInfo(app: App, plugin: string, item: Item): boolean {
 }
 
 /**
- * Now Playing's "More": Go to Album, Go to Artist and Open in {Service} for a source's song (empty
- * for files). Going to a page closes Now Playing; Back returns to it.
+ * Now Playing's and the player bar's "More": Add to Playlist… and the heart for the song playing
+ * (a dropped file has neither), Go to Album, Go to Artist and Open in {Service} for a source's
+ * song, the made lyrics' entries, then Desktop Lyrics. Going to a page closes Now Playing; Back
+ * returns to it.
  */
-export function nowPlayingMenu(app: App, row: Row | null): MenuEntry[] {
-  const found = row ? app.player.sourceItem(row) : null;
+export function nowPlayingMenu(app: App, row: Row | null, toast: (text: string) => void = () => {}): MenuEntry[] {
   const menu: MenuEntry[] = [];
+  const saved = row ? (JSON.parse(app.core.saved(row.uid)) as Saved | null) : null;
+  if (saved) {
+    // The library's songs as the catalogue lists them now (with their album and artist).
+    const [song] = app.collections.current([saved]);
+    menu.push(addToPlaylistEntry(async () => [song]), heartEntry(app, song.plugin, song.item, toast));
+    if (song.plugin === LIBRARY) {
+      const album = albumOf(song.item);
+      if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin: LIBRARY, item: album }) });
+      const artist = artistOf(song.item);
+      if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin: LIBRARY, item: artist }) });
+    }
+  }
+  const found = row ? app.player.sourceItem(row) : null;
   if (found) {
     const plugin = found.plugin.id;
     const album = albumOf(found.item);
@@ -209,24 +266,24 @@ export function nowPlayingMenu(app: App, row: Row | null): MenuEntry[] {
   return menu;
 }
 
-/** Every track in a container (first pages), for Play, Shuffle and the queue commands. */
-export async function tracksOf(app: App, plugin: string, container: Item, limit = 500): Promise<NewEntry[]> {
-  if (plugin === LIBRARY) {
-    return app.library
-      .browse(container)
-      .items.filter((i) => i.kind === 'Track')
-      .map((i) => entryOf(plugin, i));
-  }
+/** Every song in a container (first pages), for Play, Shuffle, Add to Playlist… and the queue commands. */
+export async function songsOf(app: App, plugin: string, container: Item, limit = 500): Promise<Item[]> {
+  if (plugin === LIBRARY) return app.library.browse(container).items.filter((i) => i.kind === 'Track');
   const source = app.sources.get(plugin);
   if (!source) return [];
-  const entries: NewEntry[] = [];
+  const songs: Item[] = [];
   let cursor: string | null = null;
   do {
     const page = await source.browse(container, cursor, 100);
-    for (const item of page.items) if (item.kind === 'Track' && item.playable) entries.push(entryOf(plugin, item));
+    for (const item of page.items) if (item.kind === 'Track') songs.push(item);
     cursor = page.next;
-  } while (cursor && entries.length < limit);
-  return entries;
+  } while (cursor && songs.length < limit);
+  return songs;
+}
+
+/** Every playable track in a container (first pages), as queue entries. */
+export async function tracksOf(app: App, plugin: string, container: Item, limit = 500): Promise<NewEntry[]> {
+  return (await songsOf(app, plugin, container, limit)).filter((i) => i.playable).map((i) => entryOf(plugin, i));
 }
 
 async function queueContainer(app: App, plugin: string, item: Item, next: boolean, toast: (text: string) => void) {

@@ -6,7 +6,10 @@
 //   tests run in, and reports for Opera), and a crash there would come at every start. The
 //   person picks a folder again on each visit before its songs play;
 // * tracks: what the scan read from each song's tags (`LibTrack`), by key `<folder>/<path>`;
-// * artwork: each embedded cover once, by the SHA-256 of its bytes.
+// * artwork: each embedded cover once, by the SHA-256 of its bytes;
+// * collections: the hearts, Jellyfesh playlists and plays (since v0.0.8), one record the core
+//   writes (`jf_web::collections`, docs/ui.md: "Hearts, playlists and history are kept in the
+//   browser").
 //
 // Without IndexedDB everything lives in memory for the visit.
 
@@ -50,10 +53,14 @@ export interface LibraryStore {
   putCover(id: string, cover: Cover): Promise<void>;
   /** Deletes the covers no track uses any more. */
   pruneCovers(used: Set<string>): Promise<void>;
+  /** The hearts, playlists and plays as the core last wrote them, or null. */
+  collections(): Promise<string | null>;
+  saveCollections(state: string): Promise<void>;
 }
 
 const DB = 'jellyfesh-library';
-const VERSION = 1;
+const VERSION = 2;
+const COLLECTIONS_KEY = 'state';
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -150,6 +157,17 @@ class IndexedLibrary implements LibraryStore {
     for (const key of keys) if (!used.has(key)) store.delete(key);
     await done(tx);
   }
+
+  async collections(): Promise<string | null> {
+    const tx = this.db.transaction('collections', 'readonly');
+    return ((await request(tx.objectStore('collections').get(COLLECTIONS_KEY))) as string | undefined) ?? null;
+  }
+
+  async saveCollections(state: string): Promise<void> {
+    const tx = this.db.transaction('collections', 'readwrite');
+    tx.objectStore('collections').put(state, COLLECTIONS_KEY);
+    await done(tx);
+  }
 }
 
 class MemoryLibrary implements LibraryStore {
@@ -205,6 +223,16 @@ class MemoryLibrary implements LibraryStore {
   async pruneCovers(used: Set<string>): Promise<void> {
     for (const key of this.covers.keys()) if (!used.has(key)) this.covers.delete(key);
   }
+
+  private kept: string | null = null;
+
+  async collections(): Promise<string | null> {
+    return this.kept;
+  }
+
+  async saveCollections(state: string): Promise<void> {
+    this.kept = state;
+  }
 }
 
 /** The library's store: IndexedDB, or memory when the browser offers no storage. */
@@ -218,8 +246,12 @@ export async function openLibraryStore(): Promise<LibraryStore> {
         db.createObjectStore('tracks', { keyPath: 'key' }).createIndex('folder', 'folder');
       }
       if (!db.objectStoreNames.contains('artwork')) db.createObjectStore('artwork');
+      if (!db.objectStoreNames.contains('collections')) db.createObjectStore('collections');
     };
-    return new IndexedLibrary(await request(open));
+    const db = await request(open);
+    // A newer version of the page opened in another tab: let it upgrade the database.
+    db.onversionchange = () => db.close();
+    return new IndexedLibrary(db);
   } catch {
     return new MemoryLibrary();
   }

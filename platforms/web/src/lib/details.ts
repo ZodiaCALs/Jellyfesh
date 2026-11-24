@@ -60,6 +60,18 @@ export function qualityText(label: QualityLabel): string {
   }
 }
 
+/**
+ * The quality menu's format line (ADR-0026 §3): "FLAC · 24-bit · 96 kHz" for lossless audio,
+ * "AAC · 256 kbit/s" otherwise, with what is known of it.
+ */
+export function formatLine(format: AudioFormat): string {
+  const lossless = format.lossless ?? (format.quality === 'Lossless' || format.quality === 'HiResLossless');
+  const parts = lossless
+    ? [format.codec, format.bit_depth ? t('{n}-bit', { n: format.bit_depth }) : null, format.sample_rate_hz ? sampleRateText(format.sample_rate_hz) : null]
+    : [format.codec, format.bitrate_kbps ? t('{n} kbit/s', { n: format.bitrate_kbps.toLocaleString() }) : null];
+  return parts.filter(Boolean).join(' · ');
+}
+
 /** A sample rate for people: 44.1 kHz, 48 kHz, 192 kHz. */
 export function sampleRateText(hz: number): string {
   const khz = hz / 1000;

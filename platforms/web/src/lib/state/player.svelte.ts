@@ -10,12 +10,15 @@ import type { Jf } from '../core/wasm';
 import type {
   AudioFormat,
   FileMeta,
+  FinishedPlay,
   Item,
   Lyrics,
   NewEntry,
   PreviousAction,
   Quality,
+  QualityMenuInfo,
   QueueSnapshot,
+  RemoteDevices,
   ReplayGainInfo,
   RepeatMode,
   Row,
@@ -85,6 +88,15 @@ function read<T>(key: string): T | null {
   }
 }
 
+/**
+ * Whether the browser reports a metered connection, for Auto (ADR-0026 §1): a cellular one, or Save
+ * Data turned on (the Network Information API, Chromium only; elsewhere never metered).
+ */
+function metered(): boolean {
+  const connection = (navigator as Navigator & { connection?: { type?: string; saveData?: boolean } }).connection;
+  return connection?.saveData === true || connection?.type === 'cellular';
+}
+
 function write(key: string, value: unknown) {
   try {
     localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
@@ -111,8 +123,13 @@ export class Player {
   waitingForPlay = $state(false);
   /** The current track's format, once its stream is prepared (with the core's quality label). */
   format = $state.raw<AudioFormat | null>(null);
+  /** The devices of a remote session, for the bar's device button: none, as Jellyfesh Web plays
+   *  no remote sources (they are refused at install, ADR-0018). */
+  readonly remote: RemoteDevices | null = null;
 
   readonly engine: AudioEngine;
+  /** An entry opened again at another streaming level, whose start is not a new play. */
+  private reopened: number | null = null;
   /** What the player did lately (the last 100 events), for diagnostics and the end-to-end tests. */
   readonly trace: string[] = [];
   private resumeAt: number | null = null;
@@ -225,17 +242,78 @@ export class Player {
     }
     this.updateLimiter();
     if (JSON.stringify(before.crossfade) !== JSON.stringify(settings.crossfade)) void this.armNext();
-    if (before.quality !== settings.quality) this.dropPrepared();
+    if (this.levelFor(before) !== this.levelFor(settings)) {
+      this.dropPrepared();
+      void this.reopenAtQuality();
+    }
+  }
+
+  /**
+   * The quality menu for what plays (the core's rules): Auto and the source's levels, or why there
+   * are none ("Files play as they are." for library songs and dropped files).
+   */
+  get qualityMenu(): QualityMenuInfo {
+    const row = this.current;
+    if (!row || row.kind !== 'source') return this.parse<QualityMenuInfo>(this.jf.quality_menu(false));
+    void this.sources.revision;
+    const plugin = this.sourceItem(row)?.plugin;
+    const policy = plugin?.info?.content_policy;
+    return this.parse<QualityMenuInfo>(
+      this.jf.quality_menu(true, plugin?.name ?? row.plugin ?? undefined, policy ? JSON.stringify(policy) : undefined),
+    );
+  }
+
+  /** The level sources are asked for: Streaming Quality, with Auto resolved for this connection. */
+  private levelFor(settings: WebSettings): Quality {
+    return this.parse<Quality>(this.jf.streaming_level(settings.streaming_quality, metered()));
+  }
+
+  /**
+   * A new streaming level (the quality menu, or Settings): the song playing opens again at the
+   * same position when it can seek; otherwise the level applies from the next song (ADR-0026 §1).
+   */
+  private async reopenAtQuality() {
+    const row = this.current;
+    if (!row || row.kind !== 'source' || !this.loaded || !this.engine.canSeek) return;
+    const generation = this.generation;
+    let fresh: Resolved;
+    try {
+      fresh = await this.resolveNow(row, this.levelFor(this.settings));
+    } catch {
+      return;
+    }
+    if (generation !== this.generation || this.current?.uid !== row.uid || !this.loaded) {
+      fresh.release();
+      return;
+    }
+    const old = this.resolved.get(row.uid);
+    this.resolved.set(row.uid, fresh);
+    this.format = fresh.format;
+    this.reopened = row.uid;
+    this.note(`reopen ${row.uid} at ${fresh.quality}`);
+    this.engine.play(row.uid, fresh.media, fresh.gain, this.engine.positionMs, !this.playing);
+    old?.release();
+    void this.armNext();
   }
 
   // ---- what the views call ----------------------------------------------------------------------
 
   /** Replaces the queue with `entries` and plays from `start`. */
   playEntries(entries: NewEntry[], start = 0, shuffle = false) {
+    this.replaceQueue(entries, () => this.core.play(JSON.stringify(entries), start, shuffle));
+  }
+
+  /** Shuffle: replaces the queue with `entries` shuffled, starting on a random one (the core's). */
+  shuffleEntries(entries: NewEntry[]) {
+    this.replaceQueue(entries, () => this.core.play_shuffled(JSON.stringify(entries)));
+  }
+
+  private replaceQueue(entries: NewEntry[], replace: () => void) {
     if (entries.length === 0) return;
     this.engine.ensureContext();
+    this.endPlay(false);
     try {
-      this.core.play(JSON.stringify(entries), start, shuffle);
+      replace();
     } catch (error) {
       this.problem = (error as Error).message;
       return;
@@ -480,7 +558,13 @@ export class Player {
   private endPlay(natural: boolean) {
     if (this.engine.current === null) return;
     const played = natural ? (this.engine.durationMs ?? this.durationMs ?? this.engine.positionMs) : this.engine.positionMs;
-    this.core.finish(played, natural);
+    this.finishPlay(played, natural);
+  }
+
+  /** Tells the core a play ended; it says whether it counted, which goes to `onPlayed`. */
+  private finishPlay(playedMs: number, natural: boolean) {
+    const play = this.parse<FinishedPlay | null>(this.core.finish(playedMs, natural));
+    if (play) this.onPlayed?.(play);
   }
 
   private async startRow(row: Row, positionMs: number, paused: boolean) {
@@ -546,6 +630,9 @@ export class Player {
   /** Lyrics AI Lyrics made for `row`'s song, shown when it has no synced lyrics of its own. */
   madeLyrics: ((row: Row) => { lyrics: Lyrics; engine: string } | null) | null = null;
 
+  /** Each play that ended, counted or a skip (Recently Played and Most Played keep them). */
+  onPlayed: ((play: FinishedPlay) => void) | null = null;
+
   /** Shows made lyrics now (a job finished for the song playing, or they were deleted). */
   refreshLyrics() {
     if (this.current) void this.loadLyrics(this.current);
@@ -560,7 +647,7 @@ export class Player {
     const busy = this.resolving.get(row.uid);
     if (busy && quality === undefined) return busy;
     if (ready) this.release(row.uid);
-    const job = this.resolveNow(row, quality ?? this.settings.quality).then(
+    const job = this.resolveNow(row, quality ?? this.levelFor(this.settings)).then(
       (resolved) => {
         this.resolving.delete(row.uid);
         this.resolved.get(row.uid)?.release();
@@ -701,7 +788,9 @@ export class Player {
   private onStarted(uid: number, durationMs: number | null) {
     this.note(`started ${uid}`);
     if (uid !== this.current?.uid) return;
-    this.core.started(uid, Date.now(), durationMs ?? undefined);
+    // The same play, at another streaming level.
+    if (this.reopened === uid) this.reopened = null;
+    else this.core.started(uid, Date.now(), durationMs ?? undefined);
     this.failures = 0;
     this.loading = false;
     this.playing = true;
@@ -713,7 +802,7 @@ export class Player {
   private onAdvanced(from: number, to: number) {
     this.note(`advanced ${from} -> ${to}`);
     // The finished track played to its end.
-    this.core.finish(this.durationMs ?? 0, true);
+    this.finishPlay(this.durationMs ?? 0, true);
     const row = this.parse<Row | null>(this.core.next(false));
     if (!row || row.uid !== to) {
       // The queue changed under the engine: play what the queue says now.

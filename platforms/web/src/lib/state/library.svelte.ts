@@ -468,6 +468,11 @@ export class Library {
     return found ? artistItem(found.artist) : null;
   }
 
+  /** The catalogue's rows for these keys, in order (null where the library no longer has the song). */
+  tracksByKey(keys: string[]): (LibTrackView | null)[] {
+    return JSON.parse(this.catalogue.tracks_by_key(JSON.stringify(keys))) as (LibTrackView | null)[];
+  }
+
   search(text: string, limit: number): { tracks: Item[]; albums: Item[]; artists: Item[] } {
     const found = JSON.parse(this.catalogue.search(text, limit)) as {
       tracks: LibTrackView[];

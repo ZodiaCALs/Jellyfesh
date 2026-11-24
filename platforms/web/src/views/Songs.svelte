@@ -26,12 +26,10 @@
   function playAll(from: Item | null, shuffle: boolean) {
     const keys = app.library.songs(sort, descending).map((i) => i.id);
     if (keys.length === 0) return;
-    const start = from ? Math.max(0, keys.indexOf(from.id)) : shuffle ? Math.floor(Math.random() * keys.length) : 0;
-    app.player.playEntries(
-      keys.map((key) => app.library.entry(key)),
-      start,
-      shuffle,
-    );
+    const entries = keys.map((key) => app.library.entry(key));
+    // Shuffle starts on a random song (the core picks it).
+    if (shuffle) app.player.shuffleEntries(entries);
+    else app.player.playEntries(entries, from ? Math.max(0, keys.indexOf(from.id)) : 0);
   }
 </script>
 

@@ -267,6 +267,13 @@ export class AudioEngine {
     return Number.isFinite(d) ? d * 1000 : null;
   }
 
+  /** Whether the current track can be opened again at a position (its stream answers ranges). */
+  get canSeek(): boolean {
+    const el = this.decks[this.cur].el;
+    const ranges = el.seekable;
+    return Number.isFinite(el.duration) && ranges.length > 0 && ranges.end(ranges.length - 1) > 0;
+  }
+
   resume() {
     const deck = this.decks[this.cur];
     if (deck.uid === null) return;

@@ -2,7 +2,7 @@
 // player shows for the mini-player style, how Now Playing arranges itself for its layout and the
 // chosen pane, and the sidebar's places in the look's order. Pure, so they are unit tested.
 
-export type Place = 'Home' | 'Albums' | 'Artists' | 'Songs' | 'Playlists' | 'Favourites' | 'Search' | 'Sources';
+export type Place = 'Home' | 'Albums' | 'Artists' | 'Songs' | 'Playlists' | 'Favourites' | 'Downloads' | 'Search' | 'Sources';
 export type HomeSection = 'Summary' | 'RecentlyAdded' | 'RecentlyPlayed' | 'MostPlayed' | 'Favourites';
 export type MiniPlayerStyle = 'Bar' | 'Compact' | 'Floating';
 export type NowPlayingLayout = 'Stage' | 'Artwork' | 'Lyrics';
@@ -35,7 +35,7 @@ export function arrangement(layout: NowPlayingLayout, pane: string): Arrangement
   }
 }
 
-/** The page's places in the look's order: those the web has (no Playlists or Favourites), the
+/** The page's places in the look's order: those the web has (no Downloads: ADR-0025 §5), the
  *  library ones once when the library is one entry. */
 export function placesInOrder<T>(order: Place[], have: Map<Place, T>): T[] {
   const out: T[] = [];
@@ -46,7 +46,9 @@ export function placesInOrder<T>(order: Place[], have: Map<Place, T>): T[] {
   return out;
 }
 
-/** Home's sections the web has, in the look's order. */
-export function homeSections(order: HomeSection[]): ('Summary' | 'RecentlyAdded')[] {
-  return order.filter((s): s is 'Summary' | 'RecentlyAdded' => s === 'Summary' || s === 'RecentlyAdded');
+/** Home's sections in the look's order (the web has them all since v0.0.8: hearts and plays are
+ *  kept in the browser). */
+export function homeSections(order: HomeSection[]): HomeSection[] {
+  const known: HomeSection[] = ['Summary', 'RecentlyAdded', 'RecentlyPlayed', 'MostPlayed', 'Favourites'];
+  return order.filter((s, i) => known.includes(s) && order.indexOf(s) === i);
 }

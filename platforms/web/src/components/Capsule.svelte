@@ -1,15 +1,18 @@
 <script lang="ts">
-  // The mini-player on phones and narrow windows (under 900 px): a floating Veil capsule with the
-  // artwork, two lines of type and one control, the play button (CMP-02), never accent-filled
-  // (COL-04). Its progress is a straight 2 px line along the capsule's bottom edge, inset by the
-  // capsule's radius so it lies on the straight part (v0.0.4; it replaces the ring). The line
-  // redraws only when it moves by a device pixel, never per frame, never while paused or inactive.
+  // The capsule on phones and narrow windows (under 900 px; docs/ui.md calls it the capsule, the
+  // look the mini-player style): a floating Veil capsule with the artwork, the title (and the
+  // artist under it), play and next (docs/ui.md, "The player bar and the mini player"), never
+  // accent-filled (COL-04). Its progress is a straight 2 px line along the capsule's bottom edge,
+  // inset by the capsule's radius so it lies on the straight part (v0.0.4; it replaces the ring).
+  // The line redraws only when it moves by a device pixel, never per frame, never while paused or
+  // inactive.
   import { untrack } from 'svelte';
   import { useApp } from '../lib/app';
   import { crossfade } from '../lib/motion';
   import { nextDrawUs } from '../lib/drawing/steps';
   import { Ticker } from '../lib/drawing/ticker';
   import { t } from '../lib/i18n/index.svelte';
+  import Icon from './Icon.svelte';
   import PlayGlyph from './PlayGlyph.svelte';
 
   // Floating (the look's mini-player style, ADR-0020): a smaller capsule at the end corner.
@@ -85,6 +88,9 @@
       onclick={() => player.toggle()}
     >
       <PlayGlyph playing={player.playing} size={22} />
+    </button>
+    <button class="next" aria-label={t('Next')} title={t('Next')} onclick={() => player.next()}>
+      <Icon name="next" size={20} />
     </button>
     <span class="progress" bind:this={line} aria-hidden="true">
       <span class="played" style:translate="{(fraction - 1) * 100}% 0"></span>
@@ -190,6 +196,22 @@
   }
   .play:hover {
     background: var(--jf-fill-press);
+  }
+  .next {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 44px;
+    margin-inline-end: 2px;
+    border: 0;
+    border-radius: var(--jf-radius-r-full);
+    background: transparent;
+    color: var(--jf-ink-90);
+    cursor: pointer;
+  }
+  .next:hover {
+    background: var(--jf-fill-hover);
   }
   button:focus-visible {
     outline: none;

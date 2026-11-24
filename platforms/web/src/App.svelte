@@ -1,29 +1,38 @@
 <script lang="ts">
-  // The shell: navigation (a sidebar on wide screens, tabs on phones), the current page, the
-  // player (the capsule under 900 px, the player bar from 900 px on; only the one shown exists, so
-  // only its clock runs), Now Playing over everything, files dropped anywhere, and the keyboard
-  // shortcuts of the Linux app. Luminous (v0.0.6): the sidebar is a floating panel of Clear glass,
-  // the player and the phone tabs are Veil capsules floating over the content, which fades out
-  // just above them.
+  // The shell, the reference layout of every app (ADR-0023): navigation (the floating sidebar
+  // panel from 761 px, the phone tabs Home, Library, Search, Sources and Settings below it, the
+  // Library tab switching Albums, Artists, Songs, Playlists and Favourites), the current page, the
+  // player floating over every page, Settings included (the capsule under 900 px, the player bar
+  // from 900 px on; only the one shown exists, so only its clock runs), Now Playing over
+  // everything, the sheets the library's menus open, files dropped anywhere, and the shared
+  // keyboard shortcuts. Luminous (v0.0.6): the sidebar is a floating panel of Clear glass, the
+  // player and the phone tabs are Veil capsules floating over the content, which fades out just
+  // above them.
   import { MediaQuery } from 'svelte/reactivity';
   import ConfirmSheet from './components/ConfirmSheet.svelte';
   import ConsentSheet from './components/ConsentSheet.svelte';
   import GetInfoSheet from './components/GetInfoSheet.svelte';
   import LicenceSheet from './components/LicenceSheet.svelte';
+  import NameSheet from './components/NameSheet.svelte';
+  import PlaylistPicker from './components/PlaylistPicker.svelte';
   import ProSheet from './components/ProSheet.svelte';
   import Icon from './components/Icon.svelte';
-  import MiniPlayer from './components/MiniPlayer.svelte';
+  import Capsule from './components/Capsule.svelte';
   import PlayerBar from './components/PlayerBar.svelte';
   import { type App as AppState, provideApp } from './lib/app';
   import { t } from './lib/i18n/index.svelte';
   import { bottomPlayer, type Place, placesInOrder } from './lib/look';
-  import type { Tab } from './lib/state/nav.svelte';
+  import { LIBRARY_PLACES, type Tab } from './lib/state/nav.svelte';
+  import { sheets } from './lib/state/sheets.svelte';
   import { toast, toasts } from './lib/state/toast.svelte';
   import NowPlaying from './nowplaying/NowPlaying.svelte';
   import Albums from './views/Albums.svelte';
   import Artists from './views/Artists.svelte';
   import Browse from './views/Browse.svelte';
+  import Favourites from './views/Favourites.svelte';
   import Home from './views/Home.svelte';
+  import PlaylistPage from './views/PlaylistPage.svelte';
+  import Playlists from './views/Playlists.svelte';
   import SearchView from './views/SearchView.svelte';
   import Settings from './views/Settings.svelte';
   import Songs from './views/Songs.svelte';
@@ -69,12 +78,15 @@
   let installEvent = $state<(Event & { prompt(): Promise<void> }) | null>(null);
 
   // The places in the order every app lists them (docs/ui.md); a null starts a new group. A
-  // customized look (ADR-0020) lists the places it shows, in its order, without groups.
+  // customized look (ADR-0020) lists the places it shows, in its order, without groups. The web has
+  // no Downloads place (ADR-0025 §5).
   const DEFAULT_PLACES: ([Tab, string, string] | null)[] = [
     ['home', 'Home', 'home'],
     ['albums', 'Albums', 'album'],
     ['artists', 'Artists', 'artist'],
     ['songs', 'Songs', 'note'],
+    ['playlists', 'Playlists', 'playlist'],
+    ['favourites', 'Favourites', 'heart'],
     null,
     ['search', 'Search', 'search'],
     ['sources', 'Sources', 'sources'],
@@ -84,27 +96,53 @@
     ['Albums', ['albums', 'Albums', 'album']],
     ['Artists', ['artists', 'Artists', 'artist']],
     ['Songs', ['songs', 'Songs', 'note']],
+    ['Playlists', ['playlists', 'Playlists', 'playlist']],
+    ['Favourites', ['favourites', 'Favourites', 'heart']],
     ['Search', ['search', 'Search', 'search']],
     ['Sources', ['sources', 'Sources', 'sources']],
   ]);
   const PLACES = $derived(app.look.value.customized ? placesInOrder(app.look.value.sidebar, BY_PLACE) : DEFAULT_PLACES);
   const bottom = $derived(bottomPlayer(app.look.value.mini_player, wide.current));
-  const LIBRARY_TABS: Tab[] = ['albums', 'artists', 'songs'];
-  // Phones: the library is one tab, as on Android; a customized look orders them (Settings last).
+  // Phones: the library is one tab, as on Android; it opens the library place last shown there. A
+  // customized look orders the tabs (Settings last) and the Library tab's switcher.
   const LIBRARY_TAB: [Tab, string, string] = ['albums', 'Library', 'library'];
+  const LIBRARY_LABELS: Record<string, string> = {
+    albums: 'Albums',
+    artists: 'Artists',
+    songs: 'Songs',
+    playlists: 'Playlists',
+    favourites: 'Favourites',
+  };
+  const LIBRARY_SWITCH = $derived(
+    app.look.value.customized
+      ? placesInOrder(app.look.value.sidebar, BY_PLACE)
+          .map(([id]) => id)
+          .filter((id) => LIBRARY_PLACES.includes(id))
+      : LIBRARY_PLACES,
+  );
   const PHONE_TABS = $derived.by((): [Tab, string, string][] => {
     const byPlace = new Map<Place, [Tab, string, string]>([
       ['Home', ['home', 'Home', 'home']],
       ['Albums', LIBRARY_TAB],
       ['Artists', LIBRARY_TAB],
       ['Songs', LIBRARY_TAB],
+      ['Playlists', LIBRARY_TAB],
+      ['Favourites', LIBRARY_TAB],
       ['Search', ['search', 'Search', 'search']],
       ['Sources', ['sources', 'Sources', 'sources']],
     ]);
     return [...placesInOrder(app.look.value.sidebar, byPlace), ['settings', 'Settings', 'settings']];
   });
+  /** The library place the phones' Library tab opens: the one last shown. */
+  let lastLibrary = $state<Tab>('albums');
+  $effect(() => {
+    if (LIBRARY_PLACES.includes(nav.tab)) lastLibrary = nav.tab;
+  });
   function onTab(id: Tab): boolean {
-    return id === 'albums' ? LIBRARY_TABS.includes(nav.tab) : nav.tab === id;
+    return id === 'albums' ? LIBRARY_PLACES.includes(nav.tab) : nav.tab === id;
+  }
+  function goTab(id: Tab) {
+    nav.switchTab(id === 'albums' && LIBRARY_PLACES.includes(lastLibrary) ? lastLibrary : id);
   }
 
   async function play(list: File[]) {
@@ -126,6 +164,9 @@
     if (!element) return false;
     return element.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName);
   }
+
+  /** macOS keeps ⌘M for minimising, so the mini player is ⌥⌘M there (docs/ui.md, Keyboard). */
+  const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
   function key(event: KeyboardEvent) {
     const mod = event.ctrlKey || event.metaKey;
@@ -153,13 +194,18 @@
       event.preventDefault();
       return;
     }
+    // Open Mini Player: Ctrl+M (⌥⌘M on macOS), where the browser has picture-in-picture windows.
+    if (mod && event.code === 'KeyM' && !event.shiftKey && event.altKey === MAC) {
+      if (app.miniPlayer.supported) void app.miniPlayer.toggle();
+      event.preventDefault();
+      return;
+    }
     if (!mod || event.altKey) return;
     const actions: Record<string, () => void> = {
       ArrowRight: () => player.next(),
       ArrowLeft: () => player.previous(),
       ArrowUp: () => player.setVolume(player.volume + 0.05),
       ArrowDown: () => player.setVolume(player.volume - 0.05),
-      m: () => player.setMuted(!player.muted),
       s: () => player.setShuffle(!player.queue.shuffle),
       r: () => player.cycleRepeat(),
       p: () => (nav.nowPlaying ? nav.closeNowPlaying() : nav.openNowPlaying()),
@@ -168,6 +214,10 @@
       f: () => {
         nav.closeNowPlaying();
         nav.switchTab('search');
+      },
+      ',': () => {
+        nav.closeNowPlaying();
+        nav.switchTab('settings');
       },
     };
     const action = actions[event.key.length === 1 ? event.key.toLowerCase() : event.key];
@@ -248,13 +298,18 @@
           <SourcePage plugin={route.plugin} />
         {:else if route.view === 'root'}
           <SourceRoot plugin={route.plugin} />
-        {:else if route.view === 'albums' || route.view === 'artists' || route.view === 'songs'}
+        {:else if route.view === 'playlist'}
+          <PlaylistPage id={route.id} />
+        {:else if LIBRARY_PLACES.includes(route.view as Tab)}
           <nav class="library-tabs" aria-label={t('Library')}>
-            {#each [['albums', t('Albums')], ['artists', t('Artists')], ['songs', t('Songs')]] as [id, label] (id)}
-              <button class:on={route.view === id} aria-current={route.view === id ? 'page' : undefined} onclick={() => nav.switchTab(id as Tab)}>{label}</button>
+            {#each LIBRARY_SWITCH as id (id)}
+              <button class:on={route.view === id} aria-current={route.view === id ? 'page' : undefined} onclick={() => nav.switchTab(id)}
+                >{t(LIBRARY_LABELS[id])}</button
+              >
             {/each}
           </nav>
-          {#if route.view === 'albums'}<Albums />{:else if route.view === 'artists'}<Artists />{:else}<Songs />{/if}
+          {#if route.view === 'albums'}<Albums />{:else if route.view === 'artists'}<Artists />{:else if route.view === 'songs'}<Songs
+            />{:else if route.view === 'playlists'}<Playlists />{:else}<Favourites />{/if}
         {:else if route.view === 'search'}
           <SearchView />
         {:else if route.view === 'sources'}
@@ -283,13 +338,13 @@
     {/if}
     <!-- Covered by Now Playing: not drawn at all, so its clock does not run. -->
     {#if !nav.nowPlaying}
-      {#if bottom === 'bar'}<PlayerBar />{:else}<MiniPlayer floating={bottom === 'floating'} />{/if}
+      {#if bottom === 'bar'}<PlayerBar />{:else}<Capsule floating={bottom === 'floating'} />{/if}
     {/if}
   </div>
 
   <nav class="tabs glass-veil" aria-label={t('Library sections')}>
     {#each PHONE_TABS as [id, label, icon] (id)}
-      <button class:on={onTab(id)} aria-current={onTab(id) ? 'page' : undefined} onclick={() => nav.switchTab(id)}>
+      <button class:on={onTab(id)} aria-current={onTab(id) ? 'page' : undefined} onclick={() => goTab(id)}>
         <span class="pill"><Icon name={icon} /></span><span>{t(label)}</span>
       </button>
     {/each}
@@ -319,6 +374,29 @@
       app.aiLyrics.deleteMade(deleting);
     }}
     oncancel={() => (app.aiLyrics.deleting = null)}
+  />
+{/if}
+
+{#if sheets.naming}
+  {@const naming = sheets.naming}
+  <NameSheet {naming} onclose={() => (sheets.naming = null)} />
+{/if}
+{#if sheets.picking}
+  {@const picking = sheets.picking}
+  <PlaylistPicker {picking} onclose={() => (sheets.picking = null)} />
+{/if}
+{#if sheets.deleting}
+  {@const deleting = sheets.deleting}
+  <ConfirmSheet
+    title={t('Delete “{name}”?', { name: deleting.name })}
+    message={t('The songs stay in your library.')}
+    action={t('Delete Playlist')}
+    onconfirm={() => {
+      sheets.deleting = null;
+      app.collections.deletePlaylist(deleting.id);
+      deleting.then?.();
+    }}
+    oncancel={() => (sheets.deleting = null)}
   />
 {/if}
 
@@ -671,17 +749,24 @@
     .tabs button.on .pill {
       background: var(--jf-accent-soft);
     }
+    /* Five places: each as wide as its word, the row scrolling sideways when they do not fit. */
     .library-tabs {
       display: flex;
       gap: 4px;
       margin-bottom: var(--jf-space-s4);
       padding: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
       border-radius: var(--jf-radius-r-full);
       background: var(--jf-fill);
     }
+    .library-tabs::-webkit-scrollbar {
+      display: none;
+    }
     .library-tabs button {
-      flex: 1;
+      flex: 1 0 auto;
       min-height: 36px;
+      padding: 0 12px;
       border: 0;
       border-radius: var(--jf-radius-r-full);
       background: transparent;

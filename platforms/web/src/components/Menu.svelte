@@ -10,14 +10,22 @@
 
 <script lang="ts">
   // A "More" menu: a popover (light dismiss, Esc) placed next to its button, growing out of it;
-  // arrow keys move.
+  // arrow keys move. Its items can be given as a function, which runs when it opens (a long list's
+  // rows then make no menus until one is opened).
+  import { tick } from 'svelte';
   import { t } from '../lib/i18n/index.svelte';
   import Icon from './Icon.svelte';
 
-  let { items, label = t('More') }: { items: MenuItem[]; label?: string } = $props();
+  let {
+    items,
+    label = t('More'),
+    icon = 'more',
+  }: { items: MenuItem[] | (() => MenuItem[]); label?: string; icon?: string } = $props();
   let button: HTMLButtonElement | undefined = $state();
   let menu: HTMLDivElement | undefined = $state();
   let open = $state(false);
+  let opened = $state.raw<MenuItem[]>([]);
+  const shown = $derived(typeof items === 'function' ? opened : items);
 
   function place() {
     if (!button || !menu) return;
@@ -32,11 +40,15 @@
     menu.style.transformOrigin = `${box.right - left}px ${below ? 0 : height}px`;
   }
 
-  function toggle(event: MouseEvent) {
+  async function toggle(event: MouseEvent) {
     event.stopPropagation();
     if (!menu) return;
     if (open) menu.hidePopover();
     else {
+      if (typeof items === 'function') {
+        opened = items();
+        await tick();
+      }
       menu.showPopover();
       place();
       menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
@@ -72,7 +84,7 @@
   aria-expanded={open}
   onclick={toggle}
 >
-  <Icon name="more" />
+  <Icon name={icon} />
 </button>
 <div
   class="menu"
@@ -83,7 +95,7 @@
   ontoggle={(event) => (open = (event as ToggleEvent).newState === 'open')}
   onkeydown={keys}
 >
-  {#each items as item (item.label)}
+  {#each shown as item (item.label)}
     {#if item.checked === undefined}
       <button role="menuitem" disabled={item.disabled} onclick={() => run(item)}>{item.label}</button>
     {:else}

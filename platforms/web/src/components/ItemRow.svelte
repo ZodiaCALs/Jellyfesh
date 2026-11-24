@@ -3,11 +3,12 @@
   // chevron, and "More". After Apple Music and Media Player: hover fills the row, a track number
   // turns into a play glyph, and the playing row is accent-soft with accent text and a level glyph
   // that moves only while playing. A song that cannot play here but has a link (API 1.1) opens it
-  // in its service instead, next to its reason (docs/ui.md, Open in {Service}).
+  // in its service instead, next to its reason (docs/ui.md, Open in {Service}). A favourite shows
+  // a small filled heart beside its length.
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { formatTime, t } from '../lib/i18n/index.svelte';
-  import { itemMenu, linkOf, openLink, secondary } from '../lib/items';
+  import { itemMenu, linkOf, type MenuEntry, openLink, secondary } from '../lib/items';
   import { LIBRARY, LIBRARY_ID } from '../lib/state/library.svelte';
   import { toast } from '../lib/state/toast.svelte';
   import Art from './Art.svelte';
@@ -23,6 +24,7 @@
     number = null,
     showArt = true,
     enter = null,
+    extra,
   }: {
     plugin: string;
     item: Item;
@@ -32,6 +34,8 @@
     showArt?: boolean;
     /** Its place among the first rows of a list, which rise in one after another as it first shows. */
     enter?: number | null;
+    /** Entries its More menu adds after Add to Playlist… (a playlist's Remove from Playlist). */
+    extra?: () => MenuEntry[];
   } = $props();
 
   const app = useApp();
@@ -54,6 +58,8 @@
         ? t('Play {title}', { title: item.title })
         : t('Open {title}', { title: item.title }),
   );
+
+  const favourite = $derived(item.kind === 'Track' && (void app.collections.revision, app.collections.isFavorite(plugin, item.id)));
 
   function activate() {
     if (opensLink && link) openLink(link.url);
@@ -97,12 +103,13 @@
       <span class="length">{item.duration_ms ? formatTime(item.duration_ms) : ''}</span>
       <span class="chevron" aria-hidden="true"><Icon name="external" size={18} /></span>
     {:else if item.kind === 'Track'}
+      {#if favourite}<span class="heart" title={t('Favourite')}><Icon name="heart-filled" size={14} /></span>{/if}
       <span class="length">{item.duration_ms ? formatTime(item.duration_ms) : ''}</span>
     {:else}
       <span class="chevron" aria-hidden="true"><Icon name="forward" size={18} /></span>
     {/if}
   </button>
-  <Menu items={itemMenu(app, plugin, item, toast)} label={t('More for {title}', { title: item.title })} />
+  <Menu items={() => itemMenu(app, plugin, item, toast, { extra: extra?.() ?? [] })} label={t('More for {title}', { title: item.title })} />
 </div>
 
 <style>
@@ -258,4 +265,10 @@
     flex: none;
     color: var(--jf-ink-30);
   }
+  .heart {
+    flex: none;
+    display: grid;
+    color: var(--jf-accent-text);
+  }
+
 </style>

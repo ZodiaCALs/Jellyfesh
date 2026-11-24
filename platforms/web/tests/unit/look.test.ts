@@ -39,7 +39,9 @@ describe('look layout', () => {
       ['Search', 'search'],
     ]);
     expect(placesInOrder(['Songs', 'Playlists', 'Home', 'Albums', 'Search'], have as never)).toEqual(['library', 'home', 'search']);
-    expect(homeSections(['MostPlayed', 'RecentlyAdded', 'Summary'])).toEqual(['RecentlyAdded', 'Summary']);
+    expect(homeSections(['MostPlayed', 'RecentlyAdded', 'Summary'])).toEqual(['MostPlayed', 'RecentlyAdded', 'Summary']);
+    expect(homeSections(['Favourites', 'Summary', 'Favourites'])).toEqual(['Favourites', 'Summary']);
+    expect(placesInOrder(['Downloads', 'Playlists', 'Favourites'], new Map([['Playlists', 'p'], ['Favourites', 'f']]) as never)).toEqual(['p', 'f']);
   });
 });
 

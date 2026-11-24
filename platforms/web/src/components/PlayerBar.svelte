@@ -1,8 +1,12 @@
 <script lang="ts">
   // The player bar on windows 900 px wide and wider (v0.0.4, after Media Player and Apple Music;
-  // Luminous v0.0.6): a floating Veil capsule, player.bar-height (80 px) high with r-2xl corners.
-  // The artwork (56 px) and two lines open Now Playing; in the middle the transport sits above the
-  // seek bar and its times; Lyrics, Queue and the volume are at the end. It bends CMP-02 (one
+  // Luminous v0.0.6): a floating Veil capsule, player.bar-height (80 px) high with r-2xl corners,
+  // over every page, Settings included. In the order every app has (docs/ui.md, "The player bar
+  // and the mini player"): the artwork (56 px) and two lines, which open Now Playing; the
+  // transport above the seek bar and its times; the quality badge and its menu; Lyrics, Queue, the
+  // device button (only while a remote source plays) and the volume; the mini player button (where
+  // the browser has picture-in-picture windows) and More. A narrower bar drops the volume line,
+  // then Lyrics and Queue (both stay in Now Playing), then the mute button. It bends CMP-02 (one
   // control) on purpose, for desktop use; play stays its only accent fill. The seek bar's clock
   // sleeps while inactive. With Show Lyrics Bar on and timed lyrics, the line being sung fills word
   // by word under the title, instead of the artist, with its translation when Show Translations is
@@ -10,17 +14,23 @@
   // Desktop Lyrics opens it.
   import { untrack } from 'svelte';
   import { useApp } from '../lib/app';
+  import { nowPlayingMenu } from '../lib/items';
   import { crossfade } from '../lib/motion';
   import { t } from '../lib/i18n/index.svelte';
   import { LyricsBarClock, showsLyricsBar } from '../lib/state/lyricsBar.svelte';
+  import { toast } from '../lib/state/toast.svelte';
+  import DeviceButton from './DeviceButton.svelte';
   import Icon from './Icon.svelte';
   import LyricsBarLine from './LyricsBarLine.svelte';
+  import Menu from './Menu.svelte';
+  import QualityMenu from './QualityMenu.svelte';
   import SeekBar from './SeekBar.svelte';
   import Transport from './Transport.svelte';
   import Volume from './Volume.svelte';
 
   let { active = true }: { active?: boolean } = $props();
-  const { player, nav, theme, settings, desktopLyrics } = useApp();
+  const app = useApp();
+  const { player, nav, theme, settings, desktopLyrics, miniPlayer } = app;
   const row = $derived(player.current);
   const second = $derived(
     player.waitingForPlay
@@ -73,18 +83,32 @@
         <SeekBar compact anchor={player.anchor} durationMs={player.durationMs} onseek={(ms) => player.seek(ms)} {active} />
       </div>
       <div class="end">
+        <QualityMenu />
         {#if desktopLyrics.waiting}
           <button class="tool" aria-label={t('Show Desktop Lyrics')} title={t('Show Desktop Lyrics')} onclick={() => void desktopLyrics.show()}>
             <Icon name="external" />
           </button>
         {/if}
-        <button class="tool" aria-label={t('Lyrics')} title={t('Lyrics')} onclick={() => nav.openNowPlaying('lyrics')}>
+        <button class="tool pane" aria-label={t('Lyrics')} title={t('Lyrics')} onclick={() => nav.openNowPlaying('lyrics')}>
           <Icon name="lyrics" />
         </button>
-        <button class="tool" aria-label={t('Queue')} title={t('Queue')} onclick={() => nav.openNowPlaying('queue')}>
+        <button class="tool pane" aria-label={t('Queue')} title={t('Queue')} onclick={() => nav.openNowPlaying('queue')}>
           <Icon name="queue" />
         </button>
+        {#if player.remote}<DeviceButton remote={player.remote} onchoose={() => {}} />{/if}
         <span class="volume"><Volume compact /></span>
+        {#if miniPlayer.supported}
+          <button
+            class="tool"
+            aria-label={miniPlayer.shown ? t('Close Mini Player') : t('Open Mini Player')}
+            aria-pressed={miniPlayer.shown}
+            title={miniPlayer.shown ? t('Close Mini Player') : t('Open Mini Player')}
+            onclick={() => void miniPlayer.toggle()}
+          >
+            <Icon name="mini-player" />
+          </button>
+        {/if}
+        <Menu items={() => nowPlayingMenu(app, row, toast)} label={t('More')} />
       </div>
     </div>
   </div>
@@ -95,10 +119,11 @@
     width: 100%;
     max-width: 1280px;
     pointer-events: auto;
+    container: bar / inline-size;
   }
   .inner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 1.4fr) minmax(0, 1fr);
+    grid-template-columns: minmax(112px, 1fr) minmax(232px, 340px) auto;
     align-items: center;
     gap: var(--jf-space-s4);
     height: var(--jf-player-bar-height);
@@ -218,16 +243,32 @@
     box-shadow: var(--jf-elevation-focus);
   }
   .volume {
-    flex: 0 1 160px;
+    flex: none;
+    width: 132px;
     min-width: 44px;
   }
-  /* A narrow bar (under about 760 px, beside the 232 px sidebar) keeps the mute button and drops
-     the volume line; Ctrl+↑/↓ still change the volume. */
-  @media (max-width: 1040px) {
+  .tool[aria-pressed='true'] {
+    background: var(--jf-accent-soft);
+    color: var(--jf-accent-text);
+  }
+  /* A narrower bar keeps the mute button and drops the volume line (Ctrl+↑/↓ still change the
+     volume), then Lyrics and Queue (Now Playing has both, and Ctrl+L and Ctrl+U), then the mute
+     button; the title keeps room to be read. */
+  @container bar (max-width: 999px) {
     .volume {
-      flex: none;
+      width: auto;
     }
     .volume :global(.line) {
+      display: none;
+    }
+  }
+  @container bar (max-width: 759px) {
+    .pane {
+      display: none;
+    }
+  }
+  @container bar (max-width: 639px) {
+    .volume {
       display: none;
     }
   }

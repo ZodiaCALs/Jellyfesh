@@ -1,4 +1,5 @@
-// Where the person is: a place (Home, Albums, Artists, Songs, Search, Sources, Settings; docs/ui.md)
+// Where the person is: a place (Home, Albums, Artists, Songs, Playlists, Favourites, Search,
+// Sources, Settings; docs/ui.md)
 // with a stack of pages opened from it, and Now Playing over everything. Each step deeper is a
 // browser history entry, so the Back button and gesture (and Esc) go back as in the apps.
 
@@ -6,7 +7,9 @@ import { tick } from 'svelte';
 import type { Item } from '../core/types';
 import { picturesReady, viewTransition } from '../motion';
 
-export type Tab = 'home' | 'albums' | 'artists' | 'songs' | 'search' | 'sources' | 'settings';
+export type Tab = 'home' | 'albums' | 'artists' | 'songs' | 'playlists' | 'favourites' | 'search' | 'sources' | 'settings';
+/** The places the phones' Library tab switches between, in order. */
+export const LIBRARY_PLACES: Tab[] = ['albums', 'artists', 'songs', 'playlists', 'favourites'];
 /** The sections of Settings, in their order. */
 export type SettingsSection = 'appearance' | 'playback' | 'library' | 'sources' | 'extensions' | 'about';
 export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'playback', 'library', 'sources', 'extensions', 'about'];
@@ -16,12 +19,14 @@ export type Route =
   /** A source's Discover page. */
   | { view: 'source'; plugin: string }
   /** A source's own folders (Browse on its Discover page). */
-  | { view: 'root'; plugin: string };
+  | { view: 'root'; plugin: string }
+  /** A Jellyfesh playlist (kept in this browser). */
+  | { view: 'playlist'; id: number };
 export type Pane = 'lyrics' | 'queue' | 'info' | 'comments';
 /** How the last page change happened, for its motion: deeper and tabs rise, back fades. */
 export type Motion = 'forward' | 'back';
 
-const TABS: Tab[] = ['home', 'albums', 'artists', 'songs', 'search', 'sources', 'settings'];
+const TABS: Tab[] = ['home', 'albums', 'artists', 'songs', 'playlists', 'favourites', 'search', 'sources', 'settings'];
 
 interface HistoryState {
   jf: true;

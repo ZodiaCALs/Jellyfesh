@@ -7,7 +7,8 @@
   import { useApp } from '../lib/app';
   import type { Item } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
-  import { itemMenu, secondary, tracksOf } from '../lib/items';
+  import { itemMenu, type MenuEntry, secondary, tracksOf } from '../lib/items';
+  import type { NewEntry } from '../lib/core/types';
   import { toast } from '../lib/state/toast.svelte';
   import Art from './Art.svelte';
   import Icon from './Icon.svelte';
@@ -18,6 +19,9 @@
     item,
     onactivate,
     index = null,
+    art,
+    entries,
+    menu,
   }: {
     plugin: string;
     item: Item;
@@ -25,6 +29,12 @@
     onactivate: (origin: HTMLElement | null) => void;
     /** Its place among the first cards of a list, which rise in one after another as it first shows. */
     index?: number | null;
+    /** The artwork to show instead of the item's own (a Jellyfesh playlist shows its first song's). */
+    art?: { plugin: string; item: Item } | null;
+    /** What its play button plays, instead of the source's songs of the item. */
+    entries?: () => NewEntry[];
+    /** Its More menu, instead of the item's. */
+    menu?: () => MenuEntry[];
   } = $props();
   const app = useApp();
   let cover: HTMLElement | undefined = $state();
@@ -35,8 +45,8 @@
     if (starting) return;
     starting = true;
     try {
-      const entries = await tracksOf(app, plugin, item);
-      if (entries.length > 0) app.player.playEntries(entries, 0);
+      const list = entries ? entries() : await tracksOf(app, plugin, item);
+      if (list.length > 0) app.player.playEntries(list, 0);
       else toast(t('Nothing here yet.'));
     } finally {
       starting = false;
@@ -46,7 +56,13 @@
 
 <div class="card" class:enter={index !== null} style:--i={index}>
   <button class="open" onclick={() => onactivate(cover ?? null)} aria-label={t('Open {title}', { title: item.title })}>
-    <span class="cover" bind:this={cover}><Art {plugin} {item} size={168} radius="grid" /></span>
+    <span class="cover" bind:this={cover}>
+      {#if art === undefined}
+        <Art {plugin} {item} size={168} radius="grid" />
+      {:else}
+        <Art plugin={art?.plugin ?? null} item={art?.item ?? null} kind={item.kind} size={168} radius="grid" />
+      {/if}
+    </span>
     <span class="title">{item.title}</span>
     <span class="second">{secondary(item)}</span>
   </button>
@@ -57,7 +73,7 @@
       </button>
     </span>
   {/if}
-  <div class="more"><Menu items={itemMenu(app, plugin, item, toast)} label={t('More for {title}', { title: item.title })} /></div>
+  <div class="more"><Menu items={() => (menu ? menu() : itemMenu(app, plugin, item, toast))} label={t('More for {title}', { title: item.title })} /></div>
 </div>
 
 <style>

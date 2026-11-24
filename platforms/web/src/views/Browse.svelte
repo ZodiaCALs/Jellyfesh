@@ -13,6 +13,7 @@
   import type { Item } from '../lib/core/types';
   import { t, tn } from '../lib/i18n/index.svelte';
   import { artistOf, itemMenu, linkOf, openLink, secondary, summary, tracksFrom } from '../lib/items';
+  import { saveAsPlaylist } from '../lib/playlists';
   import { toast } from '../lib/state/toast.svelte';
   import { LIBRARY } from '../lib/state/library.svelte';
   import { explain } from '../lib/state/sources.svelte';
@@ -71,7 +72,15 @@
   // Open in {Service} (API 1.1): in More, and the main action of a page whose songs cannot play here.
   const link = $derived((void app.sources.revision, linkOf(app, plugin, item)));
   const opensLink = $derived(link !== null && complete && tracks.length > 0 && !playable);
-  const menu = $derived(itemMenu(app, plugin, item, toast, { queue: playable }));
+  // A source's playlist can be kept as a Jellyfesh playlist (ADR-0024: Save as Playlist…).
+  const menu = () =>
+    itemMenu(app, plugin, item, toast, {
+      queue: playable,
+      extra:
+        item.kind === 'Playlist' && plugin !== LIBRARY && tracks.length > 0
+          ? [{ label: t('Save as Playlist…'), action: () => saveAsPlaylist(app, plugin, item) }]
+          : [],
+    });
   /** Albums and playlists get the large header. */
   const collection = $derived(item.kind === 'Album' || item.kind === 'Playlist');
   const artist = $derived(item.kind === 'Album' ? artistOf(item) : null);
@@ -86,7 +95,8 @@
   function play(shuffle: boolean) {
     const { entries } = tracksFrom(plugin, items);
     if (entries.length === 0) return;
-    app.player.playEntries(entries, shuffle ? Math.floor(Math.random() * entries.length) : 0, shuffle);
+    if (shuffle) app.player.shuffleEntries(entries);
+    else app.player.playEntries(entries, 0);
   }
 </script>
 

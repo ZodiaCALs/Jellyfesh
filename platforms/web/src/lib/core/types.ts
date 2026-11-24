@@ -51,6 +51,20 @@ export interface ItemPage {
 
 export type Quality = 'Low' | 'Normal' | 'High' | 'Lossless';
 
+/** Streaming Quality (ADR-0026 §1; the core's `StreamingQuality`): Auto is Lossless, or High on a
+ *  metered connection. */
+export type StreamingQuality = 'auto' | 'lossless' | 'high' | 'normal' | 'low';
+
+/** Why the quality menu offers no levels (jf_web::quality::QualityNote). */
+export type QualityNote = { kind: 'files_play_as_they_are' } | { kind: 'set_in_service'; service: string };
+
+/** The quality menu for what plays (jf_web::quality::Menu). */
+export interface QualityMenuInfo {
+  /** Auto, then the source's levels best first; empty when there is no choice. */
+  qualities: StreamingQuality[];
+  note: QualityNote | null;
+}
+
 export interface StreamInfo {
   url: string;
   headers: Header[];
@@ -84,7 +98,10 @@ export type Capability =
   | 'Appearance'
   | 'Discover'
   | 'Details'
-  | 'Comments';
+  | 'Comments'
+  /** API 1.3 (manifest capabilities): the person's likes and playlists, and downloads. */
+  | 'Library'
+  | 'Download';
 
 /** API 1.2: a host import the manifest declares. */
 export type Permission = 'Audio' | 'Speech';
@@ -178,6 +195,8 @@ export interface ContentPolicy {
   metadata_ttl_secs: number | null;
   lyrics_sync: boolean;
   attribution: string | null;
+  /** API 1.3: the streaming levels the source honours, best first (missing before). */
+  qualities?: Quality[];
 }
 
 export type SignatureStatus =
@@ -221,6 +240,63 @@ export interface PackageInfo {
   localized_schemas?: Record<string, SettingsSchema>;
   requires_pro?: boolean;
   extension?: boolean;
+}
+
+// ---- API 1.3 answers (jf_plugin_model's types, as serde writes them) --------------------------
+
+/** A playlist in the person's library on a service (`library.playlist-entry`). */
+export interface SourcePlaylistEntry {
+  item: Item;
+  /** The person's own playlist, or one they collaborate on. */
+  owned: boolean;
+  /** The service lists its songs here (false: only in its own app). */
+  songs_listed: boolean;
+}
+
+export interface PlaylistPage {
+  entries: SourcePlaylistEntry[];
+  next: string | null;
+  total: number | null;
+}
+
+/** Where to fetch a song's file (`download.download-info`), checked by jf-web. */
+export interface DownloadInfo {
+  url: string;
+  headers: { name: string; value: string }[];
+  /** The file's extension, without the dot. */
+  container: string;
+  size: number | null;
+  /** The file exactly as the server keeps it. */
+  original: boolean;
+  file_name: string | null;
+}
+
+// ---- the sources' likes and playlists (jf_web::source_library) --------------------------------
+
+export type SourceLibraryPart = 'liked_songs' | 'liked_albums' | 'liked_artists' | 'playlists';
+
+export interface SourceLibraryEntry {
+  item: Item;
+  owned: boolean;
+  songs_listed: boolean;
+}
+
+export interface SourceLibraryList {
+  part: SourceLibraryPart;
+  entries: SourceLibraryEntry[];
+  total: number | null;
+  next: string | null;
+  refreshed_at_ms: number | null;
+  loading: boolean;
+  error: string | null;
+}
+
+export interface SourceLibrary {
+  plugin: string;
+  name: string;
+  attribution: string | null;
+  /** In the order Liked Songs, Liked Albums, Liked Artists, Playlists; lists it does not keep left out. */
+  lists: SourceLibraryList[];
 }
 
 // ---- API 1.2 answers (jf_plugin_model's types, as serde writes them) --------------------------
@@ -454,6 +530,11 @@ export type Transition = { kind: 'gapless' } | { kind: 'crossfade'; overlap_ms: 
 
 export type PreviousAction = { action: 'restart' } | { action: 'play'; row: Row };
 
+/** A remote session's devices (the core's `Remote` slice, ADR-0018), for the device button. */
+export interface RemoteDevices {
+  devices: { id: string; name: string; active: boolean }[];
+}
+
 export interface ReplayGainInfo {
   track_gain_db: number | null;
   track_peak: number | null;
@@ -536,12 +617,23 @@ export interface WebSettings {
   preamp_db: number;
   eq: EqSettings;
   resume_on_launch: boolean;
-  quality: Quality;
+  /** Streaming Quality; `auto` by default. */
+  streaming_quality: StreamingQuality;
   language: string | null;
   /** Show Lyrics Bar (Settings › Appearance › Lyrics); on by default. */
   show_lyrics_bar: boolean;
   /** Desktop Lyrics: a Document Picture-in-Picture window, where the browser offers one; off by default. */
   desktop_lyrics: boolean;
+  /** Settings › Appearance › Mini Player (the core's; the web shows Show Lyrics Line only). */
+  mini_player: MiniPlayerSettings;
+}
+
+export interface MiniPlayerSettings {
+  keep_on_top: boolean;
+  open_when_window_closed: boolean;
+  /** The lyrics bar's current line in the mini player; on by default. */
+  show_lyrics_line: boolean;
+  android_pip: boolean;
 }
 
 // ---- lyrics and themes ------------------------------------------------------------------------
@@ -676,3 +768,106 @@ export interface LibStats {
 
 export type AlbumSort = 'title' | 'artist' | 'year' | 'added';
 export type TrackSort = 'title' | 'artist' | 'album' | 'year' | 'duration' | 'path' | 'added';
+
+// ---- hearts, playlists and plays (jf_web::collections) --------------------------------------
+
+/** A song as hearts, playlists and plays keep it: a source's item with its plugin's id, or a
+ *  library song under `library` with its key as id. */
+export interface Saved {
+  plugin: string;
+  item: Item;
+}
+
+/** Why the core refused a change to hearts or playlists (the error's message). */
+export type CollectionError = 'empty-name' | 'no-playlist' | 'no-entry' | 'not-a-song';
+
+export interface PlaylistSummary {
+  id: number;
+  name: string;
+  entry_count: number;
+  duration_ms: number;
+  created_at_ms: number;
+  updated_at_ms: number;
+  /** The first entry with artwork. */
+  cover: Saved | null;
+}
+
+export interface PlaylistEntry {
+  entry_id: number;
+  position: number;
+  plugin: string;
+  item: Item;
+}
+
+export interface ItemStats {
+  plugin: string;
+  item: Item;
+  favorite: boolean;
+  favorited_at_ms: number | null;
+  play_count: number;
+  skip_count: number;
+  last_played_ms: number | null;
+}
+
+/** A play that ended (Core.finish). */
+export interface FinishedPlay {
+  uid: number;
+  counted: boolean;
+  started_ms: number;
+  /** What the entry is for hearts and plays; null for a dropped file. */
+  saved: Saved | null;
+}
+
+// ---- search by source (jf_web::search) ------------------------------------------------------------
+
+export interface SearchPlan {
+  kinds: ItemKind[];
+  limit: number;
+  library_limit: number;
+}
+
+export interface SectionRow {
+  item: Item;
+  also_in: string[];
+}
+
+export type SearchStatus = 'searching' | 'done' | 'failed';
+
+/** A merging source's section on the All tab (From Your Sources). */
+export interface SearchSection {
+  source: string;
+  name: string;
+  status: SearchStatus;
+  error: string | null;
+  rows: SectionRow[];
+}
+
+export interface SearchTabLink {
+  source: string;
+  name: string;
+  merged: boolean;
+}
+
+export interface SearchView {
+  library: SectionRow[];
+  sections: SearchSection[];
+  tabs: SearchTabLink[];
+  done: boolean;
+  empty: boolean;
+}
+
+/** One kind of one source's results (the core's `SearchGroup`). */
+export interface SearchGroup {
+  kind: ItemKind;
+  items: Item[];
+  /** Show More goes on from here; null when there is no more. */
+  next: string | null;
+  total: number | null;
+}
+
+export interface SearchTab {
+  source: string;
+  name: string;
+  merged: boolean;
+  groups: SearchGroup[];
+}

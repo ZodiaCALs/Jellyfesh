@@ -42,10 +42,16 @@
     sort: 'M8 5v14M5 16l3 3 3-3M16 19V5M13 8l3-3 3 3',
     library: 'M5 4.5v15M9.5 4.5v15M14 5.5l4.5 13.5',
     'folder-plus': 'M3.5 6.5a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1zM12 10.5v5M9.5 13h5',
+    // The mini player: a small window in a corner of the screen.
+    'mini-player': 'M3.5 5.5h17v13h-17zM12 11.5h6v4.5h-6z',
+    // The device a remote source plays on: a screen and a speaker.
+    devices: 'M3.5 5.5h11v8.5h-11zM6.5 18h5M9 14v4M16.5 8h4v10.5h-4zM18.5 15.5h.01',
     // Open in {Service}: out of the box, to another place.
     external: 'M13.5 4.5h6v6M19.5 4.5 11 13M17.5 13.5v5a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1h5',
   };
   const FILLED: Record<string, string> = {
+    // A favourite (the heart, filled): a state, as play and pause are.
+    'heart-filled': 'M12 19.5s-7.5-4.6-7.5-9.7A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8c0 5.1-7.5 9.7-7.5 9.7z',
     play: 'M8 5.6v12.8a.9.9 0 0 0 1.4.8l10-6.4a.9.9 0 0 0 0-1.6l-10-6.4A.9.9 0 0 0 8 5.6z',
     pause: 'M7.7 5h2.4c.66 0 1.2.54 1.2 1.2v11.6c0 .66-.54 1.2-1.2 1.2H7.7c-.66 0-1.2-.54-1.2-1.2V6.2c0-.66.54-1.2 1.2-1.2zM14.1 5h2.4c.66 0 1.2.54 1.2 1.2v11.6c0 .66-.54 1.2-1.2 1.2h-2.4c-.66 0-1.2-.54-1.2-1.2V6.2c0-.66.54-1.2 1.2-1.2z',
   };

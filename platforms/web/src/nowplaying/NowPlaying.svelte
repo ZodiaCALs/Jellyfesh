@@ -5,8 +5,9 @@
   // Info) float at the top; the artwork (380 px, shadow-3) and the titles on one side and the
   // chosen pane on the other, or stacked on a phone; every control in one floating Veil dock
   // (radius 40, 80 px high; a rounded card on phones): shuffle, previous, play, next, repeat, the
-  // seek bar with its times, the volume and More. There is no device button: a browser decides
-  // where sound goes, and Jellyfesh Web has no remote sessions (ADR-0018). After Apple Music: the
+  // seek bar with its times, the volume, the quality badge and More; the heart beside the title
+  // (a dropped file has none). There is no device button: a browser decides where sound goes, and
+  // Jellyfesh Web has no remote sessions (ADR-0018). After Apple Music: the
   // artwork scales to 0.88 while paused and springs back when playing, the backdrop crossfades
   // between songs, and the whole view opens with Deeper and closes with Back (src/lib/motion.ts).
   // The dock is the view's one live blur layer; the top controls are Veil without blur.
@@ -14,12 +15,16 @@
   import Art from '../components/Art.svelte';
   import Icon from '../components/Icon.svelte';
   import Menu from '../components/Menu.svelte';
+  import QualityMenu from '../components/QualityMenu.svelte';
   import SeekBar from '../components/SeekBar.svelte';
   import Transport from '../components/Transport.svelte';
   import Volume from '../components/Volume.svelte';
   import { useApp } from '../lib/app';
   import { t } from '../lib/i18n/index.svelte';
   import { nowPlayingMenu } from '../lib/items';
+  import type { Saved } from '../lib/core/types';
+  import { refusalText } from '../lib/state/collections.svelte';
+  import { toast } from '../lib/state/toast.svelte';
   import { back, crossfade, deeper } from '../lib/motion';
   import type { Pane } from '../lib/state/nav.svelte';
   import { arrangement } from '../lib/look';
@@ -38,7 +43,19 @@
   let phonePane = $state(false);
   /** Wider than a phone: the dock is one row, with the seek bar's times beside it. */
   const wide = new MediaQuery('min-width: 761px');
-  const more = $derived((void app.sources.revision, nowPlayingMenu(app, row)));
+  const more = $derived((void app.sources.revision, void app.collections.revision, nowPlayingMenu(app, row, toast)));
+  // The heart for the song playing (kept in this browser; a dropped file has none).
+  const saved = $derived<Saved | null>(row ? (JSON.parse(app.core.saved(row.uid)) as Saved | null) : null);
+  const favourite = $derived(saved !== null && (void app.collections.revision, app.collections.isFavorite(saved.plugin, saved.item.id)));
+  function heart() {
+    if (!saved) return;
+    try {
+      const [song] = app.collections.current([saved]);
+      app.collections.setFavorite(song, !favourite);
+    } catch (error) {
+      toast(refusalText(error));
+    }
+  }
 
   // The backdrop crossfades over dur-4 when the artwork changes (instant with reduced motion).
   let layers = $state<{ id: number; url: string }[]>([]);
@@ -146,7 +163,21 @@
         {/each}
       </div>
       <div class="titles">
-        <h1 class="title">{row?.title ?? t('Nothing Playing')}</h1>
+        <div class="title-row">
+          <h1 class="title">{row?.title ?? t('Nothing Playing')}</h1>
+          {#if saved}
+            <button
+              class="heart"
+              class:on={favourite}
+              aria-pressed={favourite}
+              aria-label={favourite ? t('Remove from Favourites') : t('Add to Favourites')}
+              title={favourite ? t('Remove from Favourites') : t('Add to Favourites')}
+              onclick={heart}
+            >
+              <Icon name={favourite ? 'heart-filled' : 'heart'} size={24} />
+            </button>
+          {/if}
+        </div>
         <p class="artist">
           {#if row}{[row.artist ?? t('Unknown Artist'), row.album].filter(Boolean).join(' · ')}{:else}{t(
               'Pick a song, an album or a playlist.',
@@ -195,7 +226,7 @@
     </div>
     <div class="vol"><Volume /></div>
     {#if more.length > 0}
-      <div class="more"><Menu items={more} label={t('More')} /></div>
+      <div class="more"><QualityMenu /><Menu items={more} label={t('More')} /></div>
     {/if}
   </div>
 </div>
@@ -379,6 +410,39 @@
     gap: 6px;
     min-width: 0;
   }
+  .title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--jf-space-s2);
+  }
+  .title-row .title {
+    flex: 1;
+    min-width: 0;
+  }
+  .heart {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin-top: -4px;
+    border: 0;
+    border-radius: var(--jf-radius-r-full);
+    background: transparent;
+    color: var(--jf-ink-70);
+    cursor: pointer;
+  }
+  .heart:hover {
+    background: var(--jf-fill-hover);
+    color: var(--jf-ink-90);
+  }
+  .heart.on {
+    color: var(--jf-accent-text);
+  }
+  .heart:focus-visible {
+    outline: none;
+    box-shadow: var(--jf-elevation-focus);
+  }
   .title {
     margin: 0;
     font-size: calc(var(--jf-type-roles-now-playing-title-size) * var(--jf-text-scale, 1));
@@ -497,6 +561,9 @@
   }
   .more {
     grid-area: more;
+    display: flex;
+    align-items: center;
+    gap: var(--jf-space-s2);
   }
   /* A narrower dock keeps the mute button and drops the volume line; Ctrl+↑/↓ still change it. */
   @media (min-width: 761px) and (max-width: 1040px) {
