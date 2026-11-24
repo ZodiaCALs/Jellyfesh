@@ -13,6 +13,9 @@
 //! * [`search`]: search by source, the library first (ADR-0024 §4);
 //! * [`collections`]: hearts, playlists and plays, kept in the browser with
 //!   `jf-library`'s rules;
+//! * [`source_library`]: the sources' likes and playlists (API 1.3);
+//! * [`quality`]: the streaming level and the quality menu;
+//! * [`download`]: the name of a song the browser saves;
 //! * [`lyrics`]: lyric documents and timelines (`jf-lyrics`) from plugins,
 //!   tags and lyrics files;
 //! * [`relay`]: which services refuse browsers, and the relay's address;
@@ -32,16 +35,19 @@ pub mod ai_lyrics;
 pub mod collections;
 pub mod details;
 pub mod discover;
+pub mod download;
 pub mod library;
 pub mod look;
 pub mod lyrics;
 pub mod pro;
 pub mod qr;
+pub mod quality;
 pub mod relay;
 pub mod rules;
 pub mod search;
 pub mod session;
 pub mod settings;
+pub mod source_library;
 pub mod sources;
 
 use jf_plugin_model::links::Links;
@@ -169,9 +175,9 @@ impl Core {
         json(&self.settings)
     }
 
-    /// Replaces the settings; returns them normalised.
+    /// Replaces the settings (as the page kept them, from any version); returns them normalised.
     pub fn set_settings(&mut self, settings: &str) -> Result<String, JsError> {
-        let settings: WebSettings = parse(settings, "settings")?;
+        let settings = WebSettings::from_json(settings).map_err(|e| error(format!("settings: {e}")))?;
         self.settings = settings.normalized();
         Ok(json(&self.settings))
     }
@@ -642,19 +648,30 @@ pub fn next_quality(failed: &str) -> String {
     json(&rules::next_quality(failed))
 }
 
-/// The levels the quality menu offers for what plays, best first (`Quality` list): for a source's
-/// stream (`source`), with its content policy (`ContentPolicy`) once its package has been read
-/// (else the manifest's defaults); for a file, none.
+/// The quality menu for what plays (`quality::Menu`: `{"qualities", "note"}`): for a source's stream
+/// (`source`, its name, and its content policy once its package has been read, else the manifest's
+/// defaults), or for a file (`source` false).
 #[wasm_bindgen]
-pub fn offered_qualities(source: bool, policy: Option<String>) -> Result<String, JsError> {
+pub fn quality_menu(source: bool, name: Option<String>, policy: Option<String>) -> Result<String, JsError> {
     if !source {
-        return Ok(json(&rules::offered_qualities(None)));
+        return Ok(json(&quality::menu(None)));
     }
     let policy: ContentPolicy = match policy {
         Some(text) => parse(&text, "content policy")?,
         None => ContentPolicy::default(),
     };
-    Ok(json(&rules::offered_qualities(Some(&policy))))
+    Ok(json(&quality::menu(Some((
+        name.as_deref().unwrap_or_default(),
+        &policy,
+    )))))
+}
+
+/// What a source is asked for with the Streaming Quality setting (`"auto"`, `"lossless"`, …) on a
+/// connection that is `metered` or not: `"Lossless"`, `"High"`, `"Normal"` or `"Low"`.
+#[wasm_bindgen]
+pub fn streaming_level(setting: &str, metered: bool) -> Result<String, JsError> {
+    let setting: quality::StreamingQuality = parse(&format!("\"{setting}\""), "streaming quality")?;
+    Ok(json(&quality::level(setting, metered)))
 }
 
 /// A MIME type for `canPlayType` from a codec hint.
@@ -1000,6 +1017,120 @@ impl Collections {
     }
 }
 
+// ---- the sources' likes and playlists, downloads --------------------------------------------
+
+/// How many entries each of a source's lists asks for first.
+#[wasm_bindgen]
+pub fn source_library_first_page() -> u32 {
+    source_library::FIRST_PAGE
+}
+
+/// The sources' likes and playlists (`source_library`), kept by the page in IndexedDB. Parts are
+/// `"liked_songs"`, `"liked_albums"`, `"liked_artists"` and `"playlists"`; times are ms since the
+/// epoch.
+#[wasm_bindgen]
+#[derive(Debug, Default)]
+pub struct SourceLibraries {
+    inner: source_library::SourceLibraries,
+}
+
+fn part(text: &str) -> Result<source_library::Part, JsError> {
+    parse(&format!("\"{text}\""), "part")
+}
+
+#[wasm_bindgen]
+impl SourceLibraries {
+    /// The lists the page kept (`cache`), or none.
+    #[wasm_bindgen(constructor)]
+    pub fn new(cache: Option<String>) -> SourceLibraries {
+        SourceLibraries {
+            inner: cache
+                .as_deref()
+                .map(source_library::SourceLibraries::from_cache)
+                .unwrap_or_default(),
+        }
+    }
+
+    /// What the page keeps.
+    pub fn cache(&self) -> String {
+        self.inner.cache()
+    }
+
+    /// The sources covered now (`[{"plugin", "name", "attribution"}]`), in order.
+    pub fn cover(&mut self, covered: &str) -> Result<(), JsError> {
+        self.inner.cover(parse(covered, "sources")?);
+        Ok(())
+    }
+
+    /// The parts of `plugin` to refresh now (`opened`: the page opened, rather than showed again).
+    pub fn stale(&self, plugin: &str, now_ms: f64, opened: bool) -> String {
+        json(&self.inner.stale(plugin, now_ms as i64, opened))
+    }
+
+    pub fn begin(&mut self, plugin: &str, part_name: &str) -> Result<(), JsError> {
+        self.inner.begin(plugin, part(part_name)?);
+        Ok(())
+    }
+
+    /// The first page of a list of likes (`ItemPage`, checked).
+    pub fn likes(&mut self, plugin: &str, part_name: &str, page: &str, now_ms: f64) -> Result<(), JsError> {
+        let page: ItemPage = parse(page, "page")?;
+        self.inner.likes(plugin, part(part_name)?, page, now_ms as i64);
+        Ok(())
+    }
+
+    /// The first page of playlists (`PlaylistPage`, checked).
+    pub fn playlists(&mut self, plugin: &str, page: &str, now_ms: f64) -> Result<(), JsError> {
+        let page: jf_plugin_model::PlaylistPage = parse(page, "playlists")?;
+        self.inner.playlists(plugin, page, now_ms as i64);
+        Ok(())
+    }
+
+    /// The source does not keep this list.
+    pub fn unsupported(&mut self, plugin: &str, part_name: &str) -> Result<(), JsError> {
+        self.inner.unsupported(plugin, part(part_name)?);
+        Ok(())
+    }
+
+    /// A refresh failed, with why (the cached entries stay).
+    pub fn fail(&mut self, plugin: &str, part_name: &str, reason: &str) -> Result<(), JsError> {
+        self.inner.fail(plugin, part(part_name)?, reason);
+        Ok(())
+    }
+
+    /// The cursor for more of a list, or `undefined`.
+    pub fn next(&self, plugin: &str, part_name: &str) -> Option<String> {
+        self.inner.next(plugin, part(part_name).ok()?)
+    }
+
+    /// More of a list of likes.
+    pub fn more_likes(&mut self, plugin: &str, part_name: &str, page: &str) -> Result<(), JsError> {
+        let page: ItemPage = parse(page, "page")?;
+        self.inner.more_likes(plugin, part(part_name)?, page);
+        Ok(())
+    }
+
+    /// More playlists.
+    pub fn more_playlists(&mut self, plugin: &str, page: &str) -> Result<(), JsError> {
+        let page: jf_plugin_model::PlaylistPage = parse(page, "playlists")?;
+        self.inner.more_playlists(plugin, page);
+        Ok(())
+    }
+
+    /// Every covered source with its lists (`source_library::SourceLibrary` list).
+    pub fn sources(&self) -> String {
+        json(&self.inner.sources())
+    }
+}
+
+/// The name the browser saves a downloaded song (`Item`) of the source named `source` as, with the
+/// file's extension (`container`).
+#[wasm_bindgen]
+pub fn download_name(item: &str, source: &str, container: &str) -> Result<String, JsError> {
+    let item: Item = parse(item, "item")?;
+    Ok(download::browser_name(&item, source, container))
+}
+
 // ---- search ------------------------------------------------------------------------------------
 
 /// What to ask each source: `{"kinds": [ItemKind…], "limit", "library_limit"}`.
@@ -1137,6 +1268,25 @@ impl Source {
     pub fn check_artwork(&self, image: &str) -> Result<String, JsError> {
         let image: ImageRef = parse(image, "image")?;
         Ok(json(&self.inner.check_artwork(image).map_err(error)?))
+    }
+
+    /// A page of the person's likes of `kind` (`"Track"`, `"Album"` or `"Artist"`; API 1.3), checked.
+    pub fn check_likes(&self, page: &str, kind: &str, limit: u32) -> Result<String, JsError> {
+        let page: ItemPage = parse(page, "page")?;
+        let kind: ItemKind = parse(&format!("\"{kind}\""), "kind")?;
+        Ok(json(&self.inner.check_likes(page, kind, limit)))
+    }
+
+    /// A page of the person's playlists (`PlaylistPage`, API 1.3), checked.
+    pub fn check_playlists(&self, page: &str, limit: u32) -> Result<String, JsError> {
+        let page: jf_plugin_model::PlaylistPage = parse(page, "playlists")?;
+        Ok(json(&self.inner.check_playlists(page, limit)))
+    }
+
+    /// Where to fetch a download (`DownloadInfo`, API 1.3), checked.
+    pub fn check_download(&self, info: &str) -> Result<String, JsError> {
+        let info: jf_plugin_model::DownloadInfo = parse(info, "download")?;
+        Ok(json(&self.inner.check_download(info).map_err(error)?))
     }
 
     /// A Discover answer (`Shelf` list), checked (API 1.2).

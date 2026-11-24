@@ -1,11 +1,13 @@
 //! Jellyfesh Web's settings: the part of the core's `Settings` a browser
 //! player uses, with the same names, defaults and `serde` shapes (a test
-//! compares them with `jf_core::Settings`), plus two of its own: the
-//! streaming quality and the interface language.
+//! compares them with `jf_core::Settings`), plus one of its own: the
+//! interface language. Settings saved before v0.0.8 kept the streaming
+//! quality as `quality` (`"Lossless"`…); they read as `streaming_quality`.
 
-use jf_plugin_model::Quality;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
+use crate::quality::StreamingQuality;
 use crate::rules::{CrossfadeSettings, EqSettings, ReplayGainMode};
 
 /// Light, dark, or following the system.
@@ -58,6 +60,30 @@ pub enum LyricsAlign {
     Center,
 }
 
+/// Settings › Appearance › Mini Player (ADR-0026 §4), as the core keeps
+/// them. The web shows Show Lyrics Line only: a picture-in-picture window
+/// always stays on top and closes with the page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MiniPlayerSettings {
+    pub keep_on_top: bool,
+    pub open_when_window_closed: bool,
+    /// The lyrics bar's current line in the mini player. On by default.
+    pub show_lyrics_line: bool,
+    pub android_pip: bool,
+}
+
+impl Default for MiniPlayerSettings {
+    fn default() -> Self {
+        MiniPlayerSettings {
+            keep_on_top: true,
+            open_when_window_closed: false,
+            show_lyrics_line: true,
+            android_pip: false,
+        }
+    }
+}
+
 /// The settings. Missing fields load as their defaults.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -80,8 +106,8 @@ pub struct WebSettings {
     pub eq: EqSettings,
     /// Start playing the restored queue when the page opens.
     pub resume_on_launch: bool,
-    /// The quality asked of the server first (web only).
-    pub quality: Quality,
+    /// Streaming Quality (ADR-0026 §1): `Auto` by default.
+    pub streaming_quality: StreamingQuality,
     /// The interface language (`en`, `zh-Hans`, `zh-Hant`, `ja`); `None`
     /// follows the browser (web only).
     pub language: Option<String>,
@@ -93,6 +119,8 @@ pub struct WebSettings {
     /// Document Picture-in-Picture window, where the browser offers one. Off
     /// by default, as in the core.
     pub desktop_lyrics: bool,
+    /// Settings › Appearance › Mini Player.
+    pub mini_player: MiniPlayerSettings,
 }
 
 impl Default for WebSettings {
@@ -112,15 +140,38 @@ impl Default for WebSettings {
             preamp_db: 0.0,
             eq: EqSettings::flat(),
             resume_on_launch: false,
-            quality: crate::rules::FIRST_QUALITY,
+            streaming_quality: StreamingQuality::Auto,
             language: None,
             show_lyrics_bar: true,
             desktop_lyrics: false,
+            mini_player: MiniPlayerSettings::default(),
         }
     }
 }
 
 impl WebSettings {
+    /// Settings as the page kept them, from any version: the `quality` of
+    /// earlier versions becomes `streaming_quality`.
+    pub fn from_json(text: &str) -> serde_json::Result<WebSettings> {
+        let mut value: Value = serde_json::from_str(text)?;
+        if let Value::Object(fields) = &mut value
+            && !fields.contains_key("streaming_quality")
+            && let Some(Value::String(old)) = fields.remove("quality")
+        {
+            let level = match old.as_str() {
+                "Lossless" => Some("lossless"),
+                "High" => Some("high"),
+                "Normal" => Some("normal"),
+                "Low" => Some("low"),
+                _ => None,
+            };
+            if let Some(level) = level {
+                fields.insert("streaming_quality".into(), Value::String(level.into()));
+            }
+        }
+        serde_json::from_value(value)
+    }
+
     /// The settings as the core stores them: the preamp within ±15 dB, the
     /// crossfade within 1–12 s, a known language or none.
     pub fn normalized(mut self) -> Self {
@@ -162,7 +213,7 @@ mod tests {
         assert_eq!(s.style, BackdropStyle::Misty);
         let s = s.normalized();
         assert_eq!(s.preamp_db, 15.0);
-        assert_eq!(s.quality, Quality::Lossless);
+        assert_eq!(s.streaming_quality, StreamingQuality::Auto);
         let fixed = WebSettings {
             hue_source: HueSource::Fixed { hue: -30.0 },
             language: Some("xx".into()),
@@ -183,5 +234,24 @@ mod tests {
             serde_json::from_str(r#"{"show_lyrics_bar": false, "desktop_lyrics": true}"#).unwrap();
         assert!(!s.show_lyrics_bar);
         assert!(s.desktop_lyrics);
+    }
+
+    #[test]
+    fn the_old_quality_setting_becomes_streaming_quality() {
+        let old = WebSettings::from_json(r#"{"quality": "High", "style": "misty"}"#).unwrap();
+        assert_eq!(old.streaming_quality, StreamingQuality::High);
+        assert_eq!(old.style, BackdropStyle::Misty);
+        let both = WebSettings::from_json(r#"{"quality": "Low", "streaming_quality": "normal"}"#).unwrap();
+        assert_eq!(
+            both.streaming_quality,
+            StreamingQuality::Normal,
+            "the new one wins"
+        );
+        let none = WebSettings::from_json("{}").unwrap();
+        assert_eq!(none.streaming_quality, StreamingQuality::Auto);
+        assert_eq!(none.mini_player, MiniPlayerSettings::default());
+        assert!(none.mini_player.show_lyrics_line);
+        let saved = serde_json::to_value(&old).unwrap();
+        assert!(saved.get("quality").is_none(), "only the new name is written");
     }
 }

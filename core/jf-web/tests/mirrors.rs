@@ -111,6 +111,8 @@ fn settings_share_the_cores_names_and_defaults() {
         "resume_on_launch",
         "show_lyrics_bar",
         "desktop_lyrics",
+        "streaming_quality",
+        "mini_player",
     ];
     for key in shared {
         assert_eq!(ours[key], core[key], "{key}");
@@ -128,6 +130,31 @@ fn settings_share_the_cores_names_and_defaults() {
         ..Default::default()
     };
     let loaded: WebSettings = serde_json::from_value(as_json(&core_settings)).unwrap();
+    // The streaming levels are the core's, with the same JSON.
+    for (ours, core) in [
+        (
+            jf_web::quality::StreamingQuality::Auto,
+            jf_core::StreamingQuality::Auto,
+        ),
+        (
+            jf_web::quality::StreamingQuality::Lossless,
+            jf_core::StreamingQuality::Lossless,
+        ),
+        (
+            jf_web::quality::StreamingQuality::High,
+            jf_core::StreamingQuality::High,
+        ),
+        (
+            jf_web::quality::StreamingQuality::Normal,
+            jf_core::StreamingQuality::Normal,
+        ),
+        (
+            jf_web::quality::StreamingQuality::Low,
+            jf_core::StreamingQuality::Low,
+        ),
+    ] {
+        assert_eq!(as_json(&ours), as_json(&core));
+    }
     assert_eq!(as_json(&loaded)["style"], "misty");
     assert_eq!(as_json(&loaded)["lyrics_size"], "large");
     assert_eq!(as_json(&loaded)["lyrics_align"], "center");

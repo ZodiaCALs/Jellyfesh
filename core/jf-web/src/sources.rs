@@ -13,8 +13,9 @@ use jf_plugin_model::merge::{self, MergedItem};
 use jf_plugin_model::sanitize::{self, Checker};
 use jf_plugin_model::schema::{Profile, SettingsSchema};
 use jf_plugin_model::{
-    AuthKind, AuthStep, CallError, CommentPage, ContentPolicy, FieldValue, Flow, FlowStep, ImageRef, Item,
-    ItemDetails, ItemKind, ItemPage, LyricPayload, Made, MakerPlan, Shelf, StreamInfo,
+    AuthKind, AuthStep, CallError, CommentPage, ContentPolicy, DownloadInfo, FieldValue, Flow, FlowStep,
+    ImageRef, Item, ItemDetails, ItemKind, ItemPage, LyricPayload, Made, MakerPlan, PlaylistPage, Shelf,
+    StreamInfo,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -156,6 +157,22 @@ impl Source {
     /// Lyrics the plugin made, checked.
     pub fn check_made(&self, made: Made) -> Result<Made, CallError> {
         sanitize::made(made)
+    }
+
+    /// A page of the person's likes of `kind` (API 1.3), checked: at most
+    /// `limit` valid items of that kind.
+    pub fn check_likes(&self, page: ItemPage, kind: ItemKind, limit: u32) -> ItemPage {
+        self.with_checker(|c| sanitize::likes(page, kind, limit, c))
+    }
+
+    /// A page of the person's playlists (API 1.3), checked.
+    pub fn check_playlists(&self, page: PlaylistPage, limit: u32) -> PlaylistPage {
+        self.with_checker(|c| sanitize::playlists(page, limit, c))
+    }
+
+    /// Where to fetch a download (API 1.3): only from the allowlist.
+    pub fn check_download(&self, info: DownloadInfo) -> Result<DownloadInfo, CallError> {
+        self.with_checker(|c| sanitize::download(info, c))
     }
 
     /// The plugin's lyrics, checked and parsed (unsynced when the content

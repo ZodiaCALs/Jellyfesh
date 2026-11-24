@@ -16,9 +16,11 @@
 //!   albums, artists and playlists as it listed them, each with Show More
 //!   while the source has more of that kind (its cursor).
 //!
-//! The page runs the calls (and the deadline) and hands each source's
-//! answer to a [`Search`]; [`Search::view`] and [`Search::tab`] are what the
-//! Search page shows.
+//! The names follow the core's search events (`SearchUpdate.merged`,
+//! `SearchGroup { kind, items, next, total }`, `SearchMore`). The page runs
+//! the calls (and the deadline) and hands each source's answer to a
+//! [`Search`]; [`Search::view`] and [`Search::tab`] are what the Search page
+//! shows.
 
 use jf_plugin_model::{ContentPolicy, Item, ItemKind, ItemPage};
 use serde::Serialize;
@@ -65,13 +67,15 @@ pub enum Status {
     Failed,
 }
 
-/// One kind of one source's results.
+/// One kind of one source's results (the core's `SearchGroup`).
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct KindResults {
+pub struct SearchGroup {
     pub kind: ItemKind,
     pub items: Vec<Item>,
     /// Where Show More goes on from; `None` when there is no more.
-    pub cursor: Option<String>,
+    pub next: Option<String>,
+    /// How many there are in all, when the source says.
+    pub total: Option<u32>,
 }
 
 #[derive(Debug, Clone)]
@@ -82,24 +86,24 @@ struct SourceResults {
     merged: bool,
     status: Status,
     error: Option<String>,
-    kinds: Vec<KindResults>,
-    /// When it answered among the sources (the order of the groups and tabs).
+    groups: Vec<SearchGroup>,
+    /// When it answered among the sources (the order of the sections and tabs).
     answered: Option<usize>,
 }
 
 impl SourceResults {
     fn items(&self) -> Vec<Item> {
-        self.kinds.iter().flat_map(|k| k.items.iter().cloned()).collect()
+        self.groups.iter().flat_map(|k| k.items.iter().cloned()).collect()
     }
 
     fn found(&self) -> bool {
-        self.kinds.iter().any(|k| !k.items.is_empty())
+        self.groups.iter().any(|k| !k.items.is_empty())
     }
 }
 
-/// A merging source's group on the All tab.
+/// A merging source's section on the All tab (From Your Sources).
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct Group {
+pub struct Section {
     pub source: String,
     pub name: String,
     pub status: Status,
@@ -125,7 +129,7 @@ pub struct View {
     pub library: Vec<SectionRow>,
     /// From Your Sources: the merging sources, in the order they answered,
     /// then those still searching or that failed.
-    pub groups: Vec<Group>,
+    pub sections: Vec<Section>,
     /// The sources that answered with something, in the order they
     /// answered: one tab each.
     pub tabs: Vec<TabLink>,
@@ -142,7 +146,7 @@ pub struct Tab {
     pub name: String,
     pub merged: bool,
     /// Songs, albums, artists and playlists, those with results.
-    pub kinds: Vec<KindResults>,
+    pub groups: Vec<SearchGroup>,
 }
 
 /// One query's results. See the module documentation.
@@ -174,7 +178,7 @@ impl Search {
             merged: false,
             status: Status::Searching,
             error: None,
-            kinds: Vec::new(),
+            groups: Vec::new(),
             answered: None,
         });
     }
@@ -192,14 +196,15 @@ impl Search {
         }
         source.merged = policy.unified_search;
         source.status = Status::Done;
-        source.kinds = KINDS
+        source.groups = KINDS
             .iter()
             .filter_map(|kind| {
                 let (_, page) = pages.iter().find(|(k, _)| k == kind)?;
-                Some(KindResults {
+                Some(SearchGroup {
                     kind: *kind,
                     items: unique(page.items.iter().filter(|i| i.kind == *kind).cloned(), &[]),
-                    cursor: page.next.clone(),
+                    next: page.next.clone(),
+                    total: page.total,
                 })
             })
             .collect();
@@ -220,10 +225,10 @@ impl Search {
     /// The cursor for Show More of a source's `kind`, or `None`.
     pub fn cursor(&self, id: &str, kind: ItemKind) -> Option<String> {
         self.source(id)?
-            .kinds
+            .groups
             .iter()
             .find(|k| k.kind == kind)?
-            .cursor
+            .next
             .clone()
     }
 
@@ -233,12 +238,12 @@ impl Search {
         let Some(source) = self.source_mut(id) else {
             return;
         };
-        let Some(results) = source.kinds.iter_mut().find(|k| k.kind == kind) else {
+        let Some(results) = source.groups.iter_mut().find(|k| k.kind == kind) else {
             return;
         };
         let added = unique(page.items.into_iter().filter(|i| i.kind == kind), &results.items);
         results.items.extend(added);
-        results.cursor = page.next;
+        results.next = page.next;
     }
 
     /// The All and Library tabs, and the list of tabs.
@@ -251,10 +256,10 @@ impl Search {
         answers.extend(merging.iter().map(|s| (s.id.clone(), s.items())));
         let mut merged = sections(&answers).into_iter();
         let library = merged.next().unwrap_or_default();
-        let mut groups: Vec<Group> = merging
+        let mut sections: Vec<Section> = merging
             .iter()
             .zip(merged)
-            .map(|(source, rows)| Group {
+            .map(|(source, rows)| Section {
                 source: source.id.clone(),
                 name: source.name.clone(),
                 status: Status::Done,
@@ -264,11 +269,11 @@ impl Search {
             .collect();
         // Still searching, or failed: shown after the answers (whether a source merges is
         // known only from its answer).
-        groups.extend(
+        sections.extend(
             self.sources
                 .iter()
                 .filter(|s| s.answered.is_none())
-                .map(|s| Group {
+                .map(|s| Section {
                     source: s.id.clone(),
                     name: s.name.clone(),
                     status: s.status.clone(),
@@ -289,7 +294,7 @@ impl Search {
         let empty = done && library.is_empty() && tabs.is_empty();
         View {
             library,
-            groups,
+            sections,
             tabs,
             done,
             empty,
@@ -303,8 +308,8 @@ impl Search {
             source: source.id.clone(),
             name: source.name.clone(),
             merged: source.merged,
-            kinds: source
-                .kinds
+            groups: source
+                .groups
                 .iter()
                 .filter(|k| !k.items.is_empty())
                 .cloned()
@@ -392,8 +397,8 @@ mod tests {
         search.asking("b", "Jellyfin");
         let view = search.view();
         assert!(!view.done);
-        assert_eq!(view.groups.len(), 2);
-        assert!(view.groups.iter().all(|g| g.status == Status::Searching));
+        assert_eq!(view.sections.len(), 2);
+        assert!(view.sections.iter().all(|g| g.status == Status::Searching));
         // Jellyfin answers first: its own copy of the library's song joins it.
         search.answer(
             "b",
@@ -434,13 +439,13 @@ mod tests {
         assert!(!view.empty);
         assert_eq!(ids(&view.library), ["lib-3"]);
         assert_eq!(view.library[0].also_in, ["b", "a"]);
-        let groups: Vec<(&str, Vec<&str>)> = view
-            .groups
+        let sections: Vec<(&str, Vec<&str>)> = view
+            .sections
             .iter()
             .map(|g| (g.source.as_str(), ids(&g.rows)))
             .collect();
         assert_eq!(
-            groups,
+            sections,
             [("b", vec!["j1"]), ("a", vec!["s5"])],
             "in the order they answered"
         );
@@ -483,19 +488,19 @@ mod tests {
             view.library[0].also_in.is_empty(),
             "the library's song is not 'also in' Spotify"
         );
-        let groups: Vec<&str> = view.groups.iter().map(|g| g.source.as_str()).collect();
+        let groups: Vec<&str> = view.sections.iter().map(|g| g.source.as_str()).collect();
         assert_eq!(groups, ["a"], "no group beside the others on the All tab");
         assert_eq!(
-            ids(&view.groups[0].rows),
+            ids(&view.sections[0].rows),
             ["s5"],
             "not de-duplicated against Spotify"
         );
         let tabs: Vec<(&str, bool)> = view.tabs.iter().map(|t| (t.source.as_str(), t.merged)).collect();
         assert_eq!(tabs, [("spotify", false), ("a", true)]);
         let tab = search.tab("spotify").unwrap();
-        assert_eq!(tab.kinds.len(), 1);
+        assert_eq!(tab.groups.len(), 1);
         assert_eq!(
-            tab.kinds[0].items.len(),
+            tab.groups[0].items.len(),
             2,
             "its own tab lists everything it found"
         );
@@ -532,8 +537,8 @@ mod tests {
             ),
         );
         let tab = search.tab("a").unwrap();
-        assert_eq!(tab.kinds.len(), 1, "kinds without results are left out");
-        let songs: Vec<&str> = tab.kinds[0].items.iter().map(|i| i.id.as_str()).collect();
+        assert_eq!(tab.groups.len(), 1, "kinds without results are left out");
+        let songs: Vec<&str> = tab.groups[0].items.iter().map(|i| i.id.as_str()).collect();
         assert_eq!(songs, ["1", "2"], "repeats and other kinds are left out");
         assert_eq!(search.cursor("a", ItemKind::Track), None);
         assert!(search.tab("nobody").is_none());
@@ -561,7 +566,7 @@ mod tests {
         let view = search.view();
         assert!(view.done);
         assert!(view.empty, "a late answer after a failure is dropped");
-        let failed = view.groups.iter().find(|g| g.source == "a").unwrap();
+        let failed = view.sections.iter().find(|g| g.source == "a").unwrap();
         assert_eq!(failed.status, Status::Failed);
         assert_eq!(failed.error.as_deref(), Some("Subsonic did not answer in time."));
         assert!(view.tabs.is_empty(), "no tab for a source that found nothing");

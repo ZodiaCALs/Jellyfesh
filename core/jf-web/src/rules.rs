@@ -16,7 +16,8 @@
 //! | Ten one-octave bands at the ISO frequencies, Q 1.41, the presets | `jf-engine` `EqSettings` |
 //! | ReplayGain scale with preamp and clip guard | `jf-engine` `replaygain_scale` |
 //! | Limiter at −1 dBFS, engaged only when gain can pass full scale or tracks overlap | `jf-engine` `limiter_needed` |
-//! | Stream quality: lossless first | `jf-core` sources, `QUALITY` |
+//!
+//! The streaming level (Auto, the quality menu) is [`crate::quality`]'s.
 
 use std::ops::RangeInclusive;
 
@@ -340,9 +341,6 @@ pub fn limiter_needed(replaygain_scales: &[f32], eq: &EqSettings, crossfading: b
 
 // ---- streams ---------------------------------------------------------------------------------
 
-/// The quality asked for first: the original file (the core's choice).
-pub const FIRST_QUALITY: Quality = Quality::Lossless;
-
 /// The quality to ask for after the browser could not play `failed`: each
 /// step down makes the server convert more files (to the plugin's
 /// conversion format), so a file the browser cannot decode gets converted.
@@ -352,17 +350,6 @@ pub fn next_quality(failed: Quality) -> Option<Quality> {
         Quality::High => Some(Quality::Low),
         Quality::Normal => Some(Quality::Low),
         Quality::Low => None,
-    }
-}
-
-/// The levels the bar's quality menu offers for what plays (ADR-0026 §2),
-/// best first: none for a file (it plays as it is), every level for a
-/// source's stream (`policy` is its content policy; a plugin cannot list
-/// its own levels before API 1.3).
-pub fn offered_qualities(policy: Option<&jf_plugin_model::ContentPolicy>) -> Vec<Quality> {
-    match policy {
-        None => Vec::new(),
-        Some(_) => vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low],
     }
 }
 
@@ -478,16 +465,6 @@ mod tests {
         assert!(limiter_needed(&[1.0], &EqSettings::bass_boost(), false));
         assert!(limiter_needed(&[], &flat, true));
         assert!(!limiter_needed(&[], &EqSettings::default(), false));
-    }
-
-    #[test]
-    fn files_offer_no_levels_and_streams_all() {
-        assert!(offered_qualities(None).is_empty());
-        let policy = jf_plugin_model::ContentPolicy::default();
-        assert_eq!(
-            offered_qualities(Some(&policy)),
-            [Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
-        );
     }
 
     #[test]
