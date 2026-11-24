@@ -85,6 +85,7 @@ mod tests {
             link: link.then(|| "https://music.example.com/song/42".into()),
             artist_id: None,
             album_id: None,
+            downloaded: false,
         }
     }
 

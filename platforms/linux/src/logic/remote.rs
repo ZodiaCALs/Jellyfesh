@@ -191,6 +191,7 @@ mod tests {
             link: Some("https://music.example.com/song/b".into()),
             artist_id: None,
             album_id: None,
+            downloaded: false,
         }
     }
 
@@ -219,6 +220,7 @@ mod tests {
                 device("phone", "Phone", RemoteDeviceKind::Smartphone, false, Some(100)),
             ],
             error: None,
+            quality_note: None,
         }
     }
 
@@ -242,6 +244,7 @@ mod tests {
             device: None,
             devices: Vec::new(),
             error: None,
+            quality_note: None,
         }
     }
 

@@ -430,6 +430,11 @@ impl App {
             Event::Discover(page) => self.emit(&Change::Discover(&page)),
             // A source's picture is in the cache: the views waiting load it.
             Event::Artwork(ready) => self.thumbs.artwork_ready(&ready),
+            // v0.0.8 (ADR-0024, ADR-0025): shown by the pages that follow.
+            Event::SearchPage(_)
+            | Event::SourceLibrary(_)
+            | Event::SourceLibraryPage(_)
+            | Event::Downloads(_) => {}
         }
         // Muted is part of the snapshot; it only changes with SetMuted, which
         // republishes the playback slice.

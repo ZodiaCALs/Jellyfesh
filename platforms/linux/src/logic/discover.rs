@@ -43,6 +43,7 @@ pub fn see_all(plugin: &str, shelf: &Shelf) -> Option<SourceItem> {
         link: None,
         artist_id: None,
         album_id: None,
+        downloaded: false,
     })
 }
 
@@ -74,6 +75,7 @@ mod tests {
             link: None,
             artist_id: None,
             album_id: None,
+            downloaded: false,
         };
         Shelf {
             id: id.into(),

@@ -40,6 +40,7 @@ impl Container {
             link: None,
             artist_id: self.artist_id.clone(),
             album_id: None,
+            downloaded: false,
         }
     }
 }
@@ -184,6 +185,7 @@ mod tests {
             link: None,
             artist_id: Some("ar9".into()),
             album_id: Some("al3".into()),
+            downloaded: false,
         }
     }
 

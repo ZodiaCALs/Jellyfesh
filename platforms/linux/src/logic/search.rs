@@ -147,6 +147,7 @@ mod tests {
             link: None,
             artist_id: None,
             album_id: None,
+            downloaded: false,
         }
     }
 
@@ -156,6 +157,8 @@ mod tests {
             query: "q".into(),
             source: source.into(),
             items,
+            merged: true,
+            groups: vec![],
             error: None,
             done,
         })
