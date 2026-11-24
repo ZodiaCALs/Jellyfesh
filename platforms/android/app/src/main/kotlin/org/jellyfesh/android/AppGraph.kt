@@ -1,6 +1,7 @@
 package org.jellyfesh.android
 
 import android.app.Application
+import android.os.Environment
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,7 @@ class AppGraph(private val app: Application) {
                     // The process may have started without its window (a media button, the system
                     // restarting the media service): the app resumes itself (ResumeOnLaunch).
                     resumeOnStart = false,
+                    downloadsDir = defaultDownloadsDir(),
                 )
             } catch (e: CoreException) {
                 _startup.value = CoreStartup.Failed(e.message.orEmpty())
@@ -170,6 +172,14 @@ class AppGraph(private val app: Application) {
         resumeDecided = true
         ResumeOnLaunch.command(state, window)?.let(::send)
     }
+
+    /**
+     * Where downloads go unless the person chose a folder (ADR-0025 §2): `Music/Jellyfesh` in shared
+     * storage, which needs no all-files permission. The core shows it in Settings › Downloads.
+     */
+    @Suppress("DEPRECATION") // Only the shared Music folder's path; no file is opened here.
+    private fun defaultDownloadsDir(): String =
+        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "Jellyfesh").path
 
     /** Sends a command; 0 when the core is not running. */
     fun send(command: Command): Long = client?.send(command) ?: 0

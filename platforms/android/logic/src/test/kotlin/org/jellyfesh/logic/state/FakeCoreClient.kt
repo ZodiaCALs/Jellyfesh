@@ -84,6 +84,12 @@ class FakeCoreClient(private var snapshot: CoreSnapshot) : CoreClient {
     override fun outputDevices(): List<DeviceInfo> = emptyList()
     override fun eqPresets(): List<EqPreset> = presets
     override fun libraryVersion(): String = version
+
+    /** Addresses the fake core calls local (the real rule is the core's `address_is_local`). */
+    val localAddresses = mutableSetOf<String>()
+    override fun addressIsLocal(address: String): Boolean = address in localAddresses
+    override fun downloadPreview(template: String): String = template.replace("{album_artist}", "Glass Harbour").replace("{album}", "Slow Tide")
+        .replace("{track}", "01").replace("{title}", "Morning Harbour") + ".flac"
     override fun monotonicNowNs(): Long = 0
     override fun newDrawClock(): DrawClock = LinearClock()
     override fun shutdown() = Unit

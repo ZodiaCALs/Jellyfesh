@@ -65,10 +65,9 @@ grant it with `INTERNET`.
 
 * **Declared** in the manifest; asked only on Android 17 and later.
 * **The core decides what is local**, by Android's definition: `PluginSummary.localNetwork` for
-  saved sources, and `CoreClient.addressIsLocal` for the address typed in Add a Source before it
-  is saved. Both are false until the generated bindings carry the core's flag and function; the
-  one gate, `LocalNetwork.needsPermission` in `:logic` (`sources/LocalNetwork.kt`, tested), is
-  what they feed.
+  saved sources, and `CoreClient.addressIsLocal` (the FFI's `address_is_local`) for the address
+  typed in Add a Source before it is saved. The one gate, `LocalNetwork.needsPermission` in
+  `:logic` (`sources/LocalNetwork.kt`, tested), is what they feed.
 * **Asked before connecting**: Add a Source with a local address, Sign In on a local source's
   page, and turning a local source on show a sheet (why, Not Now, Continue), then Android's
   dialog. Jellyfesh also asks once by itself when it opens with enabled local sources and has

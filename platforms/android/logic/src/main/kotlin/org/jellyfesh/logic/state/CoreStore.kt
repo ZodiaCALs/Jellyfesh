@@ -14,6 +14,8 @@ import org.jellyfesh.logic.core.CoreClient
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreSnapshot
 import org.jellyfesh.logic.core.DevicesSnapshot
+import org.jellyfesh.logic.core.SourceLibrarySnapshot
+import org.jellyfesh.logic.core.DownloadsSnapshot
 import org.jellyfesh.logic.core.LookSnapshot
 import org.jellyfesh.logic.core.LyricsSnapshot
 import org.jellyfesh.logic.core.NowPlaying
@@ -58,6 +60,10 @@ data class CoreState(
     val pro: ProSnapshot = ProSnapshot.Inactive,
     /** Update checks for direct downloads. */
     val update: UpdateSnapshot = UpdateSnapshot.Unsupported,
+    /** The sources' likes and playlists (ADR-0024). */
+    val sourceLibrary: SourceLibrarySnapshot = SourceLibrarySnapshot.Empty,
+    /** Downloads (ADR-0025). */
+    val downloads: DownloadsSnapshot = DownloadsSnapshot.Empty,
 ) {
     /** The lyrics of the track playing now (a slice for another track is not shown). */
     val currentLyrics: LyricsSnapshot?
@@ -103,9 +109,13 @@ object CoreReducer {
             if (event.snapshot.version >= state.pro.version) state.copy(pro = event.snapshot) else state
         is CoreEvent.Update ->
             if (event.snapshot.version >= state.update.version) state.copy(update = event.snapshot) else state
+        is CoreEvent.SourceLibrary ->
+            if (event.snapshot.version >= state.sourceLibrary.version) state.copy(sourceLibrary = event.snapshot) else state
+        is CoreEvent.Downloads ->
+            if (event.snapshot.version >= state.downloads.version) state.copy(downloads = event.snapshot) else state
         is CoreEvent.Auth, is CoreEvent.SearchResults, is CoreEvent.BrowsePage, is CoreEvent.CommandFailed,
         is CoreEvent.Error, is CoreEvent.PlaylistCreated, is CoreEvent.Discover, is CoreEvent.Details,
-        is CoreEvent.Comments, is CoreEvent.Artwork -> state
+        is CoreEvent.Comments, is CoreEvent.Artwork, is CoreEvent.SearchPage, is CoreEvent.SourceLibraryPage -> state
     }
 
     /**
@@ -130,6 +140,8 @@ object CoreReducer {
         look = newer(state.look, snapshot.look) { it.version },
         pro = newer(state.pro, snapshot.pro) { it.version },
         update = newer(state.update, snapshot.update) { it.version },
+        sourceLibrary = newer(state.sourceLibrary, snapshot.sourceLibrary) { it.version },
+        downloads = newer(state.downloads, snapshot.downloads) { it.version },
     )
 
     /**

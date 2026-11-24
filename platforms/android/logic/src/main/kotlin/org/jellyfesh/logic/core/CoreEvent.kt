@@ -36,6 +36,19 @@ sealed interface CoreEvent {
     /** A source picture is cached, or cannot be had; the artwork loader takes it, not the state. */
     data class Artwork(val ready: ArtworkReady) : CoreEvent
 
+    // v0.0.8
+    /** More of one kind of a source's search results ([Command.SearchMore]). */
+    data class SearchPage(val page: org.jellyfesh.logic.core.SearchPage) : CoreEvent
+
+    /** The SourceLibrary slice changed (ADR-0024). */
+    data class SourceLibrary(val snapshot: SourceLibrarySnapshot) : CoreEvent
+
+    /** More of a source's list ([Command.SourceLibraryMore]). */
+    data class SourceLibraryPage(val page: org.jellyfesh.logic.core.SourceLibraryPage) : CoreEvent
+
+    /** The Downloads slice changed (ADR-0025). */
+    data class Downloads(val snapshot: DownloadsSnapshot) : CoreEvent
+
     /**
      * True for events that are not state: they matter to whoever is waiting for them (a search,
      * a sign-in, a toast), and the store forwards them on its signal stream.
@@ -43,7 +56,7 @@ sealed interface CoreEvent {
     val isSignal: Boolean
         get() = when (this) {
             is Auth, is SearchResults, is BrowsePage, is CommandFailed, is Error, is PlaylistCreated, is Scan,
-            is Discover, is Details, is Comments -> true
+            is Discover, is Details, is Comments, is SearchPage, is SourceLibraryPage -> true
             else -> false
         }
 }

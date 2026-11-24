@@ -47,7 +47,8 @@ sealed interface CollectionRef {
     /** Every library song in the Songs page's order: Play and Shuffle for all songs, with no paging. */
     data class Songs(val sort: TrackSort, val descending: Boolean) : CollectionRef
     data class Tracks(val tracks: List<TrackRef>) : CollectionRef
-    data class Source(val plugin: String, val id: String) : CollectionRef
+    /** An album, playlist or other container from a source: a `SourceItem`'s source, id and kind. */
+    data class Source(val plugin: String, val id: String, val kind: ItemKind) : CollectionRef
 }
 
 sealed interface SearchScope {
@@ -150,11 +151,12 @@ data class Settings(
     val showLyricsBar: Boolean = true,
     /** Desktop Lyrics, which phones do not have; kept so a changed copy sends it back as it was. */
     val desktopLyrics: Boolean = false,
-    /**
-     * Mini Player in Picture-in-Picture (Settings › Appearance › Mini Player, ADR-0026 §4), off by
-     * default. False until the generated bindings carry the core's setting.
-     */
-    val miniPlayerPip: Boolean = false,
+    /** Streaming Quality (ADR-0026 §1), the same setting as the bar's quality menu. */
+    val streamingQuality: StreamingQuality = StreamingQuality.Auto,
+    /** Settings › Downloads (ADR-0025 §2). */
+    val downloads: DownloadSettings = DownloadSettings(),
+    /** Settings › Appearance › Mini Player (ADR-0026 §4); Android uses its picture-in-picture switch. */
+    val miniPlayer: MiniPlayerSettings = MiniPlayerSettings(),
 ) {
     companion object {
         /** The core's default transparency: the glass tokens' own alphas. */
@@ -215,9 +217,14 @@ data class PluginSummary(
      * The core's word that the source's address is on the local network (Android's definition:
      * private, CGNAT and link-local addresses, multicast and `.local` names). On Android 17 the
      * app reaches it only with the Local Network permission ([org.jellyfesh.logic.sources.LocalNetwork]).
-     * False until the generated bindings carry the core's flag.
      */
     val localNetwork: Boolean = false,
+    /** It lists the person's likes and playlists: it joins the SourceLibrary slice while on and signed in. */
+    val library: Boolean = false,
+    /** It offers downloads (ADR-0025). */
+    val download: Boolean = false,
+    /** The streaming levels it offers, best first; empty when the service sets the quality. */
+    val qualities: List<StreamingQuality> = emptyList(),
 )
 
 /**
@@ -321,15 +328,25 @@ data class SourceItem(
     val artistId: String? = null,
     /** The source's id of a track's album: Go to Album. */
     val albumId: String? = null,
+    /** A source track with a finished download (it plays the file): the Downloaded mark. */
+    val downloaded: Boolean = false,
 )
 
 data class SearchUpdate(
     val request: Long,
     val query: String,
     val source: String,
+    /** The section for the All tab: with [merged], its results less those an earlier section shows. */
     val items: List<SourceItem>,
     val error: String?,
     val done: Boolean,
+    /**
+     * Part of the merged results (the library, From Your Sources). False for sources whose terms
+     * forbid merging: never shown beside other rows; the All tab links to the source's own tab.
+     */
+    val merged: Boolean = true,
+    /** The source's own results kind by kind, for its tab, each with Show More's cursor. */
+    val groups: List<SearchGroup> = emptyList(),
 )
 
 data class BrowseUpdate(
@@ -352,6 +369,8 @@ data class TrackRow(
     val artworkHash: String?,
     val favorite: Boolean,
     val missing: Boolean,
+    /** A source track with a finished download: the Downloaded mark. */
+    val downloaded: Boolean = false,
 )
 
 data class PlaylistSummary(
@@ -508,6 +527,12 @@ data class NowPlaying(
     val link: String? = null,
     /** What plays as decoded, with the core's quality label, once the engine has opened it. */
     val quality: AudioFormat? = null,
+    /** The quality menu's levels, in its order (Auto first); empty when there is no choice. */
+    val qualities: List<StreamingQuality> = emptyList(),
+    /** Why [qualities] is empty. */
+    val qualityNote: QualityNote? = null,
+    /** The level the stream was asked for (Auto resolved); null for files. */
+    val qualityLevel: StreamingQuality? = null,
 )
 
 // ---- lyrics --------------------------------------------------------------------------------------
@@ -617,6 +642,8 @@ data class RemoteSnapshot(
     val devices: List<RemoteDevice>,
     /** What went wrong last talking to the service, until a call succeeds. */
     val error: String?,
+    /** The quality menu's note while a session runs ("Quality is set in {service}."). */
+    val qualityNote: QualityNote? = null,
 ) {
     /** Whether a remote session runs (the player views show it). */
     val isActive: Boolean get() = source != null
@@ -677,4 +704,6 @@ data class CoreSnapshot(
     val look: LookSnapshot = LookSnapshot.Default,
     val pro: ProSnapshot = ProSnapshot.Inactive,
     val update: UpdateSnapshot = UpdateSnapshot.Unsupported,
+    val sourceLibrary: SourceLibrarySnapshot = SourceLibrarySnapshot.Empty,
+    val downloads: DownloadsSnapshot = DownloadsSnapshot.Empty,
 )

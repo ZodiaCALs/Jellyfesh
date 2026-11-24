@@ -156,6 +156,7 @@ import org.jellyfesh.logic.core.TrackRow
 import org.jellyfesh.logic.core.TrackSort
 import org.jellyfesh.logic.theme.ColorMath
 import org.jellyfesh.android.ffi.FfiMappingV7.toLogic
+import org.jellyfesh.android.ffi.FfiMappingV8.toLogic
 
 object FfiMapping {
     // ---- shell -> core ---------------------------------------------------------------------------
@@ -225,6 +226,18 @@ object FfiMapping {
         is Command.Discover -> FCommand.Discover(source = command.source)
         is Command.Details -> FCommand.Details(item = FfiMappingV7.ffi(command.item))
         is Command.Comments -> FCommand.Comments(item = FfiMappingV7.ffi(command.item), page = command.page)
+        is Command.SetNetworkState -> FCommand.SetNetworkState(online = command.online, metered = command.metered)
+        is Command.SearchMore -> FCommand.SearchMore(plugin = command.plugin, kind = FfiMappingV7.ffi(command.kind), cursor = command.cursor)
+        is Command.RefreshSourceLibrary -> FCommand.RefreshSourceLibrary(plugin = command.plugin)
+        is Command.SourceLibraryMore ->
+            FCommand.SourceLibraryMore(plugin = command.plugin, part = FfiMappingV8.ffi(command.part), cursor = command.cursor)
+        is Command.SavePlaylistCopy -> FCommand.SavePlaylistCopy(plugin = command.plugin, id = command.id, name = command.name)
+        is Command.Download -> FCommand.Download(target = FfiMappingV8.ffi(command.target))
+        // Download ids are the core's u64s carried in a Long, so the round trip keeps every bit.
+        is Command.CancelDownload -> FCommand.CancelDownload(id = command.id.toULong())
+        is Command.RetryDownload -> FCommand.RetryDownload(id = command.id.toULong())
+        is Command.RemoveDownload -> FCommand.RemoveDownload(id = command.id.toULong())
+        Command.RemoveAllDownloads -> FCommand.RemoveAllDownloads
     }
 
     fun ffi(action: RemoteAction): FRemoteAction = when (action) {
@@ -258,7 +271,7 @@ object FfiMapping {
         CollectionRef.Favorites -> FCollection.Favorites
         is CollectionRef.Songs -> FCollection.Songs(sort = ffi(collection.sort), descending = collection.descending)
         is CollectionRef.Tracks -> FCollection.Tracks(tracks = collection.tracks.map(::ffi))
-        is CollectionRef.Source -> FCollection.Source(plugin = collection.plugin, id = collection.id)
+        is CollectionRef.Source -> FCollection.Source(plugin = collection.plugin, id = collection.id, itemKind = FfiMappingV7.ffi(collection.kind))
     }
 
     fun ffi(scope: SearchScope): FSearchScope = when (scope) {
@@ -350,6 +363,9 @@ object FfiMapping {
         checkForUpdates = settings.checkForUpdates,
         showLyricsBar = settings.showLyricsBar,
         desktopLyrics = settings.desktopLyrics,
+        streamingQuality = FfiMappingV8.ffi(settings.streamingQuality),
+        downloads = FfiMappingV8.ffi(settings.downloads),
+        miniPlayer = FfiMappingV8.ffi(settings.miniPlayer),
     )
 
     fun ffi(sort: TrackSort): FTrackSort = when (sort) {
@@ -417,6 +433,10 @@ object FfiMapping {
         is FEvent.Details -> CoreEvent.Details(page.toLogic())
         is FEvent.Comments -> CoreEvent.Comments(page.toLogic())
         is FEvent.Artwork -> CoreEvent.Artwork(ready.toLogic())
+        is FEvent.SearchPage -> CoreEvent.SearchPage(page.toLogic())
+        is FEvent.SourceLibrary -> CoreEvent.SourceLibrary(snapshot.toLogic())
+        is FEvent.SourceLibraryPage -> CoreEvent.SourceLibraryPage(page.toLogic())
+        is FEvent.Downloads -> CoreEvent.Downloads(snapshot.toLogic())
     }
 
     fun FSnapshot.toLogic(lyrics: (org.jellyfesh.ffi.LyricTimeline) -> org.jellyfesh.logic.time.LyricTimelineLookup): CoreSnapshot = CoreSnapshot(
@@ -436,6 +456,8 @@ object FfiMapping {
         look = look.toLogic(),
         pro = pro.toLogic(),
         update = update.toLogic(),
+        sourceLibrary = sourceLibrary.toLogic(),
+        downloads = downloads.toLogic(),
     )
 
     fun FTrackRef.toLogic(): TrackRef = when (this) {
@@ -529,6 +551,9 @@ object FfiMapping {
         format = format?.toLogic(),
         link = link,
         quality = quality?.toLogic(),
+        qualities = qualities.map { it.toLogic() },
+        qualityNote = qualityNote?.toLogic(),
+        qualityLevel = qualityLevel?.toLogic(),
     )
 
     private fun FWord.toLogic(): LyricWord = LyricWord(startMs.toLong(), endMs.toLong(), text, joinsNext)
@@ -673,6 +698,9 @@ object FfiMapping {
         checkForUpdates = checkForUpdates,
         showLyricsBar = showLyricsBar,
         desktopLyrics = desktopLyrics,
+        streamingQuality = streamingQuality.toLogic(),
+        downloads = downloads.toLogic(),
+        miniPlayer = miniPlayer.toLogic(),
     )
 
     fun FDeviceInfo.toLogic(): DeviceInfo = DeviceInfo(id, name, isDefault, sampleRates.map { it.toInt() })
@@ -716,6 +744,10 @@ object FfiMapping {
         discover = discover,
         details = details,
         comments = comments,
+        localNetwork = localNetwork,
+        library = library,
+        download = download,
+        qualities = qualities.map { it.toLogic() },
     )
 
     fun FSourcePreset.toLogic(): SourcePreset = SourcePreset(
@@ -785,6 +817,7 @@ object FfiMapping {
         link = link,
         artistId = artistId,
         albumId = albumId,
+        downloaded = downloaded,
     )
 
     fun FRemoteDevice.toLogic(): RemoteDevice = RemoteDevice(
@@ -815,10 +848,11 @@ object FfiMapping {
         device = device?.toLogic(),
         devices = devices.map { it.toLogic() },
         error = error,
+        qualityNote = qualityNote?.toLogic(),
     )
 
     fun FSearchUpdate.toLogic(): SearchUpdate =
-        SearchUpdate(request.toLong(), query, source, items.map { it.toLogic() }, error, done)
+        SearchUpdate(request.toLong(), query, source, items.map { it.toLogic() }, error, done, merged, groups.map { it.toLogic() })
 
     fun FBrowseUpdate.toLogic(): BrowseUpdate =
         BrowseUpdate(request.toLong(), plugin, node, items.map { it.toLogic() }, nextPage?.toInt(), error)
@@ -870,6 +904,7 @@ object FfiMapping {
         artworkHash = artworkHash,
         favorite = favorite,
         missing = missing,
+        downloaded = downloaded,
     )
 
     fun FPlaylistSummary.toLogic(): PlaylistSummary =

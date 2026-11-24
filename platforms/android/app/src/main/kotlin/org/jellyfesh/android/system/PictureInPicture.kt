@@ -27,7 +27,7 @@ class PictureInPicture(private val activity: Activity) {
 
     /** The core's state changed: the window's parameters follow it, when they change. */
     fun update(state: CoreState) {
-        opensOnLeave = MiniPlayerPip.opensOnLeave(state, state.settings.miniPlayerPip, supported)
+        opensOnLeave = MiniPlayerPip.opensOnLeave(state, state.settings.miniPlayer.androidPip, supported)
         caption = MiniPlayerPip.caption(state)
         if (!supported) return
         val wanted = opensOnLeave to caption

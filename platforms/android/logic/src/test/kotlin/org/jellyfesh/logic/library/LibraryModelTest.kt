@@ -9,6 +9,7 @@ import org.jellyfesh.logic.core.AlbumSort
 import org.jellyfesh.logic.core.Artist
 import org.jellyfesh.logic.core.AuthMethod
 import org.jellyfesh.logic.core.CollectionRef
+import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.CoreSnapshot
 import org.jellyfesh.logic.core.DevicesSnapshot
 import org.jellyfesh.logic.core.LibraryStats
@@ -134,9 +135,9 @@ class LibraryModelTest {
 
     @Test
     fun aSourcesContainerCannotBeAdded() {
-        assertFalse(CollectionTracks.canAdd(CollectionRef.Source("p", "album")))
+        assertFalse(CollectionTracks.canAdd(CollectionRef.Source("p", "album", ItemKind.Album)))
         assertTrue(CollectionTracks.canAdd(CollectionRef.Album(1)))
-        assertEquals(emptyList(), CollectionTracks.of(Library(snapshot), CollectionRef.Source("p", "album")))
+        assertEquals(emptyList(), CollectionTracks.of(Library(snapshot), CollectionRef.Source("p", "album", ItemKind.Album)))
     }
 
     // ---- Go to Artist ------------------------------------------------------------------------------
@@ -235,7 +236,7 @@ class LibraryModelTest {
             listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.AddToPlaylist),
             CollectionMenu.items(album, withPlay = true),
         )
-        val sourceAlbum = CollectionRef.Source("org.jellyfesh.subsonic", "al-1")
+        val sourceAlbum = CollectionRef.Source("org.jellyfesh.subsonic", "al-1", ItemKind.Album)
         assertEquals(
             listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.OpenLink),
             CollectionMenu.items(sourceAlbum, withPlay = true, hasLink = true),
@@ -243,7 +244,7 @@ class LibraryModelTest {
         )
         assertEquals(
             listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.OpenLink),
-            CollectionMenu.items(CollectionRef.Source("spotify", "pl-1"), withPlay = true, remote = true, hasLink = true),
+            CollectionMenu.items(CollectionRef.Source("spotify", "pl-1", ItemKind.Playlist), withPlay = true, remote = true, hasLink = true),
             "a remote source's playlist plays (a remote session) but never joins the queue",
         )
     }

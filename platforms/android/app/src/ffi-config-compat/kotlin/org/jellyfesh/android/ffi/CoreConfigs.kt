@@ -14,6 +14,7 @@ internal fun androidCoreConfig(
     bundledPlugins: List<String>,
     distribution: org.jellyfesh.ffi.Distribution,
     resumeOnStart: Boolean,
+    downloadsDir: String?,
 ): CoreConfig =
     CoreConfig(
         dataDir = dataDir,

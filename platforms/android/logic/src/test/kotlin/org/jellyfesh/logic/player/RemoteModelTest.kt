@@ -152,7 +152,7 @@ class RemoteModelTest {
         assertTrue(RemoteModel.isRemote(sources, TrackRef.Source(SourceTrack("spotify", "1", "S"))))
         assertFalse(RemoteModel.isRemote(sources, TrackRef.Source(SourceTrack("org.jellyfesh.subsonic", "1", "S"))))
         assertFalse(RemoteModel.isRemote(sources, TrackRef.Library(1)))
-        assertTrue(RemoteModel.isRemote(sources, CollectionRef.Source("spotify", "pl")))
+        assertTrue(RemoteModel.isRemote(sources, CollectionRef.Source("spotify", "pl", ItemKind.Playlist)))
         assertFalse(RemoteModel.isRemote(sources, CollectionRef.Album(3)))
         assertFalse(RemoteModel.isRemoteSource(sources, null))
     }

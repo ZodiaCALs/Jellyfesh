@@ -52,7 +52,7 @@ class LocalNetworkTest {
         val off = jellyfin.copy(id = "off", enabled = false)
         val extension = jellyfin.copy(id = "ai", kind = PluginKind.Extension)
         assertEquals(listOf(jellyfin), LocalNetwork.localSources(listOf(spotify, off, extension, jellyfin)))
-        // Until the bindings carry the core's flag, nothing is local and nothing is asked.
+        // A summary that does not say (a core before v0.0.8) is not local, and nothing is asked.
         assertFalse(PluginSummary("x", "X", "1", "a", PluginBadge.Official, false, emptyList(), emptyList(), true, null, false, "{}", "{}", null).localNetwork)
     }
 

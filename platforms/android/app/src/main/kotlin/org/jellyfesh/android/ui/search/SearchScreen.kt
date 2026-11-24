@@ -357,7 +357,7 @@ fun sourceItemMenu(item: SourceItem, actions: TrackActions): (() -> Unit)? {
                 } else {
                     listOf(actions.getInfoAction(DetailsModel.itemFor(item), KnownInfo(item.title, item.subtitle, source = item.source)))
                 }
-                actions.showForCollection(item.title, subtitle, CollectionRef.Source(item.source, item.id), link = item.link, extra = info)
+                actions.showForCollection(item.title, subtitle, CollectionRef.Source(item.source, item.id, item.kind), link = item.link, extra = info)
             }
         }
         else -> actions.openLinkAction(item.link, item.source)?.let { open -> { actions.showSheetActions(item.title, item.unplayableReason ?: subtitle, listOf(open)) } }

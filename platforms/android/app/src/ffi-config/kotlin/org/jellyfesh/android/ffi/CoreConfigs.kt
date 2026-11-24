@@ -9,7 +9,9 @@ import org.jellyfesh.ffi.OutputKind
  * that ship inside the APK ([bundledPlugins]: paths of their `.jfpkg` files, installed on first
  * start and updated with the app), how this build was distributed ([distribution]) and whether
  * Resume on Launch may start playback as the core starts ([resumeOnStart]: false on Android, where
- * the process may start without its window; the app sends Play itself, ResumeOnLaunch).
+ * the process may start without its window; the app sends Play itself, ResumeOnLaunch) and the
+ * default downloads folder ([downloadsDir]: `Music/Jellyfesh` in shared storage, ADR-0025 §2;
+ * Settings › Downloads › Folder replaces it).
  *
  * `CoreConfig.bundledPlugins` is being added to the core and the FFI while this is written
  * (Rust `Config::bundled_plugins`). It is named here and nowhere else, so a different name after
@@ -23,6 +25,7 @@ internal fun androidCoreConfig(
     bundledPlugins: List<String>,
     distribution: Distribution,
     resumeOnStart: Boolean,
+    downloadsDir: String?,
 ): CoreConfig =
     CoreConfig(
         dataDir = dataDir,
@@ -32,4 +35,5 @@ internal fun androidCoreConfig(
         bundledPlugins = bundledPlugins,
         distribution = distribution,
         resumeOnStart = resumeOnStart,
+        downloadsDir = downloadsDir,
     )

@@ -471,7 +471,8 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
         if (browse.items.isEmpty() && !browse.loading) browse = BrowseModel.loadMore(browse, pluginId, node, graph::send)
     }
     val collection = BrowseModel.isCollection(screen.kind) && node != null
-    val container = node?.let { CollectionRef.Source(pluginId, it) }
+    // A folder a source did not say the kind of is browsed as a folder (the core lists it so).
+    val container = node?.let { CollectionRef.Source(pluginId, it, screen.kind ?: ItemKind.Folder) }
     // An album's or artist's page (Go to Album, Go to Artist): its picture and notes or biography
     // from the source's details (ADR-0022).
     val kind = screen.kind

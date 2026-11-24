@@ -114,6 +114,10 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
 
     override fun libraryVersion(): String = query { org.jellyfesh.ffi.libraryVersion() }
 
+    override fun addressIsLocal(address: String): Boolean = query { org.jellyfesh.ffi.addressIsLocal(address) }
+
+    override fun downloadPreview(template: String): String = query { org.jellyfesh.ffi.downloadPreview(template) }
+
     override fun monotonicNowNs(): Long = org.jellyfesh.ffi.monotonicNowNs().toLong()
 
     override fun newDrawClock(): DrawClock = PortDrawClock()
@@ -132,8 +136,10 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
          * Hands the Android `Context` to the core (ndk-context, needed by the audio output and the
          * keystore before first use; docs/ffi.md) and starts the core with the official plugins
          * that ship in the APK ([bundledPlugins], `.jfpkg` paths), telling it how this build was
-         * distributed ([distribution]: where Pro is sold, whether it checks for updates). Pass the
-         * application context. Throws [CoreException] when the library or session cannot be opened.
+         * distributed ([distribution]: where Pro is sold, whether it checks for updates) and where
+         * downloads go unless the person chose a folder ([downloadsDir]; null lets the core decide).
+         * Pass the application context. Throws [CoreException] when the library or session cannot
+         * be opened.
          */
         fun start(
             context: Any,
@@ -143,9 +149,12 @@ class UniffiCoreClient private constructor(private val core: JellyfeshCore) : Co
             distribution: Distribution,
             resumeOnStart: Boolean,
             watchFolders: Boolean = true,
+            downloadsDir: String? = null,
         ): UniffiCoreClient {
             AndroidContext.initialize(context)
-            return startWithoutContext(androidCoreConfig(dataDir, cacheDir, watchFolders, bundledPlugins, FfiMappingV7.ffi(distribution), resumeOnStart))
+            return startWithoutContext(
+                androidCoreConfig(dataDir, cacheDir, watchFolders, bundledPlugins, FfiMappingV7.ffi(distribution), resumeOnStart, downloadsDir),
+            )
         }
 
         /** Starts a core from a ready config (JVM tests use a null output). */

@@ -20,10 +20,19 @@ import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.CoreException
+import org.jellyfesh.logic.core.DownloadQuality
+import org.jellyfesh.logic.core.DownloadSettings
+import org.jellyfesh.logic.core.DownloadTarget
+import org.jellyfesh.logic.core.DownloadsPaused
+import org.jellyfesh.logic.core.ItemKind
+import org.jellyfesh.logic.core.MiniPlayerSettings
+import org.jellyfesh.logic.core.QualityNote
 import org.jellyfesh.logic.core.RemoteAction
 import org.jellyfesh.logic.core.RemoteDeviceKind
 import org.jellyfesh.logic.core.ScanStatus
+import org.jellyfesh.logic.core.SourceLibraryPart
 import org.jellyfesh.logic.core.Status
+import org.jellyfesh.logic.core.StreamingQuality
 import org.jellyfesh.logic.core.TrackQuery
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.core.TrackSort
@@ -156,7 +165,7 @@ class UniffiCoreClientTest {
             Command.PlayTracks(listOf(TrackRef.File("/a.flac")), -1),
             Command.PlayCollection(CollectionRef.Favorites, 0, true),
             Command.Enqueue(listOf(TrackRef.Library(1)), true),
-            Command.EnqueueCollection(CollectionRef.Source("p", "x"), false),
+            Command.EnqueueCollection(CollectionRef.Source("p", "x", ItemKind.Playlist), false),
             Command.RemoveFromQueue(3), Command.MoveInQueue(3, 1), Command.JumpTo(3), Command.ClearQueue,
             Command.SetShuffle(true), Command.SetRepeat(org.jellyfesh.logic.core.RepeatMode.One),
             Command.SetSettings(org.jellyfesh.logic.core.Settings()),
@@ -184,6 +193,11 @@ class UniffiCoreClientTest {
         // Out-of-range values are clamped rather than wrapped.
         assertEquals(org.jellyfesh.ffi.Command.Seek(positionMs = 0uL), mapped[6])
         assertEquals(org.jellyfesh.ffi.Command.SetVolume(volume = 1f), mapped[7])
+        // A source container goes with its kind, so a playlist is never fetched as an album.
+        assertEquals(
+            org.jellyfesh.ffi.Command.EnqueueCollection(org.jellyfesh.ffi.Collection.Source("p", "x", org.jellyfesh.ffi.ItemKind.PLAYLIST), false),
+            mapped[12],
+        )
         assertEquals(
             org.jellyfesh.ffi.Command.Remote(org.jellyfesh.ffi.RemoteAction.SetVolume(percent = 100u)),
             FfiMapping.ffi(Command.Remote(RemoteAction.SetVolume(140))),
@@ -212,6 +226,7 @@ class UniffiCoreClientTest {
             link = "https://open.example/track/9",
             artistId = "ar-3",
             albumId = null,
+            downloaded = false,
         )
         val slice = org.jellyfesh.ffi.RemoteSnapshot(
             version = 4uL,
@@ -226,6 +241,7 @@ class UniffiCoreClientTest {
             device = kitchen,
             devices = listOf(kitchen, tv),
             error = null,
+            qualityNote = org.jellyfesh.ffi.QualityNote.SetInService(service = "Spotify"),
         )
         val event = with(FfiMapping) { org.jellyfesh.ffi.Event.Remote(slice).toLogic { PortLyricTimeline(it) } }
         val remote = (event as CoreEvent.Remote).snapshot
@@ -238,6 +254,57 @@ class UniffiCoreClientTest {
         assertEquals(64, remote.device?.volumePercent)
         assertEquals(listOf(RemoteDeviceKind.Speaker, RemoteDeviceKind.Tv), remote.devices.map { it.kind })
         assertNull(remote.devices[1].volumePercent)
+        // The quality menu's note while the session runs.
+        assertEquals(QualityNote.SetInService("Spotify"), remote.qualityNote)
+    }
+
+    /** v0.0.8's commands, with what each carries, and the settings' new groups both ways. */
+    @Test
+    fun theV008CommandsAndSettingsMap() {
+        assertEquals(
+            org.jellyfesh.ffi.Command.SetNetworkState(online = true, metered = true),
+            FfiMapping.ffi(Command.SetNetworkState(online = true, metered = true)),
+        )
+        assertEquals(
+            org.jellyfesh.ffi.Command.SearchMore("p", org.jellyfesh.ffi.ItemKind.ALBUM, "c-2"),
+            FfiMapping.ffi(Command.SearchMore("p", ItemKind.Album, "c-2")),
+        )
+        assertEquals(org.jellyfesh.ffi.Command.RefreshSourceLibrary(null), FfiMapping.ffi(Command.RefreshSourceLibrary(null)))
+        assertEquals(
+            org.jellyfesh.ffi.Command.SourceLibraryMore("p", org.jellyfesh.ffi.SourceLibraryPart.PLAYLISTS, "c-3"),
+            FfiMapping.ffi(Command.SourceLibraryMore("p", SourceLibraryPart.Playlists, "c-3")),
+        )
+        assertEquals(
+            org.jellyfesh.ffi.Command.SavePlaylistCopy("p", "pl-1", "Road Trip"),
+            FfiMapping.ffi(Command.SavePlaylistCopy("p", "pl-1", "Road Trip")),
+        )
+        assertEquals(
+            org.jellyfesh.ffi.Command.Download(org.jellyfesh.ffi.DownloadTarget.Collection("p", "al-1", org.jellyfesh.ffi.ItemKind.ALBUM)),
+            FfiMapping.ffi(Command.Download(DownloadTarget.Collection("p", "al-1", ItemKind.Album))),
+        )
+        val song = TrackRef.Source(org.jellyfesh.logic.core.SourceTrack("org.jellyfesh.jellyfin", "t-1", "Morning Harbour", "Glass Harbour"))
+        assertEquals(
+            org.jellyfesh.ffi.Command.Download(org.jellyfesh.ffi.DownloadTarget.Track(FfiMapping.ffi(song))),
+            FfiMapping.ffi(Command.Download(DownloadTarget.Track(song))),
+        )
+        // Download ids are the core's u64s carried in a Long: every bit survives.
+        assertEquals(org.jellyfesh.ffi.Command.CancelDownload(ULong.MAX_VALUE), FfiMapping.ffi(Command.CancelDownload(-1)))
+        assertEquals(org.jellyfesh.ffi.Command.RetryDownload(7uL), FfiMapping.ffi(Command.RetryDownload(7)))
+        assertEquals(org.jellyfesh.ffi.Command.RemoveDownload(7uL), FfiMapping.ffi(Command.RemoveDownload(7)))
+        assertEquals(org.jellyfesh.ffi.Command.RemoveAllDownloads, FfiMapping.ffi(Command.RemoveAllDownloads))
+
+        val settings = org.jellyfesh.logic.core.Settings(
+            streamingQuality = StreamingQuality.Normal,
+            downloads = DownloadSettings(folder = "/storage/emulated/0/Music/Mine", quality = DownloadQuality.High, wifiOnly = false, atOnce = 9),
+            miniPlayer = MiniPlayerSettings(androidPip = true),
+        )
+        val sent = (FfiMapping.ffi(Command.SetSettings(settings)) as org.jellyfesh.ffi.Command.SetSettings).settings
+        assertEquals(org.jellyfesh.ffi.StreamingQuality.NORMAL, sent.streamingQuality)
+        assertEquals(org.jellyfesh.ffi.DownloadQuality.HIGH, sent.downloads.quality)
+        // Downloads at Once stays within 1-4.
+        assertEquals(4u, sent.downloads.atOnce)
+        assertEquals(true, sent.miniPlayer.androidPip)
+        assertEquals(settings.copy(downloads = settings.downloads.copy(atOnce = 4)), with(FfiMapping) { sent.toLogic() })
     }
 
     @Test
@@ -253,6 +320,14 @@ class UniffiCoreClientTest {
             assertTrue(presets.first().settings.bands.all { it.gainDb == 0f })
             // Settings › About shows the version from the build, never a typed-in one.
             assertTrue(client.libraryVersion().matches(Regex("\\d+\\.\\d+\\.\\d+.*")), client.libraryVersion())
+            // Add a Source asks the core whether a typed address is on the local network.
+            assertTrue(client.addressIsLocal("http://192.168.1.20:4533"))
+            assertTrue(client.addressIsLocal("jellyfin.local"))
+            assertEquals(false, client.addressIsLocal("https://music.example"))
+            assertEquals(false, client.addressIsLocal("http://127.0.0.1:8096"))
+            // Settings › Downloads › File Names: the live preview is the core's.
+            assertEquals("Album Artist/Album/01 Title.flac", client.downloadPreview("{album_artist}/{album}/{track} {title}"))
+            assertEquals("Album_ Title_.flac", client.downloadPreview("{album}: {title}?"))
             client.shutdown()
         } finally {
             dir.deleteRecursively()
@@ -352,6 +427,82 @@ class UniffiCoreClientTest {
             assertEquals(org.jellyfesh.logic.core.QualityLabel.Lossless, quality.quality)
             // The store applied the event before the test saw it.
             assertEquals(quality, store.state.value.nowPlaying?.quality)
+            client.shutdown()
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    /**
+     * v0.0.8 through the shell's adapter and store: the new slices at start with the platform's
+     * downloads folder, the network's effect on downloads, the new settings through the core and
+     * back, and the quality menu's note for a file.
+     */
+    @Test
+    fun theV008SlicesAndSettingsThroughTheShellsStore() {
+        library()
+        val dir = Files.createTempDirectory("jf-android-ffi-v008").toFile()
+        try {
+            val file = dir.resolve("01 Harbor.wav")
+            writeTone(file, 440.0)
+            val downloads = dir.resolve("Music/Jellyfesh").path
+            val client = UniffiCoreClient.startWithoutContext(
+                CoreConfig(
+                    dataDir = dir.resolve("data").path,
+                    cacheDir = dir.resolve("cache").path,
+                    output = OutputKind.Null(realtime = false),
+                    restoreSession = false,
+                    persistSession = false,
+                    watchFolders = false,
+                    distribution = org.jellyfesh.ffi.Distribution.SOURCE,
+                    downloadsDir = downloads,
+                ),
+            )
+            val store = CoreStore()
+            val events = LinkedBlockingQueue<CoreEvent>()
+            store.attach(client)
+            client.setListener { event ->
+                store.onEvent(event)
+                events.put(event)
+            }
+            val first = store.state.value
+            // No source lists likes or playlists, nothing is downloaded, and the folder is the platform's.
+            assertEquals(emptyList(), first.sourceLibrary.sources)
+            assertEquals(downloads, first.downloads.folder)
+            assertEquals(emptyList(), first.downloads.items)
+            assertNull(first.downloads.paused)
+            // The shell's defaults are the core's, so a page drawn before the slice arrives is right.
+            assertEquals(StreamingQuality.Auto, first.settings.streamingQuality)
+            assertEquals(DownloadSettings(), first.settings.downloads)
+            assertEquals(MiniPlayerSettings(), first.settings.miniPlayer)
+
+            // Metered with Wi-Fi Only on, downloads wait for Wi-Fi; offline, for a network.
+            client.send(Command.SetNetworkState(online = true, metered = true))
+            waitFor(events) { it is CoreEvent.Downloads && it.snapshot.paused == DownloadsPaused.Metered }
+            client.send(Command.SetNetworkState(online = false, metered = false))
+            waitFor(events) { it is CoreEvent.Downloads && it.snapshot.paused == DownloadsPaused.Offline }
+            client.send(Command.SetNetworkState(online = true, metered = false))
+            waitFor(events) { it is CoreEvent.Downloads && it.snapshot.paused == null }
+            assertNull(store.state.value.downloads.paused)
+
+            // The new settings go to the core and come back in its Settings slice.
+            val chosen = store.state.value.settings.copy(
+                streamingQuality = StreamingQuality.High,
+                downloads = DownloadSettings(quality = DownloadQuality.Normal, nameTemplate = "{artist}/{title}", wifiOnly = false, atOnce = 3),
+                miniPlayer = MiniPlayerSettings(androidPip = true),
+            )
+            client.send(Command.SetSettings(chosen))
+            val saved = (waitFor(events) { it is CoreEvent.SettingsChanged && it.snapshot.streamingQuality == StreamingQuality.High } as CoreEvent.SettingsChanged).snapshot
+            assertEquals(chosen.downloads, saved.downloads)
+            assertEquals(chosen.miniPlayer, saved.miniPlayer)
+            assertEquals("Artist/Title.flac", client.downloadPreview(saved.downloads.nameTemplate))
+
+            // A file: the quality menu offers no levels and says files play as they are.
+            client.send(Command.PlayTracks(listOf(TrackRef.File(file.path)), 0))
+            val playing = assertNotNull((waitFor(events) { it is CoreEvent.NowPlayingChanged && it.snapshot != null } as CoreEvent.NowPlayingChanged).snapshot)
+            assertEquals(emptyList(), playing.qualities)
+            assertEquals(QualityNote.FilesPlayAsTheyAre, playing.qualityNote)
+            assertNull(playing.qualityLevel)
             client.shutdown()
         } finally {
             dir.deleteRecursively()

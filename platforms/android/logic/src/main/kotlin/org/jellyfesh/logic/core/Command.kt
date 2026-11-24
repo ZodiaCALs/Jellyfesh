@@ -113,6 +113,40 @@ sealed interface Command {
 
     /** A page of comments ([page] null for the first); answered by [CoreEvent.Comments]. */
     data class Comments(val item: ItemRef, val page: String?) : Command
+
+    // ---- v0.0.8 (ADR-0024 to ADR-0026)
+    /**
+     * The network as Android reports it, at start and on every change: the core decides Auto
+     * quality (High while metered) and whether downloads run.
+     */
+    data class SetNetworkState(val online: Boolean, val metered: Boolean) : Command
+
+    /** Show More: more of one kind of a source's results for the newest search ([cursor]: the group's `next`). */
+    data class SearchMore(val plugin: String, val kind: ItemKind, val cursor: String) : Command
+
+    /** Reloads a source's likes and playlists (null: every source), when Favourites or Playlists opens. */
+    data class RefreshSourceLibrary(val plugin: String?) : Command
+
+    /** The next page of a source's list; answered by [CoreEvent.SourceLibraryPage]. */
+    data class SourceLibraryMore(val plugin: String, val part: SourceLibraryPart, val cursor: String) : Command
+
+    /** Save as Playlist…: a Jellyfesh playlist of a source playlist's songs; answered by [CoreEvent.PlaylistCreated]. */
+    data class SavePlaylistCopy(val plugin: String, val id: String, val name: String) : Command
+
+    /** Downloads a song, or every song of an album or playlist (ADR-0025). */
+    data class Download(val target: DownloadTarget) : Command
+
+    /** Stops an unfinished download and forgets it. */
+    data class CancelDownload(val id: Long) : Command
+
+    /** Try Again for a failed download. */
+    data class RetryDownload(val id: Long) : Command
+
+    /** Remove Download…: deletes a finished download's file (asks first). */
+    data class RemoveDownload(val id: Long) : Command
+
+    /** Remove All Downloads… (asks first). */
+    data object RemoveAllDownloads : Command
 }
 
 /** What [Command.Remote] asks of the remote session. */

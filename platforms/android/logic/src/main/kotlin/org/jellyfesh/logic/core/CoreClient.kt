@@ -76,9 +76,15 @@ interface CoreClient {
     /**
      * Whether [address], typed in Add a Source before it is saved, is on the local network by the
      * core's rule (the free function `address_is_local`; [PluginSummary.localNetwork] says it for
-     * saved sources). The app never decides it. False until the generated bindings have it.
+     * saved sources). The app never decides it.
      */
-    fun addressIsLocal(address: String): Boolean = false
+    fun addressIsLocal(address: String): Boolean
+
+    /**
+     * What a download's file would be called with [template] (Settings › Downloads › File Names,
+     * the live preview; the free function `download_preview`).
+     */
+    fun downloadPreview(template: String): String
 
     /** The clock anchors are stamped with, in nanoseconds. Not for per-frame use. */
     fun monotonicNowNs(): Long
