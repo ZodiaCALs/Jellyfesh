@@ -1089,6 +1089,28 @@
         }
       }
     },
+    "Add Missing Cover and Lyrics": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不足しているカバーと歌詞を追加"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "补充缺少的封面和歌词"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "補上缺少的封面和歌詞"
+          }
+        }
+      }
+    },
     "Add Music Folder": {
       "localizations": {
         "ja": {
@@ -2283,6 +2305,28 @@
         }
       }
     },
+    "Change…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改…"
+          }
+        }
+      }
+    },
     "Check for Updates": {
       "localizations": {
         "ja": {
@@ -2345,6 +2389,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在檢查…"
+          }
+        }
+      }
+    },
+    "Choose": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇"
+          }
+        }
+      }
+    },
+    "Choose a Folder for Downloads": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード先のフォルダを選択"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择下载文件夹"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇下載資料夾"
           }
         }
       }
@@ -3537,6 +3625,28 @@
         }
       }
     },
+    "Downloads at Once": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同時ダウンロード数"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同时下载数"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同時下載數"
+          }
+        }
+      }
+    },
     "Downloads wait for Wi-Fi.": {
       "localizations": {
         "ja": {
@@ -3735,6 +3845,28 @@
         }
       }
     },
+    "Every downloaded file is deleted from this device.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードしたファイルはすべてこのデバイスから削除されます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有已下载的文件都会从此设备中删除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有已下載的檔案都會從此裝置中刪除。"
+          }
+        }
+      }
+    },
     "Export Playlist": {
       "localizations": {
         "ja": {
@@ -3845,6 +3977,28 @@
         }
       }
     },
+    "Fields: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "項目: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字段：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欄位：%@"
+          }
+        }
+      }
+    },
     "File": {
       "localizations": {
         "ja": {
@@ -3863,6 +4017,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案"
+          }
+        }
+      }
+    },
+    "File Names": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件名"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案名稱"
           }
         }
       }
@@ -7057,6 +7233,28 @@
         }
       }
     },
+    "Original files are kept as they are unless this is on.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これがオフのときは、オリジナルのファイルをそのまま保存します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭此项时，原始文件保持原样。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉此項時，原始檔案保持原樣。"
+          }
+        }
+      }
+    },
     "Output": {
       "localizations": {
         "ja": {
@@ -7673,6 +7871,28 @@
         }
       }
     },
+    "Preview: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビュー: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "预览：%@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預覽：%@"
+          }
+        }
+      }
+    },
     "Previous": {
       "localizations": {
         "ja": {
@@ -8131,6 +8351,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "發行"
+          }
+        }
+      }
+    },
+    "Remove All": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて削除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部移除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部移除"
+          }
+        }
+      }
+    },
+    "Remove All Downloads?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのダウンロードを削除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要移除所有下载吗？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要移除所有下載嗎？"
+          }
+        }
+      }
+    },
+    "Remove All Downloads…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのダウンロードを削除…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除所有下载…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除所有下載…"
           }
         }
       }
@@ -8703,6 +8989,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "儲存"
+          }
+        }
+      }
+    },
+    "Save .lrc Files": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".lrc ファイルを保存"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存 .lrc 文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存 .lrc 檔案"
           }
         }
       }
@@ -9917,6 +10225,28 @@
         }
       }
     },
+    "Space Used": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用容量"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已用空间"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已用空間"
+          }
+        }
+      }
+    },
     "Standard": {
       "localizations": {
         "ja": {
@@ -10203,6 +10533,28 @@
         }
       }
     },
+    "Tags": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標籤"
+          }
+        }
+      }
+    },
     "Teal": {
       "localizations": {
         "ja": {
@@ -10353,6 +10705,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "按鈕、選取項目和 Misty 背景的顏色。"
+          }
+        }
+      }
+    },
+    "The file exactly as your server keeps it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーに保存されているままのファイルです。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与服务器上保存的文件完全相同。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與伺服器上儲存的檔案完全相同。"
           }
         }
       }

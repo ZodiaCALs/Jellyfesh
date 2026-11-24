@@ -23,6 +23,8 @@ final class DownloadsStore {
     private let toasts: ToastCenter
 
     private(set) var state: DownloadsState = .empty
+    /// Sandboxed builds' hold on the folder the person chose (FolderAccess, its downloads key).
+    @ObservationIgnored var folderAccess: FolderAccess?
 
     init(client: CoreClient, tracker: CommandTracker, toasts: ToastCenter) {
         self.client = client
@@ -81,6 +83,23 @@ final class DownloadsStore {
         }
     }
 
+    /// A folder as the person knows it: "~/Music/Jellyfesh" under their home.
+    nonisolated static func displayPath(_ path: String, home: String?) -> String {
+        guard let home, !home.isEmpty, path == home || path.hasPrefix(home + "/") else { return path }
+        return "~" + String(path.dropFirst(home.count))
+    }
+
+    /// The person's home folder: in the sandbox `NSHomeDirectory()` is the app's container.
+    nonisolated static let realHome: String? = {
+        guard let entry = getpwuid(getuid()), let dir = entry.pointee.pw_dir else { return nil }
+        return String(cString: dir)
+    }()
+
+    /// File Names' live preview: one song's path under `template` (cheap, from the core's rules).
+    func preview(_ template: String) -> String {
+        client.downloadPreview(template: template)
+    }
+
     /// Why downloads wait.
     nonisolated static func paused(_ pause: DownloadsPause) -> String {
         switch pause {
@@ -118,10 +137,32 @@ final class DownloadsStore {
         watch(client.send(.removeAllDownloads))
     }
 
+    /// Change…: in sandboxed builds, keeps the chosen folder reachable on later launches and lets
+    /// the one before it go. Called before the settings name the folder, so the core can write.
+    func keepAccess(to url: URL) {
+        guard let folderAccess else { return }
+        for path in folderAccess.folders where path != url.path {
+            folderAccess.forget(path)
+        }
+        folderAccess.remember(url)
+    }
+
     private func watch(_ id: CommandID) {
         tracker.watch(id) { [weak self] message in
             self?.toasts.show(isNotAvailableMessage(message)
                 ? String(localized: "Downloads aren't available in this build yet.") : message)
+        }
+    }
+}
+
+extension DownloadQualityOption {
+    /// Its name in Settings › Downloads › Quality.
+    var title: String {
+        switch self {
+        case .original: return String(localized: "Original")
+        case .high: return String(localized: "High")
+        case .normal: return String(localized: "Normal")
+        case .low: return String(localized: "Low")
         }
     }
 }

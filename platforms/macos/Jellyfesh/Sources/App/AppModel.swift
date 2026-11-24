@@ -8,13 +8,14 @@ import SwiftUI
 
 /// The sections of the Settings page, in docs/ui.md's order.
 enum SettingsTab: Hashable, CaseIterable {
-    case appearance, playback, library, sources, extensions, about
+    case appearance, playback, library, downloads, sources, extensions, about
 
     var title: LocalizedStringKey {
         switch self {
         case .appearance: return "Appearance"
         case .playback: return "Playback"
         case .library: return "Library"
+        case .downloads: return "Downloads"
         case .sources: return "Sources"
         case .extensions: return "Extensions"
         case .about: return "About"
@@ -82,6 +83,8 @@ final class AppModel {
     /// Music folders that moved since the last launch (sandboxed builds), passed to the core once
     /// it has started.
     @ObservationIgnored private var movedFolders: [FolderAccess.Move] = []
+    /// The downloads folder's new path, when it moved since the last launch (sandboxed builds).
+    @ObservationIgnored private var movedDownloadFolder: String?
     @ObservationIgnored private var appliedAppearance: AppearanceOption?
 
     init(client: CoreClient, startupError: String? = nil, distribution: AppDistribution = .source) {
@@ -132,6 +135,9 @@ final class AppModel {
         // core opens the library.
         let folderAccess = FolderAccess(enabled: distribution.isAppStore)
         let moved = folderAccess.restore()
+        // So is the downloads folder the person chose, before the core downloads into it.
+        let downloadAccess = FolderAccess(enabled: distribution.isAppStore, key: FolderAccess.downloadsKey)
+        let downloadMoves = downloadAccess.restore()
         do {
             let files = FileManager.default
             try files.createDirectory(atPath: folders.data, withIntermediateDirectories: true)
@@ -142,6 +148,8 @@ final class AppModel {
             let model = AppModel(client: client, distribution: distribution)
             model.library.folderAccess = folderAccess
             model.movedFolders = moved
+            model.downloads.folderAccess = downloadAccess
+            model.movedDownloadFolder = downloadMoves.last?.to
             model.desktopLyrics.attach(DesktopLyricsWindow { [unowned model] in
                 AnyView(DesktopLyricsView().stores(model))
             })
@@ -173,6 +181,10 @@ final class AppModel {
             library.addFolder(move.to)
         }
         movedFolders = []
+        if let folder = movedDownloadFolder {
+            settings.update { $0.downloads.folder = folder }
+            movedDownloadFolder = nil
+        }
         nowPlayingCenter.start()
         nowPlayingCenter.update()
         system.start()

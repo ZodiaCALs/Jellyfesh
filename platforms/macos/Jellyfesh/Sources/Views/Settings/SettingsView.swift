@@ -1,9 +1,10 @@
 // Settings, a page in the main window (ADR-0023, docs/ui.md "Settings"): the title, the sections
-// Appearance, Playback, Library, Sources, Extensions and About as Jellyfesh Web's pill tabs, and
-// the chosen section's groups in a column as wide as the web's (`layout.reading`). The groups are
-// the native grouped forms over the field; the player bar floats over them like every page. ⌘,
-// and the app menu's Settings… open the page, About Jellyfesh its About section. Every change goes
-// to the core as a settings command, and the app applies the appearance ones.
+// Appearance, Playback, Library, Downloads, Sources, Extensions and About as Jellyfesh Web's pill
+// tabs (Downloads isn't in the web), and the chosen section's groups in a column as wide as the
+// web's (`layout.reading`). The groups are the web's cards over the field; the player bar floats
+// over them like every page. ⌘, and the app menu's Settings… open the page, About Jellyfesh its
+// About section. Every change goes to the core as a settings command, and the app applies the
+// appearance ones.
 
 import SwiftUI
 
@@ -47,6 +48,7 @@ struct SettingsPage: View {
         case .appearance: AppearanceSettings()
         case .playback: PlaybackSettings()
         case .library: LibrarySettings()
+        case .downloads: DownloadsSettings()
         case .sources: SourcesSettings()
         case .extensions: ExtensionsSettings()
         case .about: AboutSettings()

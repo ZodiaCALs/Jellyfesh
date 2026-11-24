@@ -44,6 +44,24 @@ enum FilePanels {
         }
     }
 
+    /// The folder downloads go to (Settings › Downloads › Change…), opening at the current one.
+    static func chooseDownloadFolder(from current: String?, _ done: @escaping (URL) -> Void) {
+        let panel = NSOpenPanel()
+        panel.title = String(localized: "Choose a Folder for Downloads")
+        panel.prompt = String(localized: "Choose")
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        if let current, !current.isEmpty {
+            panel.directoryURL = URL(fileURLWithPath: current, isDirectory: true)
+        }
+        panel.begin { response in
+            guard response == .OK, let url = panel.url else { return }
+            done(url)
+        }
+    }
+
     /// An M3U playlist to import.
     static func choosePlaylist(_ done: @escaping (URL) -> Void) {
         let panel = NSOpenPanel()

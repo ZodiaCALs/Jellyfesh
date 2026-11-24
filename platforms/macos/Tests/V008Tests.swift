@@ -212,4 +212,16 @@ final class DownloadsStoreTests: XCTestCase {
         store.removeAll()
         XCTAssertEqual(client.sent.last, .removeAllDownloads)
     }
+
+    func testFoldersShowUnderTheHomeWithATilde() {
+        XCTAssertEqual(DownloadsStore.displayPath("/Users/kim/Music/Jellyfesh", home: "/Users/kim"), "~/Music/Jellyfesh")
+        XCTAssertEqual(DownloadsStore.displayPath("/Users/kimberly/Music", home: "/Users/kim"), "/Users/kimberly/Music")
+        XCTAssertEqual(DownloadsStore.displayPath("/Volumes/Disk/Music", home: nil), "/Volumes/Disk/Music")
+    }
+
+    func testQualityNamesAndTheFileNamesPreview() {
+        XCTAssertEqual(DownloadQualityOption.allCases.map(\.title), ["Original", "High", "Normal", "Low"])
+        let store = DownloadsStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        XCTAssertEqual(store.preview("{album}/{title}"), "Preview/{album}/{title}", "the core's rules make the path")
+    }
 }

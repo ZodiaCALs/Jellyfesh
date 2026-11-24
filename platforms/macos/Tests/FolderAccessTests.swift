@@ -1,7 +1,8 @@
-// Music folders in the sandboxed (Mac App Store) build: a chosen folder's bookmark is kept, held
-// open while the app runs, restored at launch (a moved folder reported at its new path, a stale
-// bookmark made again, a dead one dropped) and forgotten with the folder. Other builds keep
-// nothing. On a stand-in for Foundation's security-scoped bookmarks.
+// Music folders (and the downloads folder, under its own key) in the sandboxed (Mac App Store)
+// build: a chosen folder's bookmark is kept, held open while the app runs, restored at launch (a
+// moved folder reported at its new path, a stale bookmark made again, a dead one dropped) and
+// forgotten with the folder. Other builds keep nothing. On a stand-in for Foundation's
+// security-scoped bookmarks.
 
 import Foundation
 import XCTest
@@ -117,5 +118,20 @@ final class FolderAccessTests: XCTestCase {
         XCTAssertEqual(client.sent.last, .removeRoot(path: "/Music"))
         XCTAssertEqual(bookmarks.stopped, ["/Music"])
         XCTAssertEqual(library.folderAccess?.folders, [])
+    }
+
+    func testTheDownloadsFolderIsKeptApartAndOnlyTheLatestIsHeld() {
+        let defaults = freshDefaults()
+        let bookmarks = FakeBookmarks()
+        let music = FolderAccess(enabled: true, defaults: defaults, bookmarks: bookmarks)
+        music.remember(URL(fileURLWithPath: "/Music/Jazz"))
+        let access = FolderAccess(enabled: true, defaults: defaults, bookmarks: bookmarks, key: FolderAccess.downloadsKey)
+        let store = DownloadsStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        store.folderAccess = access
+        store.keepAccess(to: URL(fileURLWithPath: "/Volumes/Disk/Downloads"))
+        store.keepAccess(to: URL(fileURLWithPath: "/Volumes/Disk/Other"))
+        XCTAssertEqual(access.folders, ["/Volumes/Disk/Other"])
+        XCTAssertEqual(bookmarks.stopped, ["/Volumes/Disk/Downloads"], "the folder before it is let go")
+        XCTAssertEqual(music.folders, ["/Music/Jazz"], "the music folders' bookmarks are kept apart")
     }
 }

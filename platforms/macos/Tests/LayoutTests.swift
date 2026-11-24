@@ -22,7 +22,7 @@ final class SettingsPageTests: XCTestCase {
     }
 
     func testTheSectionsAreInTheSpecsOrder() {
-        XCTAssertEqual(SettingsTab.allCases, [.appearance, .playback, .library, .sources, .extensions, .about])
+        XCTAssertEqual(SettingsTab.allCases, [.appearance, .playback, .library, .downloads, .sources, .extensions, .about])
     }
 
     func testAboutListsTheSharedKeysWithCommand() {

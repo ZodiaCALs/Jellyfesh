@@ -1,11 +1,12 @@
-// Music folders in the Mac App Store build, which runs in the App Sandbox: a folder chosen in the
-// open panel stays reachable only while the app holds the panel's grant. A security-scoped
-// bookmark keeps the grant for later launches (Jellyfesh-AppStore.entitlements has
-// com.apple.security.files.bookmarks.app-scope). At launch, before the core opens the library,
-// every folder's bookmark is resolved and its access held while the app runs. A folder that moved
-// is passed to the core at its new path, and a stale bookmark is made again. Other builds are not
-// sandboxed and keep nothing. The file system calls are behind `FolderBookmarks`, so tests use a
-// stand-in.
+// Music folders and the downloads folder in the Mac App Store build, which runs in the App
+// Sandbox: a folder chosen in the open panel stays reachable only while the app holds the panel's
+// grant. A security-scoped bookmark keeps the grant for later launches
+// (Jellyfesh-AppStore.entitlements has com.apple.security.files.bookmarks.app-scope). At launch,
+// before the core opens the library, every folder's bookmark is resolved and its access held while
+// the app runs (the downloads folder's under its own key, before the core downloads into it). A
+// folder that moved is passed to the core at its new path, and a stale bookmark is made again.
+// Other builds are not sandboxed and keep nothing. The file system calls are behind
+// `FolderBookmarks`, so tests use a stand-in.
 
 import Foundation
 
@@ -42,8 +43,10 @@ struct SecurityScopedBookmarks: FolderBookmarks {
 
 @MainActor
 final class FolderAccess {
-    /// Where the bookmarks are kept: folder path → bookmark data.
-    static let defaultsKey = "MusicFolderBookmarks"
+    /// Where the music folders' bookmarks are kept: folder path → bookmark data.
+    nonisolated static let defaultsKey = "MusicFolderBookmarks"
+    /// Where the downloads folder's bookmark is kept (Settings › Downloads › Change…).
+    nonisolated static let downloadsKey = "DownloadFolderBookmarks"
 
     /// A folder whose bookmark now names another path.
     struct Move: Equatable {
@@ -52,14 +55,18 @@ final class FolderAccess {
     }
 
     private let enabled: Bool
+    private let key: String
     private let defaults: UserDefaults
     private let bookmarks: FolderBookmarks
     /// The folders whose access is held, by path.
     private var held: [String: URL] = [:]
 
-    /// `enabled` is true for sandboxed builds (the Mac App Store's).
-    init(enabled: Bool, defaults: UserDefaults = .standard, bookmarks: FolderBookmarks = SecurityScopedBookmarks()) {
+    /// `enabled` is true for sandboxed builds (the Mac App Store's); `key` names where the
+    /// bookmarks are kept.
+    init(enabled: Bool, defaults: UserDefaults = .standard, bookmarks: FolderBookmarks = SecurityScopedBookmarks(),
+         key: String = FolderAccess.defaultsKey) {
         self.enabled = enabled
+        self.key = key
         self.defaults = defaults
         self.bookmarks = bookmarks
     }
@@ -120,7 +127,7 @@ final class FolderAccess {
     }
 
     private var stored: [String: Data] {
-        get { (defaults.dictionary(forKey: Self.defaultsKey) as? [String: Data]) ?? [:] }
-        set { defaults.set(newValue, forKey: Self.defaultsKey) }
+        get { (defaults.dictionary(forKey: key) as? [String: Data]) ?? [:] }
+        set { defaults.set(newValue, forKey: key) }
     }
 }
