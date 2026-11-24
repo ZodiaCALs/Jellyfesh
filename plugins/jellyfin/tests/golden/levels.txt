@@ -1,0 +1,21 @@
+# song | level | maxStreamingBitrate | audioBitRate | hint to the engine | the server sent
+Ebb (FLAC, 921 kbit/s) | lossless | 100000000 | 320000 | flac 921 kbit/s | original flac
+Ebb (FLAC, 921 kbit/s) | high | 320000 | 320000 | aac 320 kbit/s | converted aac 320000
+Ebb (FLAC, 921 kbit/s) | normal | 192000 | 192000 | aac 192 kbit/s | converted aac 192000
+Ebb (FLAC, 921 kbit/s) | low | 96000 | 96000 | aac 96 kbit/s | converted aac 96000
+Flow (MP3, 320 kbit/s) | lossless | 100000000 | 320000 | mp3 320 kbit/s | original mp3
+Flow (MP3, 320 kbit/s) | high | 320000 | 320000 | mp3 320 kbit/s | original mp3
+Flow (MP3, 320 kbit/s) | normal | 192000 | 192000 | aac 192 kbit/s | converted aac 192000
+Flow (MP3, 320 kbit/s) | low | 96000 | 96000 | aac 96 kbit/s | converted aac 96000
+Slack Tide (AAC in M4A, 256 kbit/s) | lossless | 100000000 | 320000 | aac 256 kbit/s | original m4a
+Slack Tide (AAC in M4A, 256 kbit/s) | high | 320000 | 320000 | aac 256 kbit/s | original m4a
+Slack Tide (AAC in M4A, 256 kbit/s) | normal | 192000 | 192000 | aac 192 kbit/s | converted aac 192000
+Slack Tide (AAC in M4A, 256 kbit/s) | low | 96000 | 96000 | aac 96 kbit/s | converted aac 96000
+Fog Bell (WMA, 192 kbit/s) | lossless | 100000000 | 320000 | aac 320 kbit/s | converted aac 320000
+Fog Bell (WMA, 192 kbit/s) | high | 320000 | 320000 | aac 320 kbit/s | converted aac 320000
+Fog Bell (WMA, 192 kbit/s) | normal | 192000 | 192000 | aac 192 kbit/s | converted aac 192000
+Fog Bell (WMA, 192 kbit/s) | low | 96000 | 96000 | aac 96 kbit/s | converted aac 96000
+Driftwood (Opus in Ogg, 128 kbit/s) | lossless | 100000000 | 320000 | opus 128 kbit/s | original ogg
+Driftwood (Opus in Ogg, 128 kbit/s) | high | 320000 | 320000 | opus 128 kbit/s | original ogg
+Driftwood (Opus in Ogg, 128 kbit/s) | normal | 192000 | 192000 | opus 128 kbit/s | original ogg
+Driftwood (Opus in Ogg, 128 kbit/s) | low | 96000 | 96000 | aac 96 kbit/s | converted aac 96000

@@ -1,5 +1,16 @@
 # Changelog: Jellyfin plugin
 
+## 0.0.8 — unreleased
+
+* With Jellyfesh v0.0.8: the **Streaming Quality** setting is gone; streams
+  use the level Jellyfesh asks for (its one streaming quality, ADR-0026).
+  Jellyfesh keeps a quality set here once, as its own. The conversion
+  format and device name stay. Still `/Audio/{id}/universal` with
+  `transcodingProtocol=http`.
+* Tests: a golden table of what each level asks of Jellyfin and gets back
+  for FLAC, MP3, AAC, WMA and Opus files, and a check that no
+  `/Users/{userId}/…` route (obsolete since Jellyfin 10.9) is used.
+
 ## 0.0.7 — 2026-11-19
 
 * With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh

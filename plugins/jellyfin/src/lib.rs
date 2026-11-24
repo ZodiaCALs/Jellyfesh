@@ -8,7 +8,8 @@
 //!   `/Artists` for artists, each paged by the server. Browse: music
 //!   libraries → artists, albums, recently added → tracks; playlists;
 //!   favourites. Stream: `/Audio/{id}/universal` with the formats the
-//!   engine plays and a bit-rate limit from the quality ([`media`]).
+//!   engine plays and a bit-rate limit from the level the app asks for
+//!   ([`media`]).
 //!   Artwork: `/Items/{id}/Images/Primary` at the asked size. Lyrics:
 //!   `/Audio/{id}/Lyrics`, ticks to LRC ([`lyrics`]). Recommendations:
 //!   instant mix. Logout reports the end of the session to the server.
@@ -612,12 +613,10 @@ impl Plugin for Jellyfin {
                     .unwrap_or_else(|| "This track can't be played.".into()),
             ));
         }
+        // The level the app asks for (ADR-0026); the plugin has no quality
+        // setting of its own.
         let settings = api::settings();
-        let plan = media::plan(
-            found.media_sources.first(),
-            settings.quality(quality),
-            settings.codec,
-        );
+        let plan = media::plan(found.media_sources.first(), quality, settings.codec);
         let query = media::query(&api::device_id()?, &plan, settings.codec);
         let pairs: Vec<(&str, &str)> = query.iter().map(|(k, v)| (*k, v.as_str())).collect();
         let url = format!(

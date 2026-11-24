@@ -1,17 +1,11 @@
 //! The person's settings (see `settings.schema.json`).
+//!
+//! There is no quality setting: the app asks for a level with each stream
+//! (ADR-0026), and a `quality` key left from an older version is ignored
+//! (the host drops it when the plugin updates).
 
 use jf_plugin_sdk::prelude::*;
 use serde_json::Value;
-
-/// What to stream.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum QualityChoice {
-    /// The quality the app asks for (per network).
-    #[default]
-    App,
-    /// Always this quality on this server.
-    Fixed(Quality),
-}
 
 /// What the server converts to when it has to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -40,7 +34,6 @@ pub struct Settings {
     /// The server's base address without a trailing `/`, or none when it is
     /// not set yet.
     pub base: Option<String>,
-    pub quality: QualityChoice,
     pub codec: Codec,
     /// `Device=` in the authorisation header.
     pub device_name: String,
@@ -50,7 +43,6 @@ impl Default for Settings {
     fn default() -> Settings {
         Settings {
             base: None,
-            quality: QualityChoice::App,
             codec: Codec::Aac,
             device_name: "Jellyfesh".into(),
         }
@@ -63,14 +55,6 @@ impl Settings {
         let base = match value.get("server_url").and_then(Value::as_str).map(str::trim) {
             None | Some("") => None,
             Some(url) => Some(normalise_base(url)?),
-        };
-        let quality = match value.get("quality").and_then(Value::as_str).unwrap_or("app") {
-            "app" => QualityChoice::App,
-            "lossless" => QualityChoice::Fixed(Quality::Lossless),
-            "high" => QualityChoice::Fixed(Quality::High),
-            "normal" => QualityChoice::Fixed(Quality::Normal),
-            "low" => QualityChoice::Fixed(Quality::Low),
-            other => return Err(PluginError::invalid_input(format!("unknown quality {other:?}"))),
         };
         let codec = match value
             .get("transcode_codec")
@@ -94,18 +78,9 @@ impl Settings {
             .collect();
         Ok(Settings {
             base,
-            quality,
             codec,
             device_name,
         })
-    }
-
-    /// The quality to use when the app asks for `asked`.
-    pub fn quality(&self, asked: Quality) -> Quality {
-        match self.quality {
-            QualityChoice::App => asked,
-            QualityChoice::Fixed(quality) => quality,
-        }
     }
 }
 
@@ -137,23 +112,20 @@ mod tests {
     fn parses_and_normalises() {
         let s = Settings::parse(&json!({
             "server_url": " http://192.168.1.20:8096/jellyfin/web/#/home.html ",
-            "quality": "normal",
             "transcode_codec": "opus",
             "device_name": "  Kitchen\n speaker "
         }))
         .unwrap();
         assert_eq!(s.base.as_deref(), Some("http://192.168.1.20:8096/jellyfin"));
-        assert_eq!(s.quality(Quality::Lossless), Quality::Normal);
         assert_eq!(s.codec.name(), "opus");
         assert_eq!(s.device_name, "Kitchen speaker");
 
-        let s = Settings::parse(&json!({ "server_url": "https://jf.example.com/web/index.html" })).unwrap();
+        // A quality left from version 0.0.7 or older changes nothing.
+        let s = Settings::parse(
+            &json!({ "server_url": "https://jf.example.com/web/index.html", "quality": "low" }),
+        )
+        .unwrap();
         assert_eq!(s.base.as_deref(), Some("https://jf.example.com"));
-        assert_eq!(
-            s.quality(Quality::Low),
-            Quality::Low,
-            "follows the app by default"
-        );
         assert_eq!((s.codec, s.device_name.as_str()), (Codec::Aac, "Jellyfesh"));
 
         assert_eq!(Settings::parse(&json!({})).unwrap().base, None);

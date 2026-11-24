@@ -120,12 +120,14 @@ fn installs_with_its_manifest() {
     let env = env_for(&server);
     let info = env.host.plugin(ID).unwrap();
     assert_eq!(info.name, "Jellyfin");
-    assert_eq!(info.version, "0.0.7");
+    assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
     assert!(info.official, "signed with the test key, which this host trusts");
     assert_eq!(info.capabilities.len(), 9);
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr, AuthKind::PasswordExchange]);
     assert!(info.has_icon);
-    assert_eq!(info.settings["quality"], "app");
+    // No quality setting: the app's level decides (ADR-0026).
+    assert!(info.settings.get("quality").is_none());
+    assert!(info.settings_schema["properties"].get("quality").is_none());
     assert_eq!(info.settings["transcode_codec"], "aac");
     assert_eq!(info.settings["device_name"], "Jellyfesh");
     assert_eq!(info.settings_schema["properties"]["server_url"]["format"], "uri");
@@ -150,7 +152,7 @@ fn password_sign_in_keeps_only_the_token() {
     let first = auth_of(&server, "/Users/AuthenticateByName");
     assert_eq!(first["Client"], "Jellyfesh");
     assert_eq!(first["Device"], "Jellyfesh");
-    assert_eq!(first["Version"], "0.0.7");
+    assert_eq!(first["Version"], env!("CARGO_PKG_VERSION"));
     let device_id = first["DeviceId"].clone();
     assert_eq!(device_id.len(), 32);
     assert!(device_id.bytes().all(|b| b.is_ascii_hexdigit()));
@@ -505,6 +507,65 @@ fn search_by_kind_and_page() {
         art.url
     );
     assert_eq!(url_query(&art.url)["tag"], "alb-b1");
+    assert_no_user_routes(&server);
+}
+
+/// The app asks for each kind on its own and continues with the cursor
+/// (Show More, ADR-0024): every page holds only that kind, and nothing
+/// repeats. Pages of two here, so the small library needs several.
+#[test]
+fn search_one_kind_at_a_time_with_show_more() {
+    let server = Mock::default().start();
+    let env = env_for(&server);
+    sign_in(&env);
+    let expected = [
+        (ItemKind::Artist, vec![ar(HARBOUR)]),
+        (
+            ItemKind::Album,
+            vec![al(LOW_WATER), al(SEA_FOG), al(DRIFTWOOD_ALBUM)],
+        ),
+        (ItemKind::Playlist, vec![]),
+        (
+            ItemKind::Track,
+            vec![tr(FLOW), tr(FOG_BELL), tr(LOST_BUOY), tr(DRIFTWOOD)],
+        ),
+    ];
+    for (kind, mut want) in expected {
+        let before = server.requests().len();
+        let mut seen = Vec::new();
+        let mut cursor = None;
+        for _ in 0..10 {
+            let found = recv(
+                env.host
+                    .search(ID, "o", kinds(&[kind]), next_page(cursor.clone(), 2)),
+            )
+            .unwrap();
+            assert!(found.items.len() <= 2);
+            assert!(found.items.iter().all(|i| i.kind == kind), "{kind:?}");
+            seen.extend(ids(&found));
+            cursor = found.next;
+            if cursor.is_none() {
+                break;
+            }
+        }
+        assert!(cursor.is_none(), "{kind:?}: the search ends");
+        let mut unique = seen.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), seen.len(), "{kind:?}: nothing twice in {seen:?}");
+        want.sort();
+        assert_eq!(unique, want, "{kind:?}");
+        // Only that kind was asked of the server.
+        for request in &server.requests()[before..] {
+            let asked = request.query("includeItemTypes");
+            match kind {
+                ItemKind::Artist => assert_eq!(request.path(), "/Artists"),
+                ItemKind::Album => assert_eq!(asked.as_deref(), Some("MusicAlbum")),
+                ItemKind::Playlist => assert_eq!(asked.as_deref(), Some("Playlist")),
+                _ => assert_eq!(asked.as_deref(), Some("Audio")),
+            }
+        }
+    }
 }
 
 #[test]
@@ -625,6 +686,7 @@ fn browse_the_library() {
             "{unknown}"
         );
     }
+    assert_no_user_routes(&server);
 }
 
 #[test]
@@ -747,19 +809,33 @@ fn streams_by_quality() {
     assert_eq!((wma.codec.as_deref(), wma.bitrate_kbps), (Some("aac"), Some(320)));
     assert_eq!(fetched(&wma).body, b"converted aac 320000");
 
-    // A fixed quality and format in the settings win.
+    // The conversion format is a setting; the quality is always the level
+    // the app asks for, and a quality setting is refused as unknown.
     env.settings(
         ID,
-        json!({ "server_url": server.url(), "quality": "low", "transcode_codec": "opus" }),
+        json!({ "server_url": server.url(), "transcode_codec": "opus" }),
     );
-    let fixed = resolve(&env, EBB, Quality::Lossless);
+    let opus_low = resolve(&env, EBB, Quality::Low);
     assert_eq!(
-        (fixed.codec.as_deref(), fixed.bitrate_kbps),
+        (opus_low.codec.as_deref(), opus_low.bitrate_kbps),
         (Some("opus"), Some(96))
     );
-    let got = fetched(&fixed);
+    let got = fetched(&opus_low);
     assert_eq!(got.body, b"converted opus 96000");
     assert_eq!(got.header("content-type"), Some("audio/opus"));
+    assert_eq!(
+        fetched(&resolve(&env, EBB, Quality::Lossless)).body,
+        b"original flac",
+        "the app's level, not an old setting"
+    );
+    assert!(
+        env.host
+            .set_settings(
+                ID,
+                &json!({ "server_url": server.url(), "quality": "low" }).to_string()
+            )
+            .is_err()
+    );
 
     assert_eq!(
         recv(env.host.resolve_stream(ID, track("tr:ffff", "x"), Quality::High)),
@@ -772,6 +848,79 @@ fn streams_by_quality() {
         ),
         Err(CallError::Plugin(PluginError::InvalidInput(_)))
     ));
+}
+
+/// Every level the app may ask for, for files of each kind: what the plugin
+/// asks Jellyfin for, what it tells the engine, and what the mock server
+/// sends back (its answers follow `UniversalAudioController`; the files are
+/// invented). The table is `tests/golden/levels.txt`; run with
+/// `UPDATE_GOLDEN=1` to accept a new one, then review it.
+#[test]
+fn levels_map_to_requests() {
+    let server = Mock::default().start();
+    let env = env_for(&server);
+    sign_in(&env);
+    let songs = [
+        (EBB, "Ebb (FLAC, 921 kbit/s)"),
+        (FLOW, "Flow (MP3, 320 kbit/s)"),
+        (SLACK_TIDE, "Slack Tide (AAC in M4A, 256 kbit/s)"),
+        (FOG_BELL, "Fog Bell (WMA, 192 kbit/s)"),
+        (DRIFTWOOD, "Driftwood (Opus in Ogg, 128 kbit/s)"),
+    ];
+    let levels = [
+        (Quality::Lossless, "lossless"),
+        (Quality::High, "high"),
+        (Quality::Normal, "normal"),
+        (Quality::Low, "low"),
+    ];
+    let mut table = String::from(
+        "# song | level | maxStreamingBitrate | audioBitRate | hint to the engine | the server sent\n",
+    );
+    for (id, song) in songs {
+        for (quality, level) in levels {
+            let info = resolve(&env, id, quality);
+            let q = url_query(&info.url);
+            assert_eq!(q["transcodingProtocol"], "http", "never HLS");
+            assert_eq!(q["audioCodec"], q["transcodingContainer"]);
+            let hint = match (&info.codec, info.bitrate_kbps) {
+                (Some(codec), Some(kbps)) => format!("{codec} {kbps} kbit/s"),
+                (Some(codec), None) => codec.clone(),
+                (None, _) => "unknown".into(),
+            };
+            let sent = String::from_utf8(fetched(&info).body).unwrap();
+            table.push_str(&format!(
+                "{song} | {level} | {} | {} | {hint} | {sent}\n",
+                q["maxStreamingBitrate"], q["audioBitRate"]
+            ));
+        }
+    }
+    let path = plugin_dir().join("tests/golden/levels.txt");
+    if std::env::var("UPDATE_GOLDEN").is_ok_and(|v| v == "1") {
+        std::fs::write(&path, &table).unwrap();
+    }
+    assert_eq!(
+        table,
+        std::fs::read_to_string(&path).unwrap(),
+        "run with UPDATE_GOLDEN=1 to accept the new table"
+    );
+}
+
+/// Jellyfin 10.9 moved every `/Users/{userId}/…` route (its 12.x releases
+/// mark them obsolete); the plugin uses none of them, only the sign-in
+/// routes under `/Users`.
+fn assert_no_user_routes(server: &Running) {
+    let sign_in = [
+        "/Users/AuthenticateByName",
+        "/Users/AuthenticateWithQuickConnect",
+        "/Users/Me",
+    ];
+    for request in server.requests() {
+        let path = request.path();
+        assert!(
+            !path.starts_with("/Users/") || sign_in.contains(&path),
+            "an obsolete route: {path}"
+        );
+    }
 }
 
 #[test]
@@ -1062,6 +1211,7 @@ fn discover_shows_latest_resume_favourites_and_suggestions() {
     let suggestions = server.requests_to("/Items/Suggestions");
     assert_eq!(suggestions[0].query("mediaType").as_deref(), Some("Audio"));
     assert_eq!(suggestions[0].query("type").as_deref(), Some("MusicAlbum"));
+    assert_no_user_routes(&server);
 }
 
 #[test]
@@ -1144,4 +1294,5 @@ fn details_from_the_overview_genres_studios_and_people() {
         recv(env.host.details(ID, item(ItemKind::Track, "local:1", "x"))),
         Err(CallError::Plugin(PluginError::NotFound))
     );
+    assert_no_user_routes(&server);
 }

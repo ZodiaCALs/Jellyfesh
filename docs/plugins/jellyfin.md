@@ -49,9 +49,13 @@ the settings) until you sign out.
 | Setting | Values | What it does |
 | --- | --- | --- |
 | Server address | a URL | where your server is |
-| Streaming quality | `app` (default), `lossless`, `high`, `normal`, `low` | `app` follows the quality you chose in Jellyfesh for each network; the others always use that quality on this server |
 | Format when the server converts | `aac` (default), `mp3`, `opus` | what Jellyfin converts to when it has to |
 | Device name | text, `Jellyfesh` by default | how this device appears in Jellyfin's devices and sessions |
+
+The streaming quality is Jellyfesh's own (Settings › Playback › Streaming,
+or the quality menu in the player bar, from v0.0.8). Version 0.0.8 of the
+plugin no longer has a quality setting of its own; a quality you had set
+there is kept once, as Jellyfesh's.
 
 | Quality | Limit | You get |
 | --- | --- | --- |
@@ -63,8 +67,8 @@ the settings) until you sign out.
 Jellyfesh plays FLAC, MP3, AAC and ALAC (M4A, MP4), Ogg Vorbis and Opus, WAV,
 AIFF, CAF and Matroska audio. Anything else, such as WMA, is converted by
 Jellyfin. The original file arrives with seeking support; conversions are
-sent as they are made. Limits your administrator sets for remote
-connections still apply.
+sent as they are made (progressive HTTP, never HLS). Limits your
+administrator sets for remote connections still apply.
 
 ## What you can do
 

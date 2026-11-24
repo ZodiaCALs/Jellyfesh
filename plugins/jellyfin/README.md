@@ -12,10 +12,10 @@ Jellyfesh release key. Setup, server preparation and troubleshooting:
 * **Browse** your music libraries (artists → albums → tracks, all albums,
   recently added), your playlists and your favourite songs, albums and
   artists. With several music libraries, each one is a folder.
-* **Play** with the quality you choose: the original file when Jellyfesh can
-  play its format within the quality's bit-rate limit (lossless: any
-  bit rate), otherwise converted by Jellyfin to AAC, MP3 or Opus at 320, 192
-  or 96 kbit/s.
+* **Play** at the streaming quality chosen in Jellyfesh: the original file
+  when Jellyfesh can play its format within the quality's bit-rate limit
+  (lossless: any bit rate), otherwise converted by Jellyfin to AAC, MP3 or
+  Opus at 320, 192 or 96 kbit/s.
 * **Cover art** at the size the screen needs, **lyrics** (Jellyfin 10.9 and
   later; synced lyrics as timed lines) and **instant mix** suggestions for
   a track, album, artist or playlist.
@@ -43,7 +43,7 @@ open Jellyfin at, such as `http://192.168.1.20:8096`). Then:
 | --- | --- |
 | The access token, tied to the server address | your system's keystore (Keychain, Credential Manager, Secret Service, Android Keystore) |
 | A random device id, so Jellyfin sees one device across sign-ins | the plugin's small private storage in Jellyfesh's data folder |
-| Server address, quality, conversion format, device name | the plugin's settings |
+| Server address, conversion format, device name | the plugin's settings |
 
 Your password is never stored, by the plugin or by Jellyfesh. The token is
 only ever sent to the address it was made for, in the `Authorization` header
