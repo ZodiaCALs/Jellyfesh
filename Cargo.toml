@@ -73,7 +73,9 @@ crossbeam-channel = "0.5.17"
 fast_image_resize = "6.1.0"
 flacenc = "0.5.1"
 hound = "3.5.1"
-image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+# Covers come as JPEG, PNG, WebP and GIF (folder art and services' pictures); checked against
+# crates.io on 2026-11-23: 0.25.10 is the newest release.
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
 lofty = "0.25.5"
 # Checked 2026-11-07: 8.2.1 is the newest stable release (9.0 is in release candidates); CC0-1.0.
 notify = "8.2.1"
