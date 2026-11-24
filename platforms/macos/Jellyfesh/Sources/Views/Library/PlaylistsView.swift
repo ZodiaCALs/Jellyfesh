@@ -7,6 +7,7 @@ import SwiftUI
 struct PlaylistsView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(PlaybackStore.self) private var playback
+    @Environment(SourceLibraryStore.self) private var sourceLibrary
     @Environment(Router.self) private var router
     @Environment(\.palette) private var palette
 
@@ -67,10 +68,15 @@ struct PlaylistsView: View {
                     }
                 }
             }
+            // Each signed-in source's playlists, in its own section (ADR-0024).
+            ForEach(sourceLibrary.playlists) { source in
+                SourceLibrarySection(source: source)
+                    .trackListRow()
+            }
         }
         .fieldList()
         .overlay {
-            if library.playlists.isEmpty {
+            if library.playlists.isEmpty && sourceLibrary.playlists.isEmpty {
                 EmptyState(title: "No Playlists Yet", symbol: "music.note.list",
                            message: "Make a playlist to keep songs together.") {
                     Button("New Playlist…") {
@@ -78,6 +84,9 @@ struct PlaylistsView: View {
                     }
                 }
             }
+        }
+        .onAppear {
+            sourceLibrary.pageOpened(.playlists)
         }
         .navigationTitle(Text("Playlists"))
     }

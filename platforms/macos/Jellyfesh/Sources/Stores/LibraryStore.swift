@@ -76,6 +76,11 @@ final class LibraryStore {
         createdPlaylist = id
     }
 
+    /// A playlist another command makes (Save as Playlist…) opens, too, when the core names it.
+    func expectPlaylist(from request: CommandID) {
+        pendingCreate = request
+    }
+
     func consumeCreatedPlaylist() -> Int64? {
         defer { createdPlaylist = nil }
         return createdPlaylist

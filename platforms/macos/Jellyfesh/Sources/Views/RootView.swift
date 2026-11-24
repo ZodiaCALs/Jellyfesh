@@ -235,8 +235,8 @@ struct RoutePage: View {
         case .album(let album): AlbumDetailView(album: album)
         case .artist(let artist): ArtistDetailView(artist: artist)
         case .playlist(let id): PlaylistDetailView(playlistID: id)
-        case .browse(let plugin, let node, let title, let link, let item):
-            BrowseView(plugin: plugin, node: node, title: title, link: link, item: item)
+        case .browse(let plugin, let node, let title, let link, let item, let songsListed):
+            BrowseView(plugin: plugin, node: node, title: title, link: link, item: item, songsListed: songsListed)
         case .discover(let plugin, let title):
             DiscoverView(plugin: plugin, title: title)
         case .appleMusic: AppleMusicView()

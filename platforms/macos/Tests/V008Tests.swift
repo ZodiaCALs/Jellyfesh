@@ -75,3 +75,87 @@ final class QualityMenuStoreTests: XCTestCase {
         XCTAssertEqual(menu?.badge, "High", "the chosen level until the engine has opened the song")
     }
 }
+
+/// A date a test moves by hand.
+private final class DateBox {
+    var now = Date(timeIntervalSince1970: 1_000_000)
+}
+
+@MainActor
+final class SourceLibraryStoreTests: XCTestCase {
+    private func entry(_ id: String, kind: ResultKind = .playlist, songsListed: Bool = true) -> SourceListEntry {
+        SourceListEntry(item: Fixture.result(id, source: "p", kind: kind), owned: true, songsListed: songsListed)
+    }
+
+    private func list(_ part: SourceListPart, _ entries: [SourceListEntry], next: String? = nil) -> SourceList {
+        SourceList(part: part, entries: entries, total: nil, next: next, refreshedAtMs: 1_000, loading: false,
+                   error: nil)
+    }
+
+    func testThePagesRefreshWhenTheyOpenAndAgainAfterTenMinutes() {
+        let client = FakeCoreClient()
+        let clock = DateBox()
+        let store = SourceLibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter(),
+                                       now: { clock.now })
+        store.pageOpened(.favourites)
+        XCTAssertEqual(client.sent.last, .refreshSourceLibrary(plugin: nil))
+        let sent = client.sent.count
+        store.pageOpened(.favourites)
+        XCTAssertEqual(client.sent.count, sent, "not again within ten minutes")
+        store.pageOpened(.playlists)
+        XCTAssertEqual(client.sent.count, sent + 1, "each page asks once")
+        clock.now = clock.now.addingTimeInterval(601)
+        store.pageOpened(.favourites)
+        XCTAssertEqual(client.sent.count, sent + 2, "returned to after ten minutes")
+    }
+
+    func testFavouritesAndPlaylistsShowWhatTheSourcesKeep() {
+        let store = SourceLibraryStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        store.apply(SourceLibraryState(version: 1, sources: [
+            SourceLibraryInfo(plugin: "p", name: "Jellyfin", attribution: nil, lists: [
+                list(.likedSongs, [entry("s1", kind: .track)]), list(.likedAlbums, []), list(.playlists, [entry("pl1")]),
+            ]),
+            SourceLibraryInfo(plugin: "q", name: "Subsonic", attribution: nil, lists: [
+                list(.likedSongs, []), list(.playlists, []),
+            ]),
+        ]))
+        XCTAssertEqual(store.likes.map(\.plugin), ["p"], "a source with nothing to show is left out")
+        XCTAssertEqual(store.likes.first?.lists.map(\.part), [.likedSongs], "and so is an empty list")
+        XCTAssertEqual(store.playlists.map(\.plugin), ["p"])
+        XCTAssertEqual(store.playlists.first?.lists.map(\.part), [.playlists])
+    }
+
+    func testMoreJoinsItsListOnce() {
+        let client = FakeCoreClient()
+        let store = SourceLibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.apply(SourceLibraryState(version: 1, sources: [
+            SourceLibraryInfo(plugin: "p", name: "Jellyfin", attribution: nil,
+                              lists: [list(.playlists, [entry("pl1")], next: "c2")]),
+        ]))
+        store.more(plugin: "p", part: .playlists)
+        XCTAssertEqual(client.sent.last, .sourceLibraryMore(plugin: "p", part: .playlists, cursor: "c2"))
+        store.apply(page: SourceLibraryPageBatch(request: client.lastCommandID, plugin: "p", part: .playlists,
+                                                 entries: [entry("pl1"), entry("pl2", songsListed: false)], next: nil,
+                                                 error: nil))
+        let entries = store.playlists.first?.lists.first?.entries
+        XCTAssertEqual(entries?.map(\.item.itemID), ["pl1", "pl2"])
+        XCTAssertEqual(entries?.last?.songsListed, false)
+        XCTAssertNil(store.playlists.first?.lists.first?.next)
+        XCTAssertTrue(store.loadingMore.isEmpty)
+    }
+
+    func testTheCachedListsSayWhenTheyWereUpdated() {
+        let line = SourceLibraryStore.updatedLine(refreshedAt: Date(timeIntervalSince1970: 0),
+                                                  now: Date(timeIntervalSince1970: 300))
+        XCTAssertTrue(line.hasPrefix("Updated "), line)
+        XCTAssertTrue(line.contains("5"), line)
+    }
+
+    func testSaveAsPlaylistNamesTheCopy() {
+        let client = FakeCoreClient()
+        let store = SourceLibraryStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        XCTAssertNotNil(store.savePlaylistCopy(plugin: "p", id: "pl1", name: "  Road Trip "))
+        XCTAssertEqual(client.sent.last, .savePlaylistCopy(plugin: "p", id: "pl1", name: "Road Trip"))
+        XCTAssertNil(store.savePlaylistCopy(plugin: "p", id: "pl1", name: "  "), "a blank name sends nothing")
+    }
+}

@@ -67,6 +67,28 @@
         }
       }
     },
+    "%@ lists this playlist's songs only in %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ はこのプレイリストの曲を %2$@ でのみ表示します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 只在 %2$@ 中列出这个歌单的歌曲。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 只在 %2$@ 中列出這個播放清單的歌曲。"
+          }
+        }
+      }
+    },
     "%@ of %@": {
       "localizations": {
         "ja": {
@@ -8443,6 +8465,94 @@
         }
       }
     },
+    "Save": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存"
+          }
+        }
+      }
+    },
+    "Save as Playlist": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストとして保存"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存储为歌单"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存為播放清單"
+          }
+        }
+      }
+    },
+    "Save as Playlist isn't available in this build yet.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このビルドではまだプレイリストとして保存できません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本尚不能存储为歌单。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本尚不能儲存為播放清單。"
+          }
+        }
+      }
+    },
+    "Save as Playlist…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストとして保存…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存储为歌单…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存為播放清單…"
+          }
+        }
+      }
+    },
     "Scan the code with the %@ app on your phone.": {
       "localizations": {
         "ja": {
@@ -10947,6 +11057,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案變更時更新資料庫。"
+          }
+        }
+      }
+    },
+    "Updated %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に更新"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@更新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@更新"
           }
         }
       }

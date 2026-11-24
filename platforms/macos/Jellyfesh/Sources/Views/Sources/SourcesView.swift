@@ -223,14 +223,21 @@ struct BrowseView: View {
     var link: String?
     /// The container as the list it was chosen from showed it, when known.
     var item: SourceResult?
+    /// False for a source playlist whose songs its service lists only in its own app: the page
+    /// says so, and Play and Shuffle start it there (ADR-0024 §1).
+    var songsListed = true
 
     @Environment(SourcesStore.self) private var sources
     @Environment(PlaybackStore.self) private var playback
+    @Environment(SourceLibraryStore.self) private var sourceLibrary
+    @Environment(LibraryStore.self) private var library
     @Environment(AppModel.self) private var app
     @Environment(\.palette) private var palette
     @State private var model: BrowseModel?
     /// What the source says about the album or artist.
     @State private var details: DetailsAnswer?
+    /// Save as Playlist…'s name, while it is asked for.
+    @State private var copyName: String?
 
     var body: some View {
         let items = model?.items ?? []
@@ -243,6 +250,13 @@ struct BrowseView: View {
             if let notes = details?.notes?.trimmingCharacters(in: .whitespacesAndNewlines), !notes.isEmpty {
                 ExpandableNotes(text: notes)
                     .padding(.bottom, Tokens.Space.s4)
+                    .trackListRow()
+            }
+            if !songsListed {
+                Text("\(sources.name(of: plugin)) lists this playlist's songs only in \(sources.name(of: plugin)).")
+                    .typography(Tokens.TypeRoles.listSecondary)
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
+                    .padding(.vertical, Tokens.Space.s4)
                     .trackListRow()
             }
             if let model {
@@ -294,7 +308,23 @@ struct BrowseView: View {
         }
         .fieldList()
         .navigationTitle(Text(title))
+        .alert("Save as Playlist", isPresented: Binding(get: { copyName != nil }, set: { if !$0 { copyName = nil } })) {
+            TextField("Name", text: Binding(get: { copyName ?? "" }, set: { copyName = $0 }))
+            Button("Save") {
+                if let name = copyName, let id = node,
+                   let request = sourceLibrary.savePlaylistCopy(plugin: plugin, id: id, name: name) {
+                    // The copy opens once the core names it.
+                    library.expectPlaylist(from: request)
+                }
+                copyName = nil
+            }
+            Button("Cancel", role: .cancel) {
+                copyName = nil
+            }
+        }
         .task(id: "\(plugin)\u{1F}\(node ?? "")") {
+            // A playlist whose songs are listed only in its service has none to load.
+            guard songsListed else { return }
             let browse = BrowseModel(plugin: plugin, node: node)
             model = browse
             browse.start(sources)
@@ -344,7 +374,9 @@ struct BrowseView: View {
     /// then More.
     @ViewBuilder private func actions(for item: SourceResult, songs: [SourceResult]) -> some View {
         let collection = CollectionReference.source(plugin: plugin, id: item.itemID, kind: item.kind)
-        let playable = SourcePage.canPlay(item: item, songs: songs, complete: model?.isComplete ?? false)
+        // Without a song list the core starts the playlist by its context.
+        let playable = songsListed ? SourcePage.canPlay(item: item, songs: songs, complete: model?.isComplete ?? false)
+            : item.playable
         let tracks = model?.isComplete == true ? (model?.playableTracks ?? []) : []
         if playable {
             PlayShuffleButtons(collection: collection)
@@ -358,10 +390,19 @@ struct BrowseView: View {
         }
         let info = sources.plugin(plugin)?.hasDetails == true
             ? InfoRequest.container(item, sourceName: sources.name(of: plugin)) : nil
-        if SourcePageMoreMenu.hasItems(remote: sources.isRemote(plugin), playable: playable, link: link) || info != nil {
+        // Save as Playlist… for a source playlist whose songs are listed (ADR-0024 §3).
+        let savesCopy = item.kind == .playlist && songsListed && node != nil
+        if SourcePageMoreMenu.hasItems(remote: sources.isRemote(plugin), playable: playable, link: link)
+            || info != nil || savesCopy {
             SourcePageMoreMenu(plugin: plugin, collection: playable ? collection : nil, tracks: tracks, link: link,
-                               info: info)
+                               info: info, saveCopy: saveCopyAction(for: item, offered: savesCopy))
         }
+    }
+
+    /// Save as Playlist…: asks for the name, the source playlist's own to begin with.
+    private func saveCopyAction(for item: SourceResult, offered: Bool) -> (() -> Void)? {
+        guard offered else { return nil }
+        return { copyName = item.title }
     }
 
     /// The source's name (unless the credit names it) and, once every page is in, the songs.
@@ -478,6 +519,8 @@ private struct SourcePageMoreMenu: View {
     var link: String?
     /// Get Info, for an album or an artist of a source that describes its items.
     var info: InfoRequest? = nil
+    /// Save as Playlist…, for a source playlist.
+    var saveCopy: (() -> Void)? = nil
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(SourcesStore.self) private var sources
@@ -499,6 +542,9 @@ private struct SourcePageMoreMenu: View {
                 if ServiceLink.url(link) != nil {
                     Divider()
                 }
+            }
+            if let saveCopy {
+                Button("Save as Playlist…", action: saveCopy)
             }
             OpenInServiceButton(link: link, source: plugin)
             if let info {

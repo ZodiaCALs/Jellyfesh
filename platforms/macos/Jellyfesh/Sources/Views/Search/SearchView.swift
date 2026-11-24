@@ -396,6 +396,8 @@ struct SourceContainerActions: View {
 struct ResultRow: View {
     var item: SourceResult
     var artwork: ArtworkSource?
+    /// A source playlist whose songs its service lists here (false: its page says where they are).
+    var songsListed = true
 
     @Environment(Router.self) private var router
     @Environment(SourcesStore.self) private var sources
@@ -473,7 +475,8 @@ struct ResultRow: View {
                 break
             }
         }
-        router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link, item: item))
+        router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link, item: item,
+                            songsListed: songsListed))
     }
 }
 

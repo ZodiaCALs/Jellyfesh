@@ -99,6 +99,7 @@ struct FavoritesView: View {
     @Environment(AppModel.self) private var model
     @Environment(LibraryStore.self) private var library
     @Environment(PlaybackStore.self) private var playback
+    @Environment(SourceLibraryStore.self) private var sourceLibrary
     @State private var selection = Set<TrackItem.ID>()
 
     var body: some View {
@@ -119,16 +120,25 @@ struct FavoritesView: View {
                     .tag(item.id)
                     .onAppear { list.rowAppeared(index: index) }
             }
+            // Each signed-in source's likes, in its own section (ADR-0024).
+            ForEach(sourceLibrary.likes) { source in
+                SourceLibrarySection(source: source)
+                    .trackListRow()
+                    .selectionDisabled()
+            }
         }
         .fieldList()
         .trackListActions(items) { index in
             playback.play(.favorites, from: index)
         }
         .overlay {
-            if list.items.isEmpty, list.loadedRevision != nil || list.error != nil {
+            if list.items.isEmpty, sourceLibrary.likes.isEmpty, list.loadedRevision != nil || list.error != nil {
                 EmptyState(title: "No Favourites Yet", symbol: "heart",
                            message: "Songs you mark with the heart appear here.", error: list.error)
             }
+        }
+        .onAppear {
+            sourceLibrary.pageOpened(.favourites)
         }
         .navigationTitle(Text("Favourites"))
         .task(id: library.revision) {
