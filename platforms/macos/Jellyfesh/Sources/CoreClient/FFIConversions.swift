@@ -678,7 +678,8 @@ extension SourcePlugin {
                   settingsSchemaJSON: p.settingsSchemaJson, settingsJSON: p.settingsJson, iconPath: p.icon,
                   remotePlayback: p.remotePlayback, attribution: p.attribution, isExtension: p.kind == .`extension`,
                   requiresPro: p.requiresPro, permissions: p.permissions, hasDiscover: p.discover,
-                  hasDetails: p.details, hasComments: p.comments, summary: p.description)
+                  hasDetails: p.details, hasComments: p.comments, summary: p.description, hasLibrary: p.library,
+                  offersDownloads: p.download, qualities: p.qualities.map(StreamingQualityOption.init))
     }
 }
 

@@ -63,6 +63,7 @@ final class FakeCoreClient: CoreClient, @unchecked Sendable {
 
     func monotonicNowNs() -> UInt64 { nowNs }
     func equalizerPresets() -> [EqualizerPreset] { equalizerPresetsResult }
+    func downloadPreview(template: String) -> String { "Preview/\(template)" }
     func shutdown() {}
 
     func registerExternalPlayer(id: String, name: String, player: AppPlayer) throws {

@@ -27,11 +27,22 @@ final class FFICoreClient: CoreClient, @unchecked Sendable {
         #if JF_BUNDLED_PLUGINS
         config.bundledPlugins = bundledPlugins
         #endif
+        // Downloads go to Jellyfesh in the person's Music folder unless they choose another (ADR-0025).
+        config.downloadsDir = Self.defaultDownloadsDirectory()
         do {
             core = try JellyfeshCore(config: config)
         } catch {
             throw CoreClientError(error)
         }
+    }
+
+    /// `~/Music/Jellyfesh`: the default folder for downloads (the core makes it when it first
+    /// downloads). In the sandbox the container's Music is a link to the person's.
+    static func defaultDownloadsDirectory() -> String? {
+        FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first?
+            .resolvingSymlinksInPath()
+            .appendingPathComponent("Jellyfesh", isDirectory: true)
+            .path
     }
 
     /// The official plugin packages the build copied into the app (`Resources/Plugins/*.jfpkg`).
@@ -71,6 +82,10 @@ final class FFICoreClient: CoreClient, @unchecked Sendable {
 
     func monotonicNowNs() -> UInt64 {
         JellyfeshFFI.monotonicNowNs()
+    }
+
+    func downloadPreview(template: String) -> String {
+        JellyfeshFFI.downloadPreview(template: template)
     }
 
     func equalizerPresets() -> [EqualizerPreset] {

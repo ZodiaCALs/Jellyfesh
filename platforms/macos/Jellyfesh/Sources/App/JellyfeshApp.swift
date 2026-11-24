@@ -50,6 +50,7 @@ extension View {
             .environment(model.desktopLyrics)
             .environment(model.miniPlayer)
             .environment(model.sourceLibrary)
+            .environment(model.downloads)
             .environment(\.artworkLoader, model.artwork)
     }
 }

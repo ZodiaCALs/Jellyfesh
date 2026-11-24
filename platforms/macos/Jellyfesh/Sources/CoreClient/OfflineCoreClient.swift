@@ -24,6 +24,7 @@ final class OfflineCoreClient: CoreClient {
 
     /// None: without the core there is no equalizer to set.
     func equalizerPresets() -> [EqualizerPreset] { [] }
+    func downloadPreview(template: String) -> String { "" }
 
     func shutdown() {}
 

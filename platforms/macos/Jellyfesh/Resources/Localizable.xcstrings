@@ -45,6 +45,28 @@
         }
       }
     },
+    "%@ doesn't offer downloads.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ はダウンロードに対応していません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 不提供下载。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 不提供下載。"
+          }
+        }
+      }
+    },
     "%@ kHz": {
       "localizations": {
         "ja": {
@@ -3445,6 +3467,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載"
+          }
+        }
+      }
+    },
+    "Downloads aren't available in this build yet.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このビルドではまだダウンロードを利用できません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本暂不支持下载。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本暫不支援下載。"
+          }
+        }
+      }
+    },
+    "Downloads wait for Wi-Fi.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードは Wi-Fi に接続するまで待機します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载将在连接 Wi-Fi 后开始。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載將在連上 Wi-Fi 後開始。"
+          }
+        }
+      }
+    },
+    "Downloads wait until you're online.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードはオンラインになるまで待機します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载将在联网后开始。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載將在連上網路後開始。"
           }
         }
       }
@@ -11541,6 +11629,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "你可以再次產生。"
+          }
+        }
+      }
+    },
+    "Your %@ server doesn't allow downloads for this account.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ サーバーでは、このアカウントのダウンロードが許可されていません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 %@ 服务器不允许此账户下载。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的 %@ 伺服器不允許此帳號下載。"
           }
         }
       }

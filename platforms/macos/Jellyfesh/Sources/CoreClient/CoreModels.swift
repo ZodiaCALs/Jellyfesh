@@ -774,6 +774,12 @@ struct SourcePlugin: Identifiable, Hashable, Sendable {
     var hasComments = false
     /// One line from its manifest.
     var summary: String? = nil
+    /// It lists the person's likes and playlists (ADR-0024).
+    var hasLibrary = false
+    /// It offers downloads from the person's server (ADR-0025): Download in its menus.
+    var offersDownloads = false
+    /// The streaming levels it offers, best first; empty when its service sets the quality.
+    var qualities: [StreamingQualityOption] = []
 
     var canBrowse: Bool { capabilities.contains("browse") }
     var canSearch: Bool { capabilities.contains("search") }

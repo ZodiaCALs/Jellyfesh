@@ -59,6 +59,8 @@ final class AppModel {
     let miniPlayer: MiniPlayerStore
     /// The sources' likes and playlists (ADR-0024).
     let sourceLibrary: SourceLibraryStore
+    /// Downloads from the person's servers (ADR-0025).
+    let downloads: DownloadsStore
     /// Discover, details and comments answers, to whoever asked.
     let answers: CoreAnswers
     /// How this build reached the person (the build flags).
@@ -112,6 +114,7 @@ final class AppModel {
         desktopLyrics = DesktopLyricsStore()
         miniPlayer = MiniPlayerStore()
         sourceLibrary = SourceLibraryStore(client: client, tracker: tracker, toasts: toasts)
+        downloads = DownloadsStore(client: client, tracker: tracker, toasts: toasts)
         answers = CoreAnswers(client: client, tracker: tracker)
         self.distribution = distribution
         nowPlayingCenter = NowPlayingCenter(playback: playback, artwork: artwork)
@@ -246,6 +249,7 @@ final class AppModel {
         pro.apply(state.pro)
         updates.apply(state.update)
         sourceLibrary.apply(state.sourceLibrary)
+        downloads.apply(state.downloads)
     }
 
     func handle(_ events: [CoreEvent]) {
@@ -328,9 +332,8 @@ final class AppModel {
                 sourceLibrary.apply(state)
             case .sourceLibraryPage(let page):
                 sourceLibrary.apply(page: page)
-            case .downloads:
-                // The Downloads page takes it (next commit).
-                break
+            case .downloads(let state):
+                downloads.apply(state)
             }
         }
         if mediaChanged {

@@ -159,3 +159,57 @@ final class SourceLibraryStoreTests: XCTestCase {
         XCTAssertNil(store.savePlaylistCopy(plugin: "p", id: "pl1", name: "  "), "a blank name sends nothing")
     }
 }
+
+@MainActor
+final class DownloadsStoreTests: XCTestCase {
+    private func entry(_ id: UInt64, album: String?, phase: DownloadPhase, done: UInt64 = 0,
+                       total: UInt64? = nil) -> DownloadEntry {
+        DownloadEntry(id: id, track: SourceSong(plugin: "p", id: "t\(id)", title: "Song \(id)", artist: "Artist",
+                                                album: album, durationMs: nil, artworkURL: nil, isrc: nil),
+                      phase: phase, bytesDone: done, bytesTotal: total, path: nil, libraryID: nil, original: true)
+    }
+
+    func testInProgressFirstThenTheFinishedByAlbum() {
+        let store = DownloadsStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        store.apply(DownloadsState(version: 1, folder: "/Music/Jellyfesh", items: [
+            entry(1, album: "A", phase: .downloading, done: 50, total: 200),
+            entry(2, album: "A", phase: .failed(.notAllowed(service: "Jellyfin"))),
+            entry(3, album: "A", phase: .done), entry(4, album: "A", phase: .done), entry(5, album: "B", phase: .done),
+        ], bytesUsed: 3_000_000, paused: nil))
+        XCTAssertEqual(store.inProgress.map(\.id), [1, 2])
+        XCTAssertEqual(store.albums.map(\.title), ["A", "B"])
+        XCTAssertEqual(store.albums.first?.entries.map(\.id), [3, 4])
+        XCTAssertEqual(DownloadsStore.progress(store.inProgress[0]), 0.25)
+        XCTAssertNil(DownloadsStore.progress(store.inProgress[1]), "no size known")
+    }
+
+    func testAFinishedDownloadPlaysItsLibraryTrackOrTheSourceSong() {
+        var linked = entry(3, album: "A", phase: .done)
+        linked.libraryID = 42
+        XCTAssertEqual(DownloadsStore.track(linked), .library(id: 42))
+        let unlinked = entry(4, album: "A", phase: .done)
+        XCTAssertEqual(DownloadsStore.track(unlinked), .source(unlinked.track))
+    }
+
+    func testDownloadsAreWordedAsTheSpecSays() {
+        XCTAssertEqual(DownloadsStore.problem(.notAllowed(service: "Jellyfin")),
+                       "Your Jellyfin server doesn't allow downloads for this account.")
+        XCTAssertEqual(DownloadsStore.problem(.network("Timed out")), "Timed out")
+        XCTAssertEqual(DownloadsStore.paused(.metered), "Downloads wait for Wi-Fi.")
+    }
+
+    func testTheChoicesGoToTheCore() {
+        let client = FakeCoreClient()
+        let store = DownloadsStore(client: client, tracker: CommandTracker(), toasts: ToastCenter())
+        store.download(.collection(plugin: "p", id: "al1", kind: .album))
+        XCTAssertEqual(client.sent.last, .download(.collection(plugin: "p", id: "al1", kind: .album)))
+        store.retry(2)
+        XCTAssertEqual(client.sent.last, .retryDownload(id: 2))
+        store.cancel(1)
+        XCTAssertEqual(client.sent.last, .cancelDownload(id: 1))
+        store.remove([3, 4])
+        XCTAssertEqual(Array(client.sent.suffix(2)), [.removeDownload(id: 3), .removeDownload(id: 4)])
+        store.removeAll()
+        XCTAssertEqual(client.sent.last, .removeAllDownloads)
+    }
+}

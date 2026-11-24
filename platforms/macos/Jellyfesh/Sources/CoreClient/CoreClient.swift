@@ -54,6 +54,10 @@ protocol CoreClient: AnyObject {
     /// list from the core's library, not a query of the running core.
     func equalizerPresets() -> [EqualizerPreset]
 
+    /// One song's path under the File Names template (`download_preview`), for Settings ›
+    /// Downloads' live preview. Cheap: no query of the running core.
+    func downloadPreview(template: String) -> String
+
     /// Saves the session and stops the core. Afterwards queries throw `.shutDown`.
     func shutdown()
 
