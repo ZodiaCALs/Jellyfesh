@@ -29,8 +29,8 @@ async function fetchFile(info: DownloadInfo, relay: RelayConfig | null): Promise
   return response.blob();
 }
 
-/** Hands a file to the browser to save as `name`. */
-function save(blob: Blob, name: string) {
+/** Hands a file to the browser to save as `name` (Download, Export Playlist…). */
+export function saveFile(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -51,7 +51,7 @@ export async function downloadSong(app: App, plugin: string, item: Item, toast: 
   try {
     const info = await source.download(item);
     const blob = await fetchFile(info, source.relay);
-    save(blob, app.jf.download_name(JSON.stringify(item), source.name, info.container));
+    saveFile(blob, app.jf.download_name(JSON.stringify(item), source.name, info.container));
   } catch (error) {
     toast(t('Couldn’t download “{title}”: {reason}', { title: item.title, reason: await explain(error, source) }));
   }

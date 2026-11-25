@@ -1,6 +1,7 @@
 <script lang="ts">
-  // Playlists (docs/ui.md): New Playlist… (it asks for the name first), then the Jellyfesh
-  // playlists by name, each with its first song's cover; kept in this browser. Then one section
+  // Playlists (docs/ui.md): New Playlist… (it asks for the name first) and Import Playlist… (an M3U
+  // or M3U8 file), then the Jellyfesh playlists by name, each with its first song's cover; kept in
+  // this browser. Then one section
   // per signed-in source that keeps playlists (API 1.3), refreshed when the page opens. Empty: "No
   // Playlists Yet", "Make a playlist to keep songs together.", New Playlist….
   import EmptyState from '../components/EmptyState.svelte';
@@ -11,7 +12,7 @@
   import { useApp } from '../lib/app';
   import type { Item, PlaylistSummary } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
-  import { playlistItem, playlistMenu, playlistSongs } from '../lib/playlists';
+  import { importPlaylist, playlistItem, playlistMenu, playlistSongs } from '../lib/playlists';
   import { savedEntries } from '../lib/items';
   import { sheets } from '../lib/state/sheets.svelte';
 
@@ -34,6 +35,14 @@
     return playlistItem(playlist);
   }
 
+  let picker: HTMLInputElement | undefined = $state();
+  function picked(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) void importPlaylist(app, file);
+  }
+
   useSourceLibrary(app, 'playlists');
   const sources = $derived(app.sourceLibraries.playlists);
 </script>
@@ -43,10 +52,12 @@
   {#if playlists.length === 0 && sources.length === 0}
     <EmptyState title={t('No Playlists Yet')} text={t('Make a playlist to keep songs together.')}>
       <button class="pill primary" onclick={create}><Icon name="plus" size={18} />{t('New Playlist…')}</button>
+      <button class="pill secondary" onclick={() => picker?.click()}>{t('Import Playlist…')}</button>
     </EmptyState>
   {:else}
     <div class="page-actions">
       <button class="pill secondary" onclick={create}><Icon name="plus" size={18} />{t('New Playlist…')}</button>
+      <button class="pill secondary" onclick={() => picker?.click()}>{t('Import Playlist…')}</button>
     </div>
     <div class="grid">
       {#each playlists as playlist, index (playlist.id)}
@@ -65,6 +76,14 @@
   {#each sources as source (source.plugin)}
     <SourceLibrarySection {source} />
   {/each}
+  <input
+    bind:this={picker}
+    type="file"
+    accept=".m3u,.m3u8,audio/x-mpegurl,audio/mpegurl,application/vnd.apple.mpegurl"
+    hidden
+    data-role="playlist-picker"
+    onchange={picked}
+  />
 </section>
 
 <style>

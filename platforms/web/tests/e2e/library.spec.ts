@@ -1,9 +1,9 @@
 // The music library: a folder of generated, tagged sine tones (invented titles) added with the
 // folder picker of browsers without a native one, then browsed, searched, played, kept across a
-// reload (picked again to play) and removed; and a folder read through a folder handle, as Chrome
-// and Edge's picker gives.
+// reload (picked again to play) and removed; a playlist file imported against it and exported
+// again; and a folder read through a folder handle, as Chrome and Edge's picker gives.
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
@@ -110,6 +110,54 @@ test('removes a folder after asking', async ({ page }) => {
   await confirm.getByRole('button', { name: 'Remove Folder', exact: true }).click();
   await expect(page.getByText('No folders yet')).toBeVisible();
   await expect.poll(() => page.evaluate(() => (globalThis as any).jellyfesh.library.stats.tracks)).toBe(0);
+});
+
+test('imports a playlist file of library songs, and exports it again', async ({ page }) => {
+  await useInputPicker(page);
+  await openApp(page);
+  await nav(page, 'Settings').click();
+  await page.getByRole('tab', { name: 'Library' }).click();
+  if (await page.getByText('No folders yet').isVisible()) {
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Add Folder…' }).click();
+    await (await chooser).setFiles(folder);
+  }
+  await expect.poll(() => page.evaluate(() => (globalThis as any).jellyfesh.library.stats.tracks)).toBe(3);
+
+  // Written on Windows and elsewhere: two of its lines name songs of the library; a stream and a
+  // missing file are left out.
+  const list = join(root, 'Road Trip.m3u8');
+  writeFileSync(
+    list,
+    [
+      '#EXTM3U',
+      '#EXTINF:4,Aurora - Lantern',
+      'C:\\Users\\me\\Music\\Tide\\02 Lantern.wav',
+      '../Music/Loose/Solo.wav',
+      'https://radio.example/stream.mp3',
+      'Music/Tide/09 Missing.wav',
+      '',
+    ].join('\r\n'),
+  );
+  await nav(page, 'Playlists').click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import Playlist…' }).first().click();
+  await (await chooser).setFiles(list);
+  await expect(page.getByRole('heading', { name: 'Road Trip', level: 1 })).toBeVisible();
+  await expect(page.getByText('Imported “Road Trip”: 2 of its songs are in your library.')).toBeVisible();
+  const songs = page.getByRole('list', { name: 'Road Trip' });
+  await expect(songs.getByRole('listitem')).toHaveCount(2);
+  await expect(songs.getByRole('listitem').first().getByRole('button', { name: 'Play Lantern' })).toBeVisible();
+
+  // Export Playlist… names each song by its folder and its path in it.
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'More for Road Trip' }).click();
+  await page.getByRole('menuitem', { name: 'Export Playlist…' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('Road Trip.m3u8');
+  expect(readFileSync((await file.path())!, 'utf8')).toBe(
+    '#EXTM3U\n#EXTINF:4,Aurora - Lantern\nMusic/Tide/02 Lantern.wav\n#EXTINF:4,Bo feat. Cy - Solo\nMusic/Loose/Solo.wav\n',
+  );
 });
 
 test('reads and plays a folder through a folder handle', async ({ page }) => {

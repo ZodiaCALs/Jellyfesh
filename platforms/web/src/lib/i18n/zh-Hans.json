@@ -481,5 +481,14 @@
   "Downloading “{title}”…": "正在下载“{title}”…",
   "Couldn’t download “{title}”: {reason}": "无法下载“{title}”：{reason}",
   "Recently Played": "最近播放",
-  "Most Played": "最常播放"
+  "Most Played": "最常播放",
+  "Import Playlist…": "导入歌单…",
+  "Export Playlist…": "导出歌单…",
+  "Couldn’t read “{name}”: {reason}": "无法读取“{name}”：{reason}",
+  "“{name}” lists no songs.": "“{name}”中没有列出歌曲。",
+  "None of the songs in “{name}” are in your library.": "“{name}”中的歌曲都不在你的资料库中。",
+  "Imported “{name}”": "已导入“{name}”",
+  "Imported “{name}”: {n} of its songs is in your library.": "已导入“{name}”：其中 {n} 首歌曲在你的资料库中。",
+  "This playlist has no songs from your library to export.": "此歌单中没有可导出的资料库歌曲。",
+  "{n} song from a server was left out: it has no file.": "有 {n} 首来自服务器的歌曲未包含在内：它们没有文件。"
 }

@@ -481,5 +481,14 @@
   "Downloading “{title}”…": "「{title}」をダウンロードしています…",
   "Couldn’t download “{title}”: {reason}": "「{title}」をダウンロードできませんでした：{reason}",
   "Recently Played": "最近再生した曲",
-  "Most Played": "よく再生する曲"
+  "Most Played": "よく再生する曲",
+  "Import Playlist…": "プレイリストを読み込む…",
+  "Export Playlist…": "プレイリストを書き出す…",
+  "Couldn’t read “{name}”: {reason}": "「{name}」を読み込めませんでした：{reason}",
+  "“{name}” lists no songs.": "「{name}」には曲がありません。",
+  "None of the songs in “{name}” are in your library.": "「{name}」の曲はどれもライブラリにありません。",
+  "Imported “{name}”": "「{name}」を読み込みました",
+  "Imported “{name}”: {n} of its songs is in your library.": "「{name}」を読み込みました：ライブラリにある曲は {n} 曲です。",
+  "This playlist has no songs from your library to export.": "このプレイリストには書き出せるライブラリの曲がありません。",
+  "{n} song from a server was left out: it has no file.": "サーバーの曲 {n} 曲はファイルがないため含まれていません。"
 }

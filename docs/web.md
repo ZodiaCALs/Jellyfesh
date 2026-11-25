@@ -53,7 +53,14 @@ secret).
   server songs alike. Both are kept in this browser (IndexedDB, with
   `jf-library`'s rules through `jf_web::collections`), as are plays, which
   give Home its Recently Played and Most Played. A server's playlist can be
-  kept as a Jellyfesh playlist with Save as Playlist…. After their own,
+  kept as a Jellyfesh playlist with Save as Playlist…. Import Playlist…
+  reads an M3U or M3U8 file: a page knows no folder's place on the disk, so
+  each line becomes the library song whose path ends like it (its folder's
+  name, then the path in it), and lines that match nothing are left out and
+  counted. Export Playlist… saves the library songs that way
+  (`Music/Album/01 Song.flac`), so the file reads back in every app when
+  kept beside the music folder; server songs have no file and are left out.
+  After their own,
   Favourites and Playlists show each signed-in server's likes and playlists
   (plugin API 1.3), kept for the next visit and shown with their age
   ("Updated 5 minutes ago"); they refresh when the page opens.
@@ -386,7 +393,7 @@ URL in it is relative. Notes:
 | | Apps | Jellyfesh Web |
 | --- | --- | --- |
 | Library | Folders scanned into a local library (SQLite) | Folders read through the browser, catalogued in IndexedDB by the same grouping, sorting and search rules (`jf_web::library`); each folder picked again on a new visit before its songs play; no Watch Folders |
-| Playlists, favourites, history | Kept locally (SQLite) | Kept in this browser (IndexedDB) by the same rules (`jf_web::collections`); no Import Playlist… or Export Playlist… yet |
+| Playlists, favourites, history | Kept locally (SQLite) | Kept in this browser (IndexedDB) by the same rules (`jf_web::collections`); Import Playlist… matches lines to library songs by the end of their paths, as a page knows no folder's place on the disk (`jf_web::m3u`) |
 | Downloads | A queue into a folder, played offline from the library | Download saves one song's original file through the browser; no queue, Downloads page or offline library |
 | Mini player | A window above the others, with Keep on Top and Open When the Window Is Closed | A Document Picture-in-Picture window where the browser offers one (always on top, closed with the page); only Show Lyrics Line |
 | Audio | `jf-engine` on a thread of its own, cpal output | The browser's decoders and Web Audio (below) |
@@ -493,8 +500,9 @@ through the relay first.
   Auto and the quality menu (`jf_web::quality`), the mini player's settings,
   search by source (`jf_web::search`), the sources' likes and playlists
   (`jf_web::source_library`, the core's `SourceLibrary` rules) and download
-  names (`jf_web::download`, `jf_plugin_model::filenames`). Settings kept by
-  v0.0.7 read their quality as Streaming Quality.
+  names (`jf_web::download`, `jf_plugin_model::filenames`), and M3U8 import
+  and export (`jf_web::m3u`). Settings kept by v0.0.7 read their quality as
+  Streaming Quality.
 * **Plugin API 1.3.** The worker calls the `library` and `download` exports
   of plugins that declare them, with the native answer checks.
 * **The pages:** Playlists, Favourites (with each source's likes and
@@ -698,7 +706,8 @@ Tests:
   serving an invented library, generated sine tones and gradient covers:
   sign-in with a password and with Quick Connect, browsing, search (with its
   tabs, `subsonic.spec.ts`), hearts, playlists, plays on Home and the quality
-  badge (`collections.spec.ts`), playback
+  badge (`collections.spec.ts`), a playlist file imported against the
+  library and exported again (`library.spec.ts`), playback
   with word-timed lyrics and translations, next and previous, crossfade on,
   off and with album continuity, the gapless gap, a dropped file with a TTML
   lyrics file, Jellyfin streams through the service worker, sign-out, and

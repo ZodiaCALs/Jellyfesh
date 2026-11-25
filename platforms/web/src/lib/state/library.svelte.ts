@@ -468,6 +468,24 @@ export class Library {
     return found ? artistItem(found.artist) : null;
   }
 
+  /**
+   * A song's path as playlist files name it: its folder's name, then where it is in the folder
+   * (`Music/Album/01 Song.flac`); null when the library no longer has it.
+   */
+  pathOf(key: string): string | null {
+    const track = this.tracks.get(key);
+    if (!track) return null;
+    return `${this.records.get(track.folder)?.name ?? track.folder}/${track.path}`;
+  }
+
+  /** Every song's path (as `pathOf`) with its key, for Import Playlist…. */
+  paths(): { key: string; path: string }[] {
+    return [...this.tracks.keys()].flatMap((key) => {
+      const path = this.pathOf(key);
+      return path ? [{ key, path }] : [];
+    });
+  }
+
   /** The catalogue's rows for these keys, in order (null where the library no longer has the song). */
   tracksByKey(keys: string[]): (LibTrackView | null)[] {
     return JSON.parse(this.catalogue.tracks_by_key(JSON.stringify(keys))) as (LibTrackView | null)[];
