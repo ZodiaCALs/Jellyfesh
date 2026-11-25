@@ -172,9 +172,11 @@ test('shows the capsule with a straight 2 px line at 390 px', async () => {
     await expect(capsule).toBeVisible();
     await expect(page.locator('.bar')).toHaveCount(0);
     expect(await height(capsule)).toBe(64);
-    // One control (CMP-02), and no seek bar.
+    // The artwork and title (which open Now Playing), play and next (docs/ui.md, v0.0.8), and no
+    // seek bar.
     await expect(capsule.getByRole('slider')).toHaveCount(0);
-    await expect(capsule.getByRole('button')).toHaveCount(2);
+    await expect(capsule.getByRole('button')).toHaveCount(3);
+    await expect(capsule.getByRole('button', { name: 'Next', exact: true })).toBeVisible();
     const box = (await capsule.boundingBox())!;
     const line = (await capsule.locator('.progress').boundingBox())!;
     expect(line.height).toBe(2);
