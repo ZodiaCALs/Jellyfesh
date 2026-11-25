@@ -143,11 +143,17 @@ Android). Delete Playlist… asks first. Empty: "No Playlists Yet",
 * Spotify's sections stand on their own, attributed "Content from
   Spotify".
 
-**Downloads** (ADR-0025). Downloads in progress (each with its progress,
-**Cancel** and, after a failure, the reason and **Try Again**), then the
-downloaded albums and songs. Each has **Remove Download…** (asks first),
-and the space used is shown at the top. Empty: "No Downloads Yet",
-"Download albums and playlists from your servers to play them offline."
+**Downloads** (ADR-0025).
+* At the top: **Play** and **Shuffle**, and "{n} songs · {size} used".
+* **In Progress**: each download with "Waiting", its percentage, or, after
+  a failure, the reason and **Try Again**; **Cancel** on each.
+* While the core pauses downloads: "Downloads resume when you're back
+  online." (offline) or "Downloads resume on Wi-Fi." (metered, with Wi-Fi
+  Only).
+* Then the downloaded songs by album. **Remove Download…** (asks first) is
+  on each song and on a whole album, which removes all its downloaded songs.
+* Empty: "No Downloads Yet", "Download albums and playlists from your
+  servers to play them offline."
 
 **Song menu** (right click, long press or More): Play Next, Play Last, Add to
 Playlist…, Add to Favourites or Remove from Favourites, Go to Album, Go to
