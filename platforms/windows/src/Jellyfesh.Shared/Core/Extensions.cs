@@ -339,18 +339,28 @@ public sealed record UpdateState(
 /// </summary>
 public static class LookRules
 {
-    /// <summary>The navigation pane's tags for the slice's places, in its order (Settings is always shown apart).</summary>
-    public static IReadOnlyList<string> SidebarTags(LookState look) => look.Sidebar.Select(p => p switch
+    /// <summary>
+    /// The navigation pane's tags for the slice's places, in its order (Settings is always shown
+    /// apart). Downloads (ADR-0025), which the look does not place, follows the last of the
+    /// library's places, as in the other apps.
+    /// </summary>
+    public static IReadOnlyList<string> SidebarTags(LookState look)
     {
-        Place.Home => "home",
-        Place.Albums => "albums",
-        Place.Artists => "artists",
-        Place.Songs => "songs",
-        Place.Playlists => "playlists",
-        Place.Favourites => "favorites",
-        Place.Search => "search",
-        _ => "sources",
-    }).Distinct().ToArray();
+        var tags = look.Sidebar.Select(p => p switch
+        {
+            Place.Home => "home",
+            Place.Albums => "albums",
+            Place.Artists => "artists",
+            Place.Songs => "songs",
+            Place.Playlists => "playlists",
+            Place.Favourites => "favorites",
+            Place.Search => "search",
+            _ => "sources",
+        }).Distinct().ToList();
+        var lastLibrary = tags.FindLastIndex(IsLibraryTag);
+        tags.Insert(lastLibrary >= 0 ? lastLibrary + 1 : tags.Count, "downloads");
+        return tags;
+    }
 
     /// <summary>A place of the library (above the pane's separator), as opposed to Search and Sources.</summary>
     public static bool IsLibraryTag(string tag) => tag is not ("search" or "sources");

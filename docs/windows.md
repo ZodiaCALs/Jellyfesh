@@ -153,6 +153,14 @@ plugin settings applied with **Save**.
   Next, Play Last, Add to Playlist… (New Playlist… or a playlist); a playlist
   also has Rename…, Export Playlist… and Delete Playlist…, which asks first and
   then goes back.
+* **Downloads** (ADR-0025, `DownloadsPage`): **Play** and **Shuffle** with "{n}
+  songs · {size} used"; **In Progress**, each with "Waiting", its percentage
+  (and a bar), or the failure ("Your Jellyfin server doesn't allow downloads
+  for this account.") and **Try Again**, with **Cancel** on each; while the
+  core pauses downloads, "Downloads resume when you're back online." or
+  "Downloads resume on Wi-Fi."; then the downloaded songs by album, with
+  **Remove Download…** on each song and on a whole album (asks first). Empty:
+  "No Downloads Yet".
 * **Song menu:** Play Next, Play Last, Add to Playlist…, Add to Favourites or
   Remove from Favourites, Go to Album, Go to Artist and Show in Explorer
   (library songs; the core's search finds the album and artist).
@@ -423,7 +431,8 @@ later start through the single-instance redirect. Other safety nets:
 
 **`Jellyfesh.exe --smoke-test`** starts the core and the main window, waits for
 its first frames, opens every section (Home, Albums, Artists, Songs, Playlists,
-Favourites, Search, Sources, Settings), each loaded and drawn, closes the
+Favourites, Downloads, Search, Sources, Settings), each loaded and drawn, opens
+and closes the mini player, closes the
 window (which shuts the core down) and exits. It registers its own
 single-instance key, so a running Jellyfesh never takes it, and shows nothing:
 
@@ -505,7 +514,8 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   source offers them: the picture for the header and the notes or biography
   (three lines, **More** shows it whole), and Get Info in More.
 * **The look** (ADR-0020, the `Look` slice, applied live by `LookRules`): the
-  navigation pane shows the slice's places in its order (a separator before
+  navigation pane shows the slice's places in its order, Downloads (which the
+  look does not place) after the last of the library's (a separator before
   Search and Sources; Settings always); Home shows the sections it lists, in
   its order; text uses the platform's face for the typeface (Segoe UI
   Variable, Georgia for serif, Cascadia Mono for mono; Windows has no rounded

@@ -58,6 +58,9 @@ public static class Bind
 
     public static double Dim(bool dim) => dim ? 0.45 : 1.0;
 
+    /// <summary>A value that may be unknown, as a number (0 while unknown).</summary>
+    public static double Or0(double? value) => value ?? 0;
+
     public static TextWrapping Wrap(bool wrap) => wrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
 
     /// <summary>A colour well's fill from "#RRGGBB" (a settings field); transparent for anything else.</summary>

@@ -593,6 +593,69 @@
   <data name="Discover_TryAgain.Content" xml:space="preserve">
     <value>再試行</value>
   </data>
+  <data name="Downloads_Cancel.Content" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Downloads_Downloading" xml:space="preserve">
+    <value>ダウンロード中…</value>
+  </data>
+  <data name="Downloads_Empty.Text" xml:space="preserve">
+    <value>サーバーからアルバムやプレイリストをダウンロードすると、オフラインでも再生できます。</value>
+  </data>
+  <data name="Downloads_EmptyTitle.Text" xml:space="preserve">
+    <value>ダウンロードはまだありません</value>
+  </data>
+  <data name="Downloads_InProgress.Text" xml:space="preserve">
+    <value>進行中</value>
+  </data>
+  <data name="Downloads_NotAllowed" xml:space="preserve">
+    <value>{0} サーバーでは、このアカウントのダウンロードが許可されていません。</value>
+  </data>
+  <data name="Downloads_NotOffered" xml:space="preserve">
+    <value>{0} はダウンロードに対応していません。</value>
+  </data>
+  <data name="Downloads_PausedMetered" xml:space="preserve">
+    <value>Wi-Fi に接続するとダウンロードを再開します。</value>
+  </data>
+  <data name="Downloads_PausedOffline" xml:space="preserve">
+    <value>オンラインに戻るとダウンロードを再開します。</value>
+  </data>
+  <data name="Downloads_Percent" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="Downloads_RemoveAlbum.Content" xml:space="preserve">
+    <value>ダウンロードを削除…</value>
+  </data>
+  <data name="Downloads_RemoveBody" xml:space="preserve">
+    <value>ファイルはこのデバイスから削除されます。もう一度ダウンロードできます。</value>
+  </data>
+  <data name="Downloads_RemoveConfirm" xml:space="preserve">
+    <value>ダウンロードを削除</value>
+  </data>
+  <data name="Downloads_RemoveSong.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>ダウンロードを削除…</value>
+  </data>
+  <data name="Downloads_RemoveSong.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>ダウンロードを削除…</value>
+  </data>
+  <data name="Downloads_RemoveTitle" xml:space="preserve">
+    <value>「{0}」のダウンロードを削除しますか？</value>
+  </data>
+  <data name="Downloads_Summary" xml:space="preserve">
+    <value>{0} · {1} 使用</value>
+  </data>
+  <data name="Downloads_Title.Text" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
+  <data name="Downloads_TryAgain.Content" xml:space="preserve">
+    <value>再試行</value>
+  </data>
+  <data name="Downloads_UnknownAlbum" xml:space="preserve">
+    <value>不明なアルバム</value>
+  </data>
+  <data name="Downloads_Waiting" xml:space="preserve">
+    <value>待機中</value>
+  </data>
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>低音強調</value>
   </data>
@@ -1171,6 +1234,9 @@
   </data>
   <data name="Place_Artists" xml:space="preserve">
     <value>アーティスト</value>
+  </data>
+  <data name="Place_Downloads" xml:space="preserve">
+    <value>ダウンロード</value>
   </data>
   <data name="Place_Favourites" xml:space="preserve">
     <value>お気に入り</value>

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Downloads (ADR-0025; docs/ui.md "Downloads"): Play and Shuffle with "{n} songs · {size} used";
+    In Progress, each download with "Waiting", its percentage, or, after a failure, the reason and
+    Try Again, with Cancel on each; while the core pauses downloads, why ("Downloads resume when
+    you're back online.", "Downloads resume on Wi-Fi."); then the downloaded songs by album, with
+    Remove Download… on each song and on a whole album (asks first). Empty: "No Downloads Yet".
+-->
+<shell:JfPage
+    x:Class="Jellyfesh.App.Views.DownloadsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Jellyfesh.App.Controls"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:vm="using:Jellyfesh.ViewModels"
+    NavigationCacheMode="Enabled">
+
+    <ScrollViewer Padding="{x:Bind Layout.PagePadding, Mode=OneWay}">
+        <StackPanel Padding="{x:Bind Layout.EndPadding, Mode=OneWay}" Spacing="24">
+            <StackPanel Spacing="4">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Uid="Downloads_Title" AutomationProperties.HeadingLevel="Level1" FontSize="{x:Bind Layout.TitleSize, Mode=OneWay}" Style="{StaticResource JfLargeTitleText}" Text="Downloads" />
+                    <Button x:Uid="Action_PlayButton" Grid.Column="1" VerticalAlignment="Center" Command="{x:Bind ViewModel.PlayCommand}" Content="Play" IsEnabled="{x:Bind ViewModel.HasDownloaded, Mode=OneWay}" Style="{StaticResource JfAccentPillStyle}" />
+                    <Button x:Uid="Action_ShuffleButton" Grid.Column="2" VerticalAlignment="Center" Command="{x:Bind ViewModel.ShuffleCommand}" Content="Shuffle" IsEnabled="{x:Bind ViewModel.HasDownloaded, Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" />
+                </Grid>
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Summary, Mode=OneWay}" Visibility="{x:Bind shell:Bind.VisibleIf(ViewModel.Summary), Mode=OneWay}" />
+            </StackPanel>
+
+            <!-- In Progress, and why downloads wait while the core pauses them. -->
+            <StackPanel Spacing="8" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasInProgress), Mode=OneWay}">
+                <TextBlock x:Uid="Downloads_InProgress" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="In Progress" />
+                <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.PausedText, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(ViewModel.IsPaused), Mode=OneWay}" />
+                <ItemsRepeater ItemsSource="{x:Bind ViewModel.InProgress}">
+                    <ItemsRepeater.Layout>
+                        <StackLayout Spacing="12" />
+                    </ItemsRepeater.Layout>
+                    <ItemsRepeater.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DownloadRow">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle}" TextTrimming="CharacterEllipsis" />
+                                    <ProgressBar Margin="0,4,0,0" Maximum="100" Value="{x:Bind shell:Bind.Or0(Percent), Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(HasProgress), Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind Status, Mode=OneWay}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button x:Uid="Downloads_TryAgain" Grid.Column="1" VerticalAlignment="Center" Click="OnRetryClick" Content="Try Again" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(IsFailed), Mode=OneWay}" />
+                                <Button x:Uid="Downloads_Cancel" Grid.Column="2" VerticalAlignment="Center" Click="OnCancelClick" Content="Cancel" Style="{StaticResource JfChipButtonStyle}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsRepeater.ItemTemplate>
+                </ItemsRepeater>
+            </StackPanel>
+
+            <!-- The downloaded songs by album. -->
+            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Albums}">
+                <ItemsRepeater.Layout>
+                    <StackLayout Spacing="24" />
+                </ItemsRepeater.Layout>
+                <ItemsRepeater.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DownloadedAlbum">
+                        <StackPanel Spacing="4">
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Artist}" Visibility="{x:Bind shell:Bind.Visible(HasArtist)}" />
+                                </StackPanel>
+                                <Button x:Uid="Downloads_RemoveAlbum" Grid.Column="1" VerticalAlignment="Center" Click="OnRemoveAlbumClick" Content="Remove Download…" Style="{StaticResource JfChipButtonStyle}" />
+                            </Grid>
+                            <ListView
+                                AutomationProperties.Name="{x:Bind Title}"
+                                IsItemClickEnabled="True"
+                                ItemClick="OnSongClick"
+                                ItemContainerStyle="{StaticResource JfTrackRowStyle}"
+                                ItemsSource="{x:Bind Songs}"
+                                ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                ScrollViewer.VerticalScrollMode="Disabled"
+                                SelectionMode="None">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DownloadedSong">
+                                        <Grid MinHeight="48" ColumnSpacing="12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind Title}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Artist}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="{ThemeResource JfInk70}" Style="{StaticResource JfTimeText}" Text="{x:Bind DurationText}" />
+                                            <Button x:Uid="Downloads_RemoveSong" Grid.Column="2" VerticalAlignment="Center" AutomationProperties.Name="Remove Download…" Click="OnRemoveSongClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Remove Download…">
+                                                <controls:StrokeIcon Data="{StaticResource IconClose}" Size="16" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsRepeater.ItemTemplate>
+            </ItemsRepeater>
+
+            <StackPanel MaxWidth="440" Margin="0,48,0,0" HorizontalAlignment="Center" Spacing="12" Visibility="{x:Bind shell:Bind.VisibleIfButNot(ViewModel.IsEmpty, ViewModel.IsLoading), Mode=OneWay}">
+                <TextBlock x:Uid="Downloads_EmptyTitle" HorizontalAlignment="Center" AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="No Downloads Yet" />
+                <TextBlock x:Uid="Downloads_Empty" HorizontalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Download albums and playlists from your servers to play them offline." TextAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</shell:JfPage>

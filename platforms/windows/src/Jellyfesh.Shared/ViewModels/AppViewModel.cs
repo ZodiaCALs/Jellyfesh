@@ -138,6 +138,8 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
 
     public FavoritesViewModel CreateFavorites() => new(Services);
 
+    public DownloadsViewModel CreateDownloads() => new(Services);
+
     public SearchViewModel CreateSearch() => new(Services);
 
     public SourcesViewModel CreateSources() => new(Services);

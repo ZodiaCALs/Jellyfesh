@@ -593,6 +593,69 @@
   <data name="Discover_TryAgain.Content" xml:space="preserve">
     <value>重试</value>
   </data>
+  <data name="Downloads_Cancel.Content" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Downloads_Downloading" xml:space="preserve">
+    <value>正在下载…</value>
+  </data>
+  <data name="Downloads_Empty.Text" xml:space="preserve">
+    <value>从你的服务器下载专辑和歌单，即可离线播放。</value>
+  </data>
+  <data name="Downloads_EmptyTitle.Text" xml:space="preserve">
+    <value>还没有下载</value>
+  </data>
+  <data name="Downloads_InProgress.Text" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="Downloads_NotAllowed" xml:space="preserve">
+    <value>你的 {0} 服务器不允许此账户下载。</value>
+  </data>
+  <data name="Downloads_NotOffered" xml:space="preserve">
+    <value>{0} 不提供下载。</value>
+  </data>
+  <data name="Downloads_PausedMetered" xml:space="preserve">
+    <value>连接 Wi-Fi 后将继续下载。</value>
+  </data>
+  <data name="Downloads_PausedOffline" xml:space="preserve">
+    <value>恢复联网后将继续下载。</value>
+  </data>
+  <data name="Downloads_Percent" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="Downloads_RemoveAlbum.Content" xml:space="preserve">
+    <value>移除下载…</value>
+  </data>
+  <data name="Downloads_RemoveBody" xml:space="preserve">
+    <value>文件会从此设备中删除。你可以再次下载。</value>
+  </data>
+  <data name="Downloads_RemoveConfirm" xml:space="preserve">
+    <value>移除下载</value>
+  </data>
+  <data name="Downloads_RemoveSong.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>移除下载…</value>
+  </data>
+  <data name="Downloads_RemoveSong.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>移除下载…</value>
+  </data>
+  <data name="Downloads_RemoveTitle" xml:space="preserve">
+    <value>要移除“{0}”的下载吗？</value>
+  </data>
+  <data name="Downloads_Summary" xml:space="preserve">
+    <value>{0} · 已用 {1}</value>
+  </data>
+  <data name="Downloads_Title.Text" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="Downloads_TryAgain.Content" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="Downloads_UnknownAlbum" xml:space="preserve">
+    <value>未知专辑</value>
+  </data>
+  <data name="Downloads_Waiting" xml:space="preserve">
+    <value>等待中</value>
+  </data>
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>低音增强</value>
   </data>
@@ -1171,6 +1234,9 @@
   </data>
   <data name="Place_Artists" xml:space="preserve">
     <value>艺人</value>
+  </data>
+  <data name="Place_Downloads" xml:space="preserve">
+    <value>下载</value>
   </data>
   <data name="Place_Favourites" xml:space="preserve">
     <value>收藏</value>

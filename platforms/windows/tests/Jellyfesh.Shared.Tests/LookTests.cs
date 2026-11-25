@@ -10,9 +10,11 @@ public class LookTests
     [Fact]
     public void The_navigation_pane_follows_the_slices_places_in_order()
     {
-        Assert.Equal(["home", "albums", "artists", "songs", "playlists", "favorites", "search", "sources"], LookRules.SidebarTags(LookState.Default));
+        // Downloads, which the look does not place, follows the last of the library's places.
+        Assert.Equal(["home", "albums", "artists", "songs", "playlists", "favorites", "downloads", "search", "sources"], LookRules.SidebarTags(LookState.Default));
         var custom = LookState.Default with { Sidebar = [Place.Songs, Place.Home, Place.Search, Place.Songs] };
-        Assert.Equal(["songs", "home", "search"], LookRules.SidebarTags(custom));
+        Assert.Equal(["songs", "home", "downloads", "search"], LookRules.SidebarTags(custom));
+        Assert.Equal(["search", "downloads"], LookRules.SidebarTags(LookState.Default with { Sidebar = [Place.Search] }));
         Assert.True(LookRules.IsLibraryTag("favorites"));
         Assert.False(LookRules.IsLibraryTag("sources"));
     }

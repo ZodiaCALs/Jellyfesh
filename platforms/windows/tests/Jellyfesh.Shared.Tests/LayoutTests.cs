@@ -115,13 +115,14 @@ public class LayoutTests
     public void The_phone_tabs_put_the_library_in_one_tab_and_settings_last()
     {
         Assert.Equal(["home", "library", "search", "sources", "settings"], LookRules.PhoneTabs(LookState.Default));
-        Assert.Equal(["albums", "artists", "songs", "playlists", "favorites"], LookRules.LibraryTags(LookState.Default));
+        Assert.Equal(["albums", "artists", "songs", "playlists", "favorites", "downloads"], LookRules.LibraryTags(LookState.Default));
 
         // A customized look orders them; the Library tab stands where its first place is.
         var custom = LookState.Default with { Sidebar = [Place.Search, Place.Songs, Place.Home, Place.Albums] };
         Assert.Equal(["search", "library", "home", "settings"], LookRules.PhoneTabs(custom));
-        Assert.Equal(["songs", "albums"], LookRules.LibraryTags(custom));
+        Assert.Equal(["songs", "albums", "downloads"], LookRules.LibraryTags(custom));
         Assert.Equal("library", LookRules.PhoneTab("favorites"));
+        Assert.Equal("library", LookRules.PhoneTab("downloads"));
         Assert.Equal("settings", LookRules.PhoneTab("settings"));
     }
 

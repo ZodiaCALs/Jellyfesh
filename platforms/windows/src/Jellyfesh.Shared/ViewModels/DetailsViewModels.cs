@@ -137,7 +137,8 @@ public static class DetailsRows
         _ => codec.Length <= 4 ? codec.ToUpperInvariant() : codec,
     };
 
-    private static string Size(ulong bytes, ILocalizer l) => bytes >= 1_000_000_000
+    /// <summary>"8.4 MB", "1.2 GB".</summary>
+    public static string Size(ulong bytes, ILocalizer l) => bytes >= 1_000_000_000
         ? l.Format("Size_GB", (bytes / 1e9).ToString("0.##", l.Culture))
         : l.Format("Size_MB", (bytes / 1e6).ToString("0.#", l.Culture));
 

@@ -593,6 +593,69 @@
   <data name="Discover_TryAgain.Content" xml:space="preserve">
     <value>Try Again</value>
   </data>
+  <data name="Downloads_Cancel.Content" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Downloads_Downloading" xml:space="preserve">
+    <value>Downloading…</value>
+  </data>
+  <data name="Downloads_Empty.Text" xml:space="preserve">
+    <value>Download albums and playlists from your servers to play them offline.</value>
+  </data>
+  <data name="Downloads_EmptyTitle.Text" xml:space="preserve">
+    <value>No Downloads Yet</value>
+  </data>
+  <data name="Downloads_InProgress.Text" xml:space="preserve">
+    <value>In Progress</value>
+  </data>
+  <data name="Downloads_NotAllowed" xml:space="preserve">
+    <value>Your {0} server doesn't allow downloads for this account.</value>
+  </data>
+  <data name="Downloads_NotOffered" xml:space="preserve">
+    <value>{0} doesn't offer downloads.</value>
+  </data>
+  <data name="Downloads_PausedMetered" xml:space="preserve">
+    <value>Downloads resume on Wi-Fi.</value>
+  </data>
+  <data name="Downloads_PausedOffline" xml:space="preserve">
+    <value>Downloads resume when you're back online.</value>
+  </data>
+  <data name="Downloads_Percent" xml:space="preserve">
+    <value>{0}%</value>
+  </data>
+  <data name="Downloads_RemoveAlbum.Content" xml:space="preserve">
+    <value>Remove Download…</value>
+  </data>
+  <data name="Downloads_RemoveBody" xml:space="preserve">
+    <value>The file is deleted from this device. You can download it again.</value>
+  </data>
+  <data name="Downloads_RemoveConfirm" xml:space="preserve">
+    <value>Remove Download</value>
+  </data>
+  <data name="Downloads_RemoveSong.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Remove Download…</value>
+  </data>
+  <data name="Downloads_RemoveSong.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Remove Download…</value>
+  </data>
+  <data name="Downloads_RemoveTitle" xml:space="preserve">
+    <value>Remove the Download of “{0}”?</value>
+  </data>
+  <data name="Downloads_Summary" xml:space="preserve">
+    <value>{0} · {1} used</value>
+  </data>
+  <data name="Downloads_Title.Text" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
+  <data name="Downloads_TryAgain.Content" xml:space="preserve">
+    <value>Try Again</value>
+  </data>
+  <data name="Downloads_UnknownAlbum" xml:space="preserve">
+    <value>Unknown Album</value>
+  </data>
+  <data name="Downloads_Waiting" xml:space="preserve">
+    <value>Waiting</value>
+  </data>
   <data name="Eq_BassBoost" xml:space="preserve">
     <value>Bass Boost</value>
   </data>
@@ -1171,6 +1234,9 @@
   </data>
   <data name="Place_Artists" xml:space="preserve">
     <value>Artists</value>
+  </data>
+  <data name="Place_Downloads" xml:space="preserve">
+    <value>Downloads</value>
   </data>
   <data name="Place_Favourites" xml:space="preserve">
     <value>Favourites</value>
