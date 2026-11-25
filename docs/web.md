@@ -6,13 +6,14 @@ music folders**, and installs **source plugins from `.jfpkg` files**, with
 the same Now Playing as the apps (artwork, both backdrop styles, lyrics that
 follow every word, with translation and romanization), the queue, search,
 sign-in and settings, in Luminous, the v0.0.6 design (Misty, with the cover's
-colour filling the room; [ui.md](ui.md)). It is laid out like the apps
-(Home, Albums, Artists, Songs, Search, Sources, Settings; [ui.md](ui.md)),
-installs as a web app, lives on the website at `/app/`, and plays audio
-files you drag onto it without keeping them.
+colour filling the room; [ui.md](ui.md)). Since v0.0.8 its layout is every
+app's (Home, Albums, Artists, Songs, Playlists, Favourites, Search, Sources,
+Settings; ADR-0023, [ui.md](ui.md)). It installs as a web app, lives on the
+website at `/app/`, and plays audio files you drag onto it without keeping
+them.
 
-It keeps no playlists, favourites or play history of its own: the server's
-playlists can be browsed and played.
+Hearts, Jellyfesh playlists and play history are kept in the browser, with
+the same rules as the apps' library.
 
 ![Now Playing in the Artwork style, dark, against the mock server](screenshots/web/now-playing-artwork-dark-desktop-mock-server.png)
 
@@ -45,6 +46,37 @@ secret).
   and that crash would come at every start, so no browser keeps one. Rescan
   Library reads new, changed and removed files; browsers do not tell pages
   when files change, so there is no Watch Folders.
+* **Hearts and playlists**: the heart (in a song's More menu and on Now
+  Playing) marks a favourite; Add to Playlist… keeps songs together in a
+  Jellyfesh playlist (New Playlist…, Rename…, Delete Playlist…, songs
+  reordered by dragging their handle or with ↑ and ↓), library songs and
+  server songs alike. Both are kept in this browser (IndexedDB, with
+  `jf-library`'s rules through `jf_web::collections`), as are plays, which
+  give Home its Recently Played and Most Played. A server's playlist can be
+  kept as a Jellyfesh playlist with Save as Playlist…. After their own,
+  Favourites and Playlists show each signed-in server's likes and playlists
+  (plugin API 1.3), kept for the next visit and shown with their age
+  ("Updated 5 minutes ago"); they refresh when the page opens.
+* **Search** has the tabs All, Library and one per source that answered.
+  All shows the library's results, then From Your Sources (the sources whose
+  terms allow merging, each result where its first playable copy is), then
+  a link to the tab of each source that keeps its results apart. A source's
+  tab lists its songs, albums, artists and playlists, each with Show More.
+* **Quality**: the player bar and Now Playing show the playing quality; its
+  menu has the format line and the levels the source offers (or why there
+  are none), the same setting as Settings › Playback › Streaming Quality
+  (below).
+* **Mini player**: the player bar's mini player button or Ctrl+M (⌥⌘M on
+  macOS) opens a small window above other windows, where the browser offers
+  Document Picture-in-Picture (Chrome and Edge 116+, Firefox 151+, on
+  computers): the cover, the title and artist, previous, play and next, the
+  line being sung (Settings › Appearance › Mini Player › Show Lyrics Line)
+  and a progress line. A page has one such window, so it and Desktop Lyrics
+  take turns.
+* **Download**: a song from a source that allows downloads (plugin API 1.3)
+  has Download in its More menu, which saves its original file through the
+  browser, named as the apps name downloads ("07 Lanterns.flac"). There is no
+  download queue or offline library on the web.
 * **Add a source**: Sources → Add a Source (also in Settings › Sources) lists
   the services this copy's official plugins connect to (Jellyfin, Navidrome,
   other Subsonic servers); choosing one opens the sign-in below with the
@@ -297,8 +329,16 @@ message says so. The two ways out:
 
 ### Formats
 
-Jellyfesh Web asks the server for the quality in Settings › Playback › Streaming
-Quality. When the browser cannot play what the server would send (the
+Jellyfesh Web asks the server for the level in Settings › Playback › Streaming
+Quality (or the player bar's quality menu). Auto, the default, asks for
+lossless, or for High on mobile data or with Data Saver on (as the Network
+Information API reports them, in Chromium; other browsers never count as
+metered). A new level opens the playing song again at the same position
+when its stream can seek, and applies from the next song otherwise. The
+menu offers the levels the source's plugin lists (`content_policy.qualities`,
+plugin API 1.3); a source that lists none says "Quality is set in
+{Service}.", and library songs and dropped files "Files play as they are.".
+When the browser cannot play what the server would send (the
 plugins say which codec will arrive, and the page asks the browser with
 `canPlayType`), it asks for the next quality down, which servers send
 converted; the format they convert to is the plugin's "Format when the
@@ -346,7 +386,9 @@ URL in it is relative. Notes:
 | | Apps | Jellyfesh Web |
 | --- | --- | --- |
 | Library | Folders scanned into a local library (SQLite) | Folders read through the browser, catalogued in IndexedDB by the same grouping, sorting and search rules (`jf_web::library`); each folder picked again on a new visit before its songs play; no Watch Folders |
-| Playlists, favourites, history | Kept locally | Not in this version; the server's playlists can be browsed and played |
+| Playlists, favourites, history | Kept locally (SQLite) | Kept in this browser (IndexedDB) by the same rules (`jf_web::collections`); no Import Playlist… or Export Playlist… yet |
+| Downloads | A queue into a folder, played offline from the library | Download saves one song's original file through the browser; no queue, Downloads page or offline library |
+| Mini player | A window above the others, with Keep on Top and Open When the Window Is Closed | A Document Picture-in-Picture window where the browser offers one (always on top, closed with the page); only Show Lyrics Line |
 | Audio | `jf-engine` on a thread of its own, cpal output | The browser's decoders and Web Audio (below) |
 | Gapless | Sample-accurate | Near-gapless: the next song starts by the element clock (below) |
 | Output device | Choosable | The browser's |
@@ -444,6 +486,22 @@ through the relay first.
   radii, glass, the aurora, typeface, type size, spacing, the lyrics' weight,
   glow and highlight as custom properties; the places, Home's sections, Now
   Playing's layout and the mini-player's style in the views.
+
+### What v0.0.8 adds
+
+* **The core's v0.0.8 contract** through `jf-web`: Streaming Quality with
+  Auto and the quality menu (`jf_web::quality`), the mini player's settings,
+  search by source (`jf_web::search`), the sources' likes and playlists
+  (`jf_web::source_library`, the core's `SourceLibrary` rules) and download
+  names (`jf_web::download`, `jf_plugin_model::filenames`). Settings kept by
+  v0.0.7 read their quality as Streaming Quality.
+* **Plugin API 1.3.** The worker calls the `library` and `download` exports
+  of plugins that declare them, with the native answer checks.
+* **The pages:** Playlists, Favourites (with each source's likes and
+  playlists), a playlist's page, Home's Recently Played and Most Played,
+  the search tabs, the quality badge and menu, the mini player and Download,
+  as above. The phone layout's capsule, called the mini player before, is
+  `Capsule`.
 
 ### How covers load
 
@@ -632,12 +690,15 @@ Tests:
   the design's presentation math: device-pixel redraw steps, the glass tints
   for each transparency (with the core's real `glass_alpha`), the lyric inks
   as opacities, the cascade's order, the motion curves read from the tokens
-  and the songs-and-minutes footer; and item links and the remote-source
-  refusal through the core's real exports.
+  and the songs-and-minutes footer; item links and the remote-source refusal
+  through the core's real exports; and the age line of the sources' kept
+  lists and the API 1.3 answers' conversion.
 * **End to end** (`tests/e2e`): the built app in Chromium against
   `tests/mock`, a mock OpenSubsonic server and a mock Jellyfin server
   serving an invented library, generated sine tones and gradient covers:
-  sign-in with a password and with Quick Connect, browsing, search, playback
+  sign-in with a password and with Quick Connect, browsing, search (with its
+  tabs, `subsonic.spec.ts`), hearts, playlists, plays on Home and the quality
+  badge (`collections.spec.ts`), playback
   with word-timed lyrics and translations, next and previous, crossfade on,
   off and with album continuity, the gapless gap, a dropped file with a TTML
   lyrics file, Jellyfin streams through the service worker, sign-out, and
