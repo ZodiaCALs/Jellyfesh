@@ -633,4 +633,7 @@
     <!-- v0.0.8: Download in the menus, and the Downloaded mark (ADR-0025) -->
     <string name="action_download">ダウンロード</string>
     <string name="a11y_downloaded">ダウンロード済み</string>
+
+    <!-- v0.0.8: the sources' likes and playlists (ADR-0024); %1$s is "5 minutes ago" -->
+    <string name="source_library_updated">%1$sに更新</string>
 </resources>

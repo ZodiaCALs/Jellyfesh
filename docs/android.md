@@ -88,6 +88,13 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   playlists when the source offers downloads (`DownloadMenus`), after the favourites in the song
   menu and before Open in {Service} in More. A downloaded song shows the Downloaded mark, which
   TalkBack reads, in search, on source pages, in playlists, favourites and Home.
+* **The sources' likes and playlists** (ADR-0024, the SourceLibrary slice): after the Jellyfesh
+  playlists, one section per signed-in source with its playlists; after the favourites, one with
+  its liked songs, albums and artists, with "Content from {Service}" where its terms ask. A list
+  shows once it has entries, is loading or failed, says "Updated 5 minutes ago" once loaded, and
+  has Show More while the source has more (SourceLibraryMore; its pages follow the first page they
+  were loaded after). The lists refresh when the page opens and when it is returned to after ten
+  minutes (`library/SourceLibraryModel.kt`). The M1 core lists none yet.
 
 ## v0.0.8: Android 17's Local Network permission
 

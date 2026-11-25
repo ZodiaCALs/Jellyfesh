@@ -92,6 +92,8 @@ import org.jellyfesh.logic.core.DownloadItem
 import org.jellyfesh.logic.core.DownloadsPaused
 import org.jellyfesh.logic.library.DownloadProgress
 import org.jellyfesh.logic.library.DownloadsModel
+import org.jellyfesh.logic.core.SourceLibraryList
+import org.jellyfesh.logic.library.SourceLibraryModel
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.theme.LookPlaces
 import org.jellyfesh.tokens.Tokens
@@ -527,7 +529,12 @@ fun PlayButtons(onPlay: () -> Unit, onShuffle: () -> Unit, modifier: Modifier = 
 @Composable
 private fun PlaylistsList(state: CoreState, header: LibraryHeader) {
     val nav = LocalNav.current
+    val graph = LocalGraph.current
     val actions = rememberTrackActions()
+    val sourcePages = rememberSourceLibraryPages()
+    val showMore: (String, SourceLibraryList) -> Unit = { plugin, list ->
+        SourceLibraryModel.showMore(plugin, list, sourcePages.value)?.let { sourcePages.value = SourceLibraryModel.moreSent(sourcePages.value, plugin, list, graph.send(it)) }
+    }
     val transfer = rememberPlaylistTransfer()
     val playlistActions = rememberPlaylistActions(transfer)
     val playlists by rememberQuery(state.libraryRevision) { it.playlists() }
@@ -578,13 +585,29 @@ private fun PlaylistsList(state: CoreState, header: LibraryHeader) {
                 }
             }
         }
+        // Then the sources' playlists, one section per signed-in source (ADR-0024).
+        sourceLibrarySections(
+            SourceLibraryModel.playlists(state.sourceLibrary),
+            sourcePages.value,
+            titled = false,
+            playing = state.nowPlaying?.track,
+            send = graph::send,
+            push = nav::push,
+            actions = actions,
+            onShowMore = showMore,
+        )
     }
 }
 
 @Composable
 private fun FavouritesList(state: CoreState, header: LibraryHeader) {
     val graph = LocalGraph.current
+    val nav = LocalNav.current
     val actions = rememberTrackActions()
+    val sourcePages = rememberSourceLibraryPages()
+    val showMore: (String, SourceLibraryList) -> Unit = { plugin, list ->
+        SourceLibraryModel.showMore(plugin, list, sourcePages.value)?.let { sourcePages.value = SourceLibraryModel.moreSent(sourcePages.value, plugin, list, graph.send(it)) }
+    }
     val listState = rememberLazyListState()
     val favourites = rememberPagedSource(listState, state.libraryRevision, rowOffset = 2) { core, offset, limit -> core.favorites(offset, limit) }
     val playing = state.nowPlaying?.track
@@ -614,5 +637,16 @@ private fun FavouritesList(state: CoreState, header: LibraryHeader) {
                 )
             }
         }
+        // Then each signed-in source's likes: its songs, albums and artists (ADR-0024).
+        sourceLibrarySections(
+            SourceLibraryModel.likes(state.sourceLibrary),
+            sourcePages.value,
+            titled = true,
+            playing = playing,
+            send = graph::send,
+            push = nav::push,
+            actions = actions,
+            onShowMore = showMore,
+        )
     }
 }
