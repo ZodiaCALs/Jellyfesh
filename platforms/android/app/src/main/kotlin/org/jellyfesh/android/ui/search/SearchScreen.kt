@@ -78,6 +78,12 @@ import org.jellyfesh.android.ui.theme.JfIconButton
 import org.jellyfesh.android.ui.theme.JfType
 import org.jellyfesh.android.ui.theme.statusBarFade
 import org.jellyfesh.logic.core.CollectionRef
+import androidx.compose.ui.platform.LocalContext
+import org.jellyfesh.android.ui.signals.describeFailure
+import org.jellyfesh.android.ui.sources.PluginIcon
+import org.jellyfesh.android.ui.theme.ButtonStyle
+import org.jellyfesh.android.ui.theme.JfButton
+import org.jellyfesh.logic.search.SearchGroupKey
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.ItemKind
@@ -111,6 +117,7 @@ fun SearchScreen(state: CoreState) {
     var search by remember { mutableStateOf(SearchState()) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = remember { FocusRequester() }
+    val context = LocalContext.current
 
     // Typing: debounce, then the library's fast query (again whenever the library changes) and,
     // once per query, the sources through the core's merged search.
@@ -133,7 +140,8 @@ fun SearchScreen(state: CoreState) {
         graph.store.signals.collect { event ->
             search = when (event) {
                 is CoreEvent.SearchResults -> SearchModel.onUpdate(search, event.update)
-                is CoreEvent.CommandFailed -> SearchModel.onCommandFailed(search, event.id)
+                is CoreEvent.SearchPage -> SearchModel.onPage(search, event.page)
+                is CoreEvent.CommandFailed -> SearchModel.onCommandFailed(search, event.id, describeFailure(context, event.error))
                 else -> search
             }
         }
@@ -177,14 +185,29 @@ fun SearchScreen(state: CoreState) {
                     item(key = "none") { EmptyState(R.drawable.ic_search, stringResource(R.string.search_no_results), stringResource(R.string.search_no_results_body)) }
                 }
                 libraryResults(library, playing, cardPx, graph::send, nav, actions)
-                // Then From Your Sources, one group per source, as each answers.
-                if (sourcesUnavailable || search.sources.isNotEmpty()) {
+                // Then From Your Sources: one group per source that allows merging, as each answers,
+                // then a link to the tab of each source whose terms keep its results apart.
+                val merged = SearchModel.mergedSections(search)
+                val separate = SearchModel.separateSections(search)
+                if (sourcesUnavailable || merged.isNotEmpty() || separate.isNotEmpty()) {
                     item(key = "src-h") { SectionHeader(stringResource(R.string.search_from_sources)) }
                 }
                 if (sourcesUnavailable) {
                     item(key = "src-unavailable") { Notice(stringResource(R.string.search_sources_unavailable)) }
                 }
-                search.sources.forEach { section -> sourceGroup(section, state, playing, graph::send, nav, actions, withName = true) }
+                merged.forEach { section -> sourceGroup(section, state, playing, graph::send, nav, actions, withName = true) }
+                separate.forEach { section ->
+                    item(key = "src-${section.source}-apart") {
+                        val plugin = state.sources.plugins.firstOrNull { it.id == section.source }
+                        val name = plugin?.name ?: section.source
+                        NavRow(
+                            stringResource(R.string.search_results_from, name),
+                            Links.attributedService(state.sources, section.source)?.let { stringResource(R.string.source_attribution, it) },
+                            onClick = { search = SearchModel.selectTab(search, SearchTab.Source(section.source)) },
+                            leading = { PluginIcon(name, plugin?.icon) },
+                        )
+                    }
+                }
             }
             SearchTab.Library -> {
                 if (search.libraryQuery == search.query && library.isEmpty) {
@@ -193,10 +216,23 @@ fun SearchScreen(state: CoreState) {
                 libraryResults(library, playing, cardPx, graph::send, nav, actions)
             }
             is SearchTab.Source -> SearchModel.sourceTab(search, tab.source)?.let { section ->
-                if (section.items.isEmpty() && section.error == null) {
+                if (section.tabGroups.isEmpty() && section.error == null) {
                     item(key = "none") { EmptyState(R.drawable.ic_search, stringResource(R.string.search_no_results), null) }
                 }
-                sourceGroup(section, state, playing, graph::send, nav, actions, withName = false)
+                sourceTabGroups(
+                    section,
+                    search,
+                    state,
+                    playing,
+                    graph::send,
+                    nav,
+                    actions,
+                    onShowMore = { kind ->
+                        SearchModel.showMore(search, section.source, kind)?.let { command ->
+                            search = SearchModel.moreSent(search, section.source, kind, graph.send(command))
+                        }
+                    },
+                )
             }
         }
         if (!search.done && tab !is SearchTab.Library) {
@@ -306,6 +342,57 @@ private fun LazyListScope.sourceGroup(
             val action = SourceItems.mainAction(item, items)
             SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
                 runItemAction(action, send, nav::push, actions::openLink)
+            }
+        }
+    }
+}
+
+/**
+ * A source's tab (ADR-0024 §4): "Content from {Service}" when its terms ask for the credit, its
+ * error, then its Songs, Albums, Artists and Playlists, each with Show More while the core has a
+ * cursor for it; Show More's failure shows under its group.
+ */
+private fun LazyListScope.sourceTabGroups(
+    section: SourceSection,
+    search: SearchState,
+    state: CoreState,
+    playing: TrackRef?,
+    send: (Command) -> Long,
+    nav: org.jellyfesh.android.ui.nav.NavController,
+    actions: TrackActions,
+    onShowMore: (ItemKind) -> Unit,
+) {
+    val name = state.sources.plugins.firstOrNull { it.id == section.source }?.name ?: section.source
+    Links.attributedService(state.sources, section.source)?.let { credit ->
+        item(key = "tab-${section.source}-credit") {
+            JfText(stringResource(R.string.source_attribution, credit), style = JfType.listSecondary, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        }
+    }
+    section.error?.let { error ->
+        item(key = "tab-${section.source}-e") { Notice(stringResource(R.string.search_source_failed, name, error), warning = true) }
+    }
+    section.tabGroups.forEach { group ->
+        val kind = group.kind
+        item(key = "tab-${section.source}-$kind") { SectionHeader(stringResource(kindLabel(kind))) }
+        itemsIndexed(group.items, key = { i, it -> "tab-${section.source}-$kind-$i-${it.id}" }) { _, item ->
+            val action = SourceItems.mainAction(item, group.items)
+            SourceItemRow(item, playing, action, onMore = sourceItemMenu(item, actions)) {
+                runItemAction(action, send, nav::push, actions::openLink)
+            }
+        }
+        search.moreErrors[SearchGroupKey(section.source, kind)]?.let { error ->
+            item(key = "tab-${section.source}-$kind-error") { Notice(error, warning = true) }
+        }
+        if (group.next != null) {
+            item(key = "tab-${section.source}-$kind-more") {
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    JfButton(
+                        stringResource(R.string.search_show_more),
+                        { onShowMore(kind) },
+                        style = ButtonStyle.Quiet,
+                        enabled = !SearchModel.loadingMore(search, section.source, kind),
+                    )
+                }
             }
         }
     }

@@ -583,4 +583,8 @@
     <string name="mini_player_pip_desc">音楽の再生中に Jellyfesh を離れたときに、ミニプレーヤーを表示します。</string>
     <string name="mini_player_pip_unsupported">このデバイスはピクチャー イン ピクチャーに対応していません。</string>
     <string name="mini_player_open">ミニプレーヤーを開く</string>
+
+    <!-- v0.0.8: search by source (ADR-0024 §4) -->
+    <string name="search_show_more">さらに表示</string>
+    <string name="search_results_from">%1$s の結果</string>
 </resources>

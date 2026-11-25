@@ -583,4 +583,8 @@
     <string name="mini_player_pip_desc">播放音乐时离开 Jellyfesh，显示迷你播放器。</string>
     <string name="mini_player_pip_unsupported">此设备不支持画中画。</string>
     <string name="mini_player_open">打开迷你播放器</string>
+
+    <!-- v0.0.8: search by source (ADR-0024 §4) -->
+    <string name="search_show_more">显示更多</string>
+    <string name="search_results_from">来自 %1$s 的结果</string>
 </resources>

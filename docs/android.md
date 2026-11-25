@@ -63,8 +63,12 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   Choosing a source on the Sources page opens its Discover page, the sign-in sheet while nobody
   has signed in, or Settings › Sources while it is off (`YourSources.opens`).
 * **Search has the web's tabs**: All (the library, then From Your Sources), Library, and one per
-  source that answered, in the order they did (`search/SearchModel.kt`). Show More and the links
-  to sources that keep their results apart come with the core's search by source (ADR-0024).
+  source that answered, in the order they did (`search/SearchModel.kt`). By source (ADR-0024 §4):
+  All shows the sources that allow merging under From Your Sources and links to the tab of each
+  source whose terms keep its results apart ("Results from Spotify"); a source's tab shows its
+  credit and its Songs, Albums, Artists and Playlists, each with Show More while the core has a
+  cursor for it. The next page joins its group once and keeps the new cursor; a failure shows
+  under the group, which can be tried again.
 * **Measures**: page titles are type.text-h2 (30.4) under 900 dp and type.text-h1 (48) from
   900 dp, as on the web; Back is the web's (the chevron and the word in accent text); Albums and
   Songs put their sort menu beside the title.

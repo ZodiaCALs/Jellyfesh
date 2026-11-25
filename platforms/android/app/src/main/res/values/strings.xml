@@ -626,4 +626,8 @@
     <string name="mini_player_pip_desc">Show the mini player when you leave Jellyfesh while music plays.</string>
     <string name="mini_player_pip_unsupported">This device doesn\'t have picture-in-picture.</string>
     <string name="mini_player_open">Open Mini Player</string>
+
+    <!-- v0.0.8: search by source (ADR-0024 §4) -->
+    <string name="search_show_more">Show More</string>
+    <string name="search_results_from">Results from %1$s</string>
 </resources>

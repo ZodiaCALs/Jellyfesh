@@ -4,8 +4,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertNull
 import org.jellyfesh.logic.core.Album
+import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.ItemKind
+import org.jellyfesh.logic.core.SearchGroup
+import org.jellyfesh.logic.core.SearchPage
 import org.jellyfesh.logic.core.SearchResults
 import org.jellyfesh.logic.core.SearchUpdate
 import org.jellyfesh.logic.core.SourceItem
@@ -84,6 +88,76 @@ class SearchModelTest {
         assertTrue(state.done)
         // After shutdown `send` returns 0: nothing will answer.
         assertTrue(SearchModel.requestSent(state, "tide", 0).sourcesUnavailable)
+    }
+
+    // ---- search by source (ADR-0024 §4) -----------------------------------------------------------
+
+    private val subsonic = "org.jellyfesh.subsonic"
+    private val spotify = "org.jellyfesh.spotify"
+
+    private fun searched(vararg updates: SearchUpdate): SearchState =
+        updates.fold(SearchModel.requestSent(SearchModel.queryChanged(SearchState(), "tide"), "tide", 7)) { state, update -> SearchModel.onUpdate(state, update) }
+
+    private val bySource = SearchUpdate(
+        7, "tide", subsonic, listOf(item(subsonic, ItemKind.Track, "1")), null, false, merged = true,
+        groups = listOf(
+            SearchGroup(ItemKind.Track, listOf(item(subsonic, ItemKind.Track, "1"), item(subsonic, ItemKind.Track, "2")), next = "c-2", total = 40),
+            SearchGroup(ItemKind.Album, emptyList(), next = null, total = 0),
+        ),
+    )
+    private val apart = SearchUpdate(
+        7, "tide", spotify, listOf(item(spotify, ItemKind.Track, "9")), null, true, merged = false,
+        groups = listOf(SearchGroup(ItemKind.Track, listOf(item(spotify, ItemKind.Track, "9")), next = null, total = 1)),
+    )
+
+    @Test
+    fun allMergesTheSourcesThatAllowItAndLinksToTheOthers() {
+        val state = searched(bySource, apart)
+        assertEquals(listOf(subsonic), SearchModel.mergedSections(state).map { it.source })
+        assertEquals(listOf(spotify), SearchModel.separateSections(state).map { it.source })
+        // Every source that answered has a tab.
+        assertEquals(listOf(SearchTab.All, SearchTab.Library, SearchTab.Source(subsonic), SearchTab.Source(spotify)), SearchModel.tabs(state))
+        // A source's tab shows its groups with results.
+        assertEquals(listOf(ItemKind.Track), SearchModel.sourceTab(state, subsonic)?.tabGroups?.map { it.kind })
+        // A core that sends no groups: its rows by kind.
+        val plain = searched(update(7, subsonic, listOf(item(subsonic, ItemKind.Album, "a"), item(subsonic, ItemKind.Track, "t"))))
+        assertEquals(listOf(ItemKind.Track, ItemKind.Album), SearchModel.sourceTab(plain, subsonic)?.tabGroups?.map { it.kind })
+    }
+
+    @Test
+    fun showMoreAddsTheNextPageOnceAndKeepsItsCursor() {
+        var state = searched(bySource)
+        val command = SearchModel.showMore(state, subsonic, ItemKind.Track)
+        assertEquals(Command.SearchMore(subsonic, ItemKind.Track, "c-2"), command)
+        state = SearchModel.moreSent(state, subsonic, ItemKind.Track, 12)
+        assertTrue(SearchModel.loadingMore(state, subsonic, ItemKind.Track))
+        // One at a time, and none for a group without a cursor.
+        assertNull(SearchModel.showMore(state, subsonic, ItemKind.Track))
+        assertNull(SearchModel.showMore(state, subsonic, ItemKind.Album))
+        // The page's rows join the group (a row it already shows only once), with the new cursor.
+        val page = SearchPage(12, "tide", subsonic, ItemKind.Track, listOf(item(subsonic, ItemKind.Track, "2"), item(subsonic, ItemKind.Track, "3")), next = "c-3", error = null)
+        state = SearchModel.onPage(state, page)
+        val tracks = SearchModel.sourceTab(state, subsonic)!!.groups.first { it.kind == ItemKind.Track }
+        assertEquals(listOf("1", "2", "3"), tracks.items.map { it.id })
+        assertEquals("c-3", tracks.next)
+        assertFalse(SearchModel.loadingMore(state, subsonic, ItemKind.Track))
+        // The same answer again changes nothing.
+        assertEquals(state, SearchModel.onPage(state, page))
+    }
+
+    @Test
+    fun aFailedShowMoreSaysWhyUnderItsGroupAndCanBeTriedAgain() {
+        var state = SearchModel.moreSent(searched(bySource), subsonic, ItemKind.Track, 12)
+        state = SearchModel.onPage(state, SearchPage(12, "tide", subsonic, ItemKind.Track, emptyList(), next = null, error = "The server did not answer."))
+        assertEquals("The server did not answer.", state.moreErrors[SearchGroupKey(subsonic, ItemKind.Track)])
+        assertEquals(Command.SearchMore(subsonic, ItemKind.Track, "c-2"), SearchModel.showMore(state, subsonic, ItemKind.Track))
+        // A refused command fails it too; trying again clears the reason.
+        state = SearchModel.moreSent(state, subsonic, ItemKind.Track, 13)
+        assertNull(state.moreErrors[SearchGroupKey(subsonic, ItemKind.Track)])
+        state = SearchModel.onCommandFailed(state, 13, "Not available in this build yet.")
+        assertEquals("Not available in this build yet.", state.moreErrors[SearchGroupKey(subsonic, ItemKind.Track)])
+        // A new search forgets them.
+        assertEquals(emptyMap(), SearchModel.requestSent(state, "tide", 20).moreErrors)
     }
 
     @Test
