@@ -53,7 +53,9 @@ public sealed class ShellServices
 
     public NotificationsViewModel Notifications { get; }
 
+    private const int MaxFailureHandlers = 64;
     private readonly HashSet<ulong> _handled = [];
+    private readonly Dictionary<ulong, Action<string>> _onFailed = [];
 
     public ulong Send(CoreCommand command) => Hub.Send(command);
 
@@ -70,6 +72,34 @@ public sealed class ShellServices
 
     /// <summary>True for a command sent with <see cref="SendHandled"/>.</summary>
     public bool IsHandled(ulong id) => _handled.Contains(id);
+
+    /// <summary>
+    /// Sends a command whose failure <paramref name="onFailed"/> puts in the app's words (a download
+    /// the core cannot make yet), instead of the generic error notification.
+    /// </summary>
+    public ulong Send(CoreCommand command, Action<string> onFailed)
+    {
+        var id = SendHandled(command);
+        _onFailed[id] = onFailed;
+        while (_onFailed.Count > MaxFailureHandlers)
+        {
+            _onFailed.Remove(_onFailed.Keys.Min()); // the oldest: its answer has long come
+        }
+
+        return id;
+    }
+
+    /// <summary>Runs the failure handler command <paramref name="id"/> was sent with; false when it has none.</summary>
+    public bool Failed(ulong id, string message)
+    {
+        if (!_onFailed.Remove(id, out var handler))
+        {
+            return false;
+        }
+
+        handler(message);
+        return true;
+    }
 
     /// <summary>
     /// Runs a query on the thread pool and returns its result on the caller's context. A feature

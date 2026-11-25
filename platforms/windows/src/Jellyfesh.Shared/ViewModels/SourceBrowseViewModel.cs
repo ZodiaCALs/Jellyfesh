@@ -178,7 +178,13 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     public bool CanQueue => CanPlay && !IsRemote;
 
     /// <summary>More has something to offer.</summary>
-    public bool HasMore => CanQueue || HasLink || CanSaveCopy;
+    public bool HasMore => CanQueue || HasLink || CanSaveCopy || CanDownload;
+
+    /// <summary>Download (ADR-0025): this album or playlist, when its source allows downloads.</summary>
+    public bool CanDownload => DownloadTarget is not null;
+
+    private DownloadTarget? DownloadTarget =>
+        DownloadActions.For(S.Hub.State.Sources, Target.Plugin, Target.Node, Target.Kind, Target.SongsListed);
 
     public bool HasError => Error is not null;
 
@@ -274,6 +280,16 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
                 }
 
                 break;
+        }
+    }
+
+    /// <summary>Download: the core downloads every song of this album or playlist.</summary>
+    [RelayCommand]
+    private void Download()
+    {
+        if (DownloadTarget is { } target)
+        {
+            DownloadActions.Download(S, target);
         }
     }
 

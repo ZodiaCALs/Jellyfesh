@@ -239,6 +239,8 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
             case CoreEvent.Buffering b:
                 Player.OnBuffering(b);
                 break;
+            case CoreEvent.CommandFailed f when Services.Failed(f.Id, f.Message):
+                break; // its sender put it in words
             case CoreEvent.CommandFailed f when Services.IsHandled(f.Id):
                 break; // the page that sent it shows it
             default:

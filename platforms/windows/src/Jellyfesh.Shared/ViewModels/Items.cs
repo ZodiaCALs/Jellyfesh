@@ -234,6 +234,11 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
     [ObservableProperty]
     private bool _isMissing;
 
+    /// <summary>The Downloaded mark (ADR-0025): the song's file is on this device.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccessibleName))]
+    private bool _isDownloaded;
+
     [ObservableProperty]
     private bool _isCurrent;
 
@@ -276,7 +281,10 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
     public ILocalizer? Localizer { get; set; }
 
     /// <summary>"Title, Artist, 3:52" for Narrator (and the source, for search results; why it cannot play).</summary>
-    public string AccessibleName => string.Join(", ", new[] { Title, Subtitle, Duration, Origin, UnplayableNote }.Where(s => !string.IsNullOrEmpty(s)));
+    public string AccessibleName => string.Join(", ", new[] { Title, Subtitle, Duration, Origin, UnplayableNote, IsDownloaded ? DownloadedWord : null }.Where(s => !string.IsNullOrEmpty(s)));
+
+    /// <summary>"Downloaded", for Narrator.</summary>
+    private string DownloadedWord => (Localizer ?? KeyLocalizer.Instance).Get("Track_Downloaded");
 
     public void Load(Track model)
     {
@@ -301,6 +309,7 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         DurationMs = row.DurationMs;
         IsFavorite = row.Favorite;
         IsMissing = row.Missing;
+        IsDownloaded = row.Downloaded;
         IsPlayable = !row.Missing;
         SetArtwork(row.Artwork, row.ArtworkHash);
         Done();
@@ -327,6 +336,7 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         SourceAlbumId = item.AlbumId;
         SourceArtistId = item.ArtistId;
         SourceAlbum = item.Album;
+        IsDownloaded = item.Downloaded;
         SetArtwork(item.Artwork, null);
         Done();
     }

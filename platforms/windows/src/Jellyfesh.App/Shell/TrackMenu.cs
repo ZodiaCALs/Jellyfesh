@@ -21,6 +21,7 @@ internal sealed class TrackMenu
     private readonly MenuFlyoutItem _playLast;
     private readonly MenuFlyoutSubItem _playlists;
     private readonly MenuFlyoutItem _favorite;
+    private readonly MenuFlyoutItem _download;
     private readonly MenuFlyoutItem _goToAlbum;
     private readonly MenuFlyoutItem _goToArtist;
     private readonly MenuFlyoutItem _makeLyrics;
@@ -45,6 +46,13 @@ internal sealed class TrackMenu
                 TrackActions.ToggleFavorite(_s, _item);
             }
         });
+        _download = Item(l.Get("Menu_Download"), () =>
+        {
+            if (DownloadActions.For(_s.Hub.State.Sources, _item) is { } target)
+            {
+                DownloadActions.Download(_s, target);
+            }
+        });
         _goToAlbum = Item(l.Get("Menu_GoToAlbum"), GoToAlbum);
         _goToArtist = Item(l.Get("Menu_GoToArtist"), GoToArtist);
         _makeLyrics = Item(l.Get("AiLyrics_Create"), MakeLyrics);
@@ -61,6 +69,7 @@ internal sealed class TrackMenu
         Flyout.Items.Add(_playLast);
         Flyout.Items.Add(_playlists);
         Flyout.Items.Add(_favorite);
+        Flyout.Items.Add(_download);
         Flyout.Items.Add(new MenuFlyoutSeparator());
         Flyout.Items.Add(_goToAlbum);
         Flyout.Items.Add(_goToArtist);
@@ -160,6 +169,8 @@ internal sealed class TrackMenu
         _openLink.Text = ItemLinks.OpenInLabel(_s.L, ItemLinks.ServiceName(_s.Hub.State.Sources, _item?.SourceId));
         _favorite.Text = _s.L.Get(_item?.IsFavorite == true ? "Menu_Unfavorite" : "Menu_Favorite");
         _favorite.IsEnabled = loaded && _item?.Ref is TrackRef.Library or TrackRef.Source;
+        // A source's song not yet on this device, when its source allows downloads (ADR-0025).
+        _download.Visibility = loaded && DownloadActions.For(_s.Hub.State.Sources, _item) is not null ? Visibility.Visible : Visibility.Collapsed;
         var library = _item?.Ref is TrackRef.Library;
         _goToAlbum.IsEnabled = loaded && (library || TrackPlaces.SourceAlbum(_item!) is not null);
         _goToArtist.IsEnabled = loaded && (library || TrackPlaces.SourceArtist(_item!) is not null);

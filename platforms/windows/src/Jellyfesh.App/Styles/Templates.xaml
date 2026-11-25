@@ -36,6 +36,8 @@
                            Visibility="{x:Bind shell:Bind.VisibleIf(UnplayableNote), Mode=OneWay}" />
                 <TextBlock Style="{StaticResource JfCaptionText}" Text="{x:Bind Origin, Mode=OneWay}"
                            Visibility="{x:Bind shell:Bind.VisibleIf(Origin), Mode=OneWay}" />
+                <controls:StrokeIcon x:Uid="Track_DownloadedMark" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" Data="{StaticResource IconDownload}" Foreground="{ThemeResource JfInk70}" Size="14" ToolTipService.ToolTip="Downloaded"
+                                     Visibility="{x:Bind shell:Bind.Visible(IsDownloaded), Mode=OneWay}" />
                 <TextBlock Style="{StaticResource JfTimeText}" Text="{x:Bind Duration, Mode=OneWay}" />
             </StackPanel>
         </Grid>
@@ -59,7 +61,11 @@
                 <TextBlock Style="{StaticResource JfListTitleText}" Foreground="{x:Bind shell:Bind.CurrentRowInk(IsCurrent), Mode=OneWay}" Text="{x:Bind Title, Mode=OneWay}" />
                 <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
             </StackPanel>
-            <TextBlock Grid.Column="2" Style="{StaticResource JfTimeText}" VerticalAlignment="Center" Text="{x:Bind Duration, Mode=OneWay}" />
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="12">
+                <controls:StrokeIcon x:Uid="Track_DownloadedMark" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw" Data="{StaticResource IconDownload}" Foreground="{ThemeResource JfInk70}" Size="14" ToolTipService.ToolTip="Downloaded"
+                                     Visibility="{x:Bind shell:Bind.Visible(IsDownloaded), Mode=OneWay}" />
+                <TextBlock Style="{StaticResource JfTimeText}" Text="{x:Bind Duration, Mode=OneWay}" />
+            </StackPanel>
         </Grid>
     </DataTemplate>
 

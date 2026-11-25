@@ -15,6 +15,7 @@ internal sealed class EntryMenu
     private readonly ShellServices _s;
     private readonly MenuFlyoutItem _play;
     private readonly MenuFlyoutItem _open;
+    private readonly MenuFlyoutItem _download;
     private SourceEntryItem? _item;
 
     public EntryMenu(ShellServices services)
@@ -31,13 +32,25 @@ internal sealed class EntryMenu
         };
         _open = new MenuFlyoutItem();
         _open.Click += (_, _) => ItemLinks.Open(_s, _item?.Link);
+
+        // Download: a source's album or playlist, when its source allows downloads (ADR-0025).
+        _download = new MenuFlyoutItem { Text = services.L.Get("Menu_Download") };
+        _download.Click += (_, _) =>
+        {
+            if (DownloadActions.For(_s.Hub.State.Sources, _item) is { } target)
+            {
+                DownloadActions.Download(_s, target);
+            }
+        };
         Flyout.Items.Add(_play);
+        Flyout.Items.Add(_download);
         Flyout.Items.Add(_open);
         Flyout.Opening += (_, _) =>
         {
             _item = Lists.ItemOf<SourceEntryItem>(Flyout);
             _play.IsEnabled = _item is { CanPlay: true };
             _open.Visibility = _item is { HasLink: true } ? Visibility.Visible : Visibility.Collapsed;
+            _download.Visibility = DownloadActions.For(_s.Hub.State.Sources, _item) is not null ? Visibility.Visible : Visibility.Collapsed;
             _open.Text = ItemLinks.OpenInLabel(_s.L, ItemLinks.ServiceName(_s.Hub.State.Sources, _item?.Item.Source));
         };
     }

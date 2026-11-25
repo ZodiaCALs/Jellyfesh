@@ -163,8 +163,12 @@ plugin settings applied with **Save**.
   **Remove Download…** on each song and on a whole album (asks first). Empty:
   "No Downloads Yet".
 * **Song menu:** Play Next, Play Last, Add to Playlist…, Add to Favourites or
-  Remove from Favourites, Go to Album, Go to Artist and Show in Explorer
-  (library songs; the core's search finds the album and artist).
+  Remove from Favourites, Download (a source's song not yet downloaded, when
+  its source allows downloads; ADR-0025), Go to Album, Go to Artist and Show
+  in Explorer (library songs; the core's search finds the album and artist).
+  A source's album or playlist has Download in its menu and on its page's
+  More; a downloaded song shows the Downloaded mark. A download the core
+  cannot make yet says "Downloads aren't available in this build yet."
 * **Search** (ADR-0024 §4): "Search Your Music" and a sentence before
   anything is typed; then the tabs **All**, **Library** and one per source
   that found something. All: library results first (Songs, Albums, Artists,

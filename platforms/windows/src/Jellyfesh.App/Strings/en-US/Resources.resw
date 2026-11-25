@@ -671,6 +671,9 @@
   <data name="Downloads_NotAllowed" xml:space="preserve">
     <value>Your {0} server doesn't allow downloads for this account.</value>
   </data>
+  <data name="Downloads_NotAvailable" xml:space="preserve">
+    <value>Downloads aren't available in this build yet.</value>
+  </data>
   <data name="Downloads_NotOffered" xml:space="preserve">
     <value>{0} doesn't offer downloads.</value>
   </data>
@@ -1163,6 +1166,9 @@
   <data name="Menu_DeletePlaylist" xml:space="preserve">
     <value>Delete Playlist…</value>
   </data>
+  <data name="Menu_Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
   <data name="Menu_Favorite" xml:space="preserve">
     <value>Add to Favourites</value>
   </data>
@@ -1243,6 +1249,9 @@
   </data>
   <data name="More_Delete.Text" xml:space="preserve">
     <value>Delete Playlist…</value>
+  </data>
+  <data name="More_Download.Text" xml:space="preserve">
+    <value>Download</value>
   </data>
   <data name="More_Export.Text" xml:space="preserve">
     <value>Export Playlist…</value>
@@ -2209,6 +2218,12 @@
   </data>
   <data name="Time_SpokenMinutes" xml:space="preserve">
     <value>{0} minutes {1} seconds</value>
+  </data>
+  <data name="Track_Downloaded" xml:space="preserve">
+    <value>Downloaded</value>
+  </data>
+  <data name="Track_DownloadedMark.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Downloaded</value>
   </data>
   <data name="Track_Unplayable" xml:space="preserve">
     <value>Not available here</value>

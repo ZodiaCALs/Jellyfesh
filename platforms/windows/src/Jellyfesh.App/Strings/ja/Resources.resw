@@ -671,6 +671,9 @@
   <data name="Downloads_NotAllowed" xml:space="preserve">
     <value>{0} サーバーでは、このアカウントのダウンロードが許可されていません。</value>
   </data>
+  <data name="Downloads_NotAvailable" xml:space="preserve">
+    <value>このビルドではまだダウンロードを利用できません。</value>
+  </data>
   <data name="Downloads_NotOffered" xml:space="preserve">
     <value>{0} はダウンロードに対応していません。</value>
   </data>
@@ -1163,6 +1166,9 @@
   <data name="Menu_DeletePlaylist" xml:space="preserve">
     <value>プレイリストを削除…</value>
   </data>
+  <data name="Menu_Download" xml:space="preserve">
+    <value>ダウンロード</value>
+  </data>
   <data name="Menu_Favorite" xml:space="preserve">
     <value>お気に入りに追加</value>
   </data>
@@ -1243,6 +1249,9 @@
   </data>
   <data name="More_Delete.Text" xml:space="preserve">
     <value>プレイリストを削除…</value>
+  </data>
+  <data name="More_Download.Text" xml:space="preserve">
+    <value>ダウンロード</value>
   </data>
   <data name="More_Export.Text" xml:space="preserve">
     <value>プレイリストを書き出す…</value>
@@ -2209,6 +2218,12 @@
   </data>
   <data name="Time_SpokenMinutes" xml:space="preserve">
     <value>{0} 分 {1} 秒</value>
+  </data>
+  <data name="Track_Downloaded" xml:space="preserve">
+    <value>ダウンロード済み</value>
+  </data>
+  <data name="Track_DownloadedMark.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>ダウンロード済み</value>
   </data>
   <data name="Track_Unplayable" xml:space="preserve">
     <value>ここでは再生できません</value>

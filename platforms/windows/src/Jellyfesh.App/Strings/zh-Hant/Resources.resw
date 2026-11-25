@@ -671,6 +671,9 @@
   <data name="Downloads_NotAllowed" xml:space="preserve">
     <value>你的 {0} 伺服器不允許此帳號下載。</value>
   </data>
+  <data name="Downloads_NotAvailable" xml:space="preserve">
+    <value>此版本暫不支援下載。</value>
+  </data>
   <data name="Downloads_NotOffered" xml:space="preserve">
     <value>{0} 不提供下載。</value>
   </data>
@@ -1163,6 +1166,9 @@
   <data name="Menu_DeletePlaylist" xml:space="preserve">
     <value>刪除播放清單…</value>
   </data>
+  <data name="Menu_Download" xml:space="preserve">
+    <value>下載</value>
+  </data>
   <data name="Menu_Favorite" xml:space="preserve">
     <value>加入最愛</value>
   </data>
@@ -1243,6 +1249,9 @@
   </data>
   <data name="More_Delete.Text" xml:space="preserve">
     <value>刪除播放清單…</value>
+  </data>
+  <data name="More_Download.Text" xml:space="preserve">
+    <value>下載</value>
   </data>
   <data name="More_Export.Text" xml:space="preserve">
     <value>匯出播放清單…</value>
@@ -2209,6 +2218,12 @@
   </data>
   <data name="Time_SpokenMinutes" xml:space="preserve">
     <value>{0} 分 {1} 秒</value>
+  </data>
+  <data name="Track_Downloaded" xml:space="preserve">
+    <value>已下載</value>
+  </data>
+  <data name="Track_DownloadedMark.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>已下載</value>
   </data>
   <data name="Track_Unplayable" xml:space="preserve">
     <value>在此無法播放</value>
