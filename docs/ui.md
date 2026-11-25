@@ -148,8 +148,8 @@ Android). Delete Playlist… asks first. Empty: "No Playlists Yet",
 * **In Progress**: each download with "Waiting", its percentage, or, after
   a failure, the reason and **Try Again**; **Cancel** on each.
 * While the core pauses downloads: "Downloads resume when you're back
-  online." (offline) or "Downloads resume on Wi-Fi." (metered, with Wi-Fi
-  Only).
+  online." (offline) or "Downloads resume when you're off a metered
+  connection." (metered, with Pause on Metered Connections on).
 * Then the downloaded songs by album. **Remove Download…** (asks first) is
   on each song and on a whole album, which removes all its downloaded songs.
 * Empty: "No Downloads Yet", "Download albums and playlists from your
@@ -436,7 +436,10 @@ Groups and rows in this order:
      they are unless this is on.";
    * **Lyrics** (on);
    * **Save .lrc Files** (off).
-5. **Network**: **Wi-Fi Only** (Android, on); **Downloads at Once** (1–4).
+5. **Network**: **Pause on Metered Connections** (on): "Downloads wait while
+   you're on mobile data, a hotspot or another metered connection." Every app
+   reports its network to the core, so every app but the web shows it.
+   **Downloads at Once** (1–4).
 6. **Space Used** and **Remove All Downloads…** (asks first).
 
 **Sources**

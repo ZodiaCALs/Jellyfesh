@@ -84,8 +84,9 @@ The non-goals stand: no DRM circumvention and no paywall bypass.
      * With **Lyrics** on, the lyrics go in the tag; synced lyrics are
        written as LRC text, which many players read. **Save .lrc Files**
        also writes them beside the song.
-   * **Wi-Fi Only** (Android, on by default): downloads wait while the
-     connection is metered.
+   * **Pause on Metered Connections** (on by default, every app but the
+     web): downloads wait while the connection is metered (mobile data, a
+     hotspot), as each app reports it. The core's field is `wifi_only`.
    * **Downloads at Once:** 1 to 4, 2 by default.
 3. **The queue, in the core:**
    * downloads resume with HTTP ranges where the server allows;
