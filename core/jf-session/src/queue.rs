@@ -872,7 +872,10 @@ mod tests {
         let mut sorted = order.clone();
         sorted.sort_unstable();
         assert_eq!(sorted, (1..=20).collect::<Vec<_>>(), "every entry once");
-        assert!(order[2..].windows(2).any(|w| w[1] < w[0]), "shuffled in: {order:?}");
+        assert!(
+            order[2..].windows(2).any(|w| w[1] < w[0]),
+            "shuffled in: {order:?}"
+        );
     }
 
     #[test]

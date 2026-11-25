@@ -218,7 +218,11 @@ mod tests {
             ..source("9")
         };
         let item = item_for(&TrackRef::Source(bare.clone()));
-        assert_eq!(row(&item, None, false).artwork, None, "the plugin gives no artwork");
+        assert_eq!(
+            row(&item, None, false).artwork,
+            None,
+            "the plugin gives no artwork"
+        );
         crate::artwork::note_covers("org.example.items-covers", true);
         let Some(ArtworkRef::Url(reference)) = row(&item, None, false).artwork else {
             panic!("a reference to the item")

@@ -173,7 +173,11 @@ mod tests {
             let target = dir.path().join(format!("{format:?}.jpg"));
             make(bytes.get_ref(), 64, &target).unwrap_or_else(|e| panic!("{format:?}: {e}"));
             let made = image::open(&target).unwrap();
-            assert_eq!((made.width(), made.height()), (40, 20), "{format:?}: never enlarged");
+            assert_eq!(
+                (made.width(), made.height()),
+                (40, 20),
+                "{format:?}: never enlarged"
+            );
         }
     }
 }

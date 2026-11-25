@@ -55,7 +55,11 @@ fn tracks_without_a_picture_of_their_own_get_their_folders() {
         t.push_picture(fixtures::front_cover(standard::cover()));
     });
     fx.scan();
-    assert_eq!(fx.track_at("Folder Art/01 one.flac").artwork_hash, None, "no picture yet");
+    assert_eq!(
+        fx.track_at("Folder Art/01 one.flac").artwork_hash,
+        None,
+        "no picture yet"
+    );
 
     // A cover arrives: the next scan gives it to the files without one, unchanged as they are.
     let folder = fixtures::png(6, 6, [10, 120, 200]);
@@ -66,7 +70,10 @@ fn tracks_without_a_picture_of_their_own_get_their_folders() {
     let expected = blake3::hash(&folder).to_hex().to_string();
     let one = fx.track_at("Folder Art/01 one.flac");
     assert_eq!(one.artwork_hash.as_deref(), Some(expected.as_str()));
-    assert_eq!(fx.track_at("Folder Art/02 two.flac").artwork_hash, one.artwork_hash);
+    assert_eq!(
+        fx.track_at("Folder Art/02 two.flac").artwork_hash,
+        one.artwork_hash
+    );
     let own = blake3::hash(&standard::cover()).to_hex().to_string();
     assert_eq!(
         fx.track_at("Folder Art/03 own.flac").artwork_hash.as_deref(),
@@ -85,8 +92,15 @@ fn tracks_without_a_picture_of_their_own_get_their_folders() {
     // A file added later gets it in its first scan.
     fixtures::flac(&fx.path("Folder Art/04 four.flac"), 100);
     assert_eq!(fx.scan().added, 1);
-    assert_eq!(fx.track_at("Folder Art/04 four.flac").artwork_hash, one.artwork_hash);
-    assert_eq!(fx.lib.stats().unwrap().artwork, 2, "the folder picture and the embedded one");
+    assert_eq!(
+        fx.track_at("Folder Art/04 four.flac").artwork_hash,
+        one.artwork_hash
+    );
+    assert_eq!(
+        fx.lib.stats().unwrap().artwork,
+        2,
+        "the folder picture and the embedded one"
+    );
 }
 
 #[test]

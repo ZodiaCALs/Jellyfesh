@@ -1227,7 +1227,13 @@ mod tests {
             name: "Example".into(),
             links: Links::default(),
         };
-        let worker = Worker::new(Box::new(fake), source, shared.clone(), 1, Arc::new(AtomicBool::new(true)));
+        let worker = Worker::new(
+            Box::new(fake),
+            source,
+            shared.clone(),
+            1,
+            Arc::new(AtomicBool::new(true)),
+        );
         (worker, calls)
     }
 
@@ -1249,15 +1255,31 @@ mod tests {
         assert_eq!(*calls.lock().unwrap(), ["play desk 0"]);
 
         // Several idle devices and none chosen: the service's answer stands.
-        let (mut w, calls) = worker(&shared, vec![speaker("tv", false), speaker("phone", false)], false);
+        let (mut w, calls) = worker(
+            &shared,
+            vec![speaker("tv", false), speaker("phone", false)],
+            false,
+        );
         assert_eq!(w.apply(play_op()), Err(no_device()));
-        assert_eq!(*calls.lock().unwrap(), ["play - 0"], "music never starts on a device not picked");
+        assert_eq!(
+            *calls.lock().unwrap(),
+            ["play - 0"],
+            "music never starts on a device not picked"
+        );
 
         // Choosing one in the picker sends later songs there.
         w.apply(Op::Transfer("phone".into())).unwrap();
-        let (mut w, calls) = worker(&shared, vec![speaker("tv", false), speaker("phone", false)], false);
+        let (mut w, calls) = worker(
+            &shared,
+            vec![speaker("tv", false), speaker("phone", false)],
+            false,
+        );
         w.apply(play_op()).unwrap();
-        assert_eq!(*calls.lock().unwrap(), ["play phone 0"], "remembered across sessions");
+        assert_eq!(
+            *calls.lock().unwrap(),
+            ["play phone 0"],
+            "remembered across sessions"
+        );
 
         // A device that sleeps through the play is moved to first.
         let (mut w, calls) = worker(&shared, vec![speaker("tv", false), speaker("phone", false)], true);
@@ -1271,7 +1293,10 @@ mod tests {
         let (mut w, calls) = worker(&shared, vec![speaker("tv", true), speaker("phone", false)], true);
         w.apply(play_op()).unwrap();
         assert_eq!(*calls.lock().unwrap(), ["play tv 0"]);
-        assert_eq!(chosen_device(&shared, "org.example.remote").as_deref(), Some("tv"));
+        assert_eq!(
+            chosen_device(&shared, "org.example.remote").as_deref(),
+            Some("tv")
+        );
     }
 
     #[test]

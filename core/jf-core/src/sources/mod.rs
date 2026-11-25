@@ -1803,7 +1803,9 @@ fn stream_collection(ctx: &Ctx, id: CommandId, plugin: &str, node: &Item, start:
         total += page.items.len();
         has_tracks |= page.items.iter().any(|i| i.kind == HostKind::Track);
         albums.extend(page.items.iter().filter(|i| i.kind == HostKind::Album).cloned());
-        let next = page.next.filter(|_| total < COLLECTION_ITEMS && page_number + 1 < COLLECTION_PAGES);
+        let next = page
+            .next
+            .filter(|_| total < COLLECTION_ITEMS && page_number + 1 < COLLECTION_PAGES);
         if has_tracks {
             let last = next.is_none();
             let mut items = std::mem::take(&mut waiting);

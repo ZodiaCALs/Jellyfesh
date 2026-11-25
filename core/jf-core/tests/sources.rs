@@ -711,7 +711,11 @@ fn plays_and_queues_whole_source_collections() {
         },
     );
     let lengths: Vec<u32> = queue_lengths(&events);
-    assert_eq!(lengths.first(), Some(&2), "played from the first two pages: {lengths:?}");
+    assert_eq!(
+        lengths.first(),
+        Some(&2),
+        "played from the first two pages: {lengths:?}"
+    );
     let queue = env.core.queue_window(0, 10);
     let ids: Vec<_> = queue
         .iter()
@@ -775,7 +779,9 @@ fn a_long_playlist_plays_from_its_first_page_and_grows() {
         // Four pages: 2, 2, 2 and 1.
         nodes: HashMap::from([(
             "pl1".to_string(),
-            ids.iter().map(|id| hit(id, &format!("Song {id}"), "A", 400)).collect(),
+            ids.iter()
+                .map(|id| hit(id, &format!("Song {id}"), "A", 400))
+                .collect(),
         )]),
         ..Service::default()
     });
@@ -795,7 +801,11 @@ fn a_long_playlist_plays_from_its_first_page_and_grows() {
         },
         |e| matches!(e, Event::Queue(q) if q.len == 7),
     );
-    assert_eq!(queue_lengths(&events), vec![2, 4, 6, 7], "each page joins as it arrives");
+    assert_eq!(
+        queue_lengths(&events),
+        vec![2, 4, 6, 7],
+        "each page joins as it arrives"
+    );
     let queued: Vec<String> = env
         .core
         .queue_window(0, 10)
@@ -809,7 +819,9 @@ fn a_long_playlist_plays_from_its_first_page_and_grows() {
     let browsed = server.with_path("/browse");
     assert_eq!(browsed.len(), 4);
     assert!(
-        browsed.iter().all(|r| r.query("kind").as_deref() == Some("playlist")),
+        browsed
+            .iter()
+            .all(|r| r.query("kind").as_deref() == Some("playlist")),
         "fetched as a playlist, not an album"
     );
 

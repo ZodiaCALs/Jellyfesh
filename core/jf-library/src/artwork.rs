@@ -129,7 +129,10 @@ mod tests {
     #[test]
     fn finds_folder_art_by_name_then_extension() {
         let files = |names: &[&str]| -> Vec<std::path::PathBuf> {
-            names.iter().map(|n| std::path::PathBuf::from("/m").join(n)).collect()
+            names
+                .iter()
+                .map(|n| std::path::PathBuf::from("/m").join(n))
+                .collect()
         };
         assert_eq!(folder_art_among(&files(&["01.flac", "notes.txt"])), None);
         assert_eq!(

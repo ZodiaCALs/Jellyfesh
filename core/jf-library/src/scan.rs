@@ -64,7 +64,10 @@ enum Change {
         root_id: i64,
     },
     /// An unchanged file without a picture of its own gets its folder's.
-    Artwork { id: i64, artwork: StoredArt },
+    Artwork {
+        id: i64,
+        artwork: StoredArt,
+    },
 }
 
 pub(crate) fn scan(
@@ -339,7 +342,10 @@ impl<'l> Pass<'l> {
             if !known.has_artwork
                 && let Some(artwork) = self.folder_art(&entry.path)
             {
-                self.batch.push(Change::Artwork { id: known.id, artwork });
+                self.batch.push(Change::Artwork {
+                    id: known.id,
+                    artwork,
+                });
             }
         } else {
             match tags::parse(self.lib.fs.as_ref(), &entry.path, true) {

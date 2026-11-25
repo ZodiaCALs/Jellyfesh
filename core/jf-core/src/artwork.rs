@@ -271,7 +271,13 @@ fn image_from_plugin(ctx: Option<&Ctx>, reference: &str, size_px: u32) -> Result
 }
 
 /// What the plugin's `artwork` answers for an item.
-fn plugin_artwork(ctx: &Ctx, plugin: &str, kind: HostKind, id: &str, size_px: u32) -> Result<ImageRef, String> {
+fn plugin_artwork(
+    ctx: &Ctx,
+    plugin: &str,
+    kind: HostKind,
+    id: &str,
+    size_px: u32,
+) -> Result<ImageRef, String> {
     let item = ctx.item(plugin, id, kind);
     let size = jf_library::thumbnail_size(size_px);
     let answer = ctx
