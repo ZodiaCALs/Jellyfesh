@@ -630,4 +630,26 @@
     <!-- v0.0.8: search by source (ADR-0024 §4) -->
     <string name="search_show_more">Show More</string>
     <string name="search_results_from">Results from %1$s</string>
+
+    <!-- v0.0.8: Settings › Downloads (ADR-0025 §2) -->
+    <string name="download_folder">Folder</string>
+    <string name="download_quality">Quality</string>
+    <string name="download_original">Original</string>
+    <string name="download_original_desc">The file exactly as your server keeps it.</string>
+    <string name="download_file_names">File Names</string>
+    <string name="download_preview">Preview: %1$s</string>
+    <string name="download_tags">Tags</string>
+    <string name="download_add_missing">Add Missing Cover and Lyrics</string>
+    <string name="download_add_missing_desc">Original files are kept as they are unless this is on.</string>
+    <string name="download_lyrics">Lyrics</string>
+    <string name="download_lrc_files">Save .lrc Files</string>
+    <string name="download_network">Network</string>
+    <string name="download_wifi_only">Wi-Fi Only</string>
+    <string name="download_wifi_only_desc">Downloads wait while the connection is metered.</string>
+    <string name="download_at_once">Downloads at Once</string>
+    <string name="download_space">Space Used</string>
+    <string name="download_remove_all">Remove All Downloads…</string>
+    <string name="download_remove_all_title">Remove All Downloads?</string>
+    <string name="download_remove_all_message">Every downloaded file is deleted from this device.</string>
+    <string name="download_remove_all_confirm">Remove All</string>
 </resources>

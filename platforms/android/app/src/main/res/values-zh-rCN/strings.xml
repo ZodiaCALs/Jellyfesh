@@ -587,4 +587,26 @@
     <!-- v0.0.8: search by source (ADR-0024 §4) -->
     <string name="search_show_more">显示更多</string>
     <string name="search_results_from">来自 %1$s 的结果</string>
+
+    <!-- v0.0.8: Settings › Downloads (ADR-0025 §2) -->
+    <string name="download_folder">文件夹</string>
+    <string name="download_quality">音质</string>
+    <string name="download_original">原版</string>
+    <string name="download_original_desc">与服务器上保存的文件完全相同。</string>
+    <string name="download_file_names">文件名</string>
+    <string name="download_preview">预览：%1$s</string>
+    <string name="download_tags">标签</string>
+    <string name="download_add_missing">补充缺少的封面和歌词</string>
+    <string name="download_add_missing_desc">关闭此项时，原始文件保持原样。</string>
+    <string name="download_lyrics">歌词</string>
+    <string name="download_lrc_files">保存 .lrc 文件</string>
+    <string name="download_network">网络</string>
+    <string name="download_wifi_only">仅限 Wi-Fi</string>
+    <string name="download_wifi_only_desc">使用按流量计费的网络时，下载会等待。</string>
+    <string name="download_at_once">同时下载数</string>
+    <string name="download_space">已用空间</string>
+    <string name="download_remove_all">移除所有下载…</string>
+    <string name="download_remove_all_title">要移除所有下载吗？</string>
+    <string name="download_remove_all_message">所有已下载的文件都会从此设备中删除。</string>
+    <string name="download_remove_all_confirm">全部移除</string>
 </resources>

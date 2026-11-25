@@ -587,4 +587,26 @@
     <!-- v0.0.8: search by source (ADR-0024 §4) -->
     <string name="search_show_more">さらに表示</string>
     <string name="search_results_from">%1$s の結果</string>
+
+    <!-- v0.0.8: Settings › Downloads (ADR-0025 §2) -->
+    <string name="download_folder">フォルダ</string>
+    <string name="download_quality">音質</string>
+    <string name="download_original">オリジナル</string>
+    <string name="download_original_desc">サーバーに保存されているままのファイルです。</string>
+    <string name="download_file_names">ファイル名</string>
+    <string name="download_preview">プレビュー: %1$s</string>
+    <string name="download_tags">タグ</string>
+    <string name="download_add_missing">不足しているカバーと歌詞を追加</string>
+    <string name="download_add_missing_desc">これがオフのときは、オリジナルのファイルをそのまま保存します。</string>
+    <string name="download_lyrics">歌詞</string>
+    <string name="download_lrc_files">.lrc ファイルを保存</string>
+    <string name="download_network">ネットワーク</string>
+    <string name="download_wifi_only">Wi-Fi のみ</string>
+    <string name="download_wifi_only_desc">従量制の接続では、ダウンロードを待機します。</string>
+    <string name="download_at_once">同時ダウンロード数</string>
+    <string name="download_space">使用容量</string>
+    <string name="download_remove_all">すべてのダウンロードを削除…</string>
+    <string name="download_remove_all_title">すべてのダウンロードを削除しますか？</string>
+    <string name="download_remove_all_message">ダウンロードしたファイルはすべてこのデバイスから削除されます。</string>
+    <string name="download_remove_all_confirm">すべて削除</string>
 </resources>

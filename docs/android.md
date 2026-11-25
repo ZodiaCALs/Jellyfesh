@@ -72,7 +72,13 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
 * **Measures**: page titles are type.text-h2 (30.4) under 900 dp and type.text-h1 (48) from
   900 dp, as on the web; Back is the web's (the chevron and the word in accent text); Albums and
   Songs put their sort menu beside the title.
-* **Not yet**: Downloads (the page and Settings › Downloads) say they are not in this build yet.
+* **Settings › Downloads** (ADR-0025 §2): the folder the core reports (Music/Jellyfesh in shared
+  storage; Android offers no other), Quality (Original, "The file exactly as your server keeps
+  it.", High, Normal, Low), File Names (the template, a button per field and the core's preview of
+  one song's path, saved once typing pauses), the three Tags switches, Wi-Fi Only and Downloads at
+  Once (1 to 4), and Space Used with Remove All Downloads…, which asks first
+  (`settings/DownloadSettingsModel.kt`).
+* **Not yet**: the Downloads page says it is not in this build yet.
 
 ## v0.0.8: Android 17's Local Network permission
 

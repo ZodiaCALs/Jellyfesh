@@ -98,6 +98,13 @@ import org.jellyfesh.logic.core.LyricsAlign
 import org.jellyfesh.logic.core.LyricsSize
 import org.jellyfesh.logic.core.ReplayGainMode
 import org.jellyfesh.logic.core.ScanStatus
+import android.text.format.Formatter
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.collectAsState
+import kotlinx.coroutines.delay
+import org.jellyfesh.android.ui.theme.JfTextField
+import org.jellyfesh.logic.core.DownloadQuality
+import org.jellyfesh.logic.settings.DownloadSettingsModel
 import org.jellyfesh.logic.core.Settings
 import org.jellyfesh.logic.core.StreamingQuality
 import org.jellyfesh.android.ui.player.streamingQualityName
@@ -211,15 +218,12 @@ private fun LazyListScope.group(group: SettingsGroup, state: CoreState) {
         SettingsGroup.MusicFolders -> musicFolders(state)
         SettingsGroup.WatchFolders -> watchFolders(state.settings)
         SettingsGroup.RescanLibrary -> rescan(state)
-        // Downloads (ADR-0025) needs the core's downloads, which arrive with v0.0.8's contract:
-        // until then the section says so once.
-        SettingsGroup.DownloadFolder -> item(key = "downloads-pending") { Notice(stringResource(R.string.not_available_yet)) }
-        SettingsGroup.DownloadQuality,
-        SettingsGroup.DownloadFileNames,
-        SettingsGroup.DownloadTags,
-        SettingsGroup.DownloadNetwork,
-        SettingsGroup.DownloadSpace,
-        -> Unit
+        SettingsGroup.DownloadFolder -> downloadFolder(state)
+        SettingsGroup.DownloadQuality -> downloadQuality(state.settings)
+        SettingsGroup.DownloadFileNames -> downloadFileNames()
+        SettingsGroup.DownloadTags -> downloadTags(state.settings)
+        SettingsGroup.DownloadNetwork -> downloadNetwork(state.settings)
+        SettingsGroup.DownloadSpace -> downloadSpace(state)
         SettingsGroup.AddSource -> addSource(state)
         SettingsGroup.Installed -> installed(state)
         SettingsGroup.CommunityPlugins -> communityPlugins(state)
@@ -632,6 +636,178 @@ private fun LazyListScope.streaming(settings: Settings) {
                 }
             }
         }
+    }
+}
+
+// ---- Downloads (ADR-0025 §2; docs/ui.md, "Settings") --------------------------------------------
+// The core keeps each setting and decides what it means (the folder, the file names, whether a
+// download waits); the page shows them and sends changes.
+
+/** Folder: where downloads go, the core's (Music/Jellyfesh in shared storage). */
+private fun LazyListScope.downloadFolder(state: CoreState) {
+    item(key = "download-folder") {
+        SettingsCard(stringResource(R.string.download_folder)) {
+            SettingColumn(null, state.downloads.folder.ifBlank { null }) {}
+        }
+    }
+}
+
+/** Quality: Original (the file exactly as the server keeps it), High, Normal or Low. */
+private fun LazyListScope.downloadQuality(settings: Settings) {
+    item(key = "download-quality") {
+        val edit = rememberEdit(settings)
+        val current = settings.downloads.quality
+        SettingsCard(stringResource(R.string.download_quality)) {
+            Column(Modifier.selectableGroup()) {
+                DownloadQuality.entries.forEachIndexed { i, quality ->
+                    if (i > 0) Divider()
+                    val choose = { if (quality != current) edit { copy(downloads = downloads.copy(quality = quality)) } }
+                    if (quality == DownloadQuality.Original) {
+                        NotedChoice(stringResource(downloadQualityName(quality)), stringResource(R.string.download_original_desc), quality == current, choose)
+                    } else {
+                        ChoiceRow(stringResource(downloadQualityName(quality)), quality == current, choose, inset = 16.dp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun downloadQualityName(quality: DownloadQuality): Int = when (quality) {
+    DownloadQuality.Original -> R.string.download_original
+    DownloadQuality.High -> R.string.streaming_high
+    DownloadQuality.Normal -> R.string.streaming_normal
+    DownloadQuality.Low -> R.string.streaming_low
+}
+
+/**
+ * File Names: the template, a button per field (added at its end), and the core's preview of one
+ * song's path. The template is saved once typing pauses; the core's value comes back unless the
+ * person is still typing.
+ */
+private fun LazyListScope.downloadFileNames() {
+    item(key = "download-names") {
+        val graph = LocalGraph.current
+        val saved = graph.store.state.collectAsState().value.settings.downloads.nameTemplate
+        var template by remember { mutableStateOf(saved) }
+        var editing by remember { mutableStateOf(false) }
+        LaunchedEffect(saved) { if (!editing) template = saved }
+        LaunchedEffect(template, editing) {
+            if (!editing) return@LaunchedEffect
+            delay(DownloadSettingsModel.TEMPLATE_SAVE_DELAY_MS)
+            editing = false
+            val latest = graph.store.state.value.settings
+            if (latest.downloads.nameTemplate != template) graph.send(SettingsEdits.set(latest) { copy(downloads = downloads.copy(nameTemplate = template)) })
+        }
+        val preview = remember(template) { runCatching { graph.client?.downloadPreview(template) }.getOrNull() }
+        val title = stringResource(R.string.download_file_names)
+        SettingsCard(title) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                JfTextField(template, {
+                    template = it
+                    editing = true
+                }, title)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DownloadSettingsModel.FIELDS.forEach { field ->
+                        JfButton(field, {
+                            template = DownloadSettingsModel.appendField(template, field)
+                            editing = true
+                        }, style = ButtonStyle.Quiet)
+                    }
+                }
+                preview?.let { JfText(stringResource(R.string.download_preview, it), style = JfType.small, color = Jf.colors.ink70) }
+            }
+        }
+    }
+}
+
+/** Tags: Add Missing Cover and Lyrics (off keeps originals byte for byte), Lyrics, Save .lrc Files. */
+private fun LazyListScope.downloadTags(settings: Settings) {
+    item(key = "download-tags") {
+        val edit = rememberEdit(settings)
+        val downloads = settings.downloads
+        SettingsCard(stringResource(R.string.download_tags)) {
+            SettingRow(stringResource(R.string.download_add_missing), description = stringResource(R.string.download_add_missing_desc)) {
+                JfSwitch(downloads.addMissingCoverAndLyrics, { on -> edit { copy(downloads = this.downloads.copy(addMissingCoverAndLyrics = on)) } })
+            }
+            Divider()
+            SettingRow(stringResource(R.string.download_lyrics)) {
+                JfSwitch(downloads.lyricsInTags, { on -> edit { copy(downloads = this.downloads.copy(lyricsInTags = on)) } })
+            }
+            Divider()
+            SettingRow(stringResource(R.string.download_lrc_files)) {
+                JfSwitch(downloads.saveLrcFiles, { on -> edit { copy(downloads = this.downloads.copy(saveLrcFiles = on)) } })
+            }
+        }
+    }
+}
+
+/** Network: Wi-Fi Only (Android; downloads wait on a metered connection) and Downloads at Once, 1 to 4. */
+private fun LazyListScope.downloadNetwork(settings: Settings) {
+    item(key = "download-network") {
+        val edit = rememberEdit(settings)
+        val downloads = settings.downloads
+        SettingsCard(stringResource(R.string.download_network)) {
+            SettingRow(stringResource(R.string.download_wifi_only), description = stringResource(R.string.download_wifi_only_desc)) {
+                JfSwitch(downloads.wifiOnly, { on -> edit { copy(downloads = this.downloads.copy(wifiOnly = on)) } })
+            }
+            Divider()
+            SettingColumn(stringResource(R.string.download_at_once), null) {
+                SegmentedControl(
+                    options = DownloadSettingsModel.AT_ONCE,
+                    selected = DownloadSettingsModel.atOnce(downloads.atOnce),
+                    label = { it.toString() },
+                    onSelect = { n -> edit { copy(downloads = this.downloads.copy(atOnce = n)) } },
+                    description = stringResource(R.string.download_at_once),
+                )
+            }
+        }
+    }
+}
+
+/** Space Used, and Remove All Downloads…, which asks first. */
+private fun LazyListScope.downloadSpace(state: CoreState) {
+    item(key = "download-space") {
+        val graph = LocalGraph.current
+        val overlays = LocalOverlays.current
+        val context = LocalContext.current
+        val downloads = state.downloads
+        val title = stringResource(R.string.download_remove_all_title)
+        val message = stringResource(R.string.download_remove_all_message)
+        val confirm = stringResource(R.string.download_remove_all_confirm)
+        SettingsCard(null) {
+            SettingRow(stringResource(R.string.download_space), description = Formatter.formatFileSize(context, downloads.bytesUsed))
+            Divider()
+            Row(Modifier.padding(16.dp)) {
+                JfButton(
+                    stringResource(R.string.download_remove_all),
+                    { overlays.confirm(title, message, confirm, destructive = true) { graph.send(Command.RemoveAllDownloads) } },
+                    style = ButtonStyle.Danger,
+                    enabled = DownloadSettingsModel.canRemoveAll(downloads),
+                )
+            }
+        }
+    }
+}
+
+/** A choice with a line under its label (Original: "The file exactly as your server keeps it."). */
+@Composable
+private fun NotedChoice(label: String, note: String, selected: Boolean, onClick: () -> Unit) {
+    val colors = Jf.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .selectable(selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            JfText(label, style = JfType.listTitle.copy(fontSize = JfType.body.fontSize), color = if (selected) colors.accentText else colors.ink90, maxLines = 1)
+            JfText(note, style = JfType.small, color = colors.ink70)
+        }
+        if (selected) JfIcon(R.drawable.ic_check, colors.accentText, size = 20.dp)
     }
 }
 
