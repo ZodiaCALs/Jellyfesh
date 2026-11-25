@@ -1,13 +1,9 @@
 package org.jellyfesh.android.system
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import org.jellyfesh.logic.sources.LocalNetwork
 import org.jellyfesh.logic.sources.LocalNetworkAccess
 
@@ -48,15 +44,7 @@ class LocalNetworkPermission(private val context: Context) {
         LocalNetwork.access(Build.VERSION.SDK_INT, anyLocal, granted(), asked, rationale(activity))
 
     /** Opens Jellyfesh's page in Android's settings, where Permissions › Nearby devices turns it on. */
-    fun openSettings(activity: Activity?) {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
-        if (activity == null) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
-            (activity ?: context).startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
-            // A device without the page: the notice stays, which is all that can be done.
-        }
-    }
+    fun openSettings(activity: Activity?) = openAppSettings(context, activity)
 
     private companion object {
         const val PREFS = "permissions"

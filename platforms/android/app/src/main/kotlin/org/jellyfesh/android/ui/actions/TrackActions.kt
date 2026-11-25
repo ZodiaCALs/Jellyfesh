@@ -42,6 +42,7 @@ import org.jellyfesh.logic.core.SongRef
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.library.ArtistMatch
 import org.jellyfesh.logic.library.CollectionMenu
+import org.jellyfesh.android.ui.library.LocalDownloadGate
 import org.jellyfesh.logic.library.DownloadMenus
 import org.jellyfesh.logic.library.SourceLibraryModel
 import org.jellyfesh.logic.library.CollectionTracks
@@ -86,6 +87,8 @@ class TrackActions internal constructor(
     private val context: android.content.Context,
     private val lyricsMaker: LyricsMaker,
     private val infoSheets: InfoSheets,
+    /** Sends a Download once storage allows it (Android 8 and 9 ask first; ADR-0025 §2). */
+    private val download: (Command) -> Unit,
 ) {
     private fun s(id: Int, vararg args: Any): String = context.getString(id, *args)
 
@@ -174,7 +177,7 @@ class TrackActions internal constructor(
         val actions = items.mapNotNull { item ->
             when (item) {
                 TrackMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(listOf(target.track)) }
-                TrackMenuItem.Download -> SheetAction(s(R.string.action_download), R.drawable.ic_download) { graph.send(DownloadMenus.download(target.track)) }
+                TrackMenuItem.Download -> SheetAction(s(R.string.action_download), R.drawable.ic_download) { download(DownloadMenus.download(target.track)) }
                 TrackMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(listOf(target.track)) }
                 TrackMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(listOf(target.track)) }
                 TrackMenuItem.AddToFavourites -> SheetAction(s(R.string.action_favourite), R.drawable.ic_heart) { graph.send(Command.SetFavorite(target.track, true)) }
@@ -261,7 +264,7 @@ class TrackActions internal constructor(
                     }
                 }
                 CollectionMenuItem.Download -> (collection as? CollectionRef.Source)?.let { source ->
-                    SheetAction(s(R.string.action_download), R.drawable.ic_download) { graph.send(DownloadMenus.download(source)) }
+                    SheetAction(s(R.string.action_download), R.drawable.ic_download) { download(DownloadMenus.download(source)) }
                 }
                 CollectionMenuItem.OpenLink -> linkAction
             }
@@ -329,5 +332,8 @@ fun rememberTrackActions(): TrackActions {
     val context = LocalContext.current
     val lyricsMaker = rememberLyricsMaker()
     val infoSheets = rememberInfoSheets()
-    return remember(graph, nav, overlays, context, lyricsMaker, infoSheets) { TrackActions(graph, nav, overlays, context, lyricsMaker, infoSheets) }
+    val gate = LocalDownloadGate.current
+    return remember(graph, nav, overlays, context, lyricsMaker, infoSheets, gate) {
+        TrackActions(graph, nav, overlays, context, lyricsMaker, infoSheets) { command -> gate?.download(command) ?: graph.send(command) }
+    }
 }

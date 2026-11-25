@@ -87,6 +87,7 @@ import org.jellyfesh.android.ui.signals.SignalMessages
 import org.jellyfesh.android.ui.sources.SourceBrowseScreen
 import org.jellyfesh.android.ui.sources.DiscoverScreen
 import org.jellyfesh.android.ui.sources.ProvideLocalNetwork
+import org.jellyfesh.android.ui.library.ProvideDownloadGate
 import org.jellyfesh.android.ui.sources.SourcesScreen
 import org.jellyfesh.android.ui.theme.GlassBackdrop
 import org.jellyfesh.android.ui.theme.Jf
@@ -204,8 +205,9 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
     CompositionLocalProvider(LocalNav provides nav, LocalPlaybackRunning provides (PlayerModel.isPlaying(state.playback.status) && !PlayerModel.isRemote(state))) {
         BackHandler(enabled = navState.canGoBack && !overlays.isOpen) { nav.back() }
         val saveable = rememberSaveableStateHolder()
-        // Android 17: Local Network access before connecting to a source on the home network.
-        ProvideLocalNetwork(state.sources.plugins) {
+        // Android 17: Local Network access before connecting to a source on the home network;
+        // Android 8 and 9: storage access before the first download (ADR-0025 §2).
+        ProvideLocalNetwork(state.sources.plugins) { ProvideDownloadGate {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val windowWidth = maxWidth.value
                 // ADR-0023: the sidebar panel from 761 dp, the phone layout's tab bar below that.
@@ -305,6 +307,7 @@ private fun MainUi(graph: AppGraph, state: CoreState, overlays: Overlays) {
                 }
                 OverlayHost(overlays, bottomInset = if (navState.nowPlayingOpen) 0.dp else chromeHeight)
             }
+        }
         }
     }
 }

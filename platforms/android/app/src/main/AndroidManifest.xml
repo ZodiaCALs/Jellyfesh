@@ -18,6 +18,12 @@
     <!-- Whether the network is metered or gone, told to the core (NetworkWatcher.kt): Auto quality
          and downloads (Wi-Fi Only) follow it. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Downloads go to Music/Jellyfesh by path (ADR-0025 §2): Android 11 and later allow it and
+         index the files, Android 10 has requestLegacyExternalStorage, and Android 8 and 9 need
+         this, asked once before the first download (DownloadGate.kt). Never the all-files one. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
     <!-- Android 17 (API 37): servers on the home network (Jellyfin, Navidrome) are reachable only
          with this runtime permission of the Nearby devices group. The app asks before connecting
          to a source whose address the core calls local (LocalNetworkUi.kt); earlier versions

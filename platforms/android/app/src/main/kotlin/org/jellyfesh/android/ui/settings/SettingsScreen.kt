@@ -648,6 +648,8 @@ private fun LazyListScope.downloadFolder(state: CoreState) {
     item(key = "download-folder") {
         SettingsCard(stringResource(R.string.download_folder)) {
             SettingColumn(null, state.downloads.folder.ifBlank { null }) {}
+            // Android 8 and 9 once storage access was refused (ADR-0025 §2).
+            org.jellyfesh.android.ui.library.StorageOffNotice()
         }
     }
 }

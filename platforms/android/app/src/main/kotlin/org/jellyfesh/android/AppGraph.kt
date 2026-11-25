@@ -23,6 +23,7 @@ import org.jellyfesh.android.library.LibraryAccess
 import org.jellyfesh.android.plugins.BundledPlugins
 import org.jellyfesh.android.system.DeviceWatcher
 import org.jellyfesh.android.system.NetworkWatcher
+import org.jellyfesh.android.system.StoragePermission
 import org.jellyfesh.android.system.IconSwitcher
 import org.jellyfesh.android.system.LocalNetworkPermission
 import org.jellyfesh.logic.core.Command
@@ -101,6 +102,9 @@ class AppGraph(private val app: Application) {
 
     /** Android 17's Local Network permission, asked before connecting to a source the core calls local. */
     val localNetwork = LocalNetworkPermission(app)
+
+    /** Android 8 and 9's storage permission, asked once before the first download (ADR-0025 §2). */
+    val storage = StoragePermission(app)
 
     /** Whether the window is the mini player in picture-in-picture (ADR-0026 §4); MainActivity sets it. */
     val pictureInPicture = MutableStateFlow(false)

@@ -155,6 +155,9 @@ fun sectionLabel(section: LibrarySection): Int = when (section) {
 @Composable
 private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
     val graph = LocalGraph.current
+    // Try Again on Android 8 and 9 goes through storage access too (ADR-0025 §2).
+    val gate = LocalDownloadGate.current
+    val retry: (Command) -> Unit = { command -> gate?.download(command) ?: graph.send(command) }
     val overlays = LocalOverlays.current
     val context = LocalContext.current
     val downloads = state.downloads
@@ -174,6 +177,7 @@ private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
     }
     LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "header") { header {} }
+        item(key = "storage") { StorageOffNotice() }
         if (downloads.items.isEmpty()) {
             item(key = "empty") { EmptyState(R.drawable.ic_download, stringResource(R.string.downloads_empty_title), stringResource(R.string.downloads_empty_body)) }
             return@LazyColumn
@@ -197,7 +201,7 @@ private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
         }
         if (inProgress.isNotEmpty()) {
             item(key = "progress-h") { SectionHeader(stringResource(R.string.downloads_in_progress)) }
-            items(inProgress, key = { "dl-${it.id}" }) { item -> DownloadProgressRow(item, graph::send) }
+            items(inProgress, key = { "dl-${it.id}" }) { item -> DownloadProgressRow(item, graph::send, retry) }
         }
         albums.forEach { album ->
             val title = album.album ?: unknownAlbum
@@ -236,7 +240,7 @@ private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
 
 /** A download on its way: the song, "Waiting", its percentage or the failure with Try Again, and Cancel. */
 @Composable
-private fun DownloadProgressRow(item: DownloadItem, send: (Command) -> Long) {
+private fun DownloadProgressRow(item: DownloadItem, send: (Command) -> Long, retry: (Command) -> Unit) {
     val colors = Jf.colors
     val progress = DownloadsModel.progress(item)
     val status = when (progress) {
@@ -263,7 +267,7 @@ private fun DownloadProgressRow(item: DownloadItem, send: (Command) -> Long) {
             }
         }
         if (progress is DownloadProgress.Failed) {
-            JfButton(stringResource(R.string.downloads_try_again), { send(DownloadsModel.retry(item)) }, style = ButtonStyle.Quiet)
+            JfButton(stringResource(R.string.downloads_try_again), { retry(DownloadsModel.retry(item)) }, style = ButtonStyle.Quiet)
         }
         JfIconButton(R.drawable.ic_close, stringResource(R.string.action_cancel), { send(DownloadsModel.cancel(item)) }, size = 40.dp, iconSize = 18.dp)
     }

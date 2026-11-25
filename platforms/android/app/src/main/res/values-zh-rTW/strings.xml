@@ -641,4 +641,9 @@
     <string name="action_save_as_playlist">儲存為播放清單…</string>
     <string name="save_as_playlist_title">儲存為播放清單</string>
     <string name="source_playlist_songs_elsewhere">%1$s 只在 %2$s 中列出這個播放清單的歌曲。</string>
+
+    <!-- v0.0.8: storage access for downloads on Android 8 and 9 (ADR-0025 §2) -->
+    <string name="storage_off_title">儲存空間存取權已關閉</string>
+    <string name="storage_off_body">在此版本的 Android 上，Jellyfesh 需要儲存空間存取權才能將下載內容儲存到 Music/Jellyfesh。</string>
+    <string name="storage_off_notice">儲存空間存取權已關閉，無法儲存下載內容。</string>
 </resources>

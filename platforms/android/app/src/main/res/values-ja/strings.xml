@@ -641,4 +641,9 @@
     <string name="action_save_as_playlist">プレイリストとして保存…</string>
     <string name="save_as_playlist_title">プレイリストとして保存</string>
     <string name="source_playlist_songs_elsewhere">%1$s はこのプレイリストの曲を %2$s でのみ表示します。</string>
+
+    <!-- v0.0.8: storage access for downloads on Android 8 and 9 (ADR-0025 §2) -->
+    <string name="storage_off_title">ストレージへのアクセスがオフです</string>
+    <string name="storage_off_body">このバージョンの Android では、ダウンロードを Music/Jellyfesh に保存するためにストレージへのアクセスが必要です。</string>
+    <string name="storage_off_notice">ストレージへのアクセスがオフのため、ダウンロードを保存できません。</string>
 </resources>

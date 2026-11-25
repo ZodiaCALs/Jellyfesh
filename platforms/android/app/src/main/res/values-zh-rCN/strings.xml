@@ -641,4 +641,9 @@
     <string name="action_save_as_playlist">存储为歌单…</string>
     <string name="save_as_playlist_title">存储为歌单</string>
     <string name="source_playlist_songs_elsewhere">%1$s 只在 %2$s 中列出这个歌单的歌曲。</string>
+
+    <!-- v0.0.8: storage access for downloads on Android 8 and 9 (ADR-0025 §2) -->
+    <string name="storage_off_title">存储访问已关闭</string>
+    <string name="storage_off_body">在此版本的 Android 上，Jellyfesh 需要存储访问权限才能将下载保存到 Music/Jellyfesh。</string>
+    <string name="storage_off_notice">存储访问已关闭，无法保存下载。</string>
 </resources>

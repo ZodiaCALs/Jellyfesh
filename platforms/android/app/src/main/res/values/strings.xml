@@ -684,4 +684,9 @@
     <string name="action_save_as_playlist">Save as Playlist…</string>
     <string name="save_as_playlist_title">Save as Playlist</string>
     <string name="source_playlist_songs_elsewhere">%1$s lists this playlist\'s songs only in %2$s.</string>
+
+    <!-- v0.0.8: storage access for downloads on Android 8 and 9 (ADR-0025 §2) -->
+    <string name="storage_off_title">Storage Access Is Off</string>
+    <string name="storage_off_body">On this version of Android, Jellyfesh needs storage access to save downloads in Music/Jellyfesh.</string>
+    <string name="storage_off_notice">Storage access is off, so downloads can\'t be saved.</string>
 </resources>
