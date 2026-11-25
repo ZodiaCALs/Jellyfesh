@@ -758,6 +758,129 @@
                     </Border>
                 </StackPanel>
 
+                <!-- ===== Downloads (ADR-0025 §2): Folder, Quality, File Names, Tags, Network, Space Used ===== -->
+                <StackPanel x:Name="DownloadsPanel" Spacing="16" Visibility="Collapsed">
+                    <!-- Folder: where downloads go, with Change… and Show in Explorer. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Downloads_Folder" Style="{StaticResource CardHeading}" Text="Folder" />
+                            <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfBodyText}" Text="{x:Bind ViewModel.Downloads.Folder, Mode=OneWay}" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button x:Uid="Downloads_ChangeFolder" Command="{x:Bind ViewModel.Downloads.ChangeFolderCommand}" Content="Change…" Style="{StaticResource JfChipButtonStyle}" />
+                                <Button x:Uid="Downloads_ShowFolder" Command="{x:Bind ViewModel.Downloads.ShowFolderCommand}" Content="Show in Explorer" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.Downloads.HasFolder), Mode=OneWay}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Quality: Original (the file as the server keeps it), or the server's conversion. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Downloads_Quality" Style="{StaticResource CardHeading}" Text="Quality" />
+                            <RadioButtons x:Uid="Downloads_QualityChoice" AutomationProperties.Name="Quality" SelectedIndex="{x:Bind ViewModel.Downloads.QualityIndex, Mode=TwoWay}">
+                                <RadioButton x:Uid="Downloads_OriginalChoice" AutomationProperties.Name="Original">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock x:Uid="Downloads_Original" Style="{StaticResource JfBodyText}" Text="Original" />
+                                        <TextBlock x:Uid="Downloads_OriginalHint" Style="{StaticResource JfSecondaryBodyText}" Text="The file exactly as your server keeps it." TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Uid="Downloads_High" Content="High" />
+                                <RadioButton x:Uid="Downloads_Normal" Content="Normal" />
+                                <RadioButton x:Uid="Downloads_Low" Content="Low" />
+                            </RadioButtons>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- File Names: the template, the core's preview of one song's path, and its fields. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="8">
+                            <TextBlock x:Uid="Downloads_FileNames" Style="{StaticResource CardHeading}" Text="File Names" />
+                            <TextBox
+                                x:Uid="Downloads_Template"
+                                AutomationProperties.Name="File Names"
+                                FontFamily="Cascadia Mono, Consolas"
+                                KeyDown="OnNameTemplateKeyDown"
+                                LostFocus="OnNameTemplateLostFocus"
+                                Text="{x:Bind ViewModel.Downloads.NameTemplate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock IsTextSelectionEnabled="True" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Downloads.NamePreview, Mode=OneWay}" TextWrapping="Wrap" />
+                            <TextBlock x:Uid="Downloads_Fields" Style="{StaticResource JfCaptionText}" Text="Fields: {artist}, {album_artist}, {album}, {title}, {track}, {disc}, {year}, {source}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tags: Add Missing Cover and Lyrics, Lyrics, Save .lrc Files. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Downloads_Tags" Style="{StaticResource CardHeading}" Text="Tags" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Downloads_AddMissingTitle" Style="{StaticResource RowTitle}" Text="Add Missing Cover and Lyrics" />
+                                    <TextBlock x:Uid="Downloads_AddMissingHint" Style="{StaticResource JfSecondaryBodyText}" Text="Original files are kept as they are unless this is on." TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch x:Uid="Downloads_AddMissing" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Add Missing Cover and Lyrics" IsOn="{x:Bind ViewModel.Downloads.AddMissingCoverAndLyrics, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="Downloads_LyricsTitle" VerticalAlignment="Center" Style="{StaticResource RowTitle}" Text="Lyrics" />
+                                <ToggleSwitch x:Uid="Downloads_Lyrics" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Lyrics" IsOn="{x:Bind ViewModel.Downloads.LyricsInTags, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Uid="Downloads_LrcTitle" VerticalAlignment="Center" Style="{StaticResource RowTitle}" Text="Save .lrc Files" />
+                                <ToggleSwitch x:Uid="Downloads_Lrc" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Save .lrc Files" IsOn="{x:Bind ViewModel.Downloads.SaveLrcFiles, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Network: Pause on Metered Connections (Windows reports metered connections) and Downloads at Once. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Downloads_Network" Style="{StaticResource CardHeading}" Text="Network" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Downloads_MeteredTitle" Style="{StaticResource RowTitle}" Text="Pause on Metered Connections" />
+                                    <TextBlock x:Uid="Downloads_MeteredHint" Style="{StaticResource JfSecondaryBodyText}" Text="Downloads wait while you're on mobile data, a hotspot or another metered connection." TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch x:Uid="Downloads_Metered" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Pause on Metered Connections" IsOn="{x:Bind ViewModel.Downloads.PauseOnMetered, Mode=TwoWay}" />
+                            </Grid>
+                            <Slider
+                                x:Uid="Downloads_AtOnce"
+                                MaxWidth="420"
+                                HorizontalAlignment="Left"
+                                AutomationProperties.Name="Downloads at Once"
+                                Header="Downloads at Once"
+                                Maximum="4"
+                                Minimum="1"
+                                SnapsTo="Ticks"
+                                StepFrequency="1"
+                                TickFrequency="1"
+                                TickPlacement="Outside"
+                                Value="{x:Bind ViewModel.Downloads.AtOnce, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Space Used, and Remove All Downloads… (asks first). -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Downloads_Space" Style="{StaticResource CardHeading}" Text="Space Used" />
+                            <TextBlock Style="{StaticResource JfBodyText}" Text="{x:Bind ViewModel.Downloads.SpaceUsed, Mode=OneWay}" />
+                            <Button x:Uid="Downloads_RemoveAll" Command="{x:Bind ViewModel.Downloads.RemoveAllCommand}" Content="Remove All Downloads…" Style="{StaticResource JfChipButtonStyle}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- ===== Sources: Add a Source, Installed (Install from File… in its heading), Community Plugins ===== -->
                 <StackPanel x:Name="SourcesPanel" Spacing="16" Visibility="Collapsed">
                     <!-- Add a Source: the services Jellyfesh offers (SourcesState.Presets), each while its official

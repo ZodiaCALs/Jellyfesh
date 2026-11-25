@@ -269,6 +269,7 @@ public sealed partial class SettingsViewModel : PageViewModel
         Player = player;
         Pro = pro ?? new ProViewModel(services, null, null);
         Updates = new UpdatesViewModel(services);
+        Downloads = new DownloadSettingsViewModel(services);
         SignIns = new SourceSignIns(services);
         SignIns.Requested += flow => SignInRequested?.Invoke(flow);
         Icons.Add(new AppIconChoice(AppIcons.Automatic, services.L.Get("Icon_Automatic"), iconPreview(AppIcons.Automatic), true));
@@ -334,6 +335,9 @@ public sealed partial class SettingsViewModel : PageViewModel
     /// <summary>Check for Updates (About, direct downloads).</summary>
     public UpdatesViewModel Updates { get; }
 
+    /// <summary>Settings › Downloads (ADR-0025 §2).</summary>
+    public DownloadSettingsViewModel Downloads { get; }
+
     /// <summary>The Customize… row's Pro badge: Customize is part of Pro.</summary>
     public bool CustomizeNeedsPro => !Pro.IsActive;
 
@@ -391,6 +395,10 @@ public sealed partial class SettingsViewModel : PageViewModel
         if (changes.HasFlag(SliceChange.Settings) || changes.HasFlag(SliceChange.Sources) || changes.HasFlag(SliceChange.Scan))
         {
             Apply(state);
+        }
+        else if (changes.HasFlag(SliceChange.Downloads))
+        {
+            Downloads.Apply(state.Settings, state.Downloads);
         }
         else if ((changes & (SliceChange.Pro | SliceChange.AiLyrics | SliceChange.Update)) != 0)
         {
@@ -878,6 +886,7 @@ public sealed partial class SettingsViewModel : PageViewModel
             SyncPlugins(state);
             SourceSignIns.Sync(SourcePresets, state.Sources, S.L);
             Updates.Update(state.Update, s);
+            Downloads.Apply(s, state.Downloads);
         }
         finally
         {

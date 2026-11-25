@@ -195,6 +195,8 @@ public sealed class FfiCoreClient : ICoreClient
     public string? LocalizedSettingsSchema(string plugin, string language) =>
         Query(() => _core.LocalizedSettingsSchema(plugin, language));
 
+    public string DownloadPreview(string template) => Query(() => F.JellyfeshMethods.DownloadPreview(template));
+
     public void SetStoreEntitlement(StoreEntitlement entitlement) => Query(() =>
     {
         _core.SetStoreEntitlement(FfiMapping.ToFfi(entitlement));

@@ -24,6 +24,7 @@ public enum SettingsSection
     Appearance,
     Playback,
     Library,
+    Downloads,
     Sources,
     Extensions,
     About,
@@ -37,6 +38,7 @@ public sealed partial class SettingsPage : JfPage
         (SettingsSection.Appearance, "Section_Appearance"),
         (SettingsSection.Playback, "Section_Playback"),
         (SettingsSection.Library, "Section_Library"),
+        (SettingsSection.Downloads, "Section_Downloads"),
         (SettingsSection.Sources, "Section_Sources"),
         (SettingsSection.Extensions, "Section_Extensions"),
         (SettingsSection.About, "Section_About"),
@@ -127,6 +129,19 @@ public sealed partial class SettingsPage : JfPage
         }
     }
 
+    /// <summary>File Names: Enter sends the template (the preview follows each key).</summary>
+    private void OnNameTemplateKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        if (e.Key == Windows.System.VirtualKey.Enter)
+        {
+            ViewModel.Downloads.CommitNameTemplateCommand.Execute(null);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>File Names: leaving the field sends the template.</summary>
+    private void OnNameTemplateLostFocus(object sender, RoutedEventArgs e) => ViewModel.Downloads.CommitNameTemplateCommand.Execute(null);
+
     /// <summary>Shows one section, from its pill, a link (Sources Settings…, Customize…) or Ctrl+,.</summary>
     public void ShowSection(SettingsSection section)
     {
@@ -138,6 +153,7 @@ public sealed partial class SettingsPage : JfPage
         AppearancePanel.Visibility = Bind.Visible(section == SettingsSection.Appearance);
         PlaybackPanel.Visibility = Bind.Visible(section == SettingsSection.Playback);
         LibraryPanel.Visibility = Bind.Visible(section == SettingsSection.Library);
+        DownloadsPanel.Visibility = Bind.Visible(section == SettingsSection.Downloads);
         SourcesPanel.Visibility = Bind.Visible(section == SettingsSection.Sources);
         ExtensionsPanel.Visibility = Bind.Visible(section == SettingsSection.Extensions);
         AboutPanel.Visibility = Bind.Visible(section == SettingsSection.About);

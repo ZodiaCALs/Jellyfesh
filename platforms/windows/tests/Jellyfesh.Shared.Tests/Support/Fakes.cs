@@ -182,6 +182,12 @@ internal sealed class FakeCore : ICoreClient
 
     public IReadOnlyList<DeviceInfo> OutputDevices() => [];
 
+    /// <summary>The core's preview, as a fake: the template filled with one sample song.</summary>
+    public string DownloadPreview(string template) =>
+        (template.Length == 0 ? "{album_artist}/{album}/{track} {title}" : template)
+            .Replace("{album_artist}", "Sample Artist").Replace("{artist}", "Sample Artist").Replace("{album}", "Night Swim")
+            .Replace("{track}", "01").Replace("{title}", "Lantern") + ".flac";
+
     public IReadOnlyList<EqPreset> EqPresets()
     {
         Count();

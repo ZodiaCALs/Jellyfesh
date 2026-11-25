@@ -58,7 +58,7 @@ public class DownloadsTests
         h.Emit(new CoreEvent.Downloads(Paused(1, DownloadsPaused.Offline, Item(1, "One", "A", new DownloadState.Queued()))));
         Assert.Equal("Downloads resume when you're back online.", page.PausedText);
         h.Emit(new CoreEvent.Downloads(Paused(2, DownloadsPaused.Metered, Item(1, "One", "A", new DownloadState.Queued()))));
-        Assert.Equal("Downloads resume on Wi-Fi.", page.PausedText);
+        Assert.Equal("Downloads resume when you're off a metered connection.", page.PausedText);
         h.Emit(new CoreEvent.Downloads(Paused(3, null, Item(1, "One", "A", new DownloadState.Queued()))));
         Assert.False(page.IsPaused);
 

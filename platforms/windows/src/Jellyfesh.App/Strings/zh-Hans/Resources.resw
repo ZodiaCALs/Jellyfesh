@@ -593,8 +593,26 @@
   <data name="Discover_TryAgain.Content" xml:space="preserve">
     <value>重试</value>
   </data>
+  <data name="Downloads_AddMissing.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>补充缺少的封面和歌词</value>
+  </data>
+  <data name="Downloads_AddMissingHint.Text" xml:space="preserve">
+    <value>关闭此项时，原始文件保持原样。</value>
+  </data>
+  <data name="Downloads_AddMissingTitle.Text" xml:space="preserve">
+    <value>补充缺少的封面和歌词</value>
+  </data>
+  <data name="Downloads_AtOnce.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>同时下载数</value>
+  </data>
+  <data name="Downloads_AtOnce.Header" xml:space="preserve">
+    <value>同时下载数</value>
+  </data>
   <data name="Downloads_Cancel.Content" xml:space="preserve">
     <value>取消</value>
+  </data>
+  <data name="Downloads_ChangeFolder.Content" xml:space="preserve">
+    <value>更改…</value>
   </data>
   <data name="Downloads_Downloading" xml:space="preserve">
     <value>正在下载…</value>
@@ -605,8 +623,50 @@
   <data name="Downloads_EmptyTitle.Text" xml:space="preserve">
     <value>还没有下载</value>
   </data>
+  <data name="Downloads_Fields.Text" xml:space="preserve">
+    <value>字段：{artist}, {album_artist}, {album}, {title}, {track}, {disc}, {year}, {source}</value>
+  </data>
+  <data name="Downloads_FileNames.Text" xml:space="preserve">
+    <value>文件名</value>
+  </data>
+  <data name="Downloads_Folder.Text" xml:space="preserve">
+    <value>文件夹</value>
+  </data>
+  <data name="Downloads_High.Content" xml:space="preserve">
+    <value>高品质</value>
+  </data>
   <data name="Downloads_InProgress.Text" xml:space="preserve">
     <value>进行中</value>
+  </data>
+  <data name="Downloads_Low.Content" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="Downloads_Lrc.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>保存 .lrc 文件</value>
+  </data>
+  <data name="Downloads_LrcTitle.Text" xml:space="preserve">
+    <value>保存 .lrc 文件</value>
+  </data>
+  <data name="Downloads_Lyrics.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>歌词</value>
+  </data>
+  <data name="Downloads_LyricsTitle.Text" xml:space="preserve">
+    <value>歌词</value>
+  </data>
+  <data name="Downloads_Metered.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>在按流量计费的网络上暂停</value>
+  </data>
+  <data name="Downloads_MeteredHint.Text" xml:space="preserve">
+    <value>使用移动数据、热点或其他按流量计费的网络时，下载会等待。</value>
+  </data>
+  <data name="Downloads_MeteredTitle.Text" xml:space="preserve">
+    <value>在按流量计费的网络上暂停</value>
+  </data>
+  <data name="Downloads_Network.Text" xml:space="preserve">
+    <value>网络</value>
+  </data>
+  <data name="Downloads_Normal.Content" xml:space="preserve">
+    <value>标准</value>
   </data>
   <data name="Downloads_NotAllowed" xml:space="preserve">
     <value>你的 {0} 服务器不允许此账户下载。</value>
@@ -614,8 +674,17 @@
   <data name="Downloads_NotOffered" xml:space="preserve">
     <value>{0} 不提供下载。</value>
   </data>
+  <data name="Downloads_Original.Text" xml:space="preserve">
+    <value>原版</value>
+  </data>
+  <data name="Downloads_OriginalChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>原版</value>
+  </data>
+  <data name="Downloads_OriginalHint.Text" xml:space="preserve">
+    <value>与服务器上保存的文件完全相同。</value>
+  </data>
   <data name="Downloads_PausedMetered" xml:space="preserve">
-    <value>连接 Wi-Fi 后将继续下载。</value>
+    <value>离开按流量计费的网络后将继续下载。</value>
   </data>
   <data name="Downloads_PausedOffline" xml:space="preserve">
     <value>恢复联网后将继续下载。</value>
@@ -623,8 +692,32 @@
   <data name="Downloads_Percent" xml:space="preserve">
     <value>{0}%</value>
   </data>
+  <data name="Downloads_Preview" xml:space="preserve">
+    <value>预览：{0}</value>
+  </data>
+  <data name="Downloads_Quality.Text" xml:space="preserve">
+    <value>音质</value>
+  </data>
+  <data name="Downloads_QualityChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>音质</value>
+  </data>
   <data name="Downloads_RemoveAlbum.Content" xml:space="preserve">
     <value>移除下载…</value>
+  </data>
+  <data name="Downloads_RemoveAlbumBody" xml:space="preserve">
+    <value>文件会从此设备中删除。你可以再次下载。</value>
+  </data>
+  <data name="Downloads_RemoveAll.Content" xml:space="preserve">
+    <value>移除所有下载…</value>
+  </data>
+  <data name="Downloads_RemoveAllBody" xml:space="preserve">
+    <value>所有已下载的文件都会从此设备中删除。</value>
+  </data>
+  <data name="Downloads_RemoveAllConfirm" xml:space="preserve">
+    <value>全部移除</value>
+  </data>
+  <data name="Downloads_RemoveAllTitle" xml:space="preserve">
+    <value>要移除所有下载吗？</value>
   </data>
   <data name="Downloads_RemoveBody" xml:space="preserve">
     <value>文件会从此设备中删除。你可以再次下载。</value>
@@ -641,8 +734,20 @@
   <data name="Downloads_RemoveTitle" xml:space="preserve">
     <value>要移除“{0}”的下载吗？</value>
   </data>
+  <data name="Downloads_ShowFolder.Content" xml:space="preserve">
+    <value>在资源管理器中显示</value>
+  </data>
+  <data name="Downloads_Space.Text" xml:space="preserve">
+    <value>已用空间</value>
+  </data>
   <data name="Downloads_Summary" xml:space="preserve">
     <value>{0} · 已用 {1}</value>
+  </data>
+  <data name="Downloads_Tags.Text" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Downloads_Template.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>文件名</value>
   </data>
   <data name="Downloads_Title.Text" xml:space="preserve">
     <value>下载</value>
@@ -1720,6 +1825,9 @@
   </data>
   <data name="Section_Appearance" xml:space="preserve">
     <value>外观</value>
+  </data>
+  <data name="Section_Downloads" xml:space="preserve">
+    <value>下载</value>
   </data>
   <data name="Section_Extensions" xml:space="preserve">
     <value>扩展</value>

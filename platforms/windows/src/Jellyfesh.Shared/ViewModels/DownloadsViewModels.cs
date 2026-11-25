@@ -204,7 +204,7 @@ public sealed partial class DownloadsViewModel(ShellServices services) : PageVie
     [RelayCommand]
     private async Task RemoveSong(DownloadedSong? song)
     {
-        if (song is not null && await ConfirmRemoveAsync(song.Title))
+        if (song is not null && await ConfirmRemoveAsync(song.Title, "Downloads_RemoveBody"))
         {
             S.Send(new CoreCommand.RemoveDownload(song.Id));
         }
@@ -214,7 +214,7 @@ public sealed partial class DownloadsViewModel(ShellServices services) : PageVie
     [RelayCommand]
     private async Task RemoveAlbum(DownloadedAlbum? album)
     {
-        if (album is not null && await ConfirmRemoveAsync(album.Title))
+        if (album is not null && await ConfirmRemoveAsync(album.Title, "Downloads_RemoveAlbumBody"))
         {
             foreach (var song in album.Songs)
             {
@@ -223,8 +223,8 @@ public sealed partial class DownloadsViewModel(ShellServices services) : PageVie
         }
     }
 
-    private Task<bool> ConfirmRemoveAsync(string name) => S.Platform.ConfirmAsync(
-        S.L.Format("Downloads_RemoveTitle", name), S.L.Get("Downloads_RemoveBody"), S.L.Get("Downloads_RemoveConfirm"), S.L.Get("Action_Cancel"));
+    private Task<bool> ConfirmRemoveAsync(string name, string body) => S.Platform.ConfirmAsync(
+        S.L.Format("Downloads_RemoveTitle", name), S.L.Get(body), S.L.Get("Downloads_RemoveConfirm"), S.L.Get("Action_Cancel"));
 
     private IEnumerable<TrackRef> Songs() =>
         Albums.SelectMany(a => a.Songs).Where(s => s.LibraryId is not null).Select(s => (TrackRef)new TrackRef.Library(s.LibraryId!.Value));

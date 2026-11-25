@@ -593,8 +593,26 @@
   <data name="Discover_TryAgain.Content" xml:space="preserve">
     <value>Try Again</value>
   </data>
+  <data name="Downloads_AddMissing.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Add Missing Cover and Lyrics</value>
+  </data>
+  <data name="Downloads_AddMissingHint.Text" xml:space="preserve">
+    <value>Original files are kept as they are unless this is on.</value>
+  </data>
+  <data name="Downloads_AddMissingTitle.Text" xml:space="preserve">
+    <value>Add Missing Cover and Lyrics</value>
+  </data>
+  <data name="Downloads_AtOnce.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Downloads at Once</value>
+  </data>
+  <data name="Downloads_AtOnce.Header" xml:space="preserve">
+    <value>Downloads at Once</value>
+  </data>
   <data name="Downloads_Cancel.Content" xml:space="preserve">
     <value>Cancel</value>
+  </data>
+  <data name="Downloads_ChangeFolder.Content" xml:space="preserve">
+    <value>Change…</value>
   </data>
   <data name="Downloads_Downloading" xml:space="preserve">
     <value>Downloading…</value>
@@ -605,8 +623,50 @@
   <data name="Downloads_EmptyTitle.Text" xml:space="preserve">
     <value>No Downloads Yet</value>
   </data>
+  <data name="Downloads_Fields.Text" xml:space="preserve">
+    <value>Fields: {artist}, {album_artist}, {album}, {title}, {track}, {disc}, {year}, {source}</value>
+  </data>
+  <data name="Downloads_FileNames.Text" xml:space="preserve">
+    <value>File Names</value>
+  </data>
+  <data name="Downloads_Folder.Text" xml:space="preserve">
+    <value>Folder</value>
+  </data>
+  <data name="Downloads_High.Content" xml:space="preserve">
+    <value>High</value>
+  </data>
   <data name="Downloads_InProgress.Text" xml:space="preserve">
     <value>In Progress</value>
+  </data>
+  <data name="Downloads_Low.Content" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="Downloads_Lrc.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Save .lrc Files</value>
+  </data>
+  <data name="Downloads_LrcTitle.Text" xml:space="preserve">
+    <value>Save .lrc Files</value>
+  </data>
+  <data name="Downloads_Lyrics.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Lyrics</value>
+  </data>
+  <data name="Downloads_LyricsTitle.Text" xml:space="preserve">
+    <value>Lyrics</value>
+  </data>
+  <data name="Downloads_Metered.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Pause on Metered Connections</value>
+  </data>
+  <data name="Downloads_MeteredHint.Text" xml:space="preserve">
+    <value>Downloads wait while you're on mobile data, a hotspot or another metered connection.</value>
+  </data>
+  <data name="Downloads_MeteredTitle.Text" xml:space="preserve">
+    <value>Pause on Metered Connections</value>
+  </data>
+  <data name="Downloads_Network.Text" xml:space="preserve">
+    <value>Network</value>
+  </data>
+  <data name="Downloads_Normal.Content" xml:space="preserve">
+    <value>Normal</value>
   </data>
   <data name="Downloads_NotAllowed" xml:space="preserve">
     <value>Your {0} server doesn't allow downloads for this account.</value>
@@ -614,8 +674,17 @@
   <data name="Downloads_NotOffered" xml:space="preserve">
     <value>{0} doesn't offer downloads.</value>
   </data>
+  <data name="Downloads_Original.Text" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="Downloads_OriginalChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="Downloads_OriginalHint.Text" xml:space="preserve">
+    <value>The file exactly as your server keeps it.</value>
+  </data>
   <data name="Downloads_PausedMetered" xml:space="preserve">
-    <value>Downloads resume on Wi-Fi.</value>
+    <value>Downloads resume when you're off a metered connection.</value>
   </data>
   <data name="Downloads_PausedOffline" xml:space="preserve">
     <value>Downloads resume when you're back online.</value>
@@ -623,8 +692,32 @@
   <data name="Downloads_Percent" xml:space="preserve">
     <value>{0}%</value>
   </data>
+  <data name="Downloads_Preview" xml:space="preserve">
+    <value>Preview: {0}</value>
+  </data>
+  <data name="Downloads_Quality.Text" xml:space="preserve">
+    <value>Quality</value>
+  </data>
+  <data name="Downloads_QualityChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Quality</value>
+  </data>
   <data name="Downloads_RemoveAlbum.Content" xml:space="preserve">
     <value>Remove Download…</value>
+  </data>
+  <data name="Downloads_RemoveAlbumBody" xml:space="preserve">
+    <value>The files are deleted from this device. You can download them again.</value>
+  </data>
+  <data name="Downloads_RemoveAll.Content" xml:space="preserve">
+    <value>Remove All Downloads…</value>
+  </data>
+  <data name="Downloads_RemoveAllBody" xml:space="preserve">
+    <value>Every downloaded file is deleted from this device.</value>
+  </data>
+  <data name="Downloads_RemoveAllConfirm" xml:space="preserve">
+    <value>Remove All</value>
+  </data>
+  <data name="Downloads_RemoveAllTitle" xml:space="preserve">
+    <value>Remove All Downloads?</value>
   </data>
   <data name="Downloads_RemoveBody" xml:space="preserve">
     <value>The file is deleted from this device. You can download it again.</value>
@@ -641,8 +734,20 @@
   <data name="Downloads_RemoveTitle" xml:space="preserve">
     <value>Remove the Download of “{0}”?</value>
   </data>
+  <data name="Downloads_ShowFolder.Content" xml:space="preserve">
+    <value>Show in Explorer</value>
+  </data>
+  <data name="Downloads_Space.Text" xml:space="preserve">
+    <value>Space Used</value>
+  </data>
   <data name="Downloads_Summary" xml:space="preserve">
     <value>{0} · {1} used</value>
+  </data>
+  <data name="Downloads_Tags.Text" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Downloads_Template.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>File Names</value>
   </data>
   <data name="Downloads_Title.Text" xml:space="preserve">
     <value>Downloads</value>
@@ -1720,6 +1825,9 @@
   </data>
   <data name="Section_Appearance" xml:space="preserve">
     <value>Appearance</value>
+  </data>
+  <data name="Section_Downloads" xml:space="preserve">
+    <value>Downloads</value>
   </data>
   <data name="Section_Extensions" xml:space="preserve">
     <value>Extensions</value>

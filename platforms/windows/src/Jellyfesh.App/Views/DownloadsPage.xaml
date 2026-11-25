@@ -3,7 +3,7 @@
     Downloads (ADR-0025; docs/ui.md "Downloads"): Play and Shuffle with "{n} songs · {size} used";
     In Progress, each download with "Waiting", its percentage, or, after a failure, the reason and
     Try Again, with Cancel on each; while the core pauses downloads, why ("Downloads resume when
-    you're back online.", "Downloads resume on Wi-Fi."); then the downloaded songs by album, with
+    you're back online.", "Downloads resume when you're off a metered connection."); then the downloaded songs by album, with
     Remove Download… on each song and on a whole album (asks first). Empty: "No Downloads Yet".
 -->
 <shell:JfPage

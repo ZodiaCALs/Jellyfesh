@@ -158,7 +158,8 @@ plugin settings applied with **Save**.
   (and a bar), or the failure ("Your Jellyfin server doesn't allow downloads
   for this account.") and **Try Again**, with **Cancel** on each; while the
   core pauses downloads, "Downloads resume when you're back online." or
-  "Downloads resume on Wi-Fi."; then the downloaded songs by album, with
+  "Downloads resume when you're off a metered connection."; then the
+  downloaded songs by album, with
   **Remove Download…** on each song and on a whole album (asks first). Empty:
   "No Downloads Yet".
 * **Song menu:** Play Next, Play Last, Add to Playlist…, Add to Favourites or
@@ -212,12 +213,20 @@ plugin settings applied with **Save**.
   the facts in the core's order, the service's own labels for others, and
   "Content from {Service}" when it asks for credit (`DetailsRows`,
   `DetailsViewModel`, `Shell/InfoDialog.cs`).
-* **Settings:** Appearance, Playback, Library, Sources, Extensions and About; no separate
-  Lyrics section. Playback: Output (Output Device), Crossfade (Crossfade,
-  Length, Album Continuity), Volume Levelling (ReplayGain, Preamp), Equalizer
-  (Equalizer, Preset from the core's `EqPresets()` with Custom once a band
-  moves, Preamp, the bands as the core's settings have them, **Reset to
-  Flat**) and Startup (Resume Playback). Library: Music Folders (each with
+* **Settings:** Appearance, Playback, Library, Downloads, Sources, Extensions and About;
+  no separate Lyrics section. Playback: Output (Output Device), Crossfade
+  (Crossfade, Length, Album Continuity), Volume Levelling (ReplayGain,
+  Preamp), Equalizer (Equalizer, Preset from the core's `EqPresets()` with
+  Custom once a band moves, Preamp, the bands as the core's settings have
+  them, **Reset to Flat**), Streaming (Streaming Quality) and Startup (Resume
+  Playback). Downloads (ADR-0025 §2): Folder (the one in use, **Change…** and
+  Show in Explorer), Quality (Original, "The file exactly as your server keeps
+  it.", High, Normal, Low), File Names (the template, sent when the field is
+  left or Enter is pressed, with the core's `download_preview` as you type and
+  the fields), Tags (Add Missing Cover and Lyrics, Lyrics, Save .lrc Files),
+  Network (**Pause on Metered Connections**, as Windows reports metered
+  connections, and Downloads at Once, 1 to 4) and Space Used with **Remove All
+  Downloads…** (asks first). Library: Music Folders (each with
   Show in Explorer and **Remove Folder…**, which asks first; then **Add
   Folder…**), Watch Folders and Rescan Library with the scan's progress and
   Last Scan. Sources: Add a Source, Installed (**Install from File…** in its

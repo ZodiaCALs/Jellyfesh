@@ -92,6 +92,12 @@ public interface ICoreClient : IDisposable
     /// </summary>
     string? LocalizedSettingsSchema(string plugin, string language);
 
+    /// <summary>
+    /// What a download's file would be called with <paramref name="template"/> (Settings ›
+    /// Downloads › File Names' live preview; the core's download_preview): "Album Artist/Album/01 Title.flac".
+    /// </summary>
+    string DownloadPreview(string template);
+
     /// <summary>Reports what the store says about Jellyfesh Pro (store builds, at start and on every change).</summary>
     void SetStoreEntitlement(StoreEntitlement entitlement);
 
