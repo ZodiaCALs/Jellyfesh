@@ -142,7 +142,13 @@ plugin settings applied with **Save**.
   its own direction (newest first for Year and Recently Added). Empty pages
   say "No Albums Yet", "No Artists Yet" or "No Songs Yet" with **Add Music
   Folder…**; Playlists says "No Playlists Yet" with **New Playlist…**,
-  Favourites "No Favourites Yet".
+  Favourites "No Favourites Yet" (when no source has lists to show either).
+  After Favourites' songs and the Jellyfesh playlists come the sources' likes
+  and playlists (ADR-0024 §3, `Views/SourceSections.xaml`): one section per
+  signed-in source, "Content from {Service}" when its terms ask, "Updated 5
+  minutes ago" for kept lists, each list with **Show More**
+  (`SourceLibraryMore`); the page asks for `RefreshSourceLibrary` when it
+  opens, and again ten minutes later.
 * **Album, artist and playlist pages:** Play, Shuffle and a More menu: Play
   Next, Play Last, Add to Playlist… (New Playlist… or a playlist); a playlist
   also has Rename…, Export Playlist… and Delete Playlist…, which asks first and

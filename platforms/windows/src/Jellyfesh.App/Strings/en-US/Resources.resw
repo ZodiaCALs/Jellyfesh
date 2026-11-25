@@ -1862,6 +1862,15 @@
   <data name="Source_Attribution" xml:space="preserve">
     <value>Content from {0}</value>
   </data>
+  <data name="SourceLibrary_Loading.Text" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="SourceLibrary_Updated" xml:space="preserve">
+    <value>Updated {0}</value>
+  </data>
+  <data name="SourceLibrary_UpdatedNow" xml:space="preserve">
+    <value>Updated just now</value>
+  </data>
   <data name="SourcePreset_Jellyfin" xml:space="preserve">
     <value>Your Jellyfin server</value>
   </data>

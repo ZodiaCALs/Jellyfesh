@@ -35,6 +35,9 @@ public static class Bind
     /// <summary>Visible when <paramref name="a"/> holds and <paramref name="b"/> does not.</summary>
     public static Visibility VisibleIfButNot(bool a, bool b) => a && !b ? Visibility.Visible : Visibility.Collapsed;
 
+    /// <summary>Visible when <paramref name="a"/> holds and neither <paramref name="b"/> nor <paramref name="c"/> does.</summary>
+    public static Visibility VisibleIfButNeither(bool a, bool b, bool c) => a && !b && !c ? Visibility.Visible : Visibility.Collapsed;
+
     public static Visibility VisibleIfAny(int count) => count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Visible when it has something and is wanted (a Home section the look lists).</summary>

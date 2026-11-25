@@ -7,7 +7,8 @@ using Jellyfesh.Formatting;
 namespace Jellyfesh.ViewModels;
 
 /// <summary>What a source page shows: the source's top level (no node), a folder, an artist, an album or a playlist.</summary>
-public sealed record SourceTarget(string Plugin, string? Node, string Title, ItemKind? Kind, SourceItem? Item = null)
+/// <param name="SongsListed">False for a source playlist whose songs the service lists only in its own app.</param>
+public sealed record SourceTarget(string Plugin, string? Node, string Title, ItemKind? Kind, SourceItem? Item = null, bool SongsListed = true)
 {
     /// <summary>The source's top level, titled with its name.</summary>
     public static SourceTarget Root(PluginInfo plugin) => new(plugin.Id, null, plugin.Name, null);

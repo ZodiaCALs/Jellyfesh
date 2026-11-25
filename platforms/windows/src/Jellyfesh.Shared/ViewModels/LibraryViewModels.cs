@@ -722,8 +722,24 @@ public sealed partial class PlaylistsViewModel(ShellServices services) : PageVie
 {
     public ObservableCollection<PlaylistItem> Playlists { get; } = [];
 
+    /// <summary>After the Jellyfesh playlists, the sources' playlists (ADR-0024 §3).</summary>
+    public SourceLibrarySections Sources { get; } = new(services, SourceLibraryPage.Playlists);
+
+    protected override void OnActivated() => Sources.Activate();
+
+    protected override void OnSlices(SliceChange changes, CoreSnapshot state)
+    {
+        if (changes.HasFlag(SliceChange.SourceLibrary))
+        {
+            Sources.Update(state.SourceLibrary);
+        }
+    }
+
+    protected override void OnNotification(CoreEvent e) => Sources.OnNotification(e);
+
     protected override async Task LoadCoreAsync()
     {
+        Sources.Activate();
         var result = await S.QueryAsync(c => c.Playlists());
         Accept(result);
         Playlists.Clear();
@@ -917,8 +933,24 @@ public sealed partial class FavoritesViewModel(ShellServices services) : PageVie
     [ObservableProperty]
     private PagedList<TrackItem, TrackRow>? _favorites;
 
+    /// <summary>After the songs marked with the heart, the sources' likes (ADR-0024 §3).</summary>
+    public SourceLibrarySections Sources { get; } = new(services, SourceLibraryPage.Favourites);
+
+    protected override void OnActivated() => Sources.Activate();
+
+    protected override void OnSlices(SliceChange changes, CoreSnapshot state)
+    {
+        if (changes.HasFlag(SliceChange.SourceLibrary))
+        {
+            Sources.Update(state.SourceLibrary);
+        }
+    }
+
+    protected override void OnNotification(CoreEvent e) => Sources.OnNotification(e);
+
     protected override Task LoadCoreAsync()
     {
+        Sources.Activate();
         var list = new PagedList<TrackItem, TrackRow>(
             null,
             i => new TrackItem(i) { Localizer = S.L },

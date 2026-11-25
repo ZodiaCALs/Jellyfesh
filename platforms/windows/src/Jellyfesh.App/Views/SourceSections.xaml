@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The sources' sections after Favourites' songs or the Jellyfesh playlists (ADR-0024 §3; docs/ui.md
+    "Favourites", "Playlists"), as Jellyfesh Web shows them: each source's name, "Content from
+    {Service}" for one whose terms ask for credit, how old the kept lists are ("Updated 5 minutes
+    ago"), then its lists, titled when there are several: songs as rows that play, albums, artists
+    and playlists as rows that open their pages, "Loading…" while a list loads, why one failed, and
+    Show More while the source has more. Read-only: the heart marks a song in Jellyfesh only.
+-->
+<UserControl
+    x:Class="Jellyfesh.App.Views.SourceSections"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:shell="using:Jellyfesh.App.Shell"
+    xmlns:vm="using:Jellyfesh.ViewModels">
+
+    <UserControl.Resources>
+        <Style x:Key="InlineListStyle" TargetType="ListView">
+            <Setter Property="SelectionMode" Value="None" />
+            <Setter Property="IsItemClickEnabled" Value="True" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource JfTrackRowStyle}" />
+            <Setter Property="ScrollViewer.VerticalScrollMode" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+        </Style>
+    </UserControl.Resources>
+
+    <ItemsRepeater x:Name="Repeater" Margin="0,24,0,0">
+        <ItemsRepeater.Layout>
+            <StackLayout Spacing="32" />
+        </ItemsRepeater.Layout>
+        <ItemsRepeater.ItemTemplate>
+            <DataTemplate x:DataType="vm:SourceLibrarySection">
+                <StackPanel Spacing="4">
+                    <TextBlock AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="{x:Bind Name}" />
+                    <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Attribution}" Visibility="{x:Bind shell:Bind.Visible(HasAttribution)}" />
+                    <TextBlock Foreground="{ThemeResource JfInk50}" Style="{StaticResource JfListSecondaryText}" Text="{x:Bind UpdatedText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(HasUpdated), Mode=OneWay}" />
+                    <ItemsRepeater ItemsSource="{x:Bind Lists}">
+                        <ItemsRepeater.Layout>
+                            <StackLayout Spacing="16" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SourceLibraryListView">
+                                <StackPanel Margin="0,8,0,0" Spacing="4">
+                                    <TextBlock AutomationProperties.HeadingLevel="Level3" FontWeight="SemiBold" Foreground="{ThemeResource JfInk70}" Style="{StaticResource JfBodyText}" Text="{x:Bind Title}" Visibility="{x:Bind shell:Bind.Visible(ShowsTitle), Mode=OneWay}" />
+                                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Error, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(HasError), Mode=OneWay}" />
+                                    <TextBlock x:Uid="SourceLibrary_Loading" Style="{StaticResource JfSecondaryBodyText}" Text="Loading…" Visibility="{x:Bind shell:Bind.Visible(IsLoading), Mode=OneWay}" />
+                                    <ListView AutomationProperties.Name="{x:Bind Title}" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind Tracks}" Loaded="OnTracksLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(IsSongs)}" />
+                                    <ListView AutomationProperties.Name="{x:Bind Title}" ItemClick="OnEntryClick" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind Entries}" Loaded="OnEntriesLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Collapsed(IsSongs)}" />
+                                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind MoreError, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(HasMoreError), Mode=OneWay}" />
+                                    <Button Margin="0,8,0,0" Command="{x:Bind ShowMoreCommand}" Content="{x:Bind ShowMoreLabel, Mode=OneWay}" Style="{StaticResource JfChipButtonStyle}" Visibility="{x:Bind shell:Bind.Visible(HasMore), Mode=OneWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </DataTemplate>
+        </ItemsRepeater.ItemTemplate>
+    </ItemsRepeater>
+</UserControl>

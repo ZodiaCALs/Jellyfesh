@@ -1862,6 +1862,15 @@
   <data name="Source_Attribution" xml:space="preserve">
     <value>内容来自 {0}</value>
   </data>
+  <data name="SourceLibrary_Loading.Text" xml:space="preserve">
+    <value>正在载入…</value>
+  </data>
+  <data name="SourceLibrary_Updated" xml:space="preserve">
+    <value>{0}更新</value>
+  </data>
+  <data name="SourceLibrary_UpdatedNow" xml:space="preserve">
+    <value>刚刚更新</value>
+  </data>
   <data name="SourcePreset_Jellyfin" xml:space="preserve">
     <value>你的 Jellyfin 服务器</value>
   </data>

@@ -405,6 +405,9 @@ public sealed class SourceEntryItem : ArtworkItem
     /// <summary>The sources that have this entry, for search results ("Jellyfin · Subsonic").</summary>
     public string? Origin { get; init; }
 
+    /// <summary>A source playlist whose songs the service lists only in its own app is false (SourceLibraryEntry.songs_listed).</summary>
+    public bool SongsListed { get; init; } = true;
+
     public bool CanPlay => Item.Playable && Item.Kind is ItemKind.Album or ItemKind.Playlist;
 
     /// <summary>

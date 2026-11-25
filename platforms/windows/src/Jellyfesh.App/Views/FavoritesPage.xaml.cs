@@ -13,6 +13,7 @@ public sealed partial class FavoritesPage : JfPage
         InitializeComponent();
         var menu = new TrackMenu(AppHost.Services, "Menu_Unfavorite", item => ViewModel.UnfavoriteCommand.Execute(item));
         Lists.Attach(FavoriteList, 40, i => ViewModel.Favorites?.Realize(i), menu.Flyout);
+        SourceLists.Model = ViewModel.Sources;
     }
 
     public FavoritesViewModel ViewModel { get; }
