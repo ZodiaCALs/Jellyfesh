@@ -370,8 +370,9 @@
     message={t('You can make them again.')}
     action={t('Delete')}
     onconfirm={() => {
+      const row = deleting;
       app.aiLyrics.deleting = null;
-      app.aiLyrics.deleteMade(deleting);
+      app.aiLyrics.deleteMade(row);
     }}
     oncancel={() => (app.aiLyrics.deleting = null)}
   />
@@ -392,9 +393,11 @@
     message={t('The songs stay in your library.')}
     action={t('Delete Playlist')}
     onconfirm={() => {
+      // Read before the sheet closes: once `sheets.deleting` is null, so is this block's `deleting`.
+      const target = deleting;
       sheets.deleting = null;
-      app.collections.deletePlaylist(deleting.id);
-      deleting.then?.();
+      app.collections.deletePlaylist(target.id);
+      target.then?.();
     }}
     oncancel={() => (sheets.deleting = null)}
   />
