@@ -25,7 +25,7 @@ fn install(mock: &Mock) -> Env {
     let env = Env::new();
     let files = PluginFiles::read(crate_dir()).with_test_server_setting("test_server");
     env.install_files(crate_dir(), "jf-netease", &files);
-    env.settings(ID, json!({ "test_server": mock.server.url(), "quality": "app" }));
+    env.settings(ID, json!({ "test_server": mock.server.url() }));
     env
 }
 
@@ -273,10 +273,17 @@ fn streams_by_quality_and_never_previews() {
             stream.url
         );
     }
-    // A fixed quality in the settings wins.
-    env.settings(ID, json!({ "test_server": mock.server.url(), "quality": "low" }));
+    // The level is always the app's: there is no quality setting any more.
+    assert!(
+        env.host
+            .set_settings(
+                ID,
+                &json!({ "test_server": mock.server.url(), "quality": "low" }).to_string()
+            )
+            .is_err()
+    );
     let stream = recv(env.host.resolve_stream(ID, track(mock::FULL), Quality::Lossless)).unwrap();
-    assert!(stream.url.ends_with("-128.mp3"));
+    assert!(stream.url.ends_with("-999.mp3"));
     // A free full listen streams; a preview, a VIP song, no URL and the daily
     // limit do not.
     assert!(
@@ -305,9 +312,10 @@ fn streams_by_quality_and_never_previews() {
         .pop()
         .unwrap();
     let biz: serde_json::Value = serde_json::from_str(&detail.query("bizContent").unwrap()).unwrap();
+    // High, as the app asked: no setting overrides it.
     assert_eq!(
         biz,
-        json!({ "songId": mock::CAPPED, "withUrl": true, "bitrate": 128 })
+        json!({ "songId": mock::CAPPED, "withUrl": true, "bitrate": 320 })
     );
 }
 
@@ -362,8 +370,8 @@ fn the_published_package_has_no_search_and_no_links() {
     let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
     assert_eq!(
         manifest.api_version.to_string(),
-        "1.2",
-        "the signing import is API 1.1; Discover and details 1.2"
+        "1.3",
+        "the signing import is API 1.1; Discover and details 1.2; the library and qualities 1.3"
     );
     assert_eq!(manifest.version.to_string(), env!("CARGO_PKG_VERSION"));
     assert!(
@@ -440,6 +448,79 @@ fn liked_songs_and_discover_come_from_the_accounts_lists() {
     for shelf in &shelves {
         assert_covers(&shelf.items, &shelf.title);
     }
+    assert_eq!(mock.state.lock().unwrap().bad_signatures, 0);
+}
+
+/// The library (ADR-0024): the liked songs for Favourites (no liked albums
+/// or artists on the open platform), and the created playlists, then the
+/// collected ones as followed, for Playlists, across both lists' pages.
+#[test]
+fn liked_songs_and_playlists_for_the_library() {
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let info = env.host.plugin(ID).unwrap();
+    assert_eq!(
+        info.content_policy.qualities,
+        vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
+    );
+    assert!(info.settings_schema["properties"].get("quality").is_none());
+
+    let first = recv(env.host.library_likes(ID, ItemKind::Track, page(4))).unwrap();
+    assert_eq!(first.items.len(), 4);
+    assert_eq!(first.next.as_deref(), Some("4"));
+    let rest = recv(
+        env.host
+            .library_likes(ID, ItemKind::Track, next_page(first.next, 4)),
+    )
+    .unwrap();
+    assert_eq!(rest.items.len(), 2);
+    let asked = mock
+        .server
+        .requests_to("/openapi/music/basic/playlist/song/list/get/v3");
+    let biz: serde_json::Value = serde_json::from_str(&asked[0].query("bizContent").unwrap()).unwrap();
+    assert_eq!(biz["playlistId"], "pl-liked");
+    for kind in [ItemKind::Album, ItemKind::Artist] {
+        assert_eq!(
+            recv(env.host.library_likes(ID, kind, page(50))),
+            Err(CallError::Plugin(PluginError::Unsupported))
+        );
+    }
+
+    let all = recv(env.host.library_playlists(ID, page(50))).unwrap();
+    let flags: Vec<(&str, bool, bool)> = all
+        .entries
+        .iter()
+        .map(|e| (e.item.id.as_str(), e.owned, e.songs_listed))
+        .collect();
+    assert_eq!(
+        flags,
+        [
+            ("pl-created-0", true, true),
+            ("pl-created-1", true, true),
+            ("pl-created-2", true, true),
+            ("pl-subed-0", false, true)
+        ]
+    );
+    assert_eq!(all.next, None);
+    // In pages of two, the cursor goes on from the created list into the
+    // collected one; nothing repeats and nothing is missed.
+    let mut seen = Vec::new();
+    let mut cursor = None;
+    for _ in 0..6 {
+        let found = recv(env.host.library_playlists(ID, next_page(cursor, 2))).unwrap();
+        assert!(found.entries.len() <= 2);
+        seen.extend(found.entries.into_iter().map(|e| (e.item.id, e.owned)));
+        cursor = found.next;
+        if cursor.is_none() {
+            break;
+        }
+    }
+    assert_eq!(cursor, None);
+    let expected: Vec<(String, bool)> = flags
+        .iter()
+        .map(|(id, owned, _)| (id.to_string(), *owned))
+        .collect();
+    assert_eq!(seen, expected);
     assert_eq!(mock.state.lock().unwrap().bad_signatures, 0);
 }
 

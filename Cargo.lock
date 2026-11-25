@@ -2669,7 +2669,7 @@ dependencies = [
 
 [[package]]
 name = "jf-netease"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "base64",
  "getrandom 0.4.3",

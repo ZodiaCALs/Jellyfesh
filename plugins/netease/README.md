@@ -22,9 +22,11 @@ could read, and may differ.
   Playlists. **Details** of a playlist: description, picture, plays, tags
   and creation date (`playlist/detail/get/v2`, read with the field names the
   official client reads).
-* **Play** at the quality you choose: 128 kbit/s (Low and Normal),
-  320 kbit/s (High) or NetEase's lossless files (Lossless), where your
-  account may play them.
+* **Play** at the streaming quality chosen in Jellyfesh: 128 kbit/s (Low and
+  Normal), 320 kbit/s (High) or NetEase's lossless files (Lossless), where
+  your account may play them.
+* **Library** (plugin API 1.3): your liked songs on Favourites, and your
+  created and collected playlists on Playlists.
 * **Respects NetEase's rules**: VIP songs and songs from digital albums show
   as needing a purchase, songs NetEase may not play here as unavailable, and
   songs of which only a preview is free are not played at all (Jellyfesh
@@ -62,7 +64,6 @@ code works for five minutes.
 | --- | --- |
 | Your App ID, private key and the sign-in tokens | your system's keystore |
 | A random id for this installation (sent to NetEase as the device id) | the plugin's small private storage |
-| Streaming quality | the plugin's settings |
 
 The private key is stored once, when you enter it, and never read back by
 the plugin: Jellyfesh signs each request with it from the keystore. Requests

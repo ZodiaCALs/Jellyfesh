@@ -1,5 +1,19 @@
 # Changelog: NetEase Cloud Music plugin
 
+## 0.0.8 — unreleased
+
+* With Jellyfesh v0.0.8: plugin API 1.3 (the package needs Jellyfesh
+  v0.0.8).
+* The **Streaming Quality** setting is gone (it was the only setting):
+  streams use the level Jellyfesh asks for (ADR-0026), and the manifest
+  lists the levels the quality menu offers. Low and Normal both ask NetEase
+  for 128 kbit/s, its lowest; High for 320, Lossless for 999. Jellyfesh
+  keeps a quality set here once, as its own.
+* **Library** (ADR-0024): the liked songs (the red-heart playlist) for
+  Favourites, and the created playlists, then the collected ones as
+  followed, for Playlists, with one cursor across both lists. The open
+  platform has no liked albums or artists.
+
 ## 0.0.7 — 2026-11-20
 
 * With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh

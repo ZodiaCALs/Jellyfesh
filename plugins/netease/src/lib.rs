@@ -4,7 +4,10 @@
 //! (created, collected) and liked songs, their songs, and streams by
 //! quality, with NetEase's rules on what each account may play: VIP songs
 //! and digital albums are paywalled, previews are not played. API 1.2: a
-//! Discover page of the same lists, and details of playlists.
+//! Discover page of the same lists, and details of playlists. API 1.3: the
+//! liked songs and the created and collected playlists for the app's
+//! Favourites and Playlists pages. Streams use the level the app asks for;
+//! the plugin has no quality setting of its own (ADR-0026).
 //!
 //! Search, recommendations, comments and lyrics wait for NetEase's API
 //! documentation: their paths were not in what the research could read (the
@@ -15,8 +18,6 @@
 mod api;
 mod items;
 mod login;
-
-use std::cell::RefCell;
 
 use jf_plugin_sdk::prelude::*;
 use serde_json::{Value, json};
@@ -32,11 +33,6 @@ const TEST_SERVER: &str = "test_server";
 
 /// Most playlists or songs per request.
 const PAGE_MAX: u32 = 100;
-
-thread_local! {
-    /// The `quality` setting: `app` or a fixed quality.
-    static QUALITY: RefCell<String> = RefCell::new("app".to_owned());
-}
 
 /// The account's two playlist lists, by folder id.
 const LISTS: [(&str, &str, &str); 2] = [
@@ -61,15 +57,9 @@ const DETAIL: &str = "/openapi/music/basic/song/detail/get/v2";
 /// Items on a Discover shelf.
 const SHELF: u32 = 20;
 
-/// The `bitrate` NetEase is asked for: 128 and 320 kbit/s, 999 for lossless.
-pub fn bitrate(quality: Quality, setting: &str) -> u32 {
-    let quality = match setting {
-        "low" => Quality::Low,
-        "normal" => Quality::Normal,
-        "high" => Quality::High,
-        "lossless" => Quality::Lossless,
-        _ => quality,
-    };
+/// The `bitrate` NetEase is asked for at the level the app asks for: 128
+/// kbit/s (its lowest) for Low and Normal, 320 for High, 999 for lossless.
+pub fn bitrate(quality: Quality) -> u32 {
     match quality {
         Quality::Low | Quality::Normal => 128,
         Quality::High => 320,
@@ -96,6 +86,54 @@ fn page_of(data: &Value, offset: u32, limit: u32, item: impl Fn(&Value) -> Optio
             .iter()
             .find_map(|k| data.get(*k).and_then(Value::as_u64))
             .and_then(|n| u32::try_from(n).ok()),
+    }
+}
+
+/// The account's playlists for the library (`library.playlists`): the
+/// created ones (the person's own), then the collected ones (followed),
+/// each list paged by NetEase. The cursor names the list and the offset in
+/// it (`created:20`, `collected:0`).
+fn library_playlists(page: &PageRequest) -> Result<PlaylistPage> {
+    let limit = page.limit.clamp(1, PAGE_MAX);
+    let (mut list, mut offset) = match page.cursor.as_deref() {
+        None | Some("") => (0, 0),
+        Some(cursor) => {
+            let (name, at) = cursor
+                .split_once(':')
+                .ok_or_else(|| PluginError::invalid_input("not a page cursor"))?;
+            let list = LISTS
+                .iter()
+                .position(|(id, _, _)| *id == name)
+                .ok_or_else(|| PluginError::invalid_input("not a page cursor"))?;
+            let offset = at
+                .parse()
+                .map_err(|_| PluginError::invalid_input("not a page cursor"))?;
+            (list, offset)
+        }
+    };
+    let mut entries = Vec::new();
+    loop {
+        let (id, _, path) = LISTS[list];
+        let want = limit - entries.len() as u32;
+        let data = api::call(path, &json!({ "limit": want, "offset": offset }))?;
+        let found = page_of(&data, offset, want, items::playlist);
+        let owned = id == "created";
+        entries.extend(found.items.into_iter().map(|item| PlaylistEntry {
+            item,
+            owned,
+            songs_listed: true,
+        }));
+        if let Some(next) = found.next {
+            return Ok(PlaylistPage::with_next(entries, format!("{id}:{next}")));
+        }
+        if list + 1 == LISTS.len() {
+            return Ok(PlaylistPage::new(entries));
+        }
+        list += 1;
+        offset = 0;
+        if entries.len() as u32 >= limit {
+            return Ok(PlaylistPage::with_next(entries, format!("{}:0", LISTS[list].0)));
+        }
     }
 }
 
@@ -181,18 +219,14 @@ impl Plugin for NetEase {
     }
 
     fn settings_changed(settings: &Value) -> Result<()> {
+        // A `quality` left from version 0.0.7 is ignored: the app's level
+        // decides (the host drops it when the plugin updates).
         api::set_server(
             settings
                 .get(TEST_SERVER)
                 .and_then(Value::as_str)
                 .filter(|s| !s.is_empty()),
         );
-        let quality = settings
-            .get("quality")
-            .and_then(Value::as_str)
-            .unwrap_or("app")
-            .to_owned();
-        QUALITY.with(|q| *q.borrow_mut() = quality);
         Ok(())
     }
 
@@ -249,6 +283,23 @@ impl Plugin for NetEase {
         discover_shelves()
     }
 
+    /// The liked songs (the red-heart playlist, newest like first, as
+    /// NetEase keeps it). The open platform has no liked albums or artists.
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        if kind != ItemKind::Track {
+            return Err(PluginError::Unsupported);
+        }
+        let offset = offset(&page)?;
+        match liked_playlist()? {
+            Some(playlist) => songs(&playlist, offset, page.limit.clamp(1, PAGE_MAX)),
+            None => Ok(ItemPage::new(Vec::new())),
+        }
+    }
+
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        library_playlists(&page)
+    }
+
     fn details(item: Item) -> Result<ItemDetails> {
         if item.kind != ItemKind::Playlist {
             // The open platform's song detail is for playing; nothing else
@@ -265,7 +316,7 @@ impl Plugin for NetEase {
         if item.kind != ItemKind::Track || item.id.is_empty() {
             return Err(PluginError::invalid_input("not a NetEase song"));
         }
-        let bitrate = QUALITY.with(|q| bitrate(quality, &q.borrow()));
+        let bitrate = bitrate(quality);
         let data = api::call(
             DETAIL,
             &json!({ "songId": item.id, "withUrl": true, "bitrate": bitrate }),
@@ -317,12 +368,10 @@ mod tests {
 
     #[test]
     fn qualities_map_to_netease_bitrates() {
-        assert_eq!(bitrate(Quality::Low, "app"), 128);
-        assert_eq!(bitrate(Quality::Normal, "app"), 128);
-        assert_eq!(bitrate(Quality::High, "app"), 320);
-        assert_eq!(bitrate(Quality::Lossless, "app"), 999);
-        assert_eq!(bitrate(Quality::Lossless, "high"), 320, "a fixed quality wins");
-        assert_eq!(bitrate(Quality::Low, "lossless"), 999);
+        assert_eq!(bitrate(Quality::Low), 128);
+        assert_eq!(bitrate(Quality::Normal), 128);
+        assert_eq!(bitrate(Quality::High), 320);
+        assert_eq!(bitrate(Quality::Lossless), 999);
     }
 
     #[test]

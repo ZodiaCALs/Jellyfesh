@@ -55,17 +55,25 @@ player like Jellyfesh could not be checked.
    registered account) and confirm in the app. The code works for five
    minutes.
 
-## Settings
+## Streaming quality
 
-| Setting | Values | What it does |
-| --- | --- | --- |
-| Streaming quality | `app` (default), `lossless`, `high`, `normal`, `low` | `app` follows the quality you chose in Jellyfesh for each network |
+The plugin has no settings. The streaming quality is Jellyfesh's own
+(Settings › Playback › Streaming, or the quality menu in the player bar,
+from v0.0.8); a quality you had set in version 0.0.7 of the plugin is kept
+once, as Jellyfesh's.
 
 | Quality | NetEase is asked for |
 | --- | --- |
 | low, normal | 128 kbit/s |
 | high | 320 kbit/s |
 | lossless | its lossless files (999), where your account may play them |
+
+## Favourites and Playlists
+
+From Jellyfesh v0.0.8, Favourites shows your liked songs (the red-heart
+playlist, newest first, as NetEase keeps it) and Playlists shows your
+created playlists, then the ones you collected. The open platform offers no
+liked albums or artists.
 
 ## What plays and what does not
 

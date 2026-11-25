@@ -1,14 +1,15 @@
 id = "org.jellyfesh.netease"
 name = "NetEase Cloud Music"
-version = "0.0.7"
-api_version = "1.2"
+version = "0.0.8"
+api_version = "1.3"
 author = "Jellyfesh"
 description = "Your NetEase Cloud Music playlists, with your own open-platform developer credentials"
 official = true
 # No search yet: its path is not in what the open platform's client shows,
 # and NetEase's API documentation was not available to us. Discover shows the
-# account's own lists; details are a playlist's.
-capabilities = ["auth", "browse", "resolve_stream", "discover", "details"]
+# account's own lists; details are a playlist's. Library: the liked songs and
+# the created and collected playlists.
+capabilities = ["auth", "browse", "resolve_stream", "discover", "details", "library"]
 playback_mode = "stream"
 # A form for your App ID and private key, then a QR code for the app.
 auth = ["qr"]
@@ -28,3 +29,6 @@ schema = "settings.schema.json"
 # The open platform's caching rules are not known: metadata may be kept,
 # audio never.
 library_storage = "metadata"
+# The levels the player bar's quality menu offers (ADR-0026). NetEase's
+# lowest is 128 kbit/s, which Low and Normal both ask for.
+qualities = ["lossless", "high", "normal", "low"]
