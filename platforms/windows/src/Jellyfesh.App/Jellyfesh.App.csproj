@@ -71,6 +71,21 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
   </ItemGroup>
 
+  <!--
+    ReadyToRun only where it buys start-up time. The Windows SDK projection is 24.9 MB of IL that
+    ReadyToRun more than doubles (55.3 MB in each architecture's folder, the largest file shipped)
+    for the few of its methods the app calls (the system's colours and animation setting, the media
+    controls, the network and device notifications), which the JIT compiles when they are first
+    used. WebView2's projection and package deployment's are never loaded. WinUI, the interactive
+    experiences (windowing, composition) and CsWinRT's runtime stay precompiled: start-up runs them.
+    About 31 MB less per architecture before compression; trimming stays off.
+  -->
+  <ItemGroup>
+    <PublishReadyToRunExclude Include="Microsoft.Windows.SDK.NET.dll" />
+    <PublishReadyToRunExclude Include="Microsoft.Web.WebView2.Core.Projection.dll" />
+    <PublishReadyToRunExclude Include="Microsoft.Windows.Management.Deployment.Projection.dll" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\Jellyfesh.Shared\Jellyfesh.Shared.csproj" />
     <ProjectReference Include="..\Jellyfesh.Interop\Jellyfesh.Interop.csproj" />

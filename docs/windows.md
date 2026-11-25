@@ -346,7 +346,12 @@ architecture (`x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`), publishes
 installing, ADR-0016), and writes
 `platforms/windows/artifacts/jellyfesh-<version>-windows-<arch>.zip` with a
 `.sha256`. The version comes from the `v*` tag in `GITHUB_REF_NAME`, else from
-`Directory.Build.props`. `CARGO_TARGET_DIR` is respected.
+`Directory.Build.props`. `CARGO_TARGET_DIR` is respected. The app is published
+ReadyToRun (precompiled, for start-up time) except where that buys little:
+the Windows SDK projection (24.9 MB of IL, 55.3 MB precompiled; the app calls
+a few of its methods), and the WebView2 and package deployment projections,
+which are never loaded (`PublishReadyToRunExclude` in `Jellyfesh.App.csproj`).
+Trimming stays off.
 
 **The installer** that releases carry, `Jellyfesh-<version>-Windows-Setup.exe`, is
 made from the two published folders (`platforms/windows/publish/win-<arch>/Jellyfesh`)
