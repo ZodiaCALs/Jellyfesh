@@ -5,7 +5,8 @@
     content fades out just above it). In this order: the artwork and two lines of type (they open
     Now Playing; in a remote session Playing on {Device} with the session's error, quieter, after
     it); shuffle, previous, play, next and repeat above the seek bar with its times (play is the only
-    accent fill); then Lyrics, Queue, the device button while a remote source plays (Devices), the
+    accent fill); then the quality badge and its menu (ADR-0026 §3) while something plays, Lyrics,
+    Queue, the device button while a remote source plays (Devices), the
     volume (hidden when a remote device has none; narrow bars keep only its mute button), the mini
     player button and More (Open in {Service}, Stop Controlling, Desktop Lyrics). It bends CMP-02
     (one control) on purpose, for desktop use.
@@ -119,8 +120,19 @@
                 </Grid>
             </StackPanel>
 
-            <!-- Lyrics, Queue, the device button (remote sources), the volume, the mini player and More. -->
+            <!-- The quality badge, Lyrics, Queue, the device button (remote sources), the volume, the mini player and More. -->
             <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" Spacing="2">
+                <Button
+                    x:Name="QualityBadge"
+                    x:Uid="Bar_Quality"
+                    Margin="0,0,6,0"
+                    AutomationProperties.Name="{x:Bind Player.QualityBadgeLabel, Mode=OneWay}"
+                    Click="OnQualityClick"
+                    Style="{StaticResource JfQualityBadgeStyle}"
+                    ToolTipService.ToolTip="Streaming Quality"
+                    Visibility="{x:Bind shell:Bind.Visible(Player.HasQualityBadge), Mode=OneWay}">
+                    <TextBlock MaxLines="1" Text="{x:Bind Player.QualityBadge, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                </Button>
                 <Button x:Uid="Bar_Lyrics" AutomationProperties.Name="Lyrics" Click="OnLyricsClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Lyrics">
                     <controls:StrokeIcon Data="{StaticResource IconLyrics}" Size="20" />
                 </Button>

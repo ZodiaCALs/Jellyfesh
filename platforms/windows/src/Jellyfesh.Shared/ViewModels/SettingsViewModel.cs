@@ -205,6 +205,10 @@ public sealed partial class SettingsViewModel : PageViewModel
     [ObservableProperty]
     private int _replayGainIndex;
 
+    /// <summary>Settings › Playback › Streaming (ADR-0026 §1): the index in <see cref="QualityMenu.AllLevels"/>.</summary>
+    [ObservableProperty]
+    private int _streamingQualityIndex;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ReplayGainPreampText))]
     private double _replayGainPreampDb;
@@ -539,6 +543,14 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     partial void OnResumeOnLaunchChanged(bool value) => Change(s => s with { ResumeOnLaunch = value });
 
+    partial void OnStreamingQualityIndexChanged(int value)
+    {
+        if (value >= 0 && value < QualityMenu.AllLevels.Count)
+        {
+            Change(s => s with { StreamingQuality = QualityMenu.AllLevels[value] });
+        }
+    }
+
     // ---- library ----
     partial void OnWatchFoldersChanged(bool value) => Change(s => s with { WatchFolders = value });
 
@@ -817,6 +829,7 @@ public sealed partial class SettingsViewModel : PageViewModel
             DesktopLyrics = s.DesktopLyrics;
             CanInstallPlugins = state.Sources.CanInstallPlugins;
             ResumeOnLaunch = s.ResumeOnLaunch;
+            StreamingQualityIndex = Math.Max(0, QualityMenu.AllLevels.ToList().IndexOf(s.StreamingQuality));
             WatchFolders = s.WatchFolders;
             AllowCommunity = s.AllowCommunityPlugins;
             if (Environment.TickCount64 - _lastAudioEditMs > EchoGuard.TotalMilliseconds)

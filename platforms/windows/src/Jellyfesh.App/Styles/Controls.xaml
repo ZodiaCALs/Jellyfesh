@@ -481,6 +481,18 @@
         <Setter Property="BorderThickness" Value="0" />
     </Style>
 
+    <!-- The quality badge (ADR-0026 §3), Jellyfesh Web's: a 28 epx pill on the fill with a soft
+         hairline, 12 epx bold, at most 132 epx wide. -->
+    <Style x:Key="JfQualityBadgeStyle" TargetType="Button" BasedOn="{StaticResource JfChipButtonStyle}">
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="MaxWidth" Value="132" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="BorderBrush" Value="{ThemeResource JfLineSoft}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
     <!-- ===== Navigation (ADR-0023): Jellyfesh Web's sidebar items, phone tabs and Library switcher =====
          Controls/SidebarItem: a radio button with a glyph and a label. The rest and current looks are
          separate layers, so the pointer's states (CommonStates) and the current place (CheckStates)

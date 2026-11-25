@@ -82,6 +82,9 @@ public sealed partial class PlayerBar : UserControl
 
     private void OnQueueClick(object sender, RoutedEventArgs e) => OpenRequested?.Invoke(this, NowPlayingPanel.Queue);
 
+    /// <summary>The quality menu: the format line, and Streaming Quality's levels or why there are none.</summary>
+    private void OnQualityClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowQuality(QualityBadge, Player, Shell.Services);
+
     /// <summary>Devices, while a remote source plays.</summary>
     private void OnDeviceClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowDevices(DeviceButton, Player, Shell.Services);
 

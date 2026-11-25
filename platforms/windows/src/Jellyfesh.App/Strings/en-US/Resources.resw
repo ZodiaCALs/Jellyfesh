@@ -410,6 +410,9 @@
   <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>Open Mini Player (Ctrl+M)</value>
   </data>
+  <data name="Bar_Quality.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Streaming Quality</value>
+  </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Queue</value>
   </data>
@@ -1253,6 +1256,33 @@
   <data name="Playback_Startup.Text" xml:space="preserve">
     <value>Startup</value>
   </data>
+  <data name="Playback_Streaming.Text" xml:space="preserve">
+    <value>Streaming</value>
+  </data>
+  <data name="Playback_StreamingAuto.Content" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Playback_StreamingChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Streaming Quality</value>
+  </data>
+  <data name="Playback_StreamingChoice.Header" xml:space="preserve">
+    <value>Streaming Quality</value>
+  </data>
+  <data name="Playback_StreamingHigh.Content" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="Playback_StreamingHint.Text" xml:space="preserve">
+    <value>Auto plays lossless, or High on a metered connection.</value>
+  </data>
+  <data name="Playback_StreamingLossless.Content" xml:space="preserve">
+    <value>Lossless</value>
+  </data>
+  <data name="Playback_StreamingLow.Content" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="Playback_StreamingNormal.Content" xml:space="preserve">
+    <value>Normal</value>
+  </data>
   <data name="Player_ArtistAlbum" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
@@ -1427,14 +1457,29 @@
   <data name="Pro_Title" xml:space="preserve">
     <value>Jellyfesh Pro</value>
   </data>
+  <data name="Quality_BadgeLabel" xml:space="preserve">
+    <value>Quality: {0}</value>
+  </data>
+  <data name="Quality_FilesAsTheyAre" xml:space="preserve">
+    <value>Files play as they are.</value>
+  </data>
   <data name="Quality_High" xml:space="preserve">
     <value>High</value>
   </data>
   <data name="Quality_HiResLossless" xml:space="preserve">
     <value>Hi-Res Lossless</value>
   </data>
+  <data name="Quality_Kbits" xml:space="preserve">
+    <value>{0} kbit/s</value>
+  </data>
   <data name="Quality_Lossless" xml:space="preserve">
     <value>Lossless</value>
+  </data>
+  <data name="Quality_Menu" xml:space="preserve">
+    <value>Streaming Quality</value>
+  </data>
+  <data name="Quality_SetIn" xml:space="preserve">
+    <value>Quality is set in {0}.</value>
   </data>
   <data name="Quality_Standard" xml:space="preserve">
     <value>Standard</value>
@@ -1885,6 +1930,21 @@
   </data>
   <data name="Startup_OpenLogFolder" xml:space="preserve">
     <value>Open Log Folder</value>
+  </data>
+  <data name="StreamingQuality_Auto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="StreamingQuality_High" xml:space="preserve">
+    <value>High</value>
+  </data>
+  <data name="StreamingQuality_Lossless" xml:space="preserve">
+    <value>Lossless</value>
+  </data>
+  <data name="StreamingQuality_Low" xml:space="preserve">
+    <value>Low</value>
+  </data>
+  <data name="StreamingQuality_Normal" xml:space="preserve">
+    <value>Normal</value>
   </data>
   <data name="Time_HoursAndMinutes" xml:space="preserve">
     <value>{0} {1}</value>

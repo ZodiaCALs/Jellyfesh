@@ -410,6 +410,9 @@
   <data name="Bar_MiniPlayer.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
     <value>開啟迷你播放器 (Ctrl+M)</value>
   </data>
+  <data name="Bar_Quality.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>串流音質</value>
+  </data>
   <data name="Bar_Queue.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>播放佇列</value>
   </data>
@@ -1253,6 +1256,33 @@
   <data name="Playback_Startup.Text" xml:space="preserve">
     <value>啟動</value>
   </data>
+  <data name="Playback_Streaming.Text" xml:space="preserve">
+    <value>串流</value>
+  </data>
+  <data name="Playback_StreamingAuto.Content" xml:space="preserve">
+    <value>自動</value>
+  </data>
+  <data name="Playback_StreamingChoice.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>串流音質</value>
+  </data>
+  <data name="Playback_StreamingChoice.Header" xml:space="preserve">
+    <value>串流音質</value>
+  </data>
+  <data name="Playback_StreamingHigh.Content" xml:space="preserve">
+    <value>高品質</value>
+  </data>
+  <data name="Playback_StreamingHint.Text" xml:space="preserve">
+    <value>「自動」以無損播放，在計量制連線上以「高」播放。</value>
+  </data>
+  <data name="Playback_StreamingLossless.Content" xml:space="preserve">
+    <value>無損</value>
+  </data>
+  <data name="Playback_StreamingLow.Content" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="Playback_StreamingNormal.Content" xml:space="preserve">
+    <value>標準</value>
+  </data>
   <data name="Player_ArtistAlbum" xml:space="preserve">
     <value>{0} · {1}</value>
   </data>
@@ -1427,14 +1457,29 @@
   <data name="Pro_Title" xml:space="preserve">
     <value>Jellyfesh Pro</value>
   </data>
+  <data name="Quality_BadgeLabel" xml:space="preserve">
+    <value>音質：{0}</value>
+  </data>
+  <data name="Quality_FilesAsTheyAre" xml:space="preserve">
+    <value>檔案按原樣播放。</value>
+  </data>
   <data name="Quality_High" xml:space="preserve">
     <value>高品質</value>
   </data>
   <data name="Quality_HiResLossless" xml:space="preserve">
     <value>高解析度無損</value>
   </data>
+  <data name="Quality_Kbits" xml:space="preserve">
+    <value>{0} kbit/s</value>
+  </data>
   <data name="Quality_Lossless" xml:space="preserve">
     <value>無損</value>
+  </data>
+  <data name="Quality_Menu" xml:space="preserve">
+    <value>串流音質</value>
+  </data>
+  <data name="Quality_SetIn" xml:space="preserve">
+    <value>音質在 {0} 中設定。</value>
   </data>
   <data name="Quality_Standard" xml:space="preserve">
     <value>標準</value>
@@ -1885,6 +1930,21 @@
   </data>
   <data name="Startup_OpenLogFolder" xml:space="preserve">
     <value>開啟記錄資料夾</value>
+  </data>
+  <data name="StreamingQuality_Auto" xml:space="preserve">
+    <value>自動</value>
+  </data>
+  <data name="StreamingQuality_High" xml:space="preserve">
+    <value>高品質</value>
+  </data>
+  <data name="StreamingQuality_Lossless" xml:space="preserve">
+    <value>無損</value>
+  </data>
+  <data name="StreamingQuality_Low" xml:space="preserve">
+    <value>低</value>
+  </data>
+  <data name="StreamingQuality_Normal" xml:space="preserve">
+    <value>標準</value>
   </data>
   <data name="Time_HoursAndMinutes" xml:space="preserve">
     <value>{0} {1}</value>

@@ -7,14 +7,60 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 namespace Jellyfesh.App.Shell;
 
 /// <summary>
-/// The device button and More of the player bar and Now Playing's dock (docs/ui.md, "Links and
-/// remote playback"). The device button lists the output devices, or in a remote session
+/// The quality badge's menu (ADR-0026 §3), the device button and More of the player bar and Now
+/// Playing's dock (docs/ui.md, "The player bar and the mini player", "Links and remote playback"). The device button lists the output devices, or in a remote session
 /// Devices: every device of the service with its kind's icon, the playing one checked; it asks
 /// the service for its devices as it opens, and choosing one moves playback there. More holds
 /// Open in {Service} and, in a remote session, Stop Controlling.
 /// </summary>
 internal static class PlayerMenus
 {
+    /// <summary>
+    /// The quality menu above the badge: the format line, then the levels the source offers with
+    /// Streaming Quality checked, or why there are none ("Files play as they are.").
+    /// </summary>
+    public static void ShowQuality(FrameworkElement target, PlayerViewModel player, ShellServices s)
+    {
+        if (player.Quality is not { } quality)
+        {
+            return;
+        }
+
+        var menu = new MenuFlyout { Placement = FlyoutPlacementMode.Top };
+        if (quality.FormatLine is { } line)
+        {
+            menu.Items.Add(new MenuFlyoutItem { Text = line, IsEnabled = false });
+        }
+
+        if (quality.Levels.Count > 0)
+        {
+            if (menu.Items.Count > 0)
+            {
+                menu.Items.Add(new MenuFlyoutSeparator());
+            }
+
+            menu.Items.Add(new MenuFlyoutItem { Text = s.L.Get("Quality_Menu"), IsEnabled = false, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold });
+            foreach (var level in quality.Levels)
+            {
+                var item = new RadioMenuFlyoutItem
+                {
+                    Text = QualityMenu.LevelName(level, s.L),
+                    GroupName = "StreamingQuality",
+                    IsChecked = level == quality.Chosen,
+                };
+                var choice = level;
+                item.Click += (_, _) => player.ChooseQualityCommand.Execute(choice);
+                menu.Items.Add(item);
+            }
+        }
+        else if (quality.Note is { } note)
+        {
+            menu.Items.Add(new MenuFlyoutItem { Text = note, IsEnabled = false });
+        }
+
+        menu.ShowAt(target);
+    }
+
     /// <summary>Opens the output devices or, in a remote session, Devices above <paramref name="target"/>.</summary>
     public static void ShowDevices(FrameworkElement target, PlayerViewModel player, ShellServices s)
     {

@@ -360,6 +360,9 @@ public sealed partial class NowPlayingView : UserControl
     /// <summary>The output devices, or Devices in a remote session (it asks the service for its devices).</summary>
     private void OnDeviceClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowDevices(DeviceButton, Player, Shell.Services);
 
+    /// <summary>The quality menu, as from the player bar's badge.</summary>
+    private void OnQualityClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowQuality(QualityBadge, Player, Shell.Services);
+
     /// <summary>More: Open in {Service}, Stop Controlling.</summary>
     private void OnMoreClick(object sender, RoutedEventArgs e) => PlayerMenus.ShowMore(MoreButton, Player, Shell.Services);
 

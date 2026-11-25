@@ -605,6 +605,23 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Streaming: Streaming Quality (ADR-0026 §1), the same setting as the bar's quality menu. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Uid="Playback_Streaming" Style="{StaticResource CardHeading}" Text="Streaming" />
+                                <TextBlock x:Uid="Playback_StreamingHint" Style="{StaticResource JfSecondaryBodyText}" Text="Auto plays lossless, or High on a metered connection." TextWrapping="Wrap" />
+                            </StackPanel>
+                            <RadioButtons x:Uid="Playback_StreamingChoice" AutomationProperties.Name="Streaming Quality" Header="Streaming Quality" SelectedIndex="{x:Bind ViewModel.StreamingQualityIndex, Mode=TwoWay}">
+                                <RadioButton x:Uid="Playback_StreamingAuto" Content="Auto" />
+                                <RadioButton x:Uid="Playback_StreamingLossless" Content="Lossless" />
+                                <RadioButton x:Uid="Playback_StreamingHigh" Content="High" />
+                                <RadioButton x:Uid="Playback_StreamingNormal" Content="Normal" />
+                                <RadioButton x:Uid="Playback_StreamingLow" Content="Low" />
+                            </RadioButtons>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Startup: Resume Playback. -->
                     <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">

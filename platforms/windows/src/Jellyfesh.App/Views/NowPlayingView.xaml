@@ -323,8 +323,20 @@
                         <TextBlock Grid.Column="2" MinWidth="36" VerticalAlignment="Center" Style="{StaticResource JfTimeText}" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Progress.RemainingText, Mode=OneWay}" AutomationProperties.AccessibilityView="Raw" />
                     </Grid>
 
-                    <!-- The volume: the engine's (with mute), or the remote device's; hidden when that device has none. -->
+                    <!-- The quality badge (ADR-0026 §3), then the volume: the engine's (with mute), or the remote
+                         device's; hidden when that device has none. A narrow dock drops the group. -->
                     <StackPanel x:Name="VolumeGroup" Grid.Column="2" VerticalAlignment="Center" Orientation="Horizontal" Spacing="4">
+                        <Button
+                            x:Name="QualityBadge"
+                            x:Uid="Bar_Quality"
+                            Margin="0,0,8,0"
+                            AutomationProperties.Name="{x:Bind Player.QualityBadgeLabel, Mode=OneWay}"
+                            Click="OnQualityClick"
+                            Style="{StaticResource JfQualityBadgeStyle}"
+                            ToolTipService.ToolTip="Streaming Quality"
+                            Visibility="{x:Bind shell:Bind.Visible(Player.HasQualityBadge), Mode=OneWay}">
+                            <TextBlock MaxLines="1" Text="{x:Bind Player.QualityBadge, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        </Button>
                         <Button
                             AutomationProperties.Name="{x:Bind Player.MuteLabel, Mode=OneWay}"
                             Command="{x:Bind Player.ToggleMuteCommand}"

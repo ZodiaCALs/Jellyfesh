@@ -131,6 +131,13 @@ public sealed partial class PlayerViewModel : ObservableObject
     [ObservableProperty]
     private string _qualityText = string.Empty;
 
+    /// <summary>The quality badge and its menu (ADR-0026 §3); null while nothing plays.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasQualityBadge))]
+    [NotifyPropertyChangedFor(nameof(QualityBadge))]
+    [NotifyPropertyChangedFor(nameof(QualityBadgeLabel))]
+    private QualityMenu? _quality;
+
     // Now Playing › Info, "About This Song": Title, Artist, Album, Year, Length, Format, Lyrics and File.
 
     /// <summary>The song's year, for library songs that have one.</summary>
@@ -259,6 +266,15 @@ public sealed partial class PlayerViewModel : ObservableObject
     /// <summary>The More menu has something: Open in {Service}, or Stop Controlling.</summary>
     public bool HasMore => HasLink || IsRemote;
 
+    /// <summary>The bar and Now Playing show the quality badge while something plays.</summary>
+    public bool HasQualityBadge => Quality is not null;
+
+    /// <summary>The badge's words: the playing quality's label, else the chosen level.</summary>
+    public string QualityBadge => Quality?.Badge ?? string.Empty;
+
+    /// <summary>"Quality: Lossless", the badge's name for screen readers.</summary>
+    public string QualityBadgeLabel => Quality is { } q ? _s.L.Format("Quality_BadgeLabel", q.Badge) : string.Empty;
+
     /// <summary>The current track's position in the queue, as "3 of 12" for Narrator; empty when unknown.</summary>
     public string QueuePositionText { get; private set; } = string.Empty;
 
@@ -319,6 +335,23 @@ public sealed partial class PlayerViewModel : ObservableObject
         {
             UpdateOutputButton();
         }
+
+        if ((changes & (SliceChange.NowPlaying | SliceChange.Settings | SliceChange.Remote)) != 0)
+        {
+            UpdateQuality(state);
+        }
+    }
+
+    /// <summary>
+    /// The quality badge and its menu (ADR-0026 §3): for the engine's song its quality, the levels
+    /// its source offers and why there are none; in a remote session, the service's note.
+    /// </summary>
+    private void UpdateQuality(CoreSnapshot state)
+    {
+        var chosen = state.Settings.StreamingQuality;
+        Quality = state.Remote.HasSession ? QualityMenu.Of(null, null, chosen, state.Remote.QualityNote, _s.L)
+            : state.NowPlaying is { } np ? QualityMenu.Of(np.Quality, np.Qualities, chosen, np.QualityNote, _s.L)
+            : null;
     }
 
     /// <summary>The engine's track and transport (no remote session).</summary>
@@ -554,6 +587,17 @@ public sealed partial class PlayerViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleShuffle() => _s.Send(new CoreCommand.SetShuffle(!Shuffle));
+
+    /// <summary>A level from the quality menu: the same setting as Settings › Playback › Streaming.</summary>
+    [RelayCommand]
+    private void ChooseQuality(StreamingQuality level)
+    {
+        var settings = _s.Hub.State.Settings;
+        if (settings.StreamingQuality != level)
+        {
+            _s.Send(new CoreCommand.SetSettings(settings with { StreamingQuality = level }));
+        }
+    }
 
     /// <summary>Off → All → One → Off.</summary>
     [RelayCommand]
