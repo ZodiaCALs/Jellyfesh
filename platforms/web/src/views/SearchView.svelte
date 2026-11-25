@@ -243,7 +243,7 @@
             {/if}
             {#if group.next}
               <div class="show-more">
-                <button class="button" disabled={loading} onclick={() => search.more(sourceTab.source, group.kind)}
+                <button class="pill secondary" disabled={loading} onclick={() => search.more(sourceTab.source, group.kind)}
                   >{loading ? t('Loading…') : t('Show More')}</button
                 >
               </div>
