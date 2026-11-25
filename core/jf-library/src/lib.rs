@@ -64,6 +64,7 @@ use std::time::Duration;
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
+pub use artwork::folder_art_among;
 pub use error::LibraryError;
 pub use fs::{FileEntry, FileSystem, PathKind, ReadSeek, StdFileSystem};
 pub use watch::{LibraryWatcher, WatchErrorKind};
@@ -604,8 +605,8 @@ impl Library {
     /// image keeps its aspect ratio and fits that square; it is never enlarged.
     /// It is made once (JPEG, quality 85, written atomically) and reused; it goes
     /// when the artwork leaves the catalogue. `None` for a hash the catalogue
-    /// does not have. Covers that are neither JPEG nor PNG, or are damaged, fail
-    /// with [`LibraryError::Artwork`].
+    /// does not have. Covers that are not JPEG, PNG, WebP or GIF, or are
+    /// damaged, fail with [`LibraryError::Artwork`].
     pub fn artwork_thumbnail(&self, hash: &str, size_px: u32) -> Result<Option<PathBuf>, LibraryError> {
         if !thumbnail::is_hash(hash) {
             return Ok(None);
@@ -647,21 +648,35 @@ impl Library {
         Ok(Some(thumb))
     }
 
-    /// Extracts the front cover of `track_path` into the artwork cache again (caches
-    /// get purged); `None` unless it is still the image with `hash`.
+    /// Puts the picture of `track_path` into the artwork cache again (caches
+    /// get purged): its front cover, else its folder's (`cover.jpg`), as the
+    /// scan found them; `None` unless one is still the image with `hash`.
     fn extract_artwork(&self, track_path: &Path, hash: &str) -> Result<Option<PathBuf>, LibraryError> {
-        let parsed = match tags::parse(self.fs.as_ref(), track_path, true) {
-            Ok(parsed) => parsed,
+        match tags::parse(self.fs.as_ref(), track_path, true) {
+            Ok(parsed) => {
+                if let Some(picture) = parsed.front_cover() {
+                    let stored = artwork::store(&self.artwork_dir(), picture.data(), picture.mime_type())?;
+                    if stored.hash == hash {
+                        return Ok(Some(self.artwork_dir().join(stored.file_name)));
+                    }
+                }
+            }
             Err(err) => {
                 tracing::warn!(path = %track_path.display(), %err, "cannot re-extract artwork");
-                return Ok(None);
             }
-        };
-        let Some(picture) = parsed.front_cover() else {
+        }
+        let folder_picture = track_path
+            .parent()
+            .and_then(|dir| self.fs.list_files(dir).ok())
+            .and_then(|files| artwork::folder_art_among(&files));
+        let Some(picture) = folder_picture else {
             return Ok(None);
         };
-        let stored = artwork::store(&self.artwork_dir(), picture.data(), picture.mime_type())?;
-        // A different hash means the file changed since the scan; the next scan fixes it.
+        let Ok(bytes) = artwork::read_folder_art(self.fs.as_ref(), &picture) else {
+            return Ok(None);
+        };
+        let stored = artwork::store(&self.artwork_dir(), &bytes, None)?;
+        // A different hash means the files changed since the scan; the next scan fixes it.
         Ok((stored.hash == hash).then(|| self.artwork_dir().join(stored.file_name)))
     }
 
@@ -984,6 +999,14 @@ pub fn read_file_details(path: &Path) -> Result<FileDetails, LibraryError> {
 
 /// The thumbnail size [`make_thumbnail`] makes for a request of `size_px`:
 /// 64, 128, 256, 512 or 1024.
+/// The cover picture next to an audio file (`cover.jpg`, `folder.png`,
+/// `front.webp`, …): what the scanner gives tracks without a picture of
+/// their own, and what Now Playing shows for files outside the library.
+pub fn folder_artwork(audio: &Path) -> Option<PathBuf> {
+    let files = StdFileSystem.list_files(audio.parent()?).ok()?;
+    folder_art_among(&files)
+}
+
 pub fn thumbnail_size(size_px: u32) -> u32 {
     thumbnail::bucket(size_px)
 }

@@ -772,8 +772,7 @@ impl Worker {
                 {
                     tracing::debug!(source = %self.source.id, error = %error.message, "remote shuffle before play");
                 }
-                self.backend
-                    .play(None, context.as_deref().cloned(), tracks.clone(), *start)
+                self.play_on_a_device(context.as_deref().cloned(), tracks.clone(), *start)
             }
             Op::Resume => self.backend.resume(),
             Op::Pause => self.backend.pause(),
@@ -806,7 +805,8 @@ impl Worker {
                 if op != Op::Refresh {
                     self.model.assume(&op, now);
                 }
-                if matches!(op, Op::Transfer(_)) {
+                if let Op::Transfer(device) = &op {
+                    remember_device(&self.shared, &self.source.id, device);
                     self.refresh_devices();
                 }
                 Ok(())
@@ -823,6 +823,84 @@ impl Worker {
         let source = &self.source;
         publish(&self.shared, self.id, |version| snapshot(version, source, model));
     }
+
+    /// The device to play on: the active one, else the one chosen last (in
+    /// the device picker, or played on) while it is listed, else the only
+    /// one; `None` (several idle devices, none chosen) leaves it to the
+    /// service.
+    fn play_device(&self) -> Option<String> {
+        let devices = &self.model.devices;
+        if let Some(active) = devices.iter().find(|d| d.active) {
+            return Some(active.id.clone());
+        }
+        let chosen = chosen_device(&self.shared, &self.source.id);
+        if let Some(chosen) = chosen.filter(|id| devices.iter().any(|d| &d.id == id)) {
+            return Some(chosen);
+        }
+        match devices.as_slice() {
+            [only] => Some(only.id.clone()),
+            _ => None,
+        }
+    }
+
+    /// Plays on [`Worker::play_device`], so a song started in Jellyfesh goes
+    /// to the device chosen there even when no device is active (Spotify
+    /// answers NO_ACTIVE_DEVICE to a play for no device then). When an idle
+    /// device does not take the play, playback moves to it first and plays
+    /// there. With several idle devices and none chosen, the service's answer
+    /// stands: it asks the person to choose one, rather than music starting
+    /// on a device they did not pick.
+    fn play_on_a_device(&mut self, context: Option<Item>, tracks: Vec<Item>, start: u32) -> Result<()> {
+        if self.model.devices.is_empty() {
+            self.refresh_devices();
+        }
+        let idle = !self.model.devices.iter().any(|d| d.active);
+        let device = self.play_device();
+        match self
+            .backend
+            .play(device.clone(), context.clone(), tracks.clone(), start)
+        {
+            Ok(()) => {
+                if let Some(device) = &device {
+                    remember_device(&self.shared, &self.source.id, device);
+                }
+                Ok(())
+            }
+            Err(error) if error.sign_in || !idle => Err(error),
+            Err(error) => {
+                let Some(target) = device else {
+                    return Err(error);
+                };
+                tracing::debug!(source = %self.source.id, error = %error.message, %target, "moving playback to the device, then playing");
+                // A device that cannot be moved to keeps the play's own answer.
+                self.backend.transfer(target.clone(), false).map_err(|_| error)?;
+                self.backend.play(Some(target.clone()), context, tracks, start)?;
+                remember_device(&self.shared, &self.source.id, &target);
+                self.refresh_devices();
+                Ok(())
+            }
+        }
+    }
+}
+
+/// Remembers the device a source last played on (chosen in the device
+/// picker, or played on), for the next session with no active device.
+fn remember_device(shared: &Shared, source: &str, device: &str) {
+    shared
+        .remote_devices
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(source.to_owned(), device.to_owned());
+}
+
+/// The device a source last played on in this run.
+fn chosen_device(shared: &Shared, source: &str) -> Option<String> {
+    shared
+        .remote_devices
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(source)
+        .cloned()
 }
 
 /// The slice for `model`.
@@ -1045,6 +1123,155 @@ mod tests {
         model.succeeded();
         assert_eq!(model.interval(), PAUSED_POLL);
         assert_eq!(model.error, None);
+    }
+
+    fn speaker(id: &str, active: bool) -> HostDevice {
+        HostDevice {
+            id: id.into(),
+            name: id.into(),
+            kind: HostKind::Speaker,
+            active,
+            supports_volume: true,
+            volume_percent: None,
+        }
+    }
+
+    /// A service with Spotify's rule: a play for no device fails while no
+    /// device is active, and a `sleepy` idle device takes a play only once
+    /// playback moved to it. It notes what it was asked.
+    struct Fake {
+        devices: Vec<HostDevice>,
+        sleepy: bool,
+        moved_to: std::sync::Mutex<Option<String>>,
+        calls: Arc<std::sync::Mutex<Vec<String>>>,
+    }
+
+    impl Fake {
+        fn note(&self, call: String) {
+            self.calls.lock().unwrap().push(call);
+        }
+    }
+
+    fn no_device() -> RemoteError {
+        RemoteError {
+            message: "No device is active.".into(),
+            sign_in: false,
+        }
+    }
+
+    impl Backend for Fake {
+        fn devices(&self) -> Result<Vec<HostDevice>> {
+            Ok(self.devices.clone())
+        }
+        fn state(&self) -> Result<Option<HostState>> {
+            Ok(None)
+        }
+        fn play(&self, device: Option<String>, _: Option<Item>, _: Vec<Item>, start: u32) -> Result<()> {
+            self.note(format!("play {} {start}", device.as_deref().unwrap_or("-")));
+            let moved = self.moved_to.lock().unwrap().clone();
+            let active = self.devices.iter().any(|d| d.active) || moved.is_some();
+            match device {
+                None if !active => Err(no_device()),
+                Some(device) if self.sleepy && !active && moved.as_deref() != Some(device.as_str()) => {
+                    Err(no_device())
+                }
+                _ => Ok(()),
+            }
+        }
+        fn resume(&self) -> Result<()> {
+            Ok(())
+        }
+        fn pause(&self) -> Result<()> {
+            Ok(())
+        }
+        fn next(&self) -> Result<()> {
+            Ok(())
+        }
+        fn previous(&self) -> Result<()> {
+            Ok(())
+        }
+        fn seek(&self, _: u32) -> Result<()> {
+            Ok(())
+        }
+        fn set_volume(&self, _: u32) -> Result<()> {
+            Ok(())
+        }
+        fn set_shuffle(&self, _: bool) -> Result<()> {
+            Ok(())
+        }
+        fn set_repeat(&self, _: RemoteRepeat) -> Result<()> {
+            Ok(())
+        }
+        fn transfer(&self, device: String, _: bool) -> Result<()> {
+            self.note(format!("transfer {device}"));
+            *self.moved_to.lock().unwrap() = Some(device);
+            Ok(())
+        }
+    }
+
+    /// A worker for `devices`, with the calls it makes.
+    fn worker(
+        shared: &Arc<Shared>,
+        devices: Vec<HostDevice>,
+        sleepy: bool,
+    ) -> (Worker, Arc<std::sync::Mutex<Vec<String>>>) {
+        let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let fake = Fake {
+            devices,
+            sleepy,
+            moved_to: std::sync::Mutex::new(None),
+            calls: calls.clone(),
+        };
+        let source = Source {
+            id: "org.example.remote".into(),
+            name: "Example".into(),
+            links: Links::default(),
+        };
+        let worker = Worker::new(Box::new(fake), source, shared.clone(), 1, Arc::new(AtomicBool::new(true)));
+        (worker, calls)
+    }
+
+    fn play_op() -> Op {
+        Op::Play {
+            context: None,
+            tracks: vec![track("a", 1000)],
+            start: 0,
+            shuffle: None,
+        }
+    }
+
+    #[test]
+    fn songs_play_on_the_device_chosen_when_none_is_active() {
+        let shared = Arc::new(Shared::new(jf_session::Queue::new()));
+        // The only device, idle: it is asked by name.
+        let (mut w, calls) = worker(&shared, vec![speaker("desk", false)], false);
+        w.apply(play_op()).unwrap();
+        assert_eq!(*calls.lock().unwrap(), ["play desk 0"]);
+
+        // Several idle devices and none chosen: the service's answer stands.
+        let (mut w, calls) = worker(&shared, vec![speaker("tv", false), speaker("phone", false)], false);
+        assert_eq!(w.apply(play_op()), Err(no_device()));
+        assert_eq!(*calls.lock().unwrap(), ["play - 0"], "music never starts on a device not picked");
+
+        // Choosing one in the picker sends later songs there.
+        w.apply(Op::Transfer("phone".into())).unwrap();
+        let (mut w, calls) = worker(&shared, vec![speaker("tv", false), speaker("phone", false)], false);
+        w.apply(play_op()).unwrap();
+        assert_eq!(*calls.lock().unwrap(), ["play phone 0"], "remembered across sessions");
+
+        // A device that sleeps through the play is moved to first.
+        let (mut w, calls) = worker(&shared, vec![speaker("tv", false), speaker("phone", false)], true);
+        w.apply(play_op()).unwrap();
+        assert_eq!(
+            *calls.lock().unwrap(),
+            ["play phone 0", "transfer phone", "play phone 0"]
+        );
+
+        // The active device wins over the one chosen.
+        let (mut w, calls) = worker(&shared, vec![speaker("tv", true), speaker("phone", false)], true);
+        w.apply(play_op()).unwrap();
+        assert_eq!(*calls.lock().unwrap(), ["play tv 0"]);
+        assert_eq!(chosen_device(&shared, "org.example.remote").as_deref(), Some("tv"));
     }
 
     #[test]

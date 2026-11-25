@@ -11,8 +11,6 @@ const BACKDROP_VERSION: u32 = 1;
 
 /// File names tried, case-insensitively, for folder artwork when a file
 /// has no embedded cover.
-const FOLDER_ART: [&str; 5] = ["cover", "folder", "front", "album", "artwork"];
-const ART_EXTS: [&str; 3] = ["jpg", "jpeg", "png"];
 
 /// Misty theme for one hue in both appearances.
 #[derive(Debug, Clone, PartialEq)]
@@ -68,22 +66,11 @@ pub fn artwork_key(bytes: &[u8]) -> String {
     blake3::hash(bytes).to_hex().to_string()
 }
 
-/// A cover image in the audio file's folder (`cover.jpg`, `folder.png`, …).
+/// A cover image in the audio file's folder (`cover.jpg`, `folder.png`, …),
+/// by the library's rules (the scanner gives the same picture to tracks
+/// without one of their own).
 pub fn folder_artwork(audio: &Path) -> Option<PathBuf> {
-    let dir = audio.parent()?;
-    let mut found: Vec<(usize, PathBuf)> = std::fs::read_dir(dir)
-        .ok()?
-        .filter_map(Result::ok)
-        .filter_map(|entry| {
-            let path = entry.path();
-            let stem = path.file_stem()?.to_str()?.to_ascii_lowercase();
-            let ext = path.extension()?.to_str()?.to_ascii_lowercase();
-            let rank = FOLDER_ART.iter().position(|n| *n == stem)?;
-            ART_EXTS.contains(&ext.as_str()).then_some((rank, path))
-        })
-        .collect();
-    found.sort();
-    found.into_iter().next().map(|(_, p)| p)
+    jf_library::folder_artwork(audio)
 }
 
 fn write_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {

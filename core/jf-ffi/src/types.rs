@@ -178,7 +178,9 @@ pub enum Command {
     /// Scan every library folder for changes.
     Rescan,
     /// Replace the queue with a whole collection in its natural order and play from `start`,
-    /// shuffled when `shuffle` is set.
+    /// shuffled when `shuffle` is set. With `shuffle` and `start` 0 (a Shuffle button: no song
+    /// chosen) any song can come first. A source collection plays as soon as its first page is
+    /// in; later pages join the queue as they arrive.
     PlayCollection {
         collection: Collection,
         start: u32,

@@ -379,6 +379,23 @@ impl Queue {
         Ok(uids)
     }
 
+    /// Replaces the whole queue for Shuffle with no song chosen: with shuffle
+    /// on, every entry is shuffled and a random one plays first; without it,
+    /// the first entry does. Nothing is current when `tracks` is empty.
+    pub fn set_items_from_any(&mut self, tracks: Vec<TrackRef>) -> Vec<u64> {
+        self.tracks.clear();
+        let uids = self.alloc(tracks);
+        self.canonical = uids.clone();
+        if self.shuffle {
+            self.order = self.shuffle_with_first(None);
+        } else {
+            self.order = uids.clone();
+        }
+        self.position = (!self.order.is_empty()).then_some(0);
+        self.touch();
+        uids
+    }
+
     /// Adds entries at the end ("Play Last"). With shuffle on they keep the
     /// given order and play after everything already queued.
     pub fn append(&mut self, tracks: Vec<TrackRef>) -> Vec<u64> {
@@ -388,6 +405,29 @@ impl Queue {
             self.order.extend_from_slice(&uids);
             self.touch();
         }
+        uids
+    }
+
+    /// Adds the rest of a collection still arriving (its later pages) to the
+    /// one playing: at the end in the given order, or, with shuffle on,
+    /// shuffled together with the entries still to play.
+    pub fn extend_arriving(&mut self, tracks: Vec<TrackRef>) -> Vec<u64> {
+        let uids = self.alloc(tracks);
+        if uids.is_empty() {
+            return uids;
+        }
+        self.canonical.extend_from_slice(&uids);
+        if self.shuffle {
+            let next = self.position.map_or(0, |p| p + 1).min(self.order.len());
+            let mut upcoming = self.order.split_off(next);
+            upcoming.extend_from_slice(&uids);
+            let shuffled = self.shuffled(upcoming, None);
+            self.shuffles += 1;
+            self.order.extend(shuffled);
+        } else {
+            self.order.extend_from_slice(&uids);
+        }
+        self.touch();
         uids
     }
 
@@ -788,6 +828,51 @@ mod tests {
         q.set_shuffle(false);
         assert_eq!(all(&q), (1..=20).collect::<Vec<_>>());
         assert_eq!(q.current().unwrap(), b);
+    }
+
+    #[test]
+    fn shuffle_without_a_chosen_song_starts_anywhere() {
+        let firsts: std::collections::BTreeSet<i64> = (0..40)
+            .map(|seed| {
+                let mut q = Queue::with_seed(seed);
+                q.set_shuffle(true);
+                q.set_items_from_any(lib(1..=10));
+                assert_eq!(all(&q).len(), 10, "every entry once");
+                cur(&q).unwrap()
+            })
+            .collect();
+        assert!(firsts.len() > 3, "not always the same first song: {firsts:?}");
+        assert!(firsts.iter().any(|f| *f != 1), "not always the first song");
+        let mut plain = Queue::with_seed(1);
+        plain.set_items_from_any(lib(1..=5));
+        assert_eq!((cur(&plain), all(&plain)), (Some(1), vec![1, 2, 3, 4, 5]));
+        plain.set_items_from_any(Vec::new());
+        assert_eq!(cur(&plain), None);
+    }
+
+    #[test]
+    fn a_collection_arriving_page_by_page_joins_the_queue() {
+        let mut q = Queue::with_seed(5);
+        q.set_items(lib(1..=3), Some(0)).unwrap();
+        q.extend_arriving(lib(4..=6));
+        assert_eq!(all(&q), vec![1, 2, 3, 4, 5, 6]);
+        assert_eq!(cur(&q), Some(1));
+
+        let mut shuffled = Queue::with_seed(5);
+        shuffled.set_shuffle(true);
+        shuffled.set_items_from_any(lib(1..=3));
+        let first = cur(&shuffled);
+        shuffled.next(Advance::Manual);
+        let played = all(&shuffled)[..2].to_vec();
+        shuffled.extend_arriving(lib(4..=20));
+        let order = all(&shuffled);
+        assert_eq!(order.len(), 20);
+        assert_eq!(&order[..2], &played[..], "what played stays");
+        assert_eq!(order[0], first.unwrap());
+        let mut sorted = order.clone();
+        sorted.sort_unstable();
+        assert_eq!(sorted, (1..=20).collect::<Vec<_>>(), "every entry once");
+        assert!(order[2..].windows(2).any(|w| w[1] < w[0]), "shuffled in: {order:?}");
     }
 
     #[test]

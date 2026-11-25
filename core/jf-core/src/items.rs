@@ -98,7 +98,7 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             artist: t.artist.clone(),
             album: t.album.clone(),
             duration_ms: t.duration_ms,
-            artwork: t.artwork_url.clone().map(ArtworkRef::Url),
+            artwork: stored_artwork(t),
             artwork_hash: None,
             favorite,
             missing: false,
@@ -138,6 +138,19 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             }
         }
     }
+}
+
+/// The picture a source track a list stored shows: the URL it was listed
+/// with, or the core's reference to the item when its plugin answers
+/// `artwork` (both fetched with `source_artwork`, in any later run too).
+pub(crate) fn stored_artwork(track: &SourceTrack) -> Option<ArtworkRef> {
+    crate::artwork::stored_picture(
+        &track.plugin,
+        jf_plugin_host::ItemKind::Track,
+        &track.id,
+        track.artwork_url.as_deref(),
+    )
+    .map(ArtworkRef::Url)
 }
 
 /// A file's name without its extension, as a title for a file without tags.
@@ -189,6 +202,34 @@ mod tests {
             Some(ArtworkRef::Url("https://example.org/a.jpg".into()))
         );
         assert!(row.favorite && !row.missing);
+    }
+
+    #[test]
+    fn stored_source_tracks_keep_a_picture_the_core_can_fetch() {
+        let listed = TrackRef::Source(source("8"));
+        assert_eq!(
+            row(&item_for(&listed), None, false).artwork,
+            Some(ArtworkRef::Url("https://example.org/a.jpg".into())),
+            "the URL it was listed with"
+        );
+        let bare = SourceTrack {
+            plugin: "org.example.items-covers".into(),
+            artwork_url: None,
+            ..source("9")
+        };
+        let item = item_for(&TrackRef::Source(bare.clone()));
+        assert_eq!(row(&item, None, false).artwork, None, "the plugin gives no artwork");
+        crate::artwork::note_covers("org.example.items-covers", true);
+        let Some(ArtworkRef::Url(reference)) = row(&item, None, false).artwork else {
+            panic!("a reference to the item")
+        };
+        assert!(
+            reference.starts_with("jellyfesh-artwork://item?")
+                && reference.contains("plugin=org.example.items-covers")
+                && reference.contains("id=9"),
+            "{reference}"
+        );
+        crate::artwork::note_covers("org.example.items-covers", false);
     }
 
     #[test]

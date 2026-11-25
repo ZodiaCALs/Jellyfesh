@@ -692,6 +692,8 @@ fn plays_and_queues_whole_source_collections() {
     searched(&env, "album", SearchScope::Plugin { id: CATALOG.into() });
 
     // Start at the locked track: it is left out, and play starts at the next.
+    // It starts once the page with that one is in; the last page joins after.
+    let (mut playing, mut queued) = (false, false);
     let events = env.run(
         Command::PlayCollection {
             collection: Collection::Source {
@@ -702,9 +704,14 @@ fn plays_and_queues_whole_source_collections() {
             start: 1,
             shuffle: false,
         },
-        |e| matches!(e, Event::NowPlaying(Some(n)) if n.title == "Three"),
+        |e| {
+            playing |= matches!(e, Event::NowPlaying(Some(n)) if n.title == "Three");
+            queued |= matches!(e, Event::Queue(q) if q.len == 3);
+            playing && queued
+        },
     );
-    assert!(events.iter().any(|e| matches!(e, Event::Queue(q) if q.len == 3)));
+    let lengths: Vec<u32> = queue_lengths(&events);
+    assert_eq!(lengths.first(), Some(&2), "played from the first two pages: {lengths:?}");
     let queue = env.core.queue_window(0, 10);
     let ids: Vec<_> = queue
         .iter()
@@ -744,6 +751,93 @@ fn plays_and_queues_whole_source_collections() {
         shuffle: false,
     });
     assert_eq!(error, "nothing to play: Needs a subscription or a purchase");
+}
+
+/// The lengths the queue had, in order (each once, leaving out an empty queue).
+fn queue_lengths(events: &[Event]) -> Vec<u32> {
+    let mut lengths: Vec<u32> = events
+        .iter()
+        .filter_map(|e| match e {
+            Event::Queue(q) if q.len > 0 => Some(q.len as u32),
+            _ => None,
+        })
+        .collect();
+    lengths.dedup();
+    lengths
+}
+
+#[test]
+fn a_long_playlist_plays_from_its_first_page_and_grows() {
+    let env = Env::new();
+    let ids: Vec<String> = (1..=7).map(|n| format!("p{n}")).collect();
+    let server = catalog_server(Service {
+        audio: ids.iter().map(|id| (id.clone(), sine_flac(440.0, 0.4))).collect(),
+        // Four pages: 2, 2, 2 and 1.
+        nodes: HashMap::from([(
+            "pl1".to_string(),
+            ids.iter().map(|id| hit(id, &format!("Song {id}"), "A", 400)).collect(),
+        )]),
+        ..Service::default()
+    });
+    env.plugin("catalog", &catalog_manifest(), CATALOG, &server.url());
+    let playlist = || Collection::Source {
+        plugin: CATALOG.into(),
+        id: "pl1".into(),
+        // Never listed in this run: the kind says what it is.
+        item_kind: ItemKind::Playlist,
+    };
+
+    let events = env.run(
+        Command::PlayCollection {
+            collection: playlist(),
+            start: 0,
+            shuffle: false,
+        },
+        |e| matches!(e, Event::Queue(q) if q.len == 7),
+    );
+    assert_eq!(queue_lengths(&events), vec![2, 4, 6, 7], "each page joins as it arrives");
+    let queued: Vec<String> = env
+        .core
+        .queue_window(0, 10)
+        .iter()
+        .map(|i| match &i.track {
+            TrackRef::Source(t) => t.id.clone(),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    assert_eq!(queued, ids, "in the playlist's order");
+    let browsed = server.with_path("/browse");
+    assert_eq!(browsed.len(), 4);
+    assert!(
+        browsed.iter().all(|r| r.query("kind").as_deref() == Some("playlist")),
+        "fetched as a playlist, not an album"
+    );
+
+    // Shuffle: every song is queued, shuffled, the later pages too.
+    let events = env.run(
+        Command::PlayCollection {
+            collection: playlist(),
+            start: 0,
+            shuffle: true,
+        },
+        |e| matches!(e, Event::Queue(q) if q.len == 7 && q.shuffle),
+    );
+    let first_shuffled = events.iter().find_map(|e| match e {
+        Event::Queue(q) if q.shuffle && q.len > 0 => Some(q.len),
+        _ => None,
+    });
+    assert_eq!(first_shuffled, Some(2), "played from the first page");
+    let mut shuffled: Vec<String> = env
+        .core
+        .queue_window(0, 10)
+        .iter()
+        .map(|i| match &i.track {
+            TrackRef::Source(t) => t.id.clone(),
+            other => panic!("{other:?}"),
+        })
+        .collect();
+    shuffled.sort();
+    assert_eq!(shuffled, ids, "each song once");
 }
 
 fn echo_server() -> TestServer {

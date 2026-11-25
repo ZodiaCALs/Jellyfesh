@@ -49,6 +49,41 @@ pub(crate) fn store(dir: &Path, data: &[u8], mime: Option<&MimeType>) -> io::Res
     })
 }
 
+/// Names of cover pictures kept next to the music, most likely first.
+const FOLDER_ART: [&str; 5] = ["cover", "folder", "front", "album", "artwork"];
+/// Their extensions.
+const FOLDER_ART_EXTS: [&str; 5] = ["jpg", "jpeg", "png", "webp", "gif"];
+/// Largest folder picture read.
+const MAX_FOLDER_ART: u64 = 32 * 1024 * 1024;
+
+/// The cover picture among `files` (a folder's files): `cover.jpg`,
+/// `folder.png`, `front.webp`, … in that order of names, any case.
+pub fn folder_art_among(files: &[std::path::PathBuf]) -> Option<std::path::PathBuf> {
+    files
+        .iter()
+        .filter_map(|path| {
+            let stem = path.file_stem()?.to_str()?.to_ascii_lowercase();
+            let ext = path.extension()?.to_str()?.to_ascii_lowercase();
+            let rank = FOLDER_ART.iter().position(|n| *n == stem)?;
+            let ext_rank = FOLDER_ART_EXTS.iter().position(|e| *e == ext)?;
+            Some(((rank, ext_rank), path))
+        })
+        .min_by_key(|(rank, _)| *rank)
+        .map(|(_, path)| path.clone())
+}
+
+/// The bytes of a folder picture (at most [`MAX_FOLDER_ART`]); an empty
+/// file is no picture.
+pub(crate) fn read_folder_art(fs: &dyn crate::fs::FileSystem, picture: &Path) -> io::Result<Vec<u8>> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    fs.open(picture)?.take(MAX_FOLDER_ART).read_to_end(&mut bytes)?;
+    if bytes.is_empty() {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "the picture is empty"));
+    }
+    Ok(bytes)
+}
+
 /// Recognises an image by its magic bytes: (extension, MIME type).
 fn sniff(data: &[u8]) -> Option<(&'static str, &'static str)> {
     if data.starts_with(b"\x89PNG\r\n\x1a\n") {
@@ -89,5 +124,23 @@ mod tests {
         let unknown = store(dir.path(), b"????", None).unwrap();
         assert!(unknown.file_name.ends_with(".img"));
         assert_eq!(unknown.mime, None);
+    }
+
+    #[test]
+    fn finds_folder_art_by_name_then_extension() {
+        let files = |names: &[&str]| -> Vec<std::path::PathBuf> {
+            names.iter().map(|n| std::path::PathBuf::from("/m").join(n)).collect()
+        };
+        assert_eq!(folder_art_among(&files(&["01.flac", "notes.txt"])), None);
+        assert_eq!(
+            folder_art_among(&files(&["Front.PNG", "01.flac"])),
+            Some("/m/Front.PNG".into())
+        );
+        assert_eq!(
+            folder_art_among(&files(&["front.png", "Cover.webp", "cover.gif"])),
+            Some("/m/Cover.webp".into()),
+            "cover before front; webp before gif"
+        );
+        assert_eq!(folder_art_among(&files(&["cover.bmp"])), None);
     }
 }

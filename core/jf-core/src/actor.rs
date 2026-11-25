@@ -162,6 +162,9 @@ pub(crate) struct Shared {
     pub(crate) host: RwLock<Option<jf_plugin_host::PluginHost>>,
     /// Source pictures fetched through the core (set once at start).
     pub(crate) artwork: std::sync::OnceLock<crate::artwork::Artwork>,
+    /// The device each remote source last played on in this run (the next
+    /// session plays there when no device is active).
+    pub(crate) remote_devices: Mutex<HashMap<String, String>>,
 }
 
 /// A player the app registered, with the name its source shows.
@@ -234,6 +237,10 @@ pub(crate) struct Actor {
     /// Versions of the v0.0.8 slices.
     source_library_version: u64,
     downloads_version: u64,
+    /// A source collection whose first pages play while the rest arrives:
+    /// its request and its queue entries so far. It stops growing once none
+    /// of them is queued (the queue was replaced).
+    growing: Option<(CommandId, Vec<u64>)>,
 }
 
 /// The network the platform reports.
@@ -345,6 +352,7 @@ impl Shared {
             external: RwLock::new(HashMap::new()),
             host: RwLock::new(None),
             artwork: std::sync::OnceLock::new(),
+            remote_devices: Mutex::new(HashMap::new()),
         }
     }
 
@@ -567,6 +575,7 @@ impl Actor {
             },
             source_library_version: 0,
             downloads_version: 0,
+            growing: None,
         };
         let revision = actor.library.revision().unwrap_or(0);
         actor.library_revision = revision;
@@ -845,6 +854,13 @@ impl Actor {
                     } else {
                         self.sources.remote_node(&plugin, &node, item_kind)?
                     };
+                    // Shuffle with no song chosen starts anywhere: services start at the
+                    // offset given (Spotify even with shuffle on), so the core picks one.
+                    let start = if shuffle && start == 0 {
+                        random_below(context.child_count.map_or(0, |n| n as usize))
+                    } else {
+                        start
+                    };
                     let op = Op::Play {
                         context: Some(Box::new(context)),
                         tracks: Vec::new(),
@@ -876,6 +892,7 @@ impl Actor {
                 start,
                 shuffle,
             } => {
+                let requested_start = start;
                 let (tracks, start) = self.collection_entries(&collection, start)?;
                 if tracks.is_empty() {
                     return Err(CoreError::Other("nothing to play".into()));
@@ -888,7 +905,12 @@ impl Actor {
                 {
                     let mut q = self.shared.write_queue();
                     q.set_shuffle(shuffle);
-                    q.set_items(tracks, Some(start))?;
+                    if shuffle && requested_start == 0 {
+                        // Shuffle with no song chosen: any song first.
+                        q.set_items_from_any(tracks);
+                    } else {
+                        q.set_items(tracks, Some(start))?;
+                    }
                 }
                 self.resume_at = None;
                 self.failures = 0;
@@ -2234,14 +2256,25 @@ impl Actor {
                 plugin,
                 then,
                 result,
-            } => {
-                if let Err(e) = self.queue_collection(&plugin, then, result) {
-                    self.shared.emit(Event::CommandFailed {
-                        id,
-                        error: e.to_string(),
-                    });
+                more,
+            } => match self.queue_collection(&plugin, then, result) {
+                Ok(uids) => {
+                    if more && let Some(uids) = uids {
+                        self.growing = Some((id, uids));
+                    }
                 }
-            }
+                Err(e) => self.shared.emit(Event::CommandFailed {
+                    id,
+                    error: e.to_string(),
+                }),
+            },
+            SourcesMsg::CollectionMore {
+                id,
+                plugin,
+                items,
+                done,
+                error,
+            } => self.collection_more(id, &plugin, &items, done, error),
         }
     }
 
@@ -2291,26 +2324,36 @@ impl Actor {
         }
     }
 
-    /// Queues a fetched source collection.
+    /// Queues a fetched source collection (to play, perhaps its first pages);
+    /// returns its queue entries when it plays.
     fn queue_collection(
         &mut self,
         plugin: &str,
         then: Then,
         result: Result<Vec<Item>, String>,
-    ) -> Result<(), CoreError> {
+    ) -> Result<Option<Vec<u64>>, CoreError> {
         let items = result.map_err(CoreError::Other)?;
         match then {
-            Then::Play { start, shuffle } => {
-                let (tracks, start) = sources::collection_queue(plugin, &items, start)?;
-                {
+            Then::Play {
+                start: requested,
+                shuffle,
+            } => {
+                let (tracks, start) = sources::collection_queue(plugin, &items, requested)?;
+                let uids = {
                     let mut q = self.shared.write_queue();
                     q.set_shuffle(shuffle);
-                    q.set_items(tracks, Some(start))?;
-                }
+                    if shuffle && requested == 0 {
+                        // Shuffle with no song chosen: any song first.
+                        q.set_items_from_any(tracks)
+                    } else {
+                        q.set_items(tracks, Some(start))?
+                    }
+                };
                 self.resume_at = None;
                 self.failures = 0;
                 self.queue_changed();
                 self.start_current()?;
+                return Ok(Some(uids));
             }
             Then::Enqueue { play_next } => {
                 let (tracks, _) = sources::collection_queue(plugin, &items, 0)?;
@@ -2326,7 +2369,53 @@ impl Actor {
                 self.rearm();
             }
         }
-        Ok(())
+        Ok(None)
+    }
+
+    /// More of a source collection that started playing joins its queue,
+    /// unless the queue was replaced meanwhile. A failed page ends it; what
+    /// came stays queued.
+    fn collection_more(
+        &mut self,
+        id: CommandId,
+        plugin: &str,
+        items: &[Item],
+        done: bool,
+        error: Option<String>,
+    ) {
+        let Some((request, mut uids)) = self.growing.take() else {
+            return;
+        };
+        if request != id {
+            // An earlier collection's page: the one growing now goes on.
+            self.growing = Some((request, uids));
+            return;
+        }
+        let queued = {
+            let q = self.shared.read_queue();
+            uids.iter().any(|uid| q.get(*uid).is_some())
+        };
+        if !queued {
+            return; // the queue was replaced: the rest is not wanted
+        }
+        let tracks = sources::collection_more(plugin, items);
+        if !tracks.is_empty() {
+            let added = self.shared.write_queue().extend_arriving(tracks);
+            uids.extend(added);
+            self.queue_changed();
+            self.rearm();
+        }
+        if let Some(error) = error {
+            self.shared.emit(Event::Error {
+                message: format!(
+                    "Only part of the list could be loaded from {}: {error}",
+                    self.sources.display_name(plugin)
+                ),
+            });
+        }
+        if !done {
+            self.growing = Some((request, uids));
+        }
     }
 
     // ---- publishing and persistence ----------------------------------
@@ -2642,6 +2731,16 @@ impl Actor {
         self.shared.emit(Event::SourceLibrary(snapshot));
         Ok(())
     }
+}
+
+/// A random number below `n` (0 when `n` is 0 or 1).
+fn random_below(n: usize) -> usize {
+    use std::hash::{BuildHasher, RandomState};
+    if n < 2 {
+        return 0;
+    }
+    let random = RandomState::new().hash_one(std::time::SystemTime::now());
+    usize::try_from(random % n as u64).unwrap_or(0)
 }
 
 /// The downloads folder when the app passes none: `Jellyfesh` in
@@ -3193,7 +3292,7 @@ fn source_now_playing(item: &QueueItem, track: &SourceTrack, link: Option<String
         artist: track.artist.clone(),
         album: track.album.clone(),
         duration_ms: track.duration_ms,
-        artwork: track.artwork_url.clone().map(ArtworkRef::Url),
+        artwork: items::stored_artwork(track),
         format: None,
         link,
         quality: None,
@@ -3498,10 +3597,16 @@ fn spawn_media_worker(
                     let bytes = sources
                         .as_ref()
                         .and_then(|ctx| ctx.artwork(&plugin, &item, listed));
-                    // Now Playing shows the picture from the cache, fetched with the plugin's headers.
+                    // Now Playing shows the picture from the cache, fetched with the plugin's headers,
+                    // under the name lists give the song, so Recently Played finds it there.
                     if let (Some(bytes), Some(dir)) = (&bytes, &artwork_dir) {
-                        let key =
-                            artwork_url.unwrap_or_else(|| format!("jellyfesh-track:{plugin}:{}", item.id));
+                        let key = crate::artwork::stored_picture(
+                            &plugin,
+                            jf_plugin_host::ItemKind::Track,
+                            &item.id,
+                            artwork_url.as_deref(),
+                        )
+                        .unwrap_or_else(|| format!("jellyfesh-track:{plugin}:{}", item.id));
                         match crate::artwork::store_now_playing(dir, &key, bytes) {
                             Ok(path) => {
                                 let _ = tx.send(Msg::Media(MediaMsg::NowPlayingArtwork { uid, path }));

@@ -311,7 +311,10 @@ pub enum Command {
     // ---- collections ----------------------------------------------------
     /// Replace the queue with a whole collection (in its natural order:
     /// album by disc and track, artist album by album, playlist as listed)
-    /// and play from `start`, shuffled when `shuffle` is set.
+    /// and play from `start`, shuffled when `shuffle` is set. With `shuffle`
+    /// and `start` 0 (a Shuffle button: no song chosen) any song can come
+    /// first. A source collection plays as soon as its first page is in;
+    /// later pages join the queue as they arrive.
     PlayCollection {
         collection: Collection,
         start: usize,

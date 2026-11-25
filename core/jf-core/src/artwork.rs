@@ -17,6 +17,13 @@
 //! core's own instead, `jellyfesh-artwork://item?plugin=…&kind=…&id=…`: the
 //! core asks the plugin's `artwork` for it and fetches what that gives, with
 //! its headers, into the same cache.
+//!
+//! Lists the library keeps (Recently Played, playlists, favourites) store a
+//! source track's picture URL from an earlier run, whose headers are gone:
+//! [`stored_picture`] notes whose it is, and the core fetches it through
+//! the plugin's `artwork` answer for the item, else as it is when the
+//! plugin's allowlist still covers it. Now Playing keeps its picture under
+//! the same name, so those rows find it in the cache.
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
@@ -55,6 +62,56 @@ static KNOWN_IMAGES: Mutex<Option<Known>> = Mutex::new(None);
 
 /// The plugins that answer `artwork`, as their rows are made.
 static COVERS: Mutex<Option<HashSet<String>>> = Mutex::new(None);
+
+/// Whose item a stored picture URL is (lists the library keeps): URL →
+/// (plugin, kind, id).
+static OWNERS: Mutex<Option<Owners>> = Mutex::new(None);
+
+#[derive(Debug, Default)]
+struct Owners {
+    items: HashMap<String, (String, HostKind, String)>,
+    order: VecDeque<String>,
+}
+
+/// The picture to show for a source item a list stored (a playlist entry,
+/// Recently Played): the URL it was listed with, which the core can fetch
+/// in any later run through its plugin; or, without one, the core's
+/// reference to the item when its plugin answers `artwork`; else none.
+pub(crate) fn stored_picture(plugin: &str, kind: HostKind, id: &str, stored: Option<&str>) -> Option<String> {
+    match stored.filter(|url| !url.is_empty()) {
+        Some(url) => {
+            if !url.starts_with(ITEM_SCHEME) {
+                let mut guard = OWNERS.lock().unwrap_or_else(|e| e.into_inner());
+                let owners = guard.get_or_insert_with(Owners::default);
+                if owners
+                    .items
+                    .insert(url.to_owned(), (plugin.to_owned(), kind, id.to_owned()))
+                    .is_none()
+                {
+                    owners.order.push_back(url.to_owned());
+                    while owners.order.len() > KNOWN {
+                        if let Some(old) = owners.order.pop_front() {
+                            owners.items.remove(&old);
+                        }
+                    }
+                }
+            }
+            Some(url.to_owned())
+        }
+        None => covers(plugin).then(|| item_ref(plugin, kind, id)),
+    }
+}
+
+/// Whose item a stored picture URL is.
+fn owner_of(url: &str) -> Option<(String, HostKind, String)> {
+    OWNERS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()?
+        .items
+        .get(url)
+        .cloned()
+}
 
 /// Notes whether a plugin answers `artwork` (the plugins as last published).
 pub(crate) fn note_covers(plugin: &str, answers: bool) {
@@ -210,11 +267,16 @@ pub(crate) fn store_now_playing(dir: &Path, url: &str, bytes: &[u8]) -> Result<P
 fn image_from_plugin(ctx: Option<&Ctx>, reference: &str, size_px: u32) -> Result<ImageRef, String> {
     let (plugin, kind, id) = parse_item_ref(reference).ok_or("not a picture a source gave")?;
     let ctx = ctx.ok_or("online sources are off")?;
-    let item = ctx.item(&plugin, &id, kind);
+    plugin_artwork(ctx, &plugin, kind, &id, size_px)
+}
+
+/// What the plugin's `artwork` answers for an item.
+fn plugin_artwork(ctx: &Ctx, plugin: &str, kind: HostKind, id: &str, size_px: u32) -> Result<ImageRef, String> {
+    let item = ctx.item(plugin, id, kind);
     let size = jf_library::thumbnail_size(size_px);
     let answer = ctx
         .host
-        .artwork(&plugin, item, size)
+        .artwork(plugin, item, size)
         .recv_timeout(ARTWORK_WAIT)
         .unwrap_or(Err(CallError::Timeout));
     match answer {
@@ -222,6 +284,22 @@ fn image_from_plugin(ctx: Option<&Ctx>, reference: &str, size_px: u32) -> Result
         Ok(None) => Err("the source has no picture for it".into()),
         Err(e) => Err(e.to_string()),
     }
+}
+
+/// The picture to fetch for a URL a list stored (from an earlier run, its
+/// headers gone): the plugin's `artwork` answer for its item, else the URL
+/// itself while the plugin's allowlist covers it.
+fn image_for_stored(ctx: Option<&Ctx>, url: &str, size_px: u32) -> Result<ImageRef, String> {
+    let (plugin, kind, id) = owner_of(url).ok_or("not a picture a source gave")?;
+    let ctx = ctx.ok_or("online sources are off")?;
+    if covers(&plugin)
+        && let Ok(image) = plugin_artwork(ctx, &plugin, kind, &id, size_px)
+    {
+        return Ok(image);
+    }
+    ctx.host
+        .checked_image(&plugin, url)
+        .ok_or_else(|| format!("{url} is not on its source's allowlist"))
 }
 
 /// Fetches (or reads the kept original of) a picture and makes its JPEG.
@@ -236,7 +314,8 @@ fn make(dir: &Path, ctx: Option<&Ctx>, url: &str, size_px: u32) -> Result<PathBu
         Err(_) => {
             let image = match image_for(url) {
                 Some(image) => image,
-                None => image_from_plugin(ctx, url, size_px)?,
+                None if parse_item_ref(url).is_some() => image_from_plugin(ctx, url, size_px)?,
+                None => image_for_stored(ctx, url, size_px)?,
             };
             let bytes = crate::sources::fetch_image(&image)?;
             crate::sources::write_atomic(&original, &bytes).map_err(|e| e.to_string())?;
@@ -486,6 +565,32 @@ mod tests {
             row_picture("org.example.covers", HostKind::Track, "t1", None),
             None
         );
+    }
+
+    #[test]
+    fn stored_pictures_name_their_item() {
+        let url = "https://img.example.com/stored-picture.jpg";
+        assert_eq!(
+            stored_picture("org.example.nocovers", HostKind::Track, "t9", Some(url)).as_deref(),
+            Some(url),
+            "a stored URL stays the row's picture"
+        );
+        assert_eq!(
+            owner_of(url),
+            Some(("org.example.nocovers".into(), HostKind::Track, "t9".into()))
+        );
+        assert_eq!(
+            stored_picture("org.example.nocovers", HostKind::Track, "t9", None),
+            None,
+            "nothing to show without a URL or the plugin's artwork"
+        );
+        note_covers("org.example.storedcovers", true);
+        let reference = stored_picture("org.example.storedcovers", HostKind::Track, "t9", None).unwrap();
+        assert_eq!(
+            parse_item_ref(&reference),
+            Some(("org.example.storedcovers".into(), HostKind::Track, "t9".into()))
+        );
+        note_covers("org.example.storedcovers", false);
     }
 
     #[test]

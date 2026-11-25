@@ -160,4 +160,20 @@ mod tests {
         let rgb = flatten(&DynamicImage::ImageRgba8(rgba));
         assert_eq!(rgb.as_raw(), &[255, 255, 255, 10, 20, 30]);
     }
+
+    #[test]
+    fn webp_and_gif_covers_make_thumbnails() {
+        let picture = image::RgbImage::from_fn(40, 20, |x, _| image::Rgb([200, (x * 6) as u8, 30]));
+        let dir = tempfile::tempdir().unwrap();
+        for format in [image::ImageFormat::WebP, image::ImageFormat::Gif] {
+            let mut bytes = std::io::Cursor::new(Vec::new());
+            image::DynamicImage::ImageRgb8(picture.clone())
+                .write_to(&mut bytes, format)
+                .unwrap();
+            let target = dir.path().join(format!("{format:?}.jpg"));
+            make(bytes.get_ref(), 64, &target).unwrap_or_else(|e| panic!("{format:?}: {e}"));
+            let made = image::open(&target).unwrap();
+            assert_eq!((made.width(), made.height()), (40, 20), "{format:?}: never enlarged");
+        }
+    }
 }

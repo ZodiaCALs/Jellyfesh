@@ -130,12 +130,25 @@ pub(crate) enum SourcesMsg {
         uid: u64,
         result: Result<HttpSource, String>,
     },
-    /// The items of a collection to queue.
+    /// The items of a collection to queue: all of them, or (to play) the
+    /// first pages, with the rest following as `CollectionMore`.
     Collection {
         id: CommandId,
         plugin: String,
         then: Then,
         result: Result<Vec<Item>, String>,
+        /// More follows as `CollectionMore` for this request.
+        more: bool,
+    },
+    /// More of a collection that started playing (`Collection` with `more`).
+    CollectionMore {
+        id: CommandId,
+        plugin: String,
+        items: Vec<Item>,
+        /// The last of it.
+        done: bool,
+        /// Why the rest could not be had (what came stays queued).
+        error: Option<String>,
     },
     /// The keystore check finished.
     SecretsChecked,
@@ -1359,14 +1372,19 @@ impl Sources {
         let item = ctx.node(&plugin, &node, &[kind], kind);
         std::thread::Builder::new()
             .name("jf-collection".into())
-            .spawn(move || {
-                let result = collection_items(&ctx, &plugin, &item);
-                ctx.send(SourcesMsg::Collection {
-                    id,
-                    plugin,
-                    then,
-                    result,
-                });
+            .spawn(move || match then {
+                // Playing starts with the first page (the one with `start`); the rest follows.
+                Then::Play { start, .. } => stream_collection(&ctx, id, &plugin, &item, start, then),
+                Then::Enqueue { .. } => {
+                    let result = collection_items(&ctx, &plugin, &item);
+                    ctx.send(SourcesMsg::Collection {
+                        id,
+                        plugin,
+                        then,
+                        result,
+                        more: false,
+                    });
+                }
             })?;
         Ok(())
     }
@@ -1695,6 +1713,141 @@ fn collection_items(ctx: &Ctx, plugin: &str, node: &Item) -> Result<Vec<Item>, S
     Ok(tracks)
 }
 
+/// Fetches a collection to play page by page: the pages up to the one that
+/// holds the listing's entry `start` go to the actor at once (playback starts
+/// with them), every later page (an artist: every later album) follows as
+/// `CollectionMore`. A page that fails ends the collection; what came stays.
+fn stream_collection(ctx: &Ctx, id: CommandId, plugin: &str, node: &Item, start: usize, then: Then) {
+    let mut first: Option<Vec<Item>> = Some(Vec::new());
+    // Hands a batch on: into the first one until that holds a playable track
+    // at the listing's entry `start` or after it (where play starts), as
+    // more afterwards. The first batch holds the listing from its start, so
+    // its positions are the listing's.
+    let mut deliver = |items: Vec<Item>, last: bool, error: Option<String>| {
+        match first.as_mut() {
+            Some(batch) => {
+                batch.extend(items);
+                let ready = batch
+                    .iter()
+                    .skip(start)
+                    .any(|i| i.kind == HostKind::Track && i.playable);
+                if ready || last {
+                    let batch = first.take().unwrap_or_default();
+                    if batch.is_empty()
+                        && let Some(error) = error
+                    {
+                        // Nothing came: the command fails with the reason.
+                        ctx.send(SourcesMsg::Collection {
+                            id,
+                            plugin: plugin.to_owned(),
+                            then,
+                            result: Err(error),
+                            more: false,
+                        });
+                        return;
+                    }
+                    // What came plays; a failure after it is reported as for later pages.
+                    let failed = error.is_some();
+                    ctx.send(SourcesMsg::Collection {
+                        id,
+                        plugin: plugin.to_owned(),
+                        then,
+                        result: Ok(batch),
+                        more: !last || failed,
+                    });
+                    if failed {
+                        ctx.send(SourcesMsg::CollectionMore {
+                            id,
+                            plugin: plugin.to_owned(),
+                            items: Vec::new(),
+                            done: true,
+                            error,
+                        });
+                    }
+                }
+            }
+            None => ctx.send(SourcesMsg::CollectionMore {
+                id,
+                plugin: plugin.to_owned(),
+                items,
+                done: last,
+                error,
+            }),
+        }
+    };
+    // The node's own children, page by page; pages before the first track
+    // wait, so the listing's positions (`start`) stay as they are.
+    let mut cursor = None;
+    let mut albums = Vec::new();
+    let mut waiting: Vec<Item> = Vec::new();
+    let mut has_tracks = false;
+    let mut total = 0usize;
+    for page_number in 0..COLLECTION_PAGES {
+        let reply = ctx.host.browse(
+            plugin,
+            Some(node.clone()),
+            PageRequest {
+                cursor: cursor.take(),
+                limit: COLLECTION_PAGE,
+            },
+        );
+        let page = match wait(&reply, CALL_WAIT) {
+            Ok(page) => page,
+            Err(e) => {
+                ctx.note(&e);
+                deliver(Vec::new(), true, Some(e.to_string()));
+                return;
+            }
+        };
+        ctx.remember(plugin, &page.items);
+        total += page.items.len();
+        has_tracks |= page.items.iter().any(|i| i.kind == HostKind::Track);
+        albums.extend(page.items.iter().filter(|i| i.kind == HostKind::Album).cloned());
+        let next = page.next.filter(|_| total < COLLECTION_ITEMS && page_number + 1 < COLLECTION_PAGES);
+        if has_tracks {
+            let last = next.is_none();
+            let mut items = std::mem::take(&mut waiting);
+            items.extend(page.items);
+            deliver(items, last, None);
+            if last {
+                return;
+            }
+        } else {
+            waiting.extend(page.items);
+        }
+        match next {
+            Some(next) => cursor = Some(next),
+            None => break,
+        }
+    }
+    // Albums and no tracks (an artist): each album's tracks, album by album.
+    let albums: Vec<Item> = albums.into_iter().take(COLLECTION_ALBUMS).collect();
+    if albums.is_empty() {
+        deliver(Vec::new(), true, None);
+        return;
+    }
+    let count = albums.len();
+    let mut tracks_so_far = 0usize;
+    for (n, album) in albums.iter().enumerate() {
+        let last = n + 1 == count;
+        match all_pages(ctx, plugin, album) {
+            Ok(items) => {
+                let tracks: Vec<Item> = items.into_iter().filter(|i| i.kind == HostKind::Track).collect();
+                tracks_so_far += tracks.len();
+                let last = last || tracks_so_far >= COLLECTION_ITEMS;
+                deliver(tracks, last, None);
+                if last {
+                    return;
+                }
+            }
+            Err(error) => {
+                deliver(Vec::new(), true, Some(error));
+                return;
+            }
+        }
+    }
+}
+
 fn all_pages(ctx: &Ctx, plugin: &str, node: &Item) -> Result<Vec<Item>, String> {
     let mut items = Vec::new();
     let mut cursor = None;
@@ -1758,6 +1911,15 @@ pub(crate) fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     ));
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(&tmp, path)
+}
+
+/// The playable tracks of more of a collection, as queue entries.
+pub(crate) fn collection_more(plugin: &str, items: &[Item]) -> Vec<TrackRef> {
+    items
+        .iter()
+        .filter(|i| i.kind == HostKind::Track && i.playable)
+        .map(|i| TrackRef::Source(source_track(plugin, i)))
+        .collect()
 }
 
 /// The queue entries for a fetched collection: its playable tracks, and the

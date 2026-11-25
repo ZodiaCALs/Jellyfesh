@@ -46,6 +46,50 @@ fn embedded_front_covers_are_cached_once_by_hash() {
 }
 
 #[test]
+fn tracks_without_a_picture_of_their_own_get_their_folders() {
+    let fx = Fixture::new();
+    for name in ["01 one.flac", "02 two.flac", "03 own.flac"] {
+        fixtures::flac(&fx.path(&format!("Folder Art/{name}")), 100);
+    }
+    fixtures::tag(&fx.path("Folder Art/03 own.flac"), |t| {
+        t.push_picture(fixtures::front_cover(standard::cover()));
+    });
+    fx.scan();
+    assert_eq!(fx.track_at("Folder Art/01 one.flac").artwork_hash, None, "no picture yet");
+
+    // A cover arrives: the next scan gives it to the files without one, unchanged as they are.
+    let folder = fixtures::png(6, 6, [10, 120, 200]);
+    fs::write(fx.path("Folder Art/Cover.PNG"), &folder).unwrap();
+    fs::write(fx.path("Folder Art/back.png"), fixtures::png(2, 2, [0, 0, 0])).unwrap();
+    let report = fx.scan();
+    assert_eq!((report.unchanged, report.updated, report.added), (3, 0, 0));
+    let expected = blake3::hash(&folder).to_hex().to_string();
+    let one = fx.track_at("Folder Art/01 one.flac");
+    assert_eq!(one.artwork_hash.as_deref(), Some(expected.as_str()));
+    assert_eq!(fx.track_at("Folder Art/02 two.flac").artwork_hash, one.artwork_hash);
+    let own = blake3::hash(&standard::cover()).to_hex().to_string();
+    assert_eq!(
+        fx.track_at("Folder Art/03 own.flac").artwork_hash.as_deref(),
+        Some(own.as_str()),
+        "a picture of its own wins"
+    );
+
+    // A purged cache file comes back from the folder, and thumbnails are made from it.
+    let path = fx.lib.artwork_path(one.id).unwrap().unwrap();
+    fs::remove_file(&path).unwrap();
+    assert_eq!(fx.lib.artwork_path(one.id).unwrap(), Some(path.clone()));
+    assert_eq!(fs::read(&path).unwrap(), folder);
+    fs::remove_file(&path).unwrap();
+    assert!(fx.lib.artwork_thumbnail(&expected, 64).unwrap().is_some());
+
+    // A file added later gets it in its first scan.
+    fixtures::flac(&fx.path("Folder Art/04 four.flac"), 100);
+    assert_eq!(fx.scan().added, 1);
+    assert_eq!(fx.track_at("Folder Art/04 four.flac").artwork_hash, one.artwork_hash);
+    assert_eq!(fx.lib.stats().unwrap().artwork, 2, "the folder picture and the embedded one");
+}
+
+#[test]
 fn a_purged_cache_file_is_restored_and_unused_artwork_is_deleted() {
     let fx = Fixture::new();
     standard::build(&fx);

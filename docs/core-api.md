@@ -292,8 +292,12 @@ or hanging plugin never holds up a command or a snapshot.
   `PlayCollection`/`EnqueueCollection` with `Collection::Source { plugin, id,
   item_kind }` (a `SourceItem`'s `source`, `id` and `kind`: the kind travels
   with the id, since an id alone is ambiguous) fetch the pages of an album or
-  playlist (an artist plays its albums) and queue the playable tracks; the
-  queue changes once the plugin answered.
+  playlist (an artist plays its albums) and queue the playable tracks. To
+  enqueue, the queue changes once every page is in; to play, it starts as
+  soon as the page holding `start` is in, and later pages (an artist's later
+  albums) join the queue as they arrive, shuffled in when shuffle is on. With
+  `shuffle` and `start` 0 (a Shuffle button) any song can come first, also
+  on a remote source's device.
 * **Playing.** A `TrackRef::Source` resolves its stream URL on a worker; the
   entry shows as starting with `Buffering { uid, buffering: true }` until
   the audio flows. The entry after it is resolved ahead, so gapless joins
@@ -437,6 +441,19 @@ Now Playing for a source track starts with the picture it was listed with
 (`ArtworkRef::Url`, or none); once the core has fetched the song's picture
 through its plugin (its `artwork` answer, else the listed one), `NowPlaying`
 comes again with `ArtworkRef::File` of a large JPEG in the cache.
+
+Rows of lists the library keeps (Recently Played, playlists, favourites)
+show a source song with the picture URL it was listed with, from any earlier
+run, or the core's item reference when it had none and its plugin answers
+`artwork`. `source_artwork` fetches a stored URL through the plugin (its
+`artwork` answer for the song, else the URL itself while the plugin's
+allowlist covers it), so these rows show covers after a restart too.
+
+Library songs without a picture of their own get their folder's cover
+(`cover`, `folder`, `front`, `album` or `artwork`, as JPEG, PNG, WebP or
+GIF) when they are scanned, so rows, albums and Now Playing show the same
+picture; songs catalogued before keep theirs and gain the folder's on the
+next scan.
 
 ## AI Lyrics (ADR-0019)
 

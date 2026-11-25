@@ -55,6 +55,19 @@ pub trait FileSystem: Send {
     /// [`crate::Library::scan_paths`] then removes the tracks below `path`. Any
     /// other error keeps them.
     fn stat(&self, path: &Path) -> io::Result<PathKind>;
+
+    /// The regular files directly in `dir` (not below it): the scanner looks
+    /// there for a cover picture next to the music (`cover.jpg`). The default
+    /// lists them with `std::fs`.
+    fn list_files(&self, dir: &Path) -> io::Result<Vec<PathBuf>> {
+        let mut files: Vec<PathBuf> = fs::read_dir(dir)?
+            .filter_map(Result::ok)
+            .filter(|entry| entry.file_type().is_ok_and(|t| t.is_file() || t.is_symlink()))
+            .map(|entry| entry.path())
+            .collect();
+        files.sort();
+        Ok(files)
+    }
 }
 
 /// [`FileSystem`] over `std::fs`, walking directories with `walkdir`.

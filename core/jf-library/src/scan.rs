@@ -43,6 +43,8 @@ struct Known {
     root_id: i64,
     size: i64,
     mtime_ns: i64,
+    /// It has a picture (embedded, or from its folder).
+    has_artwork: bool,
 }
 
 struct Upsert {
@@ -61,6 +63,8 @@ enum Change {
         id: i64,
         root_id: i64,
     },
+    /// An unchanged file without a picture of its own gets its folder's.
+    Artwork { id: i64, artwork: StoredArt },
 }
 
 pub(crate) fn scan(
@@ -182,6 +186,20 @@ fn hidden_below(root: &Path, path: &Path) -> bool {
     })
 }
 
+/// Records a cached picture (once per hash).
+fn insert_artwork(conn: &Connection, art: &StoredArt) -> Result<(), LibraryError> {
+    conn.prepare_cached(
+        "INSERT OR IGNORE INTO artwork (hash, file_name, mime, byte_len) VALUES (?1, ?2, ?3, ?4)",
+    )?
+    .execute(params![
+        art.hash,
+        art.file_name,
+        art.mime,
+        i64::try_from(art.byte_len).unwrap_or(i64::MAX)
+    ])?;
+    Ok(())
+}
+
 fn size_i64(size: u64) -> i64 {
     i64::try_from(size).unwrap_or(i64::MAX)
 }
@@ -196,10 +214,11 @@ fn load_known(conn: &Connection, prefix: Option<&str>) -> Result<HashMap<String,
                 root_id: row.get(2)?,
                 size: row.get(3)?,
                 mtime_ns: row.get(4)?,
+                has_artwork: row.get::<_, Option<String>>(5)?.is_some(),
             },
         ))
     };
-    const COLUMNS: &str = "SELECT path, id, root_id, file_size, mtime_ns FROM tracks";
+    const COLUMNS: &str = "SELECT path, id, root_id, file_size, mtime_ns, artwork_hash FROM tracks";
     let rows = match prefix {
         None => conn
             .prepare(COLUMNS)?
@@ -229,6 +248,8 @@ struct Pass<'l> {
     batch: Vec<Change>,
     files_seen: u64,
     files_changed: u64,
+    /// Each folder's cover picture, looked for once per pass.
+    folder_art: HashMap<PathBuf, Option<StoredArt>>,
 }
 
 impl<'l> Pass<'l> {
@@ -240,7 +261,38 @@ impl<'l> Pass<'l> {
             batch: Vec::new(),
             files_seen: 0,
             files_changed: 0,
+            folder_art: HashMap::new(),
         }
+    }
+
+    /// The cover picture in `audio`'s folder (`cover.jpg`, `folder.png`, …),
+    /// cached in the artwork store, once per folder and pass.
+    fn folder_art(&mut self, audio: &Path) -> Option<StoredArt> {
+        let dir = audio.parent()?.to_path_buf();
+        if let Some(found) = self.folder_art.get(&dir) {
+            return found.clone();
+        }
+        let found = self
+            .lib
+            .fs
+            .list_files(&dir)
+            .ok()
+            .and_then(|files| artwork::folder_art_among(&files))
+            .and_then(|picture| {
+                let stored = artwork::read_folder_art(self.lib.fs.as_ref(), &picture)
+                    .and_then(|bytes| artwork::store(&self.lib.artwork_dir(), &bytes, None));
+                match stored {
+                    Ok(stored) => Some(stored),
+                    Err(err) => {
+                        self.report
+                            .errors
+                            .push((picture, format!("cannot cache artwork: {err}")));
+                        None
+                    }
+                }
+            });
+        self.folder_art.insert(dir, found.clone());
+        found
     }
 
     /// The path as stored text; a path that is not UTF-8 is reported.
@@ -283,11 +335,17 @@ impl<'l> Pass<'l> {
                     root_id,
                 });
             }
+            // Catalogued before folder pictures were (or before the picture came).
+            if !known.has_artwork
+                && let Some(artwork) = self.folder_art(&entry.path)
+            {
+                self.batch.push(Change::Artwork { id: known.id, artwork });
+            }
         } else {
             match tags::parse(self.lib.fs.as_ref(), &entry.path, true) {
                 Ok(parsed) => {
                     // Cached before the transaction; a failure costs the art, not the track.
-                    let artwork = parsed.front_cover().and_then(|picture| {
+                    let embedded = parsed.front_cover().and_then(|picture| {
                         artwork::store(&self.lib.artwork_dir(), picture.data(), picture.mime_type())
                             .map_err(|err| {
                                 self.report
@@ -296,6 +354,8 @@ impl<'l> Pass<'l> {
                             })
                             .ok()
                     });
+                    // No picture of its own: the folder's (cover.jpg), as Now Playing shows it.
+                    let artwork = embedded.or_else(|| self.folder_art(&entry.path));
                     self.batch.push(Change::Upsert(Box::new(Upsert {
                         root_id,
                         path,
@@ -466,6 +526,11 @@ impl<'c> Writer<'c> {
                     tx.prepare_cached("UPDATE tracks SET root_id = ?1 WHERE id = ?2")?
                         .execute(params![root_id, id])?;
                 }
+                Change::Artwork { id, artwork } => {
+                    insert_artwork(&tx, &artwork)?;
+                    tx.prepare_cached("UPDATE tracks SET artwork_hash = ?1 WHERE id = ?2")?
+                        .execute(params![artwork.hash, id])?;
+                }
                 Change::Upsert(upsert) => {
                     self.upsert(&tx, &upsert)?;
                     if upsert.existed {
@@ -512,15 +577,7 @@ impl<'c> Writer<'c> {
         };
         let now = unix_now();
         if let Some(art) = &upsert.artwork {
-            conn.prepare_cached(
-                "INSERT OR IGNORE INTO artwork (hash, file_name, mime, byte_len) VALUES (?1, ?2, ?3, ?4)",
-            )?
-            .execute(params![
-                art.hash,
-                art.file_name,
-                art.mime,
-                i64::try_from(art.byte_len).unwrap_or(i64::MAX)
-            ])?;
+            insert_artwork(conn, art)?;
         }
         let rg = &meta.replaygain;
         let id: i64 = conn

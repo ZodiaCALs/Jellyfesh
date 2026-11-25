@@ -359,6 +359,26 @@ impl PluginHost {
         }
     }
 
+    /// A picture URL the plugin may hand the host to fetch (an http link
+    /// moved to https where only that is allowed), checked against its
+    /// current allowlist; `None` when the allowlist does not cover it, or no
+    /// such plugin is installed. For pictures a list stored in an earlier
+    /// run, whose headers are gone.
+    pub fn checked_image(&self, id: &str, url: &str) -> Option<ImageRef> {
+        let plugin = self.inner.plugins.read().get(id).cloned()?;
+        let services = &plugin.services;
+        let allows = |url: &url::Url| services.allows(url);
+        sanitize::image(
+            ImageRef {
+                url: url.to_owned(),
+                headers: Vec::new(),
+                width: None,
+                height: None,
+            },
+            &Checker::new(&services.id, &allows),
+        )
+    }
+
     /// The plugin's settings schema in `language` (a BCP 47 tag such as
     /// `zh-Hans` or `ja-JP`; English when the package has no translation for
     /// it), with the properties in the package's order (API 1.2). `None`
