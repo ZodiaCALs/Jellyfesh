@@ -609,4 +609,24 @@
     <string name="download_remove_all_title">すべてのダウンロードを削除しますか？</string>
     <string name="download_remove_all_message">ダウンロードしたファイルはすべてこのデバイスから削除されます。</string>
     <string name="download_remove_all_confirm">すべて削除</string>
+
+    <!-- v0.0.8: the Downloads page (ADR-0025) -->
+    <string name="downloads_empty_title">ダウンロードはまだありません</string>
+    <string name="downloads_empty_body">サーバーからアルバムやプレイリストをダウンロードすると、オフラインでも再生できます。</string>
+    <string name="downloads_used">%1$s 使用</string>
+    <string name="downloads_paused_offline">オンラインに戻るとダウンロードを再開します。</string>
+    <string name="downloads_paused_metered">Wi-Fi に接続するとダウンロードを再開します。</string>
+    <string name="downloads_in_progress">進行中</string>
+    <string name="downloads_waiting">待機中</string>
+    <string name="downloads_downloading">ダウンロード中…</string>
+    <string name="downloads_percent">%1$d%%</string>
+    <string name="downloads_try_again">再試行</string>
+    <string name="downloads_unknown_album">不明なアルバム</string>
+    <string name="download_remove">ダウンロードを削除…</string>
+    <string name="download_remove_title">「%1$s」のダウンロードを削除しますか？</string>
+    <string name="download_remove_song_message">ファイルはこのデバイスから削除されます。もう一度ダウンロードできます。</string>
+    <string name="download_remove_album_message">ファイルはこのデバイスから削除されます。もう一度ダウンロードできます。</string>
+    <string name="download_remove_confirm">ダウンロードを削除</string>
+    <string name="download_error_not_allowed">%1$s サーバーでは、このアカウントのダウンロードが許可されていません。</string>
+    <string name="download_error_not_offered">%1$s はダウンロードに対応していません。</string>
 </resources>

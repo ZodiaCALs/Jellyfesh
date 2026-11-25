@@ -78,7 +78,12 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   one song's path, saved once typing pauses), the three Tags switches, Wi-Fi Only and Downloads at
   Once (1 to 4), and Space Used with Remove All Downloads…, which asks first
   (`settings/DownloadSettingsModel.kt`).
-* **Not yet**: the Downloads page says it is not in this build yet.
+* **Downloads** (Library › Downloads, ADR-0025) draws the core's Downloads slice: Play and
+  Shuffle with "{n} songs · {size} used"; "Downloads resume when you're back online." or
+  "Downloads resume on Wi-Fi." while the core pauses them; In Progress, each with "Waiting", its
+  percentage (and a progress line), or the failure and Try Again, and Cancel; then the downloaded
+  songs by album, with Remove Download… (asks first) on each song and, in the album's More, on the
+  whole album. Empty: "No Downloads Yet" (`library/DownloadsModel.kt`).
 
 ## v0.0.8: Android 17's Local Network permission
 

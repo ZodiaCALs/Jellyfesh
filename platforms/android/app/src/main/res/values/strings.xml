@@ -652,4 +652,24 @@
     <string name="download_remove_all_title">Remove All Downloads?</string>
     <string name="download_remove_all_message">Every downloaded file is deleted from this device.</string>
     <string name="download_remove_all_confirm">Remove All</string>
+
+    <!-- v0.0.8: the Downloads page (ADR-0025) -->
+    <string name="downloads_empty_title">No Downloads Yet</string>
+    <string name="downloads_empty_body">Download albums and playlists from your servers to play them offline.</string>
+    <string name="downloads_used">%1$s used</string>
+    <string name="downloads_paused_offline">Downloads resume when you\'re back online.</string>
+    <string name="downloads_paused_metered">Downloads resume on Wi-Fi.</string>
+    <string name="downloads_in_progress">In Progress</string>
+    <string name="downloads_waiting">Waiting</string>
+    <string name="downloads_downloading">Downloading…</string>
+    <string name="downloads_percent">%1$d%%</string>
+    <string name="downloads_try_again">Try Again</string>
+    <string name="downloads_unknown_album">Unknown Album</string>
+    <string name="download_remove">Remove Download…</string>
+    <string name="download_remove_title">Remove the Download of “%1$s”?</string>
+    <string name="download_remove_song_message">The file is deleted from this device. You can download it again.</string>
+    <string name="download_remove_album_message">The files are deleted from this device. You can download them again.</string>
+    <string name="download_remove_confirm">Remove Download</string>
+    <string name="download_error_not_allowed">Your %1$s server doesn\'t allow downloads for this account.</string>
+    <string name="download_error_not_offered">%1$s doesn\'t offer downloads.</string>
 </resources>

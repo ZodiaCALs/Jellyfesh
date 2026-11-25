@@ -609,4 +609,24 @@
     <string name="download_remove_all_title">要移除所有下載嗎？</string>
     <string name="download_remove_all_message">所有已下載的檔案都會從此裝置中刪除。</string>
     <string name="download_remove_all_confirm">全部移除</string>
+
+    <!-- v0.0.8: the Downloads page (ADR-0025) -->
+    <string name="downloads_empty_title">還沒有下載</string>
+    <string name="downloads_empty_body">從你的伺服器下載專輯和播放清單，即可離線播放。</string>
+    <string name="downloads_used">已用 %1$s</string>
+    <string name="downloads_paused_offline">恢復連線後將繼續下載。</string>
+    <string name="downloads_paused_metered">連上 Wi-Fi 後將繼續下載。</string>
+    <string name="downloads_in_progress">進行中</string>
+    <string name="downloads_waiting">等待中</string>
+    <string name="downloads_downloading">正在下載…</string>
+    <string name="downloads_percent">%1$d%%</string>
+    <string name="downloads_try_again">再試一次</string>
+    <string name="downloads_unknown_album">未知專輯</string>
+    <string name="download_remove">移除下載…</string>
+    <string name="download_remove_title">要移除「%1$s」的下載嗎？</string>
+    <string name="download_remove_song_message">檔案會從此裝置中刪除。你可以再次下載。</string>
+    <string name="download_remove_album_message">檔案會從此裝置中刪除。你可以再次下載。</string>
+    <string name="download_remove_confirm">移除下載</string>
+    <string name="download_error_not_allowed">你的 %1$s 伺服器不允許此帳號下載。</string>
+    <string name="download_error_not_offered">%1$s 不提供下載。</string>
 </resources>

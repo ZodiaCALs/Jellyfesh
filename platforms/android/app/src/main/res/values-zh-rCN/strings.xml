@@ -609,4 +609,24 @@
     <string name="download_remove_all_title">要移除所有下载吗？</string>
     <string name="download_remove_all_message">所有已下载的文件都会从此设备中删除。</string>
     <string name="download_remove_all_confirm">全部移除</string>
+
+    <!-- v0.0.8: the Downloads page (ADR-0025) -->
+    <string name="downloads_empty_title">还没有下载</string>
+    <string name="downloads_empty_body">从你的服务器下载专辑和歌单，即可离线播放。</string>
+    <string name="downloads_used">已用 %1$s</string>
+    <string name="downloads_paused_offline">恢复联网后将继续下载。</string>
+    <string name="downloads_paused_metered">连接 Wi-Fi 后将继续下载。</string>
+    <string name="downloads_in_progress">进行中</string>
+    <string name="downloads_waiting">等待中</string>
+    <string name="downloads_downloading">正在下载…</string>
+    <string name="downloads_percent">%1$d%%</string>
+    <string name="downloads_try_again">重试</string>
+    <string name="downloads_unknown_album">未知专辑</string>
+    <string name="download_remove">移除下载…</string>
+    <string name="download_remove_title">要移除“%1$s”的下载吗？</string>
+    <string name="download_remove_song_message">文件会从此设备中删除。你可以再次下载。</string>
+    <string name="download_remove_album_message">文件会从此设备中删除。你可以再次下载。</string>
+    <string name="download_remove_confirm">移除下载</string>
+    <string name="download_error_not_allowed">你的 %1$s 服务器不允许此账户下载。</string>
+    <string name="download_error_not_offered">%1$s 不提供下载。</string>
 </resources>

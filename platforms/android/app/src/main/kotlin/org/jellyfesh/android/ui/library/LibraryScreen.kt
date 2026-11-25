@@ -77,6 +77,21 @@ import org.jellyfesh.logic.library.SortMenus
 import org.jellyfesh.logic.library.SortOrder
 import org.jellyfesh.logic.nav.Layout
 import org.jellyfesh.logic.nav.LibrarySection
+import android.text.format.Formatter
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import org.jellyfesh.android.ui.components.JfText
+import org.jellyfesh.android.ui.components.SectionHeader
+import org.jellyfesh.android.ui.components.SheetAction
+import org.jellyfesh.android.ui.theme.JfIconButton
+import org.jellyfesh.android.ui.theme.JfType
+import org.jellyfesh.android.ui.theme.MiniProgressLine
+import org.jellyfesh.logic.core.DownloadError
+import org.jellyfesh.logic.core.DownloadItem
+import org.jellyfesh.logic.core.DownloadsPaused
+import org.jellyfesh.logic.library.DownloadProgress
+import org.jellyfesh.logic.library.DownloadsModel
 import org.jellyfesh.logic.state.CoreState
 import org.jellyfesh.logic.theme.LookPlaces
 import org.jellyfesh.tokens.Tokens
@@ -115,7 +130,7 @@ fun LibraryScreen(chosen: LibrarySection, state: CoreState) {
         LibrarySection.Songs -> SongsList(state, header)
         LibrarySection.Playlists -> PlaylistsList(state, header)
         LibrarySection.Favorites -> FavouritesList(state, header)
-        LibrarySection.Downloads -> DownloadsPage(header)
+        LibrarySection.Downloads -> DownloadsPage(state, header)
     }
 }
 
@@ -129,16 +144,137 @@ fun sectionLabel(section: LibrarySection): Int = when (section) {
 }
 
 /**
- * Downloads (ADR-0025): what downloads, then the downloaded albums and songs. The core's
- * downloads arrive with v0.0.8's contract; until then the page says so rather than showing an
- * empty list as if downloading worked.
+ * Downloads (docs/ui.md, "Downloads"; ADR-0025), on the core's Downloads slice ([DownloadsModel]):
+ * Play and Shuffle with "{n} songs · {size} used"; the line while the core pauses downloads
+ * (offline, or a metered network with Wi-Fi Only on); In Progress, each download with "Waiting",
+ * its percentage, or the failure and Try Again, and Cancel; then the downloaded songs by album,
+ * Remove Download… (asks first) on each song and on a whole album. Empty: "No Downloads Yet".
  */
 @Composable
-private fun DownloadsPage(header: LibraryHeader) {
+private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
+    val graph = LocalGraph.current
+    val overlays = LocalOverlays.current
+    val context = LocalContext.current
+    val downloads = state.downloads
+    val inProgress = DownloadsModel.inProgress(downloads)
+    val albums = DownloadsModel.albums(downloads)
+    val songs = albums.sumOf { it.items.size }
+    val playing = state.nowPlaying?.track
+    val removeConfirm = stringResource(R.string.download_remove_confirm)
+    val songMessage = stringResource(R.string.download_remove_song_message)
+    val albumMessage = stringResource(R.string.download_remove_album_message)
+    val removeLabel = stringResource(R.string.download_remove)
+    val unknownAlbum = stringResource(R.string.downloads_unknown_album)
+    // "Remove the Download of “Name”?" (docs/ui.md, "Steps that ask first"), for a song or a whole album.
+    fun askToRemove(name: String, message: String, items: List<DownloadItem>) {
+        val title = context.getString(R.string.download_remove_title, name)
+        overlays.confirm(title, message, removeConfirm, destructive = true) { DownloadsModel.remove(items).forEach { graph.send(it) } }
+    }
     LazyColumn(Modifier.fillMaxSize().statusBarFade(), contentPadding = listPadding()) {
         item(key = "header") { header {} }
-        item(key = "state") { Notice(stringResource(R.string.not_available_yet)) }
+        if (downloads.items.isEmpty()) {
+            item(key = "empty") { EmptyState(R.drawable.ic_download, stringResource(R.string.downloads_empty_title), stringResource(R.string.downloads_empty_body)) }
+            return@LazyColumn
+        }
+        if (songs > 0) {
+            item(key = "play") {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        JfButton(stringResource(R.string.action_play), { DownloadsModel.play(downloads, shuffle = false)?.let(graph::send) }, style = ButtonStyle.Accent, icon = R.drawable.ic_play)
+                        JfButton(stringResource(R.string.action_shuffle), { DownloadsModel.play(downloads, shuffle = true)?.let(graph::send) }, icon = R.drawable.ic_shuffle)
+                    }
+                    val used = stringResource(R.string.downloads_used, Formatter.formatFileSize(context, downloads.bytesUsed))
+                    JfText("${pluralStringResource(R.plurals.count_songs, songs, songs)} · $used", style = JfType.small, color = Jf.colors.ink70)
+                }
+            }
+        }
+        downloads.paused?.let { paused ->
+            item(key = "paused") {
+                Notice(stringResource(if (paused == DownloadsPaused.Offline) R.string.downloads_paused_offline else R.string.downloads_paused_metered))
+            }
+        }
+        if (inProgress.isNotEmpty()) {
+            item(key = "progress-h") { SectionHeader(stringResource(R.string.downloads_in_progress)) }
+            items(inProgress, key = { "dl-${it.id}" }) { item -> DownloadProgressRow(item, graph::send) }
+        }
+        albums.forEach { album ->
+            val title = album.album ?: unknownAlbum
+            item(key = "album-${album.key}") {
+                SectionHeader(title, action = {
+                    JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), {
+                        overlays.showActions(
+                            title,
+                            null,
+                            listOf(SheetAction(removeLabel, R.drawable.ic_trash, destructive = true) { askToRemove(title, albumMessage, album.items) }),
+                        )
+                    }, size = 40.dp, iconSize = 20.dp)
+                })
+            }
+            itemsIndexed(album.items, key = { _, it -> "done-${it.id}" }) { index, item ->
+                val track = item.track
+                TrackRow(
+                    title = track.title,
+                    subtitle = track.artist,
+                    onClick = { graph.send(DownloadsModel.playFrom(album, index)) },
+                    art = track.artworkUrl?.let(ArtKey::Url),
+                    durationMs = track.durationMs,
+                    playing = DownloadsModel.track(item) == playing || TrackRef.Source(track) == playing,
+                    onMore = {
+                        overlays.showActions(
+                            track.title,
+                            track.artist,
+                            listOf(SheetAction(removeLabel, R.drawable.ic_trash, destructive = true) { askToRemove(track.title, songMessage, listOf(item)) }),
+                        )
+                    },
+                )
+            }
+        }
     }
+}
+
+/** A download on its way: the song, "Waiting", its percentage or the failure with Try Again, and Cancel. */
+@Composable
+private fun DownloadProgressRow(item: DownloadItem, send: (Command) -> Long) {
+    val colors = Jf.colors
+    val progress = DownloadsModel.progress(item)
+    val status = when (progress) {
+        DownloadProgress.Waiting, null -> stringResource(R.string.downloads_waiting)
+        is DownloadProgress.Downloading -> progress.percent?.let { stringResource(R.string.downloads_percent, it) } ?: stringResource(R.string.downloads_downloading)
+        is DownloadProgress.Failed -> downloadErrorText(progress.error)
+    }
+    Row(
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            JfText(item.track.title, style = JfType.listTitle, maxLines = 1)
+            JfText(
+                listOfNotNull(item.track.artist, status).joinToString(" · "),
+                style = JfType.listSecondary,
+                color = if (progress is DownloadProgress.Failed) colors.danger else colors.ink70,
+                maxLines = 2,
+            )
+            if (progress is DownloadProgress.Downloading) {
+                val fraction = (progress.percent ?: 0) / 100f
+                MiniProgressLine({ fraction }, Modifier.padding(top = 4.dp), inset = 0.dp)
+            }
+        }
+        if (progress is DownloadProgress.Failed) {
+            JfButton(stringResource(R.string.downloads_try_again), { send(DownloadsModel.retry(item)) }, style = ButtonStyle.Quiet)
+        }
+        JfIconButton(R.drawable.ic_close, stringResource(R.string.action_cancel), { send(DownloadsModel.cancel(item)) }, size = 40.dp, iconSize = 18.dp)
+    }
+}
+
+/** Why a download failed, as the app words it. */
+@Composable
+private fun downloadErrorText(error: DownloadError): String = when (error) {
+    is DownloadError.NotAllowed -> stringResource(R.string.download_error_not_allowed, error.service)
+    is DownloadError.NotOffered -> stringResource(R.string.download_error_not_offered, error.service)
+    is DownloadError.Network -> error.message
+    is DownloadError.Storage -> error.message
+    is DownloadError.Other -> error.message
 }
 
 /** Shared bottom space: the floating chrome plus a margin. */
