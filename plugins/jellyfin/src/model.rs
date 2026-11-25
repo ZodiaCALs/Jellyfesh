@@ -63,6 +63,10 @@ pub struct BaseItem {
     /// `Full` or `None` (with `fields=PlayAccess`): whether the account may play it.
     #[serde(deserialize_with = "lenient")]
     pub play_access: Option<String>,
+    /// With `fields=CanDownload`: whether the account may download it (its
+    /// `EnableContentDownloading` policy, and a file to download).
+    #[serde(deserialize_with = "lenient")]
+    pub can_download: Option<bool>,
     #[serde(deserialize_with = "lenient")]
     pub media_type: Option<String>,
     /// For library views: `music`, `playlists`, `movies`, …
@@ -115,6 +119,12 @@ pub struct NameId {
 pub struct MediaSource {
     #[serde(deserialize_with = "lenient")]
     pub container: Option<String>,
+    /// The file's path on the server.
+    #[serde(deserialize_with = "lenient")]
+    pub path: Option<String>,
+    /// The file's size in bytes.
+    #[serde(deserialize_with = "lenient")]
+    pub size: Option<i64>,
     /// Bits per second.
     #[serde(deserialize_with = "lenient")]
     pub bitrate: Option<i64>,

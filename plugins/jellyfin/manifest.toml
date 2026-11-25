@@ -1,11 +1,11 @@
 id = "org.jellyfesh.jellyfin"
 name = "Jellyfin"
 version = "0.0.8"
-api_version = "1.2"
+api_version = "1.3"
 author = "Jellyfesh"
 description = "Music from your Jellyfin server"
 official = true
-capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations", "discover", "details"]
+capabilities = ["auth", "search", "browse", "resolve_stream", "lyrics", "artwork", "recommendations", "discover", "details", "library", "download"]
 playback_mode = "stream"
 # Quick Connect is the qr kind: the plugin shows a code to enter in Jellyfin.
 auth = ["qr", "password-exchange"]
@@ -17,3 +17,8 @@ max_rps = 20
 
 [settings]
 schema = "settings.schema.json"
+
+[content_policy]
+# The levels the player bar's quality menu offers for this server's songs
+# (ADR-0026). Downloads need the default library_storage, "full".
+qualities = ["lossless", "high", "normal", "low"]

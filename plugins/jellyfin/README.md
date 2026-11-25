@@ -22,6 +22,11 @@ Jellyfesh release key. Setup, server preparation and troubleshooting:
 * **Discover** (plugin API 1.2): Recently Added, Continue Listening,
   Favourites and Suggestions. **Details**: an item's overview, genres,
   release date, labels and the people on a song.
+* **Library** (plugin API 1.3): your favourite songs, albums and artists on
+  Favourites, and your audio playlists on Playlists.
+* **Download** (plugin API 1.3) when your account may download: the
+  original file from `/Items/{id}/Download`, or an Opus conversion for the
+  lower download qualities.
 
 Your server may be on your home network; Jellyfesh lets this plugin reach
 that one address and nothing else.

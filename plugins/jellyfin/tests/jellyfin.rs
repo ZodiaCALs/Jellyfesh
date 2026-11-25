@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use jf_plugin_host::{
-    AuthKind, AuthStep, CallError, Capability, FieldKind, Item, ItemKind, ItemPage, LyricFormat, PluginError,
-    Quality, SecretStore, StreamInfo, UnplayableReason,
+    AuthKind, AuthStep, CallError, Capability, DownloadQuality, FieldKind, Item, ItemKind, ItemPage,
+    LyricFormat, PluginError, Quality, SecretStore, StreamInfo, UnplayableReason,
 };
 use jf_plugin_testkit::*;
 use mock::{Mock, PNG, Running, USERS};
@@ -122,18 +122,23 @@ fn installs_with_its_manifest() {
     assert_eq!(info.name, "Jellyfin");
     assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
     assert!(info.official, "signed with the test key, which this host trusts");
-    assert_eq!(info.capabilities.len(), 9);
+    assert_eq!(info.capabilities.len(), 11);
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr, AuthKind::PasswordExchange]);
     assert!(info.has_icon);
     // No quality setting: the app's level decides (ADR-0026).
     assert!(info.settings.get("quality").is_none());
     assert!(info.settings_schema["properties"].get("quality").is_none());
+    assert_eq!(
+        info.content_policy.qualities,
+        vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
+    );
     assert_eq!(info.settings["transcode_codec"], "aac");
     assert_eq!(info.settings["device_name"], "Jellyfesh");
     assert_eq!(info.settings_schema["properties"]["server_url"]["format"], "uri");
     let capabilities = recv(env.host.capabilities(ID)).unwrap();
     assert!(capabilities.contains(&Capability::Recommendations));
     assert!(capabilities.contains(&Capability::Discover) && capabilities.contains(&Capability::Details));
+    assert!(capabilities.contains(&Capability::Library) && capabilities.contains(&Capability::Download));
 }
 
 #[test]
@@ -658,7 +663,11 @@ fn browse_the_library() {
         .collect();
     assert_eq!(
         lists,
-        vec![vec![tr(EBB)], vec![al(DRIFTWOOD_ALBUM)], vec![ar(TIDE)]]
+        vec![
+            vec![tr(DRIFTWOOD), tr(EBB), tr(FLOW)],
+            vec![al(DRIFTWOOD_ALBUM)],
+            vec![ar(TIDE)]
+        ]
     );
 
     // Missing things and things without children.
@@ -921,6 +930,158 @@ fn assert_no_user_routes(server: &Running) {
             "an obsolete route: {path}"
         );
     }
+}
+
+/// The library's likes and playlists (ADR-0024): the server's favourites,
+/// in name order (Jellyfin keeps no date for them), and its audio
+/// playlists, in the pages the app asks for.
+#[test]
+fn favourites_and_playlists_for_the_library() {
+    let server = Mock::default().start();
+    let env = env_for(&server);
+    sign_in(&env);
+    let likes = |kind, cursor: Option<String>, limit| {
+        recv(env.host.library_likes(ID, kind, next_page(cursor, limit))).unwrap()
+    };
+
+    let first = likes(ItemKind::Track, None, 2);
+    assert_eq!(ids(&first), vec![tr(DRIFTWOOD), tr(EBB)]);
+    assert_eq!((first.next.as_deref(), first.total), (Some("2"), Some(3)));
+    let rest = likes(ItemKind::Track, first.next.clone(), 2);
+    assert_eq!(ids(&rest), vec![tr(FLOW)]);
+    assert_eq!(rest.next, None);
+    assert_eq!(ids(&likes(ItemKind::Album, None, 50)), vec![al(DRIFTWOOD_ALBUM)]);
+    assert_eq!(ids(&likes(ItemKind::Artist, None, 50)), vec![ar(TIDE)]);
+    let asked = server.requests_to("/Items");
+    assert!(
+        asked
+            .iter()
+            .all(|r| r.query("isFavorite").as_deref() == Some("true"))
+    );
+    assert_eq!(
+        recv(env.host.library_likes(ID, ItemKind::Playlist, next_page(None, 50))),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+
+    let lists = recv(env.host.library_playlists(ID, next_page(None, 50))).unwrap();
+    let flags: Vec<(String, bool, bool)> = lists
+        .entries
+        .iter()
+        .map(|e| (e.item.id.clone(), e.owned, e.songs_listed))
+        .collect();
+    assert_eq!(
+        flags,
+        [(pl(EMPTY), true, true), (pl(NIGHT_DRIVE), true, true)],
+        "audio playlists only"
+    );
+    assert_eq!(lists.total, Some(2));
+    assert_eq!(lists.entries[1].item.child_count, Some(4));
+    let one = recv(env.host.library_playlists(ID, next_page(None, 1))).unwrap();
+    assert_eq!((one.entries.len(), one.next.as_deref()), (1, Some("1")));
+    // A playlist's songs, from browse as for any playlist.
+    let songs = recv(env.host.browse(ID, Some(lists.entries[1].item.clone()), next_page(None, 50))).unwrap();
+    assert_eq!(songs.items.len(), 4);
+    assert_no_user_routes(&server);
+}
+
+/// Downloads (ADR-0025): the original file from `/Items/{id}/Download` with
+/// its size and name, or Opus through the universal endpoint for a lower
+/// quality once the server says the account may download the item; never
+/// `/Audio/{id}/stream?static=true`, which skips the download policy.
+#[test]
+fn downloads_follow_the_download_policy() {
+    let server = Mock::default().start();
+    let env = env_for(&server);
+    sign_in(&env);
+    let download = |id: &str, quality| recv(env.host.download(ID, track(&tr(id), "x"), quality)).unwrap();
+    let headers = |info: &jf_plugin_host::DownloadInfo| -> Vec<(String, String)> {
+        info.headers
+            .iter()
+            .map(|h| (h.name.clone(), h.value.clone()))
+            .collect()
+    };
+
+    let original = download(EBB, DownloadQuality::Original);
+    assert_eq!(original.url, format!("{}/Items/{EBB}/Download", server.url()));
+    assert_eq!(original.headers.len(), 1);
+    assert_eq!(original.headers[0].name, "authorization");
+    let auth = mock::auth_parts(&original.headers[0].value).unwrap();
+    assert!(!auth["Token"].is_empty(), "the token in the header, not the URL");
+    assert_eq!(original.container, "flac");
+    assert_eq!(original.size, Some(28_300_000));
+    assert!(original.original);
+    assert_eq!(original.file_name.as_deref(), Some("01 Ebb.flac"));
+    let got = fetch(&original.url, &headers(&original)).unwrap();
+    assert_eq!((got.status, got.body.as_slice()), (200, b"file flac".as_slice()));
+
+    // Lower qualities: Opus at the limit, when the file is above it.
+    let high = download(EBB, DownloadQuality::High);
+    let q = url_query(&high.url);
+    assert!(high.url.starts_with(&format!("{}/Audio/{EBB}/universal?", server.url())));
+    assert_eq!(
+        (q["audioCodec"].as_str(), q["transcodingContainer"].as_str()),
+        ("opus", "opus")
+    );
+    assert_eq!(
+        (q["maxStreamingBitrate"].as_str(), q["audioBitRate"].as_str()),
+        ("320000", "320000")
+    );
+    assert_eq!(q["transcodingProtocol"], "http");
+    assert_eq!(
+        (high.container.as_str(), high.original, high.size, high.file_name.clone()),
+        ("opus", false, None, None)
+    );
+    let got = fetch(&high.url, &headers(&high)).unwrap();
+    assert_eq!(got.body, b"converted opus 320000");
+    assert_eq!(got.header("content-type"), Some("audio/opus"));
+    assert_eq!(url_query(&download(FLOW, DownloadQuality::Low).url)["audioBitRate"], "128000");
+    let small = download(DRIFTWOOD, DownloadQuality::Low);
+    assert!(small.original, "Opus at 128 kbit/s is within Low");
+    assert_eq!(small.container, "ogg");
+    let m4a = download(SLACK_TIDE, DownloadQuality::Original);
+    assert_eq!((m4a.container.as_str(), m4a.file_name.clone()), ("m4a", None));
+    assert_eq!(download(FOG_BELL, DownloadQuality::Original).container, "wma");
+
+    assert!(matches!(
+        recv(env.host.download(ID, track(&tr(LOST_BUOY), "x"), DownloadQuality::Original)),
+        Err(CallError::Plugin(PluginError::Service(_)))
+    ));
+    assert_eq!(
+        recv(env.host.download(ID, track("tr:ffff", "x"), DownloadQuality::Original)),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+    assert!(matches!(
+        recv(env.host.download(ID, item(ItemKind::Album, &al(LOW_WATER), "x"), DownloadQuality::Original)),
+        Err(CallError::Plugin(PluginError::InvalidInput(_)))
+    ));
+    for request in server.requests() {
+        assert!(!request.path().ends_with("/stream"), "{}", request.path());
+        assert_ne!(request.query("static").as_deref(), Some("true"));
+    }
+    assert_no_user_routes(&server);
+}
+
+/// Without `EnableContentDownloading` the server answers `CanDownload`
+/// false, and the plugin refuses before any file is asked for.
+#[test]
+fn downloads_off_for_the_account() {
+    let server = Mock {
+        downloads: false,
+        ..Mock::default()
+    }
+    .start();
+    let env = env_for(&server);
+    sign_in(&env);
+    for quality in [DownloadQuality::Original, DownloadQuality::Low] {
+        assert_eq!(
+            recv(env.host.download(ID, track(&tr(EBB), "x"), quality)),
+            Err(CallError::Plugin(PluginError::Unsupported))
+        );
+    }
+    assert!(server.requests_to(&format!("/Items/{EBB}/Download")).is_empty());
+    assert!(server.requests_to(&format!("/Audio/{EBB}/universal")).is_empty());
+    // Playing is another policy.
+    assert!(recv(env.host.resolve_stream(ID, track(&tr(EBB), "x"), Quality::High)).is_ok());
 }
 
 #[test]

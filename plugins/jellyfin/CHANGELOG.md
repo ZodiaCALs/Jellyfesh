@@ -2,11 +2,24 @@
 
 ## 0.0.8 — unreleased
 
-* With Jellyfesh v0.0.8: the **Streaming Quality** setting is gone; streams
-  use the level Jellyfesh asks for (its one streaming quality, ADR-0026).
+* With Jellyfesh v0.0.8: plugin API 1.3 (the package needs Jellyfesh
+  v0.0.8).
+* The **Streaming Quality** setting is gone; streams use the level
+  Jellyfesh asks for (its one streaming quality, ADR-0026), and the manifest
+  lists the levels the quality menu offers (lossless, high, normal, low).
   Jellyfesh keeps a quality set here once, as its own. The conversion
   format and device name stay. Still `/Audio/{id}/universal` with
   `transcodingProtocol=http`.
+* **Library** (ADR-0024): favourite songs, albums and artists for
+  Favourites (`isFavorite=true`, in name order: Jellyfin keeps no date for
+  a favourite) and audio playlists for Playlists.
+* **Download** (ADR-0025): the original file from `/Items/{id}/Download`,
+  which keeps the account's `EnableContentDownloading` policy, with its size
+  and name. High, Normal and Low convert a file above 320, 192 or
+  128 kbit/s (or in a format Jellyfesh cannot play) to Opus, only once
+  `CanDownload` says the account may download it. Never
+  `/Audio/{id}/stream?static=true`, which skips the policy. An account
+  without the policy is told the server does not allow downloads.
 * Tests: a golden table of what each level asks of Jellyfin and gets back
   for FLAC, MP3, AAC, WMA and Opus files, and a check that no
   `/Users/{userId}/…` route (obsolete since Jellyfin 10.9) is used.

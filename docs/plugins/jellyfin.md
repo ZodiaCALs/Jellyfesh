@@ -81,6 +81,18 @@ administrator sets for remote connections still apply.
   synced lyrics as timed lines, others as plain text. Lyrics for tracks from
   other sources are found by title, artist and length.
 * **Instant mix**: suggestions based on a track, album, artist or playlist.
+* **Favourites and Playlists** (Jellyfesh v0.0.8) show your favourite songs,
+  albums and artists (in name order: Jellyfin keeps no date for a
+  favourite) and your audio playlists.
+* **Download** (Jellyfesh v0.0.8, not in Jellyfesh Web's queue) needs the
+  **Allow media downloading** permission on your user (an administrator sets
+  it in the user's settings; `EnableContentDownloading`):
+  * **Original** is the file exactly as the server keeps it, from
+    `/Items/{id}/Download`.
+  * **High**, **Normal** and **Low** are converted by Jellyfin to Opus at
+    320, 192 or 128 kbit/s when the file is above that or in a format
+    Jellyfesh cannot play; a file already within the limit comes as it is.
+    Converting also needs the media playback permission.
 * **Discover** (Jellyfesh v0.0.7): shelves of Recently Added (the newest
   albums), Continue Listening (what you stopped in the middle of, such as an
   audiobook), Favourites and Suggestions (albums Jellyfin picks at random),
@@ -114,6 +126,7 @@ signing in again shows the same device in Jellyfin.
 | The server refused this sign-in … | The account may be disabled, not allowed on new devices, or at its limit of sessions; an administrator can change that in the user's settings. |
 | Your account on this server is not allowed to play media | An administrator can allow media playback for your user. |
 | The file of this track is missing on the server | Jellyfin lists the track but has no file for it. |
+| Your Jellyfin server doesn't allow downloads for this account. | An administrator can turn on **Allow media downloading** for your user. |
 | Sign in again. | The token stopped working (signed out from Jellyfin's dashboard, for example). Sign in again. |
 
 ## Privacy

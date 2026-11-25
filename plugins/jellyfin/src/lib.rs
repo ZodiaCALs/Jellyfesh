@@ -17,6 +17,10 @@
 //!   Listening (`/UserItems/Resume`), Favourites and Suggestions
 //!   (`/Items/Suggestions`). Details: `Overview`, genres, release date,
 //!   labels and the people on a song ([`details`]).
+//! * Library (API 1.3): favourite songs, albums and artists
+//!   (`isFavorite=true`) and playlists. Download: the original file from
+//!   `/Items/{id}/Download`, or an Opus conversion, as far as the account's
+//!   download policy allows ([`media`]).
 
 mod api;
 mod details;
@@ -313,6 +317,109 @@ fn browse_folder(path: &str, page: &PageRequest) -> Result<ItemPage> {
             }
         }
     }
+}
+
+/// The person's favourites of `kind` (`library.likes`). Jellyfin keeps no
+/// date for a favourite, so they come in name order, as in its own apps.
+fn likes(kind: ItemKind, page: &PageRequest) -> Result<ItemPage> {
+    match kind {
+        ItemKind::Track => browse_folder("favourites:songs", page),
+        ItemKind::Album => browse_folder("favourites:albums", page),
+        ItemKind::Artist => browse_folder("favourites:artists", page),
+        _ => Err(PluginError::Unsupported),
+    }
+}
+
+/// The person's playlists (`library.playlists`), whose songs come from
+/// `/Playlists/{id}/Items`. Jellyfin's listing does not say whose a playlist
+/// is (playlists shared since 10.9 included), so each counts as the
+/// person's own.
+fn playlists(page: &PageRequest) -> Result<PlaylistPage> {
+    let found = browse_folder("playlists", page)?;
+    Ok(PlaylistPage {
+        entries: found
+            .items
+            .into_iter()
+            .filter(|item| item.kind == ItemKind::Playlist)
+            .map(PlaylistEntry::owned)
+            .collect(),
+        next: found.next,
+        total: found.total,
+    })
+}
+
+/// Where to fetch a track (`download.download`, see [`media`]): the original
+/// from `/Items/{id}/Download`, or Opus from the universal endpoint once the
+/// server has said the account may download the item.
+fn download_info(id: &str, quality: DownloadQuality) -> Result<DownloadInfo> {
+    let token = api::session()?;
+    let found: ItemList = api::get(
+        "/Items",
+        &[
+            ("ids", id),
+            ("fields", "MediaSources,PlayAccess,CanDownload"),
+            ("enableImages", "false"),
+        ],
+    )?;
+    let found = found
+        .items
+        .into_iter()
+        .find(|item| item.id.eq_ignore_ascii_case(id))
+        .ok_or(PluginError::NotFound)?;
+    // A missing file first: the server says it cannot be downloaded either.
+    if found.location_type.as_deref() == Some("Virtual") {
+        return Err(PluginError::service(
+            "The file of this track is missing on the server.",
+        ));
+    }
+    // The account's `EnableContentDownloading` policy, per item.
+    if found.can_download == Some(false) {
+        return Err(PluginError::Unsupported);
+    }
+    let may_convert = found.can_download == Some(true) && found.play_access.as_deref() != Some("None");
+    let source = found.media_sources.first();
+    let headers = vec![Header::new("authorization", api::authorization(Some(&token))?)];
+    let base = api::base()?;
+    Ok(match media::download(source, quality, may_convert) {
+        media::Download::Original => DownloadInfo {
+            url: format!("{base}/Items/{}/Download", http::encode(id)),
+            headers,
+            container: media::extension(source),
+            size: source
+                .and_then(|s| s.size)
+                .and_then(|size| u64::try_from(size).ok())
+                .filter(|size| *size > 0),
+            original: true,
+            // Only the name: the folders above it are the server's.
+            file_name: source
+                .and_then(|s| s.path.as_deref())
+                .and_then(media::file_name)
+                .map(str::to_string),
+        },
+        media::Download::Opus(bitrate) => {
+            let plan = media::Plan {
+                original: false,
+                max_bitrate: bitrate,
+                transcode_bitrate: bitrate,
+                codec: Some("opus".into()),
+                bitrate_kbps: Some(bitrate / 1000),
+            };
+            let query = media::query(&api::device_id()?, &plan, settings::Codec::Opus);
+            let pairs: Vec<(&str, &str)> = query.iter().map(|(k, v)| (*k, v.as_str())).collect();
+            DownloadInfo {
+                url: format!(
+                    "{base}/Audio/{}/universal?{}",
+                    http::encode(id),
+                    http::form_encode(&pairs)
+                ),
+                headers,
+                container: "opus".into(),
+                size: None,
+                original: false,
+                file_name: None,
+            }
+        }
+    })
 }
 
 /// The kinds a search covers, in page order.
@@ -693,6 +800,21 @@ impl Plugin for Jellyfin {
 
     fn details(item: Item) -> Result<ItemDetails> {
         details::details(&item)
+    }
+
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        likes(kind, &page)
+    }
+
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        playlists(&page)
+    }
+
+    fn download(item: Item, quality: DownloadQuality) -> Result<DownloadInfo> {
+        match Id::parse(&item.id) {
+            Some(Id::Track(id)) => download_info(id, quality),
+            _ => Err(PluginError::invalid_input("not a track from this server")),
+        }
     }
 
     fn recommendations_for_item(item: Item, page: PageRequest) -> Result<ItemPage> {

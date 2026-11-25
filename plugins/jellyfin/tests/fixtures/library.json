@@ -55,6 +55,7 @@
       "IndexNumber": 1, "ParentIndexNumber": 1, "ProductionYear": 2022, "RunTimeTicks": 2450000000, "LocationType": "FileSystem",
       "ImageTags": {}, "DateCreated": "2026-01-05T10:00:00.0000000Z", "_library": "f1000000000000000000000000000001",
       "MediaSources": [{ "Protocol": "File", "Id": "c4000000000000000000000000000001", "Type": "Default", "Container": "flac", "Bitrate": 921000, "Name": "Ebb",
+        "Path": "/music/Harbour Lights/Low Water/01 Ebb.flac", "Size": 28300000,
         "SupportsDirectPlay": true, "SupportsDirectStream": true, "SupportsTranscoding": true,
         "MediaStreams": [{ "Type": "Audio", "Codec": "flac", "BitRate": 921000, "Channels": 2, "SampleRate": 44100, "BitDepth": 16, "Index": 0 }] }]
     },
@@ -141,7 +142,7 @@
     }
   ],
   "favourites": {
-    "songs": ["c4000000000000000000000000000001"],
+    "songs": ["c4000000000000000000000000000001", "c4000000000000000000000000000002", "c4000000000000000000000000000006"],
     "albums": ["b3000000000000000000000000000003"],
     "artists": ["a2000000000000000000000000000002"]
   },

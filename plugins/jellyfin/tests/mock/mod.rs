@@ -127,6 +127,8 @@ pub struct Mock {
     pub quick_connect: bool,
     /// A second music library is visible.
     pub two_libraries: bool,
+    /// The accounts' `EnableContentDownloading` policy.
+    pub downloads: bool,
 }
 
 impl Default for Mock {
@@ -136,6 +138,7 @@ impl Default for Mock {
             product: "Jellyfin Server",
             quick_connect: true,
             two_libraries: false,
+            downloads: true,
         }
     }
 }
@@ -393,7 +396,8 @@ impl Mock {
         let visible = |item: &Value| {
             self.two_libraries || item["_library"].as_str() != Some("f1000000000000000000000000000002")
         };
-        let shape = |item: &Value, fields: &[String]| shape(item, fields, may_play);
+        let may_download = self.downloads;
+        let shape = |item: &Value, fields: &[String]| shape(item, fields, may_play, may_download);
         match (method, path.as_str()) {
             ("POST", "/Sessions/Logout") => {
                 let mut state = state.lock().unwrap();
@@ -631,7 +635,9 @@ impl Mock {
                     let total = entries.len();
                     let page = page(entries, request);
                     json(query_result_total(
-                        page.iter().map(|i| shape(i, &fields, may_play)).collect(),
+                        page.iter()
+                            .map(|i| shape(i, &fields, may_play, self.downloads))
+                            .collect(),
                         start,
                         total,
                     ))
@@ -647,7 +653,7 @@ impl Mock {
                         .iter()
                         .filter_map(|id| lib.find(id.as_str().unwrap()).cloned())
                         .take(limit)
-                        .map(|i| shape(&i, &fields, may_play))
+                        .map(|i| shape(&i, &fields, may_play, self.downloads))
                         .collect();
                     json(query_result(mix, 0))
                 }
@@ -657,6 +663,24 @@ impl Mock {
                 (Some(_), Some(lyrics)) => json(lyrics.clone()),
                 _ => not_found(),
             },
+            // LibraryController.GetDownload: the file as it is, with ranges,
+            // behind the `Download` policy (403 without
+            // EnableContentDownloading).
+            ["Items", id, "Download"] => {
+                let Some(song) = lib.find(id).filter(|s| s["Type"] == "Audio" && visible(s)) else {
+                    return not_found();
+                };
+                if !self.downloads {
+                    return Response::text(403, "");
+                }
+                let Some(source) = song["MediaSources"].as_array().and_then(|s| s.first()) else {
+                    return not_found();
+                };
+                let container = source["Container"].as_str().unwrap_or_default();
+                Response::new(200, format!("file {container}"))
+                    .header("content-type", &format!("audio/{container}"))
+                    .header("accept-ranges", "bytes")
+            }
             ["Audio", id, "universal"] => {
                 let Some(song) = lib.find(id).filter(|s| s["Type"] == "Audio" && visible(s)) else {
                     return not_found();
@@ -737,7 +761,7 @@ impl Library<'_> {
 
 /// An item as the server sends it: the mock's `_` keys removed, and the
 /// fields that only come when asked for (`fields=`) only then.
-fn shape(item: &Value, fields: &[String], may_play: bool) -> Value {
+fn shape(item: &Value, fields: &[String], may_play: bool, may_download: bool) -> Value {
     let mut out = public(item);
     let object = out.as_object_mut().unwrap();
     let asked = |name: &str| fields.iter().any(|f| f == name);
@@ -749,6 +773,11 @@ fn shape(item: &Value, fields: &[String], may_play: bool) -> Value {
     }
     if asked("PlayAccess") {
         object.insert("PlayAccess".into(), if may_play { "Full" } else { "None" }.into());
+    }
+    if asked("CanDownload") {
+        // `BaseItem.CanDownload`: the policy, and a file to download.
+        let file = item["LocationType"] == "FileSystem";
+        object.insert("CanDownload".into(), (may_download && file).into());
     }
     if !asked("SortName") {
         object.remove("SortName");
