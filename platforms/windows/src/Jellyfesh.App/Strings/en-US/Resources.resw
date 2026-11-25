@@ -302,6 +302,36 @@
   <data name="Appearance_LyricsStart.Content" xml:space="preserve">
     <value>Start</value>
   </data>
+  <data name="Appearance_MiniLyrics.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Show Lyrics Line</value>
+  </data>
+  <data name="Appearance_MiniLyricsHint.Text" xml:space="preserve">
+    <value>The line being sung, under the song in the mini player.</value>
+  </data>
+  <data name="Appearance_MiniLyricsTitle.Text" xml:space="preserve">
+    <value>Show Lyrics Line</value>
+  </data>
+  <data name="Appearance_MiniOnClose.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Open When the Window Is Closed</value>
+  </data>
+  <data name="Appearance_MiniOnCloseHint.Text" xml:space="preserve">
+    <value>Keep the mini player when you close the window while music plays.</value>
+  </data>
+  <data name="Appearance_MiniOnCloseTitle.Text" xml:space="preserve">
+    <value>Open When the Window Is Closed</value>
+  </data>
+  <data name="Appearance_MiniOnTop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Keep on Top</value>
+  </data>
+  <data name="Appearance_MiniOnTopHint.Text" xml:space="preserve">
+    <value>The mini player stays above other windows.</value>
+  </data>
+  <data name="Appearance_MiniOnTopTitle.Text" xml:space="preserve">
+    <value>Keep on Top</value>
+  </data>
+  <data name="Appearance_MiniPlayer.Text" xml:space="preserve">
+    <value>Mini Player</value>
+  </data>
   <data name="Appearance_Mode.Text" xml:space="preserve">
     <value>Theme</value>
   </data>

@@ -20,7 +20,11 @@ public sealed partial class AppViewModel : ObservableObject, IDisposable
     private bool _disposed;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MiniPlayer))]
     private AppSettings _settings = AppSettings.Default;
+
+    /// <summary>Settings › Appearance › Mini Player (ADR-0026 §4); the core's defaults until it says.</summary>
+    public MiniPlayerSettings MiniPlayer => Settings.MiniPlayer ?? MiniPlayerSettings.Default;
 
     [ObservableProperty]
     private Core.Appearance _appearance = Core.Appearance.Light;

@@ -91,6 +91,7 @@ public sealed partial class MainWindow : Window
     private bool _layoutApplied;
 
     private bool _compact;
+    private bool? _miniOnTop; // the mini player's presenter: the compact overlay (Keep on Top) or not
     private Windows.Graphics.SizeInt32? _fullSize;
     private bool _themeApplied;
     private Notification? _shownNotice;
@@ -203,6 +204,7 @@ public sealed partial class MainWindow : Window
         TryHook("live changes of the animation setting", () => _ui.AnimationsEnabledChanged += (_, _) => queue.TryEnqueue(ReadSystemPreferences));
         TryHook("live changes of high contrast", () => _accessibility.HighContrastChanged += (_, _) => queue.TryEnqueue(ApplyTheme));
         VisibilityChanged += OnVisibilityChanged;
+        AppWindow.Closing += OnClosing;
         Closed += OnClosed;
         Root.AddHandler(UIElement.PointerPressedEvent, new PointerEventHandler(OnRootPointerPressed), handledEventsToo: true);
 
@@ -298,12 +300,15 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The compact mini player: the window becomes a small always-on-top player (Windows' compact
-    /// overlay) until the person asks for the full window again (Ctrl+M or its button).
+    /// The mini player (ADR-0026 §4): the window becomes a small player, above other windows while
+    /// Keep on Top is on (Windows' compact overlay), until the person asks for the full window again
+    /// (Ctrl+M or its button). Open When the Window Is Closed brings it here when the window is
+    /// closed while music plays (<see cref="OnClosing"/>).
     /// </summary>
-    public void EnterCompact()
+    /// <param name="evenWithoutTrack">The smoke test opens it with nothing playing.</param>
+    public void EnterCompact(bool evenWithoutTrack = false)
     {
-        if (_compact || !_vm.Player.HasTrack)
+        if (_compact || (!_vm.Player.HasTrack && !evenWithoutTrack))
         {
             return;
         }
@@ -320,8 +325,9 @@ public sealed partial class MainWindow : Window
         ShellGrid.Visibility = Visibility.Collapsed;
         Notice.IsOpen = false;
         Compact.Visibility = Visibility.Visible;
+        Compact.SetShown(true);
         SetTitleBar(Compact.DragRegion);
-        AppWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
+        ApplyMiniPresenter();
         var side = (int)(340 * Math.Max(1.0, Win32.GetDpiForWindow(_hwnd) / 96.0));
         AppWindow.Resize(new Windows.Graphics.SizeInt32(side, side));
         UpdateActivity();
@@ -335,6 +341,8 @@ public sealed partial class MainWindow : Window
         }
 
         _compact = false;
+        _miniOnTop = null;
+        Compact.SetShown(false);
         AppWindow.SetPresenter(AppWindowPresenterKind.Default);
         if (_fullSize is { } size)
         {
@@ -346,6 +354,52 @@ public sealed partial class MainWindow : Window
         ShellGrid.Visibility = Visibility.Visible;
         SetTitleBar(AppTitleBar);
         UpdateActivity();
+    }
+
+    /// <summary>
+    /// Keep on Top, live: the compact overlay stays above other windows; without it the mini player
+    /// is a small ordinary window (it keeps its size either way).
+    /// </summary>
+    private void ApplyMiniPresenter()
+    {
+        var onTop = _vm.MiniPlayer.KeepOnTop;
+        if (_miniOnTop == onTop)
+        {
+            return;
+        }
+
+        var size = AppWindow.Size;
+        var resize = _miniOnTop is not null;
+        _miniOnTop = onTop;
+        if (onTop)
+        {
+            AppWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
+        }
+        else
+        {
+            var presenter = OverlappedPresenter.Create();
+            presenter.IsMaximizable = false;
+            AppWindow.SetPresenter(presenter);
+        }
+
+        if (resize)
+        {
+            AppWindow.Resize(size);
+        }
+    }
+
+    /// <summary>
+    /// Open When the Window Is Closed (ADR-0026 §4): closing the full window while music plays
+    /// leaves the mini player instead. Closing the mini player, or the window while nothing plays,
+    /// quits as before.
+    /// </summary>
+    private void OnClosing(AppWindow sender, AppWindowClosingEventArgs args)
+    {
+        if (!_compact && _vm.Player.IsPlaying && _vm.MiniPlayer.OpenWhenWindowClosed)
+        {
+            args.Cancel = true;
+            EnterCompact();
+        }
     }
 
     public void CloseNowPlaying()
@@ -537,6 +591,10 @@ public sealed partial class MainWindow : Window
         else if (e.PropertyName == nameof(AppViewModel.Settings))
         {
             SyncDesktopLyrics();
+            if (_compact)
+            {
+                Optional("the mini player's Keep on Top", ApplyMiniPresenter);
+            }
         }
         else if (e.PropertyName == nameof(AppViewModel.Look))
         {

@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The compact mini player: the whole window, kept on top (Windows' compact overlay), showing the
-    artwork, two lines of type and the transport. The strip at the top moves the window. Its
-    progress is a straight 2 px line along the top of the glass (player.mini-progress), as on the
-    mini player (v0.0.4), drawn at whole-pixel steps only; play and pause morph.
+    The mini player (ADR-0026 §4, docs/ui.md "The player bar and the mini player"): the whole
+    window, above other windows while Keep on Top is on (Windows' compact overlay), showing the
+    cover, the title and the artist, the lyrics bar's line when Show Lyrics Line is on, previous,
+    play and next, and its own button back to the full window. The strip at the top moves the
+    window. Its progress is a straight 2 px line along the top of the glass (player.mini-progress),
+    drawn at whole-pixel steps only; play and pause morph.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.CompactPlayer"
@@ -38,6 +40,7 @@
                     <TextBlock FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource JfInk90}" Text="{x:Bind Player.Title, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                     <TextBlock FontSize="12" Foreground="{ThemeResource JfInk70}" Text="{x:Bind Player.Artist, Mode=OneWay}" TextTrimming="CharacterEllipsis" Visibility="{x:Bind shell:Bind.Collapsed(Player.IsRemote), Mode=OneWay}" />
                     <TextBlock Style="{StaticResource JfRemoteLineText}" Text="{x:Bind Player.RemoteDeviceText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}" />
+                    <controls:LyricsBarLine x:Name="LyricLine" Margin="0,2,0,0" LineFontSize="12" Visibility="{x:Bind shell:Bind.VisibleIfAll(Shell.MiniPlayer.ShowLyricsLine, Shell.LyricsBar.HasLine), Mode=OneWay}" />
                 </StackPanel>
                 <Grid>
                     <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">

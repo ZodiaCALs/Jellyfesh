@@ -69,8 +69,14 @@ the app only draws them.
   corners, instead of the ring; from 900 px of content width a floating 80 px
   player bar with `r-xl` corners: artwork and two lines (they open Now
   Playing), shuffle, previous, play, next and repeat above the seek bar, and
-  Lyrics, Queue and the volume. The compact mini player (Ctrl+M) has the same
-  straight line along the top of its glass.
+  the quality badge (its menu: the format line and Streaming Quality's
+  levels, ADR-0026 §3), Lyrics, Queue and the volume. The mini player
+  (Ctrl+M, `Views/CompactPlayer.xaml`, ADR-0026 §4) turns the window into a
+  small player, Windows' compact overlay while Keep on Top is on, with the
+  lyrics bar's line when Show Lyrics Line is on and the same straight line
+  along the top of its glass; with Open When the Window Is Closed, closing the
+  window while music plays leaves the mini player. The smoke test opens and
+  closes it.
 * **Now Playing:** the artwork scales to 0.88 while paused and springs back
   (dur-3 Spring); play and pause morph; the artwork grows from the mini
   player's or the bar's through a connected animation where the toolkit
@@ -589,7 +595,7 @@ Player keys that reuse none of these stay:
 | Ctrl+H / Ctrl+T | Shuffle / repeat |
 | F8 / F9 / F10 | Mute / volume down / volume up |
 | Ctrl+L | Open or close Now Playing |
-| Ctrl+M | The compact mini player (always on top) and back |
+| Ctrl+M | The mini player (above other windows while Keep on Top is on) and back |
 | Alt+Left, mouse back | Back |
 | Alt+Up / Alt+Down, Delete | Move or remove the selected queue or playlist row |
 | Left / Right on the seek bar | Seek 5 s (Page Up / Page Down: 30 s; Home / End: start / end) |

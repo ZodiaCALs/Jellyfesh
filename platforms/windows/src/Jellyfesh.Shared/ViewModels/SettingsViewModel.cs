@@ -209,6 +209,18 @@ public sealed partial class SettingsViewModel : PageViewModel
     [ObservableProperty]
     private int _streamingQualityIndex;
 
+    /// <summary>Settings › Appearance › Mini Player › Keep on Top (ADR-0026 §4).</summary>
+    [ObservableProperty]
+    private bool _miniKeepOnTop = true;
+
+    /// <summary>Open When the Window Is Closed: closing the window while music plays leaves the mini player.</summary>
+    [ObservableProperty]
+    private bool _miniOpenWhenClosed;
+
+    /// <summary>Show Lyrics Line: the lyrics bar's line in the mini player.</summary>
+    [ObservableProperty]
+    private bool _miniShowLyricsLine = true;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ReplayGainPreampText))]
     private double _replayGainPreampDb;
@@ -543,6 +555,15 @@ public sealed partial class SettingsViewModel : PageViewModel
 
     partial void OnResumeOnLaunchChanged(bool value) => Change(s => s with { ResumeOnLaunch = value });
 
+    partial void OnMiniKeepOnTopChanged(bool value) => ChangeMiniPlayer(m => m with { KeepOnTop = value });
+
+    partial void OnMiniOpenWhenClosedChanged(bool value) => ChangeMiniPlayer(m => m with { OpenWhenWindowClosed = value });
+
+    partial void OnMiniShowLyricsLineChanged(bool value) => ChangeMiniPlayer(m => m with { ShowLyricsLine = value });
+
+    private void ChangeMiniPlayer(Func<MiniPlayerSettings, MiniPlayerSettings> edit) =>
+        Change(s => s with { MiniPlayer = edit(s.MiniPlayer ?? MiniPlayerSettings.Default) });
+
     partial void OnStreamingQualityIndexChanged(int value)
     {
         if (value >= 0 && value < QualityMenu.AllLevels.Count)
@@ -830,6 +851,10 @@ public sealed partial class SettingsViewModel : PageViewModel
             CanInstallPlugins = state.Sources.CanInstallPlugins;
             ResumeOnLaunch = s.ResumeOnLaunch;
             StreamingQualityIndex = Math.Max(0, QualityMenu.AllLevels.ToList().IndexOf(s.StreamingQuality));
+            var mini = s.MiniPlayer ?? MiniPlayerSettings.Default;
+            MiniKeepOnTop = mini.KeepOnTop;
+            MiniOpenWhenClosed = mini.OpenWhenWindowClosed;
+            MiniShowLyricsLine = mini.ShowLyricsLine;
             WatchFolders = s.WatchFolders;
             AllowCommunity = s.AllowCommunityPlugins;
             if (Environment.TickCount64 - _lastAudioEditMs > EchoGuard.TotalMilliseconds)

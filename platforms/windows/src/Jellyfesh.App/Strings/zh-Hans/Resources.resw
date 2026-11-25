@@ -302,6 +302,36 @@
   <data name="Appearance_LyricsStart.Content" xml:space="preserve">
     <value>靠左</value>
   </data>
+  <data name="Appearance_MiniLyrics.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>显示歌词行</value>
+  </data>
+  <data name="Appearance_MiniLyricsHint.Text" xml:space="preserve">
+    <value>正在演唱的那一行，显示在迷你播放器的歌曲下方。</value>
+  </data>
+  <data name="Appearance_MiniLyricsTitle.Text" xml:space="preserve">
+    <value>显示歌词行</value>
+  </data>
+  <data name="Appearance_MiniOnClose.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>关闭窗口时打开</value>
+  </data>
+  <data name="Appearance_MiniOnCloseHint.Text" xml:space="preserve">
+    <value>播放音乐时关闭窗口，保留迷你播放器。</value>
+  </data>
+  <data name="Appearance_MiniOnCloseTitle.Text" xml:space="preserve">
+    <value>关闭窗口时打开</value>
+  </data>
+  <data name="Appearance_MiniOnTop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>保持在最前</value>
+  </data>
+  <data name="Appearance_MiniOnTopHint.Text" xml:space="preserve">
+    <value>迷你播放器保持在其他窗口之上。</value>
+  </data>
+  <data name="Appearance_MiniOnTopTitle.Text" xml:space="preserve">
+    <value>保持在最前</value>
+  </data>
+  <data name="Appearance_MiniPlayer.Text" xml:space="preserve">
+    <value>迷你播放器</value>
+  </data>
   <data name="Appearance_Mode.Text" xml:space="preserve">
     <value>主题</value>
   </data>

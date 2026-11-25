@@ -7,7 +7,8 @@ namespace Jellyfesh.App.Shell;
 /// <summary>
 /// <c>Jellyfesh.exe --smoke-test</c> (docs/windows.md, "When Jellyfesh does not start"): once the
 /// main window is open, wait for its first frames, open every section in turn (each page loaded and
-/// drawn), narrow the window to the phone layout and open the tabs' places again, then close the
+/// drawn), open and close the mini player (ADR-0026 §4), narrow the window to the phone layout and
+/// open the tabs' places again, then close the
 /// window, which shuts the core down, and exit with
 /// <see cref="ExitCodes.Ok"/>. A failure anywhere, including one WinUI only reports through
 /// UnhandledException or a failed navigation, exits with <see cref="ExitCodes.StartupFailed"/>, and
@@ -30,6 +31,13 @@ internal static class SmokeTest
             {
                 await OpenAsync(window, section);
             }
+
+            // The mini player opens and closes (nothing plays, so it is empty).
+            Startup.EnterStage("smoke test: opening and closing the mini player");
+            window.EnterCompact(evenWithoutTrack: true);
+            await FramesAsync(Frames);
+            window.ExitCompact();
+            await FramesAsync(Frames);
 
             // The phone layout (ADR-0023): narrowed below 761 epx, the window shows the tab bar and,
             // on the library's pages, the Library switcher; their styles first load here.

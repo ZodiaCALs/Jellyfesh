@@ -428,6 +428,46 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- Mini Player (ADR-0026 §4): Keep on Top, Open When the Window Is Closed, Show Lyrics Line. -->
+                    <Border Style="{StaticResource SettingsGroup}">
+                        <StackPanel Spacing="12">
+                            <TextBlock x:Uid="Appearance_MiniPlayer" Style="{StaticResource CardHeading}" Text="Mini Player" />
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Appearance_MiniOnTopTitle" Style="{StaticResource RowTitle}" Text="Keep on Top" />
+                                    <TextBlock x:Uid="Appearance_MiniOnTopHint" Style="{StaticResource JfSecondaryBodyText}" Text="The mini player stays above other windows." TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch x:Uid="Appearance_MiniOnTop" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Keep on Top" IsOn="{x:Bind ViewModel.MiniKeepOnTop, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Appearance_MiniOnCloseTitle" Style="{StaticResource RowTitle}" Text="Open When the Window Is Closed" />
+                                    <TextBlock x:Uid="Appearance_MiniOnCloseHint" Style="{StaticResource JfSecondaryBodyText}" Text="Keep the mini player when you close the window while music plays." TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch x:Uid="Appearance_MiniOnClose" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Open When the Window Is Closed" IsOn="{x:Bind ViewModel.MiniOpenWhenClosed, Mode=TwoWay}" />
+                            </Grid>
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock x:Uid="Appearance_MiniLyricsTitle" Style="{StaticResource RowTitle}" Text="Show Lyrics Line" />
+                                    <TextBlock x:Uid="Appearance_MiniLyricsHint" Style="{StaticResource JfSecondaryBodyText}" Text="The line being sung, under the song in the mini player." TextWrapping="Wrap" />
+                                </StackPanel>
+                                <ToggleSwitch x:Uid="Appearance_MiniLyrics" Grid.Column="1" VerticalAlignment="Center" AutomationProperties.Name="Show Lyrics Line" IsOn="{x:Bind ViewModel.MiniShowLyricsLine, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
                     <!-- App Icon. -->
                     <Border Style="{StaticResource SettingsGroup}">
                         <StackPanel Spacing="12">

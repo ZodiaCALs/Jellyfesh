@@ -302,6 +302,36 @@
   <data name="Appearance_LyricsStart.Content" xml:space="preserve">
     <value>左揃え</value>
   </data>
+  <data name="Appearance_MiniLyrics.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>歌詞の行を表示</value>
+  </data>
+  <data name="Appearance_MiniLyricsHint.Text" xml:space="preserve">
+    <value>歌っている行を、ミニプレーヤーの曲の下に表示します。</value>
+  </data>
+  <data name="Appearance_MiniLyricsTitle.Text" xml:space="preserve">
+    <value>歌詞の行を表示</value>
+  </data>
+  <data name="Appearance_MiniOnClose.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>ウインドウを閉じたときに開く</value>
+  </data>
+  <data name="Appearance_MiniOnCloseHint.Text" xml:space="preserve">
+    <value>音楽の再生中にウインドウを閉じても、ミニプレーヤーを残します。</value>
+  </data>
+  <data name="Appearance_MiniOnCloseTitle.Text" xml:space="preserve">
+    <value>ウインドウを閉じたときに開く</value>
+  </data>
+  <data name="Appearance_MiniOnTop.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>常に手前に表示</value>
+  </data>
+  <data name="Appearance_MiniOnTopHint.Text" xml:space="preserve">
+    <value>ミニプレーヤーをほかのウインドウより手前に表示します。</value>
+  </data>
+  <data name="Appearance_MiniOnTopTitle.Text" xml:space="preserve">
+    <value>常に手前に表示</value>
+  </data>
+  <data name="Appearance_MiniPlayer.Text" xml:space="preserve">
+    <value>ミニプレーヤー</value>
+  </data>
   <data name="Appearance_Mode.Text" xml:space="preserve">
     <value>テーマ</value>
   </data>
