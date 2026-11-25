@@ -251,6 +251,40 @@ pub fn browse(node: Option<&Item>, page: &PageRequest) -> Result<ItemPage> {
     }
 }
 
+/// `library.likes`: the liked songs (the playlist in folder 201, paged by
+/// the service). Liked albums and followed singers are not offered yet.
+pub fn library_likes(kind: ItemKind, page: &PageRequest) -> Result<ItemPage> {
+    if kind != ItemKind::Track {
+        return Err(PluginError::Unsupported);
+    }
+    match own_playlists()?.into_iter().find(|p| p.liked) {
+        Some(liked) => playlist_page(&liked.id, page),
+        None => Ok(ItemPage::new(Vec::new())),
+    }
+}
+
+/// `library.playlists`: the account's own playlists (without the liked
+/// songs, which have their own section), in pages.
+pub fn library_playlists(page: &PageRequest) -> Result<PlaylistPage> {
+    let entries: Vec<PlaylistEntry> = own_playlists()?
+        .iter()
+        .filter(|p| !p.liked)
+        .map(|p| PlaylistEntry::owned(items::own_playlist(p)))
+        .collect();
+    let start = paging::offset(page)?;
+    let total = entries.len();
+    let end = start.saturating_add(paging::limit(page)).min(total);
+    Ok(PlaylistPage {
+        entries: entries
+            .into_iter()
+            .skip(start)
+            .take(end.saturating_sub(start))
+            .collect(),
+        next: (end < total).then(|| end.to_string()),
+        total: u32::try_from(total).ok(),
+    })
+}
+
 /// The account's own playlists, its liked songs (folder 201) among them.
 fn own_playlists() -> Result<Vec<OwnPlaylist>> {
     if let Some(lists) = api::cached_playlists() {

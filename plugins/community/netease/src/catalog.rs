@@ -4,7 +4,8 @@
 //!   albums, 100 artists, 1000 playlists). Songs come with the account's
 //!   privileges.
 //! * Library: the liked songs (`weapi/song/like/get`, ids), the account's own
-//!   and saved playlists (`weapi/user/playlist`).
+//!   and saved playlists (`weapi/user/playlist`); the same lists for the
+//!   app's Favourites and Playlists pages (API 1.3 `library`).
 //! * A playlist's songs: its `trackIds` (`weapi/v6/playlist/detail`), then
 //!   the songs of one page with their privileges (`weapi/v3/song/detail`).
 //! * An album's songs: `weapi/v1/album/<id>`. An artist's albums:
@@ -212,7 +213,7 @@ pub fn browse(node: Option<&Item>, page: &PageRequest) -> Result<ItemPage> {
         return Ok(root());
     };
     match Id::parse(&node.id) {
-        Some(Id::Folder("liked")) => liked(page),
+        Some(Id::Folder("liked")) => liked(page, false),
         Some(Id::Folder(which @ ("playlists" | "saved"))) => {
             let (own, saved) = user_playlists()?;
             paging::slice(if which == "playlists" { own } else { saved }, page)
@@ -234,11 +235,13 @@ struct LikedIds {
     ids: Vec<Value>,
 }
 
-/// The liked songs, newest first.
-fn liked(page: &PageRequest) -> Result<ItemPage> {
+/// The liked songs, newest first. `refresh` asks NetEase again instead of
+/// paging through the ids fetched a moment ago.
+fn liked(page: &PageRequest, refresh: bool) -> Result<ItemPage> {
     let session = api::require_session()?;
     let key = format!("liked:{}", session.user_id);
-    let ids = match api::cached_ids(&key) {
+    let cached = if refresh { None } else { api::cached_ids(&key) };
+    let ids = match cached {
         Some(ids) => ids,
         None => {
             let found: LikedIds = api::call_as("/song/like/get", json!({ "uid": session.user_id }))?;
@@ -303,6 +306,39 @@ fn song_details(ids: &[u64]) -> Result<Vec<Item>> {
 /// One song.
 pub fn song(id: u64) -> Result<Song> {
     songs(&[id])?.0.into_iter().next().ok_or(PluginError::NotFound)
+}
+
+/// `library.likes`: the liked songs; a first page (the app refreshing the
+/// list) asks NetEase again. Saved albums and followed artists are not
+/// offered yet.
+pub fn library_likes(kind: ItemKind, page: &PageRequest) -> Result<ItemPage> {
+    match kind {
+        ItemKind::Track => liked(page, page.cursor.as_deref().is_none_or(str::is_empty)),
+        _ => Err(PluginError::Unsupported),
+    }
+}
+
+/// `library.playlists`: the account's own playlists, then the ones it saved
+/// (followed), in pages.
+pub fn library_playlists(page: &PageRequest) -> Result<PlaylistPage> {
+    let (own, saved) = user_playlists()?;
+    let entries: Vec<PlaylistEntry> = own
+        .into_iter()
+        .map(PlaylistEntry::owned)
+        .chain(saved.into_iter().map(PlaylistEntry::followed))
+        .collect();
+    let start = paging::offset(page)?;
+    let total = entries.len();
+    let end = start.saturating_add(paging::limit(page)).min(total);
+    Ok(PlaylistPage {
+        entries: entries
+            .into_iter()
+            .skip(start)
+            .take(end.saturating_sub(start))
+            .collect(),
+        next: (end < total).then(|| end.to_string()),
+        total: u32::try_from(total).ok(),
+    })
 }
 
 /// The account's own playlists (without the liked songs, which have their

@@ -2,7 +2,7 @@
 name = "jf-community-netease"
 description = "NetEase Cloud Music (Unofficial): a community source plugin for Jellyfesh, on the web player's weapi endpoints. Not made or endorsed by NetEase."
 # The plugin's own version: keep it equal to `version` in manifest.toml.
-version = "0.1.2"
+version = "0.1.3"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

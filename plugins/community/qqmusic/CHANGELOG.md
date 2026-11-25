@@ -1,5 +1,16 @@
 # Changelog: QQ Music (Unofficial) plugin
 
+## 0.1.3 — unreleased
+
+* With Jellyfesh v0.0.8: plugin API 1.3 (the package needs Jellyfesh
+  v0.0.8).
+* The **Streaming Quality** setting is gone: streams use the level
+  Jellyfesh asks for (ADR-0026), from the levels the manifest lists for the
+  quality menu (FLAC, 320 and 128 kbit/s MP3, 96 kbit/s AAC, best first down from the level). Jellyfesh keeps a quality set here once, as
+  its own. Translated Lyrics stays.
+* **Library** (ADR-0024): Liked Songs (folder 201) for Favourites, and My Playlists for Playlists. A first page of liked songs asks
+  QQ Music again; liked albums and artists are not offered yet.
+
 ## 0.1.2 — 2026-11-20
 
 * With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh

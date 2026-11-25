@@ -19,8 +19,9 @@ it on: [`docs/plugins/community-netease.md`](../../../docs/plugins/community-net
   Music app (the scan button on its home screen) and confirm on your phone.
 * **Search** songs, albums, artists and playlists.
 * **Library**: Liked Songs, My Playlists, Saved Playlists; a playlist's and
-  an album's tracks, an artist's albums.
-* **Play** at the quality you choose: Low → `standard` (128 kbit/s MP3),
+  an album's tracks, an artist's albums. With plugin API 1.3 the same lists
+  fill Jellyfesh's Favourites and Playlists pages.
+* **Play** at the streaming quality chosen in Jellyfesh: Low → `standard` (128 kbit/s MP3),
   Normal → `higher` (192), High → `exhigh` (320), Lossless → `lossless`
   (FLAC). Your account decides what you get; NetEase may give less.
 * **Lyrics**: plain synced LRC, with NetEase's translation shown under each
@@ -97,7 +98,7 @@ browser's `User-Agent`.
 | --- | --- |
 | The session cookie (`MUSIC_U`) and the other cookies NetEase sets | the host's cookie jar for this plugin, encrypted on disk |
 | Your account id, its name and the `__csrf` value | your system's keystore |
-| Quality and translation settings | the plugin's settings |
+| The translation setting | the plugin's settings |
 
 Signing out ends the session on NetEase (`/logout`); Jellyfesh then deletes
 the keystore entry and the cookies.

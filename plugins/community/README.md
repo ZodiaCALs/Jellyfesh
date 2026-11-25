@@ -63,9 +63,10 @@ person allows community plugins:
 3. **Sign In with QR Code**: scan the code with the NetEase Cloud Music app,
    or with WeChat for QQ Music, and confirm on the phone.
 
-Each plugin has two settings: **Streaming Quality** (follow Jellyfesh, or
-always use one quality; the account still decides what it gets) and
-**Translated Lyrics**.
+Each plugin has one setting, **Translated Lyrics**. Streams use Jellyfesh's
+own streaming quality (from version 0.1.3 with Jellyfesh v0.0.8; the
+account still decides what it gets), and both plugins fill Jellyfesh's
+Favourites and Playlists pages with the liked songs and playlists.
 
 The release also publishes both packages as separate downloads
 (`community.unofficial.netease-<release>.jfpkg`,
@@ -131,7 +132,7 @@ folder would wait for the build lock of the `cargo test` running it.
 | --- | --- | --- |
 | `netease/` | `jf-community-netease` | NetEase Cloud Music (Unofficial): the plugin crate, manifest, settings schema, tests |
 | `qqmusic/` | `jf-community-qqmusic` | QQ Music (Unofficial): the same |
-| `common/` | `jf-community-common` | helpers both plugins use: base64, LRC lyrics, paging, the quality setting, matching items from other sources |
+| `common/` | `jf-community-common` | helpers both plugins use: base64, LRC lyrics, paging, settings flags, matching items from other sources |
 | `testsupport/` | `jf-community-testsupport` | test-only: builds a plugin with `mock-service` and installs it in a real host as a community plugin |
 
 ## Rules these plugins keep

@@ -92,13 +92,18 @@ fn installs_only_as_a_community_plugin() {
     assert_eq!(info.signature, SignatureStatus::Unsigned);
     assert!(!info.enabled, "community plugins start turned off");
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr]);
-    assert_eq!(info.capabilities.len(), 8);
-    for capability in [Capability::Discover, Capability::Details] {
+    assert_eq!(info.capabilities.len(), 9);
+    for capability in [Capability::Discover, Capability::Details, Capability::Library] {
         assert!(info.capabilities.contains(&capability), "{capability:?}");
     }
     assert!(!info.capabilities.contains(&Capability::Comments));
     assert_eq!(info.content_policy.library_storage, LibraryStorage::Metadata);
-    assert_eq!(info.settings["quality"], "app");
+    // No quality setting: the app's level decides (ADR-0026).
+    assert!(info.settings.get("quality").is_none());
+    assert_eq!(
+        info.content_policy.qualities,
+        vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
+    );
     assert!(matches!(
         recv(env.host.search(ID, "mock", kinds(&[]), page(5))),
         Err(CallError::Disabled(_))
@@ -528,26 +533,81 @@ fn streams_whole_tracks_only() {
     assert!(mock.violations().is_empty(), "{:?}", mock.violations());
 }
 
+/// Each level the app may ask for becomes the files asked of the service,
+/// best first (ADR-0026), for a song with every kind of file; there is no
+/// quality setting any more, and an old one is refused.
 #[test]
-fn the_quality_setting_wins() {
+fn levels_map_to_the_files_asked_for() {
     let mock = quick_mock();
-    let (env, info) = with_mock(dir(), PACKAGE, &mock.server, json!({ "quality": "normal" }));
+    let env = env_for(&mock);
     sign_in(&env);
-    let stream = recv(
+    let flac = "F0000000MockMedia6.flac";
+    let (mp3_320, mp3_128, aac_96) = (
+        "M8000000MockMedia6.mp3",
+        "M5000000MockMedia6.mp3",
+        "C4000000MockMedia6.m4a",
+    );
+    for (quality, files) in [
+        (Quality::Lossless, vec![flac, mp3_320, mp3_128, aac_96]),
+        (Quality::High, vec![mp3_320, mp3_128, aac_96]),
+        (Quality::Normal, vec![mp3_128, aac_96]),
+        (Quality::Low, vec![aac_96, mp3_128]),
+    ] {
+        let before = mock.calls().len();
+        let _ = recv(env.host.resolve_stream(ID, track("0000MockSong06"), quality));
+        let asked = mock.calls()[before..]
+            .iter()
+            .find(|c| c.module == "vkey.GetVkeyServer")
+            .cloned()
+            .unwrap_or_else(|| panic!("{quality:?}: no file request"));
+        assert_eq!(asked.param["filename"], json!(files), "{quality:?}");
+    }
+    assert!(
         env.host
-            .resolve_stream(&info.id, track("0000MockSong06"), Quality::Lossless),
+            .set_settings(ID, &json!({ "quality": "low" }).to_string())
+            .is_err()
+    );
+}
+
+/// The library (ADR-0024): the liked songs (folder 201) for Favourites, and
+/// the account's own playlists for Playlists.
+#[test]
+fn likes_and_playlists_for_the_library() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    assert_eq!(
+        plugin_error(recv(env.host.library_likes(ID, ItemKind::Track, page(10)))),
+        PluginError::AuthRequired
+    );
+    sign_in(&env);
+    let first = recv(env.host.library_likes(ID, ItemKind::Track, page(2))).unwrap();
+    assert_eq!(ids(&first), ["qqm:tr:0000MockSong02", "qqm:tr:0000MockSong01"]);
+    assert_eq!(first.total, Some(3));
+    let rest = recv(
+        env.host
+            .library_likes(ID, ItemKind::Track, next_page(first.next, 2)),
     )
     .unwrap();
-    assert_eq!(stream.bitrate_kbps, Some(128));
-    let asked = mock
-        .calls()
-        .into_iter()
-        .find(|c| c.module == "vkey.GetVkeyServer")
-        .unwrap();
+    assert_eq!(ids(&rest), ["qqm:tr:0000MockSong06"]);
+    for kind in [ItemKind::Album, ItemKind::Artist] {
+        assert_eq!(
+            plugin_error(recv(env.host.library_likes(ID, kind, page(10)))),
+            PluginError::Unsupported
+        );
+    }
+    let lists = recv(env.host.library_playlists(ID, page(10))).unwrap();
+    let flags: Vec<(&str, bool, bool)> = lists
+        .entries
+        .iter()
+        .map(|e| (e.item.id.as_str(), e.owned, e.songs_listed))
+        .collect();
     assert_eq!(
-        asked.param["filename"],
-        json!(["M5000000MockMedia6.mp3", "C4000000MockMedia6.m4a"])
+        flags,
+        [("qqm:pl:8000002", true, true)],
+        "the liked songs are not among the playlists"
     );
+    assert_eq!((lists.total, lists.next), (Some(1), None));
+    assert!(mock.violations().is_empty(), "{:?}", mock.violations());
 }
 
 #[test]

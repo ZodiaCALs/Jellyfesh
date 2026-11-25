@@ -47,8 +47,9 @@ but unusable until you allow them again.
 
 * **Search** songs, singers, albums and playlists.
 * **Your library**: Liked Songs and My Playlists; the tracks of a playlist
-  or album, a singer's albums.
-* **Plays** whole tracks at the quality you choose: it asks QQ Music for
+  or album, a singer's albums. From version 0.1.3 (Jellyfesh v0.0.8)
+  Favourites shows the liked songs and Playlists shows your playlists.
+* **Plays** whole tracks at the streaming quality chosen in Jellyfesh: it asks QQ Music for
   that file and the ones below it, best first, and plays the first one QQ
   Music grants your account.
 * **Lyrics**: synced lyrics, with QQ Music's translation under each line
@@ -69,8 +70,12 @@ but unusable until you allow them again.
 
 | Setting | Values | What it does |
 | --- | --- | --- |
-| Streaming Quality | `app` (default), `lossless`, `high`, `normal`, `low` | `app` follows the quality you chose in Jellyfesh for each network; the others are the best quality asked for |
 | Translated Lyrics | on (default), off | QQ Music's translation under each line of the lyrics |
+
+The streaming quality is Jellyfesh's own (Settings › Playback › Streaming,
+or the quality menu in the player bar, from v0.0.8). Version 0.1.3 of the
+plugin no longer has a quality setting of its own; a quality you had set
+there is kept once, as Jellyfesh's.
 
 | Quality | QQ Music is asked for, in this order |
 | --- | --- |
@@ -118,7 +123,7 @@ song.
 | Your account number, its session key, what renews the key, and your name | your system's keystore |
 | A random 10-digit player id for the stream service | the plugin's small private storage |
 | Cookies QQ Music or WeChat set | the plugin's cookie jar, encrypted on disk |
-| Quality and translation settings | the plugin's settings |
+| The translation setting | the plugin's settings |
 
 The web player has no sign-out call: **Sign Out** forgets the session, and
 Jellyfesh deletes the keystore entry and the cookies.

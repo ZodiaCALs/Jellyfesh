@@ -44,9 +44,11 @@ but unusable until you allow them again.
 
 * **Search** songs, albums, artists and playlists.
 * **Your library**: Liked Songs, My Playlists and Saved Playlists; the
-  tracks of a playlist or album, an artist's albums.
-* **Plays** whole tracks at the quality you choose, as far as your account
-  allows.
+  tracks of a playlist or album, an artist's albums. From version 0.1.3
+  (Jellyfesh v0.0.8) Favourites shows the liked songs and Playlists shows
+  your playlists, then the saved ones.
+* **Plays** whole tracks at the streaming quality chosen in Jellyfesh, as
+  far as your account allows.
 * **Lyrics**: synced lyrics, with NetEase's translation under each line when
   it has one; instrumentals have none. **Word by word** (version 0.1.2, with
   Jellyfesh v0.0.7) when NetEase's answer has its word timing (YRC): the
@@ -70,8 +72,12 @@ but unusable until you allow them again.
 
 | Setting | Values | What it does |
 | --- | --- | --- |
-| Streaming Quality | `app` (default), `lossless`, `high`, `normal`, `low` | `app` follows the quality you chose in Jellyfesh for each network; the others always ask NetEase for that quality |
 | Translated Lyrics | on (default), off | NetEase's translation under each line of the lyrics |
+
+The streaming quality is Jellyfesh's own (Settings › Playback › Streaming,
+or the quality menu in the player bar, from v0.0.8). Version 0.1.3 of the
+plugin no longer has a quality setting of its own; a quality you had set
+there is kept once, as Jellyfesh's.
 
 | Quality | NetEase is asked for |
 | --- | --- |
@@ -120,7 +126,7 @@ song.
 | --- | --- |
 | The session cookie and the other cookies NetEase sets | the plugin's cookie jar, encrypted on disk |
 | Your account id, its name and the `__csrf` value | your system's keystore |
-| Quality and translation settings | the plugin's settings |
+| The translation setting | the plugin's settings |
 
 **Sign Out** ends the session on NetEase; Jellyfesh then deletes the
 keystore entry and the cookies.

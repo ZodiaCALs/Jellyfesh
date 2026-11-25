@@ -9,8 +9,11 @@
 //! * Search songs, albums, singers and playlists; the library: liked songs
 //!   and own playlists; a playlist's and an album's tracks, a singer's
 //!   albums ([`catalog`]).
-//! * Streams: only files the service grants this account, at the chosen
-//!   quality or below; never a preview in place of the song ([`stream`]).
+//! * Streams: only files the service grants this account, at the level
+//!   Jellyfesh asks for or below; never a preview in place of the song
+//!   ([`stream`]).
+//! * Library (API 1.3): the liked songs and the own playlists for the app's
+//!   Favourites and Playlists pages ([`catalog`]).
 //! * Lyrics: plain synced LRC, with QQ Music's translation merged in as
 //!   bilingual lines ([`lyrics`]); never the app-encrypted QRC. Artwork from
 //!   the picture service at the size asked for.
@@ -134,6 +137,14 @@ impl Plugin for QqMusic {
 
     fn details(item: Item) -> Result<ItemDetails> {
         discover::details(&item)
+    }
+
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        catalog::library_likes(kind, &page)
+    }
+
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        catalog::library_playlists(&page)
     }
 
     fn artwork(item: Item, size: u32) -> Result<Option<ImageRef>> {

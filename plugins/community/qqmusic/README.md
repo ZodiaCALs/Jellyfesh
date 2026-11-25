@@ -20,8 +20,9 @@ on: [`docs/plugins/community-qqmusic.md`](../../../docs/plugins/community-qqmusi
   linked to QQ Music.
 * **Search** songs, singers, albums and playlists.
 * **Library**: Liked Songs and My Playlists; a playlist's and an album's
-  tracks, a singer's albums.
-* **Play** at the quality you choose or below: the plugin asks for FLAC, 320
+  tracks, a singer's albums. With plugin API 1.3 the same lists fill
+  Jellyfesh's Favourites and Playlists pages.
+* **Play** at the streaming quality chosen in Jellyfesh or below: the plugin asks for FLAC, 320
   and 128 kbit/s MP3 and 96 kbit/s AAC, best first down from the chosen
   quality (Lossless, High, Normal, Low), and plays the first file QQ Music
   grants your account; without VIP that may be a lower quality, or nothing.
@@ -100,7 +101,7 @@ signed in, `uin` (the account's `musicid`), `authst` (its `musickey`) and
 | Your `musicid`, `musickey`, what renews the key, and your name | your system's keystore |
 | A random 10-digit player id (`guid`) for the stream service | the plugin's small private storage |
 | Cookies QQ Music or WeChat set | the host's cookie jar for this plugin, encrypted on disk |
-| Quality and translation settings | the plugin's settings |
+| The translation setting | the plugin's settings |
 
 The web player has no sign-out call; signing out forgets the session and
 Jellyfesh deletes the keystore entry and the cookies.

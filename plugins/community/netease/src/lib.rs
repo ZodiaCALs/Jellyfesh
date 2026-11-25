@@ -10,8 +10,10 @@
 //! * Search songs, albums, artists and playlists; the library: liked songs,
 //!   own and saved playlists; a playlist's, an album's tracks, an artist's
 //!   albums ([`catalog`]).
-//! * Streams: only full tracks the account may play, at the chosen quality;
-//!   never a preview in place of the song ([`stream`]).
+//! * Streams: only full tracks the account may play, at the level Jellyfesh
+//!   asks for; never a preview in place of the song ([`stream`]).
+//! * Library (API 1.3): the liked songs and the own and saved playlists for
+//!   the app's Favourites and Playlists pages ([`catalog`]).
 //! * Lyrics: word by word when NetEase has word timing (its YRC, converted
 //!   to enhanced LRC in [`yrc`]), else synced LRC, with NetEase's
 //!   translation merged in as bilingual lines ([`lyrics`]). Artwork at the
@@ -164,6 +166,14 @@ impl Plugin for NetEase {
 
     fn comments(item: Item, page: PageRequest) -> Result<CommentPage> {
         discover::comments(&item, &page)
+    }
+
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        catalog::library_likes(kind, &page)
+    }
+
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        catalog::library_playlists(&page)
     }
 
     fn artwork(item: Item, size: u32) -> Result<Option<ImageRef>> {

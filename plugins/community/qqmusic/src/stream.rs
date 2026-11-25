@@ -185,7 +185,7 @@ pub fn resolve(item: &Item, quality: Quality) -> Result<StreamInfo> {
         return Err(PluginError::invalid_input("not a QQ Music track"));
     };
     let session = api::require_session()?;
-    let quality = api::settings().quality.pick(quality);
+    // The level Jellyfesh asks for (ADR-0026): no quality setting any more.
     let song = catalog::song(mid)?;
     if !song.file.any() && song.file.media_mid.is_empty() {
         api::remember_refusal(

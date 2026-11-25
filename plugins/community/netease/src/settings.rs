@@ -1,14 +1,14 @@
-//! The plugin's settings (`settings.schema.json`).
+//! The plugin's settings (`settings.schema.json`). There is no quality
+//! setting: streams use the level Jellyfesh asks for (ADR-0026), and a
+//! `quality` left from version 0.1.2 is ignored.
 
-use jf_community_common::quality::{QualityChoice, flag};
+use jf_community_common::quality::flag;
 use jf_plugin_sdk::Result;
 use serde_json::Value;
 
 /// What the person chose.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Settings {
-    /// `quality`: follow Jellyfesh or always use one quality.
-    pub quality: QualityChoice,
     /// `translations`: merge NetEase's lyric translations in.
     pub translations: bool,
     /// `mock_origin`, only in test builds (`mock-service` feature): the test
@@ -22,7 +22,6 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Settings {
         Settings {
-            quality: QualityChoice::App,
             translations: true,
             #[cfg(feature = "mock-service")]
             mock_origin: None,
@@ -34,7 +33,6 @@ impl Settings {
     /// Reads the settings JSON.
     pub fn parse(value: &Value) -> Result<Settings> {
         Ok(Settings {
-            quality: QualityChoice::from_settings(value)?,
             translations: flag(value, "translations", true),
             #[cfg(feature = "mock-service")]
             mock_origin: value
@@ -49,7 +47,6 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jf_plugin_sdk::Quality;
     use serde_json::json;
 
     #[test]
@@ -57,8 +54,8 @@ mod tests {
         let settings = Settings::parse(&json!({})).unwrap();
         assert_eq!(settings, Settings::default());
         assert!(settings.translations);
+        // A quality left from version 0.1.2 changes nothing.
         let settings = Settings::parse(&json!({ "quality": "high", "translations": false })).unwrap();
-        assert_eq!(settings.quality, QualityChoice::Fixed(Quality::High));
         assert!(!settings.translations);
     }
 }

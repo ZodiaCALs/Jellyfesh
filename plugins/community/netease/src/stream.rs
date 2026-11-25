@@ -130,7 +130,7 @@ pub fn resolve(item: &Item, quality: Quality) -> Result<StreamInfo> {
         return Err(PluginError::invalid_input("not a NetEase Cloud Music track"));
     };
     api::require_session()?;
-    let quality = api::settings().quality.pick(quality);
+    // The level Jellyfesh asks for (ADR-0026): no quality setting any more.
     let info = url_info(id, quality)?;
     let Some(url) = info.url.as_deref().map(str::trim).filter(|u| !u.is_empty()) else {
         return Err(PluginError::service(refusal(&info)));

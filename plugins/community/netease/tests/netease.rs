@@ -94,12 +94,22 @@ fn installs_only_as_a_community_plugin() {
     assert_eq!(info.signature, SignatureStatus::Unsigned);
     assert!(!info.enabled, "community plugins start turned off");
     assert_eq!(info.auth_kinds, vec![AuthKind::Qr]);
-    assert_eq!(info.capabilities.len(), 9);
-    for capability in [Capability::Discover, Capability::Details, Capability::Comments] {
+    assert_eq!(info.capabilities.len(), 10);
+    for capability in [
+        Capability::Discover,
+        Capability::Details,
+        Capability::Comments,
+        Capability::Library,
+    ] {
         assert!(info.capabilities.contains(&capability), "{capability:?}");
     }
     assert_eq!(info.content_policy.library_storage, LibraryStorage::Metadata);
-    assert_eq!(info.settings["quality"], "app");
+    // No quality setting: the app's level decides (ADR-0026).
+    assert!(info.settings.get("quality").is_none());
+    assert_eq!(
+        info.content_policy.qualities,
+        vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
+    );
     assert_eq!(info.settings["translations"], true);
     assert!(matches!(
         recv(env.host.search(ID, "mock", kinds(&[]), page(5))),
@@ -110,8 +120,8 @@ fn installs_only_as_a_community_plugin() {
     assert!(capabilities.contains(&Capability::ResolveStream));
     assert_eq!(
         capabilities.len(),
-        9,
-        "six it reports, and discover, details and comments"
+        10,
+        "six it reports, and discover, details, comments and library"
     );
     // The published package has no way to point it anywhere else.
     assert!(matches!(
@@ -519,19 +529,89 @@ fn streams_whole_tracks_only() {
     assert!(mock.violations().is_empty(), "{:?}", mock.violations());
 }
 
+/// Each level the app may ask for becomes NetEase's own (ADR-0026); there
+/// is no quality setting any more, and an old one is refused.
 #[test]
-fn the_quality_setting_wins() {
+fn levels_map_to_netease_levels() {
     let mock = quick_mock();
-    let (env, info) = with_mock(dir(), PACKAGE, &mock.server, json!({ "quality": "low" }));
+    let env = env_for(&mock);
     sign_in(&env);
-    let stream = recv(env.host.resolve_stream(&info.id, track(1007), Quality::Lossless)).unwrap();
-    assert_eq!(stream.bitrate_kbps, Some(128));
-    let asked = mock
-        .decoded()
-        .into_iter()
-        .find(|d| d.endpoint == "/song/enhance/player/url/v1")
-        .unwrap();
-    assert_eq!(asked.params["level"], "standard");
+    for (quality, level) in [
+        (Quality::Low, "standard"),
+        (Quality::Normal, "higher"),
+        (Quality::High, "exhigh"),
+        (Quality::Lossless, "lossless"),
+    ] {
+        mock.clear();
+        let _ = recv(env.host.resolve_stream(ID, track(1007), quality));
+        let asked = mock
+            .decoded()
+            .into_iter()
+            .find(|d| d.endpoint == "/song/enhance/player/url/v1")
+            .unwrap_or_else(|| panic!("{quality:?}: no stream request"));
+        assert_eq!(asked.params["level"], level, "{quality:?}");
+    }
+    assert!(
+        env.host
+            .set_settings(ID, &json!({ "quality": "low" }).to_string())
+            .is_err()
+    );
+}
+
+/// The library (ADR-0024): the liked songs for Favourites, newest first (a
+/// first page asks NetEase again, later pages slice the ids it fetched), and
+/// the account's own playlists, then the saved ones as followed.
+#[test]
+fn likes_and_playlists_for_the_library() {
+    let mock = quick_mock();
+    let env = env_for(&mock);
+    assert_eq!(
+        plugin_error(recv(env.host.library_likes(ID, ItemKind::Track, page(10)))),
+        PluginError::AuthRequired
+    );
+    sign_in(&env);
+    mock.clear();
+    let liked_asked = || {
+        mock.decoded()
+            .iter()
+            .filter(|d| d.endpoint == "/song/like/get")
+            .count()
+    };
+    let first = recv(env.host.library_likes(ID, ItemKind::Track, page(2))).unwrap();
+    assert_eq!(ids(&first), ["ncm:tr:1002", "ncm:tr:1001"]);
+    assert_eq!((first.next.as_deref(), first.total), (Some("2"), Some(3)));
+    let rest = recv(
+        env.host
+            .library_likes(ID, ItemKind::Track, next_page(first.next, 2)),
+    )
+    .unwrap();
+    assert_eq!(ids(&rest), ["ncm:tr:1007"]);
+    assert_eq!(rest.next, None);
+    assert_eq!(liked_asked(), 1, "a later page slices the ids already fetched");
+    recv(env.host.library_likes(ID, ItemKind::Track, page(2))).unwrap();
+    assert_eq!(liked_asked(), 2, "a first page (a refresh) asks again");
+    for kind in [ItemKind::Album, ItemKind::Artist] {
+        assert_eq!(
+            plugin_error(recv(env.host.library_likes(ID, kind, page(10)))),
+            PluginError::Unsupported
+        );
+    }
+
+    let lists = recv(env.host.library_playlists(ID, page(10))).unwrap();
+    let flags: Vec<(&str, bool, bool)> = lists
+        .entries
+        .iter()
+        .map(|e| (e.item.id.as_str(), e.owned, e.songs_listed))
+        .collect();
+    assert_eq!(
+        flags,
+        [("ncm:pl:3002", true, true), ("ncm:pl:3003", false, true)],
+        "the liked songs are not among the playlists"
+    );
+    assert_eq!(lists.total, Some(2));
+    let one = recv(env.host.library_playlists(ID, page(1))).unwrap();
+    assert_eq!((one.entries.len(), one.next.as_deref()), (1, Some("1")));
+    assert!(mock.violations().is_empty(), "{:?}", mock.violations());
 }
 
 #[test]
