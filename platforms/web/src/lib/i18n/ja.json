@@ -479,5 +479,7 @@
   "Download": "ダウンロード",
   "The server answered {status}.": "サーバーが {status} を返しました。",
   "Downloading “{title}”…": "「{title}」をダウンロードしています…",
-  "Couldn’t download “{title}”: {reason}": "「{title}」をダウンロードできませんでした：{reason}"
+  "Couldn’t download “{title}”: {reason}": "「{title}」をダウンロードできませんでした：{reason}",
+  "Recently Played": "最近再生した曲",
+  "Most Played": "よく再生する曲"
 }

@@ -1,13 +1,17 @@
 <script lang="ts">
-  // Home (docs/ui.md): the library's size and Recently Added, then each signed-in source's own start
-  // page (what its `browse` lists at the top); with neither, the welcome: add music folders or
-  // connect a server (or drop files, which play without being kept).
+  // Home (docs/ui.md): the library's size, then Recently Added (albums), Recently Played and Most
+  // Played (songs from anywhere, kept in this browser) and, in a customized look, Favourites, in
+  // the look's order; then each signed-in source's own start page (what its `browse` lists at the
+  // top). With nothing at all, the welcome: add music folders or connect a server (or drop files,
+  // which play without being kept).
   import Icon from '../components/Icon.svelte';
   import ItemList from '../components/ItemList.svelte';
   import Skeleton from '../components/Skeleton.svelte';
+  import SongList from '../components/SongList.svelte';
   import { useApp } from '../lib/app';
   import { homeSections } from '../lib/look';
-  import type { Item } from '../lib/core/types';
+  import type { HomeSection, Item, ItemStats, Saved } from '../lib/core/types';
+  import { savedEntries } from '../lib/items';
   import { t, tn } from '../lib/i18n/index.svelte';
   import { LIBRARY } from '../lib/state/library.svelte';
   import { explain } from '../lib/state/sources.svelte';
@@ -15,8 +19,10 @@
 
   let { onopenfiles }: { onopenfiles: () => void } = $props();
   const app = useApp();
-  // The look's Home sections this page has (ADR-0020): the library's size and Recently Added.
+  // The look's Home sections (ADR-0020), in its order.
   const sections = $derived(homeSections(app.look.value.home));
+  /** How many songs Recently Played, Most Played and Favourites show. */
+  const SONGS = 10;
 
   interface Shelf {
     plugin: string;
@@ -38,6 +44,33 @@
         ].join(' · ')
       : '',
   );
+
+  const saved = (stats: ItemStats[]): Saved[] => stats.map((s) => ({ plugin: s.plugin, item: s.item }));
+  const songs = $derived.by((): Partial<Record<HomeSection, Saved[]>> => {
+    void app.collections.revision;
+    void library.revision;
+    return {
+      RecentlyPlayed: saved(app.collections.recentlyPlayed(SONGS)),
+      MostPlayed: saved(app.collections.mostPlayed(SONGS)),
+      Favourites: saved(app.collections.favorites(0, SONGS)),
+    };
+  });
+
+  function songsTitle(section: HomeSection): string {
+    switch (section) {
+      case 'RecentlyPlayed':
+        return t('Recently Played');
+      case 'MostPlayed':
+        return t('Most Played');
+      default:
+        return t('Favourites');
+    }
+  }
+
+  function playFrom(rows: Saved[], index: number) {
+    const { entries, start } = savedEntries(rows, index);
+    if (entries.length > 0) app.player.playEntries(entries, start);
+  }
 
   async function addFolder() {
     try {
@@ -83,12 +116,20 @@
       <p class="hint">{t('Files you open or drop on this page play without being added.')}</p>
     </div>
   {/if}
-  {#if recent.length > 0 && sections.includes('RecentlyAdded')}
-    <section class="shelf" aria-labelledby="recent-title">
-      <h2 id="recent-title" class="section">{t('Recently Added')}</h2>
-      <ItemList plugin={LIBRARY} items={recent} />
-    </section>
-  {/if}
+  {#each sections as section (section)}
+    {#if section === 'RecentlyAdded' && recent.length > 0}
+      <section class="shelf" aria-labelledby="recent-title">
+        <h2 id="recent-title" class="section">{t('Recently Added')}</h2>
+        <ItemList plugin={LIBRARY} items={recent} />
+      </section>
+    {:else if section !== 'Summary' && section !== 'RecentlyAdded' && (songs[section]?.length ?? 0) > 0}
+      {@const rows = songs[section] ?? []}
+      <section class="shelf" aria-labelledby="home-{section}">
+        <h2 id="home-{section}" class="section">{songsTitle(section)}</h2>
+        <SongList {rows} label={songsTitle(section)} onplay={(index) => playFrom(rows, index)} />
+      </section>
+    {/if}
+  {/each}
   {#each shelves as shelf (shelf.plugin)}
     <section class="shelf" aria-label={shelf.name}>
       <h2 class="section">{shelf.name}</h2>

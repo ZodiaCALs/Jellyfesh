@@ -479,5 +479,7 @@
   "Download": "下载",
   "The server answered {status}.": "服务器返回了 {status}。",
   "Downloading “{title}”…": "正在下载“{title}”…",
-  "Couldn’t download “{title}”: {reason}": "无法下载“{title}”：{reason}"
+  "Couldn’t download “{title}”: {reason}": "无法下载“{title}”：{reason}",
+  "Recently Played": "最近播放",
+  "Most Played": "最常播放"
 }
