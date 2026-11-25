@@ -20,6 +20,7 @@ import { Nav } from './state/nav.svelte';
 import { Player } from './state/player.svelte';
 import { Search } from './state/search.svelte';
 import { Settings } from './state/settings.svelte';
+import { SourceLibraries } from './state/sourceLibrary.svelte';
 import { Sources } from './state/sources.svelte';
 import { Theme } from './state/theme.svelte';
 
@@ -35,6 +36,8 @@ export interface App {
   library: Library;
   /** Hearts, Jellyfesh playlists and plays, kept in this browser. */
   collections: Collections;
+  /** The sources' likes and playlists (API 1.3), for Favourites and Playlists. */
+  sourceLibraries: SourceLibraries;
   artworks: Artworks;
   player: Player;
   search: Search;
@@ -82,6 +85,7 @@ export async function createApp(): Promise<App> {
   const library = new Library(jf, core, libraryStore, pickWithInput);
   files.attach(library);
   const collections = new Collections(jf, libraryStore, (keys) => library.tracksByKey(keys));
+  const sourceLibraries = new SourceLibraries(jf, sources, libraryStore);
   const artworks = new Artworks();
   const player = new Player(jf, core, sources, files, theme, artworks, settings.value);
   // Every play that ends counts or is a skip (the core decides); Recently Played and Most Played
@@ -108,6 +112,7 @@ export async function createApp(): Promise<App> {
     desktopLyrics.follow(value.desktop_lyrics);
   });
   await Promise.all([sources.init(), library.init().then(() => collections.init())]);
+  await sourceLibraries.init();
   player.restore(() => library.restoreQueue());
   const app: App = {
     jf,
@@ -120,6 +125,7 @@ export async function createApp(): Promise<App> {
     files,
     library,
     collections,
+    sourceLibraries,
     artworks,
     player,
     search,

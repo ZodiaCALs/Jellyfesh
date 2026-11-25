@@ -1,10 +1,13 @@
 <script lang="ts">
   // Playlists (docs/ui.md): New Playlist… (it asks for the name first), then the Jellyfesh
-  // playlists by name, each with its first song's cover. Kept in this browser. Empty: "No
+  // playlists by name, each with its first song's cover; kept in this browser. Then one section
+  // per signed-in source that keeps playlists (API 1.3), refreshed when the page opens. Empty: "No
   // Playlists Yet", "Make a playlist to keep songs together.", New Playlist….
   import EmptyState from '../components/EmptyState.svelte';
   import Icon from '../components/Icon.svelte';
   import ItemCard from '../components/ItemCard.svelte';
+  import SourceLibrarySection from '../components/SourceLibrarySection.svelte';
+  import { useSourceLibrary } from '../lib/state/sourceLibrary.svelte';
   import { useApp } from '../lib/app';
   import type { Item, PlaylistSummary } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
@@ -30,11 +33,14 @@
   function card(playlist: PlaylistSummary): Item {
     return playlistItem(playlist);
   }
+
+  useSourceLibrary(app, 'playlists');
+  const sources = $derived(app.sourceLibraries.playlists);
 </script>
 
 <section class="page" aria-labelledby="playlists-title">
   <h1 id="playlists-title" class="page-title">{t('Playlists')}</h1>
-  {#if playlists.length === 0}
+  {#if playlists.length === 0 && sources.length === 0}
     <EmptyState title={t('No Playlists Yet')} text={t('Make a playlist to keep songs together.')}>
       <button class="pill primary" onclick={create}><Icon name="plus" size={18} />{t('New Playlist…')}</button>
     </EmptyState>
@@ -56,6 +62,9 @@
       {/each}
     </div>
   {/if}
+  {#each sources as source (source.plugin)}
+    <SourceLibrarySection {source} />
+  {/each}
 </section>
 
 <style>

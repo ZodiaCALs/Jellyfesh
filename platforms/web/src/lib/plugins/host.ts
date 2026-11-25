@@ -26,6 +26,7 @@ import type {
   AuthKind,
   Capability,
   CommentPage,
+  DownloadInfo,
   ImageRef,
   Item,
   ItemDetails,
@@ -37,6 +38,7 @@ import type {
   MakerPlan,
   MakeSong,
   PackageInfo,
+  PlaylistPage,
   PluginError,
   Quality,
   Shelf,
@@ -46,6 +48,7 @@ import {
   capabilityFromJco,
   commentsFromJco,
   detailsFromJco,
+  downloadFromJco,
   imageFromJco,
   itemToJco,
   kebab,
@@ -55,6 +58,7 @@ import {
   pageFromJco,
   pageRequestToJco,
   planFromJco,
+  playlistPageFromJco,
   pluginErrorFromJco,
   pluginErrorText,
   qualityToJco,
@@ -640,6 +644,28 @@ export class Plugin {
     return JSON.parse(this.checker().check_page(JSON.stringify(pageFromJco(page)), limit));
   }
 
+  /** A page of the person's liked items of `kind` on the service (API 1.3 `library`), checked. */
+  async likes(kind: ItemKind, cursor: string | null, limit: number): Promise<ItemPage> {
+    const page = await this.call('library.likes', [kebab(kind), pageRequestToJco(cursor, limit)]);
+    return JSON.parse(this.checker().check_likes(JSON.stringify(pageFromJco(page)), kind, limit));
+  }
+
+  /** A page of the person's own and followed playlists (API 1.3 `library`), checked. */
+  async playlists(cursor: string | null, limit: number): Promise<PlaylistPage> {
+    const page = await this.call('library.playlists', [pageRequestToJco(cursor, limit)]);
+    return JSON.parse(this.checker().check_playlists(JSON.stringify(playlistPageFromJco(page)), limit));
+  }
+
+  /** Where to fetch a song's original file (API 1.3 `download`), checked: only from the allowlist. */
+  async download(item: Item): Promise<DownloadInfo> {
+    const info = await this.call('download.download', [itemToJco(item), 'original']);
+    try {
+      return JSON.parse(this.checker().check_download(JSON.stringify(downloadFromJco(info))));
+    } catch (error) {
+      throw new CallError('invalid-response', (error as Error).message);
+    }
+  }
+
   async browse(node: Item | null, cursor: string | null, limit = 100): Promise<ItemPage> {
     const page = await this.call('catalog.browse', [node ? itemToJco(node) : undefined, pageRequestToJco(cursor, limit)]);
     return JSON.parse(this.checker().check_page(JSON.stringify(pageFromJco(page)), limit));
@@ -769,6 +795,11 @@ function capabilityOf(method: string): string | null {
       return 'Details';
     case 'comments.comments':
       return 'Comments';
+    case 'library.likes':
+    case 'library.playlists':
+      return 'Library';
+    case 'download.download':
+      return 'Download';
     default:
       return null;
   }

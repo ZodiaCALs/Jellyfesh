@@ -15,7 +15,9 @@ export type SettingsSection = 'appearance' | 'playback' | 'library' | 'sources' 
 export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'playback', 'library', 'sources', 'extensions', 'about'];
 export type Route =
   | { view: Tab }
-  | { view: 'browse'; plugin: string; item: Item }
+  /** A source's item; `songsListed` false for a playlist whose songs its service lists only in its
+   *  own app (ADR-0024). */
+  | { view: 'browse'; plugin: string; item: Item; songsListed?: boolean }
   /** A source's Discover page. */
   | { view: 'source'; plugin: string }
   /** A source's own folders (Browse on its Discover page). */

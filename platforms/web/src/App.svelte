@@ -293,7 +293,7 @@
       {@const route = nav.route}
       <div class="route" class:fade={nav.motion === 'back'}>
         {#if route.view === 'browse'}
-          <Browse plugin={route.plugin} item={route.item} />
+          <Browse plugin={route.plugin} item={route.item} songsListed={route.songsListed ?? true} />
         {:else if route.view === 'source'}
           <SourcePage plugin={route.plugin} />
         {:else if route.view === 'root'}

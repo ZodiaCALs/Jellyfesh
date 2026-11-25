@@ -472,5 +472,8 @@
   "Results from {service}": "{service} の結果",
   "Show More": "さらに表示",
   "Content from {service}": "{service} 提供のコンテンツ",
-  "{service} did not answer in time.": "{service} から時間内に応答がありませんでした。"
+  "{service} did not answer in time.": "{service} から時間内に応答がありませんでした。",
+  "{service} lists this playlist’s songs only in {service}.": "{service} はこのプレイリストの曲を {service} でのみ表示します。",
+  "Updated just now": "たった今更新",
+  "Updated {age}": "{age}に更新"
 }

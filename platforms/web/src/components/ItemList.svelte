@@ -20,6 +20,7 @@
     onmore,
     alsoIn,
     onplay,
+    listed,
   }: {
     plugin: string;
     items: Item[];
@@ -32,6 +33,8 @@
     alsoIn?: (item: Item) => string[];
     /** Plays from a track instead of the tracks listed (a list longer than what is loaded). */
     onplay?: (item: Item) => void;
+    /** Whether the source lists a playlist's songs here (false: only in its own app; ADR-0024). */
+    listed?: (item: Item) => boolean;
   } = $props();
 
   const app = useApp();
@@ -60,7 +63,8 @@
       const { entries, start } = tracksFrom(plugin, tracks, item);
       app.player.playEntries(entries, start);
     } else {
-      app.nav.open({ view: 'browse', plugin, item }, origin);
+      const songsListed = listed?.(item) ?? true;
+      app.nav.open(songsListed ? { view: 'browse', plugin, item } : { view: 'browse', plugin, item, songsListed }, origin);
     }
   }
 </script>

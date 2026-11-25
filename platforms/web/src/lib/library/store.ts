@@ -9,7 +9,8 @@
 // * artwork: each embedded cover once, by the SHA-256 of its bytes;
 // * collections: the hearts, Jellyfesh playlists and plays (since v0.0.8), one record the core
 //   writes (`jf_web::collections`, docs/ui.md: "Hearts, playlists and history are kept in the
-//   browser").
+//   browser"); beside it, the sources' likes and playlists as last read (`jf_web::source_library`),
+//   so Favourites and Playlists show them at once, offline too.
 //
 // Without IndexedDB everything lives in memory for the visit.
 
@@ -56,11 +57,15 @@ export interface LibraryStore {
   /** The hearts, playlists and plays as the core last wrote them, or null. */
   collections(): Promise<string | null>;
   saveCollections(state: string): Promise<void>;
+  /** The sources' likes and playlists as last read, or null. */
+  sourceLibraries(): Promise<string | null>;
+  saveSourceLibraries(state: string): Promise<void>;
 }
 
 const DB = 'jellyfesh-library';
 const VERSION = 2;
 const COLLECTIONS_KEY = 'state';
+const SOURCE_LIBRARIES_KEY = 'source-libraries';
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -168,6 +173,17 @@ class IndexedLibrary implements LibraryStore {
     tx.objectStore('collections').put(state, COLLECTIONS_KEY);
     await done(tx);
   }
+
+  async sourceLibraries(): Promise<string | null> {
+    const tx = this.db.transaction('collections', 'readonly');
+    return ((await request(tx.objectStore('collections').get(SOURCE_LIBRARIES_KEY))) as string | undefined) ?? null;
+  }
+
+  async saveSourceLibraries(state: string): Promise<void> {
+    const tx = this.db.transaction('collections', 'readwrite');
+    tx.objectStore('collections').put(state, SOURCE_LIBRARIES_KEY);
+    await done(tx);
+  }
 }
 
 class MemoryLibrary implements LibraryStore {
@@ -232,6 +248,16 @@ class MemoryLibrary implements LibraryStore {
 
   async saveCollections(state: string): Promise<void> {
     this.kept = state;
+  }
+
+  private keptSources: string | null = null;
+
+  async sourceLibraries(): Promise<string | null> {
+    return this.keptSources;
+  }
+
+  async saveSourceLibraries(state: string): Promise<void> {
+    this.keptSources = state;
   }
 }
 

@@ -7,6 +7,7 @@ import type {
   AuthKind,
   Capability,
   CommentPage,
+  DownloadInfo,
   FactKey,
   FieldValue,
   Flow,
@@ -21,6 +22,7 @@ import type {
   Made,
   MakerPlan,
   MakeSong,
+  PlaylistPage,
   PluginError,
   Quality,
   Shelf,
@@ -108,6 +110,27 @@ export function itemToJco(i: Item): Jco {
 
 export function pageFromJco(p: Jco): ItemPage {
   return { items: p.items.map(itemFromJco), next: opt(p.next), total: opt(p.total) };
+}
+
+/** `library.playlist-page` (API 1.3). */
+export function playlistPageFromJco(p: Jco): PlaylistPage {
+  return {
+    entries: p.entries.map((e: Jco) => ({ item: itemFromJco(e.item), owned: e.owned, songs_listed: e.songsListed })),
+    next: opt(p.next),
+    total: opt(p.total),
+  };
+}
+
+/** `download.download-info` (API 1.3). */
+export function downloadFromJco(d: Jco): DownloadInfo {
+  return {
+    url: d.url,
+    headers: d.headers.map((h: Jco) => ({ name: h.name, value: h.value })),
+    container: d.container,
+    size: num(d.size),
+    original: d.original,
+    file_name: opt(d.fileName),
+  };
 }
 
 export function pageRequestToJco(cursor: string | null, limit: number): Jco {

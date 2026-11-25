@@ -472,5 +472,8 @@
   "Results from {service}": "来自 {service} 的结果",
   "Show More": "显示更多",
   "Content from {service}": "内容来自 {service}",
-  "{service} did not answer in time.": "{service} 未能及时响应。"
+  "{service} did not answer in time.": "{service} 未能及时响应。",
+  "{service} lists this playlist’s songs only in {service}.": "{service} 只在 {service} 中列出这个歌单的歌曲。",
+  "Updated just now": "刚刚更新",
+  "Updated {age}": "更新于{age}"
 }

@@ -18,7 +18,9 @@
   import { LIBRARY } from '../lib/state/library.svelte';
   import { explain } from '../lib/state/sources.svelte';
 
-  let { plugin, item }: { plugin: string; item: Item } = $props();
+  // A source's playlist whose songs its service lists only in its own app (ADR-0024: a Spotify
+  // playlist the person follows) says so, with Open in {Service}, and asks for no songs.
+  let { plugin, item, songsListed = true }: { plugin: string; item: Item; songsListed?: boolean } = $props();
   const app = useApp();
 
   let items = $state.raw<Item[]>([]);
@@ -38,6 +40,10 @@
     const source = app.sources.get(plugin);
     if (!source) {
       error = t('The source of this page is not available.');
+      loading = false;
+      return;
+    }
+    if (!songsListed) {
       loading = false;
       return;
     }
@@ -71,7 +77,8 @@
   const complete = $derived(!loading && next === null);
   // Open in {Service} (API 1.1): in More, and the main action of a page whose songs cannot play here.
   const link = $derived((void app.sources.revision, linkOf(app, plugin, item)));
-  const opensLink = $derived(link !== null && complete && tracks.length > 0 && !playable);
+  const opensLink = $derived(link !== null && complete && (!songsListed || (tracks.length > 0 && !playable)));
+  const service = $derived((void app.sources.revision, app.sources.get(plugin)?.name ?? plugin));
   // A source's playlist can be kept as a Jellyfesh playlist (ADR-0024: Save as Playlist…).
   const menu = () =>
     itemMenu(app, plugin, item, toast, {
@@ -143,6 +150,8 @@
         <p>{error}</p>
       </div>
     </div>
+  {:else if !songsListed}
+    <p class="empty">{t('{service} lists this playlist’s songs only in {service}.', { service })}</p>
   {:else if !loading && items.length === 0}
     <p class="empty">{t('Nothing here yet.')}</p>
   {/if}

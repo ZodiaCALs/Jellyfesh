@@ -85,3 +85,15 @@ export function formatTime(ms: number | null | undefined): string {
   const ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
+
+/** "Updated 5 minutes ago" for something loaded at `at` (ms since the epoch), seen at `now`. */
+export function updatedText(at: number, now: number): string {
+  const seconds = Math.max(0, (now - at) / 1000);
+  if (seconds < 60) return t('Updated just now');
+  const format = new Intl.RelativeTimeFormat(i18n.lang, { numeric: 'always' });
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const age = days > 0 ? format.format(-days, 'day') : hours > 0 ? format.format(-hours, 'hour') : format.format(-minutes, 'minute');
+  return t('Updated {age}', { age });
+}
