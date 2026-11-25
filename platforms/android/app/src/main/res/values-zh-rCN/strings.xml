@@ -629,4 +629,8 @@
     <string name="download_remove_confirm">移除下载</string>
     <string name="download_error_not_allowed">你的 %1$s 服务器不允许此账户下载。</string>
     <string name="download_error_not_offered">%1$s 不提供下载。</string>
+
+    <!-- v0.0.8: Download in the menus, and the Downloaded mark (ADR-0025) -->
+    <string name="action_download">下载</string>
+    <string name="a11y_downloaded">已下载</string>
 </resources>

@@ -42,6 +42,7 @@ import org.jellyfesh.logic.core.SongRef
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.library.ArtistMatch
 import org.jellyfesh.logic.library.CollectionMenu
+import org.jellyfesh.logic.library.DownloadMenus
 import org.jellyfesh.logic.library.CollectionTracks
 import org.jellyfesh.logic.library.CollectionMenuItem
 import org.jellyfesh.logic.library.TrackMenu
@@ -68,6 +69,8 @@ data class TrackTarget(
     val sourceAlbumId: String? = null,
     val sourceArtistId: String? = null,
     val durationMs: Long? = null,
+    /** A source's song whose file is on this device (the Downloaded mark): no Download in its menu. */
+    val downloaded: Boolean = false,
 )
 
 /**
@@ -165,10 +168,12 @@ class TrackActions internal constructor(
             hasLink = linkAction != null,
             makesLyrics = LyricsMakingModel.offersFor(graph.store.state.value.aiLyrics, target.track),
             getInfo = true,
+            download = DownloadMenus.canDownload(sources, target.track, target.downloaded),
         )
         val actions = items.mapNotNull { item ->
             when (item) {
                 TrackMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(listOf(target.track)) }
+                TrackMenuItem.Download -> SheetAction(s(R.string.action_download), R.drawable.ic_download) { graph.send(DownloadMenus.download(target.track)) }
                 TrackMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(listOf(target.track)) }
                 TrackMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(listOf(target.track)) }
                 TrackMenuItem.AddToFavourites -> SheetAction(s(R.string.action_favourite), R.drawable.ic_heart) { graph.send(Command.SetFavorite(target.track, true)) }
@@ -216,9 +221,10 @@ class TrackActions internal constructor(
 
     /**
      * The More menu of an album, an artist or a playlist ([CollectionMenu]): Play Next, Play Last
-     * and Add to Playlist… (none of them for a remote source's), Open in {Service} when it has a
-     * [link], then [extra] (a playlist's Rename…, Export Playlist… and Delete Playlist…). Lists
-     * without Play and Shuffle buttons ([withPlay]) offer those first.
+     * and Add to Playlist… (none of them for a remote source's), Download for a source's album or
+     * playlist when the source offers downloads, Open in {Service} when it has a [link], then
+     * [extra] (a playlist's Rename…, Export Playlist… and Delete Playlist…). Lists without Play
+     * and Shuffle buttons ([withPlay]) offer those first.
      */
     fun showForCollection(
         title: String,
@@ -230,7 +236,13 @@ class TrackActions internal constructor(
     ) {
         val sources = graph.store.state.value.sources
         val linkAction = openLinkAction(link, (collection as? CollectionRef.Source)?.plugin)
-        val items = CollectionMenu.items(collection, withPlay, remote = RemoteModel.isRemote(sources, collection), hasLink = linkAction != null)
+        val items = CollectionMenu.items(
+            collection,
+            withPlay,
+            remote = RemoteModel.isRemote(sources, collection),
+            hasLink = linkAction != null,
+            download = DownloadMenus.canDownload(sources, collection),
+        )
         val actions = items.mapNotNull { item ->
             when (item) {
                 CollectionMenuItem.Play -> SheetAction(s(R.string.action_play), R.drawable.ic_play) { graph.send(Command.PlayCollection(collection, 0, false)) }
@@ -238,6 +250,9 @@ class TrackActions internal constructor(
                 CollectionMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(collection) }
                 CollectionMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(collection) }
                 CollectionMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(collection) }
+                CollectionMenuItem.Download -> (collection as? CollectionRef.Source)?.let { source ->
+                    SheetAction(s(R.string.action_download), R.drawable.ic_download) { graph.send(DownloadMenus.download(source)) }
+                }
                 CollectionMenuItem.OpenLink -> linkAction
             }
         } + extra

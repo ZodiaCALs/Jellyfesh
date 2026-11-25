@@ -608,8 +608,9 @@ private fun FavouritesList(state: CoreState, header: LibraryHeader) {
                     durationMs = row.durationMs,
                     playing = row.track == playing,
                     missing = row.missing,
+                    downloaded = row.downloaded,
                     onClick = { graph.send(Command.PlayCollection(CollectionRef.Favorites, i, false)) },
-                    onMore = { actions.showFor(TrackTarget(row.track, row.title, subtitle, favorite = true, artist = row.artist)) },
+                    onMore = { actions.showFor(TrackTarget(row.track, row.title, subtitle, favorite = true, artist = row.artist, downloaded = row.downloaded)) },
                 )
             }
         }

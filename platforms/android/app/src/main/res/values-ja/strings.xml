@@ -629,4 +629,8 @@
     <string name="download_remove_confirm">ダウンロードを削除</string>
     <string name="download_error_not_allowed">%1$s サーバーでは、このアカウントのダウンロードが許可されていません。</string>
     <string name="download_error_not_offered">%1$s はダウンロードに対応していません。</string>
+
+    <!-- v0.0.8: Download in the menus, and the Downloaded mark (ADR-0025) -->
+    <string name="action_download">ダウンロード</string>
+    <string name="a11y_downloaded">ダウンロード済み</string>
 </resources>

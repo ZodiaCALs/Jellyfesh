@@ -390,6 +390,7 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                         playing = row.track == playing,
                         missing = row.missing,
                         favorite = row.favorite,
+                        downloaded = row.downloaded,
                         modifier = Modifier
                             .zIndex(if (dragging) 1f else 0f)
                             .graphicsLayer {
@@ -411,7 +412,7 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                         trailing = {
                             JfIconButton(R.drawable.ic_more, moreLabel, {
                                 actions.showFor(
-                                    TrackTarget(row.track, row.title, subtitle, favorite = row.favorite, artist = row.artist),
+                                    TrackTarget(row.track, row.title, subtitle, favorite = row.favorite, artist = row.artist, downloaded = row.downloaded),
                                     extra = listOf(
                                         SheetAction(removeLabel, R.drawable.ic_close, destructive = true) {
                                             graph.send(Command.RemoveFromPlaylist(id, listOf(entry.entryId)))

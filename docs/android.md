@@ -84,6 +84,10 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   percentage (and a progress line), or the failure and Try Again, and Cancel; then the downloaded
   songs by album, with Remove Download… (asks first) on each song and, in the album's More, on the
   whole album. Empty: "No Downloads Yet" (`library/DownloadsModel.kt`).
+* **Download** is in the menus of a source's songs (until they are downloaded), albums and
+  playlists when the source offers downloads (`DownloadMenus`), after the favourites in the song
+  menu and before Open in {Service} in More. A downloaded song shows the Downloaded mark, which
+  TalkBack reads, in search, on source pages, in playlists, favourites and Home.
 
 ## v0.0.8: Android 17's Local Network permission
 

@@ -433,6 +433,7 @@ fun sourceItemMenu(item: SourceItem, actions: TrackActions): (() -> Unit)? {
                         sourceAlbumId = item.albumId,
                         sourceArtistId = item.artistId,
                         durationMs = item.durationMs,
+                        downloaded = item.downloaded,
                     ),
                 )
             }
@@ -483,6 +484,7 @@ fun SourceItemRow(item: SourceItem, playing: TrackRef?, action: ItemAction, onMo
             number = number,
             durationMs = item.durationMs,
             playing = item.track != null && item.track == playing,
+            downloaded = item.downloaded,
             dimmed = !item.playable,
             enabled = action != ItemAction.None,
             onClick = onClick,

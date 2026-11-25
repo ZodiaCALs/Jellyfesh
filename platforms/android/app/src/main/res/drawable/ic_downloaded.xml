@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Downloaded mark (ADR-0025): a song whose file is on this device, which plays offline too. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:pathData="M12 3.5a8.5 8.5 0 1 0 0 17a8.5 8.5 0 1 0 0 -17z" android:fillColor="#00000000" android:strokeColor="#FF000000" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round" />
+    <path android:pathData="M12 7.5v8M8.75 12.25 12 15.5l3.25-3.25" android:fillColor="#00000000" android:strokeColor="#FF000000" android:strokeWidth="1.75" android:strokeLineCap="round" android:strokeLineJoin="round" />
+</vector>

@@ -188,8 +188,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.trackSection(
                     playing = row.track == playing,
                     missing = row.missing,
                     favorite = row.favorite,
+                    downloaded = row.downloaded,
                     onClick = { send(Command.PlayCollection(CollectionRef.Tracks(refs), index, false)) },
-                    onMore = { more(TrackTarget(row.track, row.title, Labels.artistAlbum(row.artist, row.album), favorite = row.favorite, artist = row.artist)) },
+                    onMore = { more(TrackTarget(row.track, row.title, Labels.artistAlbum(row.artist, row.album), favorite = row.favorite, artist = row.artist, downloaded = row.downloaded)) },
                 )
             }
         }

@@ -125,6 +125,8 @@ fun TrackRow(
     playing: Boolean = false,
     missing: Boolean = false,
     favorite: Boolean = false,
+    /** A source's song whose file is on this device: the Downloaded mark (ADR-0025). */
+    downloaded: Boolean = false,
     onMore: (() -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
     /** False for a row that does nothing when chosen (a missing file, a song that cannot play here and has no link). */
@@ -171,6 +173,7 @@ fun TrackRow(
             if (second != null) JfText(second, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
         }
         if (favorite) JfIcon(R.drawable.ic_heart_filled, colors.accentText, size = 16.dp, description = stringResource(R.string.a11y_favourite))
+        if (downloaded) JfIcon(R.drawable.ic_downloaded, colors.ink50, size = 16.dp, description = stringResource(R.string.a11y_downloaded))
         if (durationMs != null && durationMs > 0) {
             JfText(TimeFormat.clock(durationMs), style = JfType.time, color = colors.ink50, maxLines = 1)
         }

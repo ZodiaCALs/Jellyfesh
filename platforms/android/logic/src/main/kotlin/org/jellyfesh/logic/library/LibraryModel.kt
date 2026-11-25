@@ -3,7 +3,10 @@ package org.jellyfesh.logic.library
 import org.jellyfesh.logic.core.AlbumSort
 import org.jellyfesh.logic.core.Artist
 import org.jellyfesh.logic.core.CollectionRef
+import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreClient
+import org.jellyfesh.logic.core.DownloadTarget
+import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.LibraryStats
 import org.jellyfesh.logic.core.SourcesSnapshot
 import org.jellyfesh.logic.core.TrackQuery
@@ -109,16 +112,17 @@ object HomeModel {
 }
 
 /** The items of a song's menu (long press or More), in the order every app lists them. */
-enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, GoToAlbum, GoToArtist, CreateSyncedLyrics, GetInfo, OpenLink }
+enum class TrackMenuItem { PlayNext, PlayLast, AddToPlaylist, AddToFavourites, RemoveFromFavourites, Download, GoToAlbum, GoToArtist, CreateSyncedLyrics, GetInfo, OpenLink }
 
 object TrackMenu {
     /**
      * The song menu (docs/ui.md, "Song menu" and "Links and remote playback"): Play Next, Play
      * Last and Add to Playlist… (songs a playlist can hold), none of them for a remote source's
      * songs, which never join the queue; Add to or Remove from Favourites (when the favourite
-     * state is known); Go to Album and Go to Artist (when the library has them); Create Synced
-     * Lyrics while AI Lyrics makes them for it ([makesLyrics], v0.0.7); then Open in {Service}
-     * when the song has a link.
+     * state is known); Download for a source's song not downloaded yet ([download], ADR-0025);
+     * Go to Album and Go to Artist (when the library has them); Create Synced Lyrics while AI
+     * Lyrics makes them for it ([makesLyrics], v0.0.7); then Open in {Service} when the song has a
+     * link.
      */
     fun items(
         track: TrackRef,
@@ -129,6 +133,7 @@ object TrackMenu {
         hasLink: Boolean = false,
         makesLyrics: Boolean = false,
         getInfo: Boolean = false,
+        download: Boolean = false,
     ): List<TrackMenuItem> = buildList {
         if (!remote) {
             add(TrackMenuItem.PlayNext)
@@ -140,6 +145,7 @@ object TrackMenu {
             false -> add(TrackMenuItem.AddToFavourites)
             null -> Unit
         }
+        if (download) add(TrackMenuItem.Download)
         if (hasAlbum) add(TrackMenuItem.GoToAlbum)
         if (hasArtist) add(TrackMenuItem.GoToArtist)
         if (makesLyrics) add(TrackMenuItem.CreateSyncedLyrics)
@@ -149,16 +155,23 @@ object TrackMenu {
 }
 
 /** The items of an album's, artist's or playlist's More menu, before a playlist's own (Rename… and on). */
-enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, OpenLink }
+enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, Download, OpenLink }
 
 object CollectionMenu {
     /**
      * The More menu of an album, artist or playlist (docs/ui.md, "Album, artist and playlist
      * pages"): Play and Shuffle where the list has no buttons for them ([withPlay]); Play Next and
      * Play Last, except for a remote source's (its songs never join the queue); Add to Playlist…
-     * when the songs can be gathered here; then Open in {Service} when it has a link.
+     * when the songs can be gathered here; Download for a source's album or playlist when the
+     * source offers downloads ([download], ADR-0025); then Open in {Service} when it has a link.
      */
-    fun items(collection: CollectionRef, withPlay: Boolean, remote: Boolean = false, hasLink: Boolean = false): List<CollectionMenuItem> = buildList {
+    fun items(
+        collection: CollectionRef,
+        withPlay: Boolean,
+        remote: Boolean = false,
+        hasLink: Boolean = false,
+        download: Boolean = false,
+    ): List<CollectionMenuItem> = buildList {
         if (withPlay) {
             add(CollectionMenuItem.Play)
             add(CollectionMenuItem.Shuffle)
@@ -168,6 +181,31 @@ object CollectionMenu {
             add(CollectionMenuItem.PlayLast)
             if (CollectionTracks.canAdd(collection)) add(CollectionMenuItem.AddToPlaylist)
         }
+        if (download) add(CollectionMenuItem.Download)
         if (hasLink) add(CollectionMenuItem.OpenLink)
     }
+}
+
+/**
+ * Download in the menus (docs/ui.md, "Album, artist and playlist pages"; ADR-0025): a source's
+ * songs, albums and playlists, when the source offers downloads (`PluginSummary.download`, which
+ * the core enforces too), and for a song only until it is downloaded.
+ */
+object DownloadMenus {
+    fun offersDownloads(sources: SourcesSnapshot, plugin: String?): Boolean =
+        plugin != null && sources.plugins.any { it.id == plugin && it.download && it.enabled }
+
+    /** A song's Download: a source's song that is not downloaded yet. */
+    fun canDownload(sources: SourcesSnapshot, track: TrackRef, downloaded: Boolean): Boolean =
+        !downloaded && track is TrackRef.Source && offersDownloads(sources, track.track.plugin)
+
+    /** An album's or playlist's Download: one a source listed. */
+    fun canDownload(sources: SourcesSnapshot, collection: CollectionRef): Boolean =
+        collection is CollectionRef.Source && collection.kind in DOWNLOADABLE && offersDownloads(sources, collection.plugin)
+
+    fun download(track: TrackRef): Command = Command.Download(DownloadTarget.Track(track))
+
+    fun download(collection: CollectionRef.Source): Command = Command.Download(DownloadTarget.Collection(collection.plugin, collection.id, collection.kind))
+
+    private val DOWNLOADABLE = setOf(ItemKind.Album, ItemKind.Playlist)
 }

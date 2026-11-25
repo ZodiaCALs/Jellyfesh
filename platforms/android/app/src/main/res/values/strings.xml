@@ -672,4 +672,8 @@
     <string name="download_remove_confirm">Remove Download</string>
     <string name="download_error_not_allowed">Your %1$s server doesn\'t allow downloads for this account.</string>
     <string name="download_error_not_offered">%1$s doesn\'t offer downloads.</string>
+
+    <!-- v0.0.8: Download in the menus, and the Downloaded mark (ADR-0025) -->
+    <string name="action_download">Download</string>
+    <string name="a11y_downloaded">Downloaded</string>
 </resources>
