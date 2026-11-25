@@ -2853,7 +2853,7 @@ dependencies = [
 
 [[package]]
 name = "jf-spotify"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "base64",
  "jf-plugin-host",

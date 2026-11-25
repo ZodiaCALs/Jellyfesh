@@ -3,7 +3,9 @@
 //! (Development Mode). Search, browse (playlists, saved albums, liked songs,
 //! albums, artists) and the player; Spotify plays the music itself, never
 //! Jellyfesh's engine (ADR-0011, ADR-0018). API 1.2: a Discover page of the
-//! person's own listening and lists, and details (see `discover`).
+//! person's own listening and lists, and details (see `discover`). API 1.3:
+//! the library's Liked Songs, Saved Albums, followed artists and playlists
+//! (only the person's own and collaborative playlists list their songs).
 //!
 //! Tested only against a mock server written from the Web API reference,
 //! not yet against the live service.
@@ -70,9 +72,10 @@ struct SavedTrack {
     track: Option<Track>,
 }
 
-/// A playlist entry: `item` since 2026, `track` before (deprecated).
+/// An entry of a playlist's items: `item` since 2026, `track` before
+/// (deprecated).
 #[derive(Debug, Deserialize)]
-struct PlaylistEntry {
+struct PlaylistItem {
     #[serde(default)]
     item: Option<Track>,
     #[serde(default)]
@@ -124,6 +127,148 @@ fn gather<T>(
 
 fn folder(id: &str, title: &str) -> Item {
     Item::new(ItemKind::Folder, id, title)
+}
+
+/// Shown for a playlist whose songs Spotify does not list here.
+pub const SONGS_NOT_LISTED: &str = "Spotify lists this playlist's songs only in Spotify.";
+
+/// A page of a playlist's songs (`/playlists/{id}/items`, which replaced the
+/// deprecated `/tracks`). Spotify lists them only for playlists the person
+/// owns or collaborates on and answers 403 for the others, which can still
+/// be played as a whole (remote `play` with the playlist as the context)
+/// and opened in Spotify.
+fn playlist_songs(id: &str, page: &PageRequest) -> Result<ItemPage> {
+    let (path, offset, limit) = library(
+        &format!("/playlists/{id}/items?additional_types=track"),
+        page,
+        PAGE_MAX,
+    )?;
+    let response = api::send(http::Method::Get, &path, None)?;
+    if response.status == 403 && !api::refuses_account(&response) {
+        return Err(PluginError::service(SONGS_NOT_LISTED));
+    }
+    if !response.is_success() {
+        return Err(api::error(&response, false));
+    }
+    Ok(page_of(
+        response.json::<Paging<PlaylistItem>>()?,
+        offset,
+        limit,
+        |e| e.item.as_ref().or(e.track.as_ref()).and_then(|t| t.item(None)),
+    ))
+}
+
+/// The person's saved tracks (Liked Songs), newest first.
+fn saved_tracks(page: &PageRequest) -> Result<ItemPage> {
+    let (path, offset, limit) = library("/me/tracks", page, PAGE_MAX)?;
+    Ok(page_of(
+        get_json::<Paging<SavedTrack>>(&path)?,
+        offset,
+        limit,
+        |s| s.track.as_ref().and_then(|t| t.item(None)),
+    ))
+}
+
+/// The person's saved albums, newest first.
+fn saved_albums(page: &PageRequest) -> Result<ItemPage> {
+    let (path, offset, limit) = library("/me/albums", page, PAGE_MAX)?;
+    Ok(page_of(
+        get_json::<Paging<SavedAlbum>>(&path)?,
+        offset,
+        limit,
+        |s| s.album.as_ref().and_then(Album::item),
+    ))
+}
+
+/// A page of followed artists: cursor-paged by artist id.
+#[derive(Debug, Default, Deserialize)]
+struct Following {
+    #[serde(default)]
+    artists: FollowedArtists,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FollowedArtists {
+    #[serde(default)]
+    items: Vec<Option<Artist>>,
+    #[serde(default)]
+    next: Option<String>,
+    #[serde(default)]
+    cursors: Option<FollowCursors>,
+    #[serde(default)]
+    total: Option<u32>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct FollowCursors {
+    #[serde(default)]
+    after: Option<String>,
+}
+
+/// Most followed artists per request.
+const FOLLOWING_MAX: u32 = 50;
+
+/// The artists the person follows (`/me/following`, scope
+/// `user-follow-read`). A sign-in from before the plugin asked for that
+/// scope answers `unsupported`, so the app leaves the list out.
+fn followed_artists(page: &PageRequest) -> Result<ItemPage> {
+    if api::session()?.granted(api::FOLLOW_SCOPE) == Some(false) {
+        return Err(PluginError::Unsupported);
+    }
+    let limit = page.limit.clamp(1, FOLLOWING_MAX);
+    let mut path = format!("/me/following?type=artist&limit={limit}");
+    if let Some(after) = page.cursor.as_deref().filter(|c| !c.is_empty()) {
+        if !valid_id(after) {
+            return Err(PluginError::invalid_input(format!(
+                "not a page cursor: {after:?}"
+            )));
+        }
+        path.push_str(&format!("&after={after}"));
+    }
+    let response = api::send(http::Method::Get, &path, None)?;
+    if response.status == 403 && !api::refuses_account(&response) {
+        return Err(PluginError::Unsupported);
+    }
+    if !response.is_success() {
+        return Err(api::error(&response, false));
+    }
+    let found = response.json::<Following>()?.artists;
+    let after = found.cursors.and_then(|c| c.after).filter(|a| valid_id(a));
+    Ok(ItemPage {
+        items: found.items.iter().flatten().filter_map(Artist::item).collect(),
+        next: found.next.and(after),
+        total: found.total,
+    })
+}
+
+/// The person's playlists for the library (`/me/playlists`): their own
+/// and collaborative ones count as theirs, and only those list their songs
+/// here (Spotify answers 403 for the items of the others, which still play
+/// as a whole and open in Spotify).
+fn library_playlists(page: &PageRequest) -> Result<PlaylistPage> {
+    let (path, offset, limit) = library("/me/playlists", page, PAGE_MAX)?;
+    let found = get_json::<Paging<Playlist>>(&path)?;
+    let me = api::user_id()?;
+    let entries = found
+        .items
+        .iter()
+        .flatten()
+        .filter_map(|playlist| {
+            let item = playlist.item()?;
+            let own = playlist.owner.as_ref().and_then(|o| o.id.as_deref()) == Some(me.as_str());
+            let theirs = own || playlist.collaborative == Some(true);
+            Some(PlaylistEntry {
+                item,
+                owned: theirs,
+                songs_listed: theirs,
+            })
+        })
+        .collect();
+    Ok(PlaylistPage {
+        entries,
+        next: found.next.is_some().then(|| (offset + limit).to_string()),
+        total: found.total,
+    })
 }
 
 impl Plugin for Spotify {
@@ -232,40 +377,12 @@ impl Plugin for Spotify {
                         Playlist::item,
                     ))
                 }
-                "albums" => {
-                    let (path, offset, limit) = library("/me/albums", &page, PAGE_MAX)?;
-                    Ok(page_of(
-                        get_json::<Paging<SavedAlbum>>(&path)?,
-                        offset,
-                        limit,
-                        |s| s.album.as_ref().and_then(Album::item),
-                    ))
-                }
-                "tracks" => {
-                    let (path, offset, limit) = library("/me/tracks", &page, PAGE_MAX)?;
-                    Ok(page_of(
-                        get_json::<Paging<SavedTrack>>(&path)?,
-                        offset,
-                        limit,
-                        |s| s.track.as_ref().and_then(|t| t.item(None)),
-                    ))
-                }
+                "albums" => saved_albums(&page),
+                "tracks" => saved_tracks(&page),
                 _ => Err(PluginError::NotFound),
             },
             _ if !valid_id(&node.id) => Err(PluginError::NotFound),
-            ItemKind::Playlist => {
-                let (path, offset, limit) = library(
-                    &format!("/playlists/{}/items?additional_types=track", node.id),
-                    &page,
-                    PAGE_MAX,
-                )?;
-                Ok(page_of(
-                    get_json::<Paging<PlaylistEntry>>(&path)?,
-                    offset,
-                    limit,
-                    |e| e.item.as_ref().or(e.track.as_ref()).and_then(|t| t.item(None)),
-                ))
-            }
+            ItemKind::Playlist => playlist_songs(&node.id, &page),
             ItemKind::Album => {
                 let (path, offset, limit) = library(&format!("/albums/{}/tracks", node.id), &page, PAGE_MAX)?;
                 Ok(page_of(get_json::<Paging<Track>>(&path)?, offset, limit, |t| {
@@ -295,6 +412,20 @@ impl Plugin for Spotify {
 
     fn details(item: Item) -> Result<ItemDetails> {
         discover::details(item)
+    }
+
+    /// Liked Songs, Saved Albums and followed artists (API 1.3).
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        match kind {
+            ItemKind::Track => saved_tracks(&page),
+            ItemKind::Album => saved_albums(&page),
+            ItemKind::Artist => followed_artists(&page),
+            _ => Err(PluginError::Unsupported),
+        }
+    }
+
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        library_playlists(&page)
     }
 
     fn remote_devices() -> Result<Vec<RemoteDevice>> {

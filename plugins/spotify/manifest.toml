@@ -1,11 +1,11 @@
 id = "org.jellyfesh.spotify"
 name = "Spotify"
-version = "0.0.7"
-api_version = "1.2"
+version = "0.0.8"
+api_version = "1.3"
 author = "Jellyfesh"
 description = "Control Spotify on your own devices with the Client ID of your own Spotify app (beta)"
 official = true
-capabilities = ["auth", "search", "browse", "remote", "discover", "details"]
+capabilities = ["auth", "search", "browse", "remote", "discover", "details", "library"]
 # Spotify allows only remote control of the person's own players: no stream,
 # and its items never join Jellyfesh's queue (ADR-0011, ADR-0018).
 playback_mode = "remote"

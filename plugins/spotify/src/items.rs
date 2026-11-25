@@ -102,6 +102,9 @@ pub struct Artist {
 pub struct Owner {
     #[serde(default)]
     pub display_name: Option<String>,
+    /// The owner's Spotify user id.
+    #[serde(default)]
+    pub id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -118,6 +121,9 @@ pub struct Playlist {
     pub name: String,
     #[serde(default)]
     pub owner: Option<Owner>,
+    /// Whether people other than the owner may change it.
+    #[serde(default)]
+    pub collaborative: Option<bool>,
     #[serde(default)]
     pub images: Option<Vec<Image>>,
     /// `items` since 2026; `tracks` before (deprecated).

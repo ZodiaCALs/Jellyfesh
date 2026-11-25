@@ -2,7 +2,7 @@
 name = "jf-spotify"
 description = "Jellyfesh source plugin for Spotify: remote control of your own Spotify devices through the Web API, with your own Client ID (beta)."
 # The plugin's own version: keep it equal to `version` in manifest.toml.
-version = "0.0.7"
+version = "0.0.8"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true

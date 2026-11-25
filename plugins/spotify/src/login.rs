@@ -179,6 +179,12 @@ pub fn submit(flow: Flow, fields: Vec<FieldValue>) -> Result<FlowStep> {
         )));
     }
     let me: Me = answer.json()?;
+    // Kept with the session, to tell the person's own playlists apart.
+    if !me.id.is_empty() {
+        let mut stored = api::session()?;
+        stored.user_id = Some(me.id.clone());
+        stored.store()?;
+    }
     Ok(FlowStep::done(
         me.display_name.filter(|n| !n.trim().is_empty()).unwrap_or(me.id),
     ))

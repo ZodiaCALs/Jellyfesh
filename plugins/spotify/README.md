@@ -22,7 +22,11 @@ Spotify stays in its own views in Jellyfesh until they are answered.
   Playing follows what Spotify plays.
 * **Search** tracks, artists, albums and playlists.
 * **Browse** your playlists, saved albums and liked songs, an album's tracks
-  and an artist's albums.
+  and an artist's albums. A playlist you follow but neither own nor
+  collaborate on plays as a whole: Spotify lists its songs only in Spotify.
+* **Library** (plugin API 1.3): Liked Songs, Saved Albums and the artists
+  you follow on Favourites, your playlists on Playlists, each in a section
+  of its own.
 * **Discover** (plugin API 1.2): Recently Played, Your Top Tracks, Your Top
   Artists, Your Playlists and Saved Albums. **Details**: an album's release
   date, kind and copyrights, a song's release date and ISRC, a playlist's
@@ -62,13 +66,14 @@ so: close it and try again.
 
 | What | Where |
 | --- | --- |
-| The sign-in tokens (and a Client ID you typed) | your system's keystore |
+| The sign-in tokens, the scopes Spotify granted, your Spotify user id (and a Client ID you typed) | your system's keystore |
 | How long Spotify asked Jellyfesh to wait after "too many requests" | the plugin's small private storage |
 | Spotify's tracks, albums and playlists | nowhere: they are not kept in the library |
 
-The tokens go only to Spotify (`accounts.spotify.com`, `api.spotify.com`).
-Spotify ends a sign-in after six months at the latest; Jellyfesh then asks
-you to sign in again. Signing out deletes the tokens (and a typed Client ID)
+The tokens and the scopes Spotify granted go only to Spotify
+(`accounts.spotify.com`, `api.spotify.com`) and stay in the keystore.
+Spotify ends a sign-in after six months at the latest; Jellyfesh then says
+"Sign in to Spotify again." Signing out deletes the tokens (and a typed Client ID)
 from this device; to revoke access completely, remove Jellyfesh's app from your
 Spotify account's apps page or delete the app in the dashboard.
 

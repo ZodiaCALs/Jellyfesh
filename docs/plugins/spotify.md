@@ -81,7 +81,15 @@ this account yet"), the app has no seat for you: use your own app.
   Spotify.
 * **Search** tracks, artists, albums and playlists, ten per type at a time.
 * **Browse** Your Playlists, Saved Albums and Liked Songs, an album's tracks
-  and an artist's albums.
+  and an artist's albums. Spotify lists a playlist's songs only when you own
+  it or collaborate on it (one of its 2026 changes); a playlist you only
+  follow says "Spotify lists this playlist's songs only in Spotify." It
+  still plays on your device as a whole, and **Open in Spotify** opens it.
+* **Favourites and Playlists** (Jellyfesh v0.0.8): your Liked Songs, Saved
+  Albums and the artists you follow, and your playlists, each in a Spotify
+  section of its own. Following artists needs the permission
+  `user-follow-read`, which Jellyfesh asks for from v0.0.8: if you signed in
+  before, sign out and in again to see the artists you follow.
 * **Discover** (Jellyfesh v0.0.7): Recently Played, Your Top Tracks and Your
   Top Artists of the last four weeks, Your Playlists and Saved Albums. These
   are the lists Spotify still lets apps like yours read: since its 2024 and
@@ -104,7 +112,7 @@ Signing out deletes the tokens (and a Client ID you typed at sign-in) on
 this device. To revoke
 Jellyfesh's access completely, remove the app from your Spotify account's
 apps, or delete it in the dashboard. Spotify ends a sign-in after six months
-at the latest; Jellyfesh then asks you to sign in again.
+at the latest; Jellyfesh then says "Sign in to Spotify again."
 
 ## When something goes wrong
 
@@ -115,7 +123,8 @@ at the latest; Jellyfesh then asks you to sign in again.
 | Spotify refused the sign-in / does not accept this Client ID | Check that the Redirect URI is exactly `http://127.0.0.1:29817/callback`, that your account is added as a user of the app, and the Client ID. |
 | Spotify Premium is needed to control playback. | Commands need Premium; browsing and searching do not. |
 | No Spotify device is active … | Open Spotify on one of your devices, or choose a device in Jellyfesh. |
-| Sign in again. | The sign-in expired or was revoked. |
+| Sign in to Spotify again. | Spotify ended the sign-in: it does after six months, or when access was revoked or the app removed. Sign in again. |
+| Spotify lists this playlist's songs only in Spotify. | A playlist you follow but neither own nor collaborate on: play it as a whole, or open it in Spotify. |
 | Too many requests (the source pauses) | Spotify's rate limit for your app was reached; Jellyfesh waits as long as Spotify asks. |
 
 Devices that Spotify marks as not accepting remote commands are not listed.

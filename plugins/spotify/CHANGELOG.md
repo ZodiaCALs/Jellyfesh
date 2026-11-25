@@ -1,5 +1,29 @@
 # Changelog: Spotify plugin
 
+## 0.0.8 — unreleased
+
+* With Jellyfesh v0.0.8: plugin API 1.3 (the package needs Jellyfesh
+  v0.0.8).
+* **Library** (ADR-0024): Liked Songs, Saved Albums and the artists the
+  person follows (`/me/following`, cursor paged; the new scope
+  `user-follow-read`, which sign-ins from before 0.0.8 lack, so their
+  followed artists are left out) for Favourites, and the playlists for
+  Playlists: the person's own and collaborative ones list their songs; the
+  ones they only follow have `songs-listed` false, play as a whole and
+  open in Spotify. The person's user id is kept with the session (asked of
+  `/me` once for older sign-ins).
+* A playlist's songs come from
+  `/playlists/{id}/items` (since 0.0.7); for a playlist the person neither
+  owns nor collaborates on, Spotify answers 403, which now says "Spotify
+  lists this playlist's songs only in Spotify." (it still plays as a whole,
+  by context, and opens in Spotify). An account Spotify refuses altogether
+  keeps Spotify's own message.
+* An expired (Spotify ends sign-ins after six months) or revoked refresh
+  token says "Sign in to Spotify again."; the next call asks to sign in.
+* The session keeps the scopes Spotify granted (the token answer's
+  `scope`), so lists that need a scope an older sign-in lacks can be left
+  out. Sign-ins from before 0.0.8 do not know theirs.
+
 ## 0.0.7 — 2026-11-20
 
 * With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh

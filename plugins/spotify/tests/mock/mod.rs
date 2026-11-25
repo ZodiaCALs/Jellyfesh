@@ -18,7 +18,14 @@ use serde_json::{Value, json};
 pub const CLIENT_ID: &str = "0123456789abcdef0123456789abcdef";
 pub const ALBUM: &str = "6akEvsycLGftJxYudPjmqK";
 pub const PLAYLIST: &str = "37i9dQZF1DXmock01";
+/// A playlist the person follows but neither owns nor collaborates on: its
+/// items answer 403 (Get Playlist Items, 2026 reference).
+pub const FOLLOWED: &str = "37i9dQZF1DXfollowed";
 pub const ARTIST: &str = "0OdUWJ0sBjDrqHygGUXeCF";
+/// The scopes the mock grants by default: what the plugin asks for.
+pub const GRANTED: &str = "user-read-playback-state user-modify-playback-state user-read-currently-playing \
+                           user-library-read playlist-read-private playlist-read-collaborative user-read-private \
+                           user-read-recently-played user-top-read user-follow-read";
 
 /// What the mock knows and what the player does.
 #[derive(Debug, Default)]
@@ -39,6 +46,8 @@ pub struct State {
     /// A sign-in from before the plugin asked for `user-read-recently-played`
     /// and `user-top-read`: the history and the top lists answer 403.
     pub old_scopes: bool,
+    /// The `scope` of token answers: the scopes granted.
+    pub granted: String,
     pub playing: bool,
     pub device: Option<String>,
     pub context: Option<String>,
@@ -59,6 +68,7 @@ pub fn start() -> Mock {
     let state = Arc::new(Mutex::new(State {
         repeat: "off".into(),
         volume: 50,
+        granted: GRANTED.split_whitespace().collect::<Vec<_>>().join(" "),
         ..State::default()
     }));
     let shared = state.clone();
@@ -198,9 +208,43 @@ fn answer(state: &Mutex<State>, request: &Request) -> Response {
                 }
                 _ => image("pl"),
             };
-            json!({ "id": format!("{PLAYLIST}{i}"), "name": format!("Playlist {i}"), "owner": { "display_name": "Mock Listener" },
+            // The person's own playlist, a collaborative one of a friend's,
+            // and one they only follow.
+            let (owner, name, collaborative) = match i {
+                0 => ("mockuser", "Mock Listener", false),
+                1 => ("mockfriend", "Mock Friend", true),
+                _ => ("mockcurator", "Mock Curator", false),
+            };
+            json!({ "id": format!("{PLAYLIST}{i}"), "name": format!("Playlist {i}"),
+                    "owner": { "id": owner, "display_name": name }, "collaborative": collaborative,
                     "images": images, "items": { "total": 30 }, "tracks": { "total": 30 } })
         })),
+        // Get Followed Artists: cursor paging by the last artist's id.
+        ("GET", "/me/following") if s.old_scopes => api_error(403, "Insufficient client scope", None),
+        ("GET", "/me/following") => {
+            if query.get("type").map(String::as_str) != Some("artist") {
+                return api_error(400, "Bad request: type must be artist", None);
+            }
+            let ids: Vec<String> = (0..3).map(|i| format!("{ARTIST}{i}")).collect();
+            let limit: usize = query.get("limit").and_then(|l| l.parse().ok()).unwrap_or(20);
+            let start = query
+                .get("after")
+                .and_then(|after| ids.iter().position(|id| id == after))
+                .map_or(0, |at| at + 1);
+            let page: Vec<Value> = ids
+                .iter()
+                .skip(start)
+                .take(limit)
+                .map(|id| json!({ "id": id, "name": format!("Artist {id}"), "images": image("ar"), "type": "artist" }))
+                .collect();
+            let last = page.last().and_then(|a| a["id"].as_str()).map(str::to_owned);
+            let more = start + page.len() < ids.len();
+            ok(json!({ "artists": {
+                "items": page, "limit": limit, "total": ids.len(),
+                "next": more.then(|| format!("https://api.spotify.com/v1/me/following?type=artist&after={}", last.clone().unwrap_or_default())),
+                "cursors": { "after": if more { last } else { None } }
+            }}))
+        }
         ("GET", "/me/player/recently-played" | "/me/top/tracks" | "/me/top/artists") if s.old_scopes => {
             api_error(403, "Insufficient client scope", None)
         }
@@ -258,6 +302,10 @@ fn answer(state: &Mutex<State>, request: &Request) -> Response {
                 0 => json!({ "track": track(i) }),
                 _ => json!({ "item": track(i) }),
             }))
+        }
+        ("GET", path) if path == format!("/playlists/{FOLLOWED}/items") => {
+            // The reference names the status, not the message: invented.
+            api_error(403, "Forbidden", None)
         }
         ("GET", path) if path == format!("/albums/{ALBUM}/tracks") => ok(paging(path, 4, &query, |i| {
             let mut t = track(i);
@@ -374,7 +422,7 @@ fn token(s: &mut State, request: &Request) -> Response {
     s.access.push(access.clone());
     s.refresh.push(refresh.clone());
     Response::json(
-        &json!({ "access_token": access, "token_type": "Bearer", "scope": "user-read-private",
+        &json!({ "access_token": access, "token_type": "Bearer", "scope": s.granted,
                             "expires_in": 3600, "refresh_token": refresh }),
     )
 }

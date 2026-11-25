@@ -136,6 +136,8 @@ fn signs_in_with_pkce_and_the_persons_own_client_id() {
         "playlist-read-private",
         "user-read-recently-played",
         "user-top-read",
+        "playlist-read-collaborative",
+        "user-follow-read",
     ] {
         assert!(q["scope"].split(' ').any(|s| s == scope), "{scope}");
     }
@@ -161,7 +163,13 @@ fn signs_in_with_pkce_and_the_persons_own_client_id() {
     assert_eq!(mock::super_challenge(&form["code_verifier"]), q["code_challenge"]);
     assert!(!form.contains_key("client_secret"));
     assert_eq!(stored(&env, "client-id").as_deref(), Some(mock::CLIENT_ID));
-    assert!(stored(&env, "session").unwrap().contains("rt-1"));
+    let session: serde_json::Value = serde_json::from_str(&stored(&env, "session").unwrap()).unwrap();
+    assert_eq!(session["refresh_token"], "rt-1");
+    // The granted scopes are kept with the tokens.
+    assert_eq!(
+        session["scope"].as_str().unwrap().split(' ').collect::<Vec<_>>(),
+        mock::GRANTED.split_whitespace().collect::<Vec<_>>()
+    );
     assert!(
         env.files_containing("rt-1").is_empty(),
         "tokens live in the keystore only"
@@ -263,17 +271,24 @@ fn tokens_are_renewed_and_rotated_and_invalid_grant_asks_to_sign_in() {
         .is_ok()
     );
     assert!(stored(&env, "session").unwrap().contains("rt-2"));
-    // An expired or revoked refresh token: sign in again (the Client ID stays).
+    // An expired (six months) or revoked refresh token ends the session in
+    // clear words; the Client ID stays, and the next call asks to sign in.
     set_session(&env, "at-gone", "rt-revoked", 0);
-    assert!(matches!(
+    let albums = || {
         recv(
             env.host
-                .browse(ID, Some(item(ItemKind::Folder, "albums", "x")), page(50))
-        ),
-        Err(CallError::Plugin(PluginError::AuthRequired))
-    ));
+                .browse(ID, Some(item(ItemKind::Folder, "albums", "x")), page(50)),
+        )
+    };
+    assert_eq!(
+        albums(),
+        Err(CallError::Plugin(PluginError::Service(
+            "Sign in to Spotify again.".into()
+        )))
+    );
     assert_eq!(stored(&env, "session"), None);
     assert_eq!(stored(&env, "client-id").as_deref(), Some(mock::CLIENT_ID));
+    assert_eq!(albums(), Err(CallError::Plugin(PluginError::AuthRequired)));
 }
 
 #[test]
@@ -507,7 +522,16 @@ fn searches_and_browses_the_library() {
 fn the_published_package_keeps_to_spotify_and_its_terms() {
     let files = PluginFiles::read(crate_dir());
     let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
-    assert_eq!(manifest.api_version.to_string(), "1.2");
+    assert_eq!(manifest.api_version.to_string(), "1.3");
+    assert!(
+        manifest
+            .capabilities
+            .contains(&jf_plugin_host::Capability::Library)
+    );
+    assert!(
+        manifest.content_policy.qualities.is_empty(),
+        "Spotify plays on its own devices: no levels"
+    );
     assert_eq!(manifest.version.to_string(), env!("CARGO_PKG_VERSION"));
     assert_eq!(manifest.playback_mode, PlaybackMode::Remote);
     assert_eq!(manifest.oauth_redirect_port, Some(29817));
@@ -745,5 +769,175 @@ fn signed_in_lists_carry_covers_the_package_may_load() {
                 .url;
             assert!(allowed_picture(url), "{title}: {url}");
         }
+    }
+}
+
+#[test]
+fn a_followed_playlist_lists_its_songs_only_in_spotify() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    // Spotify lists the items only of playlists the person owns or
+    // collaborates on; others answer 403.
+    let followed = item(ItemKind::Playlist, mock::FOLLOWED, "Someone's Mix");
+    assert_eq!(
+        recv(env.host.browse(ID, Some(followed.clone()), page(50))),
+        Err(CallError::Plugin(PluginError::Service(
+            "Spotify lists this playlist's songs only in Spotify.".into()
+        )))
+    );
+    let asked = mock
+        .server
+        .requests_to(&format!("/v1/playlists/{}/items", mock::FOLLOWED))
+        .pop()
+        .unwrap();
+    assert_eq!(asked.query("limit").as_deref(), Some("50"));
+    assert_eq!(
+        mock.server
+            .count(&format!("/v1/playlists/{}/tracks", mock::FOLLOWED)),
+        0,
+        "never the deprecated /tracks"
+    );
+    // It still plays as a whole, by context, and opens in Spotify.
+    recv(
+        env.host
+            .remote_play(ID, Some("dev-kitchen".into()), Some(followed), Vec::new(), 0),
+    )
+    .unwrap();
+    let play = mock.server.requests_to("/v1/me/player/play").pop().unwrap();
+    assert_eq!(
+        play.json().unwrap()["context_uri"],
+        format!("spotify:playlist:{}", mock::FOLLOWED)
+    );
+    let links = env.host.plugin(ID).unwrap().links;
+    assert_eq!(
+        links.url_for(ItemKind::Playlist, mock::FOLLOWED).as_deref(),
+        Some(format!("https://open.spotify.com/playlist/{}", mock::FOLLOWED).as_str())
+    );
+    // An account Spotify refuses altogether is not mistaken for that.
+    mock.state.lock().unwrap().no_seat = true;
+    let Err(CallError::Plugin(PluginError::Service(message))) = recv(env.host.browse(
+        ID,
+        Some(item(ItemKind::Playlist, mock::FOLLOWED, "x")),
+        page(50),
+    )) else {
+        panic!("expected Spotify's refusal");
+    };
+    assert!(message.contains("may not be registered"), "{message}");
+}
+
+/// The app asks for each kind on its own, 20 at first, then Show More with
+/// the cursor (ADR-0024). Spotify gives at most ten per type and request.
+/// The library (ADR-0024): Liked Songs, Saved Albums and followed artists
+/// for Favourites, and the playlists for Playlists; only the person's own
+/// and collaborative playlists list their songs here.
+#[test]
+fn likes_and_playlists_for_the_library() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    let likes = |kind, cursor: Option<String>, limit| {
+        recv(env.host.library_likes(ID, kind, next_page(cursor, limit)))
+    };
+
+    let songs = likes(ItemKind::Track, None, 50).unwrap();
+    assert!(!songs.items.is_empty() && songs.items.iter().all(|i| i.kind == ItemKind::Track));
+    let albums = likes(ItemKind::Album, None, 50).unwrap();
+    assert!(!albums.items.is_empty() && albums.items.iter().all(|i| i.kind == ItemKind::Album));
+    // Followed artists, two at a time by Spotify's cursor (the last id).
+    let first = likes(ItemKind::Artist, None, 2).unwrap();
+    assert_eq!(first.items.len(), 2);
+    assert_eq!(first.total, Some(3));
+    let after = first.next.clone().expect("a cursor");
+    assert_eq!(after, first.items[1].id);
+    let rest = likes(ItemKind::Artist, Some(after), 2).unwrap();
+    assert_eq!(rest.items.len(), 1);
+    assert_eq!(rest.next, None);
+    assert_eq!(
+        likes(ItemKind::Playlist, None, 50),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+
+    let lists = recv(env.host.library_playlists(ID, next_page(None, 50))).unwrap();
+    let flags: Vec<(String, bool, bool)> = lists
+        .entries
+        .iter()
+        .map(|e| (e.item.id.clone(), e.owned, e.songs_listed))
+        .collect();
+    assert_eq!(
+        flags,
+        [
+            (format!("{}0", mock::PLAYLIST), true, true),
+            (format!("{}1", mock::PLAYLIST), true, true),
+            (format!("{}2", mock::PLAYLIST), false, false)
+        ],
+        "own, collaborative, followed"
+    );
+    assert_eq!(lists.total, Some(3));
+    // The person's user id is asked once and kept with the session.
+    recv(env.host.library_playlists(ID, next_page(None, 50))).unwrap();
+    assert_eq!(mock.server.requests_to("/v1/me").len(), 1);
+    let session: serde_json::Value = serde_json::from_str(&stored(&env, "session").unwrap()).unwrap();
+    assert_eq!(session["user_id"], "mockuser");
+}
+
+/// A sign-in from before the plugin asked for `user-follow-read` has no
+/// followed artists; the other lists still come.
+#[test]
+fn followed_artists_need_their_scope() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    mock.state.lock().unwrap().old_scopes = true;
+    assert_eq!(
+        recv(env.host.library_likes(ID, ItemKind::Artist, next_page(None, 20))),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+    assert!(recv(env.host.library_likes(ID, ItemKind::Track, next_page(None, 20))).is_ok());
+    // A session that says what it was granted is not even asked.
+    let mut session: serde_json::Value = serde_json::from_str(&stored(&env, "session").unwrap()).unwrap();
+    session["scope"] = "user-library-read playlist-read-private".into();
+    env.secrets
+        .set(&format!("jellyfesh/{ID}/session"), &session.to_string())
+        .unwrap();
+    let before = mock.server.requests_to("/v1/me/following").len();
+    assert_eq!(
+        recv(env.host.library_likes(ID, ItemKind::Artist, next_page(None, 20))),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+    assert_eq!(mock.server.requests_to("/v1/me/following").len(), before);
+}
+
+#[test]
+fn search_one_kind_at_a_time_with_show_more() {
+    let mock = mock::start();
+    let env = signed_in(&mock);
+    for (kind, spotify_type, total) in [
+        (ItemKind::Track, "track", 12),
+        (ItemKind::Artist, "artist", 1),
+        (ItemKind::Album, "album", 1),
+        (ItemKind::Playlist, "playlist", 2),
+    ] {
+        let mut cursor = None;
+        let mut seen = Vec::new();
+        for _ in 0..5 {
+            let found = recv(
+                env.host
+                    .search(ID, "harbour", kinds(&[kind]), next_page(cursor.clone(), 20)),
+            )
+            .unwrap();
+            let asked = mock.server.requests_to("/v1/search").pop().unwrap();
+            assert_eq!(asked.query("type").as_deref(), Some(spotify_type));
+            assert_eq!(asked.query("limit").as_deref(), Some("10"));
+            assert!(found.items.iter().all(|i| i.kind == kind), "{kind:?}");
+            seen.extend(found.items.iter().map(|i| (i.id.clone(), i.title.clone())));
+            cursor = found.next;
+            if cursor.is_none() {
+                break;
+            }
+        }
+        assert!(cursor.is_none(), "{kind:?}: the search ends");
+        assert_eq!(seen.len(), total, "{kind:?}: {seen:?}");
+        let mut unique = seen.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), seen.len(), "{kind:?}: nothing twice");
     }
 }
