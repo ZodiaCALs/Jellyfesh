@@ -110,7 +110,10 @@ public class CoversTests
         // The same song again (its decoded format arrives) asks nothing more.
         h.Emit(new CoreEvent.NowPlaying(new NowPlayingInfo(3, track, null, "Lantern", "Sample Artist", null, 184_000, new ArtworkRef.Url(Url), null)));
         h.Emit(new CoreEvent.Artwork(new ArtworkReady(Url, 1024, "/cache/source-artwork/7-1024.jpg")));
-        await Poll(() => player.ArtworkPath is not null);
+
+        // Tests have no UI thread for the load to resume on: it sets the path, then the URI, on
+        // another thread, so wait for both (waiting for the path alone read the URI in between).
+        await Poll(() => player.ArtworkPath is not null && player.ArtworkUri is not null);
         Assert.Equal("/cache/source-artwork/7-1024.jpg", player.ArtworkPath);
         Assert.Equal(FileUris.From("/cache/source-artwork/7-1024.jpg"), player.ArtworkUri);
         Assert.Single(h.Core.ArtworkRequests);
