@@ -95,6 +95,11 @@ The app draws Jellyfesh Web's structure with Compose, at the web's breakpoints; 
   has Show More while the source has more (SourceLibraryMore; its pages follow the first page they
   were loaded after). The lists refresh when the page opens and when it is returned to after ten
   minutes (`library/SourceLibraryModel.kt`). The M1 core lists none yet.
+* **A source playlist** has Save as Playlist… in its More menu, before Download and Open in
+  {Service}: it asks for the name (the playlist's own first) and sends SavePlaylistCopy, which the
+  core answers with PlaylistCreated. A followed playlist whose songs the service lists only there
+  says "{Service} lists this playlist's songs only in {Service}." on its page, where Play and
+  Shuffle still start it in the service.
 
 ## v0.0.8: Android 17's Local Network permission
 

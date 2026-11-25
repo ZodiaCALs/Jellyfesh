@@ -88,6 +88,7 @@ import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.ItemKind
+import org.jellyfesh.logic.library.SourceLibraryModel
 import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.core.SourcePreset
@@ -473,6 +474,9 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
     val collection = BrowseModel.isCollection(screen.kind) && node != null
     // A folder a source did not say the kind of is browsed as a folder (the core lists it so).
     val container = node?.let { CollectionRef.Source(pluginId, it, screen.kind ?: ItemKind.Folder) }
+    // A followed playlist whose songs its service lists only there (ADR-0024): Play and Shuffle
+    // still start it, in the service.
+    val songsElsewhere = screen.kind == ItemKind.Playlist && node != null && SourceLibraryModel.songsOnlyInService(state.sourceLibrary, pluginId, node)
     // An album's or artist's page (Go to Album, Go to Artist): its picture and notes or biography
     // from the source's details (ADR-0022).
     val kind = screen.kind
@@ -505,9 +509,15 @@ fun SourceBrowseScreen(screen: Screen.SourceBrowse, state: CoreState) {
                         note = credit,
                     )
                 }
+                if (songsElsewhere) {
+                    item(key = "songs-elsewhere") {
+                        val service = state.sources.plugins.firstOrNull { it.id == pluginId }?.name ?: pluginId
+                        Notice(stringResource(R.string.source_playlist_songs_elsewhere, service, service))
+                    }
+                }
                 item(key = "actions") {
                     when {
-                        browse.playable -> PlayButtons(
+                        browse.playable || songsElsewhere -> PlayButtons(
                             onPlay = { graph.send(Command.PlayCollection(container, 0, false)) },
                             onShuffle = { graph.send(Command.PlayCollection(container, 0, true)) },
                         ) {

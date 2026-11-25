@@ -155,15 +155,16 @@ object TrackMenu {
 }
 
 /** The items of an album's, artist's or playlist's More menu, before a playlist's own (Rename… and on). */
-enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, Download, OpenLink }
+enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, SaveAsPlaylist, Download, OpenLink }
 
 object CollectionMenu {
     /**
      * The More menu of an album, artist or playlist (docs/ui.md, "Album, artist and playlist
      * pages"): Play and Shuffle where the list has no buttons for them ([withPlay]); Play Next and
      * Play Last, except for a remote source's (its songs never join the queue); Add to Playlist…
-     * when the songs can be gathered here; Download for a source's album or playlist when the
-     * source offers downloads ([download], ADR-0025); then Open in {Service} when it has a link.
+     * when the songs can be gathered here; Save as Playlist… for a source's playlist
+     * ([saveAsPlaylist], ADR-0024); Download for a source's album or playlist when the source
+     * offers downloads ([download], ADR-0025); then Open in {Service} when it has a link.
      */
     fun items(
         collection: CollectionRef,
@@ -171,6 +172,7 @@ object CollectionMenu {
         remote: Boolean = false,
         hasLink: Boolean = false,
         download: Boolean = false,
+        saveAsPlaylist: Boolean = false,
     ): List<CollectionMenuItem> = buildList {
         if (withPlay) {
             add(CollectionMenuItem.Play)
@@ -181,6 +183,7 @@ object CollectionMenu {
             add(CollectionMenuItem.PlayLast)
             if (CollectionTracks.canAdd(collection)) add(CollectionMenuItem.AddToPlaylist)
         }
+        if (saveAsPlaylist) add(CollectionMenuItem.SaveAsPlaylist)
         if (download) add(CollectionMenuItem.Download)
         if (hasLink) add(CollectionMenuItem.OpenLink)
     }

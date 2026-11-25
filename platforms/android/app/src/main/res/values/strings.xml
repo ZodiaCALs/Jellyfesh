@@ -679,4 +679,9 @@
 
     <!-- v0.0.8: the sources' likes and playlists (ADR-0024); %1$s is "5 minutes ago" -->
     <string name="source_library_updated">Updated %1$s</string>
+
+    <!-- v0.0.8: a source playlist's page (ADR-0024) -->
+    <string name="action_save_as_playlist">Save as Playlist…</string>
+    <string name="save_as_playlist_title">Save as Playlist</string>
+    <string name="source_playlist_songs_elsewhere">%1$s lists this playlist\'s songs only in %2$s.</string>
 </resources>

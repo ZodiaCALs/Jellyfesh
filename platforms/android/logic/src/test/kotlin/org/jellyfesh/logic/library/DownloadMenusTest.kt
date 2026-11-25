@@ -59,5 +59,10 @@ class DownloadMenusTest {
             CollectionMenu.items(CollectionRef.Source("org.jellyfesh.jellyfin", "pl-1", ItemKind.Playlist), withPlay = false, hasLink = true, download = true),
         )
         assertFalse(CollectionMenuItem.Download in CollectionMenu.items(CollectionRef.Album(1), withPlay = true))
+        // A source playlist's Save as Playlist… comes before Download (ADR-0024).
+        assertEquals(
+            listOf(CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.SaveAsPlaylist, CollectionMenuItem.Download),
+            CollectionMenu.items(CollectionRef.Source("org.jellyfesh.jellyfin", "pl-1", ItemKind.Playlist), withPlay = false, download = true, saveAsPlaylist = true),
+        )
     }
 }

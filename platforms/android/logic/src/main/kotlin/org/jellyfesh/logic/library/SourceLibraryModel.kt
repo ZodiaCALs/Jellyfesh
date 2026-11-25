@@ -1,6 +1,8 @@
 package org.jellyfesh.logic.library
 
+import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
+import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.SourceLibrary
 import org.jellyfesh.logic.core.SourceLibraryEntry
 import org.jellyfesh.logic.core.SourceLibraryList
@@ -105,6 +107,26 @@ object SourceLibraryModel {
     }
 
     fun error(pages: SourceLibraryPages, plugin: String, part: SourceLibraryPart): String? = pages.errors[SourceListKey(plugin, part)]
+
+    /** A source playlist's entry in its source's Playlists list, when the slice has it. */
+    fun entry(snapshot: SourceLibrarySnapshot, plugin: String, id: String): SourceLibraryEntry? = snapshot.sources
+        .firstOrNull { it.plugin == plugin }
+        ?.lists?.firstOrNull { it.part == SourceLibraryPart.Playlists }
+        ?.entries?.firstOrNull { it.item.id == id }
+
+    /**
+     * Whether a source playlist's page says "{Service} lists this playlist's songs only in
+     * {Service}.": the service lists no songs for it (a followed Spotify playlist). Play and Shuffle
+     * still start it there.
+     */
+    fun songsOnlyInService(snapshot: SourceLibrarySnapshot, plugin: String, id: String): Boolean = entry(snapshot, plugin, id)?.songsListed == false
+
+    /** Save as Playlist…: offered for a source's playlist. */
+    fun canSaveAsPlaylist(collection: CollectionRef): Boolean = collection is CollectionRef.Source && collection.kind == ItemKind.Playlist
+
+    /** Save as Playlist… with the name the person gave: a Jellyfesh playlist of its songs (answered by PlaylistCreated); null for a blank name. */
+    fun saveAsPlaylist(collection: CollectionRef.Source, name: String): Command? =
+        name.trim().takeIf { it.isNotEmpty() }?.let { Command.SavePlaylistCopy(collection.plugin, collection.id, it) }
 
     /** The key when Show More's pages follow the list's current first page; null when they follow an older one. */
     private fun current(pages: SourceLibraryPages, key: SourceListKey, list: SourceLibraryList): SourceListKey? =

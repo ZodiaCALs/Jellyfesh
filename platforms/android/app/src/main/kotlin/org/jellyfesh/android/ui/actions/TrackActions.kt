@@ -43,6 +43,7 @@ import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.library.ArtistMatch
 import org.jellyfesh.logic.library.CollectionMenu
 import org.jellyfesh.logic.library.DownloadMenus
+import org.jellyfesh.logic.library.SourceLibraryModel
 import org.jellyfesh.logic.library.CollectionTracks
 import org.jellyfesh.logic.library.CollectionMenuItem
 import org.jellyfesh.logic.library.TrackMenu
@@ -242,6 +243,7 @@ class TrackActions internal constructor(
             remote = RemoteModel.isRemote(sources, collection),
             hasLink = linkAction != null,
             download = DownloadMenus.canDownload(sources, collection),
+            saveAsPlaylist = SourceLibraryModel.canSaveAsPlaylist(collection),
         )
         val actions = items.mapNotNull { item ->
             when (item) {
@@ -250,6 +252,14 @@ class TrackActions internal constructor(
                 CollectionMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(collection) }
                 CollectionMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(collection) }
                 CollectionMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(collection) }
+                // Save as Playlist…: a Jellyfesh playlist of its songs, named first (ADR-0024).
+                CollectionMenuItem.SaveAsPlaylist -> (collection as? CollectionRef.Source)?.let { source ->
+                    SheetAction(s(R.string.action_save_as_playlist), R.drawable.ic_playlist) {
+                        overlays.prompt(s(R.string.save_as_playlist_title), s(R.string.playlist_name), title, s(R.string.action_save)) { name ->
+                            SourceLibraryModel.saveAsPlaylist(source, name)?.let(graph::send)
+                        }
+                    }
+                }
                 CollectionMenuItem.Download -> (collection as? CollectionRef.Source)?.let { source ->
                     SheetAction(s(R.string.action_download), R.drawable.ic_download) { graph.send(DownloadMenus.download(source)) }
                 }

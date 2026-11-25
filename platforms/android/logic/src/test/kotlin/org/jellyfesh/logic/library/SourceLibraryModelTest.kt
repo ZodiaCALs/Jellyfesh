@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.SourceItem
@@ -72,6 +73,22 @@ class SourceLibraryModelTest {
         val refreshed = playlists.copy(refreshedAtMs = 9_000, next = "c-9")
         assertEquals(listOf("p1", "p2"), SourceLibraryModel.entries(spotify, refreshed, pages).map { it.item.id })
         assertEquals(Command.SourceLibraryMore(spotify, SourceLibraryPart.Playlists, "c-9"), SourceLibraryModel.showMore(spotify, refreshed, pages))
+    }
+
+    @Test
+    fun aSourcePlaylistSavesAsAJellyfeshPlaylistAndSaysWhereItsSongsAre() {
+        val followed = snapshot.copy(
+            sources = listOf(snapshot.sources[0].copy(lists = listOf(playlists.copy(entries = listOf(entry("p1"), entry("p9").copy(owned = false, songsListed = false)))))),
+        )
+        assertTrue(SourceLibraryModel.songsOnlyInService(followed, spotify, "p9"))
+        assertFalse(SourceLibraryModel.songsOnlyInService(followed, spotify, "p1"))
+        // A playlist the slice does not list says nothing.
+        assertFalse(SourceLibraryModel.songsOnlyInService(followed, spotify, "p404"))
+        val playlist = CollectionRef.Source(spotify, "p1", ItemKind.Playlist)
+        assertTrue(SourceLibraryModel.canSaveAsPlaylist(playlist))
+        assertFalse(SourceLibraryModel.canSaveAsPlaylist(playlist.copy(kind = ItemKind.Album)))
+        assertEquals(Command.SavePlaylistCopy(spotify, "p1", "Road Trip"), SourceLibraryModel.saveAsPlaylist(playlist, "  Road Trip "))
+        assertNull(SourceLibraryModel.saveAsPlaylist(playlist, " "))
     }
 
     @Test
