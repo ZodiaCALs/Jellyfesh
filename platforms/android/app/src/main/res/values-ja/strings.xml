@@ -601,8 +601,8 @@
     <string name="download_lyrics">歌詞</string>
     <string name="download_lrc_files">.lrc ファイルを保存</string>
     <string name="download_network">ネットワーク</string>
-    <string name="download_wifi_only">Wi-Fi のみ</string>
-    <string name="download_wifi_only_desc">従量制の接続では、ダウンロードを待機します。</string>
+    <string name="download_pause_metered">従量制の接続では一時停止</string>
+    <string name="download_pause_metered_desc">モバイルデータ通信、テザリング、その他の従量制の接続を使っている間は、ダウンロードを待機します。</string>
     <string name="download_at_once">同時ダウンロード数</string>
     <string name="download_space">使用容量</string>
     <string name="download_remove_all">すべてのダウンロードを削除…</string>
@@ -615,7 +615,7 @@
     <string name="downloads_empty_body">サーバーからアルバムやプレイリストをダウンロードすると、オフラインでも再生できます。</string>
     <string name="downloads_used">%1$s 使用</string>
     <string name="downloads_paused_offline">オンラインに戻るとダウンロードを再開します。</string>
-    <string name="downloads_paused_metered">Wi-Fi に接続するとダウンロードを再開します。</string>
+    <string name="downloads_paused_metered">従量制の接続でなくなると、ダウンロードを再開します。</string>
     <string name="downloads_in_progress">進行中</string>
     <string name="downloads_waiting">待機中</string>
     <string name="downloads_downloading">ダウンロード中…</string>

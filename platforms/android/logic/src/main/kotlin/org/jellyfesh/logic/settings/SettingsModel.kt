@@ -219,7 +219,7 @@ enum class SettingsGroup {
     DownloadFileNames,
     DownloadTags,
 
-    /** Wi-Fi Only (Android) and Downloads at Once. */
+    /** Pause on Metered Connections and Downloads at Once. */
     DownloadNetwork,
 
     /** Space Used and Remove All Downloads…. */

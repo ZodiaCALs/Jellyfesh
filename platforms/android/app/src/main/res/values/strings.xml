@@ -644,8 +644,8 @@
     <string name="download_lyrics">Lyrics</string>
     <string name="download_lrc_files">Save .lrc Files</string>
     <string name="download_network">Network</string>
-    <string name="download_wifi_only">Wi-Fi Only</string>
-    <string name="download_wifi_only_desc">Downloads wait while the connection is metered.</string>
+    <string name="download_pause_metered">Pause on Metered Connections</string>
+    <string name="download_pause_metered_desc">Downloads wait while you\'re on mobile data, a hotspot or another metered connection.</string>
     <string name="download_at_once">Downloads at Once</string>
     <string name="download_space">Space Used</string>
     <string name="download_remove_all">Remove All Downloads…</string>
@@ -658,7 +658,7 @@
     <string name="downloads_empty_body">Download albums and playlists from your servers to play them offline.</string>
     <string name="downloads_used">%1$s used</string>
     <string name="downloads_paused_offline">Downloads resume when you\'re back online.</string>
-    <string name="downloads_paused_metered">Downloads resume on Wi-Fi.</string>
+    <string name="downloads_paused_metered">Downloads resume when you\'re off a metered connection.</string>
     <string name="downloads_in_progress">In Progress</string>
     <string name="downloads_waiting">Waiting</string>
     <string name="downloads_downloading">Downloading…</string>

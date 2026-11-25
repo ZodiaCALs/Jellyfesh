@@ -476,7 +476,7 @@ class UniffiCoreClientTest {
             assertEquals(DownloadSettings(), first.settings.downloads)
             assertEquals(MiniPlayerSettings(), first.settings.miniPlayer)
 
-            // Metered with Wi-Fi Only on, downloads wait for Wi-Fi; offline, for a network.
+            // Metered with Pause on Metered Connections on, downloads wait; offline, they wait for a network.
             client.send(Command.SetNetworkState(online = true, metered = true))
             waitFor(events) { it is CoreEvent.Downloads && it.snapshot.paused == DownloadsPaused.Metered }
             client.send(Command.SetNetworkState(online = false, metered = false))

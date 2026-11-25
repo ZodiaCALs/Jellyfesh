@@ -744,13 +744,13 @@ private fun LazyListScope.downloadTags(settings: Settings) {
     }
 }
 
-/** Network: Wi-Fi Only (Android; downloads wait on a metered connection) and Downloads at Once, 1 to 4. */
+/** Network: Pause on Metered Connections (downloads wait on a metered connection; the core's `wifi_only`) and Downloads at Once, 1 to 4. */
 private fun LazyListScope.downloadNetwork(settings: Settings) {
     item(key = "download-network") {
         val edit = rememberEdit(settings)
         val downloads = settings.downloads
         SettingsCard(stringResource(R.string.download_network)) {
-            SettingRow(stringResource(R.string.download_wifi_only), description = stringResource(R.string.download_wifi_only_desc)) {
+            SettingRow(stringResource(R.string.download_pause_metered), description = stringResource(R.string.download_pause_metered_desc)) {
                 JfSwitch(downloads.wifiOnly, { on -> edit { copy(downloads = this.downloads.copy(wifiOnly = on)) } })
             }
             Divider()

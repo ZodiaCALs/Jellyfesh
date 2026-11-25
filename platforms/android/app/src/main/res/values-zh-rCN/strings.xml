@@ -601,8 +601,8 @@
     <string name="download_lyrics">歌词</string>
     <string name="download_lrc_files">保存 .lrc 文件</string>
     <string name="download_network">网络</string>
-    <string name="download_wifi_only">仅限 Wi-Fi</string>
-    <string name="download_wifi_only_desc">使用按流量计费的网络时，下载会等待。</string>
+    <string name="download_pause_metered">使用按流量计费的网络时暂停</string>
+    <string name="download_pause_metered_desc">使用移动数据、热点或其他按流量计费的网络时，下载会等待。</string>
     <string name="download_at_once">同时下载数</string>
     <string name="download_space">已用空间</string>
     <string name="download_remove_all">移除所有下载…</string>
@@ -615,7 +615,7 @@
     <string name="downloads_empty_body">从你的服务器下载专辑和歌单，即可离线播放。</string>
     <string name="downloads_used">已用 %1$s</string>
     <string name="downloads_paused_offline">恢复联网后将继续下载。</string>
-    <string name="downloads_paused_metered">连接 Wi-Fi 后将继续下载。</string>
+    <string name="downloads_paused_metered">不再使用按流量计费的网络后，将继续下载。</string>
     <string name="downloads_in_progress">进行中</string>
     <string name="downloads_waiting">等待中</string>
     <string name="downloads_downloading">正在下载…</string>

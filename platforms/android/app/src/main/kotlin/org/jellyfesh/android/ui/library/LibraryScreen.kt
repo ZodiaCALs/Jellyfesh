@@ -148,7 +148,7 @@ fun sectionLabel(section: LibrarySection): Int = when (section) {
 /**
  * Downloads (docs/ui.md, "Downloads"; ADR-0025), on the core's Downloads slice ([DownloadsModel]):
  * Play and Shuffle with "{n} songs · {size} used"; the line while the core pauses downloads
- * (offline, or a metered network with Wi-Fi Only on); In Progress, each download with "Waiting",
+ * (offline, or a metered network with Pause on Metered Connections on); In Progress, each download with "Waiting",
  * its percentage, or the failure and Try Again, and Cancel; then the downloaded songs by album,
  * Remove Download… (asks first) on each song and on a whole album. Empty: "No Downloads Yet".
  */

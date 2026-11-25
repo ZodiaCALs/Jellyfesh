@@ -16,7 +16,7 @@
     <!-- Online sources (plugins) and their artwork. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Whether the network is metered or gone, told to the core (NetworkWatcher.kt): Auto quality
-         and downloads (Wi-Fi Only) follow it. -->
+         and downloads (Pause on Metered Connections) follow it. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Downloads go to Music/Jellyfesh by path (ADR-0025 §2): Android 11 and later allow it and
          index the files, Android 10 has requestLegacyExternalStorage, and Android 8 and 9 need

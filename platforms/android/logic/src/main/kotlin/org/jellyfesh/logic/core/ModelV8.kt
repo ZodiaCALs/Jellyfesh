@@ -34,7 +34,7 @@ data class DownloadSettings(
     val addMissingCoverAndLyrics: Boolean = false,
     val lyricsInTags: Boolean = true,
     val saveLrcFiles: Boolean = false,
-    /** Wi-Fi Only: downloads wait while the connection is metered. */
+    /** Pause on Metered Connections: downloads wait while the connection is metered (the core's `wifi_only`). */
     val wifiOnly: Boolean = true,
     /** Downloads at Once, 1–4. */
     val atOnce: Int = 2,
@@ -130,7 +130,7 @@ enum class DownloadsPaused {
     /** No network. */
     Offline,
 
-    /** A metered network with Wi-Fi Only on ("Waiting for Wi-Fi"). */
+    /** A metered network with Pause on Metered Connections on. */
     Metered,
 }
 
