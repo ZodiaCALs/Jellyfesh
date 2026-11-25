@@ -200,9 +200,7 @@ pub fn download(source: Option<&MediaSource>, quality: DownloadQuality, may_conv
 /// list several names for one format, `mov,mp4,m4a,3gp,3g2,mj2`). Empty
 /// when neither says.
 pub fn extension(source: Option<&MediaSource>) -> String {
-    let usable = |ext: &str| {
-        (1..=8).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
-    };
+    let usable = |ext: &str| (1..=8).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric());
     if let Some(path) = source.and_then(|s| s.path.as_deref())
         && let Some((stem, ext)) = file_name(path).and_then(|name| name.rsplit_once('.'))
         && !stem.is_empty()
@@ -225,7 +223,11 @@ pub fn extension(source: Option<&MediaSource>) -> String {
     } else {
         names.first().copied().unwrap_or_default()
     };
-    if usable(ext) { ext.to_string() } else { String::new() }
+    if usable(ext) {
+        ext.to_string()
+    } else {
+        String::new()
+    }
 }
 
 /// The last part of a path on the server (`/music/A/B/01 Song.flac` →
@@ -303,22 +305,37 @@ mod tests {
     #[test]
     fn downloads_convert_to_opus_above_the_limit() {
         let flac = source("flac", "flac", Some(921_000));
-        assert_eq!(download(Some(&flac), DownloadQuality::Original, true), Download::Original);
-        assert_eq!(download(Some(&flac), DownloadQuality::High, true), Download::Opus(320_000));
-        assert_eq!(download(Some(&flac), DownloadQuality::Low, true), Download::Opus(128_000));
+        assert_eq!(
+            download(Some(&flac), DownloadQuality::Original, true),
+            Download::Original
+        );
+        assert_eq!(
+            download(Some(&flac), DownloadQuality::High, true),
+            Download::Opus(320_000)
+        );
+        assert_eq!(
+            download(Some(&flac), DownloadQuality::Low, true),
+            Download::Opus(128_000)
+        );
         assert_eq!(
             download(Some(&flac), DownloadQuality::Low, false),
             Download::Original,
             "no conversion before the server says the account may download"
         );
         let mp3 = source("mp3", "mp3", Some(128_000));
-        assert_eq!(download(Some(&mp3), DownloadQuality::Low, true), Download::Original);
+        assert_eq!(
+            download(Some(&mp3), DownloadQuality::Low, true),
+            Download::Original
+        );
         assert_eq!(
             download(Some(&source("mp3", "mp3", None)), DownloadQuality::Low, true),
             Download::Original
         );
         let wma = source("asf", "wmav2", Some(128_000));
-        assert_eq!(download(Some(&wma), DownloadQuality::Low, true), Download::Opus(128_000));
+        assert_eq!(
+            download(Some(&wma), DownloadQuality::Low, true),
+            Download::Opus(128_000)
+        );
     }
 
     #[test]
@@ -327,7 +344,10 @@ mod tests {
         assert_eq!(extension(Some(&flac)), "flac");
         flac.path = Some("/music/Harbour Lights/Low Water/01 Ebb.FLAC".into());
         assert_eq!(extension(Some(&flac)), "flac");
-        assert_eq!(extension(Some(&source("mov,mp4,m4a,3gp,3g2,mj2", "aac", None))), "m4a");
+        assert_eq!(
+            extension(Some(&source("mov,mp4,m4a,3gp,3g2,mj2", "aac", None))),
+            "m4a"
+        );
         assert_eq!(extension(Some(&source("asf", "wmav2", None))), "wma");
         assert_eq!(extension(Some(&source("matroska,webm", "opus", None))), "mka");
         assert_eq!(extension(None), "");

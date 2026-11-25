@@ -173,32 +173,72 @@ mod tests {
 
     #[test]
     fn downloads_convert_only_on_navidrome_above_the_limit() {
-        let d = |suffix, rate, quality, converts| download(Some(suffix), rate, quality, converts, Transcode::Mp3);
-        assert_eq!(d("flac", Some(900), DownloadQuality::Original, true), Download::Original);
+        let d =
+            |suffix, rate, quality, converts| download(Some(suffix), rate, quality, converts, Transcode::Mp3);
+        assert_eq!(
+            d("flac", Some(900), DownloadQuality::Original, true),
+            Download::Original
+        );
         assert_eq!(
             d("flac", Some(900), DownloadQuality::High, true),
-            Download::Convert { format: "mp3", kbps: 320 }
+            Download::Convert {
+                format: "mp3",
+                kbps: 320
+            }
         );
-        assert_eq!(d("mp3", Some(320), DownloadQuality::High, true), Download::Original);
+        assert_eq!(
+            d("mp3", Some(320), DownloadQuality::High, true),
+            Download::Original
+        );
         assert_eq!(
             d("mp3", Some(320), DownloadQuality::Low, true),
-            Download::Convert { format: "mp3", kbps: 128 }
+            Download::Convert {
+                format: "mp3",
+                kbps: 128
+            }
         );
-        assert_eq!(d("mp3", Some(128), DownloadQuality::Low, true), Download::Original);
+        assert_eq!(
+            d("mp3", Some(128), DownloadQuality::Low, true),
+            Download::Original
+        );
         assert_eq!(d("mp3", None, DownloadQuality::Low, true), Download::Original);
         assert_eq!(
             d("wma", Some(192), DownloadQuality::Normal, true),
-            Download::Convert { format: "mp3", kbps: 192 }
+            Download::Convert {
+                format: "mp3",
+                kbps: 192
+            }
         );
         // Other servers' `download` sends only originals.
-        assert_eq!(d("flac", Some(900), DownloadQuality::Low, false), Download::Original);
         assert_eq!(
-            download(Some("flac"), Some(900), DownloadQuality::Normal, true, Transcode::Opus),
-            Download::Convert { format: "opus", kbps: 192 }
+            d("flac", Some(900), DownloadQuality::Low, false),
+            Download::Original
         );
         assert_eq!(
-            download(Some("flac"), Some(900), DownloadQuality::Normal, true, Transcode::Aac),
-            Download::Convert { format: "mp3", kbps: 192 }
+            download(
+                Some("flac"),
+                Some(900),
+                DownloadQuality::Normal,
+                true,
+                Transcode::Opus
+            ),
+            Download::Convert {
+                format: "opus",
+                kbps: 192
+            }
+        );
+        assert_eq!(
+            download(
+                Some("flac"),
+                Some(900),
+                DownloadQuality::Normal,
+                true,
+                Transcode::Aac
+            ),
+            Download::Convert {
+                format: "mp3",
+                kbps: 192
+            }
         );
     }
 

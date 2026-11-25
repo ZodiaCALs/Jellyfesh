@@ -664,11 +664,15 @@ fn levels_map_to_requests() {
         (Quality::Normal, "normal"),
         (Quality::Low, "low"),
     ];
-    let mut table = String::from("# song | level | format | maxBitRate | hint to the engine | the server sent\n");
+    let mut table =
+        String::from("# song | level | format | maxBitRate | hint to the engine | the server sent\n");
     for (id, song) in songs {
         for (quality, level) in levels {
             let info = recv(env.host.resolve_stream(ID, track(id, "x"), quality)).unwrap();
-            assert!(info.url.starts_with(&format!("{}/rest/stream.view?", server.url())));
+            assert!(
+                info.url
+                    .starts_with(&format!("{}/rest/stream.view?", server.url()))
+            );
             let q = url_query(&info.url);
             let hint = match (&info.codec, info.bitrate_kbps) {
                 (Some(codec), Some(kbps)) => format!("{codec} {kbps} kbit/s"),
@@ -726,7 +730,10 @@ fn likes_come_newest_first_in_pages() {
         vec!["ar:ar-1", "ar:ar-2"]
     );
     assert_eq!(
-        recv(env.host.library_likes(ID, ItemKind::Playlist, next_page(None, 50))),
+        recv(
+            env.host
+                .library_likes(ID, ItemKind::Playlist, next_page(None, 50))
+        ),
         Err(CallError::Plugin(PluginError::Unsupported))
     );
 }
@@ -773,7 +780,11 @@ fn playlists_own_and_followed() {
         assert_eq!(last.next, None);
 
         // A followed playlist's songs, from browse as for any playlist.
-        let songs = recv(env.host.browse(ID, Some(lists.entries[2].item.clone()), next_page(None, 50))).unwrap();
+        let songs = recv(
+            env.host
+                .browse(ID, Some(lists.entries[2].item.clone()), next_page(None, 50)),
+        )
+        .unwrap();
         assert_eq!(ids(&songs), vec!["tr:tr-1", "tr:tr-3"]);
     }
 }
@@ -822,10 +833,11 @@ fn downloads_the_original_file() {
         Err(CallError::Plugin(PluginError::NotFound))
     );
     assert!(matches!(
-        recv(
-            env.host
-                .download(ID, item(ItemKind::Album, "al:al-1", "x"), DownloadQuality::Original)
-        ),
+        recv(env.host.download(
+            ID,
+            item(ItemKind::Album, "al:al-1", "x"),
+            DownloadQuality::Original
+        )),
         Err(CallError::Plugin(PluginError::InvalidInput(_)))
     ));
     assert!(matches!(
@@ -869,7 +881,10 @@ fn navidrome_converts_downloads_above_the_limit() {
     assert!(small.original, "an MP3 at 128 kbit/s is within Low");
     assert_eq!(url_query(&small.url)["format"], "raw");
     let original = download("tr:tr-1", DownloadQuality::Original);
-    assert_eq!((url_query(&original.url)["format"].as_str(), original.original), ("raw", true));
+    assert_eq!(
+        (url_query(&original.url)["format"].as_str(), original.original),
+        ("raw", true)
+    );
 
     // Opus when the person's conversion format is Opus.
     env.settings(
@@ -879,7 +894,11 @@ fn navidrome_converts_downloads_above_the_limit() {
     let low = download("tr:tr-6", DownloadQuality::Low);
     let q = url_query(&low.url);
     assert_eq!(
-        (low.container.as_str(), q["format"].as_str(), q["bitrate"].as_str()),
+        (
+            low.container.as_str(),
+            q["format"].as_str(),
+            q["bitrate"].as_str()
+        ),
         ("opus", "opus", "128")
     );
     assert_eq!(
@@ -909,13 +928,7 @@ fn downloads_off_for_the_account() {
     );
     assert!(server.requests_to("/rest/getSong.view").is_empty());
     assert!(server.requests_to("/rest/download.view").is_empty());
-    assert!(
-        recv(
-            env.host
-                .resolve_stream(ID, track("tr:tr-1", "x"), Quality::High)
-        )
-        .is_ok()
-    );
+    assert!(recv(env.host.resolve_stream(ID, track("tr:tr-1", "x"), Quality::High)).is_ok());
 }
 
 #[test]

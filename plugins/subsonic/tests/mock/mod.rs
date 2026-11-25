@@ -439,8 +439,13 @@ impl Mock {
                 Some(song) => match p("format").filter(|f| f != "raw" && self.server_type == "navidrome") {
                     Some(format) => {
                         let bitrate = p("bitrate").unwrap_or_default();
-                        let kind = if format == "mp3" { "audio/mpeg" } else { "audio/ogg" };
-                        Response::new(200, format!("converted {format} {bitrate}")).header("content-type", kind)
+                        let kind = if format == "mp3" {
+                            "audio/mpeg"
+                        } else {
+                            "audio/ogg"
+                        };
+                        Response::new(200, format!("converted {format} {bitrate}"))
+                            .header("content-type", kind)
                     }
                     None => Response::new(200, AUDIO).header(
                         "content-type",

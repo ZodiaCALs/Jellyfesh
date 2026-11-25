@@ -959,7 +959,10 @@ fn favourites_and_playlists_for_the_library() {
             .all(|r| r.query("isFavorite").as_deref() == Some("true"))
     );
     assert_eq!(
-        recv(env.host.library_likes(ID, ItemKind::Playlist, next_page(None, 50))),
+        recv(
+            env.host
+                .library_likes(ID, ItemKind::Playlist, next_page(None, 50))
+        ),
         Err(CallError::Plugin(PluginError::Unsupported))
     );
 
@@ -979,7 +982,11 @@ fn favourites_and_playlists_for_the_library() {
     let one = recv(env.host.library_playlists(ID, next_page(None, 1))).unwrap();
     assert_eq!((one.entries.len(), one.next.as_deref()), (1, Some("1")));
     // A playlist's songs, from browse as for any playlist.
-    let songs = recv(env.host.browse(ID, Some(lists.entries[1].item.clone()), next_page(None, 50))).unwrap();
+    let songs = recv(
+        env.host
+            .browse(ID, Some(lists.entries[1].item.clone()), next_page(None, 50)),
+    )
+    .unwrap();
     assert_eq!(songs.items.len(), 4);
     assert_no_user_routes(&server);
 }
@@ -1017,7 +1024,10 @@ fn downloads_follow_the_download_policy() {
     // Lower qualities: Opus at the limit, when the file is above it.
     let high = download(EBB, DownloadQuality::High);
     let q = url_query(&high.url);
-    assert!(high.url.starts_with(&format!("{}/Audio/{EBB}/universal?", server.url())));
+    assert!(
+        high.url
+            .starts_with(&format!("{}/Audio/{EBB}/universal?", server.url()))
+    );
     assert_eq!(
         (q["audioCodec"].as_str(), q["transcodingContainer"].as_str()),
         ("opus", "opus")
@@ -1028,13 +1038,21 @@ fn downloads_follow_the_download_policy() {
     );
     assert_eq!(q["transcodingProtocol"], "http");
     assert_eq!(
-        (high.container.as_str(), high.original, high.size, high.file_name.clone()),
+        (
+            high.container.as_str(),
+            high.original,
+            high.size,
+            high.file_name.clone()
+        ),
         ("opus", false, None, None)
     );
     let got = fetch(&high.url, &headers(&high)).unwrap();
     assert_eq!(got.body, b"converted opus 320000");
     assert_eq!(got.header("content-type"), Some("audio/opus"));
-    assert_eq!(url_query(&download(FLOW, DownloadQuality::Low).url)["audioBitRate"], "128000");
+    assert_eq!(
+        url_query(&download(FLOW, DownloadQuality::Low).url)["audioBitRate"],
+        "128000"
+    );
     let small = download(DRIFTWOOD, DownloadQuality::Low);
     assert!(small.original, "Opus at 128 kbit/s is within Low");
     assert_eq!(small.container, "ogg");
@@ -1043,15 +1061,25 @@ fn downloads_follow_the_download_policy() {
     assert_eq!(download(FOG_BELL, DownloadQuality::Original).container, "wma");
 
     assert!(matches!(
-        recv(env.host.download(ID, track(&tr(LOST_BUOY), "x"), DownloadQuality::Original)),
+        recv(
+            env.host
+                .download(ID, track(&tr(LOST_BUOY), "x"), DownloadQuality::Original)
+        ),
         Err(CallError::Plugin(PluginError::Service(_)))
     ));
     assert_eq!(
-        recv(env.host.download(ID, track("tr:ffff", "x"), DownloadQuality::Original)),
+        recv(
+            env.host
+                .download(ID, track("tr:ffff", "x"), DownloadQuality::Original)
+        ),
         Err(CallError::Plugin(PluginError::NotFound))
     );
     assert!(matches!(
-        recv(env.host.download(ID, item(ItemKind::Album, &al(LOW_WATER), "x"), DownloadQuality::Original)),
+        recv(env.host.download(
+            ID,
+            item(ItemKind::Album, &al(LOW_WATER), "x"),
+            DownloadQuality::Original
+        )),
         Err(CallError::Plugin(PluginError::InvalidInput(_)))
     ));
     for request in server.requests() {
