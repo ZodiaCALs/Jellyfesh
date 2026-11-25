@@ -78,6 +78,7 @@
                                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
                                         <MenuFlyoutItem x:Uid="More_PlayNext" Command="{x:Bind ViewModel.PlayNextCommand}" Text="Play Next" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanQueue), Mode=OneWay}" />
                                         <MenuFlyoutItem x:Uid="More_PlayLast" Command="{x:Bind ViewModel.PlayLastCommand}" Text="Play Last" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanQueue), Mode=OneWay}" />
+                                        <MenuFlyoutItem x:Uid="More_SaveAsPlaylist" Command="{x:Bind ViewModel.SaveAsPlaylistCommand}" Text="Save as Playlist…" Visibility="{x:Bind shell:Bind.Visible(ViewModel.CanSaveCopy)}" />
                                         <MenuFlyoutItem Command="{x:Bind ViewModel.OpenLinkCommand}" Text="{x:Bind ViewModel.OpenInLabel}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasLink)}" />
                                         <MenuFlyoutItem x:Uid="More_GetInfo" Click="OnGetInfoClick" Text="Get Info" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasDetails)}" />
                                     </MenuFlyout>
@@ -92,6 +93,9 @@
                     <TextBlock x:Name="DescriptionText" IsTextSelectionEnabled="True" MaxLines="3" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.Description, Mode=OneWay}" TextTrimming="WordEllipsis" TextWrapping="Wrap" />
                     <HyperlinkButton x:Name="DescriptionMore" x:Uid="Browse_More" Padding="0" Click="OnDescriptionMoreClick" Content="More" />
                 </StackPanel>
+
+                <!-- A playlist whose songs the service lists only in its own app (ADR-0024 §3). -->
+                <TextBlock MaxWidth="720" HorizontalAlignment="Left" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind ViewModel.SongsListedElsewhereText}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(ViewModel.SongsListedElsewhere)}" />
 
                 <!-- A page the source could not give: what it said. -->
                 <StackPanel Spacing="2" Visibility="{x:Bind shell:Bind.Visible(ViewModel.HasError), Mode=OneWay}">

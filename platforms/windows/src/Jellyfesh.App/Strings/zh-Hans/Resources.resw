@@ -1091,6 +1091,9 @@
   <data name="More_Rename.Text" xml:space="preserve">
     <value>重命名…</value>
   </data>
+  <data name="More_SaveAsPlaylist.Text" xml:space="preserve">
+    <value>存储为歌单…</value>
+  </data>
   <data name="NowPlaying_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>返回资料库</value>
   </data>
@@ -1864,6 +1867,21 @@
   </data>
   <data name="SourceLibrary_Loading.Text" xml:space="preserve">
     <value>正在载入…</value>
+  </data>
+  <data name="SourceLibrary_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="SourceLibrary_Saved" xml:space="preserve">
+    <value>歌单已存储</value>
+  </data>
+  <data name="SourceLibrary_SaveNotAvailable" xml:space="preserve">
+    <value>此版本尚不能存储为歌单。</value>
+  </data>
+  <data name="SourceLibrary_SaveTitle" xml:space="preserve">
+    <value>存储为歌单</value>
+  </data>
+  <data name="SourceLibrary_SongsOnlyIn" xml:space="preserve">
+    <value>{0} 只在 {1} 中列出这个歌单的歌曲。</value>
   </data>
   <data name="SourceLibrary_Updated" xml:space="preserve">
     <value>{0}更新</value>

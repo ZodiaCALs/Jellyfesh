@@ -182,7 +182,12 @@ plugin settings applied with **Save**.
   a song plays with the rest of its album or playlist after it. **Load More**
   while the source has more; "This Source Did Not Answer" with its message;
   "Nothing Here"; Open in {Service} as the main action when nothing plays here;
-  "Content from {Service}" for a source that asks for credit.
+  "Content from {Service}" for a source that asks for credit. A source
+  playlist's More has **Save as Playlist…** (it asks for the name, the
+  playlist's own to begin with; `SavePlaylistCopy`); one whose songs the
+  service lists only in its own app lists none and says "{Service} lists this
+  playlist's songs only in {Service}.", and Play and Shuffle still start it
+  there (ADR-0024).
 * **Now Playing:** Queue has "Up Next", **Clear Queue** (it asks first) and
   "Nothing Up Next"; Info is "About This Song" with Title, Artist, Album, Year
   (library songs), Length, Quality (the core's label for what is decoded:

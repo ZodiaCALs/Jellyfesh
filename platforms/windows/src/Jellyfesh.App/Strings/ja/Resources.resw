@@ -1091,6 +1091,9 @@
   <data name="More_Rename.Text" xml:space="preserve">
     <value>名前を変更…</value>
   </data>
+  <data name="More_SaveAsPlaylist.Text" xml:space="preserve">
+    <value>プレイリストとして保存…</value>
+  </data>
   <data name="NowPlaying_Back.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>ライブラリに戻る</value>
   </data>
@@ -1864,6 +1867,21 @@
   </data>
   <data name="SourceLibrary_Loading.Text" xml:space="preserve">
     <value>読み込み中…</value>
+  </data>
+  <data name="SourceLibrary_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="SourceLibrary_Saved" xml:space="preserve">
+    <value>プレイリストを保存しました</value>
+  </data>
+  <data name="SourceLibrary_SaveNotAvailable" xml:space="preserve">
+    <value>このビルドではまだプレイリストとして保存できません。</value>
+  </data>
+  <data name="SourceLibrary_SaveTitle" xml:space="preserve">
+    <value>プレイリストとして保存</value>
+  </data>
+  <data name="SourceLibrary_SongsOnlyIn" xml:space="preserve">
+    <value>このプレイリストの曲は {0} では {1} 内でのみ表示されます。</value>
   </data>
   <data name="SourceLibrary_Updated" xml:space="preserve">
     <value>{0}に更新</value>

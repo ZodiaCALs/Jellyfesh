@@ -86,10 +86,28 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
         Subtitle = target.Kind is ItemKind.Album or ItemKind.Playlist ? target.Item?.Subtitle ?? string.Empty : string.Empty;
         Attribution = ItemLinks.Attribution(sources, target.Plugin, l);
         Link = ItemLinks.Usable(target.Item?.Link);
-        OpenInLabel = ItemLinks.OpenInLabel(l, ItemLinks.ServiceName(sources, target.Plugin));
+        var service = ItemLinks.ServiceName(sources, target.Plugin);
+        OpenInLabel = ItemLinks.OpenInLabel(l, service);
         IsRemote = ItemLinks.IsRemoteSource(sources, target.Plugin);
         Header = target.Item is { } item ? new SourceEntryItem(item, l) : null;
+        SongsListedElsewhereText = SongsListedElsewhere ? l.Format("SourceLibrary_SongsOnlyIn", service, service) : string.Empty;
     }
+
+    /// <summary>
+    /// A source playlist whose songs the service lists only in its own app (songs-listed false, as a
+    /// Spotify playlist the person follows): the page lists none and says so; Play and Shuffle still
+    /// start it there (ADR-0024 §3).
+    /// </summary>
+    public bool SongsListedElsewhere => Target is { Kind: ItemKind.Playlist, SongsListed: false, Node: not null };
+
+    /// <summary>"{Service} lists this playlist's songs only in {Service}."</summary>
+    public string SongsListedElsewhereText { get; }
+
+    /// <summary>Save as Playlist… (ADR-0024 §2): a source playlist whose songs are listed can be copied into a Jellyfesh playlist.</summary>
+    public bool CanSaveCopy => Target is { Kind: ItemKind.Playlist, SongsListed: true, Node: not null };
+
+    private ulong _saveRequest;
+    private string _savedName = string.Empty;
 
     public SourceTarget Target { get; }
 
@@ -160,7 +178,7 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
     public bool CanQueue => CanPlay && !IsRemote;
 
     /// <summary>More has something to offer.</summary>
-    public bool HasMore => CanQueue || HasLink;
+    public bool HasMore => CanQueue || HasLink || CanSaveCopy;
 
     public bool HasError => Error is not null;
 
@@ -179,6 +197,14 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
         if (!_started)
         {
             _started = true;
+            if (SongsListedElsewhere)
+            {
+                // Nothing to list: the service keeps these songs to itself.
+                IsComplete = true;
+                Summarize();
+                return Task.CompletedTask;
+            }
+
             Browse(0, clear: true);
             if (DetailsItem is { } details)
             {
@@ -232,7 +258,42 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
                 IsNotAvailable = SearchViewModel.IsNotAvailableMessage(f.Message);
                 Error = IsNotAvailable ? null : f.Message;
                 break;
+            case CoreEvent.PlaylistCreated created when created.Request == _saveRequest && _saveRequest != 0:
+                _saveRequest = 0;
+                S.Notifications.Success(S.L.Get("SourceLibrary_Saved"), _savedName);
+                break;
+            case CoreEvent.CommandFailed f when f.Id == _saveRequest && _saveRequest != 0:
+                _saveRequest = 0;
+                if (SearchViewModel.IsNotAvailableMessage(f.Message))
+                {
+                    S.Notifications.Info(S.L.Get("SourceLibrary_SaveTitle"), S.L.Get("SourceLibrary_SaveNotAvailable"));
+                }
+                else
+                {
+                    S.Notifications.Error(S.L.Get("SourceLibrary_SaveTitle"), f.Message);
+                }
+
+                break;
         }
+    }
+
+    /// <summary>Save as Playlist…: asks for the name (the playlist's own to begin with), then the core copies its songs.</summary>
+    [RelayCommand]
+    private async Task SaveAsPlaylist()
+    {
+        if (!CanSaveCopy || Target.Node is not { } id)
+        {
+            return;
+        }
+
+        var name = await S.Platform.PromptTextAsync(S.L.Get("SourceLibrary_SaveTitle"), Title, S.L.Get("SourceLibrary_Save"));
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return;
+        }
+
+        _savedName = name.Trim();
+        _saveRequest = S.SendHandled(new CoreCommand.SavePlaylistCopy(Target.Plugin, id, _savedName));
     }
 
     /// <summary>
@@ -376,9 +437,9 @@ public sealed partial class SourceBrowseViewModel : PageViewModel
         // Play and Shuffle play the whole album, artist, playlist or folder (the source's top level is
         // no collection): offered once something of it plays here.
         CanPlay = Target.Node is not null
-            && (tracks.Any(t => t.IsPlayable) || (Target.Kind == ItemKind.Artist && Rows.OfType<SourceEntryItem>().Any(e => e.CanPlay)));
+            && (SongsListedElsewhere || tracks.Any(t => t.IsPlayable) || (Target.Kind == ItemKind.Artist && Rows.OfType<SourceEntryItem>().Any(e => e.CanPlay)));
         OpensLink = !CanPlay && HasLink && IsComplete && tracks.Count > 0;
-        IsNothingHere = IsComplete && Rows.Count == 0;
+        IsNothingHere = IsComplete && Rows.Count == 0 && !SongsListedElsewhere;
         if (IsComplete && tracks.Count > 0)
         {
             var songs = S.L.Plural("Count_Songs", tracks.Count);
