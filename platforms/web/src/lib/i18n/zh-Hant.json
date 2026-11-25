@@ -475,5 +475,9 @@
   "{service} did not answer in time.": "{service} 未能及時回應。",
   "{service} lists this playlist’s songs only in {service}.": "{service} 只在 {service} 中列出這個播放清單的歌曲。",
   "Updated just now": "剛剛更新",
-  "Updated {age}": "更新於{age}"
+  "Updated {age}": "更新於{age}",
+  "Download": "下載",
+  "The server answered {status}.": "伺服器回應了 {status}。",
+  "Downloading “{title}”…": "正在下載「{title}」…",
+  "Couldn’t download “{title}”: {reason}": "無法下載「{title}」：{reason}"
 }

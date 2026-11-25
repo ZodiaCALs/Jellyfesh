@@ -3,6 +3,7 @@
 // else as a source's tracks.
 
 import type { App } from './app';
+import { canDownload, downloadSong } from './download';
 import type { Item, NewEntry, Row, Saved } from './core/types';
 import { t, tn } from './i18n/index.svelte';
 import { refusalText } from './state/collections.svelte';
@@ -187,6 +188,8 @@ export function itemMenu(
       ...extra,
       heartEntry(app, plugin, item, toast),
     );
+    // Download (ADR-0025 §5): one file through the browser, from a source that allows it.
+    if (canDownload(app, plugin, item)) menu.push({ label: t('Download'), action: () => void downloadSong(app, plugin, item, toast) });
     const album = albumOf(item);
     if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
   } else if (queue) {
