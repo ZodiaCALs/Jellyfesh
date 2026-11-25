@@ -55,8 +55,11 @@ The non-goals stand: no DRM circumvention and no paywall bypass.
        `~/Music/Jellyfesh` on macOS, `Music\Jellyfesh` on Windows,
        `$XDG_MUSIC_DIR/Jellyfesh` on Linux (the Flatpak through its music
        folder permission).
-     * On Android, `Music/Jellyfesh` in shared storage through MediaStore,
-       with no all-files permission.
+     * On Android, `Music/Jellyfesh` in shared storage, with no all-files
+       permission. Android 11 and later let the core write there by path
+       and index the files in MediaStore; Android 10 uses the legacy
+       storage flag; Android 8 and 9 ask once for `WRITE_EXTERNAL_STORAGE`
+       (declared with `maxSdkVersion="28"`) before the first download.
      * A folder chosen on macOS is kept with a security-scoped bookmark.
    * **Quality:**
      * **Original** (the default) is the file exactly as the server keeps
