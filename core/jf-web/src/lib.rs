@@ -16,6 +16,7 @@
 //! * [`source_library`]: the sources' likes and playlists (API 1.3);
 //! * [`quality`]: the streaming level and the quality menu;
 //! * [`download`]: the name of a song the browser saves;
+//! * [`m3u`]: Import Playlist… and Export Playlist… (M3U8);
 //! * [`lyrics`]: lyric documents and timelines (`jf-lyrics`) from plugins,
 //!   tags and lyrics files;
 //! * [`relay`]: which services refuse browsers, and the relay's address;
@@ -39,6 +40,7 @@ pub mod download;
 pub mod library;
 pub mod look;
 pub mod lyrics;
+pub mod m3u;
 pub mod pro;
 pub mod qr;
 pub mod quality;
@@ -1129,6 +1131,28 @@ impl SourceLibraries {
 pub fn download_name(item: &str, source: &str, container: &str) -> Result<String, JsError> {
     let item: Item = parse(item, "item")?;
     Ok(download::browser_name(&item, source, container))
+}
+
+/// Import Playlist…: reads an M3U or M3U8 file against the library songs' paths (a JSON list of
+/// `<folder name>/<path in it>`): `{"found": [path…], "lines": n}` (`m3u::Imported`).
+#[wasm_bindgen]
+pub fn m3u_import(bytes: &[u8], songs: &str) -> Result<String, JsError> {
+    let songs: Vec<String> = parse(songs, "songs")?;
+    Ok(json(&m3u::import(bytes, &songs).map_err(error)?))
+}
+
+/// Export Playlist…: the M3U8 text for library songs (`m3u::ExportSong` list).
+#[wasm_bindgen]
+pub fn m3u_export(songs: &str) -> Result<String, JsError> {
+    let songs: Vec<m3u::ExportSong> = parse(songs, "songs")?;
+    Ok(m3u::write(&songs))
+}
+
+/// The file name an exported playlist named `name` is saved as ("Road Songs.m3u8"), safe on
+/// every platform.
+#[wasm_bindgen]
+pub fn m3u_file_name(name: &str) -> String {
+    jf_plugin_model::filenames::file_name(name, "m3u8")
 }
 
 // ---- search ------------------------------------------------------------------------------------
