@@ -234,12 +234,32 @@
       "created": "2026-04-03T18:00:00Z",
       "changed": "2026-04-03T18:00:00Z",
       "entry": []
+    },
+    {
+      "id": "pl-3",
+      "name": "Lighthouse Shift",
+      "comment": "Another account's public playlist.",
+      "owner": "bob",
+      "public": true,
+      "songCount": 2,
+      "duration": 552,
+      "created": "2026-05-01T18:00:00Z",
+      "changed": "2026-05-02T18:00:00Z",
+      "entry": ["tr-1", "tr-3"]
     }
   ],
   "starred": {
-    "artist": ["ar-2"],
+    "artist": ["ar-2", "ar-1"],
     "album": ["al-3"],
-    "song": ["tr-1"]
+    "song": ["tr-1", "tr-3", "tr-4"],
+    "at": {
+      "ar-1": "2026-08-20T12:00:00Z",
+      "ar-2": "2026-06-11T08:15:00Z",
+      "al-3": "2026-07-04T19:30:00Z",
+      "tr-1": "2026-09-01T10:00:00Z",
+      "tr-3": "2026-11-01T09:30:00Z",
+      "tr-4": "2026-10-15T21:45:00Z"
+    }
   },
   "similar": ["tr-2", "tr-1", "tr-6"]
 }

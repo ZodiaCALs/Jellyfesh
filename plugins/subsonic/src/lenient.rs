@@ -26,6 +26,12 @@ pub fn opt_u32<'de, D: Deserializer<'de>>(d: D) -> Result<Option<u32>, D::Error>
     Ok(number(&Value::deserialize(d)?).map(|n| n.round().clamp(0.0, f64::from(u32::MAX)) as u32))
 }
 
+/// An optional file size in bytes, as [`opt_u32`] but wider (files can be
+/// larger than 4 GB).
+pub fn opt_u64<'de, D: Deserializer<'de>>(d: D) -> Result<Option<u64>, D::Error> {
+    Ok(number(&Value::deserialize(d)?).map(|n| n.round().clamp(0.0, u64::MAX as f64) as u64))
+}
+
 /// An optional number (milliseconds in lyrics may be fractional).
 pub fn opt_f64<'de, D: Deserializer<'de>>(d: D) -> Result<Option<f64>, D::Error> {
     Ok(number(&Value::deserialize(d)?))

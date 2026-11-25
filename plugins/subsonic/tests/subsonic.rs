@@ -7,8 +7,8 @@ mod mock;
 use std::path::Path;
 
 use jf_plugin_host::{
-    AuthKind, AuthStep, CallError, Capability, FieldKind, Item, ItemKind, LyricFormat, PluginError, Quality,
-    SecretStore, UnplayableReason,
+    AuthKind, AuthStep, CallError, Capability, DownloadQuality, FieldKind, Item, ItemKind, LyricFormat,
+    PluginError, Quality, SecretStore, UnplayableReason,
 };
 use jf_plugin_testkit::*;
 use mock::{API_KEY, AUDIO, Mock, PNG, USERS};
@@ -91,20 +91,28 @@ fn installs_with_its_manifest() {
     let env = env_for(&server);
     let info = env.host.plugin(ID).unwrap();
     assert_eq!(info.name, "Subsonic");
-    assert_eq!(info.version, "0.0.7");
+    assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
     assert!(info.official, "signed with the test key, which this host trusts");
-    assert_eq!(info.capabilities.len(), 9);
+    assert_eq!(info.capabilities.len(), 11);
     assert_eq!(
         info.auth_kinds,
         vec![AuthKind::ApiKey, AuthKind::PasswordExchange]
     );
     assert!(info.has_icon);
-    assert_eq!(info.settings["quality"], "app");
+    // No quality setting: the app's level decides (ADR-0026), from the
+    // levels the manifest offers.
+    assert!(info.settings.get("quality").is_none());
+    assert!(info.settings_schema["properties"].get("quality").is_none());
+    assert_eq!(
+        info.content_policy.qualities,
+        vec![Quality::Lossless, Quality::High, Quality::Normal, Quality::Low]
+    );
     assert_eq!(info.settings["transcode_format"], "mp3");
     assert_eq!(info.settings_schema["properties"]["server_url"]["format"], "uri");
     let capabilities = recv(env.host.capabilities(ID)).unwrap();
     assert!(capabilities.contains(&Capability::Recommendations));
     assert!(capabilities.contains(&Capability::Discover) && capabilities.contains(&Capability::Details));
+    assert!(capabilities.contains(&Capability::Library) && capabilities.contains(&Capability::Download));
 }
 
 #[test]
@@ -496,7 +504,7 @@ fn browse_the_library() {
 
     // Playlists.
     let playlists = browse(Some(root.items[2].clone()), None, 50);
-    assert_eq!(ids(&playlists), vec!["pl:pl-1", "pl:pl-2"]);
+    assert_eq!(ids(&playlists), vec!["pl:pl-1", "pl:pl-2", "pl:pl-3"]);
     assert_eq!(playlists.items[0].child_count, Some(2));
     let evening = browse(Some(playlists.items[0].clone()), None, 50);
     assert_eq!(ids(&evening), vec!["tr:tr-2", "tr:tr-6"]);
@@ -517,9 +525,14 @@ fn browse_the_library() {
         .iter()
         .map(|folder| ids(&browse(Some(folder.clone()), None, 50)))
         .collect();
+    // In the server's order (the library's likes come newest first).
     assert_eq!(
         starred_ids,
-        vec![vec!["tr:tr-1"], vec!["al:al-3"], vec!["ar:ar-2"]]
+        vec![
+            vec!["tr:tr-1", "tr:tr-3", "tr:tr-4"],
+            vec!["al:al-3"],
+            vec!["ar:ar-2", "ar:ar-1"]
+        ]
     );
 
     // Missing things and things without children.
@@ -597,13 +610,24 @@ fn streams_by_quality() {
     assert_eq!(fetched.body, AUDIO);
     assert_eq!(fetched.header("content-type"), Some("audio/flac"));
 
-    // A fixed quality and format in the settings win.
+    // The conversion format is a setting; the quality is always the level
+    // the app asks for, and a quality setting is refused as unknown.
     env.settings(
         ID,
-        json!({ "server_url": server.url(), "quality": "low", "transcode_format": "opus" }),
+        json!({ "server_url": server.url(), "transcode_format": "opus" }),
     );
-    let q = query(&resolve("tr:tr-1", Quality::Lossless).url);
+    let q = query(&resolve("tr:tr-1", Quality::Low).url);
     assert_eq!((q["format"].as_str(), q["maxBitRate"].as_str()), ("opus", "96"));
+    let q = query(&resolve("tr:tr-1", Quality::Lossless).url);
+    assert_eq!(q["format"], "raw", "the app's level, not an old setting");
+    assert!(
+        env.host
+            .set_settings(
+                ID,
+                &json!({ "server_url": server.url(), "quality": "low" }).to_string()
+            )
+            .is_err()
+    );
 
     assert_eq!(
         recv(
@@ -616,6 +640,282 @@ fn streams_by_quality() {
         recv(env.host.resolve_stream(ID, track("al:al-1", "x"), Quality::High)),
         Err(CallError::Plugin(PluginError::InvalidInput(_)))
     ));
+}
+
+/// Every level the app may ask for, for files of each kind: what the plugin
+/// asks the server for, what it tells the engine, and what the mock server
+/// sends back. The table is `tests/golden/levels.txt`; run with
+/// `UPDATE_GOLDEN=1` to accept a new one, then review it.
+#[test]
+fn levels_map_to_requests() {
+    let server = Mock::with_api_keys().start();
+    let env = env_for(&server);
+    sign_in_with_key(&env);
+    let songs = [
+        ("tr:tr-1", "Aurora (FLAC, 920 kbit/s)"),
+        ("tr:tr-2", "Midnight Sun (MP3, 320 kbit/s)"),
+        ("tr:tr-3", "Snowfall (MP3, 128 kbit/s)"),
+        ("tr:tr-4", "Glacier (AAC in M4A, 256 kbit/s)"),
+        ("tr:tr-6", "Rewind (WMA, 192 kbit/s)"),
+    ];
+    let levels = [
+        (Quality::Lossless, "lossless"),
+        (Quality::High, "high"),
+        (Quality::Normal, "normal"),
+        (Quality::Low, "low"),
+    ];
+    let mut table = String::from("# song | level | format | maxBitRate | hint to the engine | the server sent\n");
+    for (id, song) in songs {
+        for (quality, level) in levels {
+            let info = recv(env.host.resolve_stream(ID, track(id, "x"), quality)).unwrap();
+            assert!(info.url.starts_with(&format!("{}/rest/stream.view?", server.url())));
+            let q = url_query(&info.url);
+            let hint = match (&info.codec, info.bitrate_kbps) {
+                (Some(codec), Some(kbps)) => format!("{codec} {kbps} kbit/s"),
+                (Some(codec), None) => codec.clone(),
+                (None, _) => "unknown".into(),
+            };
+            let sent = fetch(&info.url, &[]).unwrap();
+            table.push_str(&format!(
+                "{song} | {level} | {} | {} | {hint} | {}\n",
+                q["format"],
+                q.get("maxBitRate").map_or("-", String::as_str),
+                sent.header("content-type").unwrap_or_default()
+            ));
+        }
+    }
+    let path = plugin_dir().join("tests/golden/levels.txt");
+    if std::env::var("UPDATE_GOLDEN").is_ok_and(|v| v == "1") {
+        std::fs::write(&path, &table).unwrap();
+    }
+    assert_eq!(
+        table,
+        std::fs::read_to_string(&path).unwrap(),
+        "run with UPDATE_GOLDEN=1 to accept the new table"
+    );
+}
+
+/// The library's likes (ADR-0024): `getStarred2`, newest star first, in the
+/// pages the app asks for; a first page asks the server again, later pages
+/// slice the list it fetched.
+#[test]
+fn likes_come_newest_first_in_pages() {
+    let server = Mock::navidrome_like().start();
+    let env = env_for(&server);
+    sign_in_with_password(&env);
+    let likes = |kind, cursor: Option<String>, limit| {
+        recv(env.host.library_likes(ID, kind, next_page(cursor, limit))).unwrap()
+    };
+    let asked = || server.requests_to("/rest/getStarred2.view").len();
+
+    let first = likes(ItemKind::Track, None, 2);
+    assert_eq!(ids(&first), vec!["tr:tr-3", "tr:tr-4"]);
+    assert_eq!((first.next.as_deref(), first.total), (Some("2"), Some(3)));
+    assert_eq!(first.items[0].title, "Snowfall");
+    assert_eq!(asked(), 1);
+    let rest = likes(ItemKind::Track, first.next.clone(), 2);
+    assert_eq!(ids(&rest), vec!["tr:tr-1"]);
+    assert_eq!(rest.next, None);
+    assert_eq!(asked(), 1, "a later page slices the list already fetched");
+    likes(ItemKind::Track, None, 2);
+    assert_eq!(asked(), 2, "a first page (a refresh) asks again");
+
+    assert_eq!(ids(&likes(ItemKind::Album, None, 50)), vec!["al:al-3"]);
+    assert_eq!(
+        ids(&likes(ItemKind::Artist, None, 50)),
+        vec!["ar:ar-1", "ar:ar-2"]
+    );
+    assert_eq!(
+        recv(env.host.library_likes(ID, ItemKind::Playlist, next_page(None, 50))),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+}
+
+/// The library's playlists (ADR-0024): the account's own, then other
+/// accounts' public ones as followed; each one's songs come from browse.
+#[test]
+fn playlists_own_and_followed() {
+    // Token sign-in knows the user name; with an API key the plugin asks
+    // `tokenInfo` for it.
+    for (server, with_key) in [
+        (Mock::navidrome_like().start(), false),
+        (Mock::with_api_keys().start(), true),
+    ] {
+        let env = env_for(&server);
+        if with_key {
+            sign_in_with_key(&env);
+        } else {
+            sign_in_with_password(&env);
+        }
+        let lists = recv(env.host.library_playlists(ID, next_page(None, 50))).unwrap();
+        let flags: Vec<(&str, bool, bool)> = lists
+            .entries
+            .iter()
+            .map(|e| (e.item.id.as_str(), e.owned, e.songs_listed))
+            .collect();
+        assert_eq!(
+            flags,
+            [
+                ("pl:pl-1", true, true),
+                ("pl:pl-2", true, true),
+                ("pl:pl-3", false, true)
+            ]
+        );
+        assert_eq!(lists.total, Some(3));
+        assert_eq!(lists.entries[0].item.title, "Evening");
+        assert_eq!(lists.entries[0].item.child_count, Some(2));
+
+        let two = recv(env.host.library_playlists(ID, next_page(None, 2))).unwrap();
+        assert_eq!(two.entries.len(), 2);
+        assert_eq!(two.next.as_deref(), Some("2"));
+        let last = recv(env.host.library_playlists(ID, next_page(two.next, 2))).unwrap();
+        assert_eq!(last.entries.len(), 1);
+        assert_eq!(last.next, None);
+
+        // A followed playlist's songs, from browse as for any playlist.
+        let songs = recv(env.host.browse(ID, Some(lists.entries[2].item.clone()), next_page(None, 50))).unwrap();
+        assert_eq!(ids(&songs), vec!["tr:tr-1", "tr:tr-3"]);
+    }
+}
+
+/// Downloads (ADR-0025) always use `download`, never `stream`. This
+/// server's `download` sends only originals, so every quality gets the
+/// original file, with its size and its name on the server.
+#[test]
+fn downloads_the_original_file() {
+    let server = Mock::with_api_keys().start();
+    let env = env_for(&server);
+    sign_in_with_key(&env);
+    let download = |id: &str, quality| recv(env.host.download(ID, track(id, "x"), quality)).unwrap();
+
+    let original = download("tr:tr-1", DownloadQuality::Original);
+    assert!(
+        original
+            .url
+            .starts_with(&format!("{}/rest/download.view?", server.url()))
+    );
+    let q = url_query(&original.url);
+    assert_eq!((q["id"].as_str(), q["format"].as_str()), ("tr-1", "raw"));
+    assert_eq!(q["apiKey"], API_KEY);
+    assert!(original.headers.is_empty(), "Subsonic signs in through the URL");
+    assert_eq!(original.container, "flac");
+    assert_eq!(original.size, Some(28_181_000));
+    assert!(original.original);
+    assert_eq!(original.file_name.as_deref(), Some("01 Aurora.flac"));
+    let fetched = fetch(&original.url, &[]).unwrap();
+    assert_eq!(fetched.body, AUDIO);
+    assert_eq!(fetched.header("content-type"), Some("audio/flac"));
+
+    let high = download("tr:tr-1", DownloadQuality::High);
+    assert!(high.original);
+    assert_eq!(url_query(&high.url)["format"], "raw");
+    let glacier = download("tr:tr-4", DownloadQuality::Low);
+    assert_eq!((glacier.container.as_str(), glacier.size), ("m4a", None));
+    assert_eq!(glacier.file_name, None, "no path on the server, no name");
+    assert!(server.requests_to("/rest/stream.view").is_empty(), "never stream");
+
+    assert_eq!(
+        recv(
+            env.host
+                .download(ID, track("tr:missing", "x"), DownloadQuality::Original)
+        ),
+        Err(CallError::Plugin(PluginError::NotFound))
+    );
+    assert!(matches!(
+        recv(
+            env.host
+                .download(ID, item(ItemKind::Album, "al:al-1", "x"), DownloadQuality::Original)
+        ),
+        Err(CallError::Plugin(PluginError::InvalidInput(_)))
+    ));
+    assert!(matches!(
+        recv(
+            env.host
+                .download(ID, track("tr:tr-5", "x"), DownloadQuality::Original)
+        ),
+        Err(CallError::Plugin(PluginError::Service(_)))
+    ));
+}
+
+/// Navidrome's `download` also converts (`format`, `bitrate`): a file above
+/// the quality's limit, or in a format the engine does not play, comes
+/// converted; one within it comes as it is.
+#[test]
+fn navidrome_converts_downloads_above_the_limit() {
+    let server = Mock {
+        server_type: "navidrome",
+        ..Mock::navidrome_like()
+    }
+    .start();
+    let env = env_for(&server);
+    sign_in_with_password(&env);
+    let download = |id: &str, quality| recv(env.host.download(ID, track(id, "x"), quality)).unwrap();
+
+    let high = download("tr:tr-1", DownloadQuality::High);
+    let q = url_query(&high.url);
+    assert_eq!((q["format"].as_str(), q["bitrate"].as_str()), ("mp3", "320"));
+    assert_eq!(
+        (high.container.as_str(), high.original, high.size),
+        ("mp3", false, None)
+    );
+    assert_eq!(high.file_name, None);
+    let fetched = fetch(&high.url, &[]).unwrap();
+    assert_eq!(fetched.body, b"converted mp3 320");
+    assert_eq!(fetched.header("content-type"), Some("audio/mpeg"));
+
+    let normal = download("tr:tr-2", DownloadQuality::Normal);
+    assert_eq!(url_query(&normal.url)["bitrate"], "192");
+    let small = download("tr:tr-3", DownloadQuality::Low);
+    assert!(small.original, "an MP3 at 128 kbit/s is within Low");
+    assert_eq!(url_query(&small.url)["format"], "raw");
+    let original = download("tr:tr-1", DownloadQuality::Original);
+    assert_eq!((url_query(&original.url)["format"].as_str(), original.original), ("raw", true));
+
+    // Opus when the person's conversion format is Opus.
+    env.settings(
+        ID,
+        json!({ "server_url": server.url(), "transcode_format": "opus" }),
+    );
+    let low = download("tr:tr-6", DownloadQuality::Low);
+    let q = url_query(&low.url);
+    assert_eq!(
+        (low.container.as_str(), q["format"].as_str(), q["bitrate"].as_str()),
+        ("opus", "opus", "128")
+    );
+    assert_eq!(
+        fetch(&low.url, &[]).unwrap().header("content-type"),
+        Some("audio/ogg")
+    );
+    assert!(server.requests_to("/rest/stream.view").is_empty(), "never stream");
+}
+
+/// An account without the download role (Navidrome with downloads off) is
+/// refused before the song is looked up; streaming is another role.
+#[test]
+fn downloads_off_for_the_account() {
+    let server = Mock {
+        download_role: false,
+        ..Mock::navidrome_like()
+    }
+    .start();
+    let env = env_for(&server);
+    sign_in_with_password(&env);
+    assert_eq!(
+        recv(
+            env.host
+                .download(ID, track("tr:tr-1", "x"), DownloadQuality::Original)
+        ),
+        Err(CallError::Plugin(PluginError::Unsupported))
+    );
+    assert!(server.requests_to("/rest/getSong.view").is_empty());
+    assert!(server.requests_to("/rest/download.view").is_empty());
+    assert!(
+        recv(
+            env.host
+                .resolve_stream(ID, track("tr:tr-1", "x"), Quality::High)
+        )
+        .is_ok()
+    );
 }
 
 #[test]

@@ -30,7 +30,7 @@ const DISCOVERY: &str = "getOpenSubsonicExtensions";
 const SECRET: &str = "login";
 /// kv: what the server supports, for `meta.capabilities`.
 const INFO_KEY: &str = "server-info";
-/// kv: whether the account may stream.
+/// kv: whether the account may stream and download.
 const ROLES_KEY: &str = "roles";
 /// How long the account's roles are trusted before asking again.
 const ROLES_TTL_MS: u64 = 24 * 60 * 60 * 1000;
@@ -221,7 +221,18 @@ struct State {
     /// Item id → cover art id, from listings, so `artwork` needs no request.
     covers: HashMap<String, String>,
     lists: Vec<(String, u64, Vec<Item>)>,
-    can_stream: Option<bool>,
+    roles: Option<Roles>,
+    /// The signed-in account's user name, once known.
+    username: Option<String>,
+}
+
+/// What the account may do (`getUser`); none where the server cannot say.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Roles {
+    /// `streamRole`.
+    pub stream: Option<bool>,
+    /// `downloadRole`.
+    pub download: Option<bool>,
 }
 
 thread_local! {
@@ -316,7 +327,8 @@ pub fn save_creds(creds: &Creds) -> core::result::Result<(), wit_kv::KvError> {
     STATE.with(|s| {
         let mut state = s.borrow_mut();
         state.creds = Some(Some(creds.clone()));
-        state.can_stream = None;
+        state.roles = None;
+        state.username = None;
     });
     let _ = kv::delete(ROLES_KEY);
     Ok(())
@@ -527,18 +539,28 @@ pub fn remembered_info() -> Option<ServerInfo> {
 }
 
 /// Whether the signed-in account may stream (`getUser`'s `streamRole`).
-/// Asked once a day; when the server cannot say, playing is allowed and
-/// the server decides.
+/// When the server cannot say, playing is allowed and the server decides.
 pub fn can_stream() -> bool {
-    if let Some(known) = STATE.with(|s| s.borrow().can_stream) {
-        return known;
-    }
-    let allowed = stream_role().unwrap_or(true);
-    STATE.with(|s| s.borrow_mut().can_stream = Some(allowed));
-    allowed
+    roles().stream.unwrap_or(true)
 }
 
-fn stream_role() -> Option<bool> {
+/// Whether the signed-in account may download (`getUser`'s
+/// `downloadRole`), or none when the server cannot say.
+pub fn can_download() -> Option<bool> {
+    roles().download
+}
+
+/// The account's roles, asked once a day.
+fn roles() -> Roles {
+    if let Some(known) = STATE.with(|s| s.borrow().roles) {
+        return known;
+    }
+    let roles = ask_roles().unwrap_or_default();
+    STATE.with(|s| s.borrow_mut().roles = Some(roles));
+    roles
+}
+
+fn ask_roles() -> Option<Roles> {
     let server = binding(&base().ok()?).ok()?;
     let now = clock::now_utc_ms();
     if let Ok(Some(stored)) = kv::get_json::<Value>(ROLES_KEY)
@@ -547,10 +569,36 @@ fn stream_role() -> Option<bool> {
             .get("at")
             .and_then(Value::as_u64)
             .is_some_and(|at| now.saturating_sub(at) < ROLES_TTL_MS)
+        // Version 0.0.7 kept only the stream role.
+        && stored.get("download").is_some()
     {
-        return stored.get("stream").and_then(Value::as_bool);
+        return Some(Roles {
+            stream: stored.get("stream").and_then(Value::as_bool),
+            download: stored.get("download").and_then(Value::as_bool),
+        });
     }
-    let user = match creds().ok()?? {
+    let user = username()?;
+    let found: User = call_field("getUser", &[("username", &user)], "user").ok()?;
+    let roles = Roles {
+        stream: Some(found.stream_role.unwrap_or(true)),
+        download: found.download_role,
+    };
+    let _ = kv::set_json(
+        ROLES_KEY,
+        &serde_json::json!({
+            "server": server, "at": now, "stream": roles.stream, "download": roles.download
+        }),
+    );
+    Some(roles)
+}
+
+/// The signed-in account's user name: from the sign-in, or for an API key
+/// from `tokenInfo`. None when there is no sign-in or the server cannot say.
+pub fn username() -> Option<String> {
+    if let Some(known) = STATE.with(|s| s.borrow().username.clone()) {
+        return Some(known);
+    }
+    let found = match creds().ok()?? {
         Creds::Token { user, .. } => user,
         Creds::ApiKey(_) => {
             call_field::<TokenInfo>("tokenInfo", &[], "tokenInfo")
@@ -558,16 +606,11 @@ fn stream_role() -> Option<bool> {
                 .username
         }
     };
-    if user.is_empty() {
+    if found.is_empty() {
         return None;
     }
-    let found: User = call_field("getUser", &[("username", &user)], "user").ok()?;
-    let stream = found.stream_role.unwrap_or(true);
-    let _ = kv::set_json(
-        ROLES_KEY,
-        &serde_json::json!({ "server": server, "at": now, "stream": stream }),
-    );
-    Some(stream)
+    STATE.with(|s| s.borrow_mut().username = Some(found.clone()));
+    Some(found)
 }
 
 /// Remembers the cover art id of an item from a listing.

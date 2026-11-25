@@ -12,10 +12,10 @@ Setup, server preparation and troubleshooting: `docs/plugins/subsonic.md`.
 * **Browse** artists → albums → tracks, album lists (recently added, recently
   played, most played, random, A to Z, by artist), playlists and starred
   songs, albums and artists.
-* **Play** with the quality you choose: the original file when Jellyfesh can
-  play its format within the quality's bit-rate limit (lossless: any
-  bit rate), otherwise converted by the server to MP3, Opus or AAC at
-  320, 192 or 96 kbit/s.
+* **Play** at the streaming quality chosen in Jellyfesh: the original file
+  when Jellyfesh can play its format within the quality's bit-rate limit
+  (lossless: any bit rate), otherwise converted by the server to MP3, Opus
+  or AAC at 320, 192 or 96 kbit/s.
 * **Cover art** at the size the screen needs, **lyrics** (synced lyrics from
   OpenSubsonic servers as timed lines, plain lyrics otherwise) and
   **similar songs** when the server offers them.
@@ -24,6 +24,13 @@ Setup, server preparation and troubleshooting: `docs/plugins/subsonic.md`.
   artist biographies (`getAlbumInfo2`, `getArtistInfo2`, usually from
   Last.fm through the server), version, genres, release date, label and the
   people on a song (OpenSubsonic fields), playlist descriptions.
+* **Library** (plugin API 1.3): your starred songs, albums and artists on
+  Favourites, newest first, and your playlists (and other accounts' public
+  ones) on Playlists.
+* **Download** (plugin API 1.3) when your account has the download role:
+  the original file, or on Navidrome a conversion for the lower download
+  qualities. Always through the server's `download` call, which keeps its
+  download permission.
 
 It works with servers that speak the Subsonic API 1.13.0 or newer. Your
 server may be on your home network; Jellyfesh lets this plugin reach that one
@@ -47,8 +54,8 @@ open the server at, such as `http://192.168.1.20:4533`). Then:
 | What | Where |
 | --- | --- |
 | The API key, or your user name with the salt and token, tied to the server address | your system's keystore (Keychain, Credential Manager, Secret Service, Android Keystore) |
-| What the server supports, and whether your account may stream (checked daily) | the plugin's small private storage in Jellyfesh's data folder |
-| Server address, quality, conversion format | the plugin's settings |
+| What the server supports, and whether your account may stream and download (checked daily) | the plugin's small private storage in Jellyfesh's data folder |
+| Server address, conversion format | the plugin's settings |
 
 Your password is never stored, by the plugin or by Jellyfesh. A sign-in is
 only ever sent to the address it was made for. Subsonic has no other way to

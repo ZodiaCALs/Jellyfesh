@@ -1,5 +1,27 @@
 # Changelog: Subsonic plugin
 
+## 0.0.8 — unreleased
+
+* With Jellyfesh v0.0.8: plugin API 1.3 (the package needs Jellyfesh
+  v0.0.8).
+* The **Streaming Quality** setting is gone: streams use the level
+  Jellyfesh asks for (its one streaming quality, ADR-0026), and the manifest
+  lists the levels the quality menu offers (lossless, high, normal, low).
+  Jellyfesh keeps a quality set here once, as its own. The conversion format
+  stays.
+* **Library** (ADR-0024): starred songs, albums and artists for Favourites,
+  newest star first (`getStarred2`), and the playlists the server lists for
+  the account for Playlists: its own, and other accounts' public ones as
+  followed (`getPlaylists`).
+* **Download** (ADR-0025): always through `download`, never `stream`. The
+  original file (`format=raw`, with its size and name), or on Navidrome,
+  whose `download` also converts, MP3 or Opus at 320, 192 or 128 kbit/s for
+  High, Normal and Low when the file is above that. An account without the
+  download role (Navidrome with downloads turned off) is told the server
+  does not allow downloads.
+* Tests: a golden table of what each level asks of the server for FLAC,
+  MP3, AAC and WMA files.
+
 ## 0.0.7 — 2026-11-19
 
 * With Jellyfesh v0.0.7: plugin API 1.2 (the package needs Jellyfesh

@@ -47,6 +47,13 @@ pub struct Mock {
     pub song_lyrics: bool,
     /// The account's `streamRole`.
     pub stream_role: bool,
+    /// The account's `downloadRole`; without it `download` answers 50, as
+    /// Navidrome does with downloads turned off.
+    pub download_role: bool,
+    /// `type` in OpenSubsonic answers. As `navidrome`, `download` also
+    /// converts (`format`, `bitrate`), as Navidrome's does; other servers'
+    /// `download` sends the original whatever is asked.
+    pub server_type: &'static str,
     /// Unknown methods answer an HTTP 404 page instead of a Subsonic error.
     pub unknown_404: bool,
 }
@@ -63,6 +70,8 @@ impl Mock {
             form_post: true,
             song_lyrics: true,
             stream_role: true,
+            download_role: true,
+            server_type: "mocksonic",
             unknown_404: false,
         }
     }
@@ -88,6 +97,8 @@ impl Mock {
             form_post: false,
             song_lyrics: false,
             stream_role: true,
+            download_role: true,
+            server_type: "mocksonic",
             unknown_404: false,
         }
     }
@@ -118,7 +129,7 @@ impl Mock {
         body.insert("status".into(), status.into());
         body.insert("version".into(), self.version.into());
         if self.open_subsonic {
-            body.insert("type".into(), "mocksonic".into());
+            body.insert("type".into(), self.server_type.into());
             body.insert("serverVersion".into(), "0.1.0 (test)".into());
             body.insert("openSubsonic".into(), true.into());
         }
@@ -219,7 +230,7 @@ impl Mock {
                 "scrobblingEnabled": true,
                 "adminRole": false,
                 "streamRole": self.stream_role,
-                "downloadRole": true,
+                "downloadRole": self.download_role,
                 "folder": [1]
             }})),
             "getArtists" => {
@@ -323,13 +334,22 @@ impl Mock {
                 None => self.fail(70, "Playlist not found"),
             },
             "getStarred2" => {
+                // In the order the fixture lists them, each with when it was
+                // starred, as servers send them.
                 let starred = &library["starred"];
                 let pick = |kind: &str, find: &dyn Fn(&str) -> Option<Value>| -> Vec<Value> {
                     starred[kind]
                         .as_array()
                         .unwrap()
                         .iter()
-                        .filter_map(|id| find(id.as_str().unwrap()))
+                        .filter_map(|id| {
+                            let id = id.as_str().unwrap();
+                            let mut found = find(id)?;
+                            if let Some(at) = starred["at"].get(id) {
+                                found["starred"] = at.clone();
+                            }
+                            Some(found)
+                        })
                         .collect()
                 };
                 self.ok(json!({ "starred2": {
@@ -410,6 +430,23 @@ impl Mock {
                     };
                     Response::new(200, AUDIO).header("content-type", &kind)
                 }
+                None => self.fail(70, "Song not found"),
+            },
+            "download" => match lib.song(&id) {
+                Some(_) if !self.download_role => {
+                    self.fail(50, "User is not authorized for the given operation.")
+                }
+                Some(song) => match p("format").filter(|f| f != "raw" && self.server_type == "navidrome") {
+                    Some(format) => {
+                        let bitrate = p("bitrate").unwrap_or_default();
+                        let kind = if format == "mp3" { "audio/mpeg" } else { "audio/ogg" };
+                        Response::new(200, format!("converted {format} {bitrate}")).header("content-type", kind)
+                    }
+                    None => Response::new(200, AUDIO).header(
+                        "content-type",
+                        song["contentType"].as_str().unwrap_or("application/octet-stream"),
+                    ),
+                },
                 None => self.fail(70, "Song not found"),
             },
             "getCoverArt" => Response::new(200, PNG).header("content-type", "image/png"),

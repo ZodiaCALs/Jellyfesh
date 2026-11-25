@@ -7,13 +7,16 @@
 //!   ([`login`], ADR-0015).
 //! * Search: `search3`. Browse: artists → albums → tracks, album lists,
 //!   playlists, starred items. Stream: `stream` with a format and bit-rate
-//!   limit from the quality ([`media`]). Artwork: `getCoverArt`. Lyrics:
+//!   limit from the level the app asks for ([`media`]). Artwork: `getCoverArt`. Lyrics:
 //!   `getLyricsBySongId` (OpenSubsonic `songLyrics`) as LRC or plain text
 //!   ([`lyrics`]), else `getLyrics`. Recommendations: `getSimilarSongs`.
 //! * Discover (API 1.2): `getAlbumList2` recently added, most played,
 //!   recently played and random. Details: `getAlbumInfo2` notes and
 //!   `getAlbum` facts, `getArtistInfo2` biographies, `getSong` facts and
 //!   playlist descriptions ([`details`]).
+//! * Library (API 1.3): `getStarred2`, newest star first, and `getPlaylists`
+//!   (the person's own, and others' public ones). Download: `download`, when
+//!   the account's download role allows it ([`media`]).
 //! * JSON answers (`f=json`), extensions found with
 //!   `getOpenSubsonicExtensions`, form POST when the server offers it.
 
@@ -34,6 +37,12 @@ use crate::items::Id;
 use crate::model::{
     AlbumList, Artist, Found, Indexes, LyricsList, PlainLyrics, Playlist, Playlists, Song, Songs,
 };
+
+/// Newest first by when the person starred each item; undated ones last, in
+/// the server's order.
+fn newest_first<T>(list: &mut [T], starred: impl Fn(&T) -> Option<&str>) {
+    list.sort_by(|a, b| starred(b).cmp(&starred(a)));
+}
 
 struct Subsonic;
 
@@ -91,6 +100,133 @@ fn whole(key: &str, page: &PageRequest, fetch: impl FnOnce() -> Result<Vec<Item>
         }
     };
     items::slice(list, page)
+}
+
+/// Like [`whole`], but a first page always asks the server again: the app
+/// asks for one each time it refreshes the list.
+fn fresh(key: &str, page: &PageRequest, fetch: impl FnOnce() -> Result<Vec<Item>>) -> Result<ItemPage> {
+    if page.cursor.as_deref().is_none_or(str::is_empty) {
+        let list = fetch()?;
+        api::keep_list(key, &list);
+        return items::slice(list, page);
+    }
+    whole(key, page, fetch)
+}
+
+/// The person's starred songs, albums or artists (`library.likes`).
+fn likes(kind: ItemKind, page: &PageRequest) -> Result<ItemPage> {
+    let key = match kind {
+        ItemKind::Track => "likes:songs",
+        ItemKind::Album => "likes:albums",
+        ItemKind::Artist => "likes:artists",
+        _ => return Err(PluginError::Unsupported),
+    };
+    fresh(key, page, || {
+        let mut found: Found = api::call_field("getStarred2", &[], "starred2")?;
+        Ok(match kind {
+            ItemKind::Track => {
+                newest_first(&mut found.song, |s| s.starred.as_deref());
+                items::tracks(&found.song)
+            }
+            ItemKind::Album => {
+                newest_first(&mut found.album, |a| a.starred.as_deref());
+                found.album.iter().filter_map(items::album).collect()
+            }
+            _ => {
+                newest_first(&mut found.artist, |a| a.starred.as_deref());
+                found.artist.iter().filter_map(items::artist).collect()
+            }
+        })
+    })
+}
+
+/// The playlists the server lists for the account (`library.playlists`):
+/// its own, and other accounts' public ones, which count as followed.
+fn playlists(page: &PageRequest) -> Result<PlaylistPage> {
+    let found: Playlists = api::call_field("getPlaylists", &[], "playlists")?;
+    let me = api::username();
+    let entries: Vec<PlaylistEntry> = found
+        .playlist
+        .iter()
+        .filter_map(|p| {
+            let item = items::playlist(p)?;
+            let owned = match (&me, &p.owner) {
+                (Some(me), Some(owner)) => owner.eq_ignore_ascii_case(me),
+                _ => true,
+            };
+            Some(if owned {
+                PlaylistEntry::owned(item)
+            } else {
+                PlaylistEntry::followed(item)
+            })
+        })
+        .collect();
+    let start = items::offset(page)?;
+    let total = entries.len();
+    let end = start.saturating_add(page.limit.max(1) as usize).min(total);
+    Ok(PlaylistPage {
+        entries: entries
+            .into_iter()
+            .skip(start)
+            .take(end.saturating_sub(start))
+            .collect(),
+        next: (end < total).then(|| end.to_string()),
+        total: u32::try_from(total).ok(),
+    })
+}
+
+/// Where to fetch a song (`download.download`): always `download`, which the
+/// server's download role governs, never `stream`.
+fn download_info(id: &str, quality: DownloadQuality) -> Result<DownloadInfo> {
+    // The account's download role (Navidrome: whether downloads are on at
+    // all). When the server cannot say, it decides when the file is fetched.
+    if api::can_download() == Some(false) {
+        return Err(PluginError::Unsupported);
+    }
+    let song: Song = api::call_field("getSong", &[("id", id)], "song")?;
+    if song.id.is_empty() {
+        return Err(PluginError::NotFound);
+    }
+    if song.is_video == Some(true) {
+        return Err(PluginError::service("Videos can't be downloaded in Jellyfesh."));
+    }
+    let converts = api::info()?
+        .server_type
+        .is_some_and(|kind| kind.eq_ignore_ascii_case("navidrome"));
+    let plan = media::download(
+        song.suffix.as_deref(),
+        song.bit_rate,
+        quality,
+        converts,
+        api::settings().transcode,
+    );
+    Ok(match plan {
+        media::Download::Original => DownloadInfo {
+            url: api::media_url("download", &[("id", id), ("format", "raw")])?,
+            headers: Vec::new(),
+            container: song.suffix.unwrap_or_default().to_ascii_lowercase(),
+            size: song.size,
+            original: true,
+            // Only the name: the folders above it are the server's.
+            file_name: song
+                .path
+                .as_deref()
+                .and_then(|path| path.rsplit(['/', '\\']).next())
+                .filter(|name| !name.is_empty())
+                .map(str::to_string),
+        },
+        media::Download::Convert { format, kbps } => DownloadInfo {
+            url: api::media_url(
+                "download",
+                &[("id", id), ("format", format), ("bitrate", &kbps.to_string())],
+            )?,
+            headers: Vec::new(),
+            container: format.into(),
+            size: None,
+            original: false,
+            file_name: None,
+        },
+    })
 }
 
 fn root() -> ItemPage {
@@ -453,12 +589,9 @@ impl Plugin for Subsonic {
                     .unwrap_or_else(|| "This track can't be played.".into()),
             ));
         }
-        let plan = media::plan(
-            song.suffix.as_deref(),
-            song.bit_rate,
-            settings.quality(quality),
-            settings.transcode,
-        );
+        // The level the app asks for (ADR-0026); the plugin has no quality
+        // setting of its own.
+        let plan = media::plan(song.suffix.as_deref(), song.bit_rate, quality, settings.transcode);
         let rate = plan.max_bit_rate.map(|r| r.to_string());
         let mut params = vec![("id", id), ("format", plan.format.as_str())];
         if let Some(rate) = &rate {
@@ -536,6 +669,21 @@ impl Plugin for Subsonic {
 
     fn details(item: Item) -> Result<ItemDetails> {
         details::details(&item)
+    }
+
+    fn library_likes(kind: ItemKind, page: PageRequest) -> Result<ItemPage> {
+        likes(kind, &page)
+    }
+
+    fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
+        playlists(&page)
+    }
+
+    fn download(item: Item, quality: DownloadQuality) -> Result<DownloadInfo> {
+        match Id::parse(&item.id) {
+            Some(Id::Track(id)) => download_info(id, quality),
+            _ => Err(PluginError::invalid_input("not a track from this server")),
+        }
     }
 
     fn recommendations_for_item(item: Item, page: PageRequest) -> Result<ItemPage> {

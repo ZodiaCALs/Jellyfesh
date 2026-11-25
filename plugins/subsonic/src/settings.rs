@@ -1,17 +1,11 @@
 //! The person's settings (see `settings.schema.json`).
+//!
+//! There is no quality setting: the app asks for a level with each stream
+//! (ADR-0026), and a `quality` key left from an older version is ignored
+//! (the host drops it when the plugin updates).
 
 use jf_plugin_sdk::prelude::*;
 use serde_json::Value;
-
-/// What to stream.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum QualityChoice {
-    /// The quality the app asks for (per network).
-    #[default]
-    App,
-    /// Always this quality on this server.
-    Fixed(Quality),
-}
 
 /// What the server converts to when it has to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -39,7 +33,6 @@ pub struct Settings {
     /// The server's base address without a trailing `/` (and without a
     /// trailing `/rest`), or none when it is not set yet.
     pub base: Option<String>,
-    pub quality: QualityChoice,
     pub transcode: Transcode,
 }
 
@@ -49,14 +42,6 @@ impl Settings {
         let base = match value.get("server_url").and_then(Value::as_str).map(str::trim) {
             None | Some("") => None,
             Some(url) => Some(normalise_base(url)?),
-        };
-        let quality = match value.get("quality").and_then(Value::as_str).unwrap_or("app") {
-            "app" => QualityChoice::App,
-            "lossless" => QualityChoice::Fixed(Quality::Lossless),
-            "high" => QualityChoice::Fixed(Quality::High),
-            "normal" => QualityChoice::Fixed(Quality::Normal),
-            "low" => QualityChoice::Fixed(Quality::Low),
-            other => return Err(PluginError::invalid_input(format!("unknown quality {other:?}"))),
         };
         let transcode = match value
             .get("transcode_format")
@@ -68,19 +53,7 @@ impl Settings {
             "aac" => Transcode::Aac,
             other => return Err(PluginError::invalid_input(format!("unknown format {other:?}"))),
         };
-        Ok(Settings {
-            base,
-            quality,
-            transcode,
-        })
-    }
-
-    /// The quality to use when the app asks for `asked`.
-    pub fn quality(&self, asked: Quality) -> Quality {
-        match self.quality {
-            QualityChoice::App => asked,
-            QualityChoice::Fixed(quality) => quality,
-        }
+        Ok(Settings { base, transcode })
     }
 }
 
@@ -109,25 +82,20 @@ mod tests {
     fn parses_and_normalises() {
         let s = Settings::parse(&json!({
             "server_url": " http://192.168.1.20:4533/navidrome/rest/ ",
-            "quality": "high",
             "transcode_format": "opus"
         }))
         .unwrap();
         assert_eq!(s.base.as_deref(), Some("http://192.168.1.20:4533/navidrome"));
-        assert_eq!(s.quality(Quality::Low), Quality::High);
         assert_eq!(s.transcode.format(), "opus");
 
-        let s = Settings::parse(&json!({ "server_url": "https://music.example.com/" })).unwrap();
+        // A quality left from version 0.0.7 or older changes nothing.
+        let s = Settings::parse(&json!({ "server_url": "https://music.example.com/", "quality": "low" }))
+            .unwrap();
         assert_eq!(s.base.as_deref(), Some("https://music.example.com"));
-        assert_eq!(
-            s.quality(Quality::Low),
-            Quality::Low,
-            "follows the app by default"
-        );
         assert_eq!(s.transcode, Transcode::Mp3);
 
         assert_eq!(Settings::parse(&json!({})).unwrap().base, None);
         assert!(Settings::parse(&json!({ "server_url": "ftp://x" })).is_err());
-        assert!(Settings::parse(&json!({ "server_url": "http://x", "quality": "max" })).is_err());
+        assert!(Settings::parse(&json!({ "server_url": "http://x", "transcode_format": "wma" })).is_err());
     }
 }

@@ -1,0 +1,21 @@
+# song | level | format | maxBitRate | hint to the engine | the server sent
+Aurora (FLAC, 920 kbit/s) | lossless | raw | - | flac 920 kbit/s | audio/flac
+Aurora (FLAC, 920 kbit/s) | high | mp3 | 320 | mp3 320 kbit/s | audio/mp3
+Aurora (FLAC, 920 kbit/s) | normal | mp3 | 192 | mp3 192 kbit/s | audio/mp3
+Aurora (FLAC, 920 kbit/s) | low | mp3 | 96 | mp3 96 kbit/s | audio/mp3
+Midnight Sun (MP3, 320 kbit/s) | lossless | raw | - | mp3 320 kbit/s | audio/mpeg
+Midnight Sun (MP3, 320 kbit/s) | high | raw | - | mp3 320 kbit/s | audio/mpeg
+Midnight Sun (MP3, 320 kbit/s) | normal | mp3 | 192 | mp3 192 kbit/s | audio/mp3
+Midnight Sun (MP3, 320 kbit/s) | low | mp3 | 96 | mp3 96 kbit/s | audio/mp3
+Snowfall (MP3, 128 kbit/s) | lossless | raw | - | mp3 128 kbit/s | audio/mpeg
+Snowfall (MP3, 128 kbit/s) | high | raw | - | mp3 128 kbit/s | audio/mpeg
+Snowfall (MP3, 128 kbit/s) | normal | raw | - | mp3 128 kbit/s | audio/mpeg
+Snowfall (MP3, 128 kbit/s) | low | mp3 | 96 | mp3 96 kbit/s | audio/mp3
+Glacier (AAC in M4A, 256 kbit/s) | lossless | raw | - | unknown | audio/mp4
+Glacier (AAC in M4A, 256 kbit/s) | high | raw | - | unknown | audio/mp4
+Glacier (AAC in M4A, 256 kbit/s) | normal | mp3 | 192 | mp3 192 kbit/s | audio/mp3
+Glacier (AAC in M4A, 256 kbit/s) | low | mp3 | 96 | mp3 96 kbit/s | audio/mp3
+Rewind (WMA, 192 kbit/s) | lossless | mp3 | 320 | mp3 320 kbit/s | audio/mp3
+Rewind (WMA, 192 kbit/s) | high | mp3 | 320 | mp3 320 kbit/s | audio/mp3
+Rewind (WMA, 192 kbit/s) | normal | mp3 | 192 | mp3 192 kbit/s | audio/mp3
+Rewind (WMA, 192 kbit/s) | low | mp3 | 96 | mp3 96 kbit/s | audio/mp3

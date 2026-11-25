@@ -10,6 +10,15 @@
 //!
 //! Stream URLs carry the sign-in (Subsonic has no other way) and do not
 //! expire.
+//!
+//! Downloads (API 1.3, ADR-0025) always go through `download`, the call the
+//! server's download role governs, never `stream`: the original file
+//! (`format=raw`, which Navidrome needs to skip its own conversion), or, on
+//! Navidrome, whose `download` also takes `format` and `bitrate`, a
+//! conversion for High (320 kbit/s), Normal (192) and Low (128) when the
+//! file is above that or in a format the engine does not play. Other
+//! servers' `download` only sends originals, so they answer the original
+//! for every quality.
 
 use jf_plugin_sdk::prelude::*;
 
@@ -74,6 +83,58 @@ pub fn plan(suffix: Option<&str>, bit_rate: Option<u32>, quality: Quality, trans
     }
 }
 
+/// The bit-rate limit of a download quality in kbit/s (none: the original).
+pub fn download_limit(quality: DownloadQuality) -> Option<u32> {
+    match quality {
+        DownloadQuality::Original => None,
+        DownloadQuality::High => Some(320),
+        DownloadQuality::Normal => Some(192),
+        DownloadQuality::Low => Some(128),
+    }
+}
+
+/// What a download asks the server for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Download {
+    /// The original file.
+    Original,
+    /// The server's conversion: `format` (also the file's extension) at
+    /// `kbps`.
+    Convert { format: &'static str, kbps: u32 },
+}
+
+/// Decides a download of a song with `suffix` and `bit_rate` (kbit/s).
+/// `converts`: the server's `download` takes `format` and `bitrate`
+/// (Navidrome). Conversions are Opus when the person's conversion format is
+/// Opus, otherwise MP3, which every converting server offers and which can
+/// carry tags (AAC arrives as a bare ADTS stream that cannot).
+pub fn download(
+    suffix: Option<&str>,
+    bit_rate: Option<u32>,
+    quality: DownloadQuality,
+    converts: bool,
+    transcode: Transcode,
+) -> Download {
+    let Some(cap) = download_limit(quality) else {
+        return Download::Original;
+    };
+    let playable = suffix.is_some_and(|s| PLAYABLE.contains(&s.to_ascii_lowercase().as_str()));
+    let small_enough = match bit_rate.filter(|b| *b > 0) {
+        Some(rate) => rate <= cap,
+        // The server knows the bit rate and might send the original anyway,
+        // so a file of unknown bit rate comes as it is.
+        None => true,
+    };
+    if !converts || (playable && small_enough) {
+        return Download::Original;
+    }
+    let format = match transcode {
+        Transcode::Opus => "opus",
+        Transcode::Mp3 | Transcode::Aac => "mp3",
+    };
+    Download::Convert { format, kbps: cap }
+}
+
 /// The codec (or, where the suffix does not say, the container) of a file
 /// with this suffix. MP4 files can hold AAC or ALAC, so they get no hint.
 fn codec_of_suffix(suffix: &str) -> Option<&'static str> {
@@ -107,6 +168,37 @@ mod tests {
         assert_eq!(
             (wma.format.as_str(), wma.max_bit_rate, wma.codec.as_deref()),
             ("mp3", Some(320), Some("mp3"))
+        );
+    }
+
+    #[test]
+    fn downloads_convert_only_on_navidrome_above_the_limit() {
+        let d = |suffix, rate, quality, converts| download(Some(suffix), rate, quality, converts, Transcode::Mp3);
+        assert_eq!(d("flac", Some(900), DownloadQuality::Original, true), Download::Original);
+        assert_eq!(
+            d("flac", Some(900), DownloadQuality::High, true),
+            Download::Convert { format: "mp3", kbps: 320 }
+        );
+        assert_eq!(d("mp3", Some(320), DownloadQuality::High, true), Download::Original);
+        assert_eq!(
+            d("mp3", Some(320), DownloadQuality::Low, true),
+            Download::Convert { format: "mp3", kbps: 128 }
+        );
+        assert_eq!(d("mp3", Some(128), DownloadQuality::Low, true), Download::Original);
+        assert_eq!(d("mp3", None, DownloadQuality::Low, true), Download::Original);
+        assert_eq!(
+            d("wma", Some(192), DownloadQuality::Normal, true),
+            Download::Convert { format: "mp3", kbps: 192 }
+        );
+        // Other servers' `download` sends only originals.
+        assert_eq!(d("flac", Some(900), DownloadQuality::Low, false), Download::Original);
+        assert_eq!(
+            download(Some("flac"), Some(900), DownloadQuality::Normal, true, Transcode::Opus),
+            Download::Convert { format: "opus", kbps: 192 }
+        );
+        assert_eq!(
+            download(Some("flac"), Some(900), DownloadQuality::Normal, true, Transcode::Aac),
+            Download::Convert { format: "mp3", kbps: 192 }
         );
     }
 

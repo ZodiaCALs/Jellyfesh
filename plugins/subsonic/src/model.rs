@@ -41,6 +41,16 @@ pub struct Song {
     pub suffix: Option<String>,
     #[serde(deserialize_with = "lenient::opt_string")]
     pub content_type: Option<String>,
+    /// The file's size in bytes.
+    #[serde(deserialize_with = "lenient::opt_u64")]
+    pub size: Option<u64>,
+    /// The file's path on the server, relative to its music folder
+    /// (`Artist/Album/01 Song.flac`); some servers leave it out.
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub path: Option<String>,
+    /// When the person starred it (`2026-11-01T09:30:00Z`), if they did.
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub starred: Option<String>,
     #[serde(deserialize_with = "lenient::opt_string")]
     pub cover_art: Option<String>,
     #[serde(deserialize_with = "lenient::strings")]
@@ -153,6 +163,9 @@ pub struct Album {
     /// OpenSubsonic: the album's version ("Deluxe Edition").
     #[serde(deserialize_with = "lenient::opt_string")]
     pub version: Option<String>,
+    /// When the person starred it, if they did.
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub starred: Option<String>,
 }
 
 /// An artist (`ArtistID3`, with albums for `getArtist`).
@@ -169,6 +182,9 @@ pub struct Artist {
     pub album_count: Option<u32>,
     #[serde(deserialize_with = "lenient::list")]
     pub album: Vec<Album>,
+    /// When the person starred them, if they did.
+    #[serde(deserialize_with = "lenient::opt_string")]
+    pub starred: Option<String>,
 }
 
 /// A playlist (with its entries for `getPlaylist`).
@@ -316,6 +332,10 @@ pub struct User {
     pub username: String,
     #[serde(deserialize_with = "lenient::opt_bool")]
     pub stream_role: Option<bool>,
+    /// Whether the account may download (Navidrome: whether downloads are
+    /// on at all, its `EnableDownloads`).
+    #[serde(deserialize_with = "lenient::opt_bool")]
+    pub download_role: Option<bool>,
 }
 
 /// `tokenInfo`.

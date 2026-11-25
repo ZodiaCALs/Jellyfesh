@@ -55,8 +55,12 @@ server offers it.
 | Setting | Values | What it does |
 | --- | --- | --- |
 | Server address | a URL | where your server is |
-| Streaming quality | `app` (default), `lossless`, `high`, `normal`, `low` | `app` follows the quality you chose in Jellyfesh for each network; the others always use that quality on this server |
 | Format when the server converts | `mp3` (default), `opus`, `aac` | what the server converts to when it has to |
+
+The streaming quality is Jellyfesh's own (Settings › Playback › Streaming,
+or the quality menu in the player bar, from v0.0.8). Version 0.0.8 of the
+plugin no longer has a quality setting of its own; a quality you had set
+there is kept once, as Jellyfesh's.
 
 | Quality | Limit | You get |
 | --- | --- | --- |
@@ -78,6 +82,20 @@ AIFF, CAF and Matroska audio. Anything else, such as WMA, is converted.
   structured lyrics; otherwise plain lyrics are looked up by artist and
   title. Lyrics for tracks from other sources are found by title, artist and
   length.
+* **Favourites and Playlists** (Jellyfesh v0.0.8) show your starred songs,
+  albums and artists, newest first, and the playlists your server lists for
+  you: your own, and other accounts' public playlists, which count as ones
+  you follow.
+* **Download** (Jellyfesh v0.0.8, not in Jellyfesh Web's queue) needs the
+  download role on your account; on Navidrome, downloads must be turned on
+  (`EnableDownloads`, on by default). Jellyfesh always downloads through the
+  server's `download` call:
+  * **Original** is the file exactly as the server keeps it.
+  * **High**, **Normal** and **Low** are converted by Navidrome, to Opus if
+    your conversion format is Opus and to MP3 otherwise, at 320, 192 or
+    128 kbit/s, when the file is above that or in a format Jellyfesh cannot
+    play. Other servers' `download` only sends original files, so they
+    download the original at every quality.
 * **Similar songs** need a server that finds them (often through an external
   service it is configured with); otherwise the list is empty.
 * **Discover** (Jellyfesh v0.0.7): shelves of the server's album lists,
@@ -115,6 +133,7 @@ everywhere, revoke it in your server's settings.
 | The server speaks Subsonic API 1.12.0; Jellyfesh needs 1.13.0 or newer | Update the server. |
 | Your password is part of your user name … | Change the password on the server, or use an API key. |
 | Your account on this server is not allowed to stream music | Ask the server's administrator for the streaming permission. |
+| Your Subsonic server doesn't allow downloads for this account. | Ask the administrator for the download permission; on Navidrome, downloads must be on (`EnableDownloads`). |
 | Videos can't be played in Jellyfesh | Videos in a music library are listed but not played. |
 | Sign in again. | The server no longer accepts the stored sign-in (a revoked key, a changed password). Sign in again. |
 
