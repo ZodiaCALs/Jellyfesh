@@ -253,8 +253,9 @@
   }
   /* A narrower bar keeps the mute button and drops the volume line (Ctrl+↑/↓ still change the
      volume), then Lyrics and Queue (Now Playing has both, and Ctrl+L and Ctrl+U), then the mute
-     button; the title keeps room to be read. */
-  @container bar (max-width: 999px) {
+     button; the title keeps room to be read. A 1280 px window's bar (968 px beside the sidebar)
+     has everything. */
+  @container bar (max-width: 899px) {
     .volume {
       width: auto;
     }
