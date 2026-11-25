@@ -563,7 +563,10 @@ pwsh platforms/windows/scripts/smoke-test.ps1
   shortcuts that point at this executable get the chosen icon (ADR-0017;
   icons other than Ice and Steel are packed into an `.ico` from their PNGs on
   first use, in `%LOCALAPPDATA%\Jellyfesh\Icons`); `RefreshDevices` on audio
-  device notifications (ADR-0009); one instance per user.
+  device notifications (ADR-0009); `SetNetworkState` at start and on each
+  network change (`NetworkInformation`: online is internet access, metered is
+  a fixed or variable cost, roaming or a data limit near or over;
+  ADR-0026 §1); one instance per user.
 * **Strings.** English, Simplified Chinese, Traditional Chinese and Japanese
   in `.resw` (x:Uid for XAML text, `ILocalizer` keys for messages); a test
   keeps the four tables and the code's keys in step.

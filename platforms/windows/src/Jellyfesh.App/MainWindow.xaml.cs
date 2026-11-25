@@ -85,6 +85,7 @@ public sealed partial class MainWindow : Window
     private WindowShell? _shell;
     private MediaTransport? _media;
     private AudioDeviceNotifications? _devices;
+    private NetworkStateReporter? _network;
     private bool _visible = true;
     private bool _nowPlayingOpen;
     private ShellLayout _layout = ShellLayout.Initial;
@@ -217,6 +218,7 @@ public sealed partial class MainWindow : Window
         Optional("the window icon", () => _shell?.SetIcon(_vm.AppIcon));
         _media = Optional("the system media controls", () => new MediaTransport(_hwnd, _vm.Player, _vm.Services, queue));
         _devices = Optional("the audio device notifications", () => new AudioDeviceNotifications(queue, c => _vm.Services.Send(c)));
+        _network = Optional("the network state", () => new NetworkStateReporter(queue, c => _vm.Services.Send(c)));
         _vm.Services.Send(new CoreCommand.RefreshDevices());
 
         SelectSection("home");
@@ -1116,6 +1118,7 @@ public sealed partial class MainWindow : Window
         Optional("closing Desktop Lyrics", () => _desktopLyrics?.Close());
         Optional("closing the media controls", () => _media?.Dispose());
         Optional("closing the device notifications", () => _devices?.Dispose());
+        Optional("closing the network notifications", () => _network?.Dispose());
         Optional("closing the taskbar buttons", () => _shell?.Dispose());
         _vm.Dispose(); // saves the session and shuts the core down
         AppLog.Write("shut down");
