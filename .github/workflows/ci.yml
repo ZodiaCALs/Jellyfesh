@@ -257,6 +257,24 @@ jobs:
       - name: Build (platforms/windows/scripts/build.ps1)
         shell: pwsh
         run: platforms/windows/scripts/build.ps1
+      # What the publish ships (the installer holds both folders): each architecture's size with
+      # its five largest files, then each zip's size.
+      - name: Size of the published app
+        shell: pwsh
+        run: |
+          foreach ($rid in 'win-x64', 'win-arm64') {
+            $app = Join-Path $PWD "platforms/windows/publish/$rid/Jellyfesh"
+            if (-not (Test-Path $app)) { continue }
+            $files = @(Get-ChildItem $app -Recurse -File)
+            $total = ($files | Measure-Object -Property Length -Sum).Sum
+            '{0}: {1:N1} MiB in {2} files' -f $rid, ($total / 1MB), $files.Count
+            $files | Sort-Object Length -Descending | Select-Object -First 5 | ForEach-Object {
+              '  {0,7:N1} MiB  {1}' -f ($_.Length / 1MB), [IO.Path]::GetRelativePath($app, $_.FullName)
+            }
+          }
+          Get-ChildItem platforms/windows/artifacts -Filter '*.zip' -ErrorAction SilentlyContinue | ForEach-Object {
+            '{0}: {1:N1} MiB' -f $_.Name, ($_.Length / 1MB)
+          }
       - name: Portable tests
         run: dotnet test --solution platforms/windows/Jellyfesh.Portable.slnf
 

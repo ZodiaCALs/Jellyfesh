@@ -371,6 +371,12 @@ jobs:
           if ($built -ne $named) { Move-Item $built $named }
           if ($env:JF_WINDOWS_PFX) { 'signed=true' >> $env:GITHUB_OUTPUT }
       # Setup installs silently for this user, and the installed app starts and opens every page.
+      - name: Size of Setup
+        shell: pwsh
+        run: |
+          Get-ChildItem upload -Filter '*-Windows-Setup.exe' | ForEach-Object {
+            '{0}: {1:N1} MiB' -f $_.Name, ($_.Length / 1MB)
+          }
       - name: Install with Setup and start the installed app
         shell: pwsh
         timeout-minutes: 15
