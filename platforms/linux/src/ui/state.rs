@@ -66,6 +66,8 @@ pub enum Change<'a> {
     Pro,
     /// The update check changed.
     Update,
+    /// The window switched between the phone layout and the sidebar panel.
+    Layout,
 }
 
 type Listener = Rc<dyn Fn(&Change)>;
@@ -247,6 +249,12 @@ impl App {
                 app.unlisten(id);
             }
         });
+    }
+
+    /// Tells the listeners about a change that is the window's, not the
+    /// core's (`Change::Layout`).
+    pub fn announce(&self, change: &Change) {
+        self.emit(change);
     }
 
     fn emit(&self, change: &Change) {

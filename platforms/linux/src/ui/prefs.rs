@@ -1,6 +1,7 @@
-//! Settings: Appearance, Playback, Library, Sources and Extensions, with
-//! their groups and rows in the order docs/ui.md ("Settings") gives every
-//! app.
+//! Settings › Appearance, Playback and Library, with their groups and rows
+//! in the order docs/ui.md ("Settings") gives every app; Sources,
+//! Extensions and About are in their own modules, and `pages::settings`
+//! shows them as one page of the main window.
 //!
 //! Every control edits a copy of the core's `Settings` slice and sends it
 //! back (`SetSettings`), or sends the matching command; controls update from
@@ -19,40 +20,18 @@ use crate::logic::appearance::{self as look, ACCENT_HUES};
 use crate::logic::{eq, format, playback};
 use crate::ui::actions;
 use crate::ui::i18n::{tr, trc, trf, trn};
-use crate::ui::sources_ui;
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::widgets::glyph;
 use crate::ui::widgets::preview::{ColorDot, HueSlider, Picture, Preview};
 use crate::ui::window;
 
-/// Shows Settings, optionally on a page (`appearance`, `playback`,
-/// `library`, `sources`, `extensions`; `lyrics` opens Appearance, which
-/// holds them now).
-pub fn present(parent: &adw::ApplicationWindow, page: Option<&str>) {
-    let dialog = adw::PreferencesDialog::new();
-    // The Luminous field and Mist groups (style.css).
-    dialog.add_css_class("jf-settings");
-    dialog.set_title(&tr("Settings"));
-    dialog.set_search_enabled(true);
-    dialog.add(&appearance_page());
-    dialog.add(&playback_page());
-    dialog.add(&library_page());
-    dialog.add(&sources_ui::page());
-    dialog.add(&crate::ui::extensions::page());
-    if let Some(name) = page {
-        dialog.set_visible_page_name(if name == "lyrics" { "appearance" } else { name });
-    }
-    // The device list is current whenever Settings opens.
-    app().send(Command::RefreshDevices);
-    dialog.present(Some(parent));
-}
-
-fn page(name: &str, title: &str, icon: &str) -> adw::PreferencesPage {
-    adw::PreferencesPage::builder()
-        .name(name)
-        .title(title)
-        .icon_name(icon)
-        .build()
+/// A section of Settings: its groups in a column (the page shows one
+/// section at a time, `pages::settings`).
+pub fn section(name: &str) -> gtk::Box {
+    let b = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    b.add_css_class("settings-section");
+    b.set_widget_name(name);
+    b
 }
 
 fn group(title: &str, description: Option<&str>) -> adw::PreferencesGroup {
@@ -243,8 +222,8 @@ fn swatch_names() -> [String; 10] {
 
 /// Appearance (docs/ui.md, "Settings"): Theme, Accent Colour,
 /// Transparency, Now Playing Backdrop, Lyrics, and the note on the app icon.
-fn appearance_page() -> adw::PreferencesPage {
-    let p = page("appearance", &tr("Appearance"), "applications-graphics-symbolic");
+pub fn appearance_page() -> gtk::Box {
+    let p = section("appearance");
     let guard = Rc::new(Cell::new(false));
 
     // Theme: System · Light · Dark, with previews.
@@ -258,7 +237,7 @@ fn appearance_page() -> adw::PreferencesPage {
         &tr("Theme"),
     );
     theme_group.add(&block_row(&tr("Theme"), false, &theme_row));
-    p.add(&theme_group);
+    p.append(&theme_group);
 
     // Accent colour: follow the artwork, or a swatch or custom hue.
     let accent_group = group(&tr("Accent Colour"), None);
@@ -298,7 +277,7 @@ fn appearance_page() -> adw::PreferencesPage {
     accent_group.add(&follow);
     accent_group.add(&swatch_row);
     accent_group.add(&custom_row);
-    p.add(&accent_group);
+    p.append(&accent_group);
 
     // Transparency: Solid … Clear, and reduced motion and transparency.
     let glass_group = group(
@@ -335,7 +314,7 @@ fn appearance_page() -> adw::PreferencesPage {
         .build();
     glass_group.add(&transparency_row);
     glass_group.add(&reduce);
-    p.add(&glass_group);
+    p.append(&glass_group);
 
     // Now Playing Backdrop: Artwork or Misty, with previews.
     let backdrop_group = group(
@@ -347,7 +326,7 @@ fn appearance_page() -> adw::PreferencesPage {
         &tr("Now Playing Backdrop"),
     );
     backdrop_group.add(&block_row(&tr("Now Playing Backdrop"), false, &style_box));
-    p.add(&backdrop_group);
+    p.append(&backdrop_group);
 
     // Lyrics: size and alignment, extra lines (lyrics settings live only here).
     let lyrics_group = group(
@@ -387,7 +366,7 @@ fn appearance_page() -> adw::PreferencesPage {
     lyrics_group.add(&romanization);
     lyrics_group.add(&lyrics_bar);
     lyrics_group.add(&desktop_lyrics);
-    p.add(&lyrics_group);
+    p.append(&lyrics_group);
 
     let icon = group(
         &tr("App Icon"),
@@ -395,7 +374,7 @@ fn appearance_page() -> adw::PreferencesPage {
             "Linux shows the Ice icon everywhere: GNOME takes one icon from the app’s metadata.",
         )),
     );
-    p.add(&icon);
+    p.append(&icon);
 
     // Customize…: Settings › Extensions with Customize open; the Pro badge
     // while Pro is inactive.
@@ -413,14 +392,9 @@ fn appearance_page() -> adw::PreferencesPage {
     badge.set_visible(!app().pro.borrow().active);
     customize.add_suffix(&badge);
     customize.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
-    customize.connect_activated(|row| {
+    customize.connect_activated(|_| {
         crate::ui::extensions::reveal("appearance");
-        if let Some(dialog) = row
-            .ancestor(adw::PreferencesDialog::static_type())
-            .and_downcast::<adw::PreferencesDialog>()
-        {
-            dialog.set_visible_page_name("extensions");
-        }
+        crate::ui::pages::settings::show(Some("extensions"));
     });
     let shown_badge = badge.downgrade();
     app().listen_for(&customize, move |c| {
@@ -431,7 +405,7 @@ fn appearance_page() -> adw::PreferencesPage {
         }
     });
     customize_group.add(&customize);
-    p.add(&customize_group);
+    p.append(&customize_group);
 
     // Wiring: every control sends the settings slice back to the core.
     for (i, b) in themes.iter().enumerate() {
@@ -722,8 +696,8 @@ fn show_seconds(row: &adw::SpinRow) {
 
 /// Playback (docs/ui.md, "Settings"): Output, Crossfade, Volume Levelling,
 /// Equalizer and Startup.
-fn playback_page() -> adw::PreferencesPage {
-    let p = page("playback", &tr("Playback"), "audio-speakers-symbolic");
+pub fn playback_page() -> gtk::Box {
+    let p = section("playback");
     let guard = Rc::new(Cell::new(false));
 
     // Output: the device, System Default first.
@@ -733,7 +707,7 @@ fn playback_page() -> adw::PreferencesPage {
         .subtitle(tr("Where the sound goes."))
         .build();
     out_group.add(&device);
-    p.add(&out_group);
+    p.append(&out_group);
 
     // Crossfade.
     let xf_group = group(&tr("Crossfade"), None);
@@ -752,7 +726,7 @@ fn playback_page() -> adw::PreferencesPage {
     xf.add_row(&xf_secs);
     xf.add_row(&xf_album);
     xf_group.add(&xf);
-    p.add(&xf_group);
+    p.append(&xf_group);
 
     // Volume Levelling: ReplayGain and its preamp.
     let rg_group = group(
@@ -766,7 +740,7 @@ fn playback_page() -> adw::PreferencesPage {
     rg_preamp.set_digits(1);
     rg_group.add(&rg_mode);
     rg_group.add(&rg_preamp);
-    p.add(&rg_group);
+    p.append(&rg_group);
 
     // Equalizer: on or off, the core's presets (Custom once a band moves),
     // the preamp, the bands and Reset to Flat.
@@ -821,7 +795,7 @@ fn playback_page() -> adw::PreferencesPage {
     eq_group.add(&preset_row);
     eq_group.add(&eq_preamp);
     eq_group.add(&bands_row);
-    p.add(&eq_group);
+    p.append(&eq_group);
 
     // Startup.
     let startup = group(&tr("Startup"), None);
@@ -830,7 +804,7 @@ fn playback_page() -> adw::PreferencesPage {
         .subtitle(tr("Start playing where you left off when Jellyfesh opens."))
         .build();
     startup.add(&resume);
-    p.add(&startup);
+    p.append(&startup);
 
     // Wiring.
     let sliders = Rc::new(sliders);
@@ -1065,8 +1039,8 @@ fn playback_page() -> adw::PreferencesPage {
 /// Library (docs/ui.md, "Settings"): Music Folders (each with Show in Files
 /// and Remove Folder…, then Add Folder…), Watch Folders, and Rescan Library
 /// with the scan's progress and Last Scan.
-fn library_page() -> adw::PreferencesPage {
-    let p = page("library", &tr("Library"), "folder-music-symbolic");
+pub fn library_page() -> gtk::Box {
+    let p = section("library");
     let guard = Rc::new(Cell::new(false));
     let folders = group(
         &tr("Music Folders"),
@@ -1076,7 +1050,7 @@ fn library_page() -> adw::PreferencesPage {
     list.add_css_class("boxed-list");
     list.set_selection_mode(gtk::SelectionMode::None);
     folders.add(&list);
-    p.add(&folders);
+    p.append(&folders);
 
     let watch_group = adw::PreferencesGroup::new();
     let watch = adw::SwitchRow::builder()
@@ -1084,7 +1058,7 @@ fn library_page() -> adw::PreferencesPage {
         .subtitle(tr("Update the library when files change."))
         .build();
     watch_group.add(&watch);
-    p.add(&watch_group);
+    p.append(&watch_group);
 
     // The sentence beside the Rescan Library button, as in every app.
     let scan = adw::PreferencesGroup::new();
@@ -1113,7 +1087,7 @@ fn library_page() -> adw::PreferencesPage {
     scan.add(&rescan_row);
     scan.add(&progress_row);
     scan.add(&last);
-    p.add(&scan);
+    p.append(&scan);
 
     let g = guard.clone();
     watch.connect_active_notify(move |r| {

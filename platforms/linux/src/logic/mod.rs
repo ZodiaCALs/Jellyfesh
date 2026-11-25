@@ -31,6 +31,7 @@ pub mod lru;
 pub mod lyrics;
 pub mod lyricsbar;
 pub mod motion;
+pub mod nav;
 pub mod paging;
 pub mod playback;
 pub mod pro;

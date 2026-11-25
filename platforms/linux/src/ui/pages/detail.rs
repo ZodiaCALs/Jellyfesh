@@ -22,6 +22,7 @@ use crate::ui::state::{Change, app, spawn};
 use crate::ui::thumbs::ArtKey;
 use crate::ui::widgets::art::Art;
 use crate::ui::widgets::glyph;
+use crate::ui::widgets::maxwidth::MaxWidth;
 use crate::ui::{actions, window};
 
 /// The artwork's side on album, artist and playlist pages (desktop).
@@ -114,23 +115,20 @@ impl Header {
         header
     }
 
-    /// Phones: the artwork above the text at the full width; wider
-    /// windows: side by side at 240 px.
+    /// Phones (the phone layout, up to 760 px): the artwork above the text
+    /// at the full width; wider windows: side by side at 240 px.
     fn follow_width(&self) {
-        let Some(split) = window::shell().map(|s| s.split.clone()) else {
-            return;
-        };
         let (root, art, texts) = (
             self.root.downgrade(),
             self.art.downgrade(),
             self.texts.downgrade(),
         );
-        let apply = move |narrow: bool| {
+        let apply = move || {
             let (Some(root), Some(art), Some(texts)) = (root.upgrade(), art.upgrade(), texts.upgrade())
             else {
                 return;
             };
-            if narrow {
+            if window::is_phone() {
                 root.set_orientation(gtk::Orientation::Vertical);
                 root.add_css_class("narrow");
                 art.set_size_request(-1, -1);
@@ -145,14 +143,10 @@ impl Header {
                 art.set_halign(gtk::Align::Start);
             }
         };
-        apply(split.is_collapsed());
-        let id = std::cell::RefCell::new(Some(
-            split.connect_collapsed_notify(move |s| apply(s.is_collapsed())),
-        ));
-        let weak_split = split.downgrade();
-        self.root.connect_destroy(move |_| {
-            if let (Some(s), Some(id)) = (weak_split.upgrade(), id.borrow_mut().take()) {
-                s.disconnect(id);
+        apply();
+        app().listen_for(&self.root, move |c| {
+            if matches!(c, Change::Layout) {
+                apply();
             }
         });
     }
@@ -183,12 +177,14 @@ pub fn fill_track_box(list: &gtk::ListBox, style: RowStyle, rows: &[ItemData]) {
     }
 }
 
-fn page_body(header: &Header) -> (gtk::Box, adw::Clamp) {
+/// A detail page's column: at most 1,000 px wide, lined up with the page's
+/// start, as on the web.
+fn page_body(header: &Header) -> (gtk::Box, MaxWidth) {
     let body = gtk::Box::new(gtk::Orientation::Vertical, 20);
     body.add_css_class("detail");
     body.append(&header.root);
-    let clamp = adw::Clamp::builder().child(&body).maximum_size(1000).build();
-    (body, clamp)
+    let column = MaxWidth::new(&body, 1000);
+    (body, column)
 }
 
 /// Genre, year and song count under an album's artist.

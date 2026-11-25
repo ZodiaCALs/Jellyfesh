@@ -36,12 +36,45 @@ impl Chrome {
             Chrome::Bar => player::BAR_HEIGHT,
         })
     }
+}
 
-    /// The room a scrolled page leaves under its last row so the floating
-    /// player never covers it: the player and its margins (`space.s4`
-    /// below, the same above).
-    pub fn bottom_room(self) -> i32 {
-        (self.height() + 2.0 * f64::from(space::S4)).round() as i32
+/// The phone tab bar (Jellyfesh Web's `.tabs`): 68 px high, `space.s6`
+/// above the window's bottom edge, 14 px from its sides.
+pub const TABS_HEIGHT: i32 = 68;
+pub const TABS_BOTTOM: i32 = space::S6 as i32;
+pub const TABS_SIDE: i32 = 14;
+
+/// How far above the window's bottom edge the player floats: `space.s4`,
+/// or over the phone tabs with `space.s3` between (the web's dock).
+pub fn dock_bottom(phone: bool) -> i32 {
+    if phone {
+        TABS_HEIGHT + TABS_BOTTOM + space::S3 as i32
+    } else {
+        space::S4 as i32
+    }
+}
+
+/// The room a scrolled page leaves under its last row, so the floating
+/// player (`chrome`, while something is queued) and the phone tabs never
+/// cover it: everything up to the top of the highest of them, and
+/// `space.s4` more.
+pub fn bottom_room(chrome: Option<Chrome>, phone: bool) -> i32 {
+    let gap = space::S4 as i32;
+    match chrome {
+        Some(c) => dock_bottom(phone) + c.height().round() as i32 + gap,
+        None if phone => TABS_HEIGHT + TABS_BOTTOM + gap,
+        None => 0,
+    }
+}
+
+/// The content's side gutters (the web's `layout.gutter-fluid`, at most
+/// 32 px from 800 px wide, and `space.s4` on phones). Between 761 and 800 px
+/// the web's is a pixel or two less; the app keeps 32.
+pub fn gutter(phone: bool) -> i32 {
+    if phone {
+        space::S4 as i32
+    } else {
+        jf_tokens::layout::GUTTER_FLUID.max as i32
     }
 }
 
@@ -217,11 +250,24 @@ mod tests {
     }
 
     #[test]
+    fn the_dock_floats_over_the_phone_tabs() {
+        assert_eq!(dock_bottom(false), 16);
+        assert_eq!(dock_bottom(true), 104);
+        // Wide: the player and s4 above and below it, as before.
+        assert_eq!(bottom_room(Some(Chrome::Bar), false), 112);
+        assert_eq!(bottom_room(Some(Chrome::Mini), false), 96);
+        assert_eq!(bottom_room(None, false), 0);
+        // Phones: the tabs (68 + 24), the capsule 12 above them, s4 above.
+        assert_eq!(bottom_room(Some(Chrome::Mini), true), 184);
+        assert_eq!(bottom_room(None, true), 108);
+        assert_eq!(gutter(false), 32);
+        assert_eq!(gutter(true), 16);
+    }
+
+    #[test]
     fn players_follow_the_tokens() {
         assert_eq!(Chrome::Mini.height(), 64.0);
         assert_eq!(Chrome::Bar.height(), 80.0);
-        assert_eq!(Chrome::Mini.bottom_room(), 96);
-        assert_eq!(Chrome::Bar.bottom_room(), 112);
     }
 
     #[test]

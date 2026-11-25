@@ -13,6 +13,7 @@
  * Playing, which hides the library. */
 
 .veil,
+.phone-tabs,
 .mini-player,
 .player-bar,
 .np-capsule {
@@ -24,7 +25,7 @@
   backdrop-filter: blur({{glass.glass-blur-clear}}) saturate({{glass.glass-sat}});
 }
 
-window.jf-window .sidebar-pane {
+window.jf-window .sidebar-panel {
   background-color: @jf_tint_clear;
   backdrop-filter: blur({{glass.glass-blur-clear}}) saturate({{glass.glass-sat}});
 }

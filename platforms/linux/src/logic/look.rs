@@ -330,7 +330,7 @@ pub fn extra_css(look: &LookSnapshot) -> String {
     }
     if let Some(family) = font_family(look) {
         css.push_str(&format!(
-            "window, popover, tooltip, .jf-settings {{ font-family: {family}; }}\n"
+            "window, popover, tooltip {{ font-family: {family}; }}\n"
         ));
     }
     if let Some(weight) = lyrics_weight(look) {

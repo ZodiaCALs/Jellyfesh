@@ -16,6 +16,7 @@ use crate::ui::pages::{follow_title, frame, heading, keep_alive, large_title, sc
 use crate::ui::rows::{Card, ListRow, RowStyle};
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::thumbs::ArtKey;
+use crate::ui::widgets::maxwidth::MaxWidth;
 use crate::ui::window::{self, Section};
 
 const RECENT_TRACKS: usize = 200;
@@ -126,7 +127,8 @@ pub fn page() -> adw::NavigationPage {
     let sections = gtk::Box::new(gtk::Orientation::Vertical, 12);
     body.append(&sections);
 
-    let clamp = adw::Clamp::builder().child(&body).maximum_size(1100).build();
+    // At most 1,100 px wide, lined up with the page's start (the web's).
+    let clamp = MaxWidth::new(&body, 1100);
     let scroll = scroller(&clamp);
     let (page, header) = frame(&tr("Home"), "home", &scroll);
     let small = small_title(&header, &tr("Home"));

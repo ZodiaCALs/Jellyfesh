@@ -331,20 +331,15 @@ fn install_actions(application: &adw::Application) {
         window::close_now_playing();
         window::show_section(window::Section::Search);
     });
+    // Settings is a page of the window (ADR-0023); the keyboard shortcuts
+    // and About Jellyfesh are in its About section.
     simple(application, "settings", &["<Primary>comma"], || {
         window::show_settings(None)
     });
-    simple(
-        application,
-        "shortcuts",
-        &["<Primary>question"],
-        keys::show_shortcuts,
-    );
-    simple(application, "about", &[], || {
-        if let Some(s) = window::shell() {
-            about::present(&s.window);
-        }
+    simple(application, "shortcuts", &["<Primary>question"], || {
+        window::show_settings(Some("shortcuts"))
     });
+    simple(application, "about", &[], || window::show_settings(Some("about")));
     let quit_app = application.downgrade();
     simple(application, "quit", &["<Primary>q"], move || {
         if let Some(a) = quit_app.upgrade() {
@@ -372,9 +367,9 @@ fn install_actions(application: &adw::Application) {
 }
 
 /// `section`, `album:<id>`, `artist:<id>`, `playlist:<id>`,
-/// `now-playing[:lyrics|queue|info]`, `settings[:<page>]` (also
-/// `preferences[:<page>]`, its earlier name), `search:<words>`, `about`,
-/// `shortcuts`.
+/// `now-playing[:lyrics|queue|info]`, `settings[:<section>]` (also
+/// `preferences[:<section>]`, its earlier name), `search:<words>`, `about`,
+/// `shortcuts` (Settings › About), `library` (closes Now Playing).
 fn show_view(spec: &str) {
     let (kind, arg) = spec.split_once(':').unwrap_or((spec, ""));
     let id = arg.parse::<i64>().ok();
@@ -395,12 +390,7 @@ fn show_view(spec: &str) {
             window::show_section(window::Section::Search);
             pages::search::search_for(arg);
         }
-        ("about", _) => {
-            if let Some(s) = window::shell() {
-                about::present(&s.window);
-            }
-        }
-        ("shortcuts", _) => keys::show_shortcuts(),
+        ("about" | "shortcuts", _) => window::show_settings(Some(kind)),
         _ => {
             if let Some(section) = window::Section::from_tag(kind) {
                 window::close_now_playing();

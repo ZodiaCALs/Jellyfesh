@@ -392,7 +392,7 @@ pub fn clamped(child: &impl IsA<gtk::Widget>) -> adw::ClampScrollable {
     let clamp = adw::ClampScrollable::builder()
         .child(child)
         .maximum_size(LIST_WIDTH)
-        .tightening_threshold(700)
+        .tightening_threshold(LIST_WIDTH)
         .build();
     clamp.add_css_class("list-clamp");
     clamp

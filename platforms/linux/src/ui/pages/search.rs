@@ -67,7 +67,7 @@ pub fn page() -> adw::NavigationPage {
 
     let results = gtk::Box::new(gtk::Orientation::Vertical, 18);
     results.add_css_class("search-results");
-    let clamp = adw::Clamp::builder().child(&results).maximum_size(1000).build();
+    let clamp = crate::ui::widgets::maxwidth::MaxWidth::new(&results, 1000);
     let stack = gtk::Stack::new();
     stack.add_named(
         &status(

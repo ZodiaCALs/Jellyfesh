@@ -13,10 +13,9 @@
 /* ---- The field (Luminous: the cover's colour fills the room) --------- */
 
 /* The aurora at field.aurora-strength (about 75 %) with four larger glows
- * at the artwork's hue, on every page and in Settings; the colours
+ * at the artwork's hue, on every page, Settings included; the colours
  * crossfade with the theme on every song change. */
-window.jf-window.background,
-dialog.jf-settings sheet {
+window.jf-window.background {
   background-color: {{field.sky}};
   background-image:
     radial-gradient(ellipse 62% 58% at 4% 0%, alpha({{field.aurora-1}}, {{field.aurora-strength * 1.07}}), alpha({{field.aurora-1}}, 0) 72%),
@@ -26,33 +25,269 @@ dialog.jf-settings sheet {
   color: {{ink.ink-90}};
 }
 
-/* The sidebar: a Clear glass panel floating on the field. Without live
- * glass (GTK before 4.22, Reduce Motion and Transparency, high contrast)
- * it is solid Cloud; glass-live.css gives it the Clear tint and blur. */
-window.jf-window .sidebar-pane {
+/* The sidebar (Jellyfesh Web's floating panel, ADR-0023): a Clear glass
+ * panel 236 px wide, 12 px from the window's edges, with the wordmark, the
+ * places and, at its foot, Open Files… and Settings. Without live glass
+ * (GTK before 4.22, Reduce Motion and Transparency, high contrast) it is
+ * solid Cloud; glass-live.css gives it the Clear tint and blur. */
+window.jf-window .sidebar-panel {
   margin: {{space.s3}} 0 {{space.s3}} {{space.s3}};
+  padding: {{space.s5}} {{space.s3}};
   border-radius: {{radius.r-2xl}};
   background-color: {{glass.cloud}};
   box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
 }
 
-window.jf-window .sidebar-pane headerbar {
+window.jf-window .sidebar-panel .brand {
+  padding: 0 10px {{space.s6}};
+}
+
+window.jf-window .sidebar-panel .brand-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+window.jf-window .sidebar-panel .brand-icon {
+  border-radius: 9px;
+}
+
+window.jf-window .sidebar-panel scrolledwindow.nav-scroll,
+window.jf-window .sidebar-panel list.navigation-sidebar {
+  background: transparent;
+  padding: 0;
+}
+
+window.jf-window .sidebar-panel list.navigation-sidebar > row.nav-item {
+  min-height: 42px;
+  margin: 0 0 3px;
+  padding: 0 {{space.s3}};
+  border-radius: {{radius.r-lg}};
+  color: {{ink.ink-70}};
+  transition: background-color {{motion.dur-1}} {{motion.ease-fluid}}, color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+window.jf-window .sidebar-panel row.nav-item label {
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+window.jf-window .sidebar-panel list.navigation-sidebar > row.nav-item:hover {
+  background-color: {{line.fill-hover}};
+  color: {{ink.ink-90}};
+}
+
+window.jf-window .sidebar-panel list.navigation-sidebar > row.nav-item.current {
+  background-color: {{accent.accent-soft}};
+  color: {{accent.accent-text}};
+}
+
+window.jf-window .sidebar-panel row.nav-item.current label {
+  font-weight: 600;
+}
+
+window.jf-window .sidebar-panel list.navigation-sidebar > row.nav-item:focus-visible {
+  outline: 2px solid {{accent.accent-text}};
+  outline-offset: -2px;
+}
+
+window.jf-window .sidebar-panel separator.nav-gap {
+  margin: {{space.s2}} {{space.s3}} 11px;
+  min-height: 1px;
+  background-color: {{line.line-soft}};
+}
+
+window.jf-window .sidebar-panel list.nav-foot > row.nav-item:last-child {
+  margin-bottom: 0;
+}
+
+/* The phone tabs (up to 760 px): a floating Veil capsule 68 px high, 24 px
+ * above the bottom; the chosen tab's glyph sits in an accent-soft pill. */
+window.jf-window .phone-tabs {
+  padding: 0 6px;
+  border-radius: {{radius.r-full}};
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge-soft}}, {{elevation.shadow-2}};
+}
+
+window.jf-window button.phone-tab {
+  min-height: 56px;
+  min-width: 0;
+  padding: 4px 0 0;
+  border-radius: {{radius.r-lg}};
   background: transparent;
   box-shadow: none;
+  color: {{ink.ink-70}};
+}
+
+window.jf-window button.phone-tab label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+window.jf-window button.phone-tab .tab-pill {
+  min-width: 54px;
+  min-height: 30px;
+  border-radius: 15px;
+  transition: background-color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+window.jf-window button.phone-tab.on {
+  color: {{accent.accent-text}};
+}
+
+window.jf-window button.phone-tab.on .tab-pill {
+  background-color: {{accent.accent-soft}};
+}
+
+window.jf-window button.phone-tab:hover:not(.on) .tab-pill {
+  background-color: {{line.fill-hover}};
+}
+
+/* Jellyfesh Web's pill tabs: Settings' sections, the Library switcher and
+ * Search's tabs. */
+.pill-tabs {
+  padding: 4px;
+  border-radius: {{radius.r-full}};
+  background-color: {{line.fill}};
+}
+
+button.pill-tab {
+  min-height: 36px;
+  padding: 0 {{space.s3}};
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  box-shadow: none;
+  color: {{ink.ink-70}};
+  font-weight: 600;
+  transition: background-color {{motion.dur-1}} {{motion.ease-fluid}}, color {{motion.dur-1}} {{motion.ease-fluid}};
+}
+
+button.pill-tab:hover {
+  color: {{ink.ink-90}};
+}
+
+button.pill-tab:checked {
+  background-color: {{glass.cloud}};
+  color: {{ink.ink-90}};
+  box-shadow: {{elevation.shadow-1}};
+}
+
+/* The phone layout's Library switcher, under a library page's header. */
+scrolledwindow.library-switcher {
+  margin: 0 {{space.s4}} {{space.s3}};
+}
+
+/* Back (the web's "‹ Back"): accent text, a pill on hover. */
+window.jf-window button.back-button {
+  min-height: 40px;
+  padding: 0 12px 0 6px;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  box-shadow: none;
+  color: {{accent.accent-text}};
+  font-weight: 600;
+}
+
+window.jf-window button.back-button:hover {
+  background-color: {{line.fill-hover}};
+}
+
+/* A page's column (Settings, Downloads): the web's gutters, 32 px from
+ * the sidebar, 16 px on phones. */
+.page-column {
+  padding: {{space.s2}} 32px {{space.s7}};
+}
+
+window.jf-window.phone .page-column {
+  padding: 0 {{space.s4}} {{space.s5}};
+}
+
+.page-column > .large-title,
+.settings-page > .large-title {
+  margin-bottom: {{space.s6}};
+}
+
+window.jf-window.phone .page-column > .large-title,
+window.jf-window.phone .settings-page > .large-title {
+  margin-bottom: {{space.s4}};
+}
+
+/* Settings (a page since v0.0.8): the sections' tabs, then each group a
+ * card of Mist glass with its heading inside, without a blur layer of its
+ * own (the web's .group). */
+.settings-page > scrolledwindow.pill-tabs-scroll {
+  margin-bottom: {{space.s6}};
+}
+
+.settings-section > preferencesgroup {
+  margin-bottom: {{space.s5}};
+  padding: {{space.s5}} {{space.s3}} {{space.s2}};
+  border-radius: {{radius.r-2xl}};
+  background-color: @jf_tint_mist;
+  box-shadow: inset 0 0 0 1px {{glass.glass-edge-soft}}, {{elevation.shadow-1}};
+}
+
+.settings-section > preferencesgroup > box > box.header {
+  margin: 0 {{space.s3}} {{space.s1}};
+}
+
+/* The group's title and description: libadwaita 1.5 names them .heading
+ * and .dim-label inside .labels; later versions add .title and
+ * .description. */
+.settings-section > preferencesgroup > box > box.header label.heading,
+.settings-section > preferencesgroup > box > box.header label.title {
+  {{type-roles.section}};
+}
+
+.settings-section > preferencesgroup > box > box.header label.dim-label,
+.settings-section > preferencesgroup > box > box.header label.description {
+  margin-top: 4px;
+  font-size: 13px;
+  color: {{ink.ink-70}};
+  opacity: 1;
+}
+
+/* The rows sit on the card itself, without a second surface (this wins
+ * over the window's Mist lists). */
+window.jf-window .settings-section list.boxed-list {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+window.jf-window .settings-section list.boxed-list > row {
+  background: transparent;
+  border-radius: {{radius.r-lg}};
+}
+
+window.jf-window .settings-section list.boxed-list > row:not(:last-child) {
+  border-bottom: 1px solid {{line.line-soft}};
+}
+
+/* Settings › About: the keyboard shortcuts as key caps beside what they
+ * do, and who made Jellyfesh. */
+.shortcuts-list {
+  margin: {{space.s2}} {{space.s3}} {{space.s3}};
+}
+
+.shortcut-action {
+  color: {{ink.ink-70}};
+}
+
+.about-identity {
+  margin: {{space.s2}} {{space.s3}} {{space.s3}};
 }
 
 /* Grouped surfaces (lists, groups, cards) take the Mist tint without live
  * blur, plus shadow-1, so a screen stays within the glass budget. */
 window.jf-window list.boxed-list,
-dialog.jf-settings list.boxed-list,
 window.jf-window list.np-info {
   border-radius: {{radius.r-xl}};
   background-color: @jf_tint_mist;
   box-shadow: inset 0 0 0 1px {{glass.glass-edge}}, {{elevation.shadow-1}};
 }
 
-window.jf-window list.boxed-list > row,
-dialog.jf-settings list.boxed-list > row {
+window.jf-window list.boxed-list > row {
   background-color: transparent;
 }
 
@@ -67,29 +302,6 @@ window.jf-window .jf-page,
 window.jf-window .jf-page toolbarview,
 window.jf-window headerbar.flat {
   background: transparent;
-}
-
-window.jf-window .navigation-sidebar > row {
-  min-height: 40px;
-  border-radius: {{radius.r-md}};
-  margin: 1px 6px;
-  padding: 0 10px;
-  color: {{ink.ink-70}};
-}
-
-window.jf-window .navigation-sidebar > row:selected {
-  background-color: {{accent.accent-soft}};
-  color: {{accent.accent-text}};
-}
-
-window.jf-window .navigation-sidebar > row:hover:not(:selected) {
-  background-color: {{line.fill-hover}};
-  color: {{ink.ink-90}};
-}
-
-window.jf-window .navigation-sidebar label {
-  {{type-roles.list-title}};
-  font-weight: 600;
 }
 
 /* ---- Type roles -------------------------------------------------------- */

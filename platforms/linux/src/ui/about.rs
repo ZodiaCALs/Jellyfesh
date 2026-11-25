@@ -1,9 +1,10 @@
-//! About: the app icon and the formal spaced-capitals wordmark (ink on
-//! light, white on dark; design/brand), the version from the build, the
-//! website, the third-party licences, the Licence Agreement and the Privacy
-//! Policy where the build knows them (docs/ui.md, "Settings";
-//! `logic::about`), Check for Updates in direct downloads (the core's
-//! `Update` slice), and the design credits.
+//! Settings › About (docs/ui.md, "Settings"): Keyboard Shortcuts (the
+//! shared keys, with Ctrl), then About Jellyfesh: the app icon and the
+//! formal spaced-capitals wordmark (ink on light, white on dark;
+//! design/brand), the version from the build, the website, the third-party
+//! licences, the Licence Agreement and the Privacy Policy where the build
+//! knows them (`logic::about`), Check for Updates in direct downloads (the
+//! core's `Update` slice), and the design credits.
 
 use std::path::PathBuf;
 
@@ -70,25 +71,67 @@ fn link_row(title: &str, subtitle: Option<&str>, open: impl Fn() + 'static) -> a
     row
 }
 
-pub fn present(parent: &impl IsA<gtk::Widget>) {
-    let dialog = adw::Dialog::builder()
-        .title(tr("About Jellyfesh"))
-        .content_width(420)
-        .content_height(560)
-        .build();
-    let body = gtk::Box::new(gtk::Orientation::Vertical, 14);
-    body.add_css_class("about");
-    body.set_halign(gtk::Align::Center);
+/// The keyboard shortcuts About lists: the keys every desktop app shares
+/// (docs/ui.md, "Keyboard"), then the app's own.
+fn shortcuts() -> Vec<(&'static str, String)> {
+    vec![
+        ("space", tr("Play or Pause")),
+        ("<Primary>Right", tr("Next Song")),
+        ("<Primary>Left", tr("Previous Song")),
+        ("<Shift>Right", tr("Skip Forward 5 Seconds")),
+        ("<Shift>Left", tr("Skip Back 5 Seconds")),
+        ("<Primary>Up", tr("Volume Up")),
+        ("<Primary>Down", tr("Volume Down")),
+        ("<Primary>m", tr("Mute")),
+        ("<Primary>s", tr("Shuffle")),
+        ("<Primary>r", tr("Repeat")),
+        ("<Primary>p", tr("Now Playing")),
+        ("<Primary>l", tr("Lyrics")),
+        ("<Primary>u", tr("Queue")),
+        ("<Primary>f", tr("Search")),
+        ("<Primary>comma", tr("Settings")),
+        ("Escape", tr("Back")),
+        ("<Primary>w", tr("Close Window")),
+        ("<Primary>q", tr("Quit")),
+    ]
+}
 
+/// Keyboard Shortcuts: each key, drawn as key caps, beside what it does.
+fn shortcuts_group() -> adw::PreferencesGroup {
+    let group = adw::PreferencesGroup::builder()
+        .title(tr("Keyboard Shortcuts"))
+        .build();
+    let grid = gtk::Grid::builder().column_spacing(20).row_spacing(8).build();
+    grid.add_css_class("shortcuts-list");
+    for (i, (accel, action)) in shortcuts().into_iter().enumerate() {
+        let keys = gtk::ShortcutLabel::new(accel);
+        keys.set_halign(gtk::Align::Start);
+        let what = gtk::Label::builder()
+            .label(&action)
+            .xalign(0.0)
+            .wrap(true)
+            .build();
+        what.add_css_class("shortcut-action");
+        what.set_hexpand(true);
+        let row = i32::try_from(i).unwrap_or(0);
+        grid.attach(&keys, 0, row, 1, 1);
+        grid.attach(&what, 1, row, 1, 1);
+    }
+    group.add(&grid);
+    group
+}
+
+/// About Jellyfesh: the icon, the wordmark, the version and what it is.
+fn identity() -> gtk::Box {
     let icon = gtk::Image::from_icon_name(APP_ID);
-    icon.set_pixel_size(128);
+    icon.set_pixel_size(64);
     icon.add_css_class("about-icon");
     icon.update_property(&[gtk::accessible::Property::Label(&tr("Jellyfesh icon"))]);
     let wordmark = gtk::Picture::new();
     wordmark.set_can_shrink(true);
     wordmark.set_content_fit(gtk::ContentFit::Contain);
-    wordmark.set_size_request(260, 39);
-    wordmark.set_halign(gtk::Align::Center);
+    wordmark.set_size_request(200, 30);
+    wordmark.set_halign(gtk::Align::Start);
     wordmark.add_css_class("about-wordmark");
     wordmark.set_alternative_text(Some("JELLYFESH"));
     let set_wordmark = {
@@ -108,22 +151,41 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
     let handler = std::cell::Cell::new(Some(
         adw::StyleManager::default().connect_dark_notify(move |_| set_wordmark()),
     ));
-    dialog.connect_closed(move |_| {
+    wordmark.connect_destroy(move |_| {
         if let Some(h) = handler.take() {
             adw::StyleManager::default().disconnect(h);
         }
     });
-
-    let version = gtk::Label::new(Some(&trf(
-        "Version {version}",
-        &[("version", env!("CARGO_PKG_VERSION"))],
-    )));
+    let version = gtk::Label::builder()
+        .label(format!(
+            "{} · {}",
+            trf("Version {version}", &[("version", env!("CARGO_PKG_VERSION"))]),
+            tr("An elegant, lightweight music player.")
+        ))
+        .xalign(0.0)
+        .wrap(true)
+        .build();
     version.add_css_class("about-version");
-    let summary = gtk::Label::new(Some(&tr("An elegant, lightweight music player.")));
-    summary.set_wrap(true);
-    summary.set_justify(gtk::Justification::Center);
-    summary.add_css_class("about-summary");
+    let texts = gtk::Box::new(gtk::Orientation::Vertical, 6);
+    texts.set_valign(gtk::Align::Center);
+    texts.append(&wordmark);
+    texts.append(&version);
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 16);
+    row.add_css_class("about-identity");
+    row.append(&icon);
+    row.append(&texts);
+    row
+}
 
+/// Settings › About: Keyboard Shortcuts, then About Jellyfesh.
+pub fn section() -> gtk::Box {
+    let p = crate::ui::prefs::section("about");
+    p.append(&shortcuts_group());
+
+    let about = adw::PreferencesGroup::builder()
+        .title(tr("About Jellyfesh"))
+        .build();
+    about.add(&identity());
     // The website and the third-party licences, where the build knows them.
     let (links, licences) = known();
     let places = gtk::ListBox::new();
@@ -159,7 +221,10 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         }
     }
     places.set_visible(places.first_child().is_some());
-
+    about.add(&places);
+    if app().update.borrow().supported {
+        about.add(&updates(&p));
+    }
     let credits = gtk::ListBox::new();
     credits.add_css_class("boxed-list");
     credits.set_selection_mode(gtk::SelectionMode::None);
@@ -177,32 +242,15 @@ pub fn present(parent: &impl IsA<gtk::Widget>) {
         row.add_css_class("property");
         credits.append(&row);
     }
-
-    body.append(&icon);
-    body.append(&wordmark);
-    body.append(&version);
-    body.append(&summary);
-    body.append(&places);
-    if app().update.borrow().supported {
-        body.append(&updates(&dialog));
-    }
-    body.append(&credits);
-    let scroll = gtk::ScrolledWindow::builder()
-        .child(&body)
-        .hscrollbar_policy(gtk::PolicyType::Never)
-        .propagate_natural_height(true)
-        .build();
-    let view = adw::ToolbarView::new();
-    view.add_top_bar(&adw::HeaderBar::new());
-    view.set_content(Some(&scroll));
-    dialog.set_child(Some(&view));
-    dialog.present(Some(parent));
+    about.add(&credits);
+    p.append(&about);
+    p
 }
 
 /// Check for Updates and Check for Updates Automatically (direct
 /// downloads), with "Jellyfesh {version} Is Available" and View Release
 /// when the core found a newer release.
-fn updates(dialog: &adw::Dialog) -> gtk::ListBox {
+fn updates(owner: &impl IsA<gtk::Widget>) -> gtk::ListBox {
     let list = gtk::ListBox::new();
     list.add_css_class("boxed-list");
     list.set_selection_mode(gtk::SelectionMode::None);
@@ -267,7 +315,7 @@ fn updates(dialog: &adw::Dialog) -> gtk::ListBox {
         }
     };
     show();
-    app().listen_for(dialog, move |c| {
+    app().listen_for(owner, move |c| {
         if matches!(c, Change::Update | Change::Settings) {
             show();
         }

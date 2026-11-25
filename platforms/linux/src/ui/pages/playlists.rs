@@ -16,6 +16,7 @@ use crate::ui::pages::{follow_title, frame, keep_alive, large_title, pill, scrol
 use crate::ui::rows::{ListRow, RowStyle};
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::thumbs::ArtKey;
+use crate::ui::widgets::maxwidth::MaxWidth;
 use crate::ui::{actions, dnd, window};
 
 pub fn page() -> adw::NavigationPage {
@@ -45,7 +46,7 @@ pub fn page() -> adw::NavigationPage {
     column.append(&title);
     column.append(&buttons);
     column.append(&list);
-    let clamp = adw::Clamp::builder().child(&column).maximum_size(1000).build();
+    let clamp = MaxWidth::new(&column, 1000);
     let scroll = scroller(&clamp);
     let stack = gtk::Stack::new();
     stack.add_named(&scroll, Some("list"));
@@ -320,10 +321,7 @@ pub fn playlist_page(id: i64, known: Option<ItemData>) -> adw::NavigationPage {
         actions::play(Collection::Playlist { id }, position as usize, false);
     });
     let body = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    let header_clamp = adw::Clamp::builder()
-        .child(&header.root)
-        .maximum_size(1000)
-        .build();
+    let header_clamp = MaxWidth::new(&header.root, 1000);
     header_clamp.add_css_class("detail");
     body.append(&header_clamp);
     let list_scroll = scroller(&clamped(&list));

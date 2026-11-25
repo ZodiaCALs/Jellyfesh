@@ -2,11 +2,13 @@
 
 pub mod detail;
 pub mod discover;
+pub mod downloads;
 pub mod favourites;
 pub mod home;
 pub mod library;
 pub mod playlists;
 pub mod search;
+pub mod settings;
 pub mod sources;
 
 use std::cell::Cell;
@@ -16,10 +18,14 @@ use gtk::{glib, graphene};
 
 use crate::logic::layout;
 use crate::logic::motion::{Transition, plan};
+use crate::logic::nav::LIBRARY_SWITCHER;
+use crate::ui::i18n::tr;
+use crate::ui::state::{Change, app};
 use crate::ui::style;
+use crate::ui::widgets::glyph::Glyph;
 use crate::ui::widgets::motion::MotionBin;
 use crate::ui::widgets::titledscroll::TitledScroll;
-use crate::ui::window::Section;
+use crate::ui::window::{self, Section};
 
 /// The page for a sidebar section.
 pub fn section_page(section: Section) -> adw::NavigationPage {
@@ -30,8 +36,10 @@ pub fn section_page(section: Section) -> adw::NavigationPage {
         Section::Songs => library::songs(),
         Section::Playlists => playlists::page(),
         Section::Favourites => favourites::page(),
+        Section::Downloads => downloads::page(),
         Section::Search => search::page(),
         Section::Sources => sources::page(),
+        Section::Settings => settings::page(),
     }
 }
 
@@ -41,8 +49,11 @@ thread_local! {
     static LAST_SHOWING: Cell<i64> = const { Cell::new(0) };
 }
 
-/// A page with a flat header bar over the Misty field. The page's content
-/// sits in a motion bin, so it can fade in and rise as it appears.
+/// A page with a flat header bar over the Misty field: the window's own
+/// controls at its end, and on a page with one under it Jellyfesh Web's
+/// "‹ Back" at its start. The library's places have the phone layout's
+/// Library switcher under it. The page's content sits in a motion bin, so it
+/// can fade in and rise as it appears.
 pub fn frame(
     title: &str,
     tag: &str,
@@ -50,8 +61,14 @@ pub fn frame(
 ) -> (adw::NavigationPage, adw::HeaderBar) {
     let header = adw::HeaderBar::new();
     header.add_css_class("flat");
+    header.set_show_back_button(false);
+    let back = back_button();
+    header.pack_start(&back);
     let view = adw::ToolbarView::new();
     view.add_top_bar(&header);
+    if let Some(section) = Section::from_tag(tag).filter(|s| s.in_library_tab()) {
+        view.add_top_bar(&library_switcher(section));
+    }
     view.set_content(Some(content));
     view.set_top_bar_style(adw::ToolbarStyle::Flat);
     let bin = MotionBin::new(&view);
@@ -61,8 +78,117 @@ pub fn frame(
         .child(&bin)
         .build();
     page.add_css_class("jf-page");
-    page.connect_showing(|_| LAST_SHOWING.with(|t| t.set(glib::monotonic_time())));
+    let back = back.downgrade();
+    page.connect_showing(move |page| {
+        LAST_SHOWING.with(|t| t.set(glib::monotonic_time()));
+        let under = page
+            .ancestor(adw::NavigationView::static_type())
+            .and_downcast::<adw::NavigationView>()
+            .and_then(|view| view.previous_page(page));
+        if let Some(back) = back.upgrade() {
+            back.set_visible(under.is_some());
+        }
+    });
     (page, header)
+}
+
+/// Jellyfesh Web's "‹ Back": back to the page underneath.
+fn back_button() -> gtk::Button {
+    let content = gtk::Box::new(gtk::Orientation::Horizontal, 4);
+    content.append(&Glyph::new("back", 18));
+    content.append(&gtk::Label::new(Some(&tr("Back"))));
+    let b = gtk::Button::builder().child(&content).visible(false).build();
+    b.add_css_class("back-button");
+    b.set_tooltip_text(Some(&tr("Back")));
+    b.update_property(&[gtk::accessible::Property::Label(&tr("Back"))]);
+    b.connect_clicked(|_| {
+        window::go_back();
+    });
+    b
+}
+
+/// Jellyfesh Web's pill tabs (Settings' sections, the Library switcher,
+/// Search's tabs): toggle buttons in a rounded track, one chosen at a time;
+/// a row too wide for the window scrolls sideways.
+pub fn pill_tabs<K: Copy + 'static>(
+    items: &[(K, String)],
+    label: &str,
+) -> (gtk::ScrolledWindow, Vec<(K, gtk::ToggleButton)>) {
+    let row = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .spacing(4)
+        .accessible_role(gtk::AccessibleRole::TabList)
+        .build();
+    row.add_css_class("pill-tabs");
+    row.update_property(&[gtk::accessible::Property::Label(label)]);
+    let mut buttons: Vec<(K, gtk::ToggleButton)> = Vec::new();
+    for (key, text) in items {
+        let b = gtk::ToggleButton::builder()
+            .label(text)
+            .hexpand(true)
+            .accessible_role(gtk::AccessibleRole::Tab)
+            .build();
+        b.add_css_class("pill-tab");
+        if let Some((_, first)) = buttons.first() {
+            b.set_group(Some(first));
+        }
+        b.connect_toggled(|b| {
+            b.update_state(&[gtk::accessible::State::Selected(Some(b.is_active()))]);
+        });
+        row.append(&b);
+        buttons.push((*key, b));
+    }
+    let scroll = gtk::ScrolledWindow::builder()
+        .child(&row)
+        .hscrollbar_policy(gtk::PolicyType::External)
+        .vscrollbar_policy(gtk::PolicyType::Never)
+        .propagate_natural_height(true)
+        .build();
+    scroll.add_css_class("pill-tabs-scroll");
+    (scroll, buttons)
+}
+
+/// The phone layout's Library switcher (Albums, Artists, Songs, Playlists,
+/// Favourites, Downloads) under a library page's header bar, with its own
+/// place chosen; hidden from 761 px, where the sidebar lists them.
+fn library_switcher(current: Section) -> gtk::Widget {
+    let items: Vec<(Section, String)> = LIBRARY_SWITCHER.iter().map(|s| (*s, window::title(*s))).collect();
+    let (scroll, buttons) = pill_tabs(&items, &crate::ui::i18n::trc("sidebar", "Library"));
+    scroll.add_css_class("library-switcher");
+    // Each page's switcher shows its own place whenever the page shows.
+    let quiet = std::rc::Rc::new(Cell::new(false));
+    let own = buttons
+        .iter()
+        .find(|(s, _)| *s == current)
+        .map(|(_, b)| b.downgrade());
+    let show_own = {
+        let quiet = quiet.clone();
+        move || {
+            if let Some(b) = own.as_ref().and_then(|b| b.upgrade()) {
+                quiet.set(true);
+                b.set_active(true);
+                quiet.set(false);
+            }
+        }
+    };
+    show_own();
+    scroll.connect_map(move |_| show_own());
+    for (section, b) in buttons {
+        let quiet = quiet.clone();
+        b.connect_toggled(move |b| {
+            if !quiet.get() && b.is_active() && section != current {
+                window::show_section(section);
+            }
+        });
+    }
+    scroll.set_visible(window::is_phone());
+    let weak = scroll.downgrade();
+    app().listen_for(&scroll, move |c| {
+        if let (Change::Layout, Some(s)) = (c, weak.upgrade()) {
+            s.set_visible(window::is_phone());
+        }
+    });
+    scroll.upcast()
 }
 
 /// Whether the page on screen began to show just now (not revealed by a
@@ -162,10 +288,12 @@ pub fn titled_scroller_with(
     };
     let holder: gtk::Widget = match max_width {
         Some(w) => {
+            // Full width up to `w`, as the list under it (the web's
+            // pages fill the width between their gutters).
             let clamp = adw::Clamp::builder()
                 .child(&block)
                 .maximum_size(w)
-                .tightening_threshold(700)
+                .tightening_threshold(w)
                 .build();
             clamp.add_css_class("title-clamp");
             clamp.upcast()

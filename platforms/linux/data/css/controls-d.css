@@ -227,8 +227,10 @@ button.np-volume-glyph:hover {
 /* Mini-player (under 900 px): a floating glass capsule with one control,
  * and its progress as a 2 px line along the bottom edge. Solid Cloud
  * without live glass (MAT-08). */
+/* The capsule and the bar float over the content's gutters and above the
+ * phone tabs: window.rs sets their margins (logic::layout). */
 .mini-clamp {
-  margin: 0 {{space.s4}} {{space.s4}};
+  margin: 0;
 }
 
 .mini-player {
@@ -292,7 +294,7 @@ button.mini-play:active {
  * the seek bar, then Lyrics, Queue, Devices (remote sessions) and the
  * volume. Solid Cloud without live glass. */
 .bar-holder {
-  margin: 0 {{space.s4}} {{space.s4}};
+  margin: 0;
 }
 
 .player-bar {

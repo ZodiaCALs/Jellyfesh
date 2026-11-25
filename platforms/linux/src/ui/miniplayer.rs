@@ -1,6 +1,6 @@
 //! The mini-player, for windows under 900 px: a floating glass capsule along
-//! the bottom of the library with artwork, two lines of type and one
-//! control, a play button (Misty CMP-02), and a straight 2 px progress line
+//! the bottom of the library with artwork, two lines of type, play and next
+//! (docs/ui.md, "The player bar and the mini player"), and a straight 2 px progress line
 //! along its bottom edge (design-controls.md, "Mini-player and the desktop
 //! player bar"). Clicking the capsule opens Now Playing. The play button is
 //! never accent-filled, so a library page keeps its own primary action
@@ -16,6 +16,7 @@ use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
 use crate::ui::state::{Change, app};
 use crate::ui::widgets::art::Art;
+use crate::ui::widgets::glyph::Glyph;
 use crate::ui::widgets::playpause::PlayPause;
 use crate::ui::widgets::progressline::ProgressLine;
 use crate::ui::window;
@@ -71,11 +72,22 @@ pub fn build() -> gtk::Widget {
         app().send(Command::TogglePlayPause);
     });
 
-    let capsule = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let next = gtk::Button::builder()
+        .child(&Glyph::new("next", 20))
+        .valign(gtk::Align::Center)
+        .tooltip_text(tr("Next"))
+        .action_name("app.next")
+        .build();
+    next.add_css_class("mini-play");
+    next.add_css_class("mini-next");
+    next.update_property(&[gtk::accessible::Property::Label(&tr("Next"))]);
+
+    let capsule = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     capsule.add_css_class("mini-player");
     capsule.add_css_class("veil");
     capsule.append(&open);
     capsule.append(&play);
+    capsule.append(&next);
     let progress = ProgressLine::new(CAPSULE_RADIUS);
     let framed = gtk::Overlay::new();
     framed.set_child(Some(&capsule));

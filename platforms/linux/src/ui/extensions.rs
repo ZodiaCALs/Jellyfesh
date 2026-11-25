@@ -70,15 +70,11 @@ fn shape(plugins: &[PluginSummary]) -> String {
     format!("{pro_active} {:?} {models:?} {consents:?} {plugins:?}", ai.plugin)
 }
 
-pub fn page() -> adw::PreferencesPage {
-    let p = adw::PreferencesPage::builder()
-        .name("extensions")
-        .title(tr("Extensions"))
-        .icon_name("application-x-addon-symbolic")
-        .build();
+pub fn page() -> gtk::Box {
+    let p = crate::ui::prefs::section("extensions");
 
     let pro_group = adw::PreferencesGroup::builder().title("Jellyfesh Pro").build();
-    p.add(&pro_group);
+    p.append(&pro_group);
     let pro_rows: Rc<RefCell<Vec<gtk::Widget>>> = Rc::new(RefCell::new(Vec::new()));
     let fill_pro = {
         let group = pro_group.downgrade();
@@ -102,7 +98,7 @@ pub fn page() -> adw::PreferencesPage {
         install.connect_clicked(|_| sources_ui::install_from_file());
         group.set_header_suffix(Some(&install));
     }
-    p.add(&group);
+    p.append(&group);
     let rows: Rc<RefCell<Vec<adw::ExpanderRow>>> = Rc::new(RefCell::new(Vec::new()));
     let shown = Rc::downgrade(&rows);
     let open: Rc<RefCell<HashSet<String>>> = Rc::new(RefCell::new(HashSet::new()));

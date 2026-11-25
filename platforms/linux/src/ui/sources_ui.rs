@@ -20,18 +20,14 @@ use crate::ui::pages::sources::{account_text, badge_text};
 use crate::ui::state::{Change, app, spawn};
 use crate::ui::widgets::qr::Qr;
 
-pub fn page() -> adw::PreferencesPage {
-    let p = adw::PreferencesPage::builder()
-        .name("sources")
-        .title(tr("Sources"))
-        .icon_name("network-server-symbolic")
-        .build();
+pub fn page() -> gtk::Box {
+    let p = crate::ui::prefs::section("sources");
     // The services Jellyfesh offers, each while its official plugin is installed.
     let add = adw::PreferencesGroup::builder()
         .title(tr("Add a Source"))
         .visible(false)
         .build();
-    p.add(&add);
+    p.append(&add);
     let preset_rows: Rc<RefCell<Vec<gtk::Widget>>> = Rc::new(RefCell::new(Vec::new()));
 
     let installed = adw::PreferencesGroup::builder().title(tr("Installed")).build();
@@ -39,7 +35,7 @@ pub fn page() -> adw::PreferencesPage {
     install.add_css_class("flat");
     install.connect_clicked(|_| install_from_file());
     installed.set_header_suffix(Some(&install));
-    p.add(&installed);
+    p.append(&installed);
     let rows: Rc<RefCell<Vec<gtk::Widget>>> = Rc::new(RefCell::new(Vec::new()));
 
     let community = adw::PreferencesGroup::builder()
@@ -52,7 +48,7 @@ pub fn page() -> adw::PreferencesPage {
         .title(tr("Allow Community Plugins"))
         .build();
     community.add(&allow);
-    p.add(&community);
+    p.append(&community);
 
     let guard = Rc::new(Cell::new(false));
     let g = guard.clone();

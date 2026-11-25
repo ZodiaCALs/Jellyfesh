@@ -20,6 +20,7 @@ use crate::ui::rows::RowStyle;
 use crate::ui::sources_ui::preset_row;
 use crate::ui::state::{Change, app};
 use crate::ui::widgets::glyph;
+use crate::ui::widgets::maxwidth::MaxWidth;
 use crate::ui::{actions, window};
 
 /// The badge line for a source (ADR-0004, ADR-0012).
@@ -85,7 +86,7 @@ pub fn page() -> adw::NavigationPage {
     column.append(&add);
     column.append(&yours);
     column.append(&settings);
-    let clamp = adw::Clamp::builder().child(&column).maximum_size(800).build();
+    let clamp = MaxWidth::new(&column, 800);
     clamp.add_css_class("detail");
     let scroll = scroller(&clamp);
     let (page, header) = frame(&tr("Sources"), "sources", &scroll);
@@ -308,7 +309,7 @@ pub fn browse_page(plugin: &str, item: Option<SourceItem>, title: &str) -> adw::
     stack.add_named(&empty, Some("empty"));
     body.append(&stack);
 
-    let clamp = adw::Clamp::builder().child(&body).maximum_size(1000).build();
+    let clamp = MaxWidth::new(&body, 1000);
     let node = item.as_ref().map(|i| i.id.clone());
     let scroll = scroller(&clamp);
     let (page, header_bar) = frame(

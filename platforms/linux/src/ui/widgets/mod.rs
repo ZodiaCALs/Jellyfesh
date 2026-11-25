@@ -9,6 +9,7 @@ pub mod glyph;
 pub mod level;
 pub mod lyricline;
 pub mod lyricscolumn;
+pub mod maxwidth;
 pub mod motion;
 pub mod playpause;
 pub mod preview;
