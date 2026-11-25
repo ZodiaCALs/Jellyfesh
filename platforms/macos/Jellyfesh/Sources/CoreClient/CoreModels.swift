@@ -566,7 +566,7 @@ struct DownloadOptions: Hashable, Sendable {
     var lyricsInTags: Bool
     /// Save .lrc Files beside the songs.
     var saveLrcFiles: Bool
-    /// Wi-Fi Only (Android's); kept as the core has it.
+    /// Pause on Metered Connections (`wifi_only`): downloads wait while the connection is metered.
     var wifiOnly: Bool
     /// Downloads at Once, 1–4.
     var atOnce: UInt32
@@ -592,7 +592,7 @@ enum DownloadRequest: Hashable, Sendable {
 enum DownloadsPause: Hashable, Sendable {
     /// No network.
     case offline
-    /// A metered network with Wi-Fi Only on.
+    /// A metered network with Pause on Metered Connections on.
     case metered
 }
 

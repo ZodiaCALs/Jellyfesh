@@ -1,9 +1,9 @@
 // Settings › Downloads (ADR-0025, docs/ui.md "Settings"; not in Jellyfesh Web), as the web's cards
 // (SettingsCards): where downloads go, with Show in Finder and Change… (a folder chosen in the
 // sandboxed build is kept with a security-scoped bookmark); their quality; how the files are named
-// (the template, its fields and a live preview of one song's path); what goes in the tags; how many
-// download at once; and the space they take, with Remove All Downloads… (asked first). Wi-Fi Only
-// is Android's.
+// (the template, its fields and a live preview of one song's path); what goes in the tags; the
+// network (Pause on Metered Connections, as NetworkMonitor reports a hotspot or Low Data Mode, and
+// how many download at once); and the space they take, with Remove All Downloads… (asked first).
 
 import AppKit
 import SwiftUI
@@ -35,7 +35,11 @@ struct DownloadsSettings: View {
                 SettingsToggleRow("Save .lrc Files", isOn: binding(\.saveLrcFiles))
             }
 
-            SettingsCard {
+            SettingsCard(title: "Network") {
+                SettingsToggleRow("Pause on Metered Connections",
+                                  help: "Downloads wait while you're on mobile data, a hotspot or another metered connection.",
+                                  isOn: binding(\.wifiOnly))
+                SettingsDivider()
                 atOnceRow
             }
 

@@ -195,7 +195,9 @@ final class DownloadsStoreTests: XCTestCase {
         XCTAssertEqual(DownloadsStore.problem(.notAllowed(service: "Jellyfin")),
                        "Your Jellyfin server doesn't allow downloads for this account.")
         XCTAssertEqual(DownloadsStore.problem(.network("Timed out")), "Timed out")
-        XCTAssertEqual(DownloadsStore.paused(.metered), "Downloads wait for Wi-Fi.")
+        XCTAssertEqual(DownloadsStore.paused(.offline), "Downloads resume when you're back online.")
+        XCTAssertEqual(DownloadsStore.paused(.metered), "Downloads resume when you're off a metered connection.")
+        XCTAssertTrue(DownloadOptions.defaults.wifiOnly, "Pause on Metered Connections starts on, as in the core")
     }
 
     func testTheChoicesGoToTheCore() {

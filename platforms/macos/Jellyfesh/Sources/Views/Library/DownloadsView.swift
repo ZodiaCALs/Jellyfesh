@@ -143,8 +143,8 @@ private struct DownloadedAlbumSection: View {
     }
 }
 
-/// A download in progress: the song, its progress or why it failed, and Cancel (Try Again after a
-/// failure).
+/// A download in progress: the song, "Waiting", its progress and percentage, or why it failed with
+/// Try Again; and Cancel.
 private struct DownloadProgressRow: View {
     var entry: DownloadEntry
 
@@ -190,9 +190,16 @@ private struct DownloadProgressRow: View {
                 .foregroundStyle(palette[Tokens.Ink.ink70])
         case .downloading, .done:
             if let progress = DownloadsStore.progress(entry) {
-                ProgressView(value: progress)
-                    .progressViewStyle(.linear)
-                    .controlSize(.small)
+                HStack(spacing: Tokens.Space.s2) {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .controlSize(.small)
+                    Text(progress, format: .percent.precision(.fractionLength(0)))
+                        .typography(Tokens.TypeRoles.listSecondary)
+                        .monospacedDigit()
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                        .frame(minWidth: 40, alignment: .trailing)
+                }
             } else {
                 ProgressView()
                     .progressViewStyle(.linear)

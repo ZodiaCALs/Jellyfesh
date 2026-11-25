@@ -113,16 +113,18 @@ brought, and where:
   Source collections carry their kind (`Collection.source(plugin, id, itemKind)`).
 * **Downloads** (ADR-0025; `Stores/DownloadsStore.swift`):
   * **The Downloads page** (`Views/Library/DownloadsView.swift`): Play and Shuffle, the songs
-    and the space used at the top, and why downloads wait ("Downloads wait until you're
-    online."); the downloads in progress, each with its progress or why it failed, Try Again
-    after a failure, and Cancel; then the downloaded songs by album. Each album and song has
+    and the space used at the top, and why downloads wait ("Downloads resume when you're back
+    online.", or off a metered connection); In Progress, each download with "Waiting", its
+    progress and percentage, or why it failed with Try Again, and Cancel; then the downloaded songs
+    by album. Each album and song has
     **Remove Download…**, which asks first. A downloaded song plays its library track, or the
     source's song, which plays the file, offline too. The rows sit in lazy stacks.
   * **Settings › Downloads** (`Views/Settings/DownloadsSettings.swift`), between Library and
     Sources: Folder with Show in Finder and Change…, Quality (Original, High, Normal, Low), File
     Names with its fields and a live preview from the core's rules (`downloadPreview`), the Tags
-    switches, Downloads at Once (1 to 4), and Space Used with **Remove All Downloads…** (asked
-    first). Wi-Fi Only is Android's.
+    switches, Network (**Pause on Metered Connections**, on, the core's `wifiOnly`: the app reports
+    a hotspot or Low Data Mode as metered, so without the switch such downloads would never start;
+    and Downloads at Once, 1 to 4), and Space Used with **Remove All Downloads…** (asked first).
   * **The folder.** The core is told `~/Music/Jellyfesh` (`CoreConfig.downloadsDir`; the real
     Music folder, not the sandbox container's). The App Store build may now write to Music
     (`com.apple.security.assets.music.read-write` instead of read-only). A folder chosen with
@@ -571,8 +573,8 @@ platforms/macos/
   Custom once a band moves, the preamp, the bands and Reset to Flat; Streaming; Startup:
   Resume Playback), Library (folders with Show in Finder, Remove Folder… and
   Add Folder…; Watch Folders; Rescan Library with the scan's progress and Last
-  Scan), Downloads (folder, quality, file names, tags, downloads at once, space used and Remove
-  All Downloads…), Sources (Add a Source; Installed with Install from File… in its
+  Scan), Downloads (folder, quality, file names, tags, Pause on Metered Connections, downloads at
+  once, space used and Remove All Downloads…), Sources (Add a Source; Installed with Install from File… in its
   heading: enable, sign-in by QR code, browser or fields, settings forms from
   each plugin's JSON Schema, "Version · Author", Uninstall…; Community Plugins
   with the ADR-0012 disclosure), Extensions, and About (Keyboard Shortcuts, the version, the

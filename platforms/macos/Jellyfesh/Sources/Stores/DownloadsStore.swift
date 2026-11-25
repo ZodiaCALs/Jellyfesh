@@ -103,8 +103,8 @@ final class DownloadsStore {
     /// Why downloads wait.
     nonisolated static func paused(_ pause: DownloadsPause) -> String {
         switch pause {
-        case .offline: return String(localized: "Downloads wait until you're online.")
-        case .metered: return String(localized: "Downloads wait for Wi-Fi.")
+        case .offline: return String(localized: "Downloads resume when you're back online.")
+        case .metered: return String(localized: "Downloads resume when you're off a metered connection.")
         }
     }
 

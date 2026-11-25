@@ -3647,46 +3647,68 @@
         }
       }
     },
-    "Downloads wait for Wi-Fi.": {
+    "Downloads resume when you're back online.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ダウンロードは Wi-Fi に接続するまで待機します。"
+            "value": "オンラインに戻るとダウンロードを再開します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "下载将在连接 Wi-Fi 后开始。"
+            "value": "恢复联网后，下载会继续。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "下載將在連上 Wi-Fi 後開始。"
+            "value": "恢復連線後，下載會繼續。"
           }
         }
       }
     },
-    "Downloads wait until you're online.": {
+    "Downloads resume when you're off a metered connection.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ダウンロードはオンラインになるまで待機します。"
+            "value": "従量制接続から切り替わるとダウンロードを再開します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "下载将在联网后开始。"
+            "value": "离开按流量计费的网络后，下载会继续。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "下載將在連上網路後開始。"
+            "value": "離開計量制網路後，下載會繼續。"
+          }
+        }
+      }
+    },
+    "Downloads wait while you're on mobile data, a hotspot or another metered connection.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モバイルデータ通信、テザリングなどの従量制接続を使っている間は、ダウンロードを待機します。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用移动数据、热点或其他按流量计费的网络时，下载会等待。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用行動數據、熱點或其他計量制網路時，下載會等待。"
           }
         }
       }
@@ -6243,6 +6265,28 @@
         }
       }
     },
+    "Network": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワーク"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "网络"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "網路"
+          }
+        }
+      }
+    },
     "New Playlist": {
       "localizations": {
         "ja": {
@@ -7361,6 +7405,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫停"
+          }
+        }
+      }
+    },
+    "Pause on Metered Connections": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "従量制接続では一時停止"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在按流量计费的网络上暂停"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在計量制網路上暫停"
           }
         }
       }
