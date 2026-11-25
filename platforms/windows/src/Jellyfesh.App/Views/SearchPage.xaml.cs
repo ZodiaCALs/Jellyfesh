@@ -50,6 +50,24 @@ public sealed partial class SearchPage : JfPage
 
     private void OnTrackClick(object sender, ItemClickEventArgs e) => ViewModel.PlayTrackCommand.Execute(e.ClickedItem as TrackItem);
 
+    /// <summary>A tab: All, Library or a source's.</summary>
+    private void OnTabClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is SearchTabItem tab)
+        {
+            ViewModel.SelectTabCommand.Execute(tab.Id);
+        }
+    }
+
+    /// <summary>"Results from {Service}": that source's tab.</summary>
+    private void OnApartClick(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is SourceResultGroup group)
+        {
+            ViewModel.SelectTabCommand.Execute(group.Source);
+        }
+    }
+
     /// <summary>A source's group of songs (From Your Sources): thumbnails and the song menu, once per list.</summary>
     private void OnOnlineTracksLoaded(object sender, RoutedEventArgs e)
     {

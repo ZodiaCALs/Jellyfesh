@@ -43,9 +43,6 @@ public static class Bind
     public static Visibility VisibleIfNone(int count) => count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>"Nothing found": a search was made, it found nothing, and nothing is still on its way.</summary>
-    public static Visibility VisibleIfNothingFound(string? searched, bool hasResults, bool busy) =>
-        !string.IsNullOrEmpty(searched) && !hasResults && !busy ? Visibility.Visible : Visibility.Collapsed;
-
     public static bool Not(bool value) => !value;
 
     /// <summary>The playing row's fill: accent-soft (Misty COL-06); clear otherwise.</summary>

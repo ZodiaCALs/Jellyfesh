@@ -65,6 +65,10 @@ internal sealed class FakeCore : ICoreClient
     public T LastSent<T>()
         where T : CoreCommand => Sent.OfType<T>().Last();
 
+    /// <summary>The id the last command of type <typeparamref name="T"/> was sent with (ids count from 1).</summary>
+    public ulong LastSentId<T>()
+        where T : CoreCommand => (ulong)(Sent.FindLastIndex(c => c is T) + 1);
+
     public CoreSnapshot Snapshot()
     {
         SnapshotCount++;

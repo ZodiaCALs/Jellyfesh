@@ -1577,6 +1577,9 @@
   <data name="Search_Albums.Text" xml:space="preserve">
     <value>Albums</value>
   </data>
+  <data name="Search_All" xml:space="preserve">
+    <value>All</value>
+  </data>
   <data name="Search_AlsoIn" xml:space="preserve">
     <value>Also in {0}</value>
   </data>
@@ -1592,8 +1595,14 @@
   <data name="Search_Box.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Search</value>
   </data>
+  <data name="Search_Folders" xml:space="preserve">
+    <value>Folders</value>
+  </data>
   <data name="Search_LibrarySource" xml:space="preserve">
     <value>Library</value>
+  </data>
+  <data name="Search_Loading" xml:space="preserve">
+    <value>Loading…</value>
   </data>
   <data name="Search_NoAnswer" xml:space="preserve">
     <value>This Source Did Not Answer: {0}</value>
@@ -1607,8 +1616,14 @@
   <data name="Search_Online.Text" xml:space="preserve">
     <value>From Your Sources</value>
   </data>
+  <data name="Search_ResultsFrom" xml:space="preserve">
+    <value>Results from {0}</value>
+  </data>
   <data name="Search_Searching.Text" xml:space="preserve">
     <value>Searching…</value>
+  </data>
+  <data name="Search_ShowMore" xml:space="preserve">
+    <value>Show More</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>Songs</value>
@@ -1624,6 +1639,9 @@
   </data>
   <data name="Search_StartTitle.Text" xml:space="preserve">
     <value>Search Your Music</value>
+  </data>
+  <data name="Search_Tabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Results</value>
   </data>
   <data name="Search_Title.Text" xml:space="preserve">
     <value>Search</value>

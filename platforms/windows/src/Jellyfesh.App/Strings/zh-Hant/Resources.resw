@@ -1577,6 +1577,9 @@
   <data name="Search_Albums.Text" xml:space="preserve">
     <value>專輯</value>
   </data>
+  <data name="Search_All" xml:space="preserve">
+    <value>全部</value>
+  </data>
   <data name="Search_AlsoIn" xml:space="preserve">
     <value>也在 {0}</value>
   </data>
@@ -1592,8 +1595,14 @@
   <data name="Search_Box.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>搜尋</value>
   </data>
+  <data name="Search_Folders" xml:space="preserve">
+    <value>資料夾</value>
+  </data>
   <data name="Search_LibrarySource" xml:space="preserve">
     <value>資料庫</value>
+  </data>
+  <data name="Search_Loading" xml:space="preserve">
+    <value>正在載入…</value>
   </data>
   <data name="Search_NoAnswer" xml:space="preserve">
     <value>這個來源沒有回應：{0}</value>
@@ -1607,8 +1616,14 @@
   <data name="Search_Online.Text" xml:space="preserve">
     <value>來自你的來源</value>
   </data>
+  <data name="Search_ResultsFrom" xml:space="preserve">
+    <value>來自 {0} 的結果</value>
+  </data>
   <data name="Search_Searching.Text" xml:space="preserve">
     <value>正在搜尋…</value>
+  </data>
+  <data name="Search_ShowMore" xml:space="preserve">
+    <value>顯示更多</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>歌曲</value>
@@ -1624,6 +1639,9 @@
   </data>
   <data name="Search_StartTitle.Text" xml:space="preserve">
     <value>搜尋你的音樂</value>
+  </data>
+  <data name="Search_Tabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>結果</value>
   </data>
   <data name="Search_Title.Text" xml:space="preserve">
     <value>搜尋</value>

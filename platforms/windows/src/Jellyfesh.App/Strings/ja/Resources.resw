@@ -1577,6 +1577,9 @@
   <data name="Search_Albums.Text" xml:space="preserve">
     <value>アルバム</value>
   </data>
+  <data name="Search_All" xml:space="preserve">
+    <value>すべて</value>
+  </data>
   <data name="Search_AlsoIn" xml:space="preserve">
     <value>{0} にもあります</value>
   </data>
@@ -1592,8 +1595,14 @@
   <data name="Search_Box.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>検索</value>
   </data>
+  <data name="Search_Folders" xml:space="preserve">
+    <value>フォルダ</value>
+  </data>
   <data name="Search_LibrarySource" xml:space="preserve">
     <value>ライブラリ</value>
+  </data>
+  <data name="Search_Loading" xml:space="preserve">
+    <value>読み込み中…</value>
   </data>
   <data name="Search_NoAnswer" xml:space="preserve">
     <value>ソースから応答がありません: {0}</value>
@@ -1607,8 +1616,14 @@
   <data name="Search_Online.Text" xml:space="preserve">
     <value>ソースから</value>
   </data>
+  <data name="Search_ResultsFrom" xml:space="preserve">
+    <value>{0} の結果</value>
+  </data>
   <data name="Search_Searching.Text" xml:space="preserve">
     <value>検索しています…</value>
+  </data>
+  <data name="Search_ShowMore" xml:space="preserve">
+    <value>さらに表示</value>
   </data>
   <data name="Search_SongList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
     <value>曲</value>
@@ -1624,6 +1639,9 @@
   </data>
   <data name="Search_StartTitle.Text" xml:space="preserve">
     <value>音楽を検索</value>
+  </data>
+  <data name="Search_Tabs.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>結果</value>
   </data>
   <data name="Search_Title.Text" xml:space="preserve">
     <value>検索</value>

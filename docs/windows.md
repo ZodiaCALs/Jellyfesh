@@ -150,12 +150,16 @@ plugin settings applied with **Save**.
 * **Song menu:** Play Next, Play Last, Add to Playlist…, Add to Favourites or
   Remove from Favourites, Go to Album, Go to Artist and Show in Explorer
   (library songs; the core's search finds the album and artist).
-* **Search:** "Search Your Music" and a sentence before anything is typed;
-  library results first (Songs, Albums, Artists, as rows), then **From Your
-  Sources**, one group per source ("Content from {Service}" under one that asks
-  for credit), an item the core merged saying "Also in …"; a source's album,
-  artist, playlist or folder opens its page; "No Results" and "Try other
-  words." when nothing is found.
+* **Search** (ADR-0024 §4): "Search Your Music" and a sentence before
+  anything is typed; then the tabs **All**, **Library** and one per source
+  that found something. All: library results first (Songs, Albums, Artists,
+  as rows), then **From Your Sources**, one group per source ("Content from
+  {Service}" under one that asks for credit), an item the core merged saying
+  "Also in …", the latest section per source; then "Results from {Service}"
+  for each source whose terms keep its results apart. A source's tab: its
+  Songs, Albums, Artists and Playlists, each with **Show More**
+  (`SearchMore`). A source's album, artist, playlist or folder opens its page;
+  "No Results" and "Try other words." when the tab shown found nothing.
 * **Sources:** the intro line, **Add a Source** (the core's presets; a service
   opens "Connect to …" for the Server Address and how to sign in, then the
   sign-in dialog), **Your Sources** (every installed source with its badge

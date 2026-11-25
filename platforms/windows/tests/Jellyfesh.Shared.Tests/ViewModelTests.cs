@@ -551,18 +551,22 @@ public class ViewModelTests
         h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "library", [library], null, false)));
         Assert.All(search.OnlineGroups, g => Assert.False(g.HasTracks || g.HasEntries));
 
-        // Each source's update carries the whole merged list so far, so it replaces the last one.
+        // Each update is one source's section (its rows less what an earlier section shows).
         var live = Live("org.sub", []);
-        h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [library, live], null, false)));
+        h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [live], null, false)));
         var first = Assert.Single(search.OnlineGroups[0].Tracks);
         Assert.Null(first.Origin); // its group names its source; no other has it
         Assert.False(search.OnlineGroups[0].IsSearching);
         Assert.True(search.OnlineGroups[1].IsSearching);
 
+        // Jelly's answer changes earlier sections: the core sends them again right before its own.
         var merged = Live("org.sub", ["org.jelly"]);
         var withLibrary = library with { AlsoIn = ["org.jelly"] };
         var album = new SourceItem("org.jelly", ItemKind.Album, "a7", "Harbour", "Band", null, null, null, true, null, null, []);
-        h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.jelly", [withLibrary, merged, album], "slow", true)));
+        h.Emit(
+            new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "library", [withLibrary], null, false)),
+            new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [merged], null, false)),
+            new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.jelly", [album], "slow", true)));
 
         // From Your Sources: one group per source, each item under the source that gave it.
         Assert.Equal(["Sub", "Jelly"], search.OnlineGroups.Select(g => g.Name));
@@ -576,9 +580,10 @@ public class ViewModelTests
         Assert.True(search.OnlineGroups[1].IsShown);
         Assert.False(search.IsSearchingSources);
 
-        // A source that answered with nothing has no section.
-        h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [withLibrary, album], null, true)));
+        // A source that answered with nothing has no section; the others keep theirs.
+        h.Emit(new CoreEvent.SearchResults(new SearchUpdate(id, "harbour", "org.sub", [], null, true)));
         Assert.False(search.OnlineGroups[0].IsShown);
+        Assert.Equal("Harbour", Assert.Single(search.OnlineGroups[1].Entries).Title);
 
         // A failure of the search command is the page's to show, not a generic error.
         search.Query = "tide";
