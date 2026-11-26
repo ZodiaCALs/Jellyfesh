@@ -490,5 +490,6 @@
   "Imported “{name}”": "「{name}」を読み込みました",
   "Imported “{name}”: {n} of its songs is in your library.": "「{name}」を読み込みました：ライブラリにある曲は {n} 曲です。",
   "This playlist has no songs from your library to export.": "このプレイリストには書き出せるライブラリの曲がありません。",
-  "{n} song from a server was left out: it has no file.": "サーバーの曲 {n} 曲はファイルがないため含まれていません。"
+  "{n} song from a server was left out: it has no file.": "サーバーの曲 {n} 曲はファイルがないため含まれていません。",
+  "Your {service} server doesn’t allow downloads for this account.": "{service} サーバーでは、このアカウントのダウンロードが許可されていません。"
 }

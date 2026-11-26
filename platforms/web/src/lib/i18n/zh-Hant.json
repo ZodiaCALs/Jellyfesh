@@ -490,5 +490,6 @@
   "Imported “{name}”": "已匯入「{name}」",
   "Imported “{name}”: {n} of its songs is in your library.": "已匯入「{name}」：其中 {n} 首歌曲在你的資料庫中。",
   "This playlist has no songs from your library to export.": "此播放清單中沒有可匯出的資料庫歌曲。",
-  "{n} song from a server was left out: it has no file.": "有 {n} 首來自伺服器的歌曲未包含在內：它們沒有檔案。"
+  "{n} song from a server was left out: it has no file.": "有 {n} 首來自伺服器的歌曲未包含在內：它們沒有檔案。",
+  "Your {service} server doesn’t allow downloads for this account.": "你的 {service} 伺服器不允許此帳號下載。"
 }

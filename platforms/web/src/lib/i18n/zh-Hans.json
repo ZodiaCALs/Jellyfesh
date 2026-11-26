@@ -490,5 +490,6 @@
   "Imported “{name}”": "已导入“{name}”",
   "Imported “{name}”: {n} of its songs is in your library.": "已导入“{name}”：其中 {n} 首歌曲在你的资料库中。",
   "This playlist has no songs from your library to export.": "此歌单中没有可导出的资料库歌曲。",
-  "{n} song from a server was left out: it has no file.": "有 {n} 首来自服务器的歌曲未包含在内：它们没有文件。"
+  "{n} song from a server was left out: it has no file.": "有 {n} 首来自服务器的歌曲未包含在内：它们没有文件。",
+  "Your {service} server doesn’t allow downloads for this account.": "你的 {service} 服务器不允许此账户下载。"
 }
