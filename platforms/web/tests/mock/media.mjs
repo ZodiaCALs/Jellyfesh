@@ -35,7 +35,7 @@ export function wav(seconds, frequency, { sampleRate = 44100, amplitude = 0.5 } 
  * `wav` with RIFF INFO tags (title INAM, artist IART, album IPRD, track number IPRT, date ICRD),
  * as tagging software writes them into WAV files.
  */
-export function taggedWav(seconds, frequency, { title, artist, album, track, year } = {}) {
+export function taggedWav(seconds, frequency, { title, artist, album, track, year, cover } = {}) {
   const plain = wav(seconds, frequency);
   const fields = [
     ['INAM', title],
@@ -57,9 +57,28 @@ export function taggedWav(seconds, frequency, { title, artist, album, track, yea
   const list = Buffer.alloc(8);
   list.write('LIST', 0, 'ascii');
   list.writeUInt32LE(info.length, 4);
-  const out = Buffer.concat([plain, list, info]);
+  const chunks = [plain, list, info];
+  if (cover) chunks.push(id3Chunk(cover));
+  const out = Buffer.concat(chunks);
   out.writeUInt32LE(out.length - 8, 4);
   return out;
+}
+
+/** An `id3 ` chunk holding an ID3v2.3 tag with `png` as the front cover (APIC), which lofty reads from WAV files. */
+function id3Chunk(png) {
+  const body = Buffer.concat([Buffer.from([0]), Buffer.from('image/png\0', 'latin1'), Buffer.from([3, 0]), png]);
+  const frame = Buffer.alloc(10);
+  frame.write('APIC', 0, 'ascii');
+  frame.writeUInt32BE(body.length, 4);
+  const frames = Buffer.concat([frame, body]);
+  const header = Buffer.from([0x49, 0x44, 0x33, 3, 0, 0, 0, 0, 0, 0]);
+  // The tag's size, syncsafe: seven bits a byte.
+  for (let i = 0; i < 4; i++) header[6 + i] = (frames.length >> (7 * (3 - i))) & 0x7f;
+  const tag = Buffer.concat([header, frames]);
+  const head = Buffer.alloc(8);
+  head.write('id3 ', 0, 'ascii');
+  head.writeUInt32LE(tag.length, 4);
+  return Buffer.concat([head, tag, Buffer.alloc(tag.length % 2)]);
 }
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {

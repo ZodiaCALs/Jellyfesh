@@ -18,8 +18,13 @@ the same rules as the apps' library.
 ![Now Playing in the Artwork style, dark, against the mock server](screenshots/web/now-playing-artwork-dark-desktop-mock-server.png)
 
 The screenshots in `docs/screenshots/web/` come from the app running against
-the test servers in `platforms/web/tests/mock` (invented names, generated
-sine tones and gradient covers), hence `-mock-server` in their names. They
+the test servers in `platforms/web/tests/mock` and a generated music folder
+(invented names, generated sine tones and gradient covers), hence
+`-mock-server` in their names. Since v0.0.8 they are the reference the apps
+match (ADR-0023 §5): every page (Home, Albums, Artists, Songs, Playlists, a
+playlist, Favourites, Search and a source's tab, Sources, an album, Settings'
+Appearance and Playback, the quality menu) light and dark, on a desktop and a
+phone, with Now Playing in both backdrop styles and the player bar. They
 were taken from a development build, whose plugins are not signed with the
 release key, so Sources shows them as Community plugins; the website's build
 signs them (`.github/workflows/web.yml`, with the `JF_PLUGIN_SIGNING_KEY`
@@ -707,7 +712,10 @@ Tests:
   sign-in with a password and with Quick Connect, browsing, search (with its
   tabs, `subsonic.spec.ts`), hearts, playlists, plays on Home and the quality
   badge (`collections.spec.ts`), a playlist file imported against the
-  library and exported again (`library.spec.ts`), playback
+  library and exported again (`library.spec.ts`), the servers' favourites
+  and playlists, Save as Playlist…, the quality menu's levels and Download,
+  including a refusal that is not saved (`sources-library.spec.ts`, and
+  Jellyfin's in `jellyfin.spec.ts`), playback
   with word-timed lyrics and translations, next and previous, crossfade on,
   off and with album continuity, the gapless gap, a dropped file with a TTML
   lyrics file, Jellyfin streams through the service worker, sign-out, and
@@ -735,7 +743,8 @@ Tests:
   points them at a copy served elsewhere (for example the website build at
   `/app/`).
 * **Screenshots**: `JF_SCREENSHOTS=1 npx playwright test screenshots
-  --trace off` rewrites `docs/screenshots/web/`.
+  --trace off` rewrites `docs/screenshots/web/` (every page, light and dark,
+  desktop and phone; the website shows a few, captioned as sample music).
 
 `.github/workflows/web.yml` runs all of it on pull requests and pushes. On
 pushes to `main`, after each release (`release.yml` starts it) and when
