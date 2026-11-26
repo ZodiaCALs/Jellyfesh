@@ -1039,6 +1039,148 @@ fn each_kind_is_searched_on_its_own_with_show_more() {
     assert!(page.items.iter().all(|i| i.kind == ItemKind::Track));
 }
 
+const LIBRARY: &str = "org.jellyfesh.test.library";
+
+/// The test plugin with API 1.3's `library` and `download`.
+fn library_manifest() -> String {
+    format!(
+        "id = {LIBRARY:?}\nname = \"Test Library\"\nversion = \"1.0.0\"\napi_version = \"1.3\"\n\
+         author = \"Jellyfesh tests\"\ndescription = \"A plugin for tests\"\n\
+         capabilities = [\"browse\", \"library\", \"download\"]\nplayback_mode = \"stream\"\n\
+         \n[network]\nallow = [\"${{settings.server_url}}\"]\nmax_rps = 20\n\
+         \n[settings]\nschema = \"settings.schema.json\"\n"
+    )
+}
+
+#[test]
+fn a_sources_likes_and_playlists_are_listed_paged_kept_and_saved_as_a_playlist() {
+    use jf_core::{SourceLibraryPart, SourceLibrarySnapshot};
+    let env = Env::new();
+    let server = TestServer::start(|_| Response::new(404, "nothing here"));
+    env.plugin("library", &library_manifest(), LIBRARY, &server.url());
+
+    // Refreshed: the lists load; liked artists are left out (the source keeps none).
+    let loaded = |s: &SourceLibrarySnapshot| {
+        s.sources.iter().any(|source| {
+            source.plugin == LIBRARY
+                && source
+                    .lists
+                    .iter()
+                    .all(|l| !l.loading && l.refreshed_at_ms.is_some())
+        })
+    };
+    let events = env.run(
+        Command::RefreshSourceLibrary { plugin: None },
+        |e| matches!(e, Event::SourceLibrary(s) if loaded(s)),
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, Event::SourceLibrary(s) if s.sources.iter().any(|x| x.lists.iter().any(|l| l.loading)))),
+        "loading first"
+    );
+    let snapshot = env.core.snapshot().source_library;
+    let source = snapshot.sources.iter().find(|s| s.plugin == LIBRARY).unwrap();
+    assert_eq!(source.name, "Test Library");
+    let parts: Vec<SourceLibraryPart> = source.lists.iter().map(|l| l.part).collect();
+    assert_eq!(
+        parts,
+        [
+            SourceLibraryPart::LikedSongs,
+            SourceLibraryPart::LikedAlbums,
+            SourceLibraryPart::Playlists
+        ]
+    );
+    let songs = &source.lists[0];
+    assert_eq!(songs.entries.len(), 5);
+    assert_eq!(songs.entries[0].item.title, "Invented Song 1");
+    assert_eq!((songs.total, songs.next.as_deref()), (Some(5), None));
+    let playlists = &source.lists[2];
+    let flags: Vec<(&str, bool, bool)> = playlists
+        .entries
+        .iter()
+        .map(|e| (e.item.id.as_str(), e.owned, e.songs_listed))
+        .collect();
+    assert_eq!(
+        flags,
+        [
+            ("pl:mine", true, true),
+            ("pl:followed", false, true),
+            ("pl:followed-unlisted", false, false)
+        ]
+    );
+    let kept = env
+        .dir
+        .path()
+        .join("data")
+        .join("source-library")
+        .join(format!("{LIBRARY}.json"));
+    assert!(kept.is_file(), "kept on disk");
+
+    // More of a list goes to the app.
+    let events = env.run(
+        Command::SourceLibraryMore {
+            plugin: LIBRARY.into(),
+            part: SourceLibraryPart::LikedSongs,
+            cursor: "2".into(),
+        },
+        |e| matches!(e, Event::SourceLibraryPage(_)),
+    );
+    let Some(Event::SourceLibraryPage(page)) = events.last() else {
+        unreachable!()
+    };
+    let titles: Vec<&str> = page.entries.iter().map(|e| e.item.title.as_str()).collect();
+    assert_eq!(titles, ["Invented Song 3", "Invented Song 4", "Invented Song 5"]);
+    assert_eq!((page.next.as_deref(), page.error.as_deref()), (None, None));
+
+    // Save as Playlist: the songs as the source's items; a playlist whose songs
+    // the source does not list cannot be saved.
+    let events = env.run(
+        Command::SavePlaylistCopy {
+            plugin: LIBRARY.into(),
+            id: "pl:mine".into(),
+            name: "Invented Mix (Copy)".into(),
+        },
+        |e| matches!(e, Event::PlaylistCreated { .. }),
+    );
+    let Some(Event::PlaylistCreated { id: playlist, .. }) = events.last() else {
+        unreachable!()
+    };
+    let entries = env.core.playlist_entries(*playlist, 0, 10).unwrap();
+    let rows: Vec<(&str, bool)> = entries
+        .iter()
+        .map(|e| {
+            (
+                e.row.title.as_str(),
+                matches!(&e.row.track, TrackRef::Source(t) if t.plugin == LIBRARY),
+            )
+        })
+        .collect();
+    assert_eq!(
+        rows,
+        [
+            ("Invented Song 1", true),
+            ("Invented Song 2", true),
+            ("Invented Song 3", true)
+        ]
+    );
+    assert!(
+        !env.fails(Command::SavePlaylistCopy {
+            plugin: LIBRARY.into(),
+            id: "pl:followed-unlisted".into(),
+            name: "Their Mix".into(),
+        })
+        .is_empty()
+    );
+
+    // Uninstalled: it leaves the slice, and its kept lists are deleted.
+    env.run(
+        Command::UninstallPlugin { id: LIBRARY.into() },
+        |e| matches!(e, Event::SourceLibrary(s) if s.sources.is_empty()),
+    );
+    assert!(!kept.exists());
+}
+
 fn echo_server() -> TestServer {
     TestServer::start(|request| match request.path() {
         "/login"

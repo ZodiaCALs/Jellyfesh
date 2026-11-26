@@ -673,7 +673,11 @@ plays as a whole.
 * `RefreshSourceLibrary { plugin }` (`None`: every source) when Favourites or
   Playlists opens, or is returned to after ten minutes; the core never polls.
   The lists come from a cache on disk at once, with `refreshed_at_ms` ("Updated
-  5 minutes ago").
+  5 minutes ago"), and show `loading` until each list's first page (up to
+  100) is in; a list that fails keeps the cached entries with its `error`.
+  The cache (`<data_dir>/source-library/`) holds each list's first page as
+  the plugin gave it; a source's lists go when it signs out or is
+  uninstalled.
 * `SourceLibraryMore { plugin, part, cursor: next }` answers with
   `Event::SourceLibraryPage { request, plugin, part, entries, next, error }`.
 * `SavePlaylistCopy { plugin, id, name }` makes a Jellyfesh playlist of the
@@ -722,9 +726,9 @@ contract. Working now: the settings, `SetNetworkState`, `Collection::Source`
 with its kind, search sections (`merged`, `groups` with
 per-kind cursors from 20-per-kind queries), `SearchMore`, the quality menu's fields and the
 level asked of sources, the local-network flag and the downloads folder.
-`RefreshSourceLibrary` lists the sources without their lists yet;
-`SourceLibraryMore`, `SavePlaylistCopy` and the download commands answer
-"not available in this build yet" until their implementation lands.
+The sources' likes and playlists work (the cache, paging and Save as
+Playlist); the download commands answer "not available in this build yet"
+until their implementation lands.
 
 New in v0.0.7: AI Lyrics, the look, Jellyfesh Pro and store builds, the
 update check, Discover, details and comments, source pictures through the

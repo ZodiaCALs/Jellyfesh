@@ -140,6 +140,20 @@ pub(crate) enum SourcesMsg {
         /// More follows as `CollectionMore` for this request.
         more: bool,
     },
+    /// The first page of one of a source's lists (likes, playlists), or why
+    /// there is none.
+    LibraryList {
+        plugin: String,
+        part: crate::types::SourceLibraryPart,
+        result: Result<crate::source_library::Page, crate::source_library::Failure>,
+    },
+    /// The songs of a source playlist to save as a Jellyfesh playlist.
+    PlaylistCopy {
+        request: CommandId,
+        plugin: String,
+        name: String,
+        result: Result<Vec<Item>, String>,
+    },
     /// More of a collection that started playing (`Collection` with `more`).
     CollectionMore {
         id: CommandId,
@@ -1262,6 +1276,128 @@ impl Sources {
             .collect()
     }
 
+    /// A plugin's item as a row; the core knows it from now on (to play and
+    /// browse it).
+    pub(crate) fn known_item(&self, plugin: &str, item: &Item) -> crate::types::SourceItem {
+        match &self.ctx {
+            Some(ctx) => {
+                ctx.remember(plugin, std::slice::from_ref(item));
+                convert::source_item(plugin, item, &ctx.links(plugin))
+            }
+            None => convert::source_item(plugin, item, &jf_plugin_host::links::Links::default()),
+        }
+    }
+
+    /// Whether a source's kept likes and playlists must go: it is
+    /// uninstalled, or signed out.
+    pub(crate) fn library_gone(&self, plugin: &str) -> bool {
+        let Some(ctx) = &self.ctx else {
+            return false;
+        };
+        match ctx.host.plugin(plugin) {
+            None => true,
+            Some(info) => info.capabilities.contains(&Capability::Auth) && info.account.is_none(),
+        }
+    }
+
+    /// Loads the first page of each of a source's lists (liked songs, albums
+    /// and artists, playlists) on a thread of its own; each answers as
+    /// `SourcesMsg::LibraryList`.
+    pub(crate) fn fetch_library(&self, plugin: &str) -> Result<(), CoreError> {
+        self.usable(plugin, Capability::Library)?;
+        let ctx = self.require()?.clone();
+        let plugin = plugin.to_owned();
+        std::thread::Builder::new()
+            .name("jf-source-library".into())
+            .spawn(move || {
+                for part in crate::source_library::PARTS {
+                    let result = library_page(&ctx, &plugin, part, None);
+                    ctx.send(SourcesMsg::LibraryList {
+                        plugin: plugin.clone(),
+                        part,
+                        result,
+                    });
+                }
+            })?;
+        Ok(())
+    }
+
+    /// `SourceLibraryMore`: the next page of a source's list, answered by
+    /// `Event::SourceLibraryPage`.
+    pub(crate) fn library_more(
+        &self,
+        request: CommandId,
+        plugin: String,
+        part: crate::types::SourceLibraryPart,
+        cursor: String,
+    ) -> Result<(), CoreError> {
+        self.usable(&plugin, Capability::Library)?;
+        let ctx = self.require()?.clone();
+        std::thread::Builder::new()
+            .name("jf-source-library".into())
+            .spawn(move || {
+                let (entries, next, error) = match library_page(&ctx, &plugin, part, Some(cursor)) {
+                    Ok(page) => {
+                        let links = ctx.links(&plugin);
+                        let entries = page
+                            .entries
+                            .iter()
+                            .map(|e| crate::types::SourceLibraryEntry {
+                                item: convert::source_item(&plugin, &e.item, &links),
+                                owned: e.owned,
+                                songs_listed: e.songs_listed,
+                            })
+                            .collect();
+                        (entries, page.next, None)
+                    }
+                    Err(crate::source_library::Failure::Unsupported) => (
+                        Vec::new(),
+                        None,
+                        Some(format!("{} does not keep this list", ctx.name(&plugin))),
+                    ),
+                    Err(crate::source_library::Failure::Error(error)) => (Vec::new(), None, Some(error)),
+                };
+                ctx.emit(Event::SourceLibraryPage(Arc::new(
+                    crate::types::SourceLibraryPage {
+                        request,
+                        plugin,
+                        part,
+                        entries,
+                        next,
+                        error,
+                    },
+                )));
+            })?;
+        Ok(())
+    }
+
+    /// Save as Playlist…: fetches every song of a source playlist (its
+    /// pages, as Play does), answered by `SourcesMsg::PlaylistCopy`.
+    pub(crate) fn copy_playlist(
+        &self,
+        request: CommandId,
+        plugin: String,
+        playlist: String,
+        name: String,
+    ) -> Result<(), CoreError> {
+        self.usable(&plugin, Capability::Browse)?;
+        let ctx = self.require()?.clone();
+        let node = ctx.node(&plugin, &playlist, &[HostKind::Playlist], HostKind::Playlist);
+        std::thread::Builder::new()
+            .name("jf-playlist-copy".into())
+            .spawn(move || {
+                let result = all_pages(&ctx, &plugin, &node)
+                    .map(|items| items.into_iter().filter(|i| i.kind == HostKind::Track).collect());
+                ctx.send(SourcesMsg::PlaylistCopy {
+                    request,
+                    plugin,
+                    name,
+                    result,
+                });
+            })?;
+        Ok(())
+    }
+
     /// Checks that a plugin can be searched now.
     pub(crate) fn check_search(&self, plugin: &str) -> Result<(), CoreError> {
         self.usable(plugin, Capability::Search).map(|_| ())
@@ -1935,6 +2071,68 @@ fn stream_collection(ctx: &Ctx, id: CommandId, plugin: &str, node: &Item, start:
             }
         }
     }
+}
+
+/// A page of one of a source's lists: liked songs, albums or artists
+/// (`library.likes`), or playlists (`library.playlists`).
+fn library_page(
+    ctx: &Ctx,
+    plugin: &str,
+    part: crate::types::SourceLibraryPart,
+    cursor: Option<String>,
+) -> Result<crate::source_library::Page, crate::source_library::Failure> {
+    use crate::source_library::{Entry, FIRST_PAGE, Failure, Page};
+    use crate::types::SourceLibraryPart;
+    let request = PageRequest {
+        cursor,
+        limit: FIRST_PAGE,
+    };
+    let failure = |error: CallError| {
+        ctx.note(&error);
+        match error {
+            CallError::Plugin(jf_plugin_host::PluginError::Unsupported) => Failure::Unsupported,
+            error => Failure::Error(error.to_string()),
+        }
+    };
+    let kind = match part {
+        SourceLibraryPart::LikedSongs => HostKind::Track,
+        SourceLibraryPart::LikedAlbums => HostKind::Album,
+        SourceLibraryPart::LikedArtists => HostKind::Artist,
+        SourceLibraryPart::Playlists => {
+            let page = wait(&ctx.host.library_playlists(plugin, request), CALL_WAIT).map_err(failure)?;
+            let items: Vec<Item> = page.entries.iter().map(|e| e.item.clone()).collect();
+            ctx.remember(plugin, &items);
+            return Ok(Page {
+                entries: page
+                    .entries
+                    .into_iter()
+                    .map(|e| Entry {
+                        item: e.item,
+                        owned: e.owned,
+                        songs_listed: e.songs_listed,
+                    })
+                    .collect(),
+                next: page.next,
+                total: page.total,
+            });
+        }
+    };
+    let page = wait(&ctx.host.library_likes(plugin, kind, request), CALL_WAIT).map_err(failure)?;
+    ctx.remember(plugin, &page.items);
+    Ok(Page {
+        entries: page
+            .items
+            .into_iter()
+            .filter(|i| i.kind == kind)
+            .map(|item| Entry {
+                item,
+                owned: false,
+                songs_listed: true,
+            })
+            .collect(),
+        next: page.next,
+        total: page.total,
+    })
 }
 
 fn all_pages(ctx: &Ctx, plugin: &str, node: &Item) -> Result<Vec<Item>, String> {

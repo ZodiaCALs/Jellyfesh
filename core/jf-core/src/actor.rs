@@ -238,6 +238,10 @@ pub(crate) struct Actor {
     network: Network,
     /// Versions of the v0.0.8 slices.
     source_library_version: u64,
+    /// The sources' likes and playlists (ADR-0024 §2), kept on disk.
+    source_lists: crate::source_library::Lists,
+    /// The sources the `SourceLibrary` slice last covered.
+    library_sources: Vec<String>,
     downloads_version: u64,
     /// A source collection whose first pages play while the rest arrives:
     /// its request and its queue entries so far. It stops growing once none
@@ -559,6 +563,7 @@ impl Actor {
             tx,
         )?;
 
+        let source_lists = crate::source_library::Lists::new(config.data_dir.join("source-library"));
         let mut actor = Actor {
             config,
             shared: shared.clone(),
@@ -604,6 +609,8 @@ impl Actor {
                 metered: false,
             },
             source_library_version: 0,
+            source_lists,
+            library_sources: Vec::new(),
             downloads_version: 0,
             growing: None,
             reopening: None,
@@ -1158,14 +1165,19 @@ impl Actor {
             Command::SearchMore { plugin, kind, cursor } => {
                 self.sources.search_more(id, plugin, kind, cursor)?;
             }
-            // M1 stub (v0.0.8 contract): the slice lists the sources with empty lists until the
-            // refresh, cache and paging land in M2.
             Command::RefreshSourceLibrary { plugin } => self.refresh_source_library(plugin.as_deref())?,
-            // M1 stubs (v0.0.8 contract): answered "not available yet" until M2.
-            Command::SourceLibraryMore { .. } | Command::SavePlaylistCopy { .. } => {
-                return Err(CoreError::Other(
-                    "sources' likes and playlists are not available in this build yet".into(),
-                ));
+            Command::SourceLibraryMore { plugin, part, cursor } => {
+                self.sources.library_more(id, plugin, part, cursor)?;
+            }
+            Command::SavePlaylistCopy {
+                plugin,
+                id: playlist,
+                name,
+            } => {
+                if name.trim().is_empty() {
+                    return Err(CoreError::Library(jf_library::LibraryError::EmptyPlaylistName));
+                }
+                self.sources.copy_playlist(id, plugin, playlist, name)?;
             }
             Command::Download { .. }
             | Command::CancelDownload { .. }
@@ -2391,6 +2403,23 @@ impl Actor {
                 done,
                 error,
             } => self.collection_more(id, &plugin, &items, done, error),
+            SourcesMsg::LibraryList { plugin, part, result } => {
+                self.source_lists.loaded(&plugin, part, result, unix_ms());
+                self.publish_source_library();
+            }
+            SourcesMsg::PlaylistCopy {
+                request,
+                plugin,
+                name,
+                result,
+            } => {
+                if let Err(e) = self.save_playlist_copy(request, &plugin, &name, result) {
+                    self.shared.emit(Event::CommandFailed {
+                        id: request,
+                        error: e.to_string(),
+                    });
+                }
+            }
         }
     }
 
@@ -2559,6 +2588,7 @@ impl Actor {
     fn publish_sources(&mut self, force: bool) {
         self.sources
             .publish(self.settings.allow_community_plugins, &self.shared, force);
+        self.sync_source_library();
         // Plugins came, went, were turned on or off, signed in or out.
         if self.ai.plugins_changed(self.pro.active(), false) {
             self.ai.publish(&self.shared);
@@ -2834,30 +2864,50 @@ impl Actor {
         self.shared.emit(Event::Downloads(snapshot));
     }
 
-    /// `RefreshSourceLibrary`.
-    ///
-    /// M1 stub (v0.0.8 contract): lists the sources that join the slice, with
-    /// no lists yet; M2 loads, caches and pages them.
+    /// `RefreshSourceLibrary`: reloads the lists of one source, or of every
+    /// source the slice covers; meanwhile they show the kept ones, loading.
     fn refresh_source_library(&mut self, plugin: Option<&str>) -> Result<(), CoreError> {
-        let sources: Vec<SourceLibrary> = self
+        let covered: Vec<String> = self
             .sources
             .library_sources()
             .into_iter()
-            .map(|(plugin, name, attribution)| SourceLibrary {
-                plugin,
-                name,
-                attribution,
-                lists: Vec::new(),
-            })
+            .map(|(id, ..)| id)
             .collect();
         if let Some(plugin) = plugin
-            && !sources.iter().any(|s| s.plugin == plugin)
+            && !covered.iter().any(|id| id == plugin)
         {
             return Err(CoreError::Other(format!(
                 "{} has no likes or playlists to show (it is off, signed out, or does not list them)",
                 self.sources.display_name(plugin)
             )));
         }
+        for id in covered
+            .iter()
+            .filter(|id| plugin.is_none_or(|p| p == id.as_str()))
+        {
+            self.sources.fetch_library(id)?;
+            self.source_lists.loading(id);
+        }
+        self.publish_source_library();
+        Ok(())
+    }
+
+    /// Publishes the `SourceLibrary` slice: every source it covers, with its
+    /// lists as kept (the core learns their items, to play and browse them).
+    fn publish_source_library(&mut self) {
+        let mut sources = Vec::new();
+        for (plugin, name, attribution) in self.sources.library_sources() {
+            let lists = self
+                .source_lists
+                .lists(&plugin, |item| self.sources.known_item(&plugin, item));
+            sources.push(SourceLibrary {
+                plugin,
+                name,
+                attribution,
+                lists,
+            });
+        }
+        self.library_sources = sources.iter().map(|s| s.plugin.clone()).collect();
         self.source_library_version += 1;
         let snapshot = Arc::new(SourceLibrarySnapshot {
             version: self.source_library_version,
@@ -2865,6 +2915,54 @@ impl Actor {
         });
         self.shared.update(|s| s.source_library = snapshot.clone());
         self.shared.emit(Event::SourceLibrary(snapshot));
+    }
+
+    /// After the `Sources` slice: the `SourceLibrary` slice follows when the
+    /// sources it covers changed, and the kept lists of a source that signed
+    /// out or was uninstalled are deleted.
+    fn sync_source_library(&mut self) {
+        let covered: Vec<String> = self
+            .sources
+            .library_sources()
+            .into_iter()
+            .map(|(id, ..)| id)
+            .collect();
+        for kept in self.source_lists.kept() {
+            if !covered.contains(&kept) && self.sources.library_gone(&kept) {
+                self.source_lists.forget(&kept);
+            }
+        }
+        if covered != self.library_sources || self.source_library_version == 0 {
+            self.publish_source_library();
+        }
+    }
+
+    /// Save as Playlist…: the songs of a source playlist became a Jellyfesh
+    /// playlist (as the source's items).
+    fn save_playlist_copy(
+        &mut self,
+        request: CommandId,
+        plugin: &str,
+        name: &str,
+        result: Result<Vec<Item>, String>,
+    ) -> Result<(), CoreError> {
+        let found = result.map_err(CoreError::Other)?;
+        let entries: Vec<_> = found
+            .iter()
+            .map(|i| items::item_for(&TrackRef::Source(sources::source_track(plugin, i))))
+            .collect();
+        let playlist = self.library.create_playlist(name)?;
+        let added = if entries.is_empty() {
+            Ok(Vec::new())
+        } else {
+            self.library.add_to_playlist(playlist, &entries, None)
+        };
+        self.library_changed();
+        self.shared.emit(Event::PlaylistCreated {
+            request,
+            id: playlist,
+        });
+        added?;
         Ok(())
     }
 }

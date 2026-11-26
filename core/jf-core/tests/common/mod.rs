@@ -38,6 +38,7 @@ const PLUGINS: &[(&str, &str)] = &[
     ("maker", "jf-test-maker"),
     ("appearance", "jf-test-appearance"),
     ("discover", "jf-test-discover"),
+    ("library", "jf-test-library"),
 ];
 
 /// The cargo target directory this test binary was built in.

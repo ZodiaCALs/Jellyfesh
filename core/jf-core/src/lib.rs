@@ -33,6 +33,7 @@ mod pro;
 mod quality;
 mod remote;
 mod secrets;
+mod source_library;
 mod sources;
 pub mod targets;
 pub mod theme;
