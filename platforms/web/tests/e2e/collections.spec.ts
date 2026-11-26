@@ -95,9 +95,13 @@ test('makes a playlist from Add to Playlist…, plays, renames and deletes it', 
   const confirm = page.getByRole('dialog', { name: 'Delete “Tide Songs”?' });
   await expect(confirm).toContainText('The songs stay in your library.');
   await confirm.getByRole('button', { name: 'Delete Playlist' }).click();
+  // Gone from the Jellyfesh playlists. The page is not empty, so it shows no empty state: the
+  // server's playlists stay below (ui.md's "No Playlists Yet" is for a page with none at all).
   await nav(page, 'Playlists').click();
-  await expect(page.getByRole('region', { name: 'Subsonic' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Subsonic' }).getByRole('button', { name: 'Open Evening Walk' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Tide Songs' })).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as any).jellyfesh.collections.playlists().length)).toBe(0);
+  await expect(page.getByRole('heading', { name: 'No Playlists Yet' })).toBeHidden();
 });
 
 test('shows what played on Home', async () => {
