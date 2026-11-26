@@ -19,8 +19,9 @@ use gtk::glib;
 use jf_core::{
     AiLyricsSnapshot, AuthUpdate, BrowseUpdate, Command, CommandId, CommentsPage, DetailsPage,
     DevicesSnapshot, DiscoverPage, DisplayClock, Event, LookSnapshot, LyricsSnapshot, NowPlaying,
-    PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchUpdate,
-    Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot, monotonic_now_ns,
+    PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchPage,
+    SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot,
+    monotonic_now_ns,
 };
 
 use crate::logic::remote::{self, RemoteView};
@@ -45,6 +46,8 @@ pub enum Change<'a> {
     Muted,
     Scan(&'a ScanStatus),
     Search(&'a Arc<SearchUpdate>),
+    /// Show More's answer (ADR-0024 §4).
+    SearchPage(&'a Arc<SearchPage>),
     Browse(&'a Arc<BrowseUpdate>),
     /// An item's details, answering `Command::Details`.
     Details(&'a Arc<DetailsPage>),
@@ -439,10 +442,8 @@ impl App {
             // A source's picture is in the cache: the views waiting load it.
             Event::Artwork(ready) => self.thumbs.artwork_ready(&ready),
             // v0.0.8 (ADR-0024, ADR-0025): shown by the pages that follow.
-            Event::SearchPage(_)
-            | Event::SourceLibrary(_)
-            | Event::SourceLibraryPage(_)
-            | Event::Downloads(_) => {}
+            Event::SearchPage(page) => self.emit(&Change::SearchPage(&page)),
+            Event::SourceLibrary(_) | Event::SourceLibraryPage(_) | Event::Downloads(_) => {}
         }
         // Muted is part of the snapshot; it only changes with SetMuted, which
         // republishes the playback slice.

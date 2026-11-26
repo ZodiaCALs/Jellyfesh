@@ -264,6 +264,15 @@ window.jf-window .settings-section list.boxed-list > row:not(:last-child) {
   border-bottom: 1px solid {{line.line-soft}};
 }
 
+/* Search's tabs, in the page's gutters. */
+.search-tabs-column {
+  padding: 0 32px {{space.s3}};
+}
+
+window.jf-window.phone .search-tabs-column {
+  padding: 0 {{space.s4}} {{space.s3}};
+}
+
 /* Settings › About: the keyboard shortcuts as key caps beside what they
  * do, and who made Jellyfesh. */
 .shortcuts-list {
