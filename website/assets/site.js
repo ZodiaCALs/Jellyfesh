@@ -47,6 +47,7 @@ const STRINGS = {
     "privacy.p5": "This website uses no cookies, no analytics and no third-party scripts or fonts.",
     "privacy.p6": "AI Lyrics makes lyrics on your device by default, and nothing leaves it. Its speech models are downloaded from Hugging Face only when you ask. In its online mode, a song’s audio goes to the provider you choose (such as OpenAI or Groq), with your own key, and only after you agree; that provider’s terms and privacy policy apply.",
     "privacy.p7": "Jellyfesh downloaded from this website checks GitHub once a day for a newer version while Check for Updates Automatically is on. Store versions are updated by their store, and purchases there are handled by Apple, Microsoft or Google.",
+    "privacy.p8": "Your sources’ likes and playlists come from your own accounts and are kept on your device so they show offline; they are deleted when you sign out of that source or uninstall it. Downloads are saved as files in the folder you choose and stay on your device. Jellyfesh checks whether your connection is metered only to choose a streaming quality and to pause downloads, and tells no one.",
   },
   "zh-Hans": {
     "nav.home": "首页", "nav.download": "下载", "nav.privacy": "隐私",
@@ -92,6 +93,7 @@ const STRINGS = {
     "privacy.p5": "本网站不使用 Cookie、统计分析，也不加载任何第三方脚本或字体。",
     "privacy.p6": "AI 歌词默认在你的设备上生成，不会发送任何内容。语音模型仅在你要求时从 Hugging Face 下载。在线模式下，歌曲的音频会在你同意之后，使用你自己的密钥发送给你选择的服务商（例如 OpenAI 或 Groq），并适用该服务商的条款和隐私政策。",
     "privacy.p7": "从本网站下载的 Jellyfesh 在开启“自动检查更新”时，每天向 GitHub 检查一次是否有新版本。应用商店版本由商店负责更新，在商店中的购买由 Apple、Microsoft 或 Google 处理。",
+    "privacy.p8": "来源中的喜欢和播放列表来自你自己的账号，并保存在你的设备上，以便离线查看；当你退出该来源或卸载它时会被删除。下载的歌曲以文件形式保存在你选择的文件夹中，只留在你的设备上。Jellyfesh 只在选择串流音质和暂停下载时查看你的网络是否按流量计费，并且不会告诉任何人。",
   },
   "zh-Hant": {
     "nav.home": "首頁", "nav.download": "下載", "nav.privacy": "隱私",
@@ -137,6 +139,7 @@ const STRINGS = {
     "privacy.p5": "本網站不使用 Cookie、統計分析，也不載入任何第三方指令碼或字型。",
     "privacy.p6": "AI 歌詞預設在你的裝置上產生，不會傳送任何內容。語音模型只在你要求時從 Hugging Face 下載。線上模式下，歌曲的音訊會在你同意之後，使用你自己的金鑰傳送給你選擇的服務商（例如 OpenAI 或 Groq），並適用該服務商的條款與隱私權政策。",
     "privacy.p7": "從本網站下載的 Jellyfesh 在開啟「自動檢查更新」時，每天向 GitHub 檢查一次是否有新版本。應用程式商店版本由商店負責更新，在商店中的購買由 Apple、Microsoft 或 Google 處理。",
+    "privacy.p8": "來源中的喜歡與播放清單來自你自己的帳號，並儲存在你的裝置上，以便離線查看；當你登出該來源或解除安裝時會被刪除。下載的歌曲以檔案形式儲存在你選擇的資料夾中，只留在你的裝置上。Jellyfesh 只在選擇串流音質與暫停下載時查看你的網路是否按流量計費，並且不會告訴任何人。",
   },
   ja: {
     "nav.home": "ホーム", "nav.download": "ダウンロード", "nav.privacy": "プライバシー",
@@ -182,6 +185,7 @@ const STRINGS = {
     "privacy.p5": "このウェブサイトは Cookie、解析、サードパーティのスクリプトやフォントを使用しません。",
     "privacy.p6": "AI 歌詞は標準ではデバイス上で歌詞を作り、何も外部に送りません。音声モデルは、あなたが求めたときだけ Hugging Face からダウンロードされます。オンラインモードでは、あなたが同意した後にだけ、曲の音声があなた自身のキーで、あなたが選んだプロバイダー（OpenAI や Groq など）に送られます。そのプロバイダーの規約とプライバシーポリシーが適用されます。",
     "privacy.p7": "このウェブサイトからダウンロードした Jellyfesh は、「アップデートを自動的に確認」がオンのとき、1 日に 1 回 GitHub で新しいバージョンを確認します。ストア版はストアが更新し、ストアでの購入は Apple、Microsoft、Google が処理します。",
+    "privacy.p8": "ソースの「いいね」とプレイリストはあなた自身のアカウントから取得し、オフラインでも表示できるようデバイスに保存します。そのソースからサインアウトするか、アンインストールすると削除されます。ダウンロードした曲は、あなたが選んだフォルダーにファイルとして保存され、デバイスの外には出ません。Jellyfesh は、ストリーミングの音質を選ぶときとダウンロードを一時停止するときだけ、接続が従量制かどうかを確認し、その情報を誰にも送りません。",
   },
 };
 
