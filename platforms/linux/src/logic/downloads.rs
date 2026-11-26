@@ -4,7 +4,10 @@
 //! album. The core keeps the downloads and their order; this only arranges
 //! them.
 
-use jf_core::{DownloadError, DownloadItem, DownloadState, DownloadsPaused, DownloadsSnapshot, TrackRef};
+use jf_core::{
+    DownloadError, DownloadItem, DownloadState, DownloadTarget, DownloadsPaused, DownloadsSnapshot, ItemKind,
+    SourceItem, TrackRef,
+};
 
 /// The downloads that have not finished, in the core's queue order.
 pub fn in_progress(d: &DownloadsSnapshot) -> Vec<&DownloadItem> {
@@ -89,6 +92,27 @@ pub fn albums(d: &DownloadsSnapshot) -> Vec<Album<'_>> {
         }
     }
     albums.into_iter().map(|(_, a)| a).collect()
+}
+
+/// What Download downloads from a source's item, where the source offers
+/// downloads: a song not downloaded yet, or an album's or a playlist's
+/// songs.
+pub fn target_of(item: &SourceItem, offered: bool) -> Option<DownloadTarget> {
+    if !offered || item.source == crate::logic::search::LIBRARY {
+        return None;
+    }
+    match item.kind {
+        ItemKind::Track if !item.downloaded => match &item.track {
+            Some(track @ TrackRef::Source(_)) => Some(DownloadTarget::Track { track: track.clone() }),
+            _ => None,
+        },
+        ItemKind::Album | ItemKind::Playlist => Some(DownloadTarget::Collection {
+            plugin: item.source.clone(),
+            id: item.id.clone(),
+            item_kind: item.kind,
+        }),
+        _ => None,
+    }
 }
 
 /// What a downloaded song plays: its library track once the library has
@@ -218,6 +242,60 @@ mod tests {
                 (Some("B"), None, vec![4, 5]),
             ]
         );
+    }
+
+    fn item(kind: ItemKind, downloaded: bool) -> SourceItem {
+        let track = (kind == ItemKind::Track)
+            .then(|| TrackRef::Source(song(1, "j", None, "X", DownloadState::Done).track));
+        SourceItem {
+            source: "j".into(),
+            kind,
+            id: "x".into(),
+            title: "X".into(),
+            subtitle: None,
+            album: None,
+            duration_ms: None,
+            artwork: None,
+            playable: true,
+            unplayable_reason: None,
+            track,
+            also_in: Vec::new(),
+            link: None,
+            artist_id: None,
+            album_id: None,
+            downloaded,
+        }
+    }
+
+    #[test]
+    fn download_is_offered_for_songs_albums_and_playlists_of_sources_that_allow_it() {
+        assert!(matches!(
+            target_of(&item(ItemKind::Track, false), true),
+            Some(DownloadTarget::Track { .. })
+        ));
+        assert_eq!(
+            target_of(&item(ItemKind::Track, true), true),
+            None,
+            "downloaded already"
+        );
+        assert_eq!(
+            target_of(&item(ItemKind::Track, false), false),
+            None,
+            "not offered"
+        );
+        assert_eq!(
+            target_of(&item(ItemKind::Album, false), true),
+            Some(DownloadTarget::Collection {
+                plugin: "j".into(),
+                id: "x".into(),
+                item_kind: ItemKind::Album,
+            })
+        );
+        assert!(target_of(&item(ItemKind::Playlist, false), true).is_some());
+        assert_eq!(target_of(&item(ItemKind::Artist, false), true), None);
+        let mut library = item(ItemKind::Album, false);
+        library.source = crate::logic::search::LIBRARY.into();
+        assert_eq!(target_of(&library, true), None);
     }
 
     #[test]

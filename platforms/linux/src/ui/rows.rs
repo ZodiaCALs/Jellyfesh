@@ -122,6 +122,8 @@ mod imp {
         /// Shown on rows that open in their service (they cannot play
         /// here, but have a link).
         pub link: RefCell<Option<Glyph>>,
+        /// The Downloaded mark (ADR-0025).
+        pub downloaded: RefCell<Option<Glyph>>,
         pub heart: RefCell<Option<gtk::Button>>,
         pub remove: RefCell<Option<gtk::Button>>,
         pub item: RefCell<Option<(Item, glib::SignalHandlerId)>>,
@@ -253,6 +255,14 @@ impl ListRow {
             texts.append(label);
         }
         row.append(&texts);
+        let downloaded = Glyph::new("download", 16);
+        downloaded.add_css_class("downloaded-mark");
+        downloaded.set_valign(gtk::Align::Center);
+        downloaded.set_tooltip_text(Some(&tr("Downloaded")));
+        downloaded.update_property(&[gtk::accessible::Property::Label(&tr("Downloaded"))]);
+        downloaded.set_visible(false);
+        row.append(&downloaded);
+        *imp.downloaded.borrow_mut() = Some(downloaded);
         imp.detail.add_css_class("row-detail");
         imp.detail.add_css_class("numeric");
         imp.detail.set_valign(gtk::Align::Center);
@@ -437,6 +447,9 @@ impl ListRow {
             .flatten();
         if let Some(l) = imp.link.borrow().as_ref() {
             l.set_visible(service.is_some());
+        }
+        if let Some(m) = imp.downloaded.borrow().as_ref() {
+            m.set_visible(d.is_some_and(|d| d.downloaded));
         }
         self.set_tooltip_text(service.map(|s| actions::open_in_label(&s)).as_deref());
         // One accessible name for the row: title and subtitle (and why it

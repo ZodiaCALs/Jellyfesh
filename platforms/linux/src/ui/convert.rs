@@ -124,6 +124,7 @@ pub fn track_row(r: &TrackRow) -> ItemData {
             .flatten(),
         favorite: r.favorite,
         playable: !r.missing,
+        downloaded: r.downloaded,
         ..ItemData::default()
     }
 }
@@ -190,6 +191,7 @@ pub fn source_item(s: &SourceItem) -> ItemData {
         artist: (kind == Kind::Track).then(|| s.subtitle.clone()).flatten(),
         playable: s.playable,
         source: Some(Box::new(s.clone())),
+        downloaded: s.downloaded,
         ..ItemData::default()
     }
 }

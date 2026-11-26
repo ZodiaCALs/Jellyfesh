@@ -167,6 +167,15 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             );
         }
     }
+    // Download (ADR-0025): a song, album or playlist of a source that offers
+    // downloads.
+    if let Some(target) = data
+        .source
+        .as_deref()
+        .and_then(|s| crate::logic::downloads::target_of(s, app().source_offers_downloads(&s.source)))
+    {
+        entry(&playing, &tr("Download"), "win.download", json_target(&target));
+    }
     menu.append_section(None, &playing);
     let more = gio::Menu::new();
     if let Some(track) = &data.track
@@ -451,6 +460,11 @@ pub fn install(window: &adw::ApplicationWindow) {
     window.add_action(&string_action("add-to-playlist", |json| {
         if let Ok(c) = serde_json::from_str::<Collection>(json) {
             add_to_playlist(c);
+        }
+    }));
+    window.add_action(&string_action("download", |json| {
+        if let Ok(target) = serde_json::from_str::<jf_core::DownloadTarget>(json) {
+            app().send(Command::Download { target });
         }
     }));
     window.add_action(&string_action("favorite", |json| {

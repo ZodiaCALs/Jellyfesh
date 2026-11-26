@@ -560,6 +560,15 @@ impl App {
     }
 
     /// Whether a source plays on the person's own devices (ADR-0018).
+    /// Whether a source offers downloads (ADR-0025): Download in its menus.
+    pub fn source_offers_downloads(&self, id: &str) -> bool {
+        self.sources
+            .borrow()
+            .plugins
+            .iter()
+            .any(|p| p.id == id && p.download)
+    }
+
     pub fn is_remote_source(&self, id: &str) -> bool {
         self.sources
             .borrow()

@@ -61,6 +61,9 @@ pub struct ItemData {
     /// False for missing files and items a source will not play here.
     pub playable: bool,
     pub source: Option<Box<SourceItem>>,
+    /// A source's song with a finished download (it plays the file): the
+    /// Downloaded mark (ADR-0025).
+    pub downloaded: bool,
 }
 
 mod imp {
