@@ -67,6 +67,8 @@ test('offers the plugin’s levels in the quality menu, and reopens the song at 
   await waitPlaying(page, 'Morning Harbour', 1000);
   await page.getByRole('button', { name: /^Quality: / }).first().click();
   const menu = page.getByRole('menu', { name: 'Streaming Quality' });
+  // The format line names the codec as people write it.
+  await expect(menu.locator('.format')).toHaveText('WAV');
   await expect(menu.getByRole('menuitemradio')).toHaveText(['Auto', 'Lossless', 'High', 'Normal', 'Low']);
   await expect(menu.getByRole('menuitemradio', { name: 'Auto' })).toHaveAttribute('aria-checked', 'true');
   await menu.getByRole('menuitemradio', { name: 'High' }).click();

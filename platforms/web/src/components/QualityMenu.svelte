@@ -37,7 +37,7 @@
   const offered = $derived(quality.qualities);
   const chosen = $derived(settings.value.streaming_quality);
   const label = $derived(player.format?.quality ? qualityText(player.format.quality) : levelName(chosen));
-  const line = $derived(player.format ? formatLine(player.format) : '');
+  const line = $derived(player.format ? formatLine(player.format, (codec) => app.jf.codec_name(codec)) : '');
   const why = $derived.by(() => {
     const note = quality.note;
     if (offered.length > 0 || !note) return null;

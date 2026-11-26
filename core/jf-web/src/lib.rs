@@ -763,6 +763,12 @@ pub fn discover_made_page(name: &str, answers: &str) -> Result<String, JsError> 
     Ok(json(&discover::made_page(name, answers)))
 }
 
+/// A codec as people write it (`flac` → `FLAC`, `opus` → `Opus`), for the quality menu's format line.
+#[wasm_bindgen]
+pub fn codec_name(name: &str) -> String {
+    details::codec_name(name)
+}
+
 /// An audio format with the core's quality label (`details::AudioFormat`), from what is known.
 #[wasm_bindgen]
 pub fn audio_format(
