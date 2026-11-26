@@ -405,6 +405,18 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
         }
     });
 
+    // Open When the Window Is Closed (ADR-0026 §4): closing the window while
+    // music plays hides it and leaves the mini player.
+    window.connect_close_request(|w| {
+        let a = app();
+        if a.settings.borrow().mini_player.open_when_window_closed && a.is_playing() {
+            crate::ui::miniwindow::open();
+            w.set_visible(false);
+            return glib::Propagation::Stop;
+        }
+        crate::ui::miniwindow::close();
+        glib::Propagation::Proceed
+    });
     actions::install(&window);
     install_window_actions(&window);
     crate::ui::keys::attach(&window);
@@ -686,6 +698,15 @@ fn update_chrome() {
         && let Some(a) = try_app()
     {
         a.announce(&Change::Layout);
+    }
+}
+
+/// Brings back the main window on Now Playing (the mini player's cover and
+/// titles), shown again if Open When the Window Is Closed hid it.
+pub fn present_now_playing() {
+    if let Some(s) = shell() {
+        s.window.present();
+        open_now_playing(None);
     }
 }
 

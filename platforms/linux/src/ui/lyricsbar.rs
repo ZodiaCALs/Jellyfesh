@@ -36,6 +36,9 @@ pub enum Mode {
     /// The line and its translation, centred under the cover (Now
     /// Playing's Artwork layout), whatever Show Lyrics Bar says.
     Cover,
+    /// The line and its translation in the mini player, while its Show
+    /// Lyrics Line is on.
+    Mini,
 }
 
 /// Told whether a line shows.
@@ -75,12 +78,16 @@ impl LyricsBarView {
         let slot = gtk::Box::new(gtk::Orientation::Vertical, 0);
         slot.add_css_class("lyrics-bar-line");
         let second = gtk::Label::builder()
-            .xalign(if mode == Mode::Line { 0.0 } else { 0.5 })
+            .xalign(if matches!(mode, Mode::Line | Mode::Mini) {
+                0.0
+            } else {
+                0.5
+            })
             .ellipsize(gtk::pango::EllipsizeMode::End)
             .single_line_mode(true)
             .build();
         second.add_css_class(match mode {
-            Mode::Line | Mode::Cover => "lyrics-bar-translation",
+            Mode::Line | Mode::Cover | Mode::Mini => "lyrics-bar-translation",
             Mode::WithNext => "lyrics-bar-next",
         });
         content.append(&slot);
@@ -134,6 +141,7 @@ impl LyricsBarView {
         let a = try_app()?;
         let setting = match self.mode {
             Mode::Line => a.settings.borrow().show_lyrics_bar,
+            Mode::Mini => a.settings.borrow().mini_player.show_lyrics_line,
             Mode::WithNext | Mode::Cover => true,
         };
         let lyrics = a.lyrics.borrow().clone()?;
@@ -183,7 +191,7 @@ impl LyricsBarView {
         if !same {
             let widget = LyricLine::new(line_text(line));
             widget.set_single_line(true);
-            widget.set_centred(self.mode != Mode::Line);
+            widget.set_centred(!matches!(self.mode, Mode::Line | Mode::Mini));
             widget.set_shadow(self.mode == Mode::WithNext);
             widget.add_css_class("lyrics-bar-text");
             if line.words.is_empty() {
@@ -196,7 +204,7 @@ impl LyricsBarView {
             self.slot.append(&widget);
             *self.line.borrow_mut() = Some(widget);
             let second = match self.mode {
-                Mode::Line | Mode::Cover => {
+                Mode::Line | Mode::Cover | Mode::Mini => {
                     let show = try_app().is_some_and(|a| a.settings.borrow().show_translation);
                     aux_lines(doc, line, show, false)
                         .into_iter()
@@ -228,14 +236,14 @@ impl LyricsBarView {
         // Desktop Lyrics draws light ink over the desktop, whatever the
         // appearance.
         let sung = match self.mode {
-            Mode::Line | Mode::Cover => style::lyrics_sung(),
+            Mode::Line | Mode::Cover | Mode::Mini => style::lyrics_sung(),
             Mode::WithNext => style::lyrics_sung_on_dark(),
         };
         // The look's glow around the line (none in Luminous), at the line's
         // size: 13 px in the player bar, 24 px under the cover, 30 px in
         // Desktop Lyrics.
         let size = match self.mode {
-            Mode::Line => 13.0,
+            Mode::Line | Mode::Mini => 13.0,
             Mode::Cover => 24.0,
             Mode::WithNext => 30.0,
         };

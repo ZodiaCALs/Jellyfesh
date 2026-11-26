@@ -16,6 +16,7 @@ pub mod i18n;
 mod keys;
 mod lyricsbar;
 mod miniplayer;
+mod miniwindow;
 mod models;
 mod mpris;
 mod network;
@@ -272,7 +273,9 @@ fn install_actions(application: &adw::Application) {
         &["<Primary>Down", "AudioLowerVolume"],
         move || volume_by(-0.05),
     );
-    simple(application, "mute", &["<Primary>m", "AudioMute"], || {
+    // Ctrl+M opens the mini player (docs/ui.md, "Keyboard"); the mute key
+    // still mutes.
+    simple(application, "mute", &["AudioMute"], || {
         let a = app();
         let muted = a.muted.get();
         a.send(Command::SetMuted { muted: !muted });
@@ -331,6 +334,12 @@ fn install_actions(application: &adw::Application) {
         }
     });
     application.add_action(&lock);
+    // Open Mini Player (ADR-0026 §4), Ctrl+M: its state says whether it is
+    // open, so the player bar's button shows it pressed.
+    let mini = gio::SimpleAction::new_stateful("mini-player", None, &false.to_variant());
+    mini.connect_activate(|_, _| miniwindow::toggle());
+    application.add_action(&mini);
+    application.set_accels_for_action("app.mini-player", &["<Primary>m"]);
     simple(application, "search", &["<Primary>f"], || {
         window::close_now_playing();
         window::show_section(window::Section::Search);
@@ -412,6 +421,7 @@ fn run_command(spec: &str) {
     let (kind, arg) = spec.split_once(':').unwrap_or((spec, ""));
     let a = app();
     match kind {
+        "mini-player" => miniwindow::toggle(),
         "play-album" => {
             if let Ok(id) = arg.parse() {
                 a.send(Command::PlayCollection {

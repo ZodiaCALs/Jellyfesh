@@ -368,6 +368,55 @@ pub fn appearance_page() -> gtk::Box {
     lyrics_group.add(&desktop_lyrics);
     p.append(&lyrics_group);
 
+    // Mini Player (ADR-0026 §4).
+    let mini_group = group(&tr("Mini Player"), None);
+    let keep_on_top = adw::SwitchRow::builder().title(tr("Keep on Top")).build();
+    let open_when_closed = adw::SwitchRow::builder()
+        .title(tr("Open When the Window Is Closed"))
+        .subtitle(tr(
+            "Keep the mini player when you close the window while music plays.",
+        ))
+        .build();
+    let lyrics_line = adw::SwitchRow::builder().title(tr("Show Lyrics Line")).build();
+    mini_group.add(&keep_on_top);
+    mini_group.add(&open_when_closed);
+    mini_group.add(&lyrics_line);
+    p.append(&mini_group);
+    let g = guard.clone();
+    keep_on_top.connect_active_notify(move |r| {
+        if !g.get() {
+            let on = r.is_active();
+            app().update_settings(|s| s.mini_player.keep_on_top = on);
+        }
+    });
+    let g = guard.clone();
+    open_when_closed.connect_active_notify(move |r| {
+        if !g.get() {
+            let on = r.is_active();
+            app().update_settings(|s| s.mini_player.open_when_window_closed = on);
+        }
+    });
+    let g = guard.clone();
+    lyrics_line.connect_active_notify(move |r| {
+        if !g.get() {
+            let on = r.is_active();
+            app().update_settings(|s| s.mini_player.show_lyrics_line = on);
+        }
+    });
+    let rows = (
+        keep_on_top.downgrade(),
+        open_when_closed.downgrade(),
+        lyrics_line.downgrade(),
+    );
+    follow_settings(&mini_group, guard.clone(), move |s| {
+        if let (Some(top), Some(closed), Some(line)) = (rows.0.upgrade(), rows.1.upgrade(), rows.2.upgrade())
+        {
+            top.set_active(s.mini_player.keep_on_top);
+            closed.set_active(s.mini_player.open_when_window_closed);
+            line.set_active(s.mini_player.show_lyrics_line);
+        }
+    });
+
     let icon = group(
         &tr("App Icon"),
         Some(&tr(

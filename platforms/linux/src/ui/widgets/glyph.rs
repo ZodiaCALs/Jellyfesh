@@ -102,6 +102,8 @@ fn data(name: &str) -> Option<(Mode, &'static str)> {
         ),
         "library" => (Stroke, "M5 4.5v15M9.5 4.5v15M14 5.5l4.5 13.5"),
         "download" => (Stroke, "M12 4v11 M7.5 10.5L12 15l4.5-4.5 M5 19.5h14"),
+        // The mini player: a small window in a screen (Jellyfesh Web's).
+        "mini-player" => (Stroke, "M3.5 5.5h17v13h-17z M12 11.5h6v4.5h-6z"),
         "more" => (
             Fill,
             "M5 12a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0z M10.5 12a1.5 1.5 0 1 0 3 0a1.5 1.5 0 1 0-3 0z \
@@ -349,6 +351,11 @@ mod tests {
             "forward",
             "devices",
             "stop",
+            "settings",
+            "file",
+            "library",
+            "download",
+            "mini-player",
         ] {
             assert!(data(name).is_some(), "{name}");
         }
@@ -363,7 +370,17 @@ mod tests {
             let (_, d) = data(name).unwrap_or_else(|| panic!("{name}"));
             assert!(gsk::Path::parse(d).is_ok(), "{name}");
         }
-        for name in ["devices", "stop", "link", "device-speaker"] {
+        for name in [
+            "devices",
+            "stop",
+            "link",
+            "device-speaker",
+            "settings",
+            "file",
+            "library",
+            "download",
+            "mini-player",
+        ] {
             let (_, d) = data(name).unwrap_or_else(|| panic!("{name}"));
             assert!(gsk::Path::parse(d).is_ok(), "{name}");
         }

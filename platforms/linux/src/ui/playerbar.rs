@@ -4,8 +4,8 @@
 //! side the artwork and two lines of type open Now Playing; in the middle
 //! the transport capsule (shuffle, previous, play, next, repeat; play is
 //! the only accent fill) sits above the seek bar and its times; on the end
-//! side the quality badge (ADR-0026 §3), Lyrics, Queue, the volume and More
-//! (Now Playing's menu). With Show Lyrics Bar on, the line
+//! side the quality badge (ADR-0026 §3), Lyrics, Queue, the volume, the mini
+//! player button and More (Now Playing's menu). With Show Lyrics Bar on, the line
 //! being sung fills word by word under the title (ADR-0022 §6). This bends CMP-02 (one control) on
 //! purpose, for desktop use; narrow windows keep the mini-player.
 //!
@@ -174,7 +174,17 @@ pub fn build() -> PlayerBar {
     end.append(&lyrics);
     end.append(&queue);
     end.append(&devices.button);
+    // The mini player button (ADR-0026 §4), pressed while it is open.
+    let mini = gtk::ToggleButton::builder()
+        .child(&Glyph::new("mini-player", 18))
+        .action_name("app.mini-player")
+        .tooltip_text(tr("Open Mini Player"))
+        .valign(gtk::Align::Center)
+        .build();
+    mini.add_css_class("bar-icon");
+    mini.update_property(&[gtk::accessible::Property::Label(&tr("Open Mini Player"))]);
     end.append(&volume_holder);
+    end.append(&mini);
     end.append(&more);
 
     // The middle stays centred; the start and end share the rest.

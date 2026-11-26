@@ -47,6 +47,9 @@ pub struct Scheduler {
     /// False while the window is minimised or not visible.
     window_live: Cell<bool>,
     window_known: Cell<bool>,
+    /// Windows of their own that show while the main one may not (the mini
+    /// player, Desktop Lyrics): time keeps running for them.
+    extra_windows: Cell<u32>,
 }
 
 impl std::fmt::Debug for Scheduler {
@@ -93,8 +96,17 @@ impl Scheduler {
         }
     }
 
+    /// Tells the scheduler that a window of its own (the mini player,
+    /// Desktop Lyrics) shows or no longer does.
+    pub fn set_extra_window(&self, shown: bool) {
+        let n = self.extra_windows.get();
+        self.extra_windows
+            .set(if shown { n + 1 } else { n.saturating_sub(1) });
+        self.refresh();
+    }
+
     fn window_live(&self) -> bool {
-        !self.window_known.get() || self.window_live.get()
+        !self.window_known.get() || self.window_live.get() || self.extra_windows.get() > 0
     }
 
     /// Draws every visible view now and schedules the next wake-up.

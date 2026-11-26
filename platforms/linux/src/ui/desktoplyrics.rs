@@ -10,7 +10,7 @@
 //!
 //! GTK 4 has no "keep above" for windows, so on X11 the window asks the
 //! window manager for `_NET_WM_STATE_ABOVE` itself (EWMH; its XID through
-//! gdk4-x11, the message through x11rb). Wayland lets no client place
+//! gdk4-x11, the message through x11rb; the mini player does the same). Wayland lets no client place
 //! itself above others: there it is a normal window (docs/ui.md, "Allowed
 //! differences").
 
@@ -209,13 +209,22 @@ fn open() {
         glib::Propagation::Stop
     });
     window.connect_map(|w| {
+        // Time keeps running for it while the main window is minimised.
+        if let Some(a) = try_app() {
+            a.scheduler.set_extra_window(true);
+        }
         let w = w.clone();
         glib::idle_add_local_once(move || {
-            keep_above(&w);
+            set_keep_above(&w, true);
             if let Some(d) = desktop() {
                 apply_lock(&d);
             }
         });
+    });
+    window.connect_unmap(|_| {
+        if let Some(a) = try_app() {
+            a.scheduler.set_extra_window(false);
+        }
     });
     let ink = gtk::CssProvider::new();
     gtk::style_context_add_provider_for_display(
@@ -290,15 +299,16 @@ fn close() {
     }
 }
 
-/// Asks an X11 window manager to keep `window` above other windows
-/// (`_NET_WM_STATE_ABOVE`, EWMH); does nothing elsewhere (Wayland).
-fn keep_above(window: &gtk::Window) {
+/// Asks an X11 window manager to keep `window` above other windows, or to
+/// stop (`_NET_WM_STATE_ABOVE`, EWMH). False where no window can place
+/// itself so (Wayland), so the mini player can offer the desktop's menu.
+pub fn set_keep_above(window: &gtk::Window, above: bool) -> bool {
     use gdk4_x11::X11Surface;
     use x11rb::connection::Connection;
     use x11rb::protocol::xproto::{ClientMessageEvent, ConnectionExt, EventMask};
 
     let Some(surface) = window.surface().and_downcast::<X11Surface>() else {
-        return;
+        return false;
     };
     let xid = surface.xid();
     let display = WidgetExt::display(window).name();
@@ -306,9 +316,11 @@ fn keep_above(window: &gtk::Window) {
         let (conn, screen) = x11rb::connect(Some(display.as_str()))?;
         let root = conn.setup().roots[screen].root;
         let state = conn.intern_atom(false, b"_NET_WM_STATE")?.reply()?.atom;
-        let above = conn.intern_atom(false, b"_NET_WM_STATE_ABOVE")?.reply()?.atom;
-        // _NET_WM_STATE_ADD, the property, none, a normal application.
-        let message = ClientMessageEvent::new(32, xid as u32, state, [1, above, 0, 1, 0]);
+        let property = conn.intern_atom(false, b"_NET_WM_STATE_ABOVE")?.reply()?.atom;
+        // _NET_WM_STATE_ADD or _REMOVE, the property, none, a normal
+        // application.
+        let action = u32::from(above);
+        let message = ClientMessageEvent::new(32, xid as u32, state, [action, property, 0, 1, 0]);
         conn.send_event(
             false,
             root,
@@ -319,6 +331,7 @@ fn keep_above(window: &gtk::Window) {
         Ok(())
     };
     if let Err(e) = ask() {
-        tracing::warn!("Desktop Lyrics cannot stay above other windows: {e}");
+        tracing::warn!("a window cannot stay above other windows: {e}");
     }
+    true
 }

@@ -929,6 +929,53 @@ button.np-back:hover {
  * light ink with a soft shadow over the desktop (their colours come from the
  * dark appearance, desktoplyrics.rs); pointing at the window shows a dark
  * backdrop with Lock and Close; locked, only the words show. */
+/* The mini player (ADR-0026 §4): a small window of its own, opaque so it
+ * reads the same with and without a compositor; play is its one accent
+ * fill, as in Jellyfesh Web's. */
+window.mini-window {
+  background-color: @window_bg_color;
+}
+
+.mini-window-body {
+  padding: {{space.s3}} {{space.s3}} {{space.s4}};
+}
+
+.mini-window-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mini-window-artist {
+  font-size: 13px;
+  color: {{ink.ink-70}};
+}
+
+button.mini-window-button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background: transparent;
+  box-shadow: none;
+}
+
+button.mini-window-button:hover {
+  background-color: {{line.fill-hover}};
+}
+
+button.mini-window-play {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: {{radius.r-full}};
+  background-color: {{accent.accent}};
+  color: {{accent.on-accent}};
+}
+
+button.mini-window-play:hover {
+  background-color: {{accent.accent-hover}};
+}
+
 window.desktop-lyrics {
   background-color: transparent;
 }

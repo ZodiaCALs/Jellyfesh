@@ -82,7 +82,7 @@ fn shortcuts() -> Vec<(&'static str, String)> {
         ("<Shift>Left", tr("Skip Back 5 Seconds")),
         ("<Primary>Up", tr("Volume Up")),
         ("<Primary>Down", tr("Volume Down")),
-        ("<Primary>m", tr("Mute")),
+        ("<Primary>m", tr("Open Mini Player")),
         ("<Primary>s", tr("Shuffle")),
         ("<Primary>r", tr("Repeat")),
         ("<Primary>p", tr("Now Playing")),
