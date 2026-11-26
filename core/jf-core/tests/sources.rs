@@ -1247,15 +1247,19 @@ fn songs_download_from_a_source_that_offers_it_and_play_offline() {
             if s.items.iter().any(|i| i.track.id == "tr:1" && i.library_id.is_some()))
     });
 
-    // The song plays its file.
-    env.run(
+    // The song plays its file. The note is read from the event, not from a
+    // snapshot afterwards: the test song lasts less than a second and may
+    // already have ended by then (it did on macOS).
+    let events = env.run(
         Command::PlayTracks {
             tracks: vec![song(1)],
             start: 0,
         },
         |e| matches!(e, Event::NowPlaying(Some(n)) if n.path.as_deref() == Some(path.as_path())),
     );
-    let now = env.core.snapshot().now_playing.unwrap();
+    let Some(Event::NowPlaying(Some(now))) = events.last() else {
+        panic!("the last event is the one that matched");
+    };
     assert_eq!(now.quality_note, Some(QualityNote::FilesPlayAsTheyAre));
 
     // A refusal in the body (Subsonic's error 50) is no file; the playlist's
