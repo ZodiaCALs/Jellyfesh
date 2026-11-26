@@ -63,6 +63,14 @@ and fixes for covers on Home, source playlists, Shuffle and Android 17
   plugins 0.1.3.
 - **Windows:** three Windows SDK and WinRT projection assemblies are no
   longer precompiled, about 60 MB less inside the installer.
+- **Lighter:**
+  - baked cover backdrops are capped at 48 MB;
+  - Jellyfesh Web loads Settings on first use (about 14 KB less gzip on
+    the first screen);
+  - `blocking` is held at 1.6.2, cutting the idle Linux app's wake-ups
+    from 2.2/s to 0.2/s; a `deny.toml` ban keeps 1.7 out;
+  - a measurement test for the core's publishing cost, run with
+    `cargo test -p jf-ffi --test cost -- --ignored`.
 
 ### Fixed
 
