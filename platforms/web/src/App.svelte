@@ -34,7 +34,6 @@
   import PlaylistPage from './views/PlaylistPage.svelte';
   import Playlists from './views/Playlists.svelte';
   import SearchView from './views/SearchView.svelte';
-  import Settings from './views/Settings.svelte';
   import Songs from './views/Songs.svelte';
   import SourcePage from './views/SourcePage.svelte';
   import SourceRoot from './views/SourceRoot.svelte';
@@ -315,13 +314,17 @@
         {:else if route.view === 'sources'}
           <SourcesView />
         {:else if route.view === 'settings'}
-          <Settings
-            installPrompt={installEvent !== null}
-            oninstall={async () => {
-              await installEvent?.prompt();
-              installEvent = null;
-            }}
-          />
+          <!-- Settings and its sections load when Settings first opens, not with the first screen
+               (scripts/postbuild.mjs keeps them in the app shell for offline use). -->
+          {#await import('./views/Settings.svelte') then { default: Settings }}
+            <Settings
+              installPrompt={installEvent !== null}
+              oninstall={async () => {
+                await installEvent?.prompt();
+                installEvent = null;
+              }}
+            />
+          {/await}
         {:else}
           <Home onopenfiles={() => fileInput?.click()} />
         {/if}

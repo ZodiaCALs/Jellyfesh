@@ -65,10 +65,15 @@ const firstLoad = [
   ...new Set([...entry, ...coreWasm, 'manifest.webmanifest', 'icons/icon.svg', 'plugins/index.json']),
 ].filter((p) => all.includes(p));
 
+// Pages the app loads when they first open (App.svelte imports them lazily), kept with the shell so
+// they open offline too, for example Settings › Sources to add a server on the local network.
+const pages = all.filter((p) => /^assets\/Settings-[\w-]+\.(js|css)$/.test(p));
+if (!pages.some((p) => p.endsWith('.js'))) throw new Error('postbuild: the Settings page chunk is missing');
+
 // The app shell kept for starting offline.
 const shell = [
   './',
-  ...new Set([...firstLoad.filter((p) => p !== 'index.html'), 'icons/apple-touch-icon.png']),
+  ...new Set([...firstLoad.filter((p) => p !== 'index.html'), ...pages, 'icons/apple-touch-icon.png']),
 ].map((p) => (p === './' ? p : `./${p}`));
 
 const hash = createHash('sha256');
