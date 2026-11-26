@@ -104,6 +104,57 @@ fn tracks_without_a_picture_of_their_own_get_their_folders() {
 }
 
 #[test]
+fn downloaded_songs_get_their_tags_and_originals_keep_their_own() {
+    let fx = Fixture::new();
+    let tags = jf_library::SongTags {
+        title: "Invented Song".into(),
+        artist: Some("Invented Artist".into()),
+        album: Some("Invented Album".into()),
+        album_artist: Some("Invented Artist".into()),
+        track: Some(3),
+        disc: Some(1),
+        year: Some(2026),
+        cover: Some(standard::cover()),
+        lyrics: Some("[00:01.00]A line".into()),
+    };
+    let converted = fx.path("Downloads/converted.flac");
+    fixtures::flac(&converted, 100);
+    jf_library::write_song_tags(&converted, &tags, false).unwrap();
+    let original = fx.path("Downloads/original.flac");
+    fixtures::flac(&original, 100);
+    fixtures::tag(&original, |t| {
+        fixtures::basic(t, "Its Own Title", "Its Artist", "Its Album", 7)
+    });
+    jf_library::write_song_tags(&original, &tags, true).unwrap();
+    fx.scan();
+
+    let c = fx.track_at("Downloads/converted.flac");
+    assert_eq!(
+        (
+            c.title.as_str(),
+            c.artist.as_deref(),
+            c.album.as_deref(),
+            c.track_no
+        ),
+        (
+            "Invented Song",
+            Some("Invented Artist"),
+            Some("Invented Album"),
+            Some(3)
+        )
+    );
+    assert!(c.artwork_hash.is_some(), "with its cover");
+    let o = fx.track_at("Downloads/original.flac");
+    assert_eq!(
+        (o.title.as_str(), o.track_no),
+        ("Its Own Title", Some(7)),
+        "an original keeps its own tags"
+    );
+    assert!(o.artwork_hash.is_some(), "and gains the cover it lacked");
+    assert!(jf_library::write_song_tags(&fx.path("Downloads/missing.flac"), &tags, false).is_err());
+}
+
+#[test]
 fn a_purged_cache_file_is_restored_and_unused_artwork_is_deleted() {
     let fx = Fixture::new();
     standard::build(&fx);

@@ -211,8 +211,15 @@ pub(crate) struct StreamFacts {
 /// What to do with a fetched collection.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Then {
-    Play { start: usize, shuffle: bool },
-    Enqueue { play_next: bool },
+    Play {
+        start: usize,
+        shuffle: bool,
+    },
+    Enqueue {
+        play_next: bool,
+    },
+    /// Download its songs (ADR-0025).
+    Download,
 }
 
 enum Job {
@@ -1398,6 +1405,20 @@ impl Sources {
         Ok(())
     }
 
+    /// Checks that a source offers downloads (the `download` capability,
+    /// ADR-0025 §1).
+    pub(crate) fn check_download(&self, plugin: &str) -> Result<(), CoreError> {
+        let info = self
+            .require()?
+            .host
+            .plugin(plugin)
+            .ok_or_else(|| CoreError::Other(format!("its source plugin {plugin} is not installed")))?;
+        if !info.capabilities.contains(&Capability::Download) {
+            return Err(CoreError::Other(format!("{} offers no downloads", info.name)));
+        }
+        self.usable(plugin, Capability::Download).map(|_| ())
+    }
+
     /// Checks that a plugin can be searched now.
     pub(crate) fn check_search(&self, plugin: &str) -> Result<(), CoreError> {
         self.usable(plugin, Capability::Search).map(|_| ())
@@ -1527,7 +1548,7 @@ impl Sources {
             .spawn(move || match then {
                 // Playing starts with the first page (the one with `start`); the rest follows.
                 Then::Play { start, .. } => stream_collection(&ctx, id, &plugin, &item, start, then),
-                Then::Enqueue { .. } => {
+                Then::Enqueue { .. } | Then::Download => {
                     let result = collection_items(&ctx, &plugin, &item);
                     ctx.send(SourcesMsg::Collection {
                         id,

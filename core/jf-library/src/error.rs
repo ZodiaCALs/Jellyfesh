@@ -41,6 +41,14 @@ pub enum LibraryError {
         /// What the tag reader reported.
         message: String,
     },
+    /// Tags could not be written into a file (a downloaded song).
+    #[error("cannot write tags into {}: {message}", path.display())]
+    TagsNotWritten {
+        /// The audio file.
+        path: PathBuf,
+        /// What the tag writer reported.
+        message: String,
+    },
     /// No track has this id.
     #[error("no track with id {0}")]
     TrackNotFound(TrackId),

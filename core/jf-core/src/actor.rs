@@ -79,6 +79,8 @@ pub(crate) enum Msg {
     },
     /// A source picture is ready, or cannot be had.
     Artwork(crate::types::ArtworkReady),
+    /// A download's thread (ADR-0025).
+    Download(crate::downloads::DownloadMsg),
     Shutdown,
 }
 
@@ -242,6 +244,10 @@ pub(crate) struct Actor {
     source_lists: crate::source_library::Lists,
     /// The sources the `SourceLibrary` slice last covered.
     library_sources: Vec<String>,
+    /// Downloads (ADR-0025), kept on disk.
+    downloads: crate::downloads::Downloads,
+    /// The downloads folder was made a library root in this run.
+    downloads_root: Option<PathBuf>,
     downloads_version: u64,
     /// A source collection whose first pages play while the rest arrives:
     /// its request and its queue entries so far. It stops growing once none
@@ -564,6 +570,7 @@ impl Actor {
         )?;
 
         let source_lists = crate::source_library::Lists::new(config.data_dir.join("source-library"));
+        let downloads = crate::downloads::Downloads::load(config.data_dir.join("downloads.json"));
         let mut actor = Actor {
             config,
             shared: shared.clone(),
@@ -611,6 +618,8 @@ impl Actor {
             source_library_version: 0,
             source_lists,
             library_sources: Vec::new(),
+            downloads,
+            downloads_root: None,
             downloads_version: 0,
             growing: None,
             reopening: None,
@@ -631,6 +640,8 @@ impl Actor {
         actor.publish_pro();
         actor.publish_sources(true);
         actor.ai.publish(&actor.shared);
+        // Downloads from the last run go on.
+        actor.pump_downloads();
         actor.publish_downloads();
         Ok((actor, shared))
     }
@@ -663,6 +674,7 @@ impl Actor {
                     Ok(Msg::AiLyrics(msg)) => self.on_ai_lyrics(msg),
                     Ok(Msg::Look { generation, plugin, result }) => self.on_look(generation, &plugin, result),
                     Ok(Msg::Artwork(ready)) => self.shared.emit(Event::Artwork(Arc::new(ready))),
+                    Ok(Msg::Download(msg)) => self.on_download(msg),
                     Ok(Msg::Shutdown) | Err(_) => break,
                 },
                 recv(engine_events) -> ev => match ev {
@@ -1158,6 +1170,8 @@ impl Actor {
             Command::Comments { item, page } => self.comments(id, item, page)?,
             Command::SetNetworkState { online, metered } => {
                 self.network = Network { online, metered };
+                // Downloads wait while the network is off (or metered, with Wi-Fi Only).
+                self.downloads_follow_network();
                 self.publish_downloads();
                 // Auto follows the network from the next song.
                 self.update_streaming_level(false);
@@ -1179,14 +1193,26 @@ impl Actor {
                 }
                 self.sources.copy_playlist(id, plugin, playlist, name)?;
             }
-            Command::Download { .. }
-            | Command::CancelDownload { .. }
-            | Command::RetryDownload { .. }
-            | Command::RemoveDownload { .. }
-            | Command::RemoveAllDownloads => {
-                return Err(CoreError::Other(
-                    "downloads are not available in this build yet".into(),
-                ));
+            Command::Download { target } => self.download(id, target)?,
+            Command::CancelDownload { id: download } => {
+                self.downloads.cancel(download).map_err(CoreError::Other)?;
+                self.pump_downloads();
+                self.publish_downloads();
+            }
+            Command::RetryDownload { id: download } => {
+                self.downloads.retry(download).map_err(CoreError::Other)?;
+                self.pump_downloads();
+                self.publish_downloads();
+            }
+            Command::RemoveDownload { id: download } => {
+                let removed = self.downloads.remove(download).map_err(CoreError::Other)?;
+                self.forget_downloads(removed.into_iter().collect());
+                self.publish_downloads();
+            }
+            Command::RemoveAllDownloads => {
+                let removed = self.downloads.remove_all();
+                self.publish_downloads();
+                self.forget_downloads(removed.map_err(CoreError::Other)?);
             }
         }
         Ok(())
@@ -1475,6 +1501,18 @@ impl Actor {
         self.library_revision = revision;
         self.shared.update(|s| s.library_revision = revision);
         self.shared.emit(Event::LibraryChanged { revision });
+        self.link_downloads();
+    }
+
+    /// Finished downloads learn their library tracks once scanned.
+    fn link_downloads(&mut self) {
+        let library = &self.library;
+        if self
+            .downloads
+            .link(|path| library.track_id_at(path).ok().flatten())
+        {
+            self.publish_downloads();
+        }
     }
 
     /// Applies new settings: the parts the core owns take effect at once;
@@ -1553,6 +1591,7 @@ impl Actor {
             self.publish_sources(true);
         }
         if downloads_changed {
+            self.downloads_follow_network();
             self.publish_downloads();
         }
         if devices_changed {
@@ -2147,10 +2186,20 @@ impl Actor {
     /// (asking for it the first time).
     fn resolve(&mut self, item: &QueueItem) -> Result<Resolution, CoreError> {
         match &item.track {
-            TrackRef::Source(track) => match self.sources.stream(item.uid, track)? {
-                Some(source) => Ok(Resolution::Ready(source_play_item(item.uid, track, source))),
-                None => Ok(Resolution::Pending),
-            },
+            TrackRef::Source(track) => {
+                if let Some(path) = crate::downloads::downloaded(&track.plugin, &track.id) {
+                    // A finished download plays its file, offline too.
+                    let file = QueueItem {
+                        uid: item.uid,
+                        track: TrackRef::File(path),
+                    };
+                    return Ok(Resolution::Ready(self.resolve_local(&file)?.0));
+                }
+                match self.sources.stream(item.uid, track)? {
+                    Some(source) => Ok(Resolution::Ready(source_play_item(item.uid, track, source))),
+                    None => Ok(Resolution::Pending),
+                }
+            }
             TrackRef::Library(_) | TrackRef::File(_) => Ok(Resolution::Ready(self.resolve_local(item)?.0)),
         }
     }
@@ -2164,6 +2213,12 @@ impl Actor {
                         .url_for(jf_plugin_host::ItemKind::Track, &track.id)
                 });
                 let mut now = source_now_playing(item, track, link);
+                if let Some(path) = crate::downloads::downloaded(&track.plugin, &track.id) {
+                    // Its download plays: a file plays as it is.
+                    now.path = Some(path);
+                    now.quality_note = Some(crate::types::QualityNote::FilesPlayAsTheyAre);
+                    return Ok(now);
+                }
                 let (qualities, note) = self.sources.offered_qualities(&track.plugin);
                 now.qualities = qualities;
                 now.quality_note = note;
@@ -2295,6 +2350,7 @@ impl Actor {
             LibraryMsg::Changed(revision) => {
                 self.shared.update(|s| s.library_revision = revision);
                 self.shared.emit(Event::LibraryChanged { revision });
+                self.link_downloads();
             }
         }
     }
@@ -2519,6 +2575,19 @@ impl Actor {
                 self.queue_changed();
                 self.start_current()?;
                 return Ok(Some(uids));
+            }
+            Then::Download => {
+                let tracks: Vec<SourceTrack> = items
+                    .iter()
+                    .filter(|i| i.kind == jf_plugin_host::ItemKind::Track && i.playable)
+                    .map(|i| sources::source_track(plugin, i))
+                    .collect();
+                if tracks.is_empty() {
+                    return Err(CoreError::Other("nothing to download".into()));
+                }
+                self.downloads.add(tracks);
+                self.pump_downloads();
+                self.publish_downloads();
             }
             Then::Enqueue { play_next } => {
                 let (tracks, _) = sources::collection_queue(plugin, &items, 0)?;
@@ -2830,23 +2899,15 @@ impl Actor {
     }
 
     /// Publishes the `Downloads` slice.
-    ///
-    /// M1 stub (v0.0.8 contract): no downloads yet; the folder and the
-    /// network's effect are real.
     fn publish_downloads(&mut self) {
         self.downloads_version += 1;
-        let paused = if !self.network.online {
-            Some(DownloadsPaused::Offline)
-        } else if self.network.metered && self.settings.downloads.wifi_only {
-            Some(DownloadsPaused::Metered)
-        } else {
-            None
-        };
+        let paused = self.downloads_paused();
+        let (items, bytes_used) = self.downloads.items();
         let snapshot = Arc::new(DownloadsSnapshot {
             version: self.downloads_version,
             folder: self.downloads_folder(),
-            items: Vec::new(),
-            bytes_used: 0,
+            items,
+            bytes_used,
             paused,
         });
         if self
@@ -2862,6 +2923,116 @@ impl Actor {
         }
         self.shared.update(|s| s.downloads = snapshot.clone());
         self.shared.emit(Event::Downloads(snapshot));
+    }
+
+    /// Why queued downloads cannot run now.
+    fn downloads_paused(&self) -> Option<DownloadsPaused> {
+        crate::downloads::paused(
+            self.network.online,
+            self.network.metered,
+            &self.settings.downloads,
+        )
+    }
+
+    /// `Download`: a song, or every song of a collection (fetched first),
+    /// from a source that offers downloads.
+    fn download(
+        &mut self,
+        request: CommandId,
+        target: crate::types::DownloadTarget,
+    ) -> Result<(), CoreError> {
+        use crate::types::DownloadTarget;
+        match target {
+            DownloadTarget::Track {
+                track: TrackRef::Source(track),
+            } => {
+                self.sources.check_download(&track.plugin)?;
+                self.downloads.add(vec![track]);
+                self.pump_downloads();
+                self.publish_downloads();
+                Ok(())
+            }
+            DownloadTarget::Track { .. } => Err(CoreError::Other(
+                "only songs from your sources can be downloaded".into(),
+            )),
+            DownloadTarget::Collection {
+                plugin,
+                id,
+                item_kind,
+            } => {
+                self.sources.check_download(&plugin)?;
+                self.sources
+                    .fetch_collection(request, plugin, id, item_kind, Then::Download)
+            }
+        }
+    }
+
+    /// Starts queued downloads while the network lets them.
+    fn pump_downloads(&mut self) {
+        let paused = self.downloads_paused().is_some();
+        let folder = self.downloads_folder();
+        let ctx = self.sources.ctx();
+        self.downloads
+            .pump(ctx.as_ref(), &self.settings.downloads, &folder, paused, &self.tx);
+    }
+
+    /// The network or the settings changed: running downloads stop where
+    /// they are while they must wait, and go on when they may.
+    fn downloads_follow_network(&mut self) {
+        if self.downloads_paused().is_some() {
+            self.downloads.pause_all();
+        } else {
+            self.pump_downloads();
+        }
+    }
+
+    /// A download's thread said something.
+    fn on_download(&mut self, msg: crate::downloads::DownloadMsg) {
+        use crate::downloads::DownloadMsg;
+        let progress = matches!(msg, DownloadMsg::Progress { .. });
+        let finished = match &msg {
+            DownloadMsg::Finished { path, .. } => Some(path.clone()),
+            _ => None,
+        };
+        let offline = !self.network.online;
+        if self.downloads.on_msg(msg, offline)
+            && let Some(path) = finished
+        {
+            self.download_to_library(path);
+        }
+        if !progress {
+            self.pump_downloads();
+        }
+        self.publish_downloads();
+    }
+
+    /// A finished download joins the library: the downloads folder becomes a
+    /// library root (once), and later files are scanned.
+    fn download_to_library(&mut self, path: PathBuf) {
+        let folder = self.downloads_folder();
+        let covered = self.downloads_root.as_ref() == Some(&folder)
+            || self
+                .library
+                .roots()
+                .is_ok_and(|roots| roots.iter().any(|root| path.starts_with(root)));
+        let job = if covered {
+            LibraryJob::ScanPaths(vec![path])
+        } else {
+            self.downloads_root = Some(folder.clone());
+            LibraryJob::AddRoot(CommandId(0), folder)
+        };
+        if let Err(e) = self.library_job(job) {
+            tracing::warn!("could not add a download to the library: {e}");
+        }
+    }
+
+    /// Removed downloads leave the library.
+    fn forget_downloads(&mut self, paths: Vec<PathBuf>) {
+        if !paths.is_empty()
+            && let Err(e) = self.library_job(LibraryJob::ScanPaths(paths))
+        {
+            tracing::warn!("could not take removed downloads out of the library: {e}");
+        }
     }
 
     /// `RefreshSourceLibrary`: reloads the lists of one source, or of every

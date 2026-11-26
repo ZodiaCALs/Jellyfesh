@@ -703,6 +703,18 @@ this account."), `NotOffered { service }`, `Network`, `Storage`, `Other`
 item's `id`. `SourceItem::downloaded` and `TrackRow::downloaded` mark source
 songs with a finished download (they play the file, offline too).
 
+The queue runs at most `DownloadSettings::at_once` downloads together. It is
+kept in `<data_dir>/downloads.json` and goes on after a restart; downloads
+resume with HTTP ranges (a `.part` file beside the song), retry network
+errors with backoff, and wait while `paused`. A refusal is `NotAllowed`: the
+plugin's `unsupported`, an HTTP 401 or 403, or a JSON or text answer where
+audio should be (Subsonic answers its error 50 that way). A finished file
+joins the library: the downloads folder becomes a library root, and the
+item's `library_id` follows once it is scanned. Originals stay byte for byte
+unless `add_missing_cover_and_lyrics` is on; converted files get the song's
+tags, cover and (with `lyrics_in_tags`) lyrics, synced ones as LRC text, and
+`save_lrc_files` writes them beside the song.
+
 File names follow `DownloadSettings::name_template`; `download_preview(template)`
 gives the live preview ("Album Artist/Album/01 Title.flac"). The template and
 the safe-name rules are `jf_plugin_model::filenames` (`render`, `safe_part`,
@@ -727,8 +739,8 @@ with its kind, search sections (`merged`, `groups` with
 per-kind cursors from 20-per-kind queries), `SearchMore`, the quality menu's fields and the
 level asked of sources, the local-network flag and the downloads folder.
 The sources' likes and playlists work (the cache, paging and Save as
-Playlist); the download commands answer "not available in this build yet"
-until their implementation lands.
+Playlist), and so do downloads (the queue, the library link and offline
+playback).
 
 New in v0.0.7: AI Lyrics, the look, Jellyfesh Pro and store builds, the
 update check, Discover, details and comments, source pictures through the

@@ -23,6 +23,7 @@ mod ai_lyrics;
 mod artwork;
 mod details;
 mod discover;
+mod downloads;
 mod items;
 mod look;
 pub mod lyrics;

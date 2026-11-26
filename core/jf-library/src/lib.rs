@@ -57,6 +57,7 @@ mod tags;
 mod thumbnail;
 mod util;
 mod watch;
+mod write;
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -68,6 +69,7 @@ pub use artwork::folder_art_among;
 pub use error::LibraryError;
 pub use fs::{FileEntry, FileSystem, PathKind, ReadSeek, StdFileSystem};
 pub use watch::{LibraryWatcher, WatchErrorKind};
+pub use write::{SongTags, write_song_tags};
 
 /// The text rules the library indexes and groups by, for Jellyfesh Web's mirror of them
 /// (`core/jf-web`) to be tested against. Not part of the library's API.
@@ -506,6 +508,18 @@ impl Library {
     }
 
     /// One track by id.
+    /// The id of the track catalogued at `path`, if any.
+    pub fn track_id_at(&self, path: &Path) -> Result<Option<TrackId>, LibraryError> {
+        let Some(text) = path.to_str() else {
+            return Ok(None);
+        };
+        Ok(self
+            .conn
+            .prepare_cached("SELECT id FROM tracks WHERE path = ?1")?
+            .query_row([text], |row| row.get(0))
+            .optional()?)
+    }
+
     pub fn track(&self, id: TrackId) -> Result<Option<Track>, LibraryError> {
         query::track(&self.conn, id)
     }

@@ -102,7 +102,7 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             artwork_hash: None,
             favorite,
             missing: false,
-            downloaded: false,
+            downloaded: crate::downloads::is_downloaded(&t.plugin, &t.id),
             track: reference,
         };
     }

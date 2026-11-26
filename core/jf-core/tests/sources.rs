@@ -1181,6 +1181,117 @@ fn a_sources_likes_and_playlists_are_listed_paged_kept_and_saved_as_a_playlist()
     assert!(!kept.exists());
 }
 
+#[test]
+fn songs_download_from_a_source_that_offers_it_and_play_offline() {
+    use jf_core::{
+        DownloadError, DownloadState, DownloadTarget, DownloadsSnapshot, QualityNote, SourceTrack,
+    };
+    let folder = tempfile::tempdir().unwrap();
+    let downloads = folder.path().to_path_buf();
+    let env = Env::with(|c| c.downloads_dir = Some(downloads.clone()));
+    let flac = sine_flac(440.0, 0.5);
+    let served = flac.clone();
+    let server = TestServer::start(move |request| match request.path() {
+        "/files/tr-1.flac" | "/files/tr-3.flac" if request.header("x-token") == Some("test-token") => {
+            Response::ranged(request, &served, "audio/flac")
+        }
+        // Subsonic's refusal when the server decides: 200 with its JSON error 50.
+        "/files/tr-2.flac" => Response::new(
+            200,
+            r#"{"subsonic-response":{"status":"failed","error":{"code":50,"message":"not authorized"}}}"#,
+        )
+        .header("content-type", "application/json"),
+        _ => Response::new(404, "no such file"),
+    });
+    env.plugin("library", &library_manifest(), LIBRARY, &server.url());
+    let song = |n: usize| {
+        TrackRef::Source(SourceTrack {
+            plugin: LIBRARY.into(),
+            id: format!("tr:{n}"),
+            title: format!("Invented Song {n}"),
+            artist: Some("Invented Artist".into()),
+            album: Some("Invented Album".into()),
+            duration_ms: Some(1_500),
+            artwork_url: None,
+            isrc: None,
+        })
+    };
+    let state =
+        |s: &DownloadsSnapshot, id: &str| s.items.iter().find(|i| i.track.id == id).map(|i| i.state.clone());
+
+    env.run(
+        Command::Download {
+            target: DownloadTarget::Track { track: song(1) },
+        },
+        |e| matches!(e, Event::Downloads(s) if state(s, "tr:1") == Some(DownloadState::Done)),
+    );
+    let item = env
+        .core
+        .snapshot()
+        .downloads
+        .items
+        .iter()
+        .find(|i| i.track.id == "tr:1")
+        .cloned()
+        .unwrap();
+    let path = item.path.clone().expect("the file");
+    assert_eq!(
+        path.strip_prefix(&downloads).unwrap(),
+        Path::new("Invented Artist/Invented Album/Invented Song 1.flac"),
+        "named by the template"
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), flac, "the original, byte for byte");
+    assert!(item.original);
+    wait_for(&env.events, Duration::from_secs(30), |e| {
+        matches!(e, Event::Downloads(s)
+            if s.items.iter().any(|i| i.track.id == "tr:1" && i.library_id.is_some()))
+    });
+
+    // The song plays its file.
+    env.run(
+        Command::PlayTracks {
+            tracks: vec![song(1)],
+            start: 0,
+        },
+        |e| matches!(e, Event::NowPlaying(Some(n)) if n.path.as_deref() == Some(path.as_path())),
+    );
+    let now = env.core.snapshot().now_playing.unwrap();
+    assert_eq!(now.quality_note, Some(QualityNote::FilesPlayAsTheyAre));
+
+    // A refusal in the body (Subsonic's error 50) is no file; the playlist's
+    // other new song downloads.
+    env.run(
+        Command::Download {
+            target: DownloadTarget::Collection {
+                plugin: LIBRARY.into(),
+                id: "pl:mine".into(),
+                item_kind: ItemKind::Playlist,
+            },
+        },
+        |e| {
+            matches!(e, Event::Downloads(s)
+                if state(s, "tr:3") == Some(DownloadState::Done)
+                    && matches!(state(s, "tr:2"), Some(DownloadState::Failed { .. })))
+        },
+    );
+    assert_eq!(
+        state(&env.core.snapshot().downloads, "tr:2"),
+        Some(DownloadState::Failed {
+            error: DownloadError::NotAllowed {
+                service: "Test Library".into()
+            }
+        })
+    );
+    assert!(server.with_path("/files/tr-1.flac").len() == 1, "once");
+
+    // Remove Download deletes the file.
+    env.run(
+        Command::RemoveDownload { id: item.id },
+        |e| matches!(e, Event::Downloads(s) if !s.items.iter().any(|i| i.id == item.id)),
+    );
+    assert!(!path.exists());
+}
+
 fn echo_server() -> TestServer {
     TestServer::start(|request| match request.path() {
         "/login"

@@ -106,7 +106,7 @@ pub(crate) fn source_item(plugin: &str, item: &Item, links: &Links) -> SourceIte
         link: links.url_for(item.kind, &item.id),
         artist_id: item.artist_id.clone(),
         album_id: item.album_id.clone(),
-        downloaded: false,
+        downloaded: item.kind == HostKind::Track && crate::downloads::is_downloaded(plugin, &item.id),
     }
 }
 
