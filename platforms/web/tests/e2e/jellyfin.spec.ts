@@ -1,6 +1,8 @@
 // Jellyfesh Web against the mock Jellyfin server: Quick Connect sign-in (a code approved
-// elsewhere), browsing, streams that need an Authorization header, lyrics, search and sign-out.
+// elsewhere), browsing, streams that need an Authorization header, lyrics, the account's
+// favourites and a download with its header (plugin API 1.3), search and sign-out.
 
+import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
 import { nav, openAlbum, openApp, openSourcesSettings, signInJellyfinQuickConnect, snapshot, sourceCard, waitPlaying } from './helpers';
 
@@ -45,6 +47,22 @@ test('plays an album whose streams need the Authorization header', async () => {
   await page.keyboard.press('Escape');
   expect((await snapshot(page)).problem).toBeNull();
   expect(streamed.length).toBeGreaterThan(0);
+});
+
+test('lists the account’s favourites, and downloads a song with its Authorization header', async () => {
+  await nav(page, 'Favourites').click();
+  const section = page.getByRole('region', { name: 'Jellyfin' });
+  // Jellyfin keeps no date for a favourite: by name, as in its own apps.
+  await expect(section.getByRole('group', { name: 'Songs' }).getByRole('button', { name: /^Play / })).toHaveText([/Rope and Mast/, /Still Water/]);
+  await expect(section.getByRole('group', { name: 'Albums' }).getByRole('button', { name: 'Open Paper Lanterns' })).toBeVisible();
+  await expect(section.getByRole('group', { name: 'Artists' }).getByRole('button', { name: 'Open Tidal Choir' })).toBeVisible();
+  // The original from /Items/{id}/Download, which answers only with the session's header.
+  const download = page.waitForEvent('download');
+  await section.getByRole('button', { name: 'More for Still Water' }).click();
+  await page.getByRole('menuitem', { name: 'Download' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toBe('04 Still Water.wav');
+  expect(readFileSync((await file.path())!).subarray(0, 4).toString('latin1')).toBe('RIFF');
 });
 
 test('searches, and signs out', async () => {

@@ -5,7 +5,19 @@
 
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { ALBUMS, ARTISTS, LYRICS, PLAYLISTS, TRACK_SECONDS, artistOf, track, tracks } from './library.mjs';
+import {
+  ALBUMS,
+  ARTISTS,
+  FAVOURITES,
+  FOLLOWED_PLAYLISTS,
+  LYRICS,
+  NO_DOWNLOAD,
+  PLAYLISTS,
+  TRACK_SECONDS,
+  artistOf,
+  track,
+  tracks,
+} from './library.mjs';
 import { png, wav } from './media.mjs';
 
 export const SUBSONIC_USER = { name: 'demo', password: 'invented-password' };
@@ -165,18 +177,21 @@ export function startSubsonic({ port = 0, cors = true, host = '127.0.0.1' } = {}
         case 'getPlaylists':
           return ok({
             playlists: {
-              playlist: PLAYLISTS.map((pl) => ({
+              playlist: [
+                ...PLAYLISTS.map((pl) => ({ ...pl, owner: user, public: false })),
+                ...FOLLOWED_PLAYLISTS.map((pl) => ({ ...pl, public: true })),
+              ].map((pl) => ({
                 id: `pl${pl.id}`,
                 name: pl.title,
                 songCount: pl.tracks.length,
                 duration: pl.tracks.length * TRACK_SECONDS,
-                owner: user,
-                public: false,
+                owner: pl.owner,
+                public: pl.public,
               })),
             },
           });
         case 'getPlaylist': {
-          const pl = PLAYLISTS.find((x) => `pl${x.id}` === id);
+          const pl = [...PLAYLISTS, ...FOLLOWED_PLAYLISTS].find((x) => `pl${x.id}` === id);
           if (!pl) return fail(70, 'Playlist not found');
           return ok({
             playlist: {
@@ -188,8 +203,17 @@ export function startSubsonic({ port = 0, cors = true, host = '127.0.0.1' } = {}
             },
           });
         }
-        case 'getStarred2':
-          return ok({ starred2: { artist: [], album: [], song: [] } });
+        case 'getStarred2': {
+          // In the server's own order, not by date: the plugin sorts them newest first.
+          const starred = (list, of) => list.map(({ id: key, at }) => ({ ...of(key), starred: at }));
+          return ok({
+            starred2: {
+              artist: starred(FAVOURITES.artists, (key) => artistJson(ARTISTS.find((a) => a.id === key))),
+              album: starred(FAVOURITES.albums, (key) => album(ALBUMS.find((a) => a.id === key), false)),
+              song: starred(FAVOURITES.songs, (key) => song(track(key))),
+            },
+          });
+        }
         case 'search3': {
           const query = (p('query') ?? '').toLowerCase().replace(/^"|"$/g, '');
           const has = (text) => text.toLowerCase().includes(query);
@@ -230,6 +254,17 @@ export function startSubsonic({ port = 0, cors = true, host = '127.0.0.1' } = {}
           if (!t) return fail(70, 'Song not found');
           if (!AUDIO.has(t.id)) AUDIO.set(t.id, wav(TRACK_SECONDS, t.frequency));
           return sendRange(req, res, headers, AUDIO.get(t.id), 'audio/wav');
+        }
+        case 'download': {
+          // The file as it is (`format=raw`, as Navidrome needs); a song the account may not have
+          // is refused as Subsonic servers do: HTTP 200 with an error in JSON, not the file.
+          const t = track(id.replace(/^s/, ''));
+          if (!t) return fail(70, 'Song not found');
+          if (NO_DOWNLOAD.includes(t.id)) return fail(50, 'User is not authorized for the given operation.');
+          if (!AUDIO.has(t.id)) AUDIO.set(t.id, wav(TRACK_SECONDS, t.frequency));
+          return send(200, AUDIO.get(t.id), 'audio/wav', {
+            'content-disposition': `attachment; filename="${t.number} - ${t.title}.wav"`,
+          });
         }
         case 'getCoverArt': {
           const a = ALBUMS.find((x) => `al${x.id}` === id);

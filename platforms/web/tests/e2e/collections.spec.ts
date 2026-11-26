@@ -28,8 +28,10 @@ async function songMenu(title: string, entry: string) {
 }
 
 test('marks songs with the heart, and lists them in Favourites', async () => {
+  // Nothing hearted yet (the server's own stars are a section of their own: sources-library.spec.ts).
   await nav(page, 'Favourites').click();
-  await expect(page.getByRole('heading', { name: 'No Favourites Yet' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Subsonic' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Favourites' })).toHaveCount(0);
   await openAlbum(page, 'Subsonic', 'Slow Tide');
   await songMenu('Lanterns', 'Add to Favourites');
   await songMenu('Morning Harbour', 'Add to Favourites');
@@ -94,7 +96,8 @@ test('makes a playlist from Add to Playlist…, plays, renames and deletes it', 
   await expect(confirm).toContainText('The songs stay in your library.');
   await confirm.getByRole('button', { name: 'Delete Playlist' }).click();
   await nav(page, 'Playlists').click();
-  await expect(page.getByRole('heading', { name: 'No Playlists Yet' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Subsonic' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Tide Songs' })).toHaveCount(0);
 });
 
 test('shows what played on Home', async () => {

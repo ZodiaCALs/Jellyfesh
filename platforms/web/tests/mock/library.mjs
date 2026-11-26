@@ -38,6 +38,25 @@ export const ALBUMS = [
 
 export const PLAYLISTS = [{ id: '1', title: 'Evening Walk', tracks: ['3', '5', '4'] }];
 
+/** Another account's public playlist, which the person follows (Subsonic lists it too). */
+export const FOLLOWED_PLAYLISTS = [{ id: '2', title: 'Harbour Mornings', owner: 'mira', tracks: ['1', '2'] }];
+
+/**
+ * What the account marked on the server (plugin API 1.3 `library.likes`): songs, albums and
+ * artists by id, with when (Subsonic's `starred`; Jellyfin keeps no date and lists them by name).
+ */
+export const FAVOURITES = {
+  songs: [
+    { id: '4', at: '2026-11-20T09:00:00Z' },
+    { id: '2', at: '2026-11-22T09:00:00Z' },
+  ],
+  albums: [{ id: '2', at: '2026-11-21T09:00:00Z' }],
+  artists: [{ id: '2', at: '2026-11-21T09:00:00Z' }],
+};
+
+/** Songs the server will not let the account download (Subsonic: error 50 instead of the file). */
+export const NO_DOWNLOAD = ['6'];
+
 /** Every track with its album. */
 export function tracks() {
   return ALBUMS.flatMap((album) => album.tracks.map((track, index) => ({ ...track, album, number: index + 1 })));

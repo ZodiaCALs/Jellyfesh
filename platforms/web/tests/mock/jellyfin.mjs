@@ -6,7 +6,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { createServer } from 'node:http';
-import { ALBUMS, ARTISTS, LYRICS, PLAYLISTS, TRACK_SECONDS, artistOf, track, tracks } from './library.mjs';
+import { ALBUMS, ARTISTS, FAVOURITES, LYRICS, NO_DOWNLOAD, PLAYLISTS, TRACK_SECONDS, artistOf, track, tracks } from './library.mjs';
 import { png, wav } from './media.mjs';
 import { sendRange } from './subsonic.mjs';
 
@@ -20,6 +20,12 @@ const artistId = (a) => id('a2', a.id);
 const albumId = (a) => id('b3', a.id);
 const songId = (t) => id('c4', t.id);
 const playlistId = (p) => id('d5', p.id);
+/** The account's favourites, by item id (Jellyfin's `IsFavorite`). */
+const FAVOURITE_IDS = new Set([
+  ...FAVOURITES.songs.map(({ id: key }) => songId(track(key))),
+  ...FAVOURITES.albums.map(({ id: key }) => albumId(ALBUMS.find((a) => a.id === key))),
+  ...FAVOURITES.artists.map(({ id: key }) => artistId(ARTISTS.find((a) => a.id === key))),
+]);
 
 function artistDto(a) {
   return { Name: a.name, Id: artistId(a), Type: 'MusicArtist', IsFolder: true, ImageTags: {} };
@@ -113,6 +119,8 @@ function shape(item, fields) {
   if (!fields.includes('MediaSources')) delete out.MediaSources;
   if (!fields.includes('ChildCount')) delete out.ChildCount;
   if (fields.includes('PlayAccess')) out.PlayAccess = 'Full';
+  // The account's EnableContentDownloading policy, per item.
+  if (fields.includes('CanDownload')) out.CanDownload = item.Type !== 'Audio' || !NO_DOWNLOAD.some((key) => songId(track(key)) === item.Id);
   out.ServerId = SERVER_ID;
   return out;
 }
@@ -296,7 +304,7 @@ export function startJellyfin({ port = 0, host = '127.0.0.1' } = {}) {
         let list = ARTISTS.map(artistDto);
         const term = params.get('searchTerm');
         if (term) list = list.filter((a) => a.Name.toLowerCase().includes(term.toLowerCase()));
-        if (params.get('isFavorite') === 'true') list = [];
+        if (params.get('isFavorite') === 'true') list = list.filter((a) => FAVOURITE_IDS.has(a.Id));
         const { items, start, total } = page(sortItems(list, params), params);
         return send(200, { Items: items.map((i) => shape(i, fields)), TotalRecordCount: total, StartIndex: start });
       }
@@ -314,7 +322,7 @@ export function startJellyfin({ port = 0, host = '127.0.0.1' } = {}) {
         }
         const term = params.get('searchTerm');
         if (term) list = list.filter((i) => i.Name.toLowerCase().includes(term.toLowerCase()));
-        if (params.get('isFavorite') === 'true') list = [];
+        if (params.get('isFavorite') === 'true') list = list.filter((i) => FAVOURITE_IDS.has(i.Id));
         const artistIds = (params.get('artistIds') ?? params.get('albumArtistIds') ?? '').split(',').filter(Boolean);
         if (artistIds.length) {
           list = list.filter((i) => [...(i.AlbumArtists ?? []), ...(i.ArtistItems ?? [])].some((a) => artistIds.includes(a.Id)));
@@ -328,6 +336,14 @@ export function startJellyfin({ port = 0, host = '127.0.0.1' } = {}) {
         if (!playlist) return send(404, 'Error processing request.', 'text/plain');
         const { items, start, total } = page(playlist.tracks.map((t) => songDto(track(t))), params);
         return send(200, { Items: items.map((i) => shape(i, fields)), TotalRecordCount: total, StartIndex: start });
+      }
+      if (req.method === 'GET' && segments[0] === 'Items' && segments[2] === 'Download') {
+        // The original file, with the MediaBrowser authorization header (checked above).
+        const t = tracks().find((x) => songId(x) === segments[1]?.toLowerCase());
+        if (!t) return send(404, 'Error processing request.', 'text/plain');
+        if (NO_DOWNLOAD.includes(t.id)) return send(403, '', 'text/plain');
+        if (!audio.has(t.id)) audio.set(t.id, wav(TRACK_SECONDS, t.frequency));
+        return sendRange(req, res, headers, audio.get(t.id), 'audio/wav');
       }
       if (segments[0] === 'Items' && segments[2] === 'InstantMix') {
         return send(200, { Items: tracks().slice(0, 3).map((t) => shape(songDto(t), fields)), TotalRecordCount: 3, StartIndex: 0 });
