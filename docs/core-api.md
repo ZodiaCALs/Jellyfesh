@@ -120,7 +120,10 @@ picture is cached, see "Covers"); and from v0.0.8 `SearchPage(SearchPage)`
 `source_artwork(url, size_px)` (see "Covers"); free functions
 `output_devices()`, `eq_presets()`, `lyrics_bar(timeline, t_ms)` (see
 "Drawing time"), and from v0.0.8 `address_is_local(address)` (see "The local
-network") and `download_preview(template)` (see "Downloads"). They are cheap enough for list views but are not for
+network"), `download_preview(template)` (see "Downloads") and
+`audio_extensions()` (the extensions of the audio files the core plays and
+the library scans, lowercase without the dot, for file pickers and drag and
+drop). They are cheap enough for list views but are not for
 per-frame use; call them off the UI thread. `set_store_entitlement(entitlement)`
 reports a store purchase (see "Jellyfesh Pro").
 

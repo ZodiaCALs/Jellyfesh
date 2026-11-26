@@ -449,6 +449,16 @@ pub fn download_preview(template: &str) -> String {
     parts.join("/")
 }
 
+/// The extensions of the audio files Jellyfesh plays and its library scans,
+/// lowercase without the dot (`mp3`, `flac`, …): what file pickers (Open,
+/// Import) and drag and drop accept, the same in every app.
+pub fn audio_extensions() -> Vec<String> {
+    jf_library::audio_extensions()
+        .iter()
+        .map(|ext| (*ext).to_owned())
+        .collect()
+}
+
 /// The equalizer presets every app offers, in their order. Applying one sets
 /// [`Settings::eq`] to its settings (keeping the person's preamp is up to the app).
 pub fn eq_presets() -> Vec<EqPreset> {

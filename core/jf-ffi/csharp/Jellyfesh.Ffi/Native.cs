@@ -169,6 +169,10 @@ internal static unsafe partial class Native
 
     [LibraryImport(Library)]
     [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
+    internal static partial nint jf_audio_extensions();
+
+    [LibraryImport(Library)]
+    [UnmanagedCallConv(CallConvs = new[] { typeof(CallConvCdecl) })]
     internal static partial ulong jf_monotonic_now_ns();
 
     [LibraryImport(Library)]

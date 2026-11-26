@@ -427,6 +427,13 @@ pub fn output_devices() -> Result<Vec<DeviceInfo>, CoreFfiError> {
     Ok(jf::output_devices()?.conv())
 }
 
+/// The extensions of the audio files Jellyfesh plays and its library scans, lowercase without
+/// the dot (`mp3`, `flac`, …): what file pickers and drag and drop accept.
+#[uniffi::export]
+pub fn audio_extensions() -> Vec<String> {
+    jf::audio_extensions()
+}
+
 /// The equalizer presets, in the order every app lists them. Applying one sets `Settings.eq`.
 #[uniffi::export]
 pub fn eq_presets() -> Vec<EqPreset> {

@@ -380,6 +380,11 @@ public static class JellyfeshMethods
     public static IReadOnlyList<EqPreset> EqPresets() =>
         Results.Unwrap(Native.TakeString(Native.jf_eq_presets()), JellyfeshJsonContext.Default.IReadOnlyListEqPreset)!;
 
+    /// <summary>The extensions of the audio files Jellyfesh plays and its library scans, lowercase
+    /// without the dot ("mp3", "flac", …): what file pickers and drag and drop accept.</summary>
+    public static IReadOnlyList<string> AudioExtensions() =>
+        Results.Unwrap(Native.TakeString(Native.jf_audio_extensions()), JellyfeshJsonContext.Default.IReadOnlyListString)!;
+
     /// <summary>Nanoseconds on the clock playback anchors are stamped with (for DisplayClock).</summary>
     public static ulong MonotonicNowNs() => Native.jf_monotonic_now_ns();
 

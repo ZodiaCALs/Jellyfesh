@@ -1021,6 +1021,12 @@ pub fn folder_artwork(audio: &Path) -> Option<PathBuf> {
     folder_art_among(&files)
 }
 
+/// The extensions of the audio files the library scans (and the engine
+/// plays), lowercase without the dot.
+pub fn audio_extensions() -> &'static [&'static str] {
+    tags::AUDIO_EXTENSIONS
+}
+
 pub fn thumbnail_size(size_px: u32) -> u32 {
     thumbnail::bucket(size_px)
 }

@@ -28,8 +28,8 @@ mod secrets;
 pub mod types;
 
 pub use api::{
-    CoreListener, JellyfeshCore, address_is_local, default_cache_dir, default_data_dir, download_preview,
-    eq_presets, library_version, lyrics_bar, monotonic_now_ns, output_devices,
+    CoreListener, JellyfeshCore, address_is_local, audio_extensions, default_cache_dir, default_data_dir,
+    download_preview, eq_presets, library_version, lyrics_bar, monotonic_now_ns, output_devices,
 };
 pub use error::CoreFfiError;
 pub use external::{ExternalItem, ExternalPlayer, ExternalPlayerError, ExternalState};

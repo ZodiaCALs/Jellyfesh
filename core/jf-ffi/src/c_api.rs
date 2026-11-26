@@ -624,6 +624,15 @@ pub extern "C" fn jf_output_devices() -> *mut c_char {
     into_c(envelope(guard(crate::api::output_devices, || Err(panicked()))))
 }
 
+/// `{"ok": ["mp3", "flac", …]}` (`audio_extensions`).
+#[unsafe(no_mangle)]
+pub extern "C" fn jf_audio_extensions() -> *mut c_char {
+    into_c(envelope(guard(
+        || Ok(crate::api::audio_extensions()),
+        || Err(panicked()),
+    )))
+}
+
 /// `{"ok": [EqPreset]}`.
 #[unsafe(no_mangle)]
 pub extern "C" fn jf_eq_presets() -> *mut c_char {

@@ -100,7 +100,10 @@ presets every app lists: `flat`, `bass_boost`, `vocal`, `treble`, shown as
 that draw every frame port it instead, see "Drawing-time ports"); from v0.0.8
 `address_is_local(address) -> bool` (whether a server address is on the
 local network by Android's definition; Android apps ask for
-`ACCESS_LOCAL_NETWORK` first; `core-api.md`, "The local network") and
+`ACCESS_LOCAL_NETWORK` first; `core-api.md`, "The local network"),
+`audio_extensions() -> [String]` (the extensions of the audio files Jellyfesh
+plays and its library scans, lowercase without the dot: what file pickers and
+drag and drop accept) and
 `download_preview(template) -> String` (the File Names setting's live preview,
 "Album Artist/Album/01 Title.flac").
 
@@ -358,6 +361,7 @@ void jf_core_shutdown(const JellyfeshCore *core);
 void jf_core_free(JellyfeshCore *core);                      /* shuts down if needed */
 char *jf_output_devices(void);                               /* {"ok"} or {"error"} */
 char *jf_eq_presets(void);                                   /* {"ok": [EqPreset]} */
+char *jf_audio_extensions(void);                             /* {"ok": ["mp3", "flac", ...]} */
 uint64_t jf_monotonic_now_ns(void);
 char *jf_default_data_dir(void);  char *jf_default_cache_dir(void);  char *jf_library_version(void);
 char *jf_lyrics_bar(const char *args_json);  /* {"timeline", "t_ms"} -> {"ok": LyricsBar} */
@@ -377,7 +381,8 @@ void jf_string_free(char *s);
   null). v0.0.8 adds the free functions `jf_address_is_local`
   (`{"address"}` → `{"ok": bool}`; C# `JellyfeshMethods.AddressIsLocal`) and
   `jf_download_preview` (`{"template"}` → `{"ok": "…"}`; C#
-  `JellyfeshMethods.DownloadPreview`). Results are `{"ok": <value>}` or
+  `JellyfeshMethods.DownloadPreview`), and `jf_audio_extensions` (no
+  arguments → `{"ok": ["mp3", …]}`; C# `JellyfeshMethods.AudioExtensions`). Results are `{"ok": <value>}` or
   `{"error": {"kind": "...", "message": "..."}}`; `jf_core_new` writes the
   error object to `*error_json`.
 * The handle may be used from any thread at once, but `jf_core_free` must not

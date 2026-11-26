@@ -509,6 +509,17 @@ fn stateless_v0_0_8_functions_over_json() {
         jf_ffi::download_preview(String::new()),
         "Album Artist/Album/01 Title.flac"
     );
+    let extensions: Value = serde_json::from_str(&take(jf_audio_extensions())).unwrap();
+    assert_eq!(extensions, json!({ "ok": jf_ffi::audio_extensions() }));
+    let listed = jf_ffi::audio_extensions();
+    for ext in ["mp3", "flac", "m4a", "opus", "wav"] {
+        assert!(listed.iter().any(|e| e == ext), "{ext} in {listed:?}");
+    }
+    assert!(
+        listed
+            .iter()
+            .all(|e| !e.starts_with('.') && *e == e.to_ascii_lowercase())
+    );
     for f in [jf_address_is_local, jf_download_preview] {
         // SAFETY: NULL is allowed and answered with an error.
         let null: Value = serde_json::from_str(&take(unsafe { f(ptr::null()) })).unwrap();
