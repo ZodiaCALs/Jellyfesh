@@ -474,7 +474,10 @@ pub fn choose_folder() {
 pub fn open_files() {
     let audio = gtk::FileFilter::new();
     audio.set_name(Some(&tr("Audio Files")));
-    audio.add_mime_type("audio/*");
+    // The files Jellyfesh plays, the same in every app (the core's list).
+    for extension in jf_core::audio_extensions() {
+        audio.add_suffix(&extension);
+    }
     let filters = gtk::gio::ListStore::new::<gtk::FileFilter>();
     filters.append(&audio);
     let dialog = gtk::FileDialog::builder()
