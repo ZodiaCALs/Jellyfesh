@@ -333,7 +333,7 @@ fn make(dir: &Path, ctx: Option<&Ctx>, url: &str, size_px: u32) -> Result<PathBu
 }
 
 /// Marks a cached picture as used now, at most once in [`TOUCH_AFTER`].
-fn touch(path: &Path) {
+pub(crate) fn touch(path: &Path) {
     let now = SystemTime::now();
     let stale = std::fs::metadata(path)
         .and_then(|m| m.modified())
