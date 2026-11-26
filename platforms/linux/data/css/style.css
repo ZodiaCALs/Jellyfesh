@@ -273,6 +273,24 @@ window.jf-window.phone .search-tabs-column {
   padding: 0 {{space.s4}} {{space.s3}};
 }
 
+/* Downloads (ADR-0025): why downloads wait, In Progress, and each album's
+ * heading with Remove Download…. */
+.downloads-waiting {
+  color: {{ink.ink-70}};
+}
+
+.downloads-album-head {
+  margin: 0 {{space.s1}};
+}
+
+glyph.downloaded-mark {
+  color: {{accent.accent-text}};
+}
+
+row.failed .subtitle {
+  color: {{semantic.danger}};
+}
+
 /* Settings › About: the keyboard shortcuts as key caps beside what they
  * do, and who made Jellyfesh. */
 .shortcuts-list {

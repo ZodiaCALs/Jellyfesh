@@ -19,6 +19,7 @@ pub mod comments;
 pub mod contrast;
 pub mod details;
 pub mod discover;
+pub mod downloads;
 pub mod easing;
 pub mod eq;
 pub mod format;

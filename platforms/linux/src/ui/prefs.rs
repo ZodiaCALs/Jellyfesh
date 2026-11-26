@@ -34,7 +34,7 @@ pub fn section(name: &str) -> gtk::Box {
     b
 }
 
-fn group(title: &str, description: Option<&str>) -> adw::PreferencesGroup {
+pub(crate) fn group(title: &str, description: Option<&str>) -> adw::PreferencesGroup {
     let g = adw::PreferencesGroup::builder().title(title).build();
     if let Some(d) = description {
         g.set_description(Some(d));
@@ -43,7 +43,7 @@ fn group(title: &str, description: Option<&str>) -> adw::PreferencesGroup {
 }
 
 /// A combo row over fixed choices.
-fn combo(title: &str, subtitle: Option<&str>, choices: &[String]) -> adw::ComboRow {
+pub(crate) fn combo(title: &str, subtitle: Option<&str>, choices: &[String]) -> adw::ComboRow {
     let names: Vec<&str> = choices.iter().map(String::as_str).collect();
     let row = adw::ComboRow::builder()
         .title(title)
@@ -57,7 +57,7 @@ fn combo(title: &str, subtitle: Option<&str>, choices: &[String]) -> adw::ComboR
 
 /// Runs `apply` when the settings slice changes while `widget` exists, and
 /// once now; `guard` is set meanwhile so change handlers stay quiet.
-fn follow_settings(
+pub(crate) fn follow_settings(
     widget: &impl IsA<gtk::Widget>,
     guard: Rc<Cell<bool>>,
     apply: impl Fn(&Settings) + 'static,

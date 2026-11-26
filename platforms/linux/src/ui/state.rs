@@ -18,9 +18,9 @@ use adw::prelude::*;
 use gtk::glib;
 use jf_core::{
     AiLyricsSnapshot, AuthUpdate, BrowseUpdate, Command, CommandId, CommentsPage, DetailsPage,
-    DevicesSnapshot, DiscoverPage, DisplayClock, Event, LookSnapshot, LyricsSnapshot, NowPlaying,
-    PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus, SearchPage,
-    SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot,
+    DevicesSnapshot, DiscoverPage, DisplayClock, DownloadsSnapshot, Event, LookSnapshot, LyricsSnapshot,
+    NowPlaying, PlaybackSnapshot, ProSnapshot, QueueSnapshot, RemoteSnapshot, RepeatMode, ScanStatus,
+    SearchPage, SearchUpdate, Settings, Snapshot, SourcesSnapshot, Status, ThemeSnapshot, UpdateSnapshot,
     monotonic_now_ns,
 };
 
@@ -69,6 +69,8 @@ pub enum Change<'a> {
     Pro,
     /// The update check changed.
     Update,
+    /// The downloads changed (ADR-0025).
+    Downloads,
     /// The window switched between the phone layout and the sidebar panel.
     Layout,
 }
@@ -97,6 +99,8 @@ pub struct App {
     pub look: RefCell<Arc<LookSnapshot>>,
     pub pro: RefCell<Arc<ProSnapshot>>,
     pub update: RefCell<Arc<UpdateSnapshot>>,
+    /// The `Downloads` slice (ADR-0025).
+    pub downloads: RefCell<Arc<DownloadsSnapshot>>,
     pub muted: Cell<bool>,
     pub library_revision: Cell<u64>,
     pub scanning: Cell<bool>,
@@ -151,6 +155,7 @@ struct Dirty {
     look: bool,
     pro: bool,
     update: bool,
+    downloads: bool,
 }
 
 impl App {
@@ -179,6 +184,7 @@ impl App {
             look: RefCell::new(snapshot.look),
             pro: RefCell::new(snapshot.pro),
             update: RefCell::new(snapshot.update),
+            downloads: RefCell::new(snapshot.downloads),
             muted: Cell::new(snapshot.muted),
             library_revision: Cell::new(snapshot.library_revision),
             scanning: Cell::new(snapshot.scanning),
@@ -289,6 +295,7 @@ impl App {
             look,
             pro,
             update,
+            downloads,
         } = dirty;
         if settings {
             self.emit(&Change::Settings);
@@ -334,6 +341,9 @@ impl App {
         }
         if update {
             self.emit(&Change::Update);
+        }
+        if downloads {
+            self.emit(&Change::Downloads);
         }
         if playback || now || lyrics || remote {
             self.scheduler.refresh();
@@ -436,6 +446,10 @@ impl App {
                 *self.update.borrow_mut() = u;
                 dirty.update = true;
             }
+            Event::Downloads(d) => {
+                *self.downloads.borrow_mut() = d;
+                dirty.downloads = true;
+            }
             Event::Details(page) => self.emit(&Change::Details(&page)),
             Event::Comments(page) => self.emit(&Change::Comments(&page)),
             Event::Discover(page) => self.emit(&Change::Discover(&page)),
@@ -443,7 +457,7 @@ impl App {
             Event::Artwork(ready) => self.thumbs.artwork_ready(&ready),
             // v0.0.8 (ADR-0024, ADR-0025): shown by the pages that follow.
             Event::SearchPage(page) => self.emit(&Change::SearchPage(&page)),
-            Event::SourceLibrary(_) | Event::SourceLibraryPage(_) | Event::Downloads(_) => {}
+            Event::SourceLibrary(_) | Event::SourceLibraryPage(_) => {}
         }
         // Muted is part of the snapshot; it only changes with SetMuted, which
         // republishes the playback slice.

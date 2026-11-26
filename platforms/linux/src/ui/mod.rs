@@ -10,6 +10,7 @@ mod desktoplyrics;
 mod details;
 mod devices;
 mod dnd;
+mod downloads_prefs;
 mod extensions;
 mod fields;
 pub mod i18n;

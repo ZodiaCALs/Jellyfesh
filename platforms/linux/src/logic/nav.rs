@@ -206,10 +206,11 @@ pub fn tabs(places: &[Place]) -> Vec<Tab> {
 }
 
 /// Settings' sections, in every app's order (docs/ui.md, "Settings").
-pub const SETTINGS_SECTIONS: [&str; 6] = [
+pub const SETTINGS_SECTIONS: [&str; 7] = [
     "appearance",
     "playback",
     "library",
+    "downloads",
     "sources",
     "extensions",
     "about",
@@ -344,6 +345,7 @@ mod tests {
                 "appearance",
                 "playback",
                 "library",
+                "downloads",
                 "sources",
                 "extensions",
                 "about"
