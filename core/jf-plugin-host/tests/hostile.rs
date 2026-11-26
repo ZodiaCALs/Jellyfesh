@@ -74,9 +74,20 @@ fn endless_waiting_hits_the_wall_clock_deadline() {
 }
 
 /// Allocating past 64 MiB traps, at once or by growing; the plugin restarts.
+///
+/// The memory limit is the usual one, but the CPU and wall budgets are wide:
+/// guest time is wall time less time in imports, so on a loaded machine the
+/// 200 ms CPU budget (or the 3 s deadline) could stop the growing bomb before
+/// it reaches 64 MiB. Here only memory can stop it.
 #[test]
 fn memory_bombs_hit_the_memory_limit() {
-    let env = Env::new();
+    let env = Env::with_limits(Limits {
+        cpu: Duration::from_secs(10),
+        cpu_long: Duration::from_secs(10),
+        wall: Duration::from_secs(20),
+        ..test_limits()
+    });
+    assert_eq!(test_limits().memory, 64 * 1024 * 1024, "the usual memory limit");
     let manifest = manifest(BOMB, &["search", "browse", "recommendations"], &[], &[], 5);
     env.install("memory-bomb", &manifest, BOMB, None);
     assert_eq!(
