@@ -14,11 +14,12 @@
   <a href="https://github.com/ZodiaCALs/Jellyfesh/actions/workflows/web.yml"><img src="https://github.com/ZodiaCALs/Jellyfesh/actions/workflows/web.yml/badge.svg?branch=main" alt="Jellyfesh Web status"></a>
 </p>
 
-> **Public Beta: v0.0.7 "Verse".** AI Lyrics, Customize and Jellyfesh Pro
-> (free during the beta), a Discover page for every source, and a Windows
-> app that starts. Jellyfesh is ready for daily listening and still
-> changing quickly: read the [release notes](docs/releases/v0.0.7.md) for
-> what is new, what has been tested and what is known not to work yet.
+> **Public Beta: v0.0.8 "Chorus".** One layout in every app, sound
+> quality in the player bar, a mini player, search by source, your
+> sources' likes and playlists, and downloads from your own servers.
+> Jellyfesh is ready for daily listening and still changing quickly: read
+> the [release notes](docs/releases/v0.0.8.md) for what is new, what has
+> been tested and what is known not to work yet.
 
 ## Highlights
 
@@ -39,8 +40,13 @@
   Subsonic servers; QQ Music, Spotify and NetEase Cloud Music through
   official plugins; Apple Music on macOS. Every source opens on its own
   Discover page; Get Info shows the sound's real quality; your library and
-  servers answer one search together; each service keeps its own view
-  where its terms ask for it.
+  servers answer one search together, with a tab for each source; your
+  sources' likes and playlists sit beside your own; each service keeps its
+  own view where its terms ask for it.
+- **Offline and in your control.** Download albums and playlists from your
+  own Jellyfin or Navidrome server to play offline, with the folder, file
+  names, quality and tags you choose. Pick the streaming quality from the
+  player bar, and keep a mini player above your other windows.
 - **Luminous design.** The colour of the cover fills the room: an aurora at
   the artwork's hue, glass where it helps, and a Now Playing stage with
   large lyrics and every control in one floating dock. Light and dark, with
@@ -52,19 +58,19 @@
   Every online source is a sandboxed WebAssembly plugin that can reach only
   the servers its manifest names, within strict CPU, memory and time
   limits; sign-ins are kept in your system's keychain.
-- **One app, five platforms.** The same places, words and steps in every
-  app, each with its platform's own look, over one Rust core
-  ([`docs/ui.md`](docs/ui.md)). English, Simplified Chinese, Traditional
-  Chinese and Japanese.
+- **One app, one layout, five platforms.** The same places, words, steps
+  and layout in every app, Jellyfesh Web's, each drawn natively over one
+  Rust core ([`docs/ui.md`](docs/ui.md), ADR-0023). English, Simplified
+  Chinese, Traditional Chinese and Japanese.
 
 ## Platforms
 
-| App | Requirements | Status in v0.0.7 |
+| App | Requirements | Status in v0.0.8 |
 | --- | --- | --- |
 | **macOS** (SwiftUI) | macOS 14.2 or later, Apple silicon or Intel | Beta. Built and tested by CI; not yet signed or notarized. |
 | **Windows** (WinUI 3, .NET 10) | Windows 10 version 1809 or later, x64 or Arm64 | Beta. One installer; built, tested and started by CI on every change; not yet signed. |
 | **Linux** (GTK 4, libadwaita) | GTK 4.14 and libadwaita 1.5 or later (Ubuntu 24.04, Debian 13, Fedora 40 and later) | Beta. Flatpak (with its GNOME runtime from Flathub); `platforms/linux/packaging/` also makes a tarball. |
-| **Android** (Jetpack Compose) | Android 8 or later | Beta. Built and tested by CI. |
+| **Android** (Jetpack Compose) | Android 8 or later | Beta. Built and tested by CI; asks for Local Network access on Android 17. |
 | **Jellyfesh Web** (Svelte, WebAssembly) | A current Chromium-based browser (others untested) | Beta. Online at the website's `/app/` and as a static folder to host yourself. |
 
 The macOS, Windows and Android apps are built and tested by continuous
