@@ -46,6 +46,11 @@ pub fn page() -> adw::NavigationPage {
     column.append(&title);
     column.append(&buttons);
     column.append(&list);
+    // The sources' playlists, one section per signed-in source (ADR-0024).
+    let sources = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    sources.add_css_class("source-sections");
+    sources.set_visible(false);
+    column.append(&sources);
     let clamp = MaxWidth::new(&column, 1000);
     let scroll = scroller(&clamp);
     let stack = gtk::Stack::new();
@@ -73,15 +78,19 @@ pub fn page() -> adw::NavigationPage {
         let list = list.downgrade();
         let stack = stack.downgrade();
         let error = error.downgrade();
+        let sources = sources.downgrade();
         move || {
-            let (list, stack, error) = (list.clone(), stack.clone(), error.clone());
+            let (list, stack, error, sources) = (list.clone(), stack.clone(), error.clone(), sources.clone());
             spawn(async move {
                 let result = app()
                     .query(|core| core.playlists().map_err(|e| e.to_string()))
                     .await;
-                let (Some(list), Some(stack), Some(error)) =
-                    (list.upgrade(), stack.upgrade(), error.upgrade())
-                else {
+                let (Some(list), Some(stack), Some(error), Some(sources)) = (
+                    list.upgrade(),
+                    stack.upgrade(),
+                    error.upgrade(),
+                    sources.upgrade(),
+                ) else {
                     return;
                 };
                 match result {
@@ -94,7 +103,10 @@ pub fn page() -> adw::NavigationPage {
                             row.bind(&Item::new(Some(convert::playlist(p))));
                             list.append(&gtk::ListBoxRow::builder().child(&row).build());
                         }
-                        stack.set_visible_child_name(if playlists.is_empty() { "empty" } else { "list" });
+                        // "No Playlists Yet" only when the sources have none either.
+                        list.set_visible(!playlists.is_empty());
+                        let empty = playlists.is_empty() && !sources.is_visible();
+                        stack.set_visible_child_name(if empty { "empty" } else { "list" });
                     }
                     Some(Err(e)) => {
                         error.set_description(Some(&e));
@@ -105,13 +117,37 @@ pub fn page() -> adw::NavigationPage {
             });
         }
     };
+    // The sources' playlists, after Jellyfesh's.
+    let show_sources = {
+        let (sources, list, stack) = (sources.downgrade(), list.downgrade(), stack.downgrade());
+        move || {
+            let (Some(sources), Some(list), Some(stack)) =
+                (sources.upgrade(), list.upgrade(), stack.upgrade())
+            else {
+                return;
+            };
+            let library = app().source_library.borrow().clone();
+            crate::ui::pages::sourcelib::fill(&sources, &crate::logic::sourcelib::playlists(&library));
+            if sources.is_visible() && stack.visible_child_name().as_deref() == Some("empty") {
+                list.set_visible(false);
+                stack.set_visible_child_name("list");
+            }
+        }
+    };
+    show_sources();
     refresh();
     let r = refresh.clone();
-    page.connect_showing(move |_| r());
-    app().listen_for(&page, move |change| {
-        if matches!(change, Change::Library) {
+    page.connect_showing(move |_| {
+        r();
+        crate::ui::pages::sourcelib::page_shown("playlists");
+    });
+    app().listen_for(&page, move |change| match change {
+        Change::Library => refresh(),
+        Change::SourceLibrary => {
+            show_sources();
             refresh();
         }
+        _ => {}
     });
     page
 }

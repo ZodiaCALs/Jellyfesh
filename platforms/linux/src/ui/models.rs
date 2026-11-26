@@ -296,11 +296,3 @@ impl PagedModel {
             .and_then(Item::data)
     }
 }
-
-/// A fixed list of items.
-pub fn store(rows: impl IntoIterator<Item = ItemData>) -> gio::ListStore {
-    let store = gio::ListStore::new::<Item>();
-    let items: Vec<Item> = rows.into_iter().map(|d| Item::new(Some(d))).collect();
-    store.extend_from_slice(&items);
-    store
-}

@@ -110,6 +110,45 @@ pub fn more_menu_for(data: &ItemData) -> gio::Menu {
     build_menu(data, true)
 }
 
+/// Save as Playlist…: a source's playlist, and the name it starts with.
+#[derive(Serialize, Deserialize)]
+struct SaveCopyArgs {
+    plugin: String,
+    id: String,
+    name: String,
+}
+
+/// Save as Playlist… (ADR-0024 §3): asks for the name (the source's to start
+/// with), then makes a Jellyfesh playlist of the source playlist's songs and
+/// opens it once the core has.
+fn save_playlist_copy(args: SaveCopyArgs) {
+    spawn(async move {
+        let a = app();
+        let dialog = adw::AlertDialog::new(Some(&tr("Save as Playlist")), None);
+        dialog.add_response("cancel", &tr("Cancel"));
+        dialog.add_response("save", &tr("Save"));
+        dialog.set_response_appearance("save", adw::ResponseAppearance::Suggested);
+        dialog.set_default_response(Some("save"));
+        dialog.set_close_response("cancel");
+        let name = gtk::Entry::builder()
+            .text(&args.name)
+            .placeholder_text(tr("Name"))
+            .activates_default(true)
+            .build();
+        dialog.set_extra_child(Some(&name));
+        let parent = a.window.borrow().upgrade();
+        if dialog.choose_future(parent.as_ref()).await == "save" {
+            let chosen = name.text().trim().to_owned();
+            let request = a.send(Command::SavePlaylistCopy {
+                plugin: args.plugin,
+                id: args.id,
+                name: if chosen.is_empty() { args.name } else { chosen },
+            });
+            crate::ui::pages::playlists::open_when_created(request);
+        }
+    });
+}
+
 /// The item's link and the name of the service it opens in, for Open in
 /// {Service}.
 pub fn link_of(data: &ItemData) -> Option<(String, String)> {
@@ -249,6 +288,27 @@ fn build_menu(data: &ItemData, own_page: bool) -> gio::Menu {
             &open_in_label(&service),
             "win.open-link",
             link.to_variant(),
+        );
+    }
+    // Save as Playlist… on a source playlist's own page (ADR-0024 §3), while
+    // its service lists its songs.
+    if own_page
+        && let Some(s) = data.source.as_deref()
+        && s.kind == jf_core::ItemKind::Playlist
+        && s.source != crate::logic::search::LIBRARY
+        && crate::logic::sourcelib::playlist_facts(&app().source_library.borrow(), &s.source, &s.id)
+            .is_none_or(|(_, listed)| listed)
+    {
+        let args = SaveCopyArgs {
+            plugin: s.source.clone(),
+            id: s.id.clone(),
+            name: s.title.clone(),
+        };
+        entry(
+            &more,
+            &tr("Save as Playlist…"),
+            "win.save-playlist-copy",
+            json_target(&args),
         );
     }
     if data.kind == Kind::Playlist {
@@ -460,6 +520,11 @@ pub fn install(window: &adw::ApplicationWindow) {
     window.add_action(&string_action("add-to-playlist", |json| {
         if let Ok(c) = serde_json::from_str::<Collection>(json) {
             add_to_playlist(c);
+        }
+    }));
+    window.add_action(&string_action("save-playlist-copy", |json| {
+        if let Ok(args) = serde_json::from_str::<SaveCopyArgs>(json) {
+            save_playlist_copy(args);
         }
     }));
     window.add_action(&string_action("download", |json| {

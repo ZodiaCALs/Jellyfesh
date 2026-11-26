@@ -9,6 +9,7 @@ pub mod library;
 pub mod playlists;
 pub mod search;
 pub mod settings;
+pub mod sourcelib;
 pub mod sources;
 
 use std::cell::Cell;

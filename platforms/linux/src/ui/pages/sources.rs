@@ -478,6 +478,19 @@ fn container_header(item: &SourceItem, facts: browse::PageFacts) -> Header {
     header.more.set_menu_model(Some(&menu));
     header.more.set_visible(has_items);
     header.meta.set_visible(false);
+    // A playlist whose songs its service lists only there (a Spotify
+    // playlist the person follows) says so; Play and Shuffle start it there.
+    if item.kind == ItemKind::Playlist
+        && crate::logic::sourcelib::playlist_facts(&app().source_library.borrow(), &item.source, &item.id)
+            .is_some_and(|(_, listed)| !listed)
+    {
+        let service = app().source_name(&item.source);
+        header.meta.set_label(&trf(
+            "{service} lists this playlist's songs only in {service}.",
+            &[("service", &service)],
+        ));
+        header.meta.set_visible(true);
+    }
     header
 }
 

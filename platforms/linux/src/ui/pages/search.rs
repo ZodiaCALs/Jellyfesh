@@ -470,7 +470,7 @@ fn error_line(into: &gtk::Box, error: Option<&str>) {
 
 /// One kind of results: songs as rows, albums as cards, artists and
 /// playlists as rows that open their pages.
-fn render_group(into: &gtk::Box, group: &SearchGroup, extra: Option<&ExtraMap>) {
+pub(crate) fn render_group(into: &gtk::Box, group: &SearchGroup, extra: Option<&ExtraMap>) {
     if group.items.is_empty() {
         return;
     }
