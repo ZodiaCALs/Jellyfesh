@@ -53,10 +53,28 @@ fn catalog_server(service: Service) -> TestServer {
         let id = request.query("id").unwrap_or_default();
         match request.path() {
             "/search" => {
-                // `{base}` in a hit stands for this server.
-                let items = json!(service.hits).to_string().replace("{base}", &base(request));
-                Response::new(200, format!(r#"{{"items": {items}}}"#))
-                    .header("content-type", "application/json")
+                // One kind when asked, a page of `limit` from `cursor`; `{base}` in
+                // a hit stands for this server.
+                let kind = request.query("kind").unwrap_or_default();
+                let hits: Vec<&serde_json::Value> = service
+                    .hits
+                    .iter()
+                    .filter(|h| {
+                        kind.is_empty() || h.get("kind").and_then(|k| k.as_str()).unwrap_or("track") == kind
+                    })
+                    .collect();
+                let start: usize = request
+                    .query("cursor")
+                    .and_then(|c| c.parse().ok())
+                    .unwrap_or(0)
+                    .min(hits.len());
+                let limit: usize = request.query("limit").and_then(|l| l.parse().ok()).unwrap_or(50);
+                let end = (start + limit).min(hits.len());
+                let next = (end < hits.len()).then(|| end.to_string());
+                let body = json!({ "items": hits[start..end], "next": next, "total": hits.len() })
+                    .to_string()
+                    .replace("{base}", &base(request));
+                Response::new(200, body).header("content-type", "application/json")
             }
             "/browse" => {
                 let node = request.query("node").unwrap_or_default();
@@ -379,8 +397,8 @@ fn unified_search_merges_the_library_with_the_sources() {
     assert!(late.is_empty(), "{late:?}");
     assert_eq!(
         server.count("/search"),
-        asked + 1,
-        "only the newer search reached the plugin"
+        asked + 4,
+        "only the newer search reached the plugin (once per kind)"
     );
 
     let error = env.fails(Command::Search {
@@ -971,6 +989,56 @@ fn the_plugins_own_quality_carries_over_once() {
     );
 }
 
+#[test]
+fn each_kind_is_searched_on_its_own_with_show_more() {
+    let env = Env::new();
+    let mut hits: Vec<serde_json::Value> = (1..=25)
+        .map(|n| hit(&format!("s{n}"), &format!("Song {n}"), "A", 1_000))
+        .collect();
+    hits.push(json!({ "id": "a1", "kind": "album", "title": "Album One", "artist": "A" }));
+    let server = catalog_server(Service {
+        hits,
+        ..Service::default()
+    });
+    env.plugin("catalog", &catalog_manifest(), CATALOG, &server.url());
+    let results = searched(&env, "song", SearchScope::Plugin { id: CATALOG.into() });
+    let section = results.iter().rev().find(|u| u.source == CATALOG).unwrap();
+    let group = |kind: ItemKind| section.groups.iter().find(|g| g.kind == kind).unwrap();
+    let songs = group(ItemKind::Track);
+    assert_eq!(
+        (songs.items.len(), songs.next.as_deref(), songs.total),
+        (20, Some("20"), Some(25)),
+        "20 songs first, with Show More"
+    );
+    let albums = group(ItemKind::Album);
+    assert_eq!((albums.items.len(), albums.next.as_deref()), (1, None));
+    let kinds: Vec<String> = server
+        .with_path("/search")
+        .iter()
+        .filter_map(|r| r.query("kind"))
+        .collect();
+    for kind in ["track", "album", "artist", "playlist"] {
+        assert!(
+            kinds.iter().any(|k| k == kind),
+            "{kind} asked on its own: {kinds:?}"
+        );
+    }
+
+    let events = env.run(
+        Command::SearchMore {
+            plugin: CATALOG.into(),
+            kind: ItemKind::Track,
+            cursor: "20".into(),
+        },
+        |e| matches!(e, Event::SearchPage(_)),
+    );
+    let Some(Event::SearchPage(page)) = events.last() else {
+        unreachable!()
+    };
+    assert_eq!((page.items.len(), page.next.as_deref()), (5, None));
+    assert!(page.items.iter().all(|i| i.kind == ItemKind::Track));
+}
+
 fn echo_server() -> TestServer {
     TestServer::start(|request| match request.path() {
         "/login"
@@ -1409,12 +1477,11 @@ fn a_plugin_the_host_turns_off_shows_in_the_sources_slice() {
     let env = Env::new();
     let server = catalog_server(Service::default());
     env.plugin("spin", &spin_manifest(), SPIN, &server.url());
-    // Each search breaks the CPU limit; the third in a row turns it off.
-    for n in 1..=3 {
-        let updates = searched(&env, "q", SearchScope::Plugin { id: SPIN.into() });
-        let error = updates.last().unwrap().error.clone().unwrap_or_default();
-        assert!(error.contains("CPU"), "search {n}: {error}");
-    }
+    // Every call breaks the CPU limit, and a search asks for each kind on its
+    // own: the third call in a row, in the first search, turns it off.
+    let updates = searched(&env, "q", SearchScope::Plugin { id: SPIN.into() });
+    let error = updates.last().unwrap().error.clone().unwrap_or_default();
+    assert!(error.contains("CPU"), "{error}");
     // The slice may have gone out while the search was waited for: the
     // snapshot has it then, an event otherwise.
     if env.summary(SPIN).enabled {

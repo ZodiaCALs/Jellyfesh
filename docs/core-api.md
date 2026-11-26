@@ -649,6 +649,10 @@ Every `SearchUpdate` is one source's section: `items` (the All tab's rows),
   own tab ("Results from Spotify").
 * `groups`: the source's own results kind by kind (`SearchGroup { kind,
   items, next, total }`: Songs, Albums, Artists, Playlists), for its tab.
+  Each kind is asked of the source on its own, 20 at first, so every group
+  has its own `next` and `total`; the section comes once all its kinds have
+  answered (or with what came by the deadline), and a kind that fails leaves
+  the others.
   `next` is Show More's cursor: `SearchMore { plugin: source, kind, cursor }`
   answers with `Event::SearchPage(SearchPage { request, query, source, kind,
   items, next, error })`; add `items` to the group and keep `next`. Show More
@@ -715,8 +719,8 @@ link-local fe80::/10 and unique local fc00::/7; multicast and broadcast;
 
 v0.0.8 (in progress): the types and commands of the sections above are the
 contract. Working now: the settings, `SetNetworkState`, `Collection::Source`
-with its kind, search sections (`merged`, `groups`; per-kind cursors and
-20-per-kind queries come next), `SearchMore`, the quality menu's fields and the
+with its kind, search sections (`merged`, `groups` with
+per-kind cursors from 20-per-kind queries), `SearchMore`, the quality menu's fields and the
 level asked of sources, the local-network flag and the downloads folder.
 `RefreshSourceLibrary` lists the sources without their lists yet;
 `SourceLibraryMore`, `SavePlaylistCopy` and the download commands answer

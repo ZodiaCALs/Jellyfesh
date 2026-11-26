@@ -54,6 +54,8 @@ struct Hit {
 struct Page {
     items: Vec<Hit>,
     next: Option<String>,
+    #[serde(default)]
+    total: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -113,10 +115,12 @@ fn item(hit: Hit) -> Item {
 
 fn page(answer: Page) -> ItemPage {
     let items = answer.items.into_iter().map(item).collect();
-    match answer.next {
+    let mut page = match answer.next {
         Some(next) => ItemPage::with_next(items, next),
         None => ItemPage::new(items),
-    }
+    };
+    page.total = answer.total;
+    page
 }
 
 impl Plugin for Catalog {
@@ -136,9 +140,17 @@ impl Plugin for Catalog {
         Ok(())
     }
 
-    fn search(query: String, _filters: SearchFilters, request: PageRequest) -> Result<ItemPage> {
+    fn search(query: String, filters: SearchFilters, request: PageRequest) -> Result<ItemPage> {
+        let kind = filters.kinds.first().copied().map(kind_name).unwrap_or_default();
+        let cursor = request.cursor.unwrap_or_default();
+        let limit = request.limit.to_string();
         let answer: Page = http::Request::get(format!("{}/search", server()?))
-            .query(&[("q", &query), ("limit", &request.limit.to_string())])
+            .query(&[
+                ("q", query.as_str()),
+                ("kind", kind),
+                ("cursor", cursor.as_str()),
+                ("limit", limit.as_str()),
+            ])
             .send_json()?;
         Ok(page(answer))
     }
