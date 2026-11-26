@@ -79,6 +79,31 @@ pub(crate) fn format(
     }
 }
 
+/// What the engine decoded, with a source's hints filling in what it does
+/// not say (ADR-0026 §1: a stream's codec and nominal bitrate).
+pub(crate) fn with_hints(
+    decoded: AudioFormat,
+    codec: Option<&str>,
+    bitrate_kbps: Option<u32>,
+) -> AudioFormat {
+    let codec = decoded
+        .codec
+        .clone()
+        .or_else(|| codec.map(|c| c.trim().to_ascii_lowercase()))
+        .filter(|c| !c.is_empty());
+    let bitrate_kbps = decoded.bitrate_kbps.or(bitrate_kbps.filter(|&k| k > 0));
+    if codec == decoded.codec && bitrate_kbps == decoded.bitrate_kbps {
+        return decoded;
+    }
+    format(
+        codec.as_deref(),
+        decoded.sample_rate_hz,
+        decoded.bit_depth,
+        decoded.channels,
+        bitrate_kbps,
+    )
+}
+
 /// What the engine decoded, as an audio format with its quality label.
 pub(crate) fn engine_format(info: &jf_engine::TrackInfo) -> AudioFormat {
     // Symphonia names PCM by its sample layout: pcm_s16le, pcm_f32le, ...
@@ -416,6 +441,25 @@ pub(crate) fn no_comments(request: CommandId, item: ItemRef) -> CommentsPage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_sources_hints_fill_in_what_the_decoder_does_not_say() {
+        let decoded = format(Some("mp3"), Some(44_100), None, Some(2), None);
+        let filled = with_hints(decoded, Some("mp3"), Some(320));
+        assert_eq!(filled.bitrate_kbps, Some(320));
+        assert_eq!(filled.quality, Some(QualityLabel::High));
+        let measured = format(Some("mp3"), Some(44_100), None, Some(2), Some(318));
+        assert_eq!(
+            with_hints(measured.clone(), Some("mp3"), Some(320)),
+            measured,
+            "what the decoder says wins"
+        );
+        let unnamed = format(None, Some(48_000), None, Some(2), None);
+        assert_eq!(
+            with_hints(unnamed, Some(" Opus"), Some(160)).codec.as_deref(),
+            Some("opus")
+        );
+    }
 
     #[test]
     fn quality_labels_follow_the_rules() {

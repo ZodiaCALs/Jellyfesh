@@ -54,6 +54,8 @@ const WATCH_DEBOUNCE: Duration = Duration::from_secs(2);
 const DECLINED_BUNDLED_KEY: &str = "uninstalled_bundled_plugins";
 /// The settings key of the Jellyfesh Pro licence key the person entered.
 const LICENCE_KEY: &str = "pro_licence_key";
+/// The plugins' own quality settings were carried over (ADR-0026 §2).
+const QUALITY_CARRIED_KEY: &str = "quality_carried_over";
 /// How long the appearance plugin may take to give its look.
 const LOOK_WAIT: Duration = Duration::from_secs(25);
 /// Longest the core waits at shutdown for installs, uninstalls and logouts in flight (a logout
@@ -241,6 +243,9 @@ pub(crate) struct Actor {
     /// its request and its queue entries so far. It stops growing once none
     /// of them is queued (the queue was replaced).
     growing: Option<(CommandId, Vec<u64>)>,
+    /// The playing source song reopened at a new streaming level: its start
+    /// is the same listen going on.
+    reopening: Option<u64>,
 }
 
 /// The network the platform reports.
@@ -467,6 +472,31 @@ impl Actor {
             // Store builds keep community plugins off (ADR-0021 §4).
             settings.allow_community_plugins = false;
         }
+        // ADR-0026 §2: the plugins' own quality settings went in v0.0.8. Once,
+        // the level they agreed on becomes the app's, read before the bundled
+        // plugins' new versions drop them from their stored settings.
+        if config.restore_session
+            && config.persist_session
+            && let Some(store) = &store
+            && !store
+                .setting::<bool>(QUALITY_CARRIED_KEY)
+                .ok()
+                .flatten()
+                .unwrap_or(false)
+        {
+            if settings.streaming_quality == StreamingQuality::Auto
+                && let Some(level) = crate::quality::carried_over(&config.data_dir.join("plugins"))
+            {
+                tracing::info!(?level, "the plugins' streaming quality is now the app's");
+                settings.streaming_quality = level;
+                if let Err(e) = store.set_setting("settings", &settings) {
+                    tracing::warn!("could not save the carried-over streaming quality: {e}");
+                }
+            }
+            if let Err(e) = store.set_setting(QUALITY_CARRIED_KEY, &true) {
+                tracing::warn!("could not note the carried-over streaming quality: {e}");
+            }
+        }
         let (eq, rg) = (
             settings.eq.clone(),
             (settings.replaygain_mode, settings.preamp_db),
@@ -576,7 +606,9 @@ impl Actor {
             source_library_version: 0,
             downloads_version: 0,
             growing: None,
+            reopening: None,
         };
+        actor.sources.set_level(actor.streaming_level());
         let revision = actor.library.revision().unwrap_or(0);
         actor.library_revision = revision;
         // A fixed hue colours the app before anything plays.
@@ -1120,6 +1152,8 @@ impl Actor {
             Command::SetNetworkState { online, metered } => {
                 self.network = Network { online, metered };
                 self.publish_downloads();
+                // Auto follows the network from the next song.
+                self.update_streaming_level(false);
             }
             Command::SearchMore { plugin, kind, cursor } => {
                 self.sources.search_more(id, plugin, kind, cursor)?;
@@ -1259,6 +1293,55 @@ impl Actor {
             shuffle,
         };
         self.start_remote(plugin, op)
+    }
+
+    // ---- streaming quality (ADR-0026) ------------------------------------
+
+    /// The level streams are asked for: the setting, Auto resolved for the
+    /// network.
+    fn streaming_level(&self) -> StreamingQuality {
+        crate::quality::streaming_level(self.settings.streaming_quality, self.network.metered)
+    }
+
+    /// Passes the level on to the sources: the next song is asked for at it
+    /// (resolved ahead again for a gapless join). When the person changed the
+    /// setting (`reopen`), the playing source song also reopens where it is.
+    fn update_streaming_level(&mut self, reopen: bool) {
+        if !self.sources.set_level(self.streaming_level()) {
+            return;
+        }
+        self.rearm();
+        if reopen {
+            self.reopen_for_level();
+        }
+    }
+
+    /// Reopens the playing source song where it is, so a new level applies
+    /// at once (ADR-0026 §1); the listen goes on (no new play or history
+    /// entry). A song still waiting for its stream is asked for again when
+    /// that arrives; a paused one keeps its stream until the next song.
+    fn reopen_for_level(&mut self) {
+        if self.remote.is_some() || self.status != Status::Playing || self.pending_start.is_some() {
+            return;
+        }
+        let Some(item) = self.shared.read_queue().current() else {
+            return;
+        };
+        if !matches!(item.track, TrackRef::Source(_)) {
+            return;
+        }
+        let position_ms = u64::try_from(self.position_us() / 1_000).unwrap_or(0);
+        let play = self.play.take();
+        self.resume_at = Some((item.uid, position_ms));
+        self.reopening = Some(item.uid);
+        let started = self.start_current();
+        self.play = play;
+        if let Err(e) = started {
+            self.shared.emit(Event::Error {
+                message: e.to_string(),
+            });
+            self.stop_playback(Status::Stopped);
+        }
     }
 
     /// Pauses local playback and starts a session with `first`.
@@ -1423,6 +1506,7 @@ impl Actor {
         let hue_changed = settings.hue_source != self.settings.hue_source;
         let community_changed = settings.allow_community_plugins != self.settings.allow_community_plugins;
         let updates_changed = settings.check_for_updates != self.settings.check_for_updates;
+        let quality_changed = settings.streaming_quality != self.settings.streaming_quality;
         let switch_output = devices_changed
             && matches!(self.config.output, OutputKind::Device { name: None })
             && self.engine.is_some();
@@ -1438,6 +1522,9 @@ impl Actor {
         let snapshot = Arc::new(self.settings.clone());
         self.shared.update(|s| s.settings = snapshot.clone());
         self.shared.emit(Event::Settings(snapshot));
+        if quality_changed {
+            self.update_streaming_level(true);
+        }
         if hue_changed {
             self.publish_theme(true);
         }
@@ -1950,15 +2037,19 @@ impl Actor {
         }
         self.failures = 0;
         self.status = Status::Playing;
+        // Reopened at a new streaming level: the same listen goes on.
+        let reopened = self.reopening.take() == Some(id);
 
         let Some(item) = self.shared.read_queue().current() else {
             return;
         };
-        // The history is part of the queue state and is saved with it.
-        self.shared
-            .write_queue()
-            .record_played(item.track.clone(), unix_ms());
-        self.queue_changed();
+        if !reopened {
+            // The history is part of the queue state and is saved with it.
+            self.shared
+                .write_queue()
+                .record_played(item.track.clone(), unix_ms());
+            self.queue_changed();
+        }
 
         let mut now = match self.now_playing(&item) {
             Ok(meta) => meta,
@@ -1969,13 +2060,34 @@ impl Actor {
                 return;
             }
         };
-        now.quality = Some(crate::details::engine_format(&info));
-        now.format = Some(info);
-        self.play = Some(PlayRecord {
-            track: item.track.clone(),
-            started_ms: unix_ms(),
-            duration_ms: now.duration_ms,
+        let decoded = crate::details::engine_format(&info);
+        now.quality = Some(match self.sources.facts(item.uid) {
+            // A source's codec and bitrate hints fill in what the decoder does not say.
+            Some(facts) if matches!(item.track, TrackRef::Source(_)) => {
+                crate::details::with_hints(decoded, facts.codec.as_deref(), facts.bitrate_kbps)
+            }
+            _ => decoded,
         });
+        now.format = Some(info);
+        let previous = self
+            .shared
+            .snapshot
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .now_playing
+            .clone()
+            .filter(|p| p.uid == item.uid);
+        match previous {
+            // The cover found for it stays (the play record, too).
+            Some(previous) if reopened => now.artwork = previous.artwork.clone(),
+            _ => {
+                self.play = Some(PlayRecord {
+                    track: item.track.clone(),
+                    started_ms: unix_ms(),
+                    duration_ms: now.duration_ms,
+                });
+            }
+        }
         let changed = self.media_uid != Some(item.uid);
         let job = self.media_job(&item, &now);
         self.set_now_playing(Some(now));
@@ -2043,8 +2155,12 @@ impl Actor {
                 let (qualities, note) = self.sources.offered_qualities(&track.plugin);
                 now.qualities = qualities;
                 now.quality_note = note;
-                // M1: sources are still always asked for lossless (M2 passes the level).
-                now.quality_level = Some(StreamingQuality::Lossless);
+                // The level its stream was asked for, else the one it would be asked for now.
+                now.quality_level = Some(
+                    self.sources
+                        .facts(item.uid)
+                        .map_or_else(|| self.sources.level_for(&track.plugin), |facts| facts.level),
+                );
                 Ok(now)
             }
             TrackRef::Library(_) | TrackRef::File(_) => Ok(self.resolve_local(item)?.1),
@@ -2250,7 +2366,7 @@ impl Actor {
                 self.sources.login_ended(flow);
                 self.publish_sources(false);
             }
-            SourcesMsg::Resolved { uid, result } => self.on_resolved(uid, result),
+            SourcesMsg::Resolved { uid, asked, result } => self.on_resolved(uid, asked, result),
             SourcesMsg::Collection {
                 id,
                 plugin,
@@ -2279,9 +2395,29 @@ impl Actor {
     }
 
     /// A source track's stream URL arrived (or will not).
-    fn on_resolved(&mut self, uid: u64, result: Result<HttpSource, String>) {
-        self.sources.resolved(uid, &result);
+    fn on_resolved(
+        &mut self,
+        uid: u64,
+        asked: StreamingQuality,
+        result: Result<(HttpSource, crate::sources::StreamFacts), String>,
+    ) {
         let current = self.shared.read_queue().current_uid();
+        if asked != self.sources.level() {
+            // Asked for at a level that changed meanwhile: ask again at the new one.
+            self.sources.drop_resolving(uid);
+            if self.pending_start != Some(uid) || current != Some(uid) {
+                self.rearm();
+            } else if self.status == Status::Playing
+                && let Err(e) = self.start_current()
+            {
+                self.shared.emit(Event::Error {
+                    message: e.to_string(),
+                });
+                self.stop_playback(Status::Stopped);
+            }
+            return;
+        }
+        let result = self.sources.resolved(uid, result);
         if self.pending_start == Some(uid) && current == Some(uid) {
             if let Err(error) = result {
                 // Like a file that cannot be opened: say why, move on.

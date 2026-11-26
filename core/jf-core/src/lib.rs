@@ -30,6 +30,7 @@ mod made;
 mod network;
 pub mod paths;
 mod pro;
+mod quality;
 mod remote;
 mod secrets;
 mod sources;

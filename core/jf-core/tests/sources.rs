@@ -17,7 +17,8 @@ use std::time::{Duration, Instant};
 use common::*;
 use jf_core::{
     ArtworkRef, AuthFieldKind, AuthMethod, AuthStep, Collection, Command, Event, ItemKind, LyricsSource,
-    PluginBadge, SearchScope, SearchUpdate, SecretStorage, Settings, SourceItem, Status, TrackRef,
+    PluginBadge, SearchScope, SearchUpdate, SecretStorage, Settings, SourceItem, Status, StreamingQuality,
+    TrackRef,
 };
 use serde_json::json;
 
@@ -850,6 +851,124 @@ fn a_long_playlist_plays_from_its_first_page_and_grows() {
         .collect();
     shuffled.sort();
     assert_eq!(shuffled, ids, "each song once");
+}
+
+#[test]
+fn streams_are_asked_for_at_the_streaming_level_and_reopen_when_it_changes() {
+    // In real time, so the level can change while the first song plays.
+    let env = Env::with(|c| {
+        if let jf_core::OutputKind::WavFile { realtime, .. } = &mut c.output {
+            *realtime = true;
+        }
+    });
+    let server = catalog_server(Service {
+        hits: vec![
+            hit("q1", "Long One", "A", 3_000),
+            hit("q2", "Short Two", "A", 1_000),
+        ],
+        audio: HashMap::from([
+            ("q1".to_string(), sine_flac(440.0, 3.0)),
+            ("q2".to_string(), sine_flac(550.0, 1.0)),
+        ]),
+        ..Service::default()
+    });
+    // A catalogue that offers three levels.
+    let manifest = catalog_manifest().replacen("api_version = \"1.0\"", "api_version = \"1.3\"", 1)
+        + "\n[content_policy]\nqualities = [\"lossless\", \"high\", \"low\"]\n";
+    env.plugin("catalog", &manifest, CATALOG, &server.url());
+    let results = searched(&env, "one", SearchScope::Plugin { id: CATALOG.into() });
+    let tracks = vec![
+        track_of(find(&results[0].items, "Long One")),
+        track_of(find(&results[0].items, "Short Two")),
+    ];
+    let asked = |id: &str| -> Vec<String> {
+        server
+            .with_path("/resolve")
+            .iter()
+            .filter(|r| r.query("id").as_deref() == Some(id))
+            .filter_map(|r| r.query("quality"))
+            .collect()
+    };
+
+    // Auto on a metered network asks for High.
+    env.core.send(Command::SetNetworkState {
+        online: true,
+        metered: true,
+    });
+    let events = env.run(
+        Command::PlayTracks { tracks, start: 0 },
+        |e| matches!(e, Event::NowPlaying(Some(n)) if n.title == "Long One"),
+    );
+    let first = events
+        .iter()
+        .find_map(|e| match e {
+            Event::NowPlaying(Some(n)) => Some(n.clone()),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(first.quality_level, Some(StreamingQuality::High));
+    assert_eq!(
+        first.qualities,
+        [
+            StreamingQuality::Auto,
+            StreamingQuality::Lossless,
+            StreamingQuality::High,
+            StreamingQuality::Low
+        ]
+    );
+    assert_eq!(asked("q1"), ["high"]);
+
+    // Normal, which the catalogue lacks, asks for Low; the song reopens where it is.
+    std::thread::sleep(Duration::from_millis(1_000));
+    let settings = Settings {
+        streaming_quality: StreamingQuality::Normal,
+        ..(*env.core.snapshot().settings).clone()
+    };
+    env.run(Command::SetSettings { settings }, |e| {
+        matches!(e, Event::NowPlaying(Some(n))
+            if n.uid == first.uid && n.quality_level == Some(StreamingQuality::Low))
+    });
+    assert_eq!(asked("q1"), ["high", "low"]);
+    wait_for(
+        &env.events,
+        Duration::from_secs(30),
+        |e| matches!(e, Event::Playback(p) if p.status == Status::Ended),
+    );
+    assert_eq!(
+        asked("q2").last().map(String::as_str),
+        Some("low"),
+        "the next song too"
+    );
+
+    // Not started again from the top: about 3 s and 1 s of audio, not 4 s and 1 s.
+    let (rate, left) = read_wav(&env.out);
+    let seconds = left.len() as f64 / f64::from(rate);
+    assert!(seconds < 4.5, "rendered {seconds} s");
+}
+
+#[test]
+fn the_plugins_own_quality_carries_over_once() {
+    let env = Env::with(|c| {
+        c.persist_session = true;
+        c.restore_session = true;
+        // A Jellyfin set to High and a NetEase that followed the app, from v0.0.7.
+        for (id, quality) in [
+            ("org.jellyfesh.jellyfin", "high"),
+            ("org.jellyfesh.netease", "app"),
+        ] {
+            let dir = c.data_dir.join("plugins").join("data").join(id);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(
+                dir.join("settings.json"),
+                format!(r#"{{"quality": "{quality}"}}"#),
+            )
+            .unwrap();
+        }
+    });
+    assert_eq!(
+        env.core.snapshot().settings.streaming_quality,
+        StreamingQuality::High
+    );
 }
 
 fn echo_server() -> TestServer {

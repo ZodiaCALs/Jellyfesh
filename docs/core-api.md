@@ -603,6 +603,20 @@ and on every change (Android always; Windows when it says a connection is
 metered; the others may send `online` alone); until then the core takes the
 network as online and not metered.
 
+The core passes the level to the plugin's `resolve-stream`, fitted to the
+levels the plugin offers (`content_policy.qualities`: the level itself, else
+the best one below it, else the lowest offered). Changing the setting
+reopens the playing source song where it is, at the new level (the listen
+goes on: no new play or history entry), and the next song is resolved again;
+a network change under `Auto` applies from the next song. A URL refreshed
+while a song plays keeps the level it started with.
+
+The plugins' own Streaming Quality settings went in v0.0.8 (Jellyfin,
+Subsonic, NetEase and the community NetEase and QQ Music plugins). On the
+first start of v0.0.8 the core reads them before the new plugin versions drop
+them: when every plugin that set a fixed level agrees, that level becomes
+`streaming_quality`; otherwise it stays `Auto`. This happens once.
+
 `NowPlaying` carries the quality menu:
 
 * `qualities`: the levels to offer for what plays, in the menu's order:
@@ -614,9 +628,10 @@ network as online and not metered.
   `RemoteSnapshot::quality_note` is `SetInService` while a remote session
   runs (Spotify).
 * `quality_level`: the level the playing stream was asked for (`Auto`
-  resolved); `None` for files.
+  resolved and fitted to the source's levels); `None` for files.
 * `quality` (`AudioFormat`) has the format line's facts ("FLAC · 24-bit · 96
-  kHz", "AAC · 256 kbit/s").
+  kHz", "AAC · 256 kbit/s"): what the decoder found, with the plugin's codec
+  and bitrate hints filling in what it does not say.
 
 `PluginSummary::qualities` lists a source's levels for Settings.
 
@@ -701,8 +716,8 @@ link-local fe80::/10 and unique local fc00::/7; multicast and broadcast;
 v0.0.8 (in progress): the types and commands of the sections above are the
 contract. Working now: the settings, `SetNetworkState`, `Collection::Source`
 with its kind, search sections (`merged`, `groups`; per-kind cursors and
-20-per-kind queries come next), `SearchMore`, the quality menu's fields (the
-level reaches sources next), the local-network flag and the downloads folder.
+20-per-kind queries come next), `SearchMore`, the quality menu's fields and the
+level asked of sources, the local-network flag and the downloads folder.
 `RefreshSourceLibrary` lists the sources without their lists yet;
 `SourceLibraryMore`, `SavePlaylistCopy` and the download commands answer
 "not available in this build yet" until their implementation lands.

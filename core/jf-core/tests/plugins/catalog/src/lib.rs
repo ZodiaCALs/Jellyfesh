@@ -62,6 +62,10 @@ struct Link {
     #[serde(default)]
     headers: Vec<(String, String)>,
     expires_at_ms: Option<u64>,
+    #[serde(default)]
+    codec: Option<String>,
+    #[serde(default)]
+    bitrate_kbps: Option<u32>,
 }
 
 #[derive(Deserialize)]
@@ -156,9 +160,15 @@ impl Plugin for Catalog {
         Ok(page(answer))
     }
 
-    fn resolve_stream(item: Item, _quality: Quality) -> Result<StreamInfo> {
+    fn resolve_stream(item: Item, quality: Quality) -> Result<StreamInfo> {
+        let level = match quality {
+            Quality::Lossless => "lossless",
+            Quality::High => "high",
+            Quality::Normal => "normal",
+            Quality::Low => "low",
+        };
         let link: Link = http::Request::get(format!("{}/resolve", server()?))
-            .query(&[("id", &item.id)])
+            .query(&[("id", item.id.as_str()), ("quality", level)])
             .send_json()?;
         let mut info = StreamInfo::new(link.url);
         info.headers = link
@@ -167,6 +177,8 @@ impl Plugin for Catalog {
             .map(|(name, value)| Header::new(name, value))
             .collect();
         info.expires_at_ms = link.expires_at_ms;
+        info.codec = link.codec;
+        info.bitrate_kbps = link.bitrate_kbps;
         Ok(info)
     }
 

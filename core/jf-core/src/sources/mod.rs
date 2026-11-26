@@ -42,7 +42,7 @@ use jf_plugin_host::presets;
 use jf_plugin_host::trust::TrustList;
 use jf_plugin_host::{
     AuthFlow, CallError, Capability, FieldValue, HostConfig, HostError, ImageRef, Item, ItemKind as HostKind,
-    PageRequest, PlaybackMode, PluginHost, Quality, Reply,
+    PageRequest, PlaybackMode, PluginHost, Reply,
 };
 use jf_session::{SourceTrack, TrackRef};
 
@@ -70,9 +70,6 @@ use crate::types::{
     AuthMethod, AuthUpdate, BrowseUpdate, CommandId, Config, Event, SearchUpdate, SourcesSnapshot,
 };
 
-/// The quality asked of a source: the original file where the service
-/// offers it (there is no quality setting yet).
-const QUALITY: Quality = Quality::Lossless;
 /// Longest the core waits for a stream URL (the plugin's own deadline is
 /// 10 s; a call may also wait behind the plugin's other calls).
 const RESOLVE_WAIT: Duration = Duration::from_secs(25);
@@ -128,7 +125,10 @@ pub(crate) enum SourcesMsg {
     /// A source track's stream URL, or why there is none.
     Resolved {
         uid: u64,
-        result: Result<HttpSource, String>,
+        /// The app's level when it was asked for: a result for a level
+        /// changed meanwhile is asked for again.
+        asked: crate::types::StreamingQuality,
+        result: Result<(HttpSource, StreamFacts), String>,
     },
     /// The items of a collection to queue: all of them, or (to play) the
     /// first pages, with the rest following as `CollectionMore`.
@@ -181,6 +181,17 @@ pub(crate) enum Done {
     LoggedOut {
         note: Option<String>,
     },
+}
+
+/// What a plugin said about a stream besides where it is (ADR-0026 §1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct StreamFacts {
+    /// The level it was asked for (the app's, fitted to the plugin's levels).
+    pub level: crate::types::StreamingQuality,
+    /// Codec or container hint, for the format line.
+    pub codec: Option<String>,
+    /// Nominal bitrate, for the format line.
+    pub bitrate_kbps: Option<u32>,
 }
 
 /// What to do with a fetched collection.
@@ -521,9 +532,13 @@ pub(crate) struct Sources {
     searches: Option<Sender<SearchJob>>,
     jobs: Option<Sender<Job>>,
     refresher: Option<Arc<Refresher>>,
-    /// Resolved stream URLs by queue uid, oldest first in `stream_order`.
-    streams: HashMap<u64, HttpSource>,
+    /// Resolved stream URLs by queue uid, oldest first in `stream_order`,
+    /// with what their plugin said about them.
+    streams: HashMap<u64, (HttpSource, StreamFacts)>,
     stream_order: VecDeque<u64>,
+    /// The level streams are asked for (ADR-0026 §1): the app's, Auto
+    /// resolved for the network.
+    level: crate::types::StreamingQuality,
     /// Queue uids whose stream is being resolved.
     resolving: HashSet<u64>,
     version: u64,
@@ -586,6 +601,7 @@ impl Sources {
             refresher: None,
             streams: HashMap::new(),
             stream_order: VecDeque::new(),
+            level: crate::types::StreamingQuality::Lossless,
             resolving: HashSet::new(),
             version: 0,
             published: None,
@@ -1396,11 +1412,11 @@ impl Sources {
     /// its plugin cannot stream at all.
     pub(crate) fn stream(&mut self, uid: u64, track: &SourceTrack) -> Result<Option<HttpSource>, CoreError> {
         let ctx = self.require()?.clone();
-        if let Some(source) = self.streams.get(&uid)
+        if let Some((source, facts)) = self.streams.get(&uid)
             && !expiring(source)
         {
-            let source = source.clone();
-            self.register(&ctx, uid, track);
+            let (source, level) = (source.clone(), facts.level);
+            self.register(&ctx, uid, track, level);
             return Ok(Some(source));
         }
         let info = ctx.host.plugin(&track.plugin).ok_or_else(|| {
@@ -1419,16 +1435,30 @@ impl Sources {
         }
         let item = ctx.track_item(track);
         let plugin = track.plugin.clone();
+        let asked = self.level;
+        let level = self.level_for(&track.plugin);
         let spawned = std::thread::Builder::new().name("jf-resolve".into()).spawn({
             let ctx = ctx.clone();
             move || {
-                let result = wait(&ctx.host.resolve_stream(&plugin, item, QUALITY), RESOLVE_WAIT)
-                    .map(convert::http_source)
-                    .map_err(|e| {
-                        ctx.note(&e);
-                        e.to_string()
-                    });
-                ctx.send(SourcesMsg::Resolved { uid, result });
+                let result = wait(
+                    &ctx.host
+                        .resolve_stream(&plugin, item, crate::quality::host_quality(level)),
+                    RESOLVE_WAIT,
+                )
+                .map(|info| {
+                    // The codec and bitrate hints are kept for the format line.
+                    let facts = StreamFacts {
+                        level,
+                        codec: info.codec.clone(),
+                        bitrate_kbps: info.bitrate_kbps,
+                    };
+                    (convert::http_source(info), facts)
+                })
+                .map_err(|e| {
+                    ctx.note(&e);
+                    e.to_string()
+                });
+                ctx.send(SourcesMsg::Resolved { uid, asked, result });
             }
         });
         if let Err(e) = spawned {
@@ -1439,26 +1469,78 @@ impl Sources {
     }
 
     /// Keeps a resolved stream for its queue entry.
-    pub(crate) fn resolved(&mut self, uid: u64, result: &Result<HttpSource, String>) {
+    pub(crate) fn resolved(
+        &mut self,
+        uid: u64,
+        result: Result<(HttpSource, StreamFacts), String>,
+    ) -> Result<(), String> {
         self.resolving.remove(&uid);
-        if let Ok(source) = result {
-            if self.streams.insert(uid, source.clone()).is_none() {
-                self.stream_order.push_back(uid);
-            }
-            while self.stream_order.len() > STREAM_CACHE {
-                if let Some(old) = self.stream_order.pop_front() {
-                    self.streams.remove(&old);
-                }
+        let resolved = result?;
+        if self.streams.insert(uid, resolved).is_none() {
+            self.stream_order.push_back(uid);
+        }
+        while self.stream_order.len() > STREAM_CACHE {
+            if let Some(old) = self.stream_order.pop_front() {
+                self.streams.remove(&old);
             }
         }
+        Ok(())
     }
 
-    /// Tells the URL refresher which plugin item a queue entry is.
-    fn register(&self, ctx: &Ctx, uid: u64, track: &SourceTrack) {
+    /// A stream asked for at a level that changed since: it is not kept, and
+    /// the entry may be resolved again.
+    pub(crate) fn drop_resolving(&mut self, uid: u64) {
+        self.resolving.remove(&uid);
+    }
+
+    /// What the plugin said about the stream of a queue entry.
+    pub(crate) fn facts(&self, uid: u64) -> Option<&StreamFacts> {
+        self.streams.get(&uid).map(|(_, facts)| facts)
+    }
+
+    /// The app's level streams are asked for (Auto resolved).
+    pub(crate) fn level(&self) -> crate::types::StreamingQuality {
+        self.level
+    }
+
+    /// Sets the level streams are asked for; `false` when it is the same.
+    /// Streams resolved at another level are forgotten (the engine keeps
+    /// what it plays), so the next ones are asked for at this one.
+    pub(crate) fn set_level(&mut self, level: crate::types::StreamingQuality) -> bool {
+        if self.level == level {
+            return false;
+        }
+        self.level = level;
+        self.streams.clear();
+        self.stream_order.clear();
+        true
+    }
+
+    /// The level asked of a plugin: the app's, fitted to the levels the
+    /// plugin offers (ADR-0026 §2).
+    pub(crate) fn level_for(&self, plugin: &str) -> crate::types::StreamingQuality {
+        let offered: Vec<crate::types::StreamingQuality> = self
+            .ctx
+            .as_ref()
+            .and_then(|ctx| ctx.host.plugin(plugin))
+            .map(|info| {
+                info.content_policy
+                    .qualities
+                    .iter()
+                    .map(|q| convert::streaming_quality(*q))
+                    .collect()
+            })
+            .unwrap_or_default();
+        crate::quality::fit(self.level, &offered)
+    }
+
+    /// Tells the URL refresher which plugin item a queue entry is, and the
+    /// level its stream was asked for (a new URL keeps it).
+    fn register(&self, ctx: &Ctx, uid: u64, track: &SourceTrack, level: crate::types::StreamingQuality) {
         if let Some(refresher) = &self.refresher {
             let mut items = lock(&refresher.items);
-            items.retain(|(u, _, _)| *u != uid);
-            items.push_back((uid, track.plugin.clone(), ctx.track_item(track)));
+            items.retain(|(u, ..)| *u != uid);
+            items.push_back((uid, track.plugin.clone(), ctx.track_item(track), level));
             while items.len() > STREAM_CACHE {
                 items.pop_front();
             }
@@ -1471,20 +1553,25 @@ impl Sources {
 /// it. Called on the stream's own thread, so it may wait for the plugin.
 pub(crate) struct Refresher {
     ctx: Arc<Ctx>,
-    /// (queue uid, plugin, item) of the source streams handed to the engine.
-    items: Mutex<VecDeque<(u64, String, Item)>>,
+    /// (queue uid, plugin, item, level) of the source streams handed to the
+    /// engine.
+    items: Mutex<VecDeque<(u64, String, Item, crate::types::StreamingQuality)>>,
 }
 
 impl StreamResolver for Refresher {
     fn resolve(&self, id: u64) -> Result<HttpSource, String> {
-        let (plugin, item) = lock(&self.items)
+        let (plugin, item, level) = lock(&self.items)
             .iter()
-            .find(|(uid, _, _)| *uid == id)
-            .map(|(_, plugin, item)| (plugin.clone(), item.clone()))
+            .find(|(uid, ..)| *uid == id)
+            .map(|(_, plugin, item, level)| (plugin.clone(), item.clone(), *level))
             .ok_or_else(|| "this stream is not from an online source".to_owned())?;
         tracing::debug!(%plugin, uid = id, "resolving a stream again");
+        // At the level it plays at: the engine goes on where it is in the same file.
         wait(
-            &self.ctx.host.resolve_stream(&plugin, item, QUALITY),
+            &self
+                .ctx
+                .host
+                .resolve_stream(&plugin, item, crate::quality::host_quality(level)),
             RESOLVE_WAIT,
         )
         .map(convert::http_source)
