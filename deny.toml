@@ -24,6 +24,12 @@ multiple-versions = "warn"
 wildcards = "deny"
 # Workspace crates are unpublished path dependencies, not wildcards.
 allow-wildcard-paths = true
+deny = [
+  # blocking 1.7.0 (zbus's thread pool) never retires its last idle thread, which then wakes every
+  # 500 ms for the life of the process; 1.6.2 retires it (ADR-0014). Lift this once a release
+  # retires idle threads again (its main_loop), then `cargo update -p blocking`.
+  { crate = "blocking:>=1.7.0", reason = "idle pool thread wakes twice a second; stay on 1.6 (ADR-0014)" },
+]
 
 [advisories]
 yanked = "deny"

@@ -32,6 +32,7 @@ tests and budgets re-run. A dependency that ships breaking majors often
 | libblur | 0.24.0 (2026-05-09) | Apache-2.0 OR BSD-3 | Candidate Gaussian blur for the bake |
 | biquad | 0.6.0 (2026-03-22) | MIT/Apache | Or hand-written RBJ biquads |
 | mpris-server / zbus | 0.11.0 / 6.2.1 | MPL-2.0 / MIT | Linux shell; zbus 5 vs 6 split noted in R18 |
+| blocking (zbus's thread pool) | **1.6.2 held** (1.7.0 is current, 2026-08-23) | MIT/Apache | Checked 2026-11-26: 1.7.0 never retires its last idle thread, which then wakes every 500 ms for the life of the process; zbus connects every Unix socket on it (the core's keystore check, MPRIS). Idle Linux app: 2.2 wake-ups/s on 1.7.0, 0.2 on 1.6.2. `deny.toml` bans ≥ 1.7.0 until a release retires idle threads again |
 | gtk4 / libadwaita (Rust) | 0.11.5 (`v4_24`) / 0.9.2 (`v1_10`) | MIT | Linux shell |
 
 ### Platforms
