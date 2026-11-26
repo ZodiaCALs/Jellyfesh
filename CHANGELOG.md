@@ -12,6 +12,83 @@ Design steps before the first code release are tagged `step-0.x`
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-11-27
+
+The third public beta: one layout in every app (Jellyfesh Web's), sound
+quality in the player bar, a mini player above other windows, search by
+source, your sources' likes and playlists, downloads from your own servers,
+and fixes for covers on Home, source playlists, Shuffle and Android 17
+([release notes](docs/releases/v0.0.8.md)).
+
+### Added
+
+- **One layout** (ADR-0023): the macOS, Windows, Linux and Android apps
+  take Jellyfesh Web's floating sidebar, phone tabs, pages and Settings
+  page, natively. 68 reference screenshots of the web are the
+  specification.
+- **Streaming quality** (ADR-0026): Auto, Lossless, High, Normal or Low,
+  one setting in the core for every app, with a quality badge and menu in
+  the player bar and Now Playing.
+- **The mini player** (ADR-0026): above other windows on macOS, Windows,
+  Linux (X11) and in the web (Document Picture-in-Picture), and
+  picture-in-picture on Android when turned on.
+- **Your sources' likes and playlists** on Favourites and Playlists
+  (ADR-0024). Live, read-only, kept on the device, with Save as Playlist….
+- **Search by source**: tabs for All, Library and each source, every kind
+  with Show More. Spotify and QQ Music get tabs of their own.
+- **Downloads** from Jellyfin and Navidrome/Subsonic servers that allow
+  them (ADR-0025):
+  - folder, quality, file-name template, tags, Pause on Metered
+    Connections;
+  - a resumable queue in the core;
+  - offline playback and the Downloaded mark.
+- **Plugin API 1.3**: the `library` and `download` exports, and
+  `content_policy.qualities`.
+- Jellyfesh Web: hearts, playlists (with M3U8 import and export), Recently
+  and Most Played, kept in the browser.
+- Android 17: the Local Network permission before connecting to a server on
+  the home network. Android 8 and 9 ask once for storage access before the
+  first download.
+
+### Changed
+
+- **Settings** is a page in the main window in every app, with Keyboard
+  Shortcuts in Settings › About. The player bar floats over every page and
+  has the device button and More everywhere.
+- **Quality settings:** the Jellyfin, Subsonic, NetEase and community
+  NetEase and QQ Music plugins lose their own quality setting. A level that
+  was set carries over once.
+- **Official plugins 0.0.8:** Jellyfin, Subsonic, Spotify and NetEase gain
+  likes and playlists, and Jellyfin and Subsonic gain downloads. Community
+  plugins 0.1.3.
+- **Windows:** three Windows SDK and WinRT projection assemblies are no
+  longer precompiled, about 60 MB less inside the installer.
+
+### Fixed
+
+- **Covers missing from Home's Recently Played** (and Most Played,
+  Favourites and the restored queue):
+  - songs played from a server kept no picture;
+  - listed covers worked only until a restart;
+  - folder art wasn't used for song rows;
+  - WebP and GIF covers couldn't be read.
+- **Source playlists:**
+  - Spotify never chose a device, so nothing played;
+  - NetEase and Spotify playlists could be fetched as albums;
+  - playback waited for every page;
+  - Shuffle always started on the first song.
+- **Android 17** could not reach Jellyfin or Navidrome servers on the home
+  network.
+- **Jellyfesh Web:** Delete Playlist… and Delete These Lyrics did nothing.
+  Search left the library out and mixed sources that forbid it.
+- **Windows:** search cleared every source's results on each source's
+  update.
+
+### Security
+
+- `cookie` 0.18.3 (RUSTSEC-2026-0594). Jellyfesh's plugin cookie jars use
+  no private cookies and were not affected.
+
 ## [0.0.7] - 2026-11-22
 
 The second public beta: AI Lyrics, Customize and Jellyfesh Pro (free
@@ -325,7 +402,8 @@ First code release: the Rust core and `jf`, a command-line player
   online sources report, risk register, milestone plan, repository layout,
   lyrics model, proposed design tokens on Misty 1.1 and five icon concepts.
 
-[Unreleased]: https://github.com/ZodiaCALs/Jellyfesh/compare/v0.0.7...HEAD
+[Unreleased]: https://github.com/ZodiaCALs/Jellyfesh/compare/v0.0.8...HEAD
+[0.0.8]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.8
 [0.0.7]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.7
 [0.0.6]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.6
 [0.0.5]: https://github.com/ZodiaCALs/Jellyfesh/releases/tag/v0.0.5
