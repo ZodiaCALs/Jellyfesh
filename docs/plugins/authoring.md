@@ -1,9 +1,11 @@
 # Writing a Jellyfesh plugin
 
 A Jellyfesh plugin is a WebAssembly component for the
-`jellyfesh:plugin@1.2` world `plugin` (`plugins/wit`): the `source` world of
-API 1.0, the `remote` interface of 1.1, and the imports and exports of 1.2
-(making lyrics, the app's look, Discover pages, details and comments). It
+`jellyfesh:plugin@1.3` world `plugin` (`plugins/wit`): the `source` world of
+API 1.0, the `remote` interface of 1.1, the imports and exports of 1.2
+(making lyrics, the app's look, Discover pages, details and comments), and
+the `library` and `download` exports of 1.3 (the person's likes and
+playlists, and downloads from their own server). It
 has no WASI at all: no files, sockets, environment or clock of its own. Everything goes through the
 host's imports (HTTP limited to the manifest's allowlist, small private
 storage, the system keystore, crypto, time, logging), and the host calls its
@@ -278,6 +280,59 @@ adds them. Each is a flat JSON object from `title`, `description`,
 nothing in the schema is an error. The app shows the schema in its language,
 English where a word is missing. A package holds at most 16 files.
 
+### API 1.3: likes, playlists, downloads and quality levels
+
+These need `api_version = "1.3"` (ADR-0024, ADR-0025, ADR-0026). As with 1.2,
+the SDK always exports the new interfaces (answering `unsupported`), and the
+host looks each one up only when the manifest declares its capability.
+
+| Capability | Implement | The host |
+| --- | --- | --- |
+| `library` | `library_likes(kind, page)`, `library_playlists(page)` | asks when the Favourites or Playlists page opens (and again after ten minutes away), then for more with your cursor; keeps only items of the asked kind and playlist entries that are playlists; caches them on the device |
+| `download` | `download(item, quality)` | asks where to fetch one song, checks the URL against the allowlist, and fetches and tags the file itself |
+
+**Likes and playlists.** `library_likes` answers the person's liked tracks,
+albums or artists on the service, one kind at a time; answer `unsupported`
+for a kind the service doesn't keep. `library_playlists` answers
+`PlaylistPage` entries: `PlaylistEntry::owned(item)` for the person's own or
+collaborative playlists, `PlaylistEntry::followed(item)` for others. Set
+`songs_listed` to false for a playlist whose songs the service won't list to
+you (Spotify answers 403 for playlists the person neither owns nor
+collaborates on); the apps then offer Play and Shuffle by context and
+"Open in {Service}" instead of a song list. A playlist's songs still come
+from `browse`, page by page. Both calls are read-only: nothing in Jellyfesh
+changes the service's likes or playlists.
+
+**Downloads.** Declare `download` only when the service's terms let a client
+keep copies (in the official plugins: Jellyfin and Subsonic, from the
+person's own server), and with `content_policy.library_storage = "full"`
+(the manifest is refused otherwise). `download` answers where the core
+fetches the file: `DownloadInfo::original(url, container)` for the file as
+the server keeps it, or a converted stream for the `high`, `normal` and
+`low` qualities, with any headers it needs. Answer `unsupported` when the
+server refuses the account (Jellyfin's `CanDownload` or policy, Subsonic's
+download role or error 50), and never use an address that skips the
+server's download rules. The core treats 401, 403 or a JSON, XML, HTML or
+text body as a refusal too.
+
+**Quality levels.** List the levels your `resolve-stream` honours in the
+content policy, best first or in any order:
+
+```toml
+api_version = "1.3"
+capabilities = ["search", "library", "download"]
+
+[content_policy]
+library_storage = "full"
+qualities = ["lossless", "high", "normal", "low"]
+```
+
+The quality menu offers Auto plus these levels for your songs, and the core
+passes the chosen level to `resolve-stream`. Leave `qualities` out when the
+service sets quality itself (remote playback) or you stream one level only.
+Don't add a quality setting of your own: the app's choice is the one that
+plays.
+
 ## 3. Build
 
 ```sh
@@ -292,7 +347,8 @@ host), wraps the module into a component with `wit-component`, and refuses it
 unless it imports only `jellyfesh:plugin/*@1` and exports the whole `source`
 world. `pack` and `verify` also check the exports the manifest's
 capabilities need (`remote`; `maker`, `appearance`, `discover`, `details`,
-`comments` at 1.2) and that `audio` and `speech` are imported only with the
+`comments` at 1.2; `library` and `download` at 1.3) and that `audio` and
+`speech` are imported only with the
 manifest's permission. `cargo xtask plugin build <package>` and the plugin tests use the same
 code (`tools/jf-plugin/plugin-build`). `opt-level = "s"` in the release
 profile gives noticeably smaller components (the official plugins: about
