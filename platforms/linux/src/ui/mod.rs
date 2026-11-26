@@ -18,12 +18,14 @@ mod lyricsbar;
 mod miniplayer;
 mod models;
 mod mpris;
+mod network;
 mod nowplaying;
 mod outputs;
 mod pages;
 mod playerbar;
 mod prefs;
 mod pro;
+mod quality;
 mod rows;
 mod sources_ui;
 mod state;
@@ -192,6 +194,8 @@ fn startup(application: &adw::Application) {
     window::listen();
     mpris::start();
     devices::watch();
+    // The network, for Auto quality and downloads (ADR-0026 §1).
+    network::follow();
     // Resume Playback is the core's: it plays the restored queue at its
     // saved position when it starts (docs/core-api.md, "Settings").
 }

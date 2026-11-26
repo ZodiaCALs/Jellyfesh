@@ -35,6 +35,7 @@ pub mod nav;
 pub mod paging;
 pub mod playback;
 pub mod pro;
+pub mod quality;
 pub mod queue;
 pub mod remote;
 pub mod schedule;

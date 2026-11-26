@@ -17,7 +17,7 @@ use gtk::glib;
 use jf_core::{Command, EqSettings, ReplayGainMode, ScanStatus, Settings};
 
 use crate::logic::appearance::{self as look, ACCENT_HUES};
-use crate::logic::{eq, format, playback};
+use crate::logic::{eq, format, playback, quality};
 use crate::ui::actions;
 use crate::ui::i18n::{tr, trc, trf, trn};
 use crate::ui::state::{Change, app, spawn};
@@ -695,7 +695,7 @@ fn show_seconds(row: &adw::SpinRow) {
 }
 
 /// Playback (docs/ui.md, "Settings"): Output, Crossfade, Volume Levelling,
-/// Equalizer and Startup.
+/// Equalizer, Streaming and Startup.
 pub fn playback_page() -> gtk::Box {
     let p = section("playback");
     let guard = Rc::new(Cell::new(false));
@@ -796,6 +796,35 @@ pub fn playback_page() -> gtk::Box {
     eq_group.add(&eq_preamp);
     eq_group.add(&bands_row);
     p.append(&eq_group);
+
+    // Streaming (ADR-0026 §1): the level asked of sources, the same setting
+    // as the player bar's quality menu.
+    let streaming = group(&tr("Streaming"), None);
+    let level_names: Vec<String> = quality::LEVELS
+        .iter()
+        .map(|l| crate::ui::quality::level_name(*l))
+        .collect();
+    let streaming_quality = combo(
+        &tr("Streaming Quality"),
+        Some(&tr("Auto plays lossless, or High on a metered connection.")),
+        &level_names,
+    );
+    streaming.add(&streaming_quality);
+    p.append(&streaming);
+    let g = guard.clone();
+    streaming_quality.connect_selected_notify(move |row| {
+        if g.get() {
+            return;
+        }
+        let level = quality::level_at(row.selected());
+        app().update_settings(|s| s.streaming_quality = level);
+    });
+    let row = streaming_quality.downgrade();
+    follow_settings(&streaming_quality, guard.clone(), move |s| {
+        if let Some(row) = row.upgrade() {
+            row.set_selected(quality::level_index(s.streaming_quality));
+        }
+    });
 
     // Startup.
     let startup = group(&tr("Startup"), None);

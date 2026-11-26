@@ -40,6 +40,7 @@ use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
 use crate::ui::lyricsbar::LyricsBarView;
 use crate::ui::outputs::DeviceButton;
+use crate::ui::quality::QualityButton;
 use crate::ui::state::{Change, app, spawn, try_app};
 use crate::ui::style::{self, FLUID};
 use crate::ui::thumbs::ArtKey;
@@ -105,6 +106,7 @@ struct Inner {
     dock_extras: gtk::Box,
     /// Kept for as long as the view, for its listener.
     _devices: Rc<DeviceButton>,
+    _quality: Rc<QualityButton>,
     more: gtk::MenuButton,
     /// What More's menu was built for, so an open menu is not replaced by
     /// an identical one (the remote session reports every second).
@@ -291,6 +293,10 @@ impl NowPlaying {
         let devices = DeviceButton::new(false);
         devices.button.add_css_class("np-dock-button");
         devices.button.set_valign(gtk::Align::Center);
+        // The quality badge (ADR-0026 §3), as in the player bar.
+        let quality = QualityButton::new();
+        quality.button.add_css_class("np-badge");
+        quality.button.set_direction(gtk::ArrowType::Up);
         let more = gtk::MenuButton::builder()
             .child(&Glyph::new("more", 20))
             .tooltip_text(tr("More"))
@@ -300,6 +306,7 @@ impl NowPlaying {
         more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
         let dock_extras = gtk::Box::new(gtk::Orientation::Horizontal, 12);
         dock_extras.add_css_class("np-dock-extras");
+        dock_extras.append(&quality.button);
         dock_extras.append(&volume.row);
         dock_extras.append(&devices.button);
         dock_extras.append(&more);
@@ -437,6 +444,7 @@ impl NowPlaying {
             dock_transport,
             dock_extras,
             _devices: devices,
+            _quality: quality,
             more,
             more_key: RefCell::new(None),
             album_of: Rc::new(Cell::new(None)),
@@ -478,6 +486,11 @@ impl NowPlaying {
         let np = NowPlaying(inner);
         np.wire(&player_clamp, &panel_clamp);
         np
+    }
+
+    /// More's menu for what plays; the player bar's More shows it too.
+    pub fn more_menu(&self) -> Option<gtk::gio::MenuModel> {
+        self.0.more.menu_model()
     }
 
     pub fn widget(&self) -> gtk::Widget {

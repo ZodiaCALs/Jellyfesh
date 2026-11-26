@@ -96,6 +96,55 @@ glyph.device-kind {
   color: {{ink.ink-70}};
 }
 
+/* The quality badge (ADR-0026 §3): a quiet pill with the playing
+ * quality's label, in the player bar and Now Playing. Its menu has the
+ * format line, then the levels or why there are none. */
+menubutton.quality-badge > button {
+  min-height: 28px;
+  min-width: 0;
+  padding: 0 10px;
+  border-radius: {{radius.r-full}};
+  background-color: {{line.fill}};
+  box-shadow: inset 0 0 0 1px {{line.line-soft}};
+  color: {{ink.ink-90}};
+}
+
+menubutton.quality-badge > button:hover,
+menubutton.quality-badge > button:checked {
+  background-color: {{line.fill-hover}};
+}
+
+.quality-badge-text {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.quality-popover-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: {{ink.ink-70}};
+  padding: 6px 10px 2px;
+}
+
+.quality-line {
+  font-size: 13px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+  padding: 0 10px 6px;
+}
+
+.quality-note {
+  font-size: 13px;
+  color: {{ink.ink-70}};
+  padding: 4px 10px 8px;
+}
+
+.quality-levels > button {
+  min-height: 36px;
+  border-radius: {{radius.r-md}};
+}
+
 /* The line sliders: the played part in the CSS colour (ink-90), the rest,
  * the thumb and the times drawn by the widget from the theme. */
 seekbar,

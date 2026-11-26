@@ -205,7 +205,6 @@ pub struct Shell {
     bar: playerbar::PlayerBar,
     phone_layout: adw::Breakpoint,
     wide: adw::Breakpoint,
-    wide_compact: adw::Breakpoint,
     chrome: Cell<Chrome>,
     phone: Cell<bool>,
     pages: RefCell<HashMap<Section, adw::NavigationPage>>,
@@ -356,11 +355,6 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
     let wide =
         adw::Breakpoint::new(adw::BreakpointCondition::parse(&layout::bar_condition()).expect("condition"));
     window.add_breakpoint(wide.clone());
-    // 900 to 1099 px: the bar without its volume line (added last: it wins).
-    let wide_compact = adw::Breakpoint::new(
-        adw::BreakpointCondition::parse(&layout::compact_bar_condition()).expect("condition"),
-    );
-    window.add_breakpoint(wide_compact.clone());
 
     *state.window.borrow_mut() = window.downgrade();
     *state.toasts.borrow_mut() = toasts.downgrade();
@@ -380,7 +374,6 @@ pub fn build(application: &adw::Application, state: &Rc<App>) -> adw::Applicatio
         bar,
         phone_layout,
         wide,
-        wide_compact,
         chrome: Cell::new(Chrome::Mini),
         phone: Cell::new(false),
         pages: RefCell::new(HashMap::new()),
@@ -641,8 +634,7 @@ fn update_chrome() {
     let Some(s) = shell() else { return };
     let current = s.window.current_breakpoint();
     let phone = current.as_ref() == Some(&s.phone_layout);
-    let compact = current.as_ref() == Some(&s.wide_compact);
-    let wide = compact || current.as_ref() == Some(&s.wide);
+    let wide = current.as_ref() == Some(&s.wide);
     // The look's player: Bar (v0.0.6), Compact or Floating (ADR-0020).
     let style = try_app().map_or(jf_core::MiniPlayerStyle::Bar, |a| {
         crate::logic::look::mini_player(&a.look.borrow())
@@ -662,7 +654,6 @@ fn update_chrome() {
     } else {
         s.mini.remove_css_class("floating");
     }
-    s.bar.set_compact(compact);
     s.chrome.set(chrome);
     if chrome == Chrome::Bar {
         s.window.add_css_class("wide");

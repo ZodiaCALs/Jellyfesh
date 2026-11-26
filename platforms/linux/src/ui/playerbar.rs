@@ -4,7 +4,8 @@
 //! side the artwork and two lines of type open Now Playing; in the middle
 //! the transport capsule (shuffle, previous, play, next, repeat; play is
 //! the only accent fill) sits above the seek bar and its times; on the end
-//! side Lyrics, Queue and the volume. With Show Lyrics Bar on, the line
+//! side the quality badge (ADR-0026 §3), Lyrics, Queue, the volume and More
+//! (Now Playing's menu). With Show Lyrics Bar on, the line
 //! being sung fills word by word under the title (ADR-0022 §6). This bends CMP-02 (one control) on
 //! purpose, for desktop use; narrow windows keep the mini-player.
 //!
@@ -19,22 +20,24 @@ use crate::ui::convert;
 use crate::ui::i18n::{tr, trf};
 use crate::ui::lyricsbar::{LyricsBarView, Mode};
 use crate::ui::outputs::DeviceButton;
+use crate::ui::quality::QualityButton;
 use crate::ui::state::{Change, app};
 use crate::ui::transport::{self, Volume};
 use crate::ui::widgets::art::Art;
-use crate::ui::widgets::glyph;
-use crate::ui::widgets::seekbar::{SeekBar, VolumeBar};
+use crate::ui::widgets::glyph::{self, Glyph};
+use crate::ui::widgets::seekbar::SeekBar;
 use crate::ui::window;
 
-/// The middle's width: the transport capsule above the seek bar.
+/// The middle's width: the transport capsule above the seek bar; narrow
+/// bars give it less, down to the web's 232 px.
 const MIDDLE_WIDTH: i32 = 360;
+const MIDDLE_WIDTH_NARROW: i32 = 232;
 /// The volume line's natural width in the bar.
 const VOLUME_WIDTH: i32 = 96;
 
 /// The bar, and what changes with the window's width.
 pub struct PlayerBar {
     pub root: gtk::Widget,
-    volume_line: VolumeBar,
 }
 
 impl std::fmt::Debug for PlayerBar {
@@ -121,7 +124,12 @@ pub fn build() -> PlayerBar {
     middle.append(&capsule);
     middle.append(&seek);
 
-    // End: Lyrics, Queue and the volume.
+    // End: the quality badge; Lyrics, Queue, the device button (while a
+    // remote source plays) and the volume; More.
+    let quality = QualityButton::new();
+    quality.button.add_css_class("bar-badge");
+    // The bar is at the bottom: its menus open upwards.
+    quality.button.set_direction(gtk::ArrowType::Up);
     let lyrics = glyph::button("lyrics", 18, &tr("Lyrics"));
     lyrics.add_css_class("bar-icon");
     lyrics.set_valign(gtk::Align::Center);
@@ -142,10 +150,32 @@ pub fn build() -> PlayerBar {
     let end = gtk::Box::new(gtk::Orientation::Horizontal, 4);
     end.add_css_class("bar-end");
     end.set_halign(gtk::Align::End);
+    // More: Now Playing's menu for what plays, as it stands when it opens.
+    let more = gtk::MenuButton::builder()
+        .child(&Glyph::new("more", 18))
+        .tooltip_text(tr("More"))
+        .valign(gtk::Align::Center)
+        .build();
+    more.add_css_class("bar-icon");
+    more.set_direction(gtk::ArrowType::Up);
+    more.update_property(&[gtk::accessible::Property::Label(&tr("More"))]);
+    more.set_create_popup_func(|b| {
+        let menu = window::shell().and_then(|s| s.now_playing.more_menu());
+        b.set_menu_model(menu.as_ref());
+        if let Some(p) = b.popover() {
+            crate::ui::style::animate_popup(&p);
+        }
+    });
+    // The volume row hides itself for a remote device without volume; the
+    // holder hides it on narrow bars.
+    let volume_holder = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    volume_holder.append(&volume.row);
+    end.append(&quality.button);
     end.append(&lyrics);
     end.append(&queue);
     end.append(&devices.button);
-    end.append(&volume.row);
+    end.append(&volume_holder);
+    end.append(&more);
 
     // The middle stays centred; the start and end share the rest.
     open.set_halign(gtk::Align::Start);
@@ -159,10 +189,62 @@ pub fn build() -> PlayerBar {
     bar.add_css_class("veil");
     bar.append(&row);
     bar.update_property(&[gtk::accessible::Property::Label(&tr("Player"))]);
+    // The bar narrows as the web's does, by its own width: under 900 px it
+    // drops the volume line (Ctrl+Up and Ctrl+Down still change the
+    // volume), under 760 Lyrics and Queue (Now Playing has both, and Ctrl+L
+    // and Ctrl+U), under 640 the mute button; the title keeps room to be
+    // read.
+    let fit = adw::BreakpointBin::builder()
+        .child(&bar)
+        .width_request(320)
+        .height_request(jf_tokens::player::BAR_HEIGHT as i32)
+        .build();
+    let narrower: Vec<adw::Breakpoint> = [899.0, 759.0, 639.0]
+        .into_iter()
+        .map(|width| {
+            let b = adw::Breakpoint::new(adw::BreakpointCondition::new_length(
+                adw::BreakpointConditionLengthType::MaxWidth,
+                width,
+                adw::LengthUnit::Px,
+            ));
+            fit.add_breakpoint(b.clone());
+            b
+        })
+        .collect();
+    let shown = (
+        volume.bar.downgrade(),
+        lyrics.downgrade(),
+        queue.downgrade(),
+        volume_holder.downgrade(),
+        middle.downgrade(),
+    );
+    fit.connect_current_breakpoint_notify(move |fit| {
+        let level = fit
+            .current_breakpoint()
+            .and_then(|current| narrower.iter().position(|b| *b == current))
+            .map_or(0, |i| i + 1);
+        if let Some(line) = shown.0.upgrade() {
+            line.set_visible(level < 1);
+        }
+        for pane in [shown.1.upgrade(), shown.2.upgrade()].into_iter().flatten() {
+            pane.set_visible(level < 2);
+        }
+        if let Some(volume) = shown.3.upgrade() {
+            volume.set_visible(level < 3);
+        }
+        if let Some(middle) = shown.4.upgrade() {
+            let width = if level < 2 {
+                MIDDLE_WIDTH
+            } else {
+                MIDDLE_WIDTH_NARROW
+            };
+            middle.set_size_request(width, -1);
+        }
+    });
     let holder = gtk::Box::new(gtk::Orientation::Vertical, 0);
     holder.add_css_class("bar-holder");
     holder.set_valign(gtk::Align::End);
-    holder.append(&bar);
+    holder.append(&fit);
 
     let weak = (
         title.downgrade(),
@@ -269,9 +351,9 @@ pub fn build() -> PlayerBar {
         }
         _ => {}
     });
-    let line = volume.bar.clone();
     crate::ui::pages::keep_alive(&holder, volume);
     crate::ui::pages::keep_alive(&holder, devices);
+    crate::ui::pages::keep_alive(&holder, quality);
     crate::ui::pages::keep_alive(&holder, lyrics_bar);
     a.scheduler.add(
         &seek,
@@ -280,14 +362,5 @@ pub fn build() -> PlayerBar {
     );
     PlayerBar {
         root: holder.upcast(),
-        volume_line: line,
-    }
-}
-
-impl PlayerBar {
-    /// Narrower bars (900 to 1099 px windows) keep the mute button and drop
-    /// the volume line, so the titles keep their room.
-    pub fn set_compact(&self, compact: bool) {
-        self.volume_line.set_visible(!compact);
     }
 }

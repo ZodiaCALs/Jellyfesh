@@ -11,17 +11,14 @@ use jf_tokens::{player, space};
 use crate::logic::seek::Line;
 
 /// The narrowest window (px) that shows the player bar; narrower windows
-/// show the mini-player capsule.
+/// show the mini-player capsule. The bar then narrows by its own width, as
+/// the web's does (`playerbar.rs`).
 pub const PLAYER_BAR_MIN_WIDTH: u32 = 900;
-/// The narrowest window (px) whose player bar has room for the volume
-/// line; between the two, the bar keeps only the mute button.
-pub const PLAYER_BAR_FULL_WIDTH: u32 = 1100;
-const _: () = assert!(PLAYER_BAR_FULL_WIDTH > PLAYER_BAR_MIN_WIDTH);
 
 /// The floating player along the bottom of the library.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Chrome {
-    /// The capsule: art, two lines of type, one play button (CMP-02).
+    /// The capsule: art, two lines of type, play and next.
     Mini,
     /// The desktop player bar: art and titles, transport and seek bar,
     /// Lyrics, Queue and volume.
@@ -81,15 +78,6 @@ pub fn gutter(phone: bool) -> i32 {
 /// The breakpoint condition for the player bar (libadwaita syntax).
 pub fn bar_condition() -> String {
     format!("min-width: {PLAYER_BAR_MIN_WIDTH}px")
-}
-
-/// The breakpoint condition for the narrower player bar, without the volume
-/// line. Added after [`bar_condition`]'s, it wins where both hold.
-pub fn compact_bar_condition() -> String {
-    format!(
-        "min-width: {PLAYER_BAR_MIN_WIDTH}px and max-width: {}px",
-        PLAYER_BAR_FULL_WIDTH - 1
-    )
 }
 
 /// The mini-player's progress line (`player.mini-progress`, 2 px) along
@@ -246,7 +234,6 @@ mod tests {
     fn the_bar_starts_at_900_px() {
         assert_eq!(PLAYER_BAR_MIN_WIDTH, 900);
         assert_eq!(bar_condition(), "min-width: 900px");
-        assert_eq!(compact_bar_condition(), "min-width: 900px and max-width: 1099px");
     }
 
     #[test]
