@@ -9,9 +9,6 @@ use crate::CoreError;
 /// Bumped whenever the bake changes, so stale cached backdrops are not reused.
 const BACKDROP_VERSION: u32 = 1;
 
-/// File names tried, case-insensitively, for folder artwork when a file
-/// has no embedded cover.
-
 /// Misty theme for one hue in both appearances.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ArtworkTheme {
