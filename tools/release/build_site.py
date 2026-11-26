@@ -60,9 +60,10 @@ FILES = [
 # servers' invented library: the captions say sample music), as (file stem, caption).
 WEB_SHOTS = [
     ("home-light-desktop", "Home"),
-    ("album-light-desktop", "An album"),
+    ("favourites-light-desktop", "Favourites, with your server's likes"),
+    ("search-source-dark-desktop", "Search by source, dark"),
+    ("quality-menu-dark-desktop", "Sound quality in the player bar"),
     ("now-playing-misty-light-desktop", "Now Playing with the Misty backdrop"),
-    ("search-dark-desktop", "Search across your sources, dark"),
     ("now-playing-lyrics-artwork-dark-phone", "Lyrics on a phone"),
 ]
 
