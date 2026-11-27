@@ -180,20 +180,30 @@ struct CollectionHeader<Actions: View>: View {
     }
 }
 
-/// A short list of tracks outside a List (Home): double-click or the accessibility action plays
-/// the list from the row.
+/// A short list of tracks outside a List (Home, an artist's songs, Search, a source's likes): a
+/// double-click, the play button, Return on a focused row or the accessibility action plays the
+/// list from the row; right-click and More open the song menu. With keyboard navigation on, Tab
+/// focuses each row, which shows its play button and More as hovering does.
 struct TrackStack: View {
     var items: [TrackItem]
     var style: TrackRowStyle = .full
     var play: (Int) -> Void
 
     @Environment(PlaybackStore.self) private var playback
+    @FocusState private var focusedRow: TrackItem.ID?
 
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                TrackRowView(item: item, style: style, isCurrent: isCurrent(item), isPlaying: playback.isPlaying)
+                TrackRowView(item: item, style: style, isCurrent: isCurrent(item), isPlaying: playback.isPlaying,
+                             showsActions: focusedRow == item.id, play: { self.play(index) })
                     .padding(.horizontal, Tokens.Space.s2)
+                    .focusable(interactions: .activate)
+                    .focused($focusedRow, equals: item.id)
+                    .onKeyPress(.return) {
+                        mainAction(item, index)
+                        return .handled
+                    }
                     .onTapGesture(count: 2) { mainAction(item, index) }
                     .contextMenu { TrackActionsMenu(items: [item]) }
                     .accessibilityAddTraits(.isButton)
@@ -219,7 +229,8 @@ struct TrackStack: View {
     }
 }
 
-/// The context menu and double-click of a List of tracks with a selection.
+/// The context menu and double-click of a List of tracks with a selection (its rows' More opens the
+/// same menu for one row; the selected rows show their play button and More).
 struct TrackListActions: ViewModifier {
     var items: [TrackItem]
     /// Plays from the row at an index of `items`.

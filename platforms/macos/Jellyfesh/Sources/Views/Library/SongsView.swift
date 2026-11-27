@@ -32,7 +32,8 @@ struct SongsView: View {
             .selectionDisabled()
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 TrackRowView(item: item, isCurrent: item.track == playback.nowPlaying?.track,
-                             isPlaying: playback.isPlaying)
+                             isPlaying: playback.isPlaying, showsActions: selection.contains(item.id),
+                             play: { songs.play(from: index, on: playback) })
                     .trackListRow()
                     .tag(item.id)
                     .onAppear { list.rowAppeared(index: index) }
@@ -115,7 +116,8 @@ struct FavoritesView: View {
             .selectionDisabled()
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 TrackRowView(item: item, isCurrent: item.track == playback.nowPlaying?.track,
-                             isPlaying: playback.isPlaying)
+                             isPlaying: playback.isPlaying, showsActions: selection.contains(item.id),
+                             play: { playback.play(.favorites, from: index) })
                     .trackListRow()
                     .tag(item.id)
                     .onAppear { list.rowAppeared(index: index) }

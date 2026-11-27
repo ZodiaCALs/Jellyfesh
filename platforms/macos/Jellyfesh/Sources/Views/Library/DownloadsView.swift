@@ -209,47 +209,27 @@ private struct DownloadProgressRow: View {
     }
 }
 
-/// A downloaded song: it plays on double-click; Remove Download… asks first.
+/// A downloaded song, as other songs' rows show it: it plays on a double-click or its play button;
+/// More and its right-click offer Play and Remove Download…, which asks first.
 private struct DownloadedRow: View {
     var entry: DownloadEntry
     var play: () -> Void
     var remove: () -> Void
 
-    @Environment(\.palette) private var palette
-    @State private var hovering = false
+    @Environment(PlaybackStore.self) private var playback
 
     var body: some View {
-        HStack(spacing: Tokens.Space.s3) {
-            ArtworkView(source: entry.track.artworkURL.map(ArtworkSource.url), size: 40)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(entry.track.title)
-                    .typography(Tokens.TypeRoles.listTitle)
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .lineLimit(1)
-                if let artist = entry.track.artist, !artist.isEmpty {
-                    Text(artist)
-                        .typography(Tokens.TypeRoles.listSecondary)
-                        .foregroundStyle(palette[Tokens.Ink.ink70])
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            DownloadedMark()
-            DownloadMoreMenu {
-                actions
-            }
-        }
-        .padding(.horizontal, Tokens.Space.s4)
-        .frame(minHeight: Tokens.Player.rowHeight)
-        .background(hovering ? palette[Tokens.Line.fill] : .clear)
-        .contentShape(Rectangle())
-        .onHover { hovering = $0 }
-        .onTapGesture(count: 2, perform: play)
-        .contextMenu { actions }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { play() }
-        .accessibilityAction(named: Text("Remove Download…"), remove)
+        let item = TrackItem(id: "d\(entry.id)", track: DownloadsStore.track(entry), title: entry.track.title,
+                             artist: entry.track.artist, album: nil, durationMs: entry.track.durationMs,
+                             artwork: entry.track.artworkURL.map(ArtworkSource.url), downloaded: true)
+        TrackRowView(item: item, style: .compact, isCurrent: item.track == playback.nowPlaying?.track,
+                     isPlaying: playback.isPlaying, play: play, more: actions)
+            .padding(.horizontal, Tokens.Space.s4)
+            .onTapGesture(count: 2, perform: play)
+            .contextMenu { actions }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { play() }
+            .accessibilityAction(named: Text("Remove Download…"), remove)
     }
 
     @ViewBuilder private var actions: some View {
@@ -259,7 +239,7 @@ private struct DownloadedRow: View {
     }
 }
 
-/// A row's or album's More menu (an ellipsis).
+/// An album's More menu (an ellipsis); its songs' rows have the song row's More.
 private struct DownloadMoreMenu<Content: View>: View {
     @ViewBuilder var content: Content
 

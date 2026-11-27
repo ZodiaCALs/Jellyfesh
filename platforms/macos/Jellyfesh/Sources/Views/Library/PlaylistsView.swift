@@ -118,7 +118,8 @@ struct PlaylistDetailView: View {
                 .selectionDisabled()
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 TrackRowView(item: item, isCurrent: item.track == playback.nowPlaying?.track,
-                             isPlaying: playback.isPlaying)
+                             isPlaying: playback.isPlaying, showsActions: selection.contains(item.id),
+                             play: { playback.play(.playlist(id: playlistID), from: index) })
                     .trackListRow()
                     .tag(item.id)
                     .onAppear { entries?.rowAppeared(index: index) }

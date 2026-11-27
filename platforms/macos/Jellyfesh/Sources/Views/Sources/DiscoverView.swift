@@ -177,13 +177,14 @@ private struct ChartRow: View {
     var body: some View {
         let artwork = item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) }
         if item.kind == .track {
-            TrackRowView(item: SourcePage.trackItem(item, artwork: artwork, number: UInt32(number)), style: .album,
+            let shown = SourcePage.trackItem(item, artwork: artwork, number: UInt32(number))
+            TrackRowView(item: shown, style: .album,
                          isCurrent: item.track != nil && item.track == playback.nowPlaying?.track,
                          isPlaying: playback.isPlaying,
                          play: { ShelfPlay.play(item, of: shelf, playback: playback) })
                 .onTapGesture(count: 2) { ShelfPlay.play(item, of: shelf, playback: playback) }
                 .contextMenu {
-                    TrackActionsMenu(items: [TrackItem(result: item, artwork: nil)])
+                    TrackActionsMenu(items: [shown])
                 }
                 .accessibilityAction { ShelfPlay.play(item, of: shelf, playback: playback) }
         } else {

@@ -1,8 +1,10 @@
 // Track rows for every list the core gives (library tracks, playlist and favourite rows, search
 // and browse results), the actions on them, and the playing indicator. Rows are 52 pt
-// (`player.row-height`) with the list type roles; hovering fills a row, the playing row is
-// accent-soft with accent text and a level glyph, and on album pages the track number turns into a
-// play button on hover (v0.0.4, after Apple Music and Media Player).
+// (`player.row-height`) with the list type roles; hovering fills a row, and the playing row is
+// accent-soft with accent text and a level glyph (v0.0.4, after Apple Music and Media Player).
+// Rows and cards (v0.0.9, docs/ui.md): while the pointer is over a row, or it is selected or has
+// keyboard focus, a play button shows over its artwork (or its number) and More at its end, which
+// opens the same menu as a right-click.
 
 import AppKit
 import SwiftUI
@@ -91,24 +93,47 @@ enum TrackRowStyle {
     case compact
 }
 
-struct TrackRowView: View {
+/// One song's row. While the pointer is over it, or it is selected or has keyboard focus
+/// (`showsActions`), a play button shows over its artwork (or its number on album pages) and plays
+/// from that row, as a double-click or Return does, and More at its end opens `more`, the same menu
+/// as the row's right-click. The playing row keeps its level glyph instead of the play button, and
+/// a row that cannot play here has none. More keeps its place while hidden, so nothing moves.
+struct TrackRowView<MoreItems: View>: View {
     var item: TrackItem
-    var style: TrackRowStyle = .full
-    var isCurrent = false
-    var isPlaying = false
-    /// Plays from this row: on album pages its number turns into a play button on hover.
+    var style: TrackRowStyle
+    var isCurrent: Bool
+    var isPlaying: Bool
+    /// Selected in its list, or focused from the keyboard: the play button and More show as on
+    /// hover.
+    var showsActions: Bool
+    /// Plays from this row (the play button).
     var play: (() -> Void)?
+    /// More's menu, the same as the row's right-click menu; nil for a row without one.
+    var more: MoreItems?
 
     @Environment(\.palette) private var palette
     @Environment(\.effects) private var effects
     @Environment(\.look) private var look
     @State private var hovering = false
+    /// The play button or More has keyboard focus: both stay shown.
+    @FocusState private var focus: RowControl?
+
+    init(item: TrackItem, style: TrackRowStyle = .full, isCurrent: Bool = false, isPlaying: Bool = false,
+         showsActions: Bool = false, play: (() -> Void)? = nil, more: MoreItems?) {
+        self.item = item
+        self.style = style
+        self.isCurrent = isCurrent
+        self.isPlaying = isPlaying
+        self.showsActions = showsActions
+        self.play = play
+        self.more = more
+    }
 
     var body: some View {
         HStack(spacing: Tokens.Space.s3) {
             leading
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.title.isEmpty ? String(localized: "Unknown Title") : item.title)
+                Text(title)
                     .typography(Tokens.TypeRoles.listTitle)
                     .foregroundStyle(palette[isCurrent ? Tokens.Accent.accentText : Tokens.Ink.ink90])
                     .lineLimit(1)
@@ -152,6 +177,7 @@ struct TrackRowView: View {
                 .monospacedDigit()
                 .foregroundStyle(palette[Tokens.Ink.ink50])
                 .frame(minWidth: 40, alignment: .trailing)
+            moreSlot
         }
         // The look's density, never shorter than the artwork with a little room.
         .frame(height: max(look.spacing(Tokens.Player.rowHeight), 44))
@@ -164,9 +190,25 @@ struct TrackRowView: View {
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .animation(Motion.unless(!effects.animates, Motion.hover), value: hovering)
+        .animation(Motion.unless(!effects.animates, Motion.hover), value: revealed)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(accessibilityText))
         .accessibilityAddTraits(isCurrent ? .isSelected : [])
+    }
+
+    private var title: String {
+        item.title.isEmpty ? String(localized: "Unknown Title") : item.title
+    }
+
+    /// The play button and More show.
+    private var revealed: Bool {
+        hovering || showsActions || focus != nil
+    }
+
+    /// What the play button does, while it shows: the row plays here and is not the one playing.
+    private var shownPlay: (() -> Void)? {
+        guard revealed, !isCurrent, item.canPlay else { return nil }
+        return play
     }
 
     /// The artist, and the other sources that have the song ("Also in …").
@@ -183,16 +225,18 @@ struct TrackRowView: View {
     @ViewBuilder private var leading: some View {
         if style == .album {
             ZStack {
-                if hovering, let play, item.canPlay {
+                if let play = shownPlay {
                     Button(action: play) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(palette[isCurrent ? Tokens.Accent.accentText : Tokens.Ink.ink90])
+                            .foregroundStyle(palette[Tokens.Ink.ink90])
                             .frame(width: 28, height: 28)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help(Text("Play"))
+                    .focused($focus, equals: .play)
+                    .accessibilityLabel(Text("Play \(title)"))
+                    .help(Text("Play \(title)"))
                 } else if isCurrent {
                     LevelGlyph(playing: isPlaying)
                 } else {
@@ -210,8 +254,37 @@ struct TrackRowView: View {
                         RoundedRectangle(cornerRadius: look.radius(Tokens.Artwork.radiusList), style: .continuous)
                             .fill(.black.opacity(0.35))
                         LevelGlyph(playing: isPlaying, color: .white)
+                    } else if let play = shownPlay {
+                        Button(action: play) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: look.radius(Tokens.Artwork.radiusList),
+                                                 style: .continuous)
+                                    .fill(.black.opacity(0.35))
+                                Image(systemName: "play.fill")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressScaleStyle(scale: 0.92))
+                        .focused($focus, equals: .play)
+                        .accessibilityLabel(Text("Play \(title)"))
+                        .help(Text("Play \(title)"))
                     }
                 }
+        }
+    }
+
+    /// More, or its place while it is hidden.
+    @ViewBuilder private var moreSlot: some View {
+        if let more {
+            if revealed {
+                MoreMenuButton(title: title) { more }
+                    .focused($focus, equals: .more)
+            } else {
+                Color.clear
+                    .frame(width: RowControl.moreSide, height: RowControl.moreSide)
+            }
         }
     }
 
@@ -232,6 +305,63 @@ struct TrackRowView: View {
         if item.downloaded { parts.append(String(localized: "Downloaded")) }
         if let note = unplayableNote { parts.append(note) }
         return parts.joined(separator: ", ")
+    }
+}
+
+extension TrackRowView where MoreItems == TrackActionsMenu {
+    /// A song's row whose More is the song menu (docs/ui.md, "Song menu").
+    init(item: TrackItem, style: TrackRowStyle = .full, isCurrent: Bool = false, isPlaying: Bool = false,
+         showsActions: Bool = false, play: (() -> Void)? = nil) {
+        self.init(item: item, style: style, isCurrent: isCurrent, isPlaying: isPlaying, showsActions: showsActions,
+                  play: play, more: TrackActionsMenu(items: [item]))
+    }
+}
+
+/// A row's controls that show on hover or focus.
+enum RowControl: Hashable {
+    case play, more
+
+    /// More's side, kept free while it is hidden.
+    static let moreSide: CGFloat = 28
+}
+
+/// More (…), which opens the same menu as the row's or card's right-click (docs/ui.md, "Rows and
+/// cards"): a 28 pt circle, filled on hover; on a cover it is a glass circle, so it reads over the
+/// artwork. VoiceOver and the tooltip say "More for {title}".
+struct MoreMenuButton<Items: View>: View {
+    var title: String
+    /// Over a card's cover.
+    var onCover = false
+    @ViewBuilder var items: Items
+
+    @Environment(\.palette) private var palette
+    @State private var hovering = false
+
+    var body: some View {
+        Menu {
+            items
+        } label: {
+            let glyph = Image(systemName: "ellipsis")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(palette[hovering || onCover ? Tokens.Ink.ink90 : Tokens.Ink.ink70])
+                .frame(width: RowControl.moreSide, height: RowControl.moreSide)
+            if onCover {
+                glyph
+                    .surface(in: Circle())
+                    .contentShape(Circle())
+            } else {
+                glyph
+                    .background(Circle().fill(hovering ? palette[Tokens.Line.fillHover] : .clear))
+                    .contentShape(Circle())
+            }
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .onHover { hovering = $0 }
+        .accessibilityLabel(Text("More for \(title)"))
+        .help(Text("More for \(title)"))
     }
 }
 

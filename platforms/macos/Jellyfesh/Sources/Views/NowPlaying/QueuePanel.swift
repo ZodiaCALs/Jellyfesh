@@ -1,6 +1,8 @@
 // The queue: what plays now and Up Next in playback order. Drag to reorder, Delete to remove,
-// double-click or Return to jump; Up Next pages past the slice's 50 entries as it scrolls, and
-// Clear Queue asks first. While a remote session runs, Up Next is the service's ("Up Next is in
+// double-click, Return or an entry's play button to jump; an entry's More and its right-click
+// offer Play Now, Remove from Queue and the song's own menu (Go to Album, Go to Artist, Open in
+// {Service}, …). Up Next pages past the slice's 50 entries as it scrolls, and Clear Queue asks
+// first. While a remote session runs, Up Next is the service's ("Up Next is in
 // {Service}."). And Info: About This Song, with Open in {Service} for a track that has a link.
 
 import SwiftUI
@@ -45,7 +47,7 @@ private struct LocalQueuePanel: View {
             }
             Section {
                 ForEach(rows) { row in
-                    QueueRowView(row: row, isCurrent: false, isPlaying: false)
+                    QueueRowView(row: row, isCurrent: false, isPlaying: false, isSelected: selection.contains(row.id))
                         .trackListRow()
                         .tag(row.id)
                 }
@@ -87,11 +89,13 @@ private struct LocalQueuePanel: View {
         }
         .fieldList()
         .contextMenu(forSelectionType: UInt64.self) { ids in
-            if ids.count == 1, let id = ids.first {
-                Button("Play Now") { playback.jump(to: id) }
-            }
-            Button("Remove from Queue") {
-                for id in ids { playback.remove(id) }
+            if ids.count == 1, let id = ids.first, let row = rows.first(where: { $0.id == id }) {
+                // One entry: the same menu as its More.
+                QueueRowMenu(row: row)
+            } else if !ids.isEmpty {
+                Button("Remove from Queue") {
+                    for id in ids { playback.remove(id) }
+                }
             }
         } primaryAction: { ids in
             if let id = ids.first { playback.jump(to: id) }
@@ -136,21 +140,52 @@ private struct NothingUpNext: View {
     }
 }
 
+/// An entry: the song playing now, or one of Up Next with its play button (which jumps to it) and
+/// More while the pointer is over it or it is selected.
 private struct QueueRowView: View {
     var row: QueueRow
     var isCurrent: Bool
     var isPlaying: Bool
+    var isSelected = false
+
+    @Environment(PlaybackStore.self) private var playback
 
     var body: some View {
-        TrackRowView(
-            item: TrackItem(id: "q\(row.id)", track: row.entry.track,
-                            title: row.resolved ? row.title : String(localized: "Loading…"),
-                            artist: row.subtitle, album: nil, durationMs: row.durationMs, artwork: row.artwork),
-            style: .compact,
-            isCurrent: isCurrent,
-            isPlaying: isPlaying
-        )
+        Group {
+            if isCurrent {
+                TrackRowView(item: row.trackItem, style: .compact, isCurrent: true, isPlaying: isPlaying,
+                             more: Optional<EmptyView>.none)
+            } else {
+                TrackRowView(item: row.trackItem, style: .compact, showsActions: isSelected,
+                             play: { playback.jump(to: row.id) }, more: QueueRowMenu(row: row))
+            }
+        }
         .redacted(reason: row.resolved ? [] : .placeholder)
+    }
+}
+
+/// An Up Next entry's menu, its More and its right-click alike: Play Now and Remove from Queue,
+/// then the song's own menu without Play Next, Play Last and the heart.
+private struct QueueRowMenu: View {
+    var row: QueueRow
+
+    @Environment(PlaybackStore.self) private var playback
+
+    var body: some View {
+        Button("Play Now") { playback.jump(to: row.id) }
+        Button("Remove from Queue") { playback.remove(row.id) }
+        Divider()
+        TrackActionsMenu(items: [row.trackItem], queueActions: false)
+    }
+}
+
+extension QueueRow {
+    /// The entry as a song's row shows it, and as its menu acts on it.
+    var trackItem: TrackItem {
+        var source: String?
+        if case .source(let song) = entry.track { source = song.plugin }
+        return TrackItem(id: "q\(id)", track: entry.track, title: resolved ? title : String(localized: "Loading…"),
+                         artist: subtitle, album: nil, durationMs: durationMs, artwork: artwork, source: source)
     }
 }
 

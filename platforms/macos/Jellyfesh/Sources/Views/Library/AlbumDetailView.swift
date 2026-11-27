@@ -27,6 +27,7 @@ struct AlbumDetailView: View {
                 .selectionDisabled()
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 TrackRowView(item: item, style: .album, isCurrent: isCurrent(item), isPlaying: playback.isPlaying,
+                             showsActions: selection.contains(item.id),
                              play: { playback.play(.album(id: album.id), from: index) })
                     .trackListRow()
                     .tag(item.id)

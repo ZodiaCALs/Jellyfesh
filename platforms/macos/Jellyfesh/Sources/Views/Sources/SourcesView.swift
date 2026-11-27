@@ -431,13 +431,12 @@ struct BrowseView: View {
         let artwork = entry.artwork.flatMap { ArtworkSource(hash: nil, location: $0) }
         if entry.kind == .track {
             let shown = SourcePage.trackItem(entry, artwork: artwork, number: number)
-            let playFromRow: (() -> Void)? = number == nil ? nil : { play(from: entry) }
             TrackRowView(item: shown, style: number == nil ? .full : .album,
                          isCurrent: entry.track != nil && entry.track == playback.nowPlaying?.track,
-                         isPlaying: playback.isPlaying, play: playFromRow)
+                         isPlaying: playback.isPlaying, play: { play(from: entry) })
                 .onTapGesture(count: 2) { play(from: entry) }
                 .contextMenu {
-                    TrackActionsMenu(items: [TrackItem(result: entry, artwork: nil)])
+                    TrackActionsMenu(items: [shown])
                 }
                 .accessibilityAction { play(from: entry) }
         } else {

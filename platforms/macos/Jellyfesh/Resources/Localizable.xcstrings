@@ -6111,6 +6111,28 @@
         }
       }
     },
+    "More for %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のその他の操作"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的更多操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的更多操作"
+          }
+        }
+      }
+    },
     "Most Played": {
       "localizations": {
         "ja": {
