@@ -9,23 +9,81 @@
 // * Lyrics, Queue, the device button while a remote source plays, and the volume;
 // * the mini player button (MiniPlayerStore) and More: the song's menu, Desktop Lyrics
 //   (NowPlayingMoreMenu).
-// A narrower bar keeps the volume's mute button and drops its line, as the web's does, and the
-// narrowest drops Lyrics and Queue too (PlayerBarLayout). While a remote session runs the bar shows its track with "Playing on {Device}"
-// (ADR-0018). Liquid Glass on macOS 26, like the capsule (FloatingGlass).
+// The columns are laid out as the web's grid lays them out (PlayerBarColumns): each keeps to its
+// own width, so nothing in the bar overlaps at any width (v0.0.9); the title, the artist and the
+// translation end with "…", the sung line fades at the column's edge. A narrower bar drops the
+// volume's line and keeps its mute button, then drops Lyrics and Queue, then the mute button, as
+// the web's does (PlayerBarLayout). While a remote session runs the bar shows its track with
+// "Playing on {Device}" (ADR-0018). Liquid Glass on macOS 26, like the capsule (FloatingGlass).
 
 import SwiftUI
 
 /// What the player bar has room for, by its own width (beside the sidebar it is the window's width
-/// less 280 pt).
+/// less 280 pt), and how its columns share that width. The web's container queries and grid.
 enum PlayerBarLayout {
-    /// The volume line shows beside the mute button from here (the default window's bar); the web
-    /// keeps the button alone in narrower windows too.
+    /// The volume line shows instead of the mute button from here (the default window's bar).
     static let volumeLineMinWidth: CGFloat = 900
     /// Lyrics and Queue show from here; narrower, Now Playing still has them (⌥⌘L, ⌥⌘U).
-    static let paneButtonsMinWidth: CGFloat = 720
+    static let paneButtonsMinWidth: CGFloat = 760
+    /// The mute button shows from here; narrower, ⌘↑ and ⌘↓ still change the volume.
+    static let muteButtonMinWidth: CGFloat = 640
+
+    /// The space before the artwork and after the last tool, and between the columns.
+    static let leadingInset: CGFloat = Tokens.Space.s2
+    static let trailingInset: CGFloat = Tokens.Space.s4
+    static let columnSpacing: CGFloat = Tokens.Space.s4
+    /// The artwork and lines' least width (the web's `minmax(112px, 1fr)`).
+    static let linesMinWidth: CGFloat = 112
+    /// The transport's narrowest (its five buttons) and widest, with the scrubber under it (the
+    /// web's `minmax(232px, 340px)`; the buttons here are 220 pt).
+    static let transportWidths: ClosedRange<CGFloat> = 220...340
 
     static func showsVolumeLine(barWidth: CGFloat) -> Bool { barWidth >= volumeLineMinWidth }
     static func showsPaneButtons(barWidth: CGFloat) -> Bool { barWidth >= paneButtonsMinWidth }
+    static func showsMuteButton(barWidth: CGFloat) -> Bool { barWidth >= muteButtonMinWidth }
+
+    /// The widths of the artwork-and-lines column and the transport column in a row `width` wide
+    /// whose tools take `tools`: the transport grows to its widest while the lines keep their least,
+    /// then the lines take the rest. The three columns and the two gaps never add up to more than
+    /// `width` while it holds the tools and the narrowest transport.
+    static func columns(width: CGFloat, tools: CGFloat) -> (lines: CGFloat, transport: CGFloat) {
+        let free = max(0, width - tools - 2 * columnSpacing)
+        let transport = min(max(free - linesMinWidth, transportWidths.lowerBound), transportWidths.upperBound, free)
+        return (lines: free - transport, transport: transport)
+    }
+}
+
+/// The bar's three columns as the web's grid lays them out (`minmax(112px, 1fr) minmax(232px,
+/// 340px) auto`): the tools at their own width at the end, then the transport and the artwork and
+/// lines as `PlayerBarLayout.columns` shares the rest. Each column is offered its width and no
+/// more, so none runs into the next.
+struct PlayerBarColumns: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let ideal = sizes.reduce(PlayerBarLayout.columnSpacing * CGFloat(max(sizes.count - 1, 0))) { $0 + $1.width }
+        return CGSize(width: proposal.width ?? ideal, height: proposal.height ?? (sizes.map(\.height).max() ?? 0))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 3 else {
+            // Not the bar's three columns: side by side at their own widths.
+            var x = bounds.minX
+            for subview in subviews {
+                let size = subview.sizeThatFits(.unspecified)
+                subview.place(at: CGPoint(x: x, y: bounds.midY), anchor: .leading, proposal: ProposedViewSize(size))
+                x += size.width + PlayerBarLayout.columnSpacing
+            }
+            return
+        }
+        let tools = subviews[2].sizeThatFits(.unspecified)
+        let columns = PlayerBarLayout.columns(width: bounds.width, tools: tools.width)
+        subviews[0].place(at: CGPoint(x: bounds.minX, y: bounds.midY), anchor: .leading,
+                          proposal: ProposedViewSize(width: columns.lines, height: bounds.height))
+        subviews[1].place(at: CGPoint(x: bounds.minX + columns.lines + PlayerBarLayout.columnSpacing, y: bounds.midY),
+                          anchor: .leading, proposal: ProposedViewSize(width: columns.transport, height: bounds.height))
+        subviews[2].place(at: CGPoint(x: bounds.maxX, y: bounds.midY), anchor: .trailing,
+                          proposal: ProposedViewSize(tools))
+    }
 }
 
 struct PlayerBar: View {
@@ -55,27 +113,28 @@ struct PlayerBar: View {
     }
 
     private func content(_ item: PlayingItem) -> some View {
-        HStack(spacing: Tokens.Space.s4) {
+        PlayerBarColumns() {
             PlayerBarNowPlaying(item: item)
-                .frame(minWidth: 120, maxWidth: .infinity, alignment: .leading)
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
 
             VStack(spacing: 0) {
                 PlayerBarTransport()
                 SeekBar()
             }
-            .frame(minWidth: 220, maxWidth: 560)
+            .frame(minWidth: 0, maxWidth: .infinity)
 
             PlayerBarTools(item: item, volumeLine: PlayerBarLayout.showsVolumeLine(barWidth: width),
-                           paneButtons: PlayerBarLayout.showsPaneButtons(barWidth: width))
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                           paneButtons: PlayerBarLayout.showsPaneButtons(barWidth: width),
+                           muteButton: PlayerBarLayout.showsMuteButton(barWidth: width))
         }
-        .padding(.leading, Tokens.Space.s2)
-        .padding(.trailing, Tokens.Space.s4)
+        .padding(.leading, PlayerBarLayout.leadingInset)
+        .padding(.trailing, PlayerBarLayout.trailingInset)
         .frame(height: Tokens.Player.barHeight)
     }
 }
 
-/// The artwork and the two lines, one button that opens Now Playing; a soft fill on hover.
+/// The artwork and the two lines, one button that opens Now Playing; a soft fill on hover. The
+/// lines take what the column leaves beside the artwork, and no more.
 private struct PlayerBarNowPlaying: View {
     var item: PlayingItem
 
@@ -94,7 +153,7 @@ private struct PlayerBarNowPlaying: View {
                 ArtworkView(source: item.artwork, size: 56, cornerRadius: Tokens.Radius.rLg)
                     .elevation(Tokens.Elevation.shadow1)
                 PlayerBarLines(item: item)
-                Spacer(minLength: 0)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             }
             .padding(.leading, 6)
             .padding(.trailing, Tokens.Space.s2)
@@ -159,11 +218,13 @@ private struct PlayerBarTransport: View {
 }
 
 /// The quality badge, Lyrics and Queue (when there is room), the device button while a remote
-/// source plays, the volume (its line when there is room), the mini player button and More.
+/// source plays, the volume (its line, or its mute button, when there is room), the mini player
+/// button and More, at their own width.
 private struct PlayerBarTools: View {
     var item: PlayingItem
     var volumeLine: Bool
     var paneButtons: Bool
+    var muteButton: Bool
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(SettingsStore.self) private var settings
@@ -209,7 +270,7 @@ private struct PlayerBarTools: View {
                     VolumeSlider()
                         .frame(width: 150)
                         .padding(.horizontal, Tokens.Space.s1)
-                } else if playback.canMute {
+                } else if muteButton && playback.canMute {
                     VolumeMuteButton()
                 }
             }

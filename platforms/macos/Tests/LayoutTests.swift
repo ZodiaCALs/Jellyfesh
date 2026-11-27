@@ -60,15 +60,61 @@ final class ShellLayoutTests: XCTestCase {
         XCTAssertFalse(ShellLayout.showsPlayer(hasTrack: false, nowPlayingShown: false))
     }
 
-    func testANarrowBarKeepsTheMuteButtonAndDropsTheVolumeLine() {
-        let narrowest = SeekGeometry.playerBarMinWidth - ShellLayout.sidebarWidth - ShellLayout.margin
-            - 2 * LuminousGeometry.playerMargin
+    /// The bar beside the panel in the narrowest window that shows it (900 pt).
+    private static let narrowestBar = SeekGeometry.playerBarMinWidth - ShellLayout.sidebarWidth - ShellLayout.margin
+        - 2 * LuminousGeometry.playerMargin
+
+    func testANarrowBarDropsTheVolumeLineThenLyricsAndQueueThenTheMuteButton() {
+        let narrowest = Self.narrowestBar
         XCTAssertFalse(PlayerBarLayout.showsVolumeLine(barWidth: narrowest), "a 900 pt window beside the panel")
         XCTAssertFalse(PlayerBarLayout.showsPaneButtons(barWidth: narrowest), "Now Playing still has them")
-        XCTAssertTrue(PlayerBarLayout.showsPaneButtons(barWidth: 720))
+        XCTAssertFalse(PlayerBarLayout.showsMuteButton(barWidth: narrowest), "under 640 pt, as on the web")
+        XCTAssertTrue(PlayerBarLayout.showsMuteButton(barWidth: 640))
+        XCTAssertFalse(PlayerBarLayout.showsPaneButtons(barWidth: 759))
+        XCTAssertTrue(PlayerBarLayout.showsPaneButtons(barWidth: 760), "from 760 pt, as on the web")
         let defaultWindow = 1180 - ShellLayout.sidebarWidth - ShellLayout.margin - 2 * LuminousGeometry.playerMargin
         XCTAssertTrue(PlayerBarLayout.showsVolumeLine(barWidth: defaultWindow), "the default window has it all")
         XCTAssertLessThan(NowPlayingDock.compactBelow, SeekGeometry.playerBarMinWidth)
+    }
+
+    func testTheBarsColumnsKeepToTheirOwnWidthsAtEveryWidth() {
+        // The artwork-and-lines button with no room left for its lines: 6 pt, the 56 pt artwork,
+        // 12 pt, 8 pt.
+        let artworkAlone: CGFloat = 6 + 56 + 12 + 8
+        for barWidth in stride(from: Self.narrowestBar, through: 1280, by: 2) {
+            let row = barWidth - PlayerBarLayout.leadingInset - PlayerBarLayout.trailingInset
+            let tools = Self.widestTools(barWidth: barWidth)
+            let columns = PlayerBarLayout.columns(width: row, tools: tools)
+            XCTAssertEqual(columns.lines + columns.transport + tools + 2 * PlayerBarLayout.columnSpacing, row,
+                           accuracy: 0.01, "nothing runs past the bar at \(barWidth) pt")
+            XCTAssertGreaterThanOrEqual(columns.transport, PlayerBarLayout.transportWidths.lowerBound,
+                                        "the five buttons fit at \(barWidth) pt")
+            XCTAssertGreaterThanOrEqual(columns.lines, artworkAlone, "the artwork fits at \(barWidth) pt")
+        }
+    }
+
+    func testTheTransportGrowsToItsWidestOnceTheLinesHaveTheirLeast() {
+        let wide = PlayerBarLayout.columns(width: 1256, tools: 400)
+        XCTAssertEqual(wide.transport, 340, "the web's widest")
+        XCTAssertEqual(wide.lines, 1256 - 400 - 32 - 340, "the lines take the rest")
+        let narrow = PlayerBarLayout.columns(width: 700, tools: 300)
+        XCTAssertEqual(narrow.lines, PlayerBarLayout.linesMinWidth)
+        XCTAssertEqual(narrow.transport, 700 - 300 - 32 - PlayerBarLayout.linesMinWidth)
+        let cramped = PlayerBarLayout.columns(width: 600, tools: 300)
+        XCTAssertEqual(cramped.transport, 220, "never narrower than its buttons while they fit")
+        XCTAssertEqual(cramped.lines, 600 - 300 - 32 - 220)
+    }
+
+    /// The tools at their widest at a bar width, as PlayerBarTools draws them 2 pt apart: the
+    /// quality badge's widest (132 pt) with its 4 pt margin, the device button (a remote source has
+    /// it, and no mute button), Lyrics and Queue, the volume line (150 pt and 4 pt each side), the
+    /// mini player button and More, each button 40 pt.
+    private static func widestTools(barWidth: CGFloat) -> CGFloat {
+        var widths: [CGFloat] = [132 + 4, 40]
+        if PlayerBarLayout.showsPaneButtons(barWidth: barWidth) { widths += [40, 40] }
+        if PlayerBarLayout.showsVolumeLine(barWidth: barWidth) { widths.append(150 + 8) }
+        widths += [40, 40]
+        return widths.reduce(0, +) + 2 * CGFloat(widths.count - 1)
     }
 
     func testTheWordmarkShowsTheChosenIcon() {
