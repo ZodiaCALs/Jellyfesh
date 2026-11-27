@@ -139,6 +139,8 @@ Android). Delete Playlist… asks first. Empty: "No Playlists Yet",
 * After them comes one section per signed-in source, in the source's own
   words ("Liked Songs", "Favourites", "Starred"), with Songs, Albums and
   Artists where the source keeps them.
+* A source whose likes came back empty still shows its name, with "Nothing
+  liked in {Service} yet."; one whose likes failed shows the reason.
 * They are read-only: the heart marks a song in Jellyfesh only.
 * Spotify's sections stand on their own, attributed "Content from
   Spotify".
@@ -159,6 +161,24 @@ Android). Delete Playlist… asks first. Empty: "No Playlists Yet",
 Playlist…, Add to Favourites or Remove from Favourites, Go to Album, Go to
 Artist, and on desktops Show in Finder / Show in Explorer / Show in Files.
 
+**Rows and cards** (v0.0.9):
+* A song row shows a **play button** over its artwork (or its number) and a
+  **More** button at its end while the pointer is over it or it has keyboard
+  focus. The play button plays from that row, as a double-click, Return or
+  a tap on a phone does.
+  * Phones have no hover: they show More on every row.
+* Right-click opens the same menu as More, in every app and in the web; so
+  does a long press on touch screens.
+* Album and playlist cards show a play button on the cover and More, on
+  hover or focus. Right-click opens the card's menu: Play, Shuffle, Play
+  Next, Play Last, Add to Playlist…, Go to Artist, Download (where the
+  source allows it) and Open in {Service}.
+* A source's song keeps its album, artist and link wherever it shows (Home,
+  Favourites, playlists, the queue). So its menu offers Go to Album, Go to
+  Artist and Open in {Service} whenever the source has them, not only in
+  search and browse.
+* Download appears only for sources that allow downloads (ADR-0025).
+
 **Search** (ADR-0024 §4). One field ("Songs, albums and artists"), then the
 tabs **All**, **Library**, and one per source that answered.
 * **All:** library results first (Songs, Albums, Artists), then **From Your
@@ -166,6 +186,11 @@ tabs **All**, **Library**, and one per source that answered.
   separate source's tab ("Results from Spotify").
 * **A source's tab:** its Songs, Albums, Artists and Playlists, each with
   **Show More**.
+* Only sources that are ready are asked: switched on, and signed in when
+  they need a sign-in. A source that isn't set up yet is left out of search;
+  Settings › Sources says what it needs.
+* A source that fails shows its reason in plain words, never a code's
+  prefix ("invalid input: …").
 * Nothing found: "No Results".
 
 **Sources.** "Sources bring music from servers and services into
@@ -350,6 +375,14 @@ The full bar holds, in this order:
 * the **mini player button** and More.
 
 The capsule holds the artwork, the title, play and next.
+
+Every part of the bar keeps to its own column at any width; nothing in it
+overlaps (v0.0.9):
+* The title, the artist and the translation end with "…" when too long.
+* The sung line fades out at its column's edge.
+* The times stay beside the scrubber.
+* The scrubber shows keyboard focus by thickening and showing its thumb,
+  never with the system's focus ring.
 
 **The quality menu** (ADR-0026 §3) opens from the badge, which shows the
 playing quality's label (the core's `QualityLabel`).
