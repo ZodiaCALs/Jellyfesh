@@ -62,7 +62,9 @@ and fixes for covers on Home, source playlists, Shuffle and Android 17
   likes and playlists, and Jellyfin and Subsonic gain downloads. Community
   plugins 0.1.3.
 - **Windows:** three Windows SDK and WinRT projection assemblies are no
-  longer precompiled, about 60 MB less inside the installer.
+  longer precompiled. The SDK projection is 24 MiB per architecture
+  instead of about 55, and the installer is 152 MiB (159 MiB in
+  v0.0.7).
 - **Lighter:**
   - baked cover backdrops are capped at 48 MB;
   - Jellyfesh Web loads Settings on first use (about 14 KB less gzip on
