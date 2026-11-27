@@ -34,6 +34,7 @@ holds the pinned versions.
 | [0024](0024-source-library-search-by-source.md) | Sources' likes and playlists, and search by source (API 1.3) | Your v0.0.8 import answer | Accepted |
 | [0025](0025-downloads.md) | Downloads from your own servers | Your v0.0.8 download request | Accepted |
 | [0026](0026-quality-menu-mini-player.md) | Streaming quality in the bar, and the mini player window | Your v0.0.8 bar and window requests | Accepted |
+| [0027](0027-source-rows-ready-search-one-keychain-item.md) | Source songs keep their album, artist and link; search asks ready sources; one Keychain item on macOS | Your v0.0.8 screenshots | Accepted |
 
 The service-by-service findings behind 0010–0012 are in
 [`../sources-report.md`](../sources-report.md).

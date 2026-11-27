@@ -2,6 +2,7 @@
 
 * Status: Proposed
 * Date: 2026-11-05
+* Amended by: ADR-0027 §1 (one Keychain item on macOS)
 
 ## Context
 
