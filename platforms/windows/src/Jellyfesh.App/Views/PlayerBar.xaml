@@ -10,6 +10,12 @@
     volume (hidden when a remote device has none; narrow bars keep only its mute button), the mini
     player button and More (Open in {Service}, Stop Controlling, Desktop Lyrics). It bends CMP-02
     (one control) on purpose, for desktop use.
+
+    Every part keeps to its own column at any width (v0.0.9, Drawing.PlayerBarLayout): the tools'
+    column is as wide as what it holds, and a narrower bar drops the volume line, then Lyrics and
+    Queue, then the mute button; the middle column grows to 340 epx once the title has 112; the title,
+    the artist and the translation end with "…" and the sung line is cut at the column's edge; the
+    times stay beside the scrubber.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.PlayerBar"
@@ -19,13 +25,13 @@
     xmlns:shell="using:Jellyfesh.App.Shell"
     xmlns:th="using:Jellyfesh.App.Theming">
 
-    <Grid Height="{th:Token Key=Player.BarHeight}">
+    <Grid x:Name="Root" Height="{th:Token Key=Player.BarHeight}" SizeChanged="OnBarSizeChanged">
         <Border CornerRadius="{th:Token Key=Radius.2xl, Kind=Corner}" Style="{StaticResource JfVeilCapsuleStyle}" />
         <Grid Padding="8,0,16,0" ColumnSpacing="16">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MinWidth="160" />
-                <ColumnDefinition Width="1.4*" MinWidth="260" MaxWidth="560" />
-                <ColumnDefinition Width="*" MinWidth="200" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="MiddleColumn" Width="340" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- What is playing; opens Now Playing. -->
@@ -121,7 +127,7 @@
             </StackPanel>
 
             <!-- The quality badge, Lyrics, Queue, the device button (remote sources), the volume, the mini player and More. -->
-            <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" Spacing="2">
+            <StackPanel x:Name="Tools" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal" SizeChanged="OnToolsSizeChanged" Spacing="2">
                 <Button
                     x:Name="QualityBadge"
                     x:Uid="Bar_Quality"
@@ -133,10 +139,10 @@
                     Visibility="{x:Bind shell:Bind.Visible(Player.HasQualityBadge), Mode=OneWay}">
                     <TextBlock MaxLines="1" Text="{x:Bind Player.QualityBadge, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
                 </Button>
-                <Button x:Uid="Bar_Lyrics" AutomationProperties.Name="Lyrics" Click="OnLyricsClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Lyrics">
+                <Button x:Uid="Bar_Lyrics" AutomationProperties.Name="Lyrics" Click="OnLyricsClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Lyrics" Visibility="{x:Bind shell:Bind.Visible(FitsPanes), Mode=OneWay}">
                     <controls:StrokeIcon Data="{StaticResource IconLyrics}" Size="20" />
                 </Button>
-                <Button x:Uid="Bar_Queue" AutomationProperties.Name="Queue" Click="OnQueueClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Queue">
+                <Button x:Uid="Bar_Queue" AutomationProperties.Name="Queue" Click="OnQueueClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Queue" Visibility="{x:Bind shell:Bind.Visible(FitsPanes), Mode=OneWay}">
                     <controls:StrokeIcon Data="{StaticResource IconQueue}" Size="20" />
                 </Button>
                 <Button
@@ -153,7 +159,7 @@
                     Command="{x:Bind Player.ToggleMuteCommand}"
                     Style="{StaticResource JfIconButtonStyle}"
                     ToolTipService.ToolTip="{x:Bind Player.MuteLabel, Mode=OneWay}"
-                    Visibility="{x:Bind shell:Bind.Visible(Player.CanMute), Mode=OneWay}">
+                    Visibility="{x:Bind shell:Bind.VisibleIfAll(Player.CanMute, FitsMute), Mode=OneWay}">
                     <controls:StrokeIcon Data="{x:Bind shell:Bind.VolumeGlyph(Player.Volume, Player.IsMuted), Mode=OneWay}" Size="20" />
                 </Button>
                 <Slider
@@ -165,7 +171,7 @@
                     Style="{StaticResource JfThinSliderStyle}"
                     Value="{x:Bind Player.Volume, Mode=OneWay}"
                     ValueChanged="OnVolumeChanged"
-                    Visibility="{x:Bind shell:Bind.VisibleIfAll(Player.ShowsVolume, ShowsVolumeLine), Mode=OneWay}" />
+                    Visibility="{x:Bind shell:Bind.VisibleIfAll(Player.ShowsVolume, FitsVolumeLine), Mode=OneWay}" />
                 <Button x:Uid="Bar_MiniPlayer" AutomationProperties.Name="Open Mini Player" Click="OnMiniPlayerClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Open Mini Player (Ctrl+M)">
                     <controls:StrokeIcon Data="{StaticResource IconMiniPlayer}" Size="20" />
                 </Button>

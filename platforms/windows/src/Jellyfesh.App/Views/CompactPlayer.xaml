@@ -42,8 +42,15 @@
                     <TextBlock Style="{StaticResource JfRemoteLineText}" Text="{x:Bind Player.RemoteDeviceText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(Player.IsRemote), Mode=OneWay}" />
                     <controls:LyricsBarLine x:Name="LyricLine" Margin="0,2,0,0" LineFontSize="12" Visibility="{x:Bind shell:Bind.VisibleIfAll(Shell.MiniPlayer.ShowLyricsLine, Shell.LyricsBar.HasLine), Mode=OneWay}" />
                 </StackPanel>
+                <!-- The transport centred, the button back to the full window in its own column: a narrow
+                     window moves the transport aside rather than under the button (v0.0.9). -->
                 <Grid>
-                    <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" MinWidth="44" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                         <Button x:Uid="Player_PreviousButton" AutomationProperties.Name="Previous" Command="{x:Bind Player.PreviousCommand}" IsEnabled="{x:Bind Player.CanGoPrevious, Mode=OneWay}" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Previous (Ctrl+←)">
                             <controls:StrokeIcon Data="{StaticResource IconPrevious}" />
                         </Button>
@@ -54,7 +61,7 @@
                             <controls:StrokeIcon Data="{StaticResource IconNext}" />
                         </Button>
                     </StackPanel>
-                    <Button x:Uid="Compact_Expand" HorizontalAlignment="Right" AutomationProperties.Name="Back to the Full Window" Click="OnExpandClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Back to the Full Window">
+                    <Button x:Uid="Compact_Expand" Grid.Column="2" HorizontalAlignment="Right" AutomationProperties.Name="Back to the Full Window" Click="OnExpandClick" Style="{StaticResource JfIconButtonStyle}" ToolTipService.ToolTip="Back to the Full Window">
                         <controls:StrokeIcon Data="{StaticResource IconExpand}" Size="18" />
                     </Button>
                 </Grid>

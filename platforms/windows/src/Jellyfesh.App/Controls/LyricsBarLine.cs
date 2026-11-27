@@ -13,7 +13,9 @@ namespace Jellyfesh.App.Controls;
 /// its translation under it when Show Translations is on. A word-timed line fills word by word in
 /// the highlight colour (<see cref="ApplySweep"/>, the same sweep as Now Playing's); a line-timed
 /// one shows whole. Unlike Now Playing's lines it never dims: the bar shows the line until the next
-/// one starts.
+/// one starts. It keeps to its column (docs/ui.md, v0.0.9): a whole line and the translation end
+/// with "…"; a word-filled line too long for the row fades out at its end, word by word over the
+/// last <see cref="FadeWidth"/>, and is cut at the edge.
 /// </summary>
 public sealed partial class LyricsBarLine : StackPanel
 {
@@ -25,6 +27,9 @@ public sealed partial class LyricsBarLine : StackPanel
 
     public static readonly DependencyProperty DimProperty =
         DependencyProperty.Register(nameof(Dim), typeof(bool), typeof(LyricsBarLine), new PropertyMetadata(false, (d, _) => ((LyricsBarLine)d).Rebuild()));
+
+    /// <summary>The width over which a word-filled line too long for its row fades out at the row's end.</summary>
+    private const double FadeWidth = 32;
 
     private readonly Grid _row = new();
     private readonly TextBlock _plain = new() { TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, FontWeight = FontWeights.SemiBold };
@@ -42,7 +47,11 @@ public sealed partial class LyricsBarLine : StackPanel
         Children.Add(_row);
         Children.Add(_translation);
         AutomationProperties.SetAccessibilityView(_words, AccessibilityView.Raw);
-        SizeChanged += (_, e) => _row.Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, e.NewSize.Width, Math.Max(e.NewSize.Height, 1)) };
+        SizeChanged += (_, e) =>
+        {
+            _row.Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, e.NewSize.Width, Math.Max(e.NewSize.Height, 1)) };
+            FadeEdge();
+        };
     }
 
     /// <summary>The bar's line (LyricsBarPresenter.Line or Next), or null for none.</summary>
@@ -167,6 +176,7 @@ public sealed partial class LyricsBarLine : StackPanel
                 var text = w.JoinsNext || i == line.Words.Count - 1 ? w.Text : w.Text + " ";
                 var part = new SweptWord(text, unsung, sung, line.Direction == Core.TextDirection.Rtl);
                 part.Apply(LineFontSize, 1.3);
+                part.Root.SizeChanged += (_, _) => FadeEdge();
                 _parts.Add(part);
                 _words.Children.Add(part.Root);
             }
@@ -174,5 +184,28 @@ public sealed partial class LyricsBarLine : StackPanel
 
         _plain.Visibility = swept ? Visibility.Collapsed : Visibility.Visible;
         _words.Visibility = swept ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// A word-filled line wider than its row fades out at the row's end: each word that reaches into
+    /// the last <see cref="FadeWidth"/> dims with how far it reaches, and the clip cuts what is past
+    /// the edge. A line that fits shows whole. Words run in the line's direction, so the end is the
+    /// left edge of a right-to-left line.
+    /// </summary>
+    private void FadeEdge()
+    {
+        var width = ActualWidth;
+        var total = 0.0;
+        foreach (var part in _parts)
+        {
+            total += part.Root.ActualWidth;
+        }
+
+        var x = 0.0;
+        foreach (var part in _parts)
+        {
+            x += part.Root.ActualWidth;
+            part.Root.Opacity = width <= 0 || total <= width ? 1 : Math.Clamp(0.3 + (0.7 * (width - x) / FadeWidth), 0.3, 1);
+        }
     }
 }

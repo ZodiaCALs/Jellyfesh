@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Jellyfesh.Core;
+using Jellyfesh.Drawing;
 using Jellyfesh.Formatting;
 using Jellyfesh.Tests.Support;
 using Jellyfesh.ViewModels;
@@ -33,6 +34,36 @@ public class LayoutTests
         // A narrow bar keeps its mute button and drops the volume line (the web's 1040 px).
         Assert.False(ShellLayout.For(1040, hasTrack: true, MiniPlayerStyle.Bar).VolumeLine);
         Assert.True(ShellLayout.For(1041, hasTrack: true, MiniPlayerStyle.Bar).VolumeLine);
+    }
+
+    /// <summary>v0.0.9: every part of the bar keeps to its own column at any width, so nothing in it overlaps.</summary>
+    [Fact]
+    public void The_player_bar_keeps_every_part_in_its_own_column()
+    {
+        // The web's container queries: the volume line from 900 epx, Lyrics and Queue from 760, mute from 640.
+        Assert.Equal(new PlayerBarLayout(VolumeLine: true, Panes: true, Mute: true), PlayerBarLayout.For(968));
+        Assert.Equal(new PlayerBarLayout(VolumeLine: false, Panes: true, Mute: true), PlayerBarLayout.For(899));
+        Assert.Equal(new PlayerBarLayout(VolumeLine: false, Panes: false, Mute: true), PlayerBarLayout.For(759));
+        Assert.Equal(new PlayerBarLayout(VolumeLine: false, Panes: false, Mute: false), PlayerBarLayout.For(639));
+
+        // A 1280 epx window's bar (968 beside the sidebar) with every tool: the middle at its widest.
+        Assert.Equal(340, PlayerBarLayout.MiddleWidth(968, 452));
+        Assert.Equal(120, PlayerBarLayout.TitleWidth(968, 452));
+
+        // Narrower, the title keeps its 112 and the middle gives way.
+        Assert.Equal(271, PlayerBarLayout.MiddleWidth(760, 321));
+        Assert.Equal(112, PlayerBarLayout.TitleWidth(760, 321));
+
+        // The narrowest bar (a 900 epx window) with a long quality badge: the transport keeps its 244.
+        Assert.Equal(244, PlayerBarLayout.MiddleWidth(588, 212));
+        Assert.Equal(76, PlayerBarLayout.TitleWidth(588, 212));
+
+        // The columns add up to the bar: none reaches into another.
+        foreach (var (width, tools) in new[] { (1280.0, 452.0), (968.0, 452.0), (760.0, 321.0), (588.0, 170.0), (588.0, 212.0) })
+        {
+            var used = PlayerBarLayout.Padding + (2 * PlayerBarLayout.Gap) + PlayerBarLayout.TitleWidth(width, tools) + PlayerBarLayout.MiddleWidth(width, tools) + tools;
+            Assert.Equal(width, used, 6);
+        }
     }
 
     [Fact]
