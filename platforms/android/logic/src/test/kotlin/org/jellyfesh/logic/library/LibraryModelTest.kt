@@ -225,6 +225,72 @@ class LibraryModelTest {
         assertEquals(emptyList(), TrackMenu.items(song, favourite = null, hasAlbum = false, hasArtist = false, remote = true))
     }
 
+    // ---- Go to Album and Go to Artist (docs/ui.md, "Rows and cards"; ADR-0027) ---------------------
+
+    private val jellyfin = "org.jellyfesh.jellyfin"
+
+    @Test
+    fun aLibrarySongGoesToTheLibrarysAlbumAndArtist() {
+        val song = TrackRef.Library(7)
+        assertEquals(GoTo.LibraryAlbum(3, "Harbour Lights"), GoToPlaces.album(song, "Morning", albumId = 3, albumTitle = "Harbour Lights", sourceAlbumId = null, artist = "Ada"))
+        assertEquals(GoTo.LibraryArtist("Ada"), GoToPlaces.artist(song, "Morning", artist = "Ada", sourceArtistId = null))
+        // Unknown album and artist: neither is offered.
+        assertNull(GoToPlaces.album(song, "Morning", albumId = null, albumTitle = "Harbour Lights", sourceAlbumId = null, artist = "Ada"))
+        assertNull(GoToPlaces.artist(song, "Morning", artist = " ", sourceArtistId = null))
+        // A file is not in the library: it has no artist page.
+        assertNull(GoToPlaces.artist(TrackRef.File("/m/loose.mp3"), "Loose", artist = "Ada", sourceArtistId = null))
+    }
+
+    @Test
+    fun aSourcesSongGoesToItsSourcesPagesWhereverItShows() {
+        // A row from Home, Favourites, a playlist or the queue keeps the ids it was played with.
+        val song = TrackRef.Source(SourceTrack(jellyfin, "t-1", "Morning", artist = "Ada", album = "Harbour Lights"))
+        assertEquals(
+            GoTo.SourcePage(jellyfin, "al-9", ItemKind.Album, "Harbour Lights", subtitle = "Ada"),
+            GoToPlaces.album(song, "Morning", albumId = null, albumTitle = "Harbour Lights", sourceAlbumId = "al-9", artist = "Ada"),
+        )
+        assertEquals(
+            GoTo.SourcePage(jellyfin, "ar-4", ItemKind.Artist, "Ada"),
+            GoToPlaces.artist(song, "Morning", artist = "Ada", sourceArtistId = "ar-4"),
+        )
+        // Without the source's ids (rows kept before v0.0.9), neither is offered.
+        assertNull(GoToPlaces.album(song, "Morning", albumId = null, albumTitle = "Harbour Lights", sourceAlbumId = null, artist = "Ada"))
+        assertNull(GoToPlaces.artist(song, "Morning", artist = "Ada", sourceArtistId = null))
+        // A library song never goes to a source's page.
+        assertNull(GoToPlaces.artist(TrackRef.Library(7), "Morning", artist = null, sourceArtistId = "ar-4"))
+    }
+
+    @Test
+    fun anAlbumsCardGoesToItsArtist() {
+        assertEquals(GoTo.LibraryArtist("Ada"), GoToPlaces.artist(CollectionRef.Album(3), "Harbour Lights", artist = "Ada", sourceArtistId = null))
+        assertNull(GoToPlaces.artist(CollectionRef.Album(3), "Harbour Lights", artist = null, sourceArtistId = null))
+        val sourceAlbum = CollectionRef.Source(jellyfin, "al-9", ItemKind.Album)
+        assertEquals(
+            GoTo.SourcePage(jellyfin, "ar-4", ItemKind.Artist, "Ada"),
+            GoToPlaces.artist(sourceAlbum, "Harbour Lights", artist = "Ada", sourceArtistId = "ar-4"),
+        )
+        assertNull(GoToPlaces.artist(sourceAlbum, "Harbour Lights", artist = "Ada", sourceArtistId = null))
+        // Playlists have no artist.
+        assertNull(GoToPlaces.artist(CollectionRef.Playlist(2), "Road Trip", artist = "Ada", sourceArtistId = null))
+        assertNull(GoToPlaces.artist(sourceAlbum.copy(kind = ItemKind.Playlist), "Road Trip", artist = "Ada", sourceArtistId = "ar-4"))
+    }
+
+    @Test
+    fun aCardsMenuIsTheSpecsInOrder() {
+        // Play, Shuffle, Play Next, Play Last, Add to Playlist…, Go to Artist, Download, Open in {Service}.
+        assertEquals(
+            listOf(CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast, CollectionMenuItem.AddToPlaylist, CollectionMenuItem.GoToArtist),
+            CollectionMenu.items(CollectionRef.Album(3), withPlay = true, hasArtist = true),
+        )
+        assertEquals(
+            listOf(
+                CollectionMenuItem.Play, CollectionMenuItem.Shuffle, CollectionMenuItem.PlayNext, CollectionMenuItem.PlayLast,
+                CollectionMenuItem.GoToArtist, CollectionMenuItem.Download, CollectionMenuItem.OpenLink,
+            ),
+            CollectionMenu.items(CollectionRef.Source(jellyfin, "al-9", ItemKind.Album), withPlay = true, hasLink = true, download = true, hasArtist = true),
+        )
+    }
+
     @Test
     fun theMoreMenuOfACollection() {
         val album = CollectionRef.Album(4)

@@ -3,7 +3,6 @@ package org.jellyfesh.android.ui.actions
 import org.jellyfesh.logic.nav.Screen
 import org.jellyfesh.logic.library.DetailsModel
 import org.jellyfesh.logic.core.ItemRef
-import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.android.ui.player.rememberInfoSheets
 import org.jellyfesh.android.ui.player.KnownInfo
 import org.jellyfesh.android.ui.player.InfoSheets
@@ -44,6 +43,8 @@ import org.jellyfesh.logic.library.ArtistMatch
 import org.jellyfesh.logic.library.CollectionMenu
 import org.jellyfesh.android.ui.library.LocalDownloadGate
 import org.jellyfesh.logic.library.DownloadMenus
+import org.jellyfesh.logic.library.GoTo
+import org.jellyfesh.logic.library.GoToPlaces
 import org.jellyfesh.logic.library.SourceLibraryModel
 import org.jellyfesh.logic.library.CollectionTracks
 import org.jellyfesh.logic.library.CollectionMenuItem
@@ -155,19 +156,17 @@ class TrackActions internal constructor(
     }
 
     private fun present(target: TrackTarget, extra: List<SheetAction>) {
-        val albumId = target.albumId
-        val artist = target.artist?.takeIf { it.isNotBlank() && target.track is TrackRef.Library }
         val sources = graph.store.state.value.sources
-        // A source's song opens its source's album and artist pages (ADR-0022).
+        // The library's album and artist, or a source's song's pages in its source (ADR-0022, ADR-0027).
         val plugin = (target.track as? TrackRef.Source)?.track?.plugin
-        val sourceAlbum = target.sourceAlbumId?.takeIf { plugin != null }
-        val sourceArtist = target.sourceArtistId?.takeIf { plugin != null }
+        val album = GoToPlaces.album(target.track, target.title, target.albumId, target.albumTitle, target.sourceAlbumId, target.artist)
+        val artist = GoToPlaces.artist(target.track, target.title, target.artist, target.sourceArtistId)
         val linkAction = openLinkAction(target.link, target.source ?: plugin)
         val items = TrackMenu.items(
             target.track,
             target.favorite,
-            hasAlbum = albumId != null || sourceAlbum != null,
-            hasArtist = artist != null || sourceArtist != null,
+            hasAlbum = album != null,
+            hasArtist = artist != null,
             remote = RemoteModel.isRemote(sources, target.track),
             hasLink = linkAction != null,
             makesLyrics = LyricsMakingModel.offersFor(graph.store.state.value.aiLyrics, target.track),
@@ -182,20 +181,8 @@ class TrackActions internal constructor(
                 TrackMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(listOf(target.track)) }
                 TrackMenuItem.AddToFavourites -> SheetAction(s(R.string.action_favourite), R.drawable.ic_heart) { graph.send(Command.SetFavorite(target.track, true)) }
                 TrackMenuItem.RemoveFromFavourites -> SheetAction(s(R.string.action_unfavourite), R.drawable.ic_heart_filled) { graph.send(Command.SetFavorite(target.track, false)) }
-                TrackMenuItem.GoToAlbum -> SheetAction(s(R.string.action_go_to_album), R.drawable.ic_album) {
-                    when {
-                        albumId != null -> nav.openAlbum(albumId, target.albumTitle ?: target.title)
-                        plugin != null && sourceAlbum != null ->
-                            nav.push(Screen.SourceBrowse(plugin, sourceAlbum, target.albumTitle ?: target.title, kind = ItemKind.Album, subtitle = target.artist))
-                    }
-                }
-                TrackMenuItem.GoToArtist -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) {
-                    when {
-                        artist != null -> goToArtist(artist)
-                        plugin != null && sourceArtist != null ->
-                            nav.push(Screen.SourceBrowse(plugin, sourceArtist, target.artist ?: target.title, kind = ItemKind.Artist))
-                    }
-                }
+                TrackMenuItem.GoToAlbum -> album?.let { place -> SheetAction(s(R.string.action_go_to_album), R.drawable.ic_album) { go(place) } }
+                TrackMenuItem.GoToArtist -> artist?.let { place -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) { go(place) } }
                 TrackMenuItem.GetInfo -> SheetAction(s(R.string.action_get_info), R.drawable.ic_info) {
                     infoSheets.show(
                         DetailsModel.itemFor(target.track),
@@ -223,12 +210,22 @@ class TrackActions internal constructor(
         }
     }
 
+    /** Go to Album or Go to Artist: the library's page, or a source's. */
+    private fun go(place: GoTo) {
+        when (place) {
+            is GoTo.LibraryAlbum -> nav.openAlbum(place.id, place.title)
+            is GoTo.LibraryArtist -> goToArtist(place.name)
+            is GoTo.SourcePage -> nav.push(Screen.SourceBrowse(place.plugin, place.id, place.title, kind = place.kind, subtitle = place.subtitle))
+        }
+    }
+
     /**
      * The More menu of an album, an artist or a playlist ([CollectionMenu]): Play Next, Play Last
-     * and Add to Playlist… (none of them for a remote source's), Download for a source's album or
+     * and Add to Playlist… (none of them for a remote source's), Go to Artist for an album whose
+     * [artist] (and, from a source, [sourceArtistId]) is given, Download for a source's album or
      * playlist when the source offers downloads, Open in {Service} when it has a [link], then
      * [extra] (a playlist's Rename…, Export Playlist… and Delete Playlist…). Lists without Play
-     * and Shuffle buttons ([withPlay]) offer those first.
+     * and Shuffle buttons ([withPlay]: cards and rows) offer those first.
      */
     fun showForCollection(
         title: String,
@@ -237,9 +234,12 @@ class TrackActions internal constructor(
         extra: List<SheetAction> = emptyList(),
         withPlay: Boolean = true,
         link: String? = null,
+        artist: String? = null,
+        sourceArtistId: String? = null,
     ) {
         val sources = graph.store.state.value.sources
         val linkAction = openLinkAction(link, (collection as? CollectionRef.Source)?.plugin)
+        val artistPage = GoToPlaces.artist(collection, title, artist, sourceArtistId)
         val items = CollectionMenu.items(
             collection,
             withPlay,
@@ -247,6 +247,7 @@ class TrackActions internal constructor(
             hasLink = linkAction != null,
             download = DownloadMenus.canDownload(sources, collection),
             saveAsPlaylist = SourceLibraryModel.canSaveAsPlaylist(collection),
+            hasArtist = artistPage != null,
         )
         val actions = items.mapNotNull { item ->
             when (item) {
@@ -255,6 +256,7 @@ class TrackActions internal constructor(
                 CollectionMenuItem.PlayNext -> SheetAction(s(R.string.action_play_next), R.drawable.ic_play_next) { playNext(collection) }
                 CollectionMenuItem.PlayLast -> SheetAction(s(R.string.action_play_last), R.drawable.ic_queue) { playLast(collection) }
                 CollectionMenuItem.AddToPlaylist -> SheetAction(s(R.string.action_add_to_playlist), R.drawable.ic_playlist) { addToPlaylist(collection) }
+                CollectionMenuItem.GoToArtist -> artistPage?.let { place -> SheetAction(s(R.string.action_go_to_artist), R.drawable.ic_artist) { go(place) } }
                 // Save as Playlist…: a Jellyfesh playlist of its songs, named first (ADR-0024).
                 CollectionMenuItem.SaveAsPlaylist -> (collection as? CollectionRef.Source)?.let { source ->
                     SheetAction(s(R.string.action_save_as_playlist), R.drawable.ic_playlist) {

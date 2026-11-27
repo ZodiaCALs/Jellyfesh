@@ -155,16 +155,18 @@ object TrackMenu {
 }
 
 /** The items of an album's, artist's or playlist's More menu, before a playlist's own (Rename… and on). */
-enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, SaveAsPlaylist, Download, OpenLink }
+enum class CollectionMenuItem { Play, Shuffle, PlayNext, PlayLast, AddToPlaylist, GoToArtist, SaveAsPlaylist, Download, OpenLink }
 
 object CollectionMenu {
     /**
      * The More menu of an album, artist or playlist (docs/ui.md, "Album, artist and playlist
-     * pages"): Play and Shuffle where the list has no buttons for them ([withPlay]); Play Next and
-     * Play Last, except for a remote source's (its songs never join the queue); Add to Playlist…
-     * when the songs can be gathered here; Save as Playlist… for a source's playlist
-     * ([saveAsPlaylist], ADR-0024); Download for a source's album or playlist when the source
-     * offers downloads ([download], ADR-0025); then Open in {Service} when it has a link.
+     * pages" and "Rows and cards"): Play and Shuffle where the list has no buttons for them
+     * ([withPlay]: a card, a row); Play Next and Play Last, except for a remote source's (its songs
+     * never join the queue); Add to Playlist… when the songs can be gathered here; Go to Artist
+     * for an album whose artist is known ([hasArtist], a card or a row); Save as Playlist… for a
+     * source's playlist ([saveAsPlaylist], ADR-0024); Download for a source's album or playlist
+     * when the source offers downloads ([download], ADR-0025); then Open in {Service} when it has
+     * a link.
      */
     fun items(
         collection: CollectionRef,
@@ -173,6 +175,7 @@ object CollectionMenu {
         hasLink: Boolean = false,
         download: Boolean = false,
         saveAsPlaylist: Boolean = false,
+        hasArtist: Boolean = false,
     ): List<CollectionMenuItem> = buildList {
         if (withPlay) {
             add(CollectionMenuItem.Play)
@@ -183,9 +186,60 @@ object CollectionMenu {
             add(CollectionMenuItem.PlayLast)
             if (CollectionTracks.canAdd(collection)) add(CollectionMenuItem.AddToPlaylist)
         }
+        if (hasArtist) add(CollectionMenuItem.GoToArtist)
         if (saveAsPlaylist) add(CollectionMenuItem.SaveAsPlaylist)
         if (download) add(CollectionMenuItem.Download)
         if (hasLink) add(CollectionMenuItem.OpenLink)
+    }
+}
+
+/** Where a menu's Go to Album or Go to Artist leads. */
+sealed interface GoTo {
+    /** The library's album page. */
+    data class LibraryAlbum(val id: Long, val title: String) : GoTo
+
+    /** The library's artist of this name, which the library's search finds ([ArtistMatch]): songs and albums carry the name only. */
+    data class LibraryArtist(val name: String) : GoTo
+
+    /** A source's album or artist page (ADR-0022), by the source's id of it. */
+    data class SourcePage(val plugin: String, val id: String, val kind: ItemKind, val title: String, val subtitle: String? = null) : GoTo
+}
+
+/**
+ * Where Go to Album and Go to Artist lead from a song's menu and a card's (docs/ui.md, "Song menu"
+ * and "Rows and cards"). A source's song keeps its album's and artist's ids wherever it shows
+ * (search, browse, Home, Favourites, playlists, the queue; ADR-0027), so its menu opens their
+ * pages in its source; the library's songs and albums open the library's.
+ */
+object GoToPlaces {
+    /**
+     * A song's album: the library's album the row knows ([albumId]), else, for a source's song,
+     * its album's page in the source ([sourceAlbumId]), titled [albumTitle] (else the song's [title]).
+     */
+    fun album(track: TrackRef, title: String, albumId: Long?, albumTitle: String?, sourceAlbumId: String?, artist: String?): GoTo? = when {
+        albumId != null -> GoTo.LibraryAlbum(albumId, albumTitle ?: title)
+        track is TrackRef.Source && sourceAlbumId != null ->
+            GoTo.SourcePage(track.track.plugin, sourceAlbumId, ItemKind.Album, albumTitle ?: title, subtitle = artist)
+        else -> null
+    }
+
+    /** A song's artist: the library's artist of a library song, by name, else a source's song's artist page in the source ([sourceArtistId]). */
+    fun artist(track: TrackRef, title: String, artist: String?, sourceArtistId: String?): GoTo? = when {
+        track is TrackRef.Library && !artist.isNullOrBlank() -> GoTo.LibraryArtist(artist)
+        track is TrackRef.Source && sourceArtistId != null -> GoTo.SourcePage(track.track.plugin, sourceArtistId, ItemKind.Artist, artist ?: title)
+        else -> null
+    }
+
+    /**
+     * An album's artist, for its card's or row's menu: the library's artist of a library album, by
+     * name, else the artist's page in the album's source ([sourceArtistId]). Playlists and artists
+     * have none.
+     */
+    fun artist(collection: CollectionRef, title: String, artist: String?, sourceArtistId: String?): GoTo? = when {
+        collection is CollectionRef.Album && !artist.isNullOrBlank() -> GoTo.LibraryArtist(artist)
+        collection is CollectionRef.Source && collection.kind == ItemKind.Album && sourceArtistId != null ->
+            GoTo.SourcePage(collection.plugin, sourceArtistId, ItemKind.Artist, artist?.takeIf { it.isNotBlank() } ?: title)
+        else -> null
     }
 }
 
