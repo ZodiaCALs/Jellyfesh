@@ -81,8 +81,10 @@ struct NowPlayingSungLine: View {
 
 /// One lyric line in one row, its words filling from the start edge as they are sung (the
 /// highlight colour over the unsung ink). A line without word timing, a right-to-left line, and
-/// any line under Reduce Motion show whole in the sung colour. A line too long for the row fades
-/// out at its end; a centred one that fits stays centred.
+/// any line under Reduce Motion show whole in the sung colour. The line takes the row's width,
+/// never more: one too long for it fades out at the row's edge and is cut there (docs/ui.md, "The
+/// player bar and the mini player": nothing in the bar overlaps); a centred one that fits stays
+/// centred.
 struct LyricsBarLine: View {
     var line: LyricsLine
     /// Its place in the document, to match the bar computed per frame.
@@ -138,10 +140,14 @@ struct LyricsBarLine: View {
         }
     }
 
+    /// The line at the row's width with its end fading at the row's edge. Both bounds matter: a
+    /// frame with only a maximum never gets narrower than the line it holds, so a long line would
+    /// keep its whole width and run over whatever is beside the row; with a minimum of 0 the frame
+    /// takes the width it is given, and the mask, which is that wide, cuts the rest.
     private func faded<Content: View>(_ content: Content) -> some View {
         let rtl = line.direction == .rightToLeft
         return content
-            .frame(maxWidth: .infinity, alignment: rtl ? .trailing : .leading)
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: rtl ? .trailing : .leading)
             .mask { LyricsBarFade(fromTrailing: rtl) }
     }
 }
