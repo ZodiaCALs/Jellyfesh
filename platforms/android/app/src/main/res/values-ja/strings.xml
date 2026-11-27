@@ -239,6 +239,8 @@
     <string name="a11y_drag">ドラッグして並べ替え</string>
     <string name="a11y_move_up">上へ移動</string>
     <string name="a11y_move_down">下へ移動</string>
+    <!-- v0.0.9: what a long press on a row or a card does, read by TalkBack ("double-tap and hold to show menu") -->
+    <string name="a11y_show_menu">メニューを表示</string>
     <string name="info_heading">この曲について</string>
     <string name="info_title">タイトル</string>
     <string name="info_artist">アーティスト</string>

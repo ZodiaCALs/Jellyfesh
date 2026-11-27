@@ -36,6 +36,15 @@ object DownloadsModel {
 
     fun finished(downloads: DownloadsSnapshot): List<DownloadItem> = downloads.items.filter { it.state == DownloadState.Done }
 
+    /**
+     * Whether a source's song has a finished download, for a row that does not say (a queue entry,
+     * Now Playing): its menu then offers no Download.
+     */
+    fun downloaded(downloads: DownloadsSnapshot, track: TrackRef): Boolean {
+        val song = (track as? TrackRef.Source)?.track ?: return false
+        return downloads.items.any { it.state == DownloadState.Done && it.track.plugin == song.plugin && it.track.id == song.id }
+    }
+
     /** The finished songs by album (the same title from one source), albums in the core's order. */
     fun albums(downloads: DownloadsSnapshot): List<DownloadedAlbum> =
         finished(downloads).groupBy { it.track.plugin to it.track.album }.map { (key, items) -> DownloadedAlbum(key.first, key.second, items) }

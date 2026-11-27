@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -40,9 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -107,10 +114,30 @@ private fun ArtworkTile(image: androidx.compose.ui.graphics.ImageBitmap?, title:
 }
 
 /**
+ * Right-click (a mouse's secondary button, a touchpad's two-finger click) runs [onClick]: the
+ * element's menu, as in every app (docs/ui.md, "Rows and cards"). The press is consumed before the
+ * element's own click sees it, so a right-click never also plays or opens.
+ */
+fun Modifier.onSecondaryClick(onClick: (() -> Unit)?): Modifier = if (onClick == null) this else pointerInput(onClick) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                event.changes.forEach { it.consume() }
+                onClick()
+            }
+        }
+    }
+}
+
+/**
  * A track row (52 dp, Tokens.Player.rowHeight): artwork or a number, title and a secondary line,
  * the duration and a More button. The row playing now is accent-soft with its title in accent
  * text, marked as selected, and (numbered rows) shows the level glyph, which moves only while
- * music plays (after Apple Music, v0.0.4).
+ * music plays (after Apple Music, v0.0.4). Rows and cards (v0.0.9): More shows on every row
+ * (phones have no hover); a long press or a right-click opens the same menu ([onMenu]); a mouse
+ * over the row or keyboard focus on it shows the play button over its artwork or number, as on
+ * Jellyfesh Web (the row plays from there when chosen).
  */
 @Composable
 fun TrackRow(
@@ -133,16 +160,46 @@ fun TrackRow(
     enabled: Boolean = !missing,
     /** Drawn in the faint ink: a missing file, or a source's song that cannot play here (its [subtitle] says why). */
     dimmed: Boolean = missing,
+    /** Long press and right-click: the row's menu; More's, unless the row draws its own More in [trailing]. */
+    onMenu: (() -> Unit)? = onMore,
 ) {
     val colors = Jf.colors
     val moreLabel = stringResource(R.string.action_more)
+    val menuLabel = stringResource(R.string.a11y_show_menu)
+    val haptics = LocalHapticFeedback.current
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val focused by interaction.collectIsFocusedAsState()
+    val showPlay = enabled && !playing && (hovered || focused)
     Row(
         modifier
             .fillMaxWidth()
             // The look's density spaces the rows (never under the 48 dp touch target).
             .heightIn(min = maxOf(spaced(Tokens.Player.rowHeight.dp + 8.dp), 48.dp))
             .then(if (playing) Modifier.padding(horizontal = 6.dp).background(colors.accentSoft, rounded(Tokens.Radius.rMd.dp)) else Modifier)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .onSecondaryClick(onMenu)
+            .combinedClickable(
+                interaction,
+                indication = LocalIndication.current,
+                enabled = enabled,
+                role = Role.Button,
+                onLongClickLabel = menuLabel.takeIf { onMenu != null },
+                onLongClick = onMenu,
+                onClick = onClick,
+            )
+            // A row that does nothing when chosen still opens its menu on a long press (TalkBack has More).
+            .then(
+                if (!enabled && onMenu != null) {
+                    Modifier.pointerInput(onMenu) {
+                        detectTapGestures(onLongPress = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onMenu()
+                        })
+                    }
+                } else {
+                    Modifier
+                },
+            )
             .semantics { selected = playing }
             .padding(horizontal = if (playing) 10.dp else 16.dp, vertical = spaced(4.dp)),
         verticalAlignment = Alignment.CenterVertically,
@@ -150,13 +207,21 @@ fun TrackRow(
     ) {
         when {
             number != null -> Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-                if (playing) {
-                    LevelGlyph(LocalPlaybackRunning.current)
-                } else {
-                    JfText(number.toString(), style = JfType.time, color = colors.ink50, maxLines = 1)
+                when {
+                    playing -> LevelGlyph(LocalPlaybackRunning.current)
+                    showPlay -> JfIcon(R.drawable.ic_play, colors.ink90, size = 16.dp)
+                    else -> JfText(number.toString(), style = JfType.time, color = colors.ink50, maxLines = 1)
                 }
             }
-            showArt -> ArtworkImage(art, title, 44.dp, rounded(Tokens.Artwork.radiusList.dp))
+            showArt -> Box {
+                val shape = rounded(Tokens.Artwork.radiusList.dp)
+                ArtworkImage(art, title, 44.dp, shape)
+                if (showPlay) {
+                    Box(Modifier.matchParentSize().background(colors.scrim, shape), contentAlignment = Alignment.Center) {
+                        JfIcon(R.drawable.ic_play, colors.onAccent, size = 18.dp)
+                    }
+                }
+            }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             JfText(
@@ -182,7 +247,10 @@ fun TrackRow(
     }
 }
 
-/** A row with a leading glyph tile, a title, a secondary line and a chevron (artists, playlists). */
+/**
+ * A row with a leading glyph tile, a title, a secondary line and a chevron (artists, playlists).
+ * With [onMore], a long press or a right-click opens the same menu (docs/ui.md, "Rows and cards").
+ */
 @Composable
 fun NavRow(
     title: String,
@@ -197,11 +265,13 @@ fun NavRow(
     badge: String? = null,
 ) {
     val colors = Jf.colors
+    val menuLabel = stringResource(R.string.a11y_show_menu)
     Row(
         modifier
             .fillMaxWidth()
             .heightIn(min = maxOf(spaced(60.dp), 48.dp))
-            .clickable(role = Role.Button, onClick = onClick)
+            .onSecondaryClick(onMore)
+            .combinedClickable(role = Role.Button, onLongClickLabel = menuLabel.takeIf { onMore != null }, onLongClick = onMore, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = spaced(6.dp)),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -230,7 +300,9 @@ fun InitialTile(text: String, size: Dp = 44.dp, icon: Int? = null) {
  * An album card for grids and shelves (Luminous): square artwork with artwork.radius-grid (16)
  * and shadow-2, title and artist. Hovering with a mouse (desktop mode) or keyboard focus lifts the
  * cover 4 dp and shows a 36 dp glass play button in its bottom start corner ([onPlay]); a press
- * scales it to 97 % (after Apple Music).
+ * scales it to 97 % (after Apple Music). A tap opens it; a long press or a right-click opens its
+ * menu ([onMenu]: Play, Shuffle, Play Next, Play Last, Add to Playlist…, Go to Artist, Download
+ * and Open in {Service}, as the item allows; docs/ui.md, "Rows and cards").
  */
 @Composable
 fun AlbumCard(
@@ -240,10 +312,11 @@ fun AlbumCard(
     sizePx: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onLongClick: (() -> Unit)? = null,
+    onMenu: (() -> Unit)? = null,
     onPlay: (() -> Unit)? = null,
 ) {
     val colors = Jf.colors
+    val menuLabel = stringResource(R.string.a11y_show_menu)
     val reduce = Jf.effects.reduceMotion
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -258,7 +331,15 @@ fun AlbumCard(
         modifier
             .clip(rounded(Tokens.Radius.rLg.dp))
             .hoverable(interaction)
-            .combinedClickable(interaction, indication = LocalIndication.current, role = Role.Button, onLongClick = onLongClick, onClick = onClick)
+            .onSecondaryClick(onMenu)
+            .combinedClickable(
+                interaction,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onLongClickLabel = menuLabel.takeIf { onMenu != null },
+                onLongClick = onMenu,
+                onClick = onClick,
+            )
             .semantics(mergeDescendants = true) {}
             .padding(4.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),

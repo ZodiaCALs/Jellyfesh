@@ -2,7 +2,9 @@ package org.jellyfesh.logic.library
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.DownloadError
@@ -33,6 +35,17 @@ class DownloadsModelTest {
         bytesUsed = 96_000_000,
         paused = null,
     )
+
+    @Test
+    fun aSongIsDownloadedOnceItsDownloadIsDone() {
+        assertTrue(DownloadsModel.downloaded(downloads, TrackRef.Source(track("t-5", "Slow Tide"))))
+        // Still on its way, or failed: not yet.
+        assertFalse(DownloadsModel.downloaded(downloads, TrackRef.Source(track("t-1", "Slow Tide"))))
+        assertFalse(DownloadsModel.downloaded(downloads, TrackRef.Source(track("t-3", "Slow Tide"))))
+        // Another source's song with the same id, or a library song.
+        assertFalse(DownloadsModel.downloaded(downloads, TrackRef.Source(SourceTrack("org.jellyfesh.subsonic", "t-5", "Song t-5"))))
+        assertFalse(DownloadsModel.downloaded(downloads, TrackRef.Library(40)))
+    }
 
     @Test
     fun inProgressThenTheFinishedSongsByAlbum() {

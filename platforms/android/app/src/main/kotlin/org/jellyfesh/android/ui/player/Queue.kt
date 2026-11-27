@@ -1,6 +1,6 @@
 package org.jellyfesh.android.ui.player
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +38,8 @@ import androidx.compose.ui.zIndex
 import org.jellyfesh.android.QueryResult
 import org.jellyfesh.android.R
 import org.jellyfesh.android.images.ArtKey
+import org.jellyfesh.android.ui.actions.TrackTarget
+import org.jellyfesh.android.ui.actions.rememberTrackActions
 import org.jellyfesh.android.ui.components.ArtworkImage
 import org.jellyfesh.android.ui.components.EmptyState
 import org.jellyfesh.android.ui.components.JfIcon
@@ -45,9 +47,11 @@ import org.jellyfesh.android.ui.components.JfText
 import org.jellyfesh.android.ui.components.LocalOverlays
 import org.jellyfesh.android.ui.components.SectionHeader
 import org.jellyfesh.android.ui.components.SheetAction
+import org.jellyfesh.android.ui.components.onSecondaryClick
 import org.jellyfesh.android.ui.data.LocalGraph
 import org.jellyfesh.android.ui.data.rememberPagedSource
 import org.jellyfesh.android.ui.data.rememberQuery
+import org.jellyfesh.android.ui.library.keepPresses
 import org.jellyfesh.android.ui.theme.ButtonStyle
 import org.jellyfesh.android.ui.theme.Jf
 import org.jellyfesh.android.ui.theme.JfButton
@@ -58,6 +62,7 @@ import org.jellyfesh.logic.core.QueueItem
 import org.jellyfesh.logic.core.QueueSnapshot
 import org.jellyfesh.logic.core.TrackRef
 import org.jellyfesh.logic.format.Labels
+import org.jellyfesh.logic.library.DownloadsModel
 import org.jellyfesh.logic.queue.QueueDrag
 import org.jellyfesh.logic.queue.QueueModel
 import org.jellyfesh.logic.queue.UpNextTail
@@ -73,11 +78,14 @@ private val ROW_HEIGHT = 64.dp
  * when the queue changes), as in the other apps ([UpNextTail]). Drag a row by its handle to move
  * it: a drop within the slice's rows shows at once, and every drop becomes `MoveInQueue`, which
  * the next Queue slice confirms (QueueModel). TalkBack gets "Move up" and "Move down" on each row.
+ * Each row's More, a long press or a right-click opens the song menu with Remove from Queue
+ * (docs/ui.md, "Rows and cards").
  */
 @Composable
 fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
     val graph = LocalGraph.current
     val overlays = LocalOverlays.current
+    val actions = rememberTrackActions()
     var upNext by remember { mutableStateOf<UpNextState?>(null) }
     LaunchedEffect(queue) { upNext = QueueModel.upNext(upNext, queue) }
     val state = upNext ?: QueueModel.upNext(null, queue)
@@ -145,8 +153,11 @@ fun QueueView(queue: QueueSnapshot, modifier: Modifier = Modifier) {
                         }
                     },
                 onClick = { graph.send(Command.JumpTo(item.uid)) },
-                onMore = { title ->
-                    overlays.showActions(title, null, listOf(SheetAction(removeLabel, R.drawable.ic_close, destructive = true) { graph.send(Command.RemoveFromQueue(item.uid)) }))
+                onMenu = { title, subtitle ->
+                    actions.showFor(
+                        TrackTarget.of(item.track, title, subtitle, downloaded = DownloadsModel.downloaded(graph.store.state.value.downloads, item.track)),
+                        extra = listOf(SheetAction(removeLabel, R.drawable.ic_close, destructive = true) { graph.send(Command.RemoveFromQueue(item.uid)) }),
+                    )
                 },
                 onDragStart = { upNext = state.copy(drag = QueueDrag(item.uid, index, 0f)) },
                 onDrag = { dy -> upNext = upNext?.let { s -> s.drag?.let { d -> s.copy(drag = d.copy(offsetPx = d.offsetPx + dy)) } ?: s } },
@@ -173,7 +184,7 @@ private fun QueueRow(
     dragging: Boolean,
     modifier: Modifier,
     onClick: () -> Unit,
-    onMore: (String) -> Unit,
+    onMenu: (title: String, subtitle: String?) -> Unit,
     onDragStart: () -> Unit,
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -181,12 +192,15 @@ private fun QueueRow(
     val colors = Jf.colors
     val (title, subtitle, art) = rowText(item.track)
     val dragLabel = stringResource(R.string.a11y_drag)
+    val menuLabel = stringResource(R.string.a11y_show_menu)
+    val menu = { onMenu(title, subtitle) }
     Row(
         modifier
             .fillMaxWidth()
             .height(ROW_HEIGHT)
             .then(if (dragging) Modifier.graphicsLayer { shadowElevation = 12f; shape = RoundedCornerShape(12.dp); clip = true } else Modifier)
-            .clickable(onClick = onClick)
+            .onSecondaryClick(menu)
+            .combinedClickable(onLongClickLabel = menuLabel, onLongClick = menu, onClick = onClick)
             .padding(start = 16.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -196,7 +210,7 @@ private fun QueueRow(
             JfText(title, style = JfType.listTitle, maxLines = 1)
             if (subtitle != null) JfText(subtitle, style = JfType.listSecondary, color = colors.ink70, maxLines = 1)
         }
-        JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), { onMore(title) }, size = 40.dp, iconSize = 20.dp)
+        JfIconButton(R.drawable.ic_more, stringResource(R.string.action_more), menu, size = 40.dp, iconSize = 20.dp)
         Box(
             Modifier
                 .size(48.dp)
@@ -211,7 +225,9 @@ private fun QueueRow(
                             onDrag(dy)
                         },
                     )
-                },
+                }
+                // Held still, the handle does not open the row's menu; a tap on it does not jump there.
+                .keepPresses(),
             contentAlignment = Alignment.Center,
         ) {
             JfIcon(R.drawable.ic_drag, colors.ink50, size = 20.dp)

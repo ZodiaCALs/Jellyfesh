@@ -159,6 +159,7 @@ private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
     val gate = LocalDownloadGate.current
     val retry: (Command) -> Unit = { command -> gate?.download(command) ?: graph.send(command) }
     val overlays = LocalOverlays.current
+    val actions = rememberTrackActions()
     val context = LocalContext.current
     val downloads = state.downloads
     val inProgress = DownloadsModel.inProgress(downloads)
@@ -225,11 +226,11 @@ private fun DownloadsPage(state: CoreState, header: LibraryHeader) {
                     art = track.artworkUrl?.let(ArtKey::Url),
                     durationMs = track.durationMs,
                     playing = DownloadsModel.track(item) == playing || TrackRef.Source(track) == playing,
+                    // The song menu, with Remove Download… (asks first).
                     onMore = {
-                        overlays.showActions(
-                            track.title,
-                            track.artist,
-                            listOf(SheetAction(removeLabel, R.drawable.ic_trash, destructive = true) { askToRemove(track.title, songMessage, listOf(item)) }),
+                        actions.showFor(
+                            TrackTarget.of(DownloadsModel.track(item), track.title, track.artist, downloaded = true),
+                            extra = listOf(SheetAction(removeLabel, R.drawable.ic_trash, destructive = true) { askToRemove(track.title, songMessage, listOf(item)) }),
                         )
                     },
                 )

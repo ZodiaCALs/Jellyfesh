@@ -86,6 +86,7 @@ import org.jellyfesh.android.ui.time.TimeDemandEffect
 import org.jellyfesh.android.ui.time.rememberPositionSeconds
 import org.jellyfesh.logic.sources.CommentsModel
 import org.jellyfesh.logic.library.DetailsModel
+import org.jellyfesh.logic.library.DownloadsModel
 import org.jellyfesh.logic.player.NowPlayingLayouts
 import org.jellyfesh.logic.player.NowPlayingArrangement
 import org.jellyfesh.logic.player.NowPlayingPanel
@@ -553,7 +554,10 @@ internal fun MoreButton(state: CoreState, track: PlayerTrack, size: Dp = 44.dp) 
                 ),
             )
             local != null -> actions.showFor(
-                TrackTarget(local.track, track.title, track.subtitle, artist = track.artist, link = track.link, source = track.source),
+                TrackTarget(
+                    local.track, track.title, track.subtitle, artist = track.artist, link = track.link, source = track.source,
+                    downloaded = DownloadsModel.downloaded(state.downloads, local.track),
+                ),
                 // Lyrics AI Lyrics made: Make Again, and Delete Made Lyrics (which asks first).
                 extra = if (LyricsMakingModel.madeWith(state.currentLyrics) != null) {
                     listOfNotNull(

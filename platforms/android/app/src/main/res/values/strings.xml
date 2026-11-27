@@ -283,6 +283,8 @@
     <string name="a11y_drag">Drag to reorder</string>
     <string name="a11y_move_up">Move up</string>
     <string name="a11y_move_down">Move down</string>
+    <!-- v0.0.9: what a long press on a row or a card does, read by TalkBack ("double-tap and hold to show menu") -->
+    <string name="a11y_show_menu">Show menu</string>
 
     <!-- Info -->
     <string name="info_heading">About This Song</string>

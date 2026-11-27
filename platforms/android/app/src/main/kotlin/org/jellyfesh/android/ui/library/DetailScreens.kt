@@ -3,6 +3,8 @@ package org.jellyfesh.android.ui.library
 import org.jellyfesh.logic.core.ItemRef
 import org.jellyfesh.android.ui.player.KnownInfo
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -382,6 +384,17 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                     val row = entry.row
                     val subtitle = Labels.artistAlbum(row.artist, row.album)
                     val dragging = drag?.entryId == entry.entryId
+                    // The song menu with Remove from Playlist: More, a long press or a right-click.
+                    val menu = {
+                        actions.showFor(
+                            TrackTarget(row.track, row.title, subtitle, favorite = row.favorite, artist = row.artist, downloaded = row.downloaded),
+                            extra = listOf(
+                                SheetAction(removeLabel, R.drawable.ic_close, destructive = true) {
+                                    graph.send(Command.RemoveFromPlaylist(id, listOf(entry.entryId)))
+                                },
+                            ),
+                        )
+                    }
                     TrackRow(
                         title = row.title,
                         subtitle = subtitle,
@@ -408,18 +421,10 @@ fun PlaylistScreen(id: Long, name: String, state: CoreState) {
                                 )
                             },
                         onClick = { graph.send(Command.PlayCollection(CollectionRef.Playlist(id), i, false)) },
+                        onMenu = menu,
                         // More, then the handle at the row's end, as in the queue.
                         trailing = {
-                            JfIconButton(R.drawable.ic_more, moreLabel, {
-                                actions.showFor(
-                                    TrackTarget(row.track, row.title, subtitle, favorite = row.favorite, artist = row.artist, downloaded = row.downloaded),
-                                    extra = listOf(
-                                        SheetAction(removeLabel, R.drawable.ic_close, destructive = true) {
-                                            graph.send(Command.RemoveFromPlaylist(id, listOf(entry.entryId)))
-                                        },
-                                    ),
-                                )
-                            }, size = 40.dp, iconSize = 20.dp)
+                            JfIconButton(R.drawable.ic_more, moreLabel, menu, size = 40.dp, iconSize = 20.dp)
                             DragHandle(
                                 key = entry.entryId,
                                 onStart = { drag = PlaylistDrag(entry.entryId, i, 0f) },
@@ -450,7 +455,7 @@ private val PLAYLIST_ROW = (Tokens.Player.rowHeight + 8).dp
 /**
  * The handle a row is dragged by: 48 dp, labelled for TalkBack (which uses Move up and Move down).
  * The gesture outlives recompositions, so it calls the latest callbacks (a row's index changes
- * after a move while its key stays).
+ * after a move while its key stays). A press on it is the handle's own ([keepPresses]).
  */
 @Composable
 internal fun DragHandle(key: Long, onStart: () -> Unit, onDrag: (Float) -> Unit, onEnd: () -> Unit) {
@@ -472,9 +477,19 @@ internal fun DragHandle(key: Long, onStart: () -> Unit, onDrag: (Float) -> Unit,
                         move(dy)
                     },
                 )
-            },
+            }
+            .keepPresses(),
         contentAlignment = Alignment.Center,
     ) {
         JfIcon(R.drawable.ic_drag, Jf.colors.ink50, size = 20.dp)
     }
+}
+
+/**
+ * A drag handle keeps its presses from the row around it: a tap on it does not play the row, and
+ * holding it still before dragging does not open the row's menu (a long press elsewhere does). The
+ * drag itself still starts, as drag gestures take presses whoever saw them first.
+ */
+internal fun Modifier.keepPresses(): Modifier = pointerInput(Unit) {
+    awaitEachGesture { awaitFirstDown(requireUnconsumed = false).consume() }
 }

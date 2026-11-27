@@ -74,7 +74,25 @@ data class TrackTarget(
     val durationMs: Long? = null,
     /** A source's song whose file is on this device (the Downloaded mark): no Download in its menu. */
     val downloaded: Boolean = false,
-)
+) {
+    companion object {
+        /**
+         * A song known by its reference alone (a queue entry, Now Playing, a download): what the
+         * reference carries. A library song's album, artist and heart are read when the menu opens.
+         */
+        fun of(track: TrackRef, title: String, subtitle: String?, downloaded: Boolean = false): TrackTarget {
+            val source = (track as? TrackRef.Source)?.track
+            return TrackTarget(
+                track, title, subtitle,
+                albumTitle = source?.album,
+                artist = source?.artist,
+                source = source?.plugin,
+                durationMs = source?.durationMs,
+                downloaded = downloaded,
+            )
+        }
+    }
+}
 
 /**
  * The menus of songs, albums, artists and playlists (docs/ui.md, "Song menu" and "Album, artist
