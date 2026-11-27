@@ -349,7 +349,8 @@ private struct AccentSwatches: View {
 }
 
 /// A hue from 0 to 360 on a track of the accent at every hue; Left and Right step 1°, Page Up and
-/// Page Down 30°. The value goes to `commit` when the drag ends or a key steps it.
+/// Page Down 30°. The value goes to `commit` when the drag ends or a key steps it. Keyboard focus
+/// rings the thumb in the accent, never with the system's focus ring around the whole track.
 private struct HueSlider: View {
     @Binding var hue: Double
     var commit: (Double) -> Void
@@ -372,6 +373,13 @@ private struct HueSlider: View {
                 Circle()
                     .fill(Color(rgba: AccentChoices.accent(hue: Float(hue), dark: palette.isDark)))
                     .overlay(Circle().strokeBorder(Color.white, lineWidth: 2))
+                    .overlay {
+                        if focused {
+                            Circle()
+                                .strokeBorder(palette[Tokens.Accent.accentText], lineWidth: 2)
+                                .padding(-4)
+                        }
+                    }
                     .elevation(Tokens.Elevation.shadow1)
                     .frame(width: 20, height: 20)
                     .position(x: x, y: geometry.size.height / 2)
@@ -388,6 +396,7 @@ private struct HueSlider: View {
         .frame(height: 28)
         .frame(maxWidth: 280)
         .focusable()
+        .focusEffectDisabled()
         .focused($focused)
         .onKeyPress(.leftArrow) { step(-1) }
         .onKeyPress(.rightArrow) { step(1) }

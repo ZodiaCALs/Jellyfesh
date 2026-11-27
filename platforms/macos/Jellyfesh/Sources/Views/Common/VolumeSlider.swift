@@ -77,6 +77,8 @@ struct VolumeSlider: View {
             .animation(Motion.unless(!effects.animates, Motion.hover), value: state)
             .onHover { hovering = $0 }
             .focusable()
+            // Focus thickens the line and shows the thumb, as on the seek bar.
+            .focusEffectDisabled()
             .focused($focused)
             .onKeyPress(.leftArrow) {
                 playback.nudgeVolume(by: -Self.step)

@@ -1,7 +1,8 @@
 // The seek bar of v0.0.4 (docs/design-controls.md, "Seek bar and sliders: a straight line"):
 // elapsed and remaining times at both ends, a straight line with round caps, the played part in
 // ink-90 over ink-30, no thumb at rest. Hovering or focusing thickens the line to 6 pt and shows a
-// 14 pt ringed thumb (after Media Player); dragging thickens it to 8 pt and the times follow the
+// 14 pt ringed thumb (after Media Player); that is how it shows keyboard focus, never with the
+// system's focus ring (docs/ui.md, v0.0.9). Dragging thickens it to 8 pt and the times follow the
 // thumb. Thickness and thumb change over dur-1 Fluid; progress itself never animates. It redraws
 // when the position moves by a pixel or a second ticks over (ProgressSchedule), never per frame,
 // and not at all while paused or out of sight. Geometry: SeekGeometry (Support/DesignMath.swift).
@@ -119,6 +120,8 @@ struct SeekBar: View {
         .animation(Motion.unless(!effects.animates, Motion.hover), value: state)
         .onHover { hovering = $0 }
         .focusable()
+        // Focus thickens the line and shows the thumb instead.
+        .focusEffectDisabled()
         .focused($focused)
         .onKeyPress(.leftArrow) { seek(.back, total: total) }
         .onKeyPress(.rightArrow) { seek(.forward, total: total) }
