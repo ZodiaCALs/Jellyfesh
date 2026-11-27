@@ -53,6 +53,17 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.0.8" date="2026-11-27">
+      <description>
+        <p>Public Beta. Jellyfesh looks and works the same in every app, with
+        Settings as a page and one player bar on every page. Choose the sound
+        quality from the bar, keep a mini player above your other windows,
+        search with a tab for each source, see your servers' likes and
+        playlists beside your own, and download albums and playlists from your
+        own server to play offline. Covers show on Home again, and source
+        playlists play and shuffle.</p>
+      </description>
+    </release>
     <release version="0.0.7" date="2026-11-22">
       <description>
         <p>Public Beta. AI Lyrics makes word-timed lyrics on this computer

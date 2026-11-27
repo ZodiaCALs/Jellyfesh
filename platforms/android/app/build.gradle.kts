@@ -66,8 +66,8 @@ android {
         applicationId = "org.jellyfesh.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 7
-        versionName = "0.0.7"
+        versionCode = 8
+        versionName = "0.0.8"
         // Settings › About shows versionName (BuildConfig.VERSION_NAME) and links to the website.
         buildConfigField("String", "WEBSITE", "\"${website.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         // The edition and distribution for the app's store glue and Settings (ADR-0021):

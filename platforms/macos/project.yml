@@ -26,8 +26,8 @@ fileGroups:
 
 settings:
   base:
-    MARKETING_VERSION: 0.0.7
-    CURRENT_PROJECT_VERSION: 7
+    MARKETING_VERSION: 0.0.8
+    CURRENT_PROJECT_VERSION: 8
     MACOSX_DEPLOYMENT_TARGET: "14.2"
     # UniFFI's Swift 6 support is partial (ADR-0002): the whole app builds in Swift 5 mode.
     SWIFT_VERSION: "5.0"

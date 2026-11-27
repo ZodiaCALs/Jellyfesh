@@ -1,7 +1,7 @@
 <Project>
   <!-- Shared by every project under platforms/windows. -->
   <PropertyGroup>
-    <Version>0.0.7</Version>
+    <Version>0.0.8</Version>
     <Product>Jellyfesh</Product>
     <Company>The Jellyfesh authors</Company>
     <Copyright>All rights reserved (ADR-0016)</Copyright>
