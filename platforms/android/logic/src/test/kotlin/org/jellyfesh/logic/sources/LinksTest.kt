@@ -3,6 +3,7 @@ package org.jellyfesh.logic.sources
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.PluginBadge
 import org.jellyfesh.logic.core.PluginSummary
@@ -84,5 +85,14 @@ class LinksTest {
         assertEquals(ItemAction.OpenLink("https://y.qq.example/pl"), SourceItems.mainAction(locked, listOf(locked)))
         val lockedNoLink = item("ar", kind = ItemKind.Artist, playable = false)
         assertEquals(ItemAction.Browse("qq", "ar", "Title ar", null, ItemKind.Artist, "Artist"), SourceItems.mainAction(lockedNoLink, listOf(lockedNoLink)))
+    }
+
+    @Test
+    fun aCardsPlayButtonPlaysAnAlbumOrAPlaylistWhole() {
+        assertEquals(CollectionRef.Source("qq", "al", ItemKind.Album), SourceItems.playsWhole(item("al", kind = ItemKind.Album)))
+        assertEquals(CollectionRef.Source("qq", "pl", ItemKind.Playlist), SourceItems.playsWhole(item("pl", kind = ItemKind.Playlist)))
+        assertNull(SourceItems.playsWhole(item("pl", kind = ItemKind.Playlist, playable = false)), "one that cannot play here")
+        assertNull(SourceItems.playsWhole(item("t")), "a song plays when chosen")
+        assertNull(SourceItems.playsWhole(item("ar", kind = ItemKind.Artist)))
     }
 }

@@ -292,6 +292,18 @@ class TrackActions internal constructor(
         overlays.showActions(title, subtitle, actions)
     }
 
+    /**
+     * A library album's card menu (docs/ui.md, "Rows and cards"): Play, Shuffle, Play Next, Play
+     * Last, Add to Playlist…, Go to Artist ([artist], the album's), then Get Info.
+     */
+    fun showForAlbum(id: Long, title: String, artist: String?) = showForCollection(
+        title,
+        artist,
+        CollectionRef.Album(id),
+        extra = listOf(getInfoAction(ItemRef.Album(id), KnownInfo(title, artist))),
+        artist = artist,
+    )
+
     /** The playlist picker for songs: the person's playlists and New Playlist…. */
     fun addToPlaylist(tracks: List<TrackRef>) = choosePlaylist(exclude = null) { tracks }
 

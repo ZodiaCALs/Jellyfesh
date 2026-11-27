@@ -2,6 +2,7 @@ package org.jellyfesh.logic.sources
 
 import java.net.URI
 import org.jellyfesh.logic.core.ArtworkRef
+import org.jellyfesh.logic.core.CollectionRef
 import org.jellyfesh.logic.core.ItemKind
 import org.jellyfesh.logic.core.SourceItem
 import org.jellyfesh.logic.core.SourcesSnapshot
@@ -82,4 +83,11 @@ object SourceItems {
             else -> ItemAction.None
         }
     }
+
+    /**
+     * What a card's play button plays (docs/ui.md, "Rows and cards"): a playable album or
+     * playlist, whole. Songs have none (choosing one plays it), nor do artists and folders.
+     */
+    fun playsWhole(item: SourceItem): CollectionRef? =
+        if (item.playable && (item.kind == ItemKind.Album || item.kind == ItemKind.Playlist)) CollectionRef.Source(item.source, item.id, item.kind) else null
 }

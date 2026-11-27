@@ -58,6 +58,7 @@ import org.jellyfesh.android.ui.theme.JfButton
 import org.jellyfesh.android.ui.theme.JfIconButton
 import org.jellyfesh.android.ui.theme.rounded
 import org.jellyfesh.android.ui.theme.topEdgeFade
+import org.jellyfesh.logic.core.Command
 import org.jellyfesh.logic.core.CoreEvent
 import org.jellyfesh.logic.core.PluginSummary
 import org.jellyfesh.logic.core.Shelf
@@ -173,6 +174,8 @@ private fun ShelfContent(shelf: Shelf, state: CoreState) {
     val actions = rememberTrackActions()
     val cardPx = with(LocalDensity.current) { 148.dp.roundToPx() }
     fun open(item: SourceItem) = runItemAction(SourceItems.mainAction(item, shelf.items), graph::send, nav::push, actions::openLink)
+    // A card's play button plays its album or playlist whole; a long press or a right-click opens its menu.
+    fun play(item: SourceItem): (() -> Unit)? = SourceItems.playsWhole(item)?.let { collection -> { graph.send(Command.PlayCollection(collection, 0, false)) } }
     when (shelf.style) {
         ShelfStyle.Row -> LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items(shelf.items, key = { "${it.kind}:${it.id}" }) { item ->
@@ -183,6 +186,8 @@ private fun ShelfContent(shelf: Shelf, state: CoreState) {
                     sizePx = ArtworkSizes.bucket(cardPx),
                     onClick = { open(item) },
                     modifier = Modifier.width(148.dp),
+                    onMenu = sourceItemMenu(item, actions),
+                    onPlay = play(item),
                 )
             }
         }
@@ -200,6 +205,8 @@ private fun ShelfContent(shelf: Shelf, state: CoreState) {
                                 sizePx = ArtworkSizes.bucket(px),
                                 onClick = { open(item) },
                                 modifier = Modifier.weight(1f),
+                                onMenu = sourceItemMenu(item, actions),
+                                onPlay = play(item),
                             )
                         }
                         repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }

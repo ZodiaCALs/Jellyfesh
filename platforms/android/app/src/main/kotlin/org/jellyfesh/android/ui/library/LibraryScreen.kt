@@ -293,6 +293,7 @@ private fun AlbumsGrid(state: CoreState, header: LibraryHeader) {
     val nav = LocalNav.current
     val graph = LocalGraph.current
     val overlays = LocalOverlays.current
+    val actions = rememberTrackActions()
     var sortField by rememberSaveable { mutableStateOf(SortMenus.DEFAULT_ALBUMS.field) }
     var descending by rememberSaveable { mutableStateOf(SortMenus.DEFAULT_ALBUMS.descending) }
     val order = SortOrder(sortField, descending)
@@ -339,6 +340,7 @@ private fun AlbumsGrid(state: CoreState, header: LibraryHeader) {
                     art = ArtKey.ofHash(album.artworkHash),
                     sizePx = ArtworkSizes.bucket(cellPx),
                     onClick = { nav.openAlbum(album.id, album.title) },
+                    onMenu = { actions.showForAlbum(album.id, album.title, album.albumArtist) },
                     onPlay = { graph.send(Command.PlayCollection(CollectionRef.Album(album.id), 0, false)) },
                 )
             }

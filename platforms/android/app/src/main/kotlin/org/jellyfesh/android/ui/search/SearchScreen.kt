@@ -289,6 +289,8 @@ private fun LazyListScope.libraryResults(
                         ArtworkSizes.bucket(cardPx),
                         onClick = { nav.openAlbum(album.id, album.title) },
                         modifier = Modifier.width(148.dp),
+                        onMenu = { actions.showForAlbum(album.id, album.title, album.albumArtist) },
+                        onPlay = { send(Command.PlayCollection(CollectionRef.Album(album.id), 0, false)) },
                     )
                 }
             }

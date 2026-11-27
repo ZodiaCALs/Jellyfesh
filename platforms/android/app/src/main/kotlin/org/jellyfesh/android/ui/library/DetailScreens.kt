@@ -312,6 +312,8 @@ fun ArtistScreen(id: Long, name: String, state: CoreState) {
                         art = ArtKey.ofHash(album.artworkHash),
                         sizePx = ArtworkSizes.bucket(cellPx),
                         onClick = { nav.openAlbum(album.id, album.title) },
+                        onMenu = { actions.showForAlbum(album.id, album.title, album.albumArtist) },
+                        onPlay = { graph.send(Command.PlayCollection(CollectionRef.Album(album.id), 0, false)) },
                     )
                 }
             }
