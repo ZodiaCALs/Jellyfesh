@@ -5,15 +5,16 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 
 namespace Jellyfesh.App.Controls;
 
 /// <summary>
 /// An album row's first cell (after Apple Music and Media Player): the track number, which turns
-/// into a play glyph while the row is hovered; on the row of the song playing, the level glyph,
-/// which moves only while music plays. The whole row stays the click target.
+/// into the row's play button while the row is pointed at or has keyboard focus (docs/ui.md, "Rows
+/// and cards"); on the row of the song playing, the level glyph, which moves only while music
+/// plays. The whole row stays the click target, so the play button plays from that row as choosing
+/// it does; a row that cannot play here keeps its number.
 /// </summary>
 public sealed partial class TrackNumberCell : Grid
 {
@@ -23,11 +24,13 @@ public sealed partial class TrackNumberCell : Grid
     public static readonly DependencyProperty IsCurrentProperty =
         DependencyProperty.Register(nameof(IsCurrent), typeof(bool), typeof(TrackNumberCell), new PropertyMetadata(false, (d, _) => ((TrackNumberCell)d).Update()));
 
+    public static readonly DependencyProperty IsPlayableProperty =
+        DependencyProperty.Register(nameof(IsPlayable), typeof(bool), typeof(TrackNumberCell), new PropertyMetadata(true, (d, _) => ((TrackNumberCell)d).Update()));
+
     private readonly TextBlock _number = new() { HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
     private readonly StrokeIcon _play = new() { Filled = true, Size = 14, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
     private readonly LevelGlyph _level = new() { HorizontalAlignment = HorizontalAlignment.Right };
-    private UIElement? _row;
-    private bool _hovered;
+    private readonly RowHover _row;
 
     public TrackNumberCell()
     {
@@ -38,6 +41,7 @@ public sealed partial class TrackNumberCell : Grid
         Children.Add(_number);
         Children.Add(_play);
         Children.Add(_level);
+        _row = new RowHover(this, Update);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
         Update();
@@ -55,17 +59,17 @@ public sealed partial class TrackNumberCell : Grid
         set => SetValue(IsCurrentProperty, value);
     }
 
+    /// <summary>Choosing the row plays it here; a song that cannot keeps its number.</summary>
+    public bool IsPlayable
+    {
+        get => (bool)GetValue(IsPlayableProperty);
+        set => SetValue(IsPlayableProperty, value);
+    }
+
     private static PlayerViewModel Player => AppHost.App.Player;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _row = Parent as UIElement;
-        if (_row is not null)
-        {
-            _row.PointerEntered += OnRowEntered;
-            _row.PointerExited += OnRowExited;
-        }
-
         Player.PropertyChanged += OnPlayerChanged;
         AppHost.App.PropertyChanged += OnPlayerChanged;
         Update();
@@ -73,28 +77,8 @@ public sealed partial class TrackNumberCell : Grid
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
-        if (_row is not null)
-        {
-            _row.PointerEntered -= OnRowEntered;
-            _row.PointerExited -= OnRowExited;
-            _row = null;
-        }
-
         Player.PropertyChanged -= OnPlayerChanged;
         AppHost.App.PropertyChanged -= OnPlayerChanged;
-        _hovered = false;
-    }
-
-    private void OnRowEntered(object sender, PointerRoutedEventArgs e)
-    {
-        _hovered = true;
-        Update();
-    }
-
-    private void OnRowExited(object sender, PointerRoutedEventArgs e)
-    {
-        _hovered = false;
-        Update();
     }
 
     private void OnPlayerChanged(object? sender, PropertyChangedEventArgs e)
@@ -107,9 +91,10 @@ public sealed partial class TrackNumberCell : Grid
 
     private void Update()
     {
-        var showLevel = IsCurrent && !_hovered;
-        _number.Visibility = !IsCurrent && !_hovered ? Visibility.Visible : Visibility.Collapsed;
-        _play.Visibility = _hovered ? Visibility.Visible : Visibility.Collapsed;
+        var hovered = _row is { IsActive: true } && IsPlayable;
+        var showLevel = IsCurrent && !hovered;
+        _number.Visibility = !IsCurrent && !hovered ? Visibility.Visible : Visibility.Collapsed;
+        _play.Visibility = hovered ? Visibility.Visible : Visibility.Collapsed;
         _level.Visibility = showLevel ? Visibility.Visible : Visibility.Collapsed;
         _level.ReduceMotion = AppHost.App.ReduceMotion;
         _level.IsPlaying = showLevel && Player.IsPlaying && IsLoaded;

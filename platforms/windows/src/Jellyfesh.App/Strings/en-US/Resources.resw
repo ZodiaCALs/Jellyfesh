@@ -1742,6 +1742,9 @@
   <data name="Remote_StopControlling" xml:space="preserve">
     <value>Stop Controlling</value>
   </data>
+  <data name="Row_More" xml:space="preserve">
+    <value>More</value>
+  </data>
   <data name="Scan_Failed" xml:space="preserve">
     <value>Scan Failed</value>
   </data>
