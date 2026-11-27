@@ -51,6 +51,54 @@ class SourceLibraryModelTest {
         assertEquals(listOf(SourceLibraryPart.Playlists), SourceLibraryModel.playlists(snapshot).single().lists.map { it.part })
     }
 
+    private fun likesOf(vararg lists: SourceLibraryList) =
+        SourceLibraryModel.likes(SourceLibrarySnapshot(5, listOf(SourceLibrary("org.jellyfesh.netease", "NetEase Cloud Music", null, lists.toList()))))
+
+    @Test
+    fun aSourceWhoseLikesCameBackEmptyStillShowsItsName() {
+        val likes = likesOf(
+            list(SourceLibraryPart.LikedSongs, emptyList(), refreshed = 2_000),
+            list(SourceLibraryPart.LikedAlbums, emptyList(), refreshed = 3_000),
+            list(SourceLibraryPart.Playlists, listOf(entry("p1"))),
+        )
+        // "Nothing liked in NetEase Cloud Music yet.", updated when the last list came back.
+        val section = likes.single()
+        assertEquals("NetEase Cloud Music", section.source.name)
+        assertEquals(emptyList(), section.lists)
+        assertTrue(section.nothingLiked)
+        assertEquals(3_000, section.nothingLikedAtMs)
+        // A section with lists to show is not empty.
+        assertFalse(SourceLibraryModel.likes(snapshot).single().nothingLiked)
+    }
+
+    @Test
+    fun aSourceWhoseLikesFailedShowsWhy() {
+        val section = likesOf(
+            list(SourceLibraryPart.LikedSongs, emptyList(), refreshed = null, error = "NetEase didn't send your liked songs."),
+            list(SourceLibraryPart.LikedAlbums, emptyList(), refreshed = 3_000),
+        ).single()
+        assertEquals(listOf(SourceLibraryPart.LikedSongs), section.lists.map { it.part })
+        assertEquals("NetEase didn't send your liked songs.", section.lists.single().error)
+        assertFalse(section.nothingLiked, "a failure is not nothing liked")
+    }
+
+    @Test
+    fun likesNotBackYetSayNothing() {
+        // Never asked yet: nothing is known, so nothing shows.
+        assertEquals(emptyList(), likesOf(list(SourceLibraryPart.LikedSongs, emptyList(), refreshed = null)))
+        // One list came back empty, another has not come back yet.
+        assertEquals(
+            emptyList(),
+            likesOf(list(SourceLibraryPart.LikedSongs, emptyList(), refreshed = 2_000), list(SourceLibraryPart.LikedAlbums, emptyList(), refreshed = null)),
+        )
+        // Loading: the list shows, loading, rather than the empty line.
+        val loading = likesOf(list(SourceLibraryPart.LikedSongs, emptyList(), refreshed = 2_000, loading = true)).single()
+        assertEquals(listOf(SourceLibraryPart.LikedSongs), loading.lists.map { it.part })
+        assertFalse(loading.nothingLiked)
+        // A source that keeps no likes is not on Favourites.
+        assertEquals(emptyList(), likesOf(list(SourceLibraryPart.Playlists, emptyList(), refreshed = 2_000)))
+    }
+
     @Test
     fun theListsRefreshWhenThePageOpensOrAfterTenMinutes() {
         assertTrue(SourceLibraryModel.refreshes(null, 5_000))

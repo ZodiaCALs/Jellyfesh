@@ -636,6 +636,8 @@
 
     <!-- v0.0.8: the sources' likes and playlists (ADR-0024); %1$s is "5 minutes ago" -->
     <string name="source_library_updated">%1$s更新</string>
+    <!-- v0.0.9: Favourites names a source whose likes came back empty; %1$s is the service's name -->
+    <string name="source_library_nothing_liked">你在 %1$s 中还没有喜欢的内容。</string>
 
     <!-- v0.0.8: a source playlist's page (ADR-0024) -->
     <string name="action_save_as_playlist">存储为歌单…</string>

@@ -26,16 +26,28 @@ data class SourceLibraryPages(
     val errors: Map<SourceListKey, String> = emptyMap(),
 )
 
-/** A source's section on Favourites or Playlists: the lists of it the page shows. */
-data class SourceLibrarySection(val source: SourceLibrary, val lists: List<SourceLibraryList>)
+/**
+ * A source's section on Favourites or Playlists: the lists of it the page shows. On Favourites, a
+ * source whose likes all came back empty shows no lists and says "Nothing liked in {Service} yet."
+ * ([nothingLikedAtMs]).
+ */
+data class SourceLibrarySection(
+    val source: SourceLibrary,
+    val lists: List<SourceLibraryList>,
+    /** Every liked list of the source came back empty: when the last of them did ("Updated {time} ago"); else null. */
+    val nothingLikedAtMs: Long? = null,
+) {
+    val nothingLiked: Boolean get() = nothingLikedAtMs != null
+}
 
 /**
  * The sources' likes and playlists (ADR-0024; docs/ui.md, "Playlists" and "Favourites"), from the
  * core's SourceLibrary slice: after the Jellyfesh playlists, one section per signed-in source with
  * its playlists; after the favourites, one with its liked songs, albums and artists. A list shows
  * once it has entries or something to say (loading, an error), with "Updated {time} ago" from its
- * age and Show More while the source has more. The lists refresh when the page opens, and when it
- * is returned to after ten minutes.
+ * age and Show More while the source has more. On Favourites a source whose likes came back empty
+ * still shows its name, with "Nothing liked in {Service} yet." (v0.0.9). The lists refresh when
+ * the page opens, and when it is returned to after ten minutes.
  */
 object SourceLibraryModel {
     const val REFRESH_AFTER_MS: Long = 10 * 60 * 1_000
@@ -43,14 +55,33 @@ object SourceLibraryModel {
     /** The likes Favourites shows, in their order. */
     val LIKES: List<SourceLibraryPart> = listOf(SourceLibraryPart.LikedSongs, SourceLibraryPart.LikedAlbums, SourceLibraryPart.LikedArtists)
 
-    fun likes(snapshot: SourceLibrarySnapshot): List<SourceLibrarySection> = sections(snapshot, LIKES)
+    /**
+     * Favourites: each source with its liked songs, albums and artists that have entries, are
+     * loading or failed (a failed list says why). A source whose liked lists all came back empty
+     * is still listed, saying so; one whose lists have not come back yet, or that keeps no likes
+     * at all, is left out: nothing is known of its likes.
+     */
+    fun likes(snapshot: SourceLibrarySnapshot): List<SourceLibrarySection> = snapshot.sources.mapNotNull { source ->
+        val liked = source.lists.filter { it.part in LIKES }
+        val lists = shown(liked, LIKES)
+        val answered = liked.mapNotNull { it.refreshedAtMs }
+        when {
+            lists.isNotEmpty() -> SourceLibrarySection(source, lists)
+            // None has entries, loads or failed: empty, once every one of them has come back.
+            liked.isNotEmpty() && answered.size == liked.size -> SourceLibrarySection(source, emptyList(), nothingLikedAtMs = answered.max())
+            else -> null
+        }
+    }
 
-    fun playlists(snapshot: SourceLibrarySnapshot): List<SourceLibrarySection> = sections(snapshot, listOf(SourceLibraryPart.Playlists))
-
-    private fun sections(snapshot: SourceLibrarySnapshot, parts: List<SourceLibraryPart>): List<SourceLibrarySection> = snapshot.sources.mapNotNull { source ->
-        val lists = source.lists.filter { it.part in parts && (it.entries.isNotEmpty() || it.loading || it.error != null) }.sortedBy { parts.indexOf(it.part) }
+    /** Playlists: each source with its playlists, once they have entries, load or failed. */
+    fun playlists(snapshot: SourceLibrarySnapshot): List<SourceLibrarySection> = snapshot.sources.mapNotNull { source ->
+        val lists = shown(source.lists, listOf(SourceLibraryPart.Playlists))
         if (lists.isEmpty()) null else SourceLibrarySection(source, lists)
     }
+
+    /** The lists of [parts] that have entries or something to say, in the order of [parts]. */
+    private fun shown(lists: List<SourceLibraryList>, parts: List<SourceLibraryPart>): List<SourceLibraryList> =
+        lists.filter { it.part in parts && (it.entries.isNotEmpty() || it.loading || it.error != null) }.sortedBy { parts.indexOf(it.part) }
 
     /** Whether the lists should refresh as the page shows again: when it opens, or after ten minutes since they last did. */
     fun refreshes(lastRefreshMs: Long?, nowMs: Long): Boolean = lastRefreshMs == null || nowMs - lastRefreshMs >= REFRESH_AFTER_MS

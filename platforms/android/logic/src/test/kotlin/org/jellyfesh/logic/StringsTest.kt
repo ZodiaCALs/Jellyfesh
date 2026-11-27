@@ -94,5 +94,7 @@ class StringsTest {
         assertEquals("Rescan Library", names.getValue("rescan_title").single())
         assertEquals("Optional", names.getValue("sign_in_optional").single())
         assertEquals("Waiting for approval…", names.getValue("sign_in_code_waiting").single())
+        // v0.0.9: Favourites, a source whose likes came back empty.
+        assertEquals("Nothing liked in %1\$s yet.", names.getValue("source_library_nothing_liked").single())
     }
 }

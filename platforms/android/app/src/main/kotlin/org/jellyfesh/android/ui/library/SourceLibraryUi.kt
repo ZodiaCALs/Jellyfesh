@@ -81,8 +81,9 @@ fun rememberSourceLibraryPages(): MutableState<SourceLibraryPages> {
  * One section per source: its name, "Content from {Service}" when its terms ask for it, then each
  * list, named on Favourites ([titled]: Songs, Albums, Artists), with "Updated {time} ago" once
  * loaded, its rows (which play, browse or open in the service as anywhere else), Show More while
- * the source has more, and why the list or its last page failed. Read-only: the heart marks songs
- * in Jellyfesh only.
+ * the source has more, and why the list or its last page failed. A source whose likes came back
+ * empty says "Nothing liked in {Service} yet." instead ([SourceLibrarySection.nothingLiked]).
+ * Read-only: the heart marks songs in Jellyfesh only.
  */
 internal fun LazyListScope.sourceLibrarySections(
     sections: List<SourceLibrarySection>,
@@ -101,6 +102,14 @@ internal fun LazyListScope.sourceLibrarySections(
                 SectionHeader(source.name)
                 source.attribution?.takeIf { it.isNotBlank() }?.let {
                     JfText(stringResource(R.string.source_attribution, it), style = JfType.listSecondary, color = Jf.colors.ink70, modifier = Modifier.padding(horizontal = 16.dp))
+                }
+            }
+        }
+        section.nothingLikedAtMs?.let { at ->
+            item(key = "srclib-${source.plugin}-none") {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                    JfText(stringResource(R.string.source_library_nothing_liked, source.name), style = JfType.small, color = Jf.colors.ink70)
+                    JfText(updatedText(at), style = JfType.caption, color = Jf.colors.ink50)
                 }
             }
         }
@@ -137,15 +146,18 @@ internal fun LazyListScope.sourceLibrarySections(
 /** A list's name on Favourites, and "Updated {time} ago" once it has been loaded. */
 @Composable
 private fun SourceListHeading(list: SourceLibraryList, titled: Boolean) {
-    val updated = list.refreshedAtMs?.let {
-        stringResource(R.string.source_library_updated, DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString())
-    }
+    val updated = list.refreshedAtMs?.let { updatedText(it) }
     if (!titled && updated == null) return
     Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
         if (titled) JfText(stringResource(partLabel(list.part)), style = JfType.label, color = Jf.colors.ink70)
         updated?.let { JfText(it, style = JfType.caption, color = Jf.colors.ink50) }
     }
 }
+
+/** "Updated 5 minutes ago": when a source's list came back. */
+@Composable
+private fun updatedText(atMs: Long): String =
+    stringResource(R.string.source_library_updated, DateUtils.getRelativeTimeSpanString(atMs, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString())
 
 private fun partLabel(part: SourceLibraryPart): Int = when (part) {
     SourceLibraryPart.LikedSongs -> R.string.kind_tracks
