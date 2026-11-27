@@ -942,14 +942,14 @@
     <!--
         The seek bar (Controls/SeekBar.cs, docs/design-controls.md "v0.0.4"): a straight line with round
         caps, ink-90 played over ink-30, a 14 px ringed thumb (ink-90, glass-edge ring, shadow-1) on
-        hover, focus and drag. The control sets the line's thickness and the thumb per state.
+        hover, focus and drag. The control sets the line's thickness and the thumb per state; keyboard
+        focus shows that way too, never as the system's focus rectangle (docs/ui.md, v0.0.9).
     -->
     <Style TargetType="controls:SeekBar">
         <Setter Property="Height" Value="32" />
         <Setter Property="Foreground" Value="{ThemeResource JfInk90}" />
         <Setter Property="Background" Value="{ThemeResource JfInk30}" />
-        <Setter Property="FocusVisualPrimaryBrush" Value="{ThemeResource JfAccentText}" />
-        <Setter Property="FocusVisualSecondaryBrush" Value="{ThemeResource JfSky}" />
+        <Setter Property="UseSystemFocusVisuals" Value="False" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="controls:SeekBar">

@@ -21,7 +21,10 @@ namespace Jellyfesh.App.Controls;
 /// dragging, never a thumb). Thickness and thumb change over dur-1 Fluid; progress itself is set
 /// from the drawing-time presenter at visible steps only, so nothing loops. Geometry comes from
 /// <see cref="SeekGeometry"/>. A RangeBase, so Narrator reads it as a slider whose value is
-/// "1:23 of 3:45"; Left/Right seek 5 s, Page Up/Page Down 30 s, Home/End the ends.
+/// "1:23 of 3:45"; Left/Right seek 5 s, Page Up/Page Down 30 s, Home/End the ends. Keyboard focus
+/// shows as hover does, thickened with its thumb, never with the system's focus rectangle (docs/ui.md,
+/// v0.0.9); so do keys pressed while a click has focused it. A click alone shows nothing once the
+/// pointer leaves.
 /// </summary>
 public sealed partial class SeekBar : RangeBase
 {
@@ -40,17 +43,24 @@ public sealed partial class SeekBar : RangeBase
     private bool _hovered;
     private bool _touch;
     private bool _dragging;
+
+    /// <summary>Keys moved it since it was focused: it shows its focus as keyboard focus does.</summary>
+    private bool _keyed;
     private Storyboard? _thickness;
 
     public SeekBar()
     {
         DefaultStyleKey = typeof(SeekBar);
         IsTabStop = true;
-        UseSystemFocusVisuals = true;
+        UseSystemFocusVisuals = false;
         SmallChange = SeekGeometry.SmallStep;
         LargeChange = SeekGeometry.LargeStep;
         GotFocus += (_, _) => UpdateState();
-        LostFocus += (_, _) => UpdateState();
+        LostFocus += (_, _) =>
+        {
+            _keyed = false;
+            UpdateState();
+        };
     }
 
     /// <summary>Raised when the person releases the thumb or uses the keyboard: seek to this value.</summary>
@@ -145,6 +155,7 @@ public sealed partial class SeekBar : RangeBase
 
         _touch = e.Pointer.PointerDeviceType == PointerDeviceType.Touch;
         _dragging = true;
+        _keyed = false;
         Focus(FocusState.Pointer);
         UpdateState();
         MoveTo(e.GetCurrentPoint(this).Position);
@@ -196,6 +207,11 @@ public sealed partial class SeekBar : RangeBase
             Value = target;
             SeekRequested?.Invoke(this, target);
             e.Handled = true;
+            if (!_keyed)
+            {
+                _keyed = true;
+                UpdateState();
+            }
         }
 
         base.OnKeyDown(e);
@@ -228,7 +244,7 @@ public sealed partial class SeekBar : RangeBase
 
     private void UpdateState()
     {
-        var focused = FocusState is FocusState.Keyboard or FocusState.Programmatic;
+        var focused = FocusState is FocusState.Keyboard or FocusState.Programmatic || (_keyed && FocusState != FocusState.Unfocused);
         var state = _dragging ? SeekBarState.Drag : _hovered || focused ? SeekBarState.Hover : SeekBarState.Rest;
         if (state != _state)
         {
