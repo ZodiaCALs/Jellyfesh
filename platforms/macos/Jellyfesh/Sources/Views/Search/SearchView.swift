@@ -183,15 +183,41 @@ private struct SearchSectionView: View {
                     }
                 }
                 if let error = section.error {
-                    Text(error)
-                        .lookFont(size: 13)
-                        .foregroundStyle(palette[Tokens.Semantic.danger])
+                    SourceFailure(reason: error)
                 }
                 ForEach(section.kinds, id: \.self) { kind in
                     SearchKindView(kind: kind, items: section.items(of: kind))
                 }
             }
         }
+    }
+}
+
+/// A source whose search failed, in plain words (docs/ui.md, "Search"): "This Source Did Not
+/// Answer", then why, as the core words it.
+private struct SourceFailure: View {
+    var reason: String
+
+    @Environment(\.palette) private var palette
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Tokens.Space.s2) {
+            Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(palette[Tokens.Semantic.danger])
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("This Source Did Not Answer")
+                    .lookFont(size: 13, weight: .semibold)
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                if !reason.isEmpty {
+                    Text(verbatim: reason)
+                        .lookFont(size: 13)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                        .textSelection(.enabled)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -218,9 +244,7 @@ private struct SourceTabView: View {
                 }
             }
             if let error = section.error {
-                Text(error)
-                    .lookFont(size: 13)
-                    .foregroundStyle(palette[Tokens.Semantic.danger])
+                SourceFailure(reason: error)
             }
             ForEach(section.tabGroups, id: \.kind) { group in
                 let key = SearchStore.moreKey(section.source, group.kind)
