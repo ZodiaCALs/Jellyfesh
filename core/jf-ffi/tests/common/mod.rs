@@ -922,12 +922,36 @@ pub fn track_row() -> jf::TrackRow {
         artist: Some("Sample Artist".into()),
         album: Some("Night Swim".into()),
         duration_ms: Some(184_000),
-        // Library rows carry a hash; the URL is for source rows (both set to cover both).
+        // Library rows carry a hash; the URL, ids and link are for source rows (all set to
+        // cover all; `source_track_row` is a source row as the core makes it).
         artwork: Some(artwork()[1].clone()),
         artwork_hash: Some("ab12cd".into()),
         favorite: true,
         missing: false,
         downloaded: true,
+        artist_id: Some("ar-3".into()),
+        album_id: Some("al-9".into()),
+        link: Some("https://music.example/song/tr-7".into()),
+    }
+}
+
+/// A source song's row (history, favourites, playlists): its artist, album and link (ADR-0027).
+pub fn source_track_row() -> jf::TrackRow {
+    let track = source_track();
+    jf::TrackRow {
+        title: track.title.clone(),
+        artist: track.artist.clone(),
+        album: track.album.clone(),
+        duration_ms: track.duration_ms,
+        artwork: track.artwork_url.clone().map(jf::ArtworkRef::Url),
+        artwork_hash: None,
+        favorite: false,
+        missing: false,
+        downloaded: false,
+        artist_id: track.artist_id.clone(),
+        album_id: track.album_id.clone(),
+        link: Some(format!("https://music.example/song/{}", track.id)),
+        track: jf::TrackRef::Source(track),
     }
 }
 

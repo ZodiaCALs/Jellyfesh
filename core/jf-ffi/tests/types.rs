@@ -74,6 +74,7 @@ fn query_results_and_arguments_convert_both_ways() {
     });
     check::<jf::LibraryStats, LibraryStats>(common::stats());
     check::<jf::TrackRow, TrackRow>(common::track_row());
+    check::<jf::TrackRow, TrackRow>(common::source_track_row());
     check::<jf::PlaylistSummary, PlaylistSummary>(common::playlist());
     check::<jf::PlaylistEntry, PlaylistEntry>(common::playlist_entry());
     check::<jf::HistoryEntry, HistoryEntry>(jf::HistoryEntry {
@@ -175,10 +176,10 @@ fn configs_without_resume_on_start_let_playback_resume() {
     assert!(jf::Config::from(read).resume_on_start);
 }
 
-/// A source track from before v0.0.9, without artist and album ids (an older app's JSON over
-/// the C ABI), reads with them empty; the new values cross both ways.
+/// A source track or a row from before v0.0.9, without artist and album ids or a link (an
+/// older app's JSON over the C ABI), reads with them empty; the new values cross both ways.
 #[test]
-fn source_tracks_without_ids_read() {
+fn source_tracks_and_rows_without_ids_read() {
     let mut json = serde_json::to_value(SourceTrack::from(common::source_track())).unwrap();
     for key in ["artist_id", "album_id"] {
         assert!(
@@ -192,6 +193,20 @@ fn source_tracks_without_ids_read() {
         (None, None)
     );
     assert_eq!(read.title, "Tidal Hymn");
+
+    let row = TrackRow::from(common::source_track_row());
+    assert_eq!(row.artist_id.as_deref(), Some("ar-3"));
+    assert_eq!(row.album_id.as_deref(), Some("al-9"));
+    assert_eq!(row.link.as_deref(), Some("https://music.example/song/tr-7"));
+    let mut json = serde_json::to_value(row).unwrap();
+    for key in ["artist_id", "album_id", "link"] {
+        assert!(
+            json.as_object_mut().unwrap().remove(key).is_some(),
+            "{key} is written"
+        );
+    }
+    let read: TrackRow = serde_json::from_value(json).unwrap();
+    assert_eq!((read.artist_id, read.album_id, read.link), (None, None, None));
 }
 
 /// Settings JSON from an older app or file, without the newer fields, reads with their
@@ -299,6 +314,7 @@ fn contract() -> String {
     );
     add("LibraryStats", &LibraryStats::from(common::stats()));
     add("TrackRow", &TrackRow::from(common::track_row()));
+    add("TrackRow", &TrackRow::from(common::source_track_row()));
     add("PlaylistSummary", &PlaylistSummary::from(common::playlist()));
     add("PlaylistEntry", &PlaylistEntry::from(common::playlist_entry()));
     add(

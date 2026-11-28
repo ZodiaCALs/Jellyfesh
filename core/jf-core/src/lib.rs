@@ -322,18 +322,20 @@ impl Core {
     /// Recently played tracks (plays that counted), newest first.
     pub fn recently_played(&self, limit: usize) -> Result<Vec<TrackRow>, CoreError> {
         let rows = self.library()?.recently_played(limit)?;
+        let mut links = self.row_links();
         Ok(rows
             .iter()
-            .map(|r| items::row(&r.item, r.track.as_ref(), r.favorite))
+            .map(|r| items::row(&r.item, r.track.as_ref(), r.favorite, &mut links))
             .collect())
     }
 
     /// The most played tracks, most first.
     pub fn most_played(&self, limit: usize) -> Result<Vec<TrackRow>, CoreError> {
         let rows = self.library()?.most_played(limit)?;
+        let mut links = self.row_links();
         Ok(rows
             .iter()
-            .map(|r| items::row(&r.item, r.track.as_ref(), r.favorite))
+            .map(|r| items::row(&r.item, r.track.as_ref(), r.favorite, &mut links))
             .collect())
     }
 
@@ -355,6 +357,7 @@ impl Core {
         offset: usize,
         limit: usize,
     ) -> Result<Vec<PlaylistEntry>, CoreError> {
+        let mut links = self.row_links();
         let library = self.library()?;
         let entries = library.playlist_entries(id, offset, limit)?;
         entries
@@ -364,7 +367,7 @@ impl Core {
                 Ok(PlaylistEntry {
                     entry_id: e.entry_id,
                     position: u32::try_from(e.position).unwrap_or(u32::MAX),
-                    row: items::row(&e.item, e.track.as_ref(), favorite),
+                    row: items::row(&e.item, e.track.as_ref(), favorite, &mut links),
                 })
             })
             .collect()
@@ -379,9 +382,10 @@ impl Core {
     /// A page of favourites, the latest first.
     pub fn favorites(&self, offset: usize, limit: usize) -> Result<Vec<TrackRow>, CoreError> {
         let rows = self.library()?.favorites(offset, limit)?;
+        let mut links = self.row_links();
         Ok(rows
             .iter()
-            .map(|r| items::row(&r.item, r.track.as_ref(), true))
+            .map(|r| items::row(&r.item, r.track.as_ref(), true, &mut links))
             .collect())
     }
 
@@ -417,6 +421,11 @@ impl Core {
 
     fn library(&self) -> Result<std::sync::MutexGuard<'_, Library>, CoreError> {
         Ok(self.queries.lock().unwrap_or_else(|e| e.into_inner()))
+    }
+
+    /// The plugins' links, for the source rows of one list.
+    fn row_links(&self) -> items::RowLinks {
+        items::RowLinks::new(self.shared.host())
     }
 }
 

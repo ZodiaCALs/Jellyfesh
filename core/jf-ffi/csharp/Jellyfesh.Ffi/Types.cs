@@ -948,6 +948,11 @@ public sealed record BrowseUpdate(
 /// <param name="Artwork">A source track's image URL; library rows have ArtworkHash.</param>
 /// <param name="ArtworkHash">Library rows: the artwork's hash, for ArtworkThumbnail.</param>
 /// <param name="Missing">The file is gone; the row cannot play.</param>
+/// <param name="ArtistId">A source track: the source's id of its artist, for Go to Artist (as
+/// SourceItem.ArtistId; from v0.0.9). Null for library rows and files.</param>
+/// <param name="AlbumId">A source track: the source's id of its album, for Go to Album.</param>
+/// <param name="Link">A source track: the https link that opens it in its service ("Open in
+/// {Service}"), from its plugin's link templates as SourceItem.Link.</param>
 public sealed record TrackRow(
     TrackRef Track,
     string Title,
@@ -958,7 +963,10 @@ public sealed record TrackRow(
     string? ArtworkHash,
     bool Favorite,
     bool Missing,
-    bool Downloaded = false);
+    bool Downloaded = false,
+    string? ArtistId = null,
+    string? AlbumId = null,
+    string? Link = null);
 
 public sealed record PlaylistSummary(
     long Id,

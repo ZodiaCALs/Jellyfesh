@@ -1,9 +1,11 @@
 //! Library items (playlist entries, favourites, play statistics) as queue
 //! entries and as rows for track lists.
 
+use std::collections::HashMap;
 use std::path::Path;
 
 use jf_library::{PlaylistItem, Track};
+use jf_plugin_host::links::Links;
 use jf_session::{SourceTrack, TrackRef};
 
 use crate::types::{ArtworkRef, PlaylistSummary, TrackRow};
@@ -91,8 +93,50 @@ pub(crate) fn queue_entries<'a>(
     (out, start_at)
 }
 
-/// A row for a track list.
-pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) -> TrackRow {
+/// The link templates of the plugins whose songs a list shows (ADR-0018),
+/// each plugin looked up once per list.
+pub(crate) struct RowLinks {
+    host: Option<jf_plugin_host::PluginHost>,
+    known: HashMap<String, Links>,
+}
+
+impl RowLinks {
+    /// The links of the plugins `host` has installed; none without a host
+    /// (sources are off).
+    pub(crate) fn new(host: Option<jf_plugin_host::PluginHost>) -> RowLinks {
+        RowLinks {
+            host,
+            known: HashMap::new(),
+        }
+    }
+
+    /// The link that opens a source track in its service, as
+    /// `convert::source_item` makes it: none when its plugin is not
+    /// installed or has no template for tracks.
+    fn track(&mut self, track: &SourceTrack) -> Option<String> {
+        if !self.known.contains_key(&track.plugin) {
+            let links = self
+                .host
+                .as_ref()
+                .and_then(|host| host.plugin(&track.plugin))
+                .map(|info| info.links)
+                .unwrap_or_default();
+            self.known.insert(track.plugin.clone(), links);
+        }
+        self.known
+            .get(&track.plugin)?
+            .url_for(jf_plugin_host::ItemKind::Track, &track.id)
+    }
+}
+
+/// A row for a track list. A source track's row keeps where Go to Artist and
+/// Go to Album lead and its link (ADR-0027 §2), as its search row had them.
+pub(crate) fn row(
+    item: &PlaylistItem,
+    track: Option<&Track>,
+    favorite: bool,
+    links: &mut RowLinks,
+) -> TrackRow {
     let reference = track_for(item, track);
     if let TrackRef::Source(t) = &reference {
         return TrackRow {
@@ -105,6 +149,9 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             favorite,
             missing: false,
             downloaded: crate::downloads::is_downloaded(&t.plugin, &t.id),
+            artist_id: t.artist_id.clone(),
+            album_id: t.album_id.clone(),
+            link: links.track(t),
             track: reference,
         };
     }
@@ -119,6 +166,9 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
             favorite,
             missing: false,
             downloaded: false,
+            artist_id: None,
+            album_id: None,
+            link: None,
             track: reference,
         },
         None => {
@@ -136,6 +186,9 @@ pub(crate) fn row(item: &PlaylistItem, track: Option<&Track>, favorite: bool) ->
                 favorite,
                 missing,
                 downloaded: false,
+                artist_id: None,
+                album_id: None,
+                link: None,
                 track: reference,
             }
         }
@@ -194,25 +247,108 @@ mod tests {
         }
     }
 
+    /// No plugin is installed: rows have no links.
+    fn no_links() -> RowLinks {
+        RowLinks::new(None)
+    }
+
+    /// `org.example.source` with a template for tracks.
+    fn links() -> RowLinks {
+        let mut links = no_links();
+        links.known.insert(
+            "org.example.source".into(),
+            Links {
+                track: Some("https://music.example.com/song/{id}".into()),
+                ..Links::default()
+            },
+        );
+        links
+    }
+
     #[test]
     fn source_tracks_round_trip_through_items() {
         let t = TrackRef::Source(source("7"));
         let item = item_for(&t);
         assert_eq!(track_for(&item, None), t);
-        let row = row(&item, None, true);
+        let row = row(&item, None, true, &mut no_links());
         assert_eq!(row.title, "Song 7");
         assert_eq!(
             row.artwork,
             Some(ArtworkRef::Url("https://example.org/a.jpg".into()))
         );
         assert!(row.favorite && !row.missing);
+        assert_eq!((row.artist_id, row.album_id, row.link), (None, None, None));
+    }
+
+    #[test]
+    fn source_rows_keep_their_artist_album_and_link() {
+        let t = SourceTrack {
+            artist_id: Some("ar-1".into()),
+            album_id: Some("al/2".into()),
+            ..source("7 b")
+        };
+        let item = item_for(&TrackRef::Source(t));
+        let row = row(&item, None, false, &mut links());
+        assert_eq!(row.artist_id.as_deref(), Some("ar-1"));
+        assert_eq!(row.album_id.as_deref(), Some("al/2"));
+        assert_eq!(
+            row.link.as_deref(),
+            Some("https://music.example.com/song/7%20b"),
+            "from the plugin's template, as its search row had it"
+        );
+        // Another plugin, without templates: no link.
+        let other = SourceTrack {
+            plugin: "org.example.other".into(),
+            ..source("8")
+        };
+        assert_eq!(row_of(&TrackRef::Source(other), &mut links()).link, None);
+    }
+
+    fn row_of(track: &TrackRef, links: &mut RowLinks) -> TrackRow {
+        row(&item_for(track), None, false, links)
+    }
+
+    #[test]
+    fn source_rows_stored_before_v0_0_9_still_read() {
+        // A favourite as v0.0.8 kept it: no artist or album ids.
+        let item = PlaylistItem::Source {
+            plugin: "org.example.source".into(),
+            id: "9".into(),
+            meta_json: r#"{"plugin":"org.example.source","id":"9","title":"Old Song","artist":"Someone",
+                "album":"Old Album","duration_ms":180000,"artwork_url":null,"isrc":null}"#
+                .into(),
+        };
+        let TrackRef::Source(t) = track_for(&item, None) else {
+            panic!("a source entry")
+        };
+        assert_eq!(t.title, "Old Song", "the stored metadata, not the bare id");
+        let row = row(&item, None, true, &mut links());
+        assert_eq!(
+            (row.title.as_str(), row.album.as_deref()),
+            ("Old Song", Some("Old Album"))
+        );
+        assert_eq!((row.artist_id, row.album_id), (None, None));
+        assert_eq!(
+            row.link.as_deref(),
+            Some("https://music.example.com/song/9"),
+            "the link needs only the plugin and the id"
+        );
+    }
+
+    #[test]
+    fn library_rows_have_no_source_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let here = dir.path().join("here.flac");
+        std::fs::write(&here, b"").unwrap();
+        let row = row(&PlaylistItem::File(here), None, false, &mut links());
+        assert_eq!((row.artist_id, row.album_id, row.link), (None, None, None));
     }
 
     #[test]
     fn stored_source_tracks_keep_a_picture_the_core_can_fetch() {
         let listed = TrackRef::Source(source("8"));
         assert_eq!(
-            row(&item_for(&listed), None, false).artwork,
+            row(&item_for(&listed), None, false, &mut no_links()).artwork,
             Some(ArtworkRef::Url("https://example.org/a.jpg".into())),
             "the URL it was listed with"
         );
@@ -223,12 +359,12 @@ mod tests {
         };
         let item = item_for(&TrackRef::Source(bare.clone()));
         assert_eq!(
-            row(&item, None, false).artwork,
+            row(&item, None, false, &mut no_links()).artwork,
             None,
             "the plugin gives no artwork"
         );
         crate::artwork::note_covers("org.example.items-covers", true);
-        let Some(ArtworkRef::Url(reference)) = row(&item, None, false).artwork else {
+        let Some(ArtworkRef::Url(reference)) = row(&item, None, false, &mut no_links()).artwork else {
             panic!("a reference to the item")
         };
         assert!(
@@ -279,7 +415,7 @@ mod tests {
         assert_eq!(queue_entries(pairs(), 0).1, 0);
         assert_eq!(queue_entries(pairs(), 9).1, 1, "past the end: the last entry");
 
-        let row = row(&items[1], None, false);
+        let row = row(&items[1], None, false, &mut no_links());
         assert!(row.missing);
         assert_eq!(row.title, "gone");
         assert_eq!(row.track, TrackRef::File(PathBuf::from(&gone)));

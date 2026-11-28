@@ -1186,6 +1186,20 @@ pub struct TrackRow {
     /// A source track with a finished download (it plays the file): the Downloaded mark.
     #[serde(default)]
     pub downloaded: bool,
+    /// A source track: the source's id of its artist, for Go to Artist (as
+    /// `SourceItem::artist_id`; from v0.0.9). `None` for library rows and files.
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub artist_id: Option<String>,
+    /// A source track: the source's id of its album, for Go to Album (from v0.0.9).
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub album_id: Option<String>,
+    /// A source track: the `https` link that opens it in its service ("Open in {Service}"),
+    /// from its plugin's link templates as `SourceItem::link` (from v0.0.9).
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub link: Option<String>,
 }
 
 /// A playlist in the library.

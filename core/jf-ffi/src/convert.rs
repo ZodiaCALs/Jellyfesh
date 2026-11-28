@@ -662,6 +662,9 @@ mirror_struct!(jf::TrackRow => TrackRow {
     favorite,
     missing,
     downloaded,
+    artist_id,
+    album_id,
+    link,
 });
 mirror_struct!(jf::PlaylistSummary => PlaylistSummary {
     id,
