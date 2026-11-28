@@ -203,6 +203,17 @@ public sealed record SourcesState(
     public IEnumerable<PluginInfo> Extensions => Plugins.Where(p => p.Kind == PluginKind.Extension);
 
     public PluginInfo? Find(string? id) => id is null ? null : Plugins.FirstOrDefault(p => p.Id == id);
+
+    /// <summary>
+    /// The plugins ready to answer <paramref name="capability"/> ("search"), as the core decides
+    /// (ADR-0027 §3): on, allowed (official, or community while community plugins are allowed),
+    /// declaring it, and signed in when they need a sign-in.
+    /// </summary>
+    public IEnumerable<PluginInfo> Ready(string capability) =>
+        Plugins.Where(p => p.Enabled
+            && (p.Badge == PluginBadge.Official || AllowCommunity)
+            && p.Capabilities.Contains(capability)
+            && (p.Account is not null || !p.Capabilities.Contains("auth")));
 }
 
 /// <summary>

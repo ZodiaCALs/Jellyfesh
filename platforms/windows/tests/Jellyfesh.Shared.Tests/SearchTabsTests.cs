@@ -154,6 +154,38 @@ public class SearchTabsTests
         return h.Started();
     }
 
+    [Fact]
+    public async Task Only_sources_ready_to_search_are_asked_and_with_none_From_Your_Sources_stays_away()
+    {
+        // ADR-0027 §3: on, allowed, declaring search, and signed in when it needs a sign-in.
+        var ready = new PluginInfo("org.sub", "Sub", "1.0.0", "Someone", PluginBadge.Official, false, ["auth", "search", "browse"],
+            [AuthMethod.PasswordExchange], true, "ana", false, "{}", "{}", null);
+        var signedOut = ready with { Id = "org.jelly", Name = "Jelly", Account = null };
+        var open = signedOut with { Id = "org.open", Name = "Open", Capabilities = ["search"] }; // needs no sign-in
+        var browseOnly = ready with { Id = "org.radio", Name = "Radio", Capabilities = ["browse"] };
+        var community = ready with { Id = "org.extra", Name = "Extra", Badge = PluginBadge.Community };
+        var off = ready with { Id = "org.off", Name = "Off", Enabled = false };
+        using (var h = new AppHarness(English.Instance))
+        {
+            h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [ready, signedOut, open, browseOnly, community, off], [], false) };
+            var search = await SearchAsync(h.Started(), "harbour");
+            Assert.Equal(["org.sub", "org.open"], search.OnlineGroups.Select(g => g.Source));
+            Assert.All(search.OnlineGroups, g => Assert.True(g.IsSearching)); // "Searching…" until each answers
+            Assert.True(search.HasOnlineResults);
+            search.Deactivate();
+        }
+
+        using (var h = new AppHarness(English.Instance))
+        {
+            h.Core.State = CoreSnapshot.Initial with { Sources = new SourcesState(1, [signedOut, browseOnly], [], false) };
+            var search = await SearchAsync(h.Started(), "harbour");
+            Assert.Empty(search.OnlineGroups);
+            Assert.False(search.HasOnlineResults || search.IsSearchingSources);
+            Assert.DoesNotContain(h.Core.Sent, c => c is CoreCommand.Search); // nothing to wait for
+            search.Deactivate();
+        }
+    }
+
     private static async Task<SearchViewModel> SearchAsync(AppHarness h, string query)
     {
         var search = h.App.CreateSearch();

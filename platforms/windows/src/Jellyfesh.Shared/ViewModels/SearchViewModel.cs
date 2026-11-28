@@ -174,10 +174,12 @@ public sealed partial class SearchTabItem(string id, string title) : ObservableO
 /// <summary>
 /// Search by source (docs/ui.md, "Search"; ADR-0024 §4), as Jellyfesh Web shows it. As you type,
 /// the library answers at once (SearchLibrary, a fast synchronous query); the same text goes to
-/// every enabled source (Command.Search), each with its section under From Your Sources from the
-/// start, saying "Searching…" until it answers. Each SearchResults update is one source's section
-/// (the core's rows less what an earlier section shows), so the latest per source replaces that
-/// source's section; the library's names the sources that also have its songs. The tabs: All
+/// every source ready to search (Command.Search; on, allowed, and signed in when it needs a
+/// sign-in, ADR-0027 §3), each with its section under From Your Sources from the start, saying
+/// "Searching…" until it answers; a source that isn't set up yet is left out. Each SearchResults
+/// update is one source's section (the core's rows less what an earlier section shows), so the
+/// latest per source replaces that source's section; the library's names the sources that also
+/// have its songs. The tabs: All
 /// (library results, From Your Sources, then a link to each source that keeps its results apart),
 /// Library, and one per source that found something, with its results kind by kind and Show More.
 /// </summary>
@@ -548,17 +550,24 @@ public sealed partial class SearchViewModel(ShellServices services) : PageViewMo
             }
         }
 
-        var enabled = S.Hub.State.Sources.Plugins.Where(p => p.Enabled).ToList();
-        if (sources && !SourcesNotAvailable && enabled.Count > 0)
+        // The sources ready to search (ADR-0027 §3): one that isn't set up yet is left out, as the
+        // core leaves it out, so nothing waits for an answer that never comes.
+        var ready = S.Hub.State.Sources.Ready("search").ToList();
+        if (sources && !SourcesNotAvailable)
         {
             ClearOnline();
-            foreach (var plugin in enabled)
+            _request = 0;
+            IsSearchingSources = false;
+            foreach (var plugin in ready)
             {
                 OnlineGroups.Add(new SourceResultGroup(plugin.Id, plugin.Name, ItemLinks.Attribution(S.Hub.State.Sources, plugin.Id, S.L)) { IsSearching = true });
             }
 
-            IsSearchingSources = true;
-            _request = S.SendHandled(new CoreCommand.Search(text, new SearchScope.All()));
+            if (ready.Count > 0)
+            {
+                IsSearchingSources = true;
+                _request = S.SendHandled(new CoreCommand.Search(text, new SearchScope.All()));
+            }
         }
 
         UpdateHasResults();
