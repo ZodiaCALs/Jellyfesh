@@ -3,11 +3,16 @@
   // (v0.0.6): covers have artwork.radius-grid (16 px) and shadow-2; hovering or focusing lifts the
   // cover by 4 px with shadow-3 and shows a 40 px glass play button in its bottom start corner
   // that plays the album or playlist; a press scales the cover to 97 %. The lift is a translate
-  // and the deeper shadow fades in with opacity (compositor work only).
+  // and the deeper shadow fades in with opacity (compositor work only). Rows and cards (v0.0.9):
+  // the play button and More show on hover or keyboard focus; right-click opens the card's menu
+  // (Play, Shuffle, then its More entries) at the pointer, as
+  // More does, and so does a long press on a touch screen, where a tap on the cover still opens
+  // the album (src/lib/contextMenu.ts).
   import { useApp } from '../lib/app';
+  import { contextMenu } from '../lib/contextMenu';
   import type { Item } from '../lib/core/types';
   import { t } from '../lib/i18n/index.svelte';
-  import { itemMenu, type MenuEntry, secondary, tracksOf } from '../lib/items';
+  import { cardMenu, type MenuEntry, playContainer, secondary } from '../lib/items';
   import type { NewEntry } from '../lib/core/types';
   import { toast } from '../lib/state/toast.svelte';
   import Art from './Art.svelte';
@@ -38,6 +43,8 @@
   } = $props();
   const app = useApp();
   let cover: HTMLElement | undefined = $state();
+  let opener: HTMLButtonElement | undefined = $state();
+  let moreMenu: ReturnType<typeof Menu> | undefined = $state();
   const playable = $derived(item.kind === 'Album' || item.kind === 'Playlist');
   let starting = $state(false);
 
@@ -45,17 +52,25 @@
     if (starting) return;
     starting = true;
     try {
-      const list = entries ? entries() : await tracksOf(app, plugin, item);
-      if (list.length > 0) app.player.playEntries(list, 0);
-      else toast(t('Nothing here yet.'));
+      await playContainer(app, plugin, item, toast, { entries });
     } finally {
       starting = false;
     }
   }
 </script>
 
-<div class="card" class:enter={index !== null} style:--i={index}>
-  <button class="open" onclick={() => onactivate(cover ?? null)} aria-label={t('Open {title}', { title: item.title })}>
+<div
+  class="card"
+  class:enter={index !== null}
+  style:--i={index}
+  use:contextMenu={(place) => moreMenu?.openAt(place, opener ?? null)}
+>
+  <button
+    class="open"
+    bind:this={opener}
+    onclick={() => onactivate(cover ?? null)}
+    aria-label={t('Open {title}', { title: item.title })}
+  >
     <span class="cover" bind:this={cover}>
       {#if art === undefined}
         <Art {plugin} {item} size={168} radius="grid" />
@@ -73,7 +88,13 @@
       </button>
     </span>
   {/if}
-  <div class="more"><Menu items={() => (menu ? menu() : itemMenu(app, plugin, item, toast))} label={t('More for {title}', { title: item.title })} /></div>
+  <div class="more">
+    <Menu
+      bind:this={moreMenu}
+      items={() => cardMenu(app, plugin, item, toast, { entries, more: menu })}
+      label={t('More for {title}', { title: item.title })}
+    />
+  </div>
 </div>
 
 <style>
@@ -196,6 +217,7 @@
     backdrop-filter: none;
   }
   .card:hover .play,
+  .card:has(.open:focus-visible) .play,
   .play:focus-visible {
     opacity: 1;
   }
@@ -250,12 +272,19 @@
     transition: opacity var(--jf-motion-dur-1) var(--jf-motion-ease-fluid);
   }
   .card:hover .more,
+  .card:has(.open:focus-visible) .more,
   .more:focus-within {
     opacity: 1;
   }
   @media (hover: none) {
     .more {
       opacity: 1;
+    }
+    /* A long press opens the menu: no text selection, no image callout. */
+    .card {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
   }
 </style>

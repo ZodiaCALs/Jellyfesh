@@ -226,6 +226,42 @@ export function itemMenu(
   return menu;
 }
 
+/** Plays an album's or playlist's songs (`entries`, else the source's), from the first or shuffled. */
+export async function playContainer(
+  app: App,
+  plugin: string,
+  item: Item,
+  toast: (text: string) => void,
+  { entries, shuffle = false }: { entries?: () => NewEntry[]; shuffle?: boolean } = {},
+) {
+  const list = entries ? entries() : await tracksOf(app, plugin, item);
+  if (list.length === 0) toast(t('Nothing here yet.'));
+  else if (shuffle) app.player.shuffleEntries(list);
+  else app.player.playEntries(list, 0);
+}
+
+/**
+ * A card's menu (docs/ui.md, "Rows and cards"), which its More button and a right-click open: Play
+ * and Shuffle for an album or playlist, then its More entries (`more`, else the item's own: Play
+ * Next, Play Last, Add to Playlist…, Go to Artist, Get Info, Open in {Service}). `entries` is what
+ * Play and Shuffle play instead of the source's songs (a Jellyfesh playlist's).
+ */
+export function cardMenu(
+  app: App,
+  plugin: string,
+  item: Item,
+  toast: (text: string) => void,
+  { entries, more }: { entries?: () => NewEntry[]; more?: () => MenuEntry[] } = {},
+): MenuEntry[] {
+  const rest = more ? more() : itemMenu(app, plugin, item, toast);
+  if (item.kind !== 'Album' && item.kind !== 'Playlist') return rest;
+  return [
+    { label: t('Play'), action: () => void playContainer(app, plugin, item, toast, { entries }) },
+    { label: t('Shuffle'), action: () => void playContainer(app, plugin, item, toast, { entries, shuffle: true }) },
+    ...rest,
+  ];
+}
+
 /** A queue entry's song for hearts and playlists (`Saved`): the library's as the catalogue lists it now. */
 function songOf(app: App, row: Row): Saved | null {
   const saved = JSON.parse(app.core.saved(row.uid)) as Saved | null;
