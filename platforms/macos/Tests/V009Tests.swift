@@ -88,5 +88,22 @@ final class SourceRowTests: XCTestCase {
         XCTAssertEqual(original.ffi.albumId, "al4")
         XCTAssertEqual(SourceSong(original.ffi), original, "played, queued or added to a playlist, it keeps them")
     }
+
+    func testATrackRowsIdsAndLinkReachItsRow() {
+        let stored = JellyfeshFFI.TrackRow(track: .source(track: song().ffi), title: "Song", artist: "Artist",
+                                           album: "Album", durationMs: nil, artwork: nil, artworkHash: nil,
+                                           favorite: false, missing: false, downloaded: false, artistId: "ar5",
+                                           albumId: "al5", link: "https://music.example.com/t1")
+        let row = SongRow(stored)
+        XCTAssertEqual(row.track, .source(song()))
+        XCTAssertEqual(row.artistID, "ar5")
+        XCTAssertEqual(row.albumID, "al5")
+        XCTAssertEqual(row.link, "https://music.example.com/t1")
+        let before = JellyfeshFFI.TrackRow(track: .source(track: song().ffi), title: "Song", artist: nil, album: nil,
+                                           durationMs: nil, artwork: nil, artworkHash: nil, favorite: false,
+                                           missing: false, downloaded: false)
+        XCTAssertNil(SongRow(before).artistID, "a row stored before has none")
+        XCTAssertNil(SongRow(before).link)
+    }
 }
 
