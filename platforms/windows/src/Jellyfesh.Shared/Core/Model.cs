@@ -17,6 +17,8 @@ public abstract record TrackRef
 }
 
 /// <summary>A track from an online source, with the display data the source gave.</summary>
+/// <param name="ArtistId">The source's id of its artist, for Go to Artist (v0.0.9, ADR-0027 §2; null when the source gave none, and in entries stored before).</param>
+/// <param name="AlbumId">The source's id of its album, for Go to Album (v0.0.9).</param>
 public sealed record SourceTrack(
     string Plugin,
     string Id,
@@ -25,7 +27,9 @@ public sealed record SourceTrack(
     string? Album,
     ulong? DurationMs,
     string? ArtworkUrl,
-    string? Isrc);
+    string? Isrc,
+    string? ArtistId = null,
+    string? AlbumId = null);
 
 /// <summary>One queue entry; <see cref="Uid"/> is stable while the entry stays queued.</summary>
 public sealed record QueueItem(ulong Uid, TrackRef Track);
@@ -218,6 +222,9 @@ public sealed record LibraryStats(
     ulong TotalBytes);
 
 /// <summary>A row in a track list (playlist, favourites, history).</summary>
+/// <param name="ArtistId">A source song's artist on its source, for Go to Artist (v0.0.9, ADR-0027 §2).</param>
+/// <param name="AlbumId">A source song's album on its source, for Go to Album (v0.0.9).</param>
+/// <param name="Link">Opens a source song in its service, for Open in {Service} (v0.0.9; the core fills it from the plugin's link templates).</param>
 public sealed record TrackRow(
     TrackRef Track,
     string Title,
@@ -228,7 +235,10 @@ public sealed record TrackRow(
     string? ArtworkHash,
     bool Favorite,
     bool Missing,
-    bool Downloaded = false);
+    bool Downloaded = false,
+    string? ArtistId = null,
+    string? AlbumId = null,
+    string? Link = null);
 
 /// <summary>A queue entry that started playing.</summary>
 public sealed record HistoryEntry(TrackRef Track, long PlayedAtMs);

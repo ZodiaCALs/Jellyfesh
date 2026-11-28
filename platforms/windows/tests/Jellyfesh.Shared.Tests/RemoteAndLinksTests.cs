@@ -239,6 +239,37 @@ public class RemoteAndLinksTests
     }
 
     [Fact]
+    public void A_source_song_in_favourites_and_playlists_keeps_its_album_artist_and_link()
+    {
+        // v0.0.9 (ADR-0027 §2): the row carries the ids and the link, so its menu offers Go to Album,
+        // Go to Artist and Open in {Service} there too, not only in search and browse.
+        var song = new SourceTrack("org.qq", "s1", "Lantern", "Band", "Tides", 200_000, null, null, ArtistId: "r1", AlbumId: "a1");
+        var favourite = new TrackItem(0);
+        favourite.Load(new TrackRow(new TrackRef.Source(song), "Lantern", "Band", "Tides", 200_000, null, null, true, false,
+            ArtistId: "r1", AlbumId: "a1", Link: "https://music.example/song/s1"));
+        Assert.Equal(("org.qq", "https://music.example/song/s1"), (favourite.SourceId, favourite.Link));
+        Assert.Equal(new SourceTarget("org.qq", "a1", "Tides", ItemKind.Album), TrackPlaces.SourceAlbum(favourite));
+        Assert.Equal(new SourceTarget("org.qq", "r1", "Band", ItemKind.Artist), TrackPlaces.SourceArtist(favourite));
+        Assert.True(TrackPlaces.HasPages(favourite));
+
+        // In a playlist, the queue's song keeps its ids though the row has no link.
+        var entry = new TrackItem(0);
+        entry.Load(new PlaylistEntry(9, 0, new TrackRow(new TrackRef.Source(song), "Lantern", "Band", "Tides", 200_000, null, null, false, false)));
+        Assert.Equal(("a1", "r1"), (entry.SourceAlbumId, entry.SourceArtistId));
+        Assert.Null(entry.Link);
+
+        // A row stored before v0.0.9 has none: no source pages, no link; a library row neither.
+        var older = new TrackItem(0);
+        older.Load(new TrackRow(new TrackRef.Source(song with { ArtistId = null, AlbumId = null }), "Lantern", "Band", null, 200_000, null, null, false, false));
+        Assert.False(TrackPlaces.HasPages(older));
+        Assert.Null(older.Link);
+        var library = new TrackItem(0);
+        library.Load(new TrackRow(new TrackRef.Library(3), "Harbour", "Band", "Tides", 200_000, null, null, false, false));
+        Assert.Null(library.SourceId);
+        Assert.Null(TrackPlaces.SourceAlbum(library));
+    }
+
+    [Fact]
     public void Remote_sources_songs_are_never_queued()
     {
         using var h = new AppHarness();

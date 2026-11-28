@@ -311,6 +311,15 @@ public sealed partial class TrackItem : ArtworkItem, IPagedItem<Track>, IPagedIt
         IsMissing = row.Missing;
         IsDownloaded = row.Downloaded;
         IsPlayable = !row.Missing;
+
+        // A source's song keeps its album, artist and link wherever it shows (v0.0.9, ADR-0027 §2),
+        // for Go to Album, Go to Artist and Open in {Service}; rows stored before have none.
+        var source = (row.Track as TrackRef.Source)?.Track;
+        SourceId = source?.Plugin;
+        Link = ItemLinks.Usable(row.Link);
+        SourceAlbumId = row.AlbumId ?? source?.AlbumId;
+        SourceArtistId = row.ArtistId ?? source?.ArtistId;
+        SourceAlbum = row.Album ?? source?.Album;
         SetArtwork(row.Artwork, row.ArtworkHash);
         Done();
     }
