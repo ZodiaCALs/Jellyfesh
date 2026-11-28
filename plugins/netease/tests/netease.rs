@@ -365,7 +365,7 @@ fn an_expired_token_is_renewed_once_then_sign_in_is_needed() {
 }
 
 #[test]
-fn the_published_package_has_no_search_and_no_links() {
+fn the_published_package_searches_and_has_no_links() {
     let files = PluginFiles::read(crate_dir());
     let manifest = jf_plugin_host::manifest::parse(&files.manifest).unwrap();
     assert_eq!(
@@ -375,18 +375,22 @@ fn the_published_package_has_no_search_and_no_links() {
     );
     assert_eq!(manifest.version.to_string(), env!("CARGO_PKG_VERSION"));
     assert!(
-        !manifest
+        manifest
             .capabilities
             .contains(&jf_plugin_host::Capability::Search)
     );
+    // NetEase's terms could not be read: the default stands.
+    assert!(manifest.content_policy.unified_search);
     assert!(manifest.links.is_empty());
     assert_eq!(manifest.auth, [AuthKind::Qr]);
-    assert!(
-        jf_plugin_host::presets::PRESETS.iter().all(|p| p.plugin != ID),
-        "not in Add a Source before it can search"
-    );
     let env = Env::new();
     env.install_crate(crate_dir(), "jf-netease");
+    assert!(
+        recv(env.host.capabilities(ID))
+            .unwrap()
+            .contains(&jf_plugin_host::Capability::Search),
+        "the plugin says it can search"
+    );
     assert!(
         env.host
             .set_settings(ID, &json!({ "test_server": "http://127.0.0.1:9" }).to_string())
@@ -522,6 +526,284 @@ fn liked_songs_and_playlists_for_the_library() {
         .collect();
     assert_eq!(seen, expected);
     assert_eq!(mock.state.lock().unwrap().bad_signatures, 0);
+}
+
+/// The business parameters of the last request to `path`.
+fn last_biz(mock: &Mock, path: &str) -> serde_json::Value {
+    let request = mock
+        .server
+        .requests_to(path)
+        .pop()
+        .unwrap_or_else(|| panic!("no request to {path}"));
+    serde_json::from_str(&request.query("bizContent").unwrap()).unwrap()
+}
+
+const SEARCH_SONG: &str = "/openapi/music/basic/search/song/get/v3";
+
+/// Search (ADR-0027 §5): each kind on its own path, as the core asks, with
+/// `keyword`, `limit` and `offset`; the cursor is the offset.
+#[test]
+fn searches_songs_albums_artists_and_playlists() {
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let search = |kind: ItemKind, cursor: Option<String>| {
+        recv(
+            env.host
+                .search(ID, " tide ", kinds(&[kind]), next_page(cursor, 20)),
+        )
+        .unwrap()
+    };
+
+    let songs = search(ItemKind::Track, None);
+    assert_eq!(
+        last_biz(&mock, SEARCH_SONG),
+        json!({ "keyword": "tide", "limit": 20, "offset": 0 })
+    );
+    assert_eq!(songs.items.len(), 20);
+    assert_eq!((songs.next.as_deref(), songs.total), (Some("20"), Some(25)));
+    let first = &songs.items[0];
+    assert_eq!(
+        (first.kind, first.id.as_str(), first.title.as_str()),
+        (ItemKind::Track, "5eac0000000000000000000000000000", "Tide Song 0")
+    );
+    assert_eq!(
+        (first.artist.as_deref(), first.album.as_deref()),
+        (Some("Mei Example"), Some("Tide Tables"))
+    );
+    let artist_id = format!("ar:{}", mock::SEARCH_ARTIST);
+    let album_id = format!("al:{}", mock::SEARCH_ALBUM);
+    assert_eq!(first.artist_id.as_deref(), Some(artist_id.as_str()));
+    assert_eq!(first.album_id.as_deref(), Some(album_id.as_str()));
+    assert_eq!(first.duration_ms, Some(200_000));
+    assert!(first.playable);
+    // NetEase's rules hold in search too: a VIP song needs a purchase.
+    let vip = &songs.items[1];
+    assert!(!vip.playable);
+    assert_eq!(
+        vip.unplayable.as_ref().map(|u| u.reason),
+        Some(UnplayableReason::Paywall)
+    );
+    assert_covers(&songs.items, "songs found");
+    let rest = search(ItemKind::Track, songs.next);
+    assert_eq!(
+        last_biz(&mock, SEARCH_SONG),
+        json!({ "keyword": "tide", "limit": 20, "offset": 20 })
+    );
+    assert_eq!((rest.items.len(), rest.next), (5, None));
+
+    let albums = search(ItemKind::Album, None);
+    assert_eq!(
+        last_biz(&mock, "/openapi/music/basic/search/album/get/v2"),
+        json!({ "keyword": "tide", "limit": 20, "offset": 0 })
+    );
+    let found: Vec<(ItemKind, &str, &str, Option<&str>)> = albums
+        .items
+        .iter()
+        .map(|a| (a.kind, a.id.as_str(), a.title.as_str(), a.artist.as_deref()))
+        .collect();
+    assert_eq!(
+        found,
+        [
+            (
+                ItemKind::Album,
+                album_id.as_str(),
+                "Tide Tables",
+                Some("Mei Example")
+            ),
+            (
+                ItemKind::Album,
+                "al:a1b00000000000000000000000000002",
+                "Low Tide Live",
+                Some("Mei Example")
+            ),
+        ]
+    );
+    assert_eq!(albums.next, None);
+    assert_covers(&albums.items, "albums found");
+
+    let artists = search(ItemKind::Artist, None);
+    assert_eq!(
+        last_biz(&mock, "/openapi/music/basic/search/artists/get/v2"),
+        json!({ "keyword": "tide", "limit": 20, "offset": 0 })
+    );
+    assert_eq!(artists.items.len(), 1);
+    assert_eq!(
+        (
+            artists.items[0].kind,
+            artists.items[0].id.as_str(),
+            artists.items[0].title.as_str()
+        ),
+        (ItemKind::Artist, artist_id.as_str(), "Mei Example")
+    );
+    assert_covers(&artists.items, "artists found");
+
+    let playlists = search(ItemKind::Playlist, None);
+    assert_eq!(
+        last_biz(&mock, "/openapi/music/basic/search/playlist/get/v2"),
+        json!({ "keyword": "tide", "limit": 20, "offset": 0 })
+    );
+    let list = &playlists.items[0];
+    assert_eq!(
+        (
+            list.kind,
+            list.id.as_str(),
+            list.artist.as_deref(),
+            list.child_count
+        ),
+        (ItemKind::Playlist, "pl-created-0", Some("Mock Listener"), Some(6))
+    );
+    assert_covers(&playlists.items, "playlists found");
+
+    // Every kind at once (none named) shares the page: five of each.
+    let all = recv(env.host.search(ID, "tide", kinds(&[]), page(20))).unwrap();
+    let counted = |kind: ItemKind| all.items.iter().filter(|i| i.kind == kind).count();
+    assert_eq!(
+        [
+            ItemKind::Track,
+            ItemKind::Album,
+            ItemKind::Artist,
+            ItemKind::Playlist
+        ]
+        .map(counted),
+        [5, 2, 1, 1]
+    );
+    assert_eq!(all.next.as_deref(), Some("5"));
+    assert_eq!(last_biz(&mock, SEARCH_SONG)["limit"], 5);
+    assert_eq!(mock.state.lock().unwrap().bad_signatures, 0);
+}
+
+#[test]
+fn a_search_finds_nothing_or_fails_in_plain_words() {
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let songs = |query: &str, cursor: Option<String>| {
+        recv(
+            env.host
+                .search(ID, query, kinds(&[ItemKind::Track]), next_page(cursor, 20)),
+        )
+    };
+    let nothing = songs("nothing", None).unwrap();
+    assert!(nothing.items.is_empty());
+    assert_eq!((nothing.next, nothing.total), (None, Some(0)));
+    assert_eq!(
+        songs("   ", None).unwrap().items.len(),
+        0,
+        "an empty search asks nothing"
+    );
+    assert_eq!(mock.server.count(SEARCH_SONG), 1);
+    // Kinds NetEase cannot search are no results, not an error.
+    assert!(
+        recv(env.host.search(ID, "tide", kinds(&[ItemKind::Folder]), page(20)))
+            .unwrap()
+            .items
+            .is_empty()
+    );
+    assert_eq!(
+        songs("garbled", None),
+        Err(CallError::Plugin(PluginError::Service(
+            "NetEase Cloud Music sent the songs it found in a form Jellyfesh cannot read.".into()
+        )))
+    );
+    assert_eq!(
+        songs("slow down", None),
+        Err(CallError::Plugin(PluginError::RateLimited))
+    );
+    assert!(matches!(
+        songs("tide", Some("page two".into())),
+        Err(CallError::Plugin(PluginError::InvalidInput(_)))
+    ));
+}
+
+/// An album found by search opens to its songs, an artist to their popular
+/// songs; the ids go to NetEase without Jellyfesh's prefixes.
+#[test]
+fn albums_and_artists_open_to_their_songs() {
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let album = item(
+        ItemKind::Album,
+        &format!("al:{}", mock::SEARCH_ALBUM),
+        "Tide Tables",
+    );
+    let first = recv(env.host.browse(ID, Some(album.clone()), page(4))).unwrap();
+    assert_eq!(
+        last_biz(&mock, "/openapi/music/basic/album/song/list/get/v2"),
+        json!({ "albumId": mock::SEARCH_ALBUM, "limit": 4, "offset": 0 })
+    );
+    assert_eq!((first.items.len(), first.next.as_deref()), (4, Some("4")));
+    let rest = recv(env.host.browse(ID, Some(album), next_page(first.next, 4))).unwrap();
+    assert_eq!((rest.items.len(), rest.next), (2, None));
+
+    let artist = item(
+        ItemKind::Artist,
+        &format!("ar:{}", mock::SEARCH_ARTIST),
+        "Mei Example",
+    );
+    let popular = recv(env.host.browse(ID, Some(artist), page(50))).unwrap();
+    assert_eq!(
+        last_biz(&mock, "/openapi/music/basic/artists/hotsong/list/get/v2"),
+        json!({ "artistId": mock::SEARCH_ARTIST })
+    );
+    assert_eq!((popular.items.len(), popular.next), (6, None));
+    assert!(popular.items.iter().all(|s| s.kind == ItemKind::Track));
+    assert_eq!(mock.state.lock().unwrap().bad_signatures, 0);
+}
+
+/// Liked songs NetEase's answers do not let Jellyfesh read are an error in
+/// plain words on Favourites and in the folder, never an empty list; the
+/// Discover page goes on without them.
+#[test]
+fn unreadable_liked_songs_are_an_error_not_an_empty_list() {
+    let mock = mock::start(&[803]);
+    let env = signed_in(&mock);
+    let likes = || recv(env.host.library_likes(ID, ItemKind::Track, page(50)));
+    let folder = || {
+        recv(env.host.browse(
+            ID,
+            Some(item(ItemKind::Folder, "starred", "Liked Songs")),
+            page(50),
+        ))
+    };
+    let unnamed = Err(CallError::Plugin(PluginError::Service(
+        "NetEase Cloud Music didn't say which playlist holds your liked songs.".into(),
+    )));
+    for star in [
+        json!(null),
+        json!({}),
+        json!({ "name": "Liked", "trackCount": 6 }),
+    ] {
+        mock.state.lock().unwrap().star = Some(star.clone());
+        assert_eq!(likes(), unnamed, "{star}");
+        assert_eq!(folder(), unnamed, "{star}");
+    }
+    let shelves = recv(env.host.discover(ID)).unwrap();
+    let titles: Vec<&str> = shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(titles, ["Created Playlists", "Collected Playlists"]);
+
+    // The playlist named under another key still reads.
+    mock.state.lock().unwrap().star = Some(json!({ "playlist": { "id": "pl-liked", "trackCount": 6 } }));
+    assert_eq!(likes().unwrap().items.len(), 6);
+
+    // Songs NetEase says are there but does not send in a readable form.
+    let unread = Err(CallError::Plugin(PluginError::Service(
+        "NetEase Cloud Music sent your liked songs in a form Jellyfesh cannot read.".into(),
+    )));
+    mock.state.lock().unwrap().star = None;
+    for songs in [
+        json!({}),
+        json!({ "records": [] }),
+        json!({ "records": [{ "privilege": {} }] }),
+        json!({ "result": { "songs": [] } }),
+    ] {
+        mock.state.lock().unwrap().liked_songs = Some(songs.clone());
+        assert_eq!(likes(), unread, "{songs}");
+        assert_eq!(folder(), unread, "{songs}");
+    }
+    // No liked songs at all is an empty list.
+    mock.state.lock().unwrap().star = Some(json!({ "id": "pl-liked", "trackCount": 0 }));
+    mock.state.lock().unwrap().liked_songs = Some(json!({ "records": [], "recordCount": 0 }));
+    let none = likes().unwrap();
+    assert_eq!((none.items.len(), none.next), (0, None));
 }
 
 #[test]

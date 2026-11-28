@@ -1,13 +1,27 @@
-//! NetEase Cloud Music's songs and playlists as Jellyfesh items.
+//! NetEase Cloud Music's songs, albums, artists and playlists as Jellyfesh
+//! items.
 //!
-//! Song ids are the encrypted ids (32 hex digits) the API takes; the numeric
-//! ids that NetEase's links need are not kept (no `[links]`). Field names are
-//! the ones the research saw in the official client's song lists; the
-//! playlist lists' answers are not documented, so a few likely spellings are
-//! read (to be checked against NetEase's documentation).
+//! Ids are the encrypted ids (32 hex digits) the API takes; the numeric ids
+//! that NetEase's links need are not kept (no `[links]`). Songs and playlists
+//! keep the bare id, as rows stored before have it; albums and artists, which
+//! only search and songs name, have the prefixes [`ALBUM`] and [`ARTIST`], so
+//! browsing one works from its id alone. Field names are the ones the
+//! research saw in the official client's song lists, and those independent
+//! public clients of the open platform read from its search answers; the
+//! answers are not documented where we could read, so a few likely spellings
+//! are read (to be checked against NetEase's documentation).
 
 use jf_plugin_sdk::prelude::*;
 use serde_json::Value;
+
+/// The id prefix of albums: `al:` and NetEase's album id.
+pub const ALBUM: &str = "al:";
+/// The id prefix of artists: `ar:` and NetEase's artist id.
+pub const ARTIST: &str = "ar:";
+
+/// Where an answer's list may be: `records` in the official client's
+/// playlist lists and in public clients' search answers.
+const LIST_KEYS: [&str; 5] = ["records", "list", "songs", "playlists", "data"];
 
 fn text<'a>(value: &'a Value, keys: &[&str]) -> Option<&'a str> {
     keys.iter()
@@ -35,20 +49,40 @@ fn flag(value: &Value, key: &str) -> Option<bool> {
 }
 
 /// The list in an answer's `data`: the array itself, or the first array
-/// under a likely name (`records` in the official client's playlist lists).
-pub fn list(data: &Value) -> &[Value] {
-    if let Some(items) = data.as_array() {
-        return items;
+/// under a likely name; empty when there is no data, an empty object, a
+/// null list, a count of 0 or no list and no more. `None` when the answer
+/// has data but no list Jellyfesh can read.
+pub fn listing(data: &Value) -> Option<&[Value]> {
+    match data {
+        Value::Null => Some(&[]),
+        Value::Array(items) => Some(items),
+        Value::Object(map) => {
+            for key in LIST_KEYS {
+                match map.get(key) {
+                    Some(Value::Array(items)) => return Some(items),
+                    Some(Value::Null) => return Some(&[]),
+                    _ => {}
+                }
+            }
+            (map.is_empty() || count(data) == Some(0) || has_more(data) == Some(false)).then_some(&[][..])
+        }
+        _ => None,
     }
-    ["records", "list", "songs", "playlists", "data"]
-        .iter()
-        .find_map(|k| data.get(*k).and_then(Value::as_array))
-        .map_or(&[], Vec::as_slice)
+}
+
+/// The list in an answer's `data`, or none.
+pub fn list(data: &Value) -> &[Value] {
+    listing(data).unwrap_or(&[])
+}
+
+/// How many entries the whole list has, when the answer says.
+pub fn count(data: &Value) -> Option<u64> {
+    number(data, &["recordCount", "total"])
 }
 
 /// The one playlist an answer's `data` describes: the object itself (the
-/// official client reads `playlist/star/get/v2`, the liked songs' playlist,
-/// and `playlist/detail/get/v2` this way), or the first of a list.
+/// official client reads `playlist/detail/get/v2` this way), or the first of
+/// a list.
 pub fn one(data: &Value) -> Option<&Value> {
     if data.get("id").is_some() {
         return Some(data);
@@ -56,11 +90,92 @@ pub fn one(data: &Value) -> Option<&Value> {
     list(data).first()
 }
 
+/// The liked songs' playlist in the answer of `playlist/star/get/v2`: its id
+/// and how many songs NetEase says it holds. The answer is one playlist (the
+/// official client reads its `data` as a playlist record); the record is
+/// also looked for under `playlist` and as the first of a list. It needs
+/// only an id.
+pub fn liked(data: &Value) -> Option<(String, Option<u64>)> {
+    [Some(data), data.get("playlist"), list(data).first()]
+        .into_iter()
+        .flatten()
+        .find_map(|record| {
+            let id = id(record, &["id", "playlistId", "encryptedId"])?;
+            Some((id, number(record, &["trackCount", "songCount"])))
+        })
+}
+
 /// Whether the list says it has more (when it says so at all).
 pub fn has_more(data: &Value) -> Option<bool> {
     ["hasMore", "more"]
         .iter()
         .find_map(|k| data.get(*k).and_then(Value::as_bool))
+}
+
+/// Longest description [`shape`] gives.
+const SHAPE_MAX: usize = 1500;
+
+/// What an answer looks like, for the log: its keys and the types of their
+/// values, never the values. Three levels deep; a list by its first entry;
+/// keys sorted, and a key that does not look like a field name (an id used
+/// as a key) shown as `<key>`.
+pub fn shape(value: &Value) -> String {
+    let mut out = String::new();
+    describe(value, 3, &mut out);
+    if out.len() > SHAPE_MAX {
+        let mut end = SHAPE_MAX;
+        while !out.is_char_boundary(end) {
+            end -= 1;
+        }
+        out.truncate(end);
+        out.push('…');
+    }
+    out
+}
+
+fn describe(value: &Value, depth: usize, out: &mut String) {
+    match value {
+        Value::Null => out.push_str("null"),
+        Value::Bool(_) => out.push_str("bool"),
+        Value::Number(_) => out.push_str("number"),
+        Value::String(_) => out.push_str("string"),
+        Value::Array(items) => match items.first() {
+            None => out.push_str("[]"),
+            Some(_) if depth == 0 => out.push_str("[…]"),
+            Some(first) => {
+                out.push('[');
+                describe(first, depth - 1, out);
+                out.push(']');
+            }
+        },
+        Value::Object(map) if map.is_empty() => out.push_str("{}"),
+        Value::Object(_) if depth == 0 => out.push_str("{…}"),
+        Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort();
+            out.push('{');
+            for (i, key) in keys.into_iter().enumerate() {
+                if i > 0 {
+                    out.push_str(", ");
+                }
+                out.push_str(if field_name(key) { key } else { "<key>" });
+                out.push_str(": ");
+                describe(&map[key], depth - 1, out);
+            }
+            out.push('}');
+        }
+    }
+}
+
+/// A key that looks like a field name (`recordCount`, `img1v1Url`), not like
+/// data: at most 40 ASCII letters, digits and underscores, starting with a
+/// letter, and not a long run of hex digits (an id).
+fn field_name(key: &str) -> bool {
+    let hex = key.len() >= 16 && key.bytes().all(|b| b.is_ascii_hexdigit());
+    key.len() <= 40
+        && key.starts_with(|c: char| c.is_ascii_alphabetic())
+        && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+        && !hex
 }
 
 /// Pictures come from NetEase's image servers, sometimes as `http`; the
@@ -176,18 +291,33 @@ fn song_cover(value: &Value) -> Option<&str> {
         .or_else(|| text(value, &["coverImgUrl", "picUrl", "albumPicUrl"]))
 }
 
-/// A song from a playlist's list.
+/// The id of the first artist of a list (the primary one), with the artist
+/// prefix.
+fn first_artist(artists: Option<&Value>) -> Option<String> {
+    let first = artists?.as_array()?.first()?;
+    id(first, &["id"]).map(|id| format!("{ARTIST}{id}"))
+}
+
+/// A song from a list (a playlist's, an album's, an artist's) or a search.
+/// Its album and first artist, where the record gives their ids, are where
+/// Go to Album and Go to Artist lead.
 pub fn song(value: &Value) -> Option<Item> {
-    let id = id(value, &["encryptedId", "songId", "id"])?;
-    let mut item = Item::new(ItemKind::Track, id, text(value, &["name", "songName"])?);
-    item.artist = names(value.get("ar").or_else(|| value.get("artists")))
-        .or_else(|| text(value, &["artistName"]).map(str::to_owned));
-    item.album = value
-        .get("al")
-        .or_else(|| value.get("album"))
+    let mut item = Item::new(
+        ItemKind::Track,
+        id(value, &["encryptedId", "songId", "id"])?,
+        text(value, &["name", "songName"])?,
+    );
+    let artists = value.get("ar").or_else(|| value.get("artists"));
+    item.artist = names(artists).or_else(|| text(value, &["artistName"]).map(str::to_owned));
+    item.artist_id = first_artist(artists);
+    let album = value.get("al").or_else(|| value.get("album"));
+    item.album = album
         .and_then(|a| text(a, &["name"]))
         .or_else(|| text(value, &["albumName"]))
         .map(str::to_owned);
+    item.album_id = album
+        .and_then(|a| id(a, &["id"]))
+        .map(|id| format!("{ALBUM}{id}"));
     item.duration_ms = number(value, &["dt", "duration"]).and_then(|d| u32::try_from(d).ok());
     if let Some(cover) = song_cover(value) {
         item = item.artwork(secure(cover));
@@ -211,6 +341,40 @@ pub fn playlist(value: &Value) -> Option<Item> {
     item.child_count = number(value, &["trackCount", "songCount"]).and_then(|n| u32::try_from(n).ok());
     if let Some(cover) = text(value, &["coverImgUrl", "coverUrl"]) {
         item = item.artwork(secure(cover));
+    }
+    Some(item)
+}
+
+/// An album from a search (`records` of `search/album/get/v2`, as public
+/// clients read them: `id`, `name`, `artists`, a cover as `coverImgUrl` or
+/// `picUrl`).
+pub fn album(value: &Value) -> Option<Item> {
+    let mut item = Item::new(
+        ItemKind::Album,
+        format!("{ALBUM}{}", id(value, &["id", "albumId"])?),
+        text(value, &["name", "albumName"])?,
+    );
+    let artists = value.get("artists").or_else(|| value.get("ar"));
+    item.artist = names(artists).or_else(|| text(value, &["artistName"]).map(str::to_owned));
+    item.artist_id = first_artist(artists);
+    if let Some(cover) = text(value, &["coverImgUrl", "picUrl"]) {
+        item = item.artwork(secure(cover));
+    }
+    Some(item)
+}
+
+/// An artist from a search (`records` of `search/artists/get/v2`). Public
+/// clients read `id` and `name`, the picture under one of several names,
+/// and some each artist under `artist`.
+pub fn artist(value: &Value) -> Option<Item> {
+    let value = value.get("artist").filter(|a| a.is_object()).unwrap_or(value);
+    let mut item = Item::new(
+        ItemKind::Artist,
+        format!("{ARTIST}{}", id(value, &["id", "artistId"])?),
+        text(value, &["name", "artistName"])?,
+    );
+    if let Some(picture) = text(value, &["coverImgUrl", "picUrl", "img1v1Url", "avatar", "cover"]) {
+        item = item.artwork(secure(picture));
     }
     Some(item)
 }
@@ -387,6 +551,153 @@ mod tests {
             ]
         );
         assert!(playlist_details(&json!({ "id": 1 })).facts.is_empty());
+    }
+
+    #[test]
+    fn search_records_read_as_songs_albums_and_artists_with_their_ids() {
+        // A song as public clients of the open platform read its search
+        // records: the encrypted `id`, `artists` and `album` with ids.
+        let s = song(&json!({
+            "id": "5eac0000000000000000000000000001", "originalId": 1901, "name": "Low Water",
+            "artists": [{ "id": "a7000000000000000000000000000001", "originalId": 31, "name": "Mei Example" },
+                        { "id": "a7000000000000000000000000000002", "name": "Quiet Pier" }],
+            "album": { "id": "a1b00000000000000000000000000001", "originalId": 41, "name": "Tide Tables" },
+            "duration": 201000, "coverImgUrl": "http://p1.music.126.net/mock/search.jpg", "playFlag": true,
+            "visible": true
+        }))
+        .unwrap();
+        assert_eq!(s.id, "5eac0000000000000000000000000001");
+        assert_eq!(s.artist.as_deref(), Some("Mei Example, Quiet Pier"));
+        assert_eq!(
+            s.artist_id.as_deref(),
+            Some("ar:a7000000000000000000000000000001")
+        );
+        assert_eq!(
+            (s.album.as_deref(), s.album_id.as_deref()),
+            (Some("Tide Tables"), Some("al:a1b00000000000000000000000000001"))
+        );
+        assert_eq!(s.duration_ms, Some(201_000));
+        assert_eq!(s.artwork.unwrap().url, "https://p1.music.126.net/mock/search.jpg");
+        assert!(s.playable);
+        // Without ids there is nowhere to go.
+        let s =
+            song(&json!({ "id": "x", "name": "Y", "artists": [{ "name": "Z" }], "albumName": "W" })).unwrap();
+        assert_eq!(
+            (s.artist_id, s.album_id, s.album.as_deref()),
+            (None, None, Some("W"))
+        );
+
+        let a = album(&json!({
+            "id": "a1b00000000000000000000000000001", "name": "Tide Tables",
+            "artists": [{ "id": "a7000000000000000000000000000001", "name": "Mei Example" }],
+            "coverImgUrl": "http://p1.music.126.net/mock/album.jpg", "company": "Invented Records"
+        }))
+        .unwrap();
+        assert_eq!(
+            (a.kind, a.id.as_str()),
+            (ItemKind::Album, "al:a1b00000000000000000000000000001")
+        );
+        assert_eq!(
+            (a.artist.as_deref(), a.artist_id.as_deref()),
+            (Some("Mei Example"), Some("ar:a7000000000000000000000000000001"))
+        );
+        assert_eq!(a.artwork.unwrap().url, "https://p1.music.126.net/mock/album.jpg");
+        let a =
+            album(&json!({ "id": "b2", "name": "B", "picUrl": "https://p2.music.126.net/b.jpg" })).unwrap();
+        assert_eq!(a.artwork.unwrap().url, "https://p2.music.126.net/b.jpg");
+        assert!(album(&json!({ "name": "no id" })).is_none());
+
+        let r = artist(&json!({
+            "id": "a7000000000000000000000000000001", "name": "Mei Example",
+            "picUrl": "http://p1.music.126.net/mock/artist.jpg"
+        }))
+        .unwrap();
+        assert_eq!(
+            (r.kind, r.id.as_str(), r.artist.as_deref()),
+            (ItemKind::Artist, "ar:a7000000000000000000000000000001", None)
+        );
+        assert_eq!(r.artwork.unwrap().url, "https://p1.music.126.net/mock/artist.jpg");
+        let r = artist(&json!({ "artist": { "id": 31, "name": "Quiet Pier", "img1v1Url": "https://p1.music.126.net/q.jpg" } }))
+            .unwrap();
+        assert_eq!((r.id.as_str(), r.title.as_str()), ("ar:31", "Quiet Pier"));
+        assert!(artist(&json!({ "id": "x" })).is_none());
+    }
+
+    #[test]
+    fn lists_tell_an_empty_answer_from_one_that_cannot_be_read() {
+        for empty in [
+            json!(null),
+            json!([]),
+            json!({}),
+            json!({ "records": [] }),
+            json!({ "records": null }),
+            json!({ "recordCount": 0 }),
+            json!({ "hasMore": false }),
+        ] {
+            assert_eq!(listing(&empty).map(<[Value]>::len), Some(0), "{empty}");
+        }
+        assert_eq!(
+            listing(&json!({ "records": [1, 2], "recordCount": 9 })).map(<[Value]>::len),
+            Some(2)
+        );
+        for unreadable in [
+            json!({ "recordCount": 3 }),
+            json!({ "result": { "songs": [1] } }),
+            json!("text"),
+            json!(7),
+        ] {
+            assert!(listing(&unreadable).is_none(), "{unreadable}");
+            assert!(list(&unreadable).is_empty());
+        }
+        assert_eq!(count(&json!({ "recordCount": 307, "records": [] })), Some(307));
+    }
+
+    #[test]
+    fn the_liked_songs_playlist_needs_only_an_id() {
+        assert_eq!(
+            liked(&json!({ "id": "pl", "originalId": 9, "name": "Liked", "trackCount": 6 })),
+            Some(("pl".into(), Some(6)))
+        );
+        assert_eq!(liked(&json!({ "playlistId": "pl2" })), Some(("pl2".into(), None)));
+        assert_eq!(
+            liked(&json!({ "playlist": { "id": "pl3", "trackCount": 0 } })),
+            Some(("pl3".into(), Some(0)))
+        );
+        assert_eq!(
+            liked(&json!({ "records": [{ "id": "pl4" }] })),
+            Some(("pl4".into(), None))
+        );
+        for none in [
+            json!(null),
+            json!({}),
+            json!({ "name": "Liked" }),
+            json!({ "records": [] }),
+            json!([]),
+        ] {
+            assert_eq!(liked(&none), None, "{none}");
+        }
+    }
+
+    #[test]
+    fn shapes_show_keys_and_types_never_values() {
+        let answer = json!({
+            "id": "0123456789abcdef0123456789abcdef", "name": "Someone's liked songs", "trackCount": 6,
+            "records": [{ "id": "secret-song", "name": "A Private Title" }], "tags": [], "creator": null,
+            "subed": false, "fedcba9876543210fedc": 1, "nested": { "deeper": { "deepest": { "x": 1 } } }
+        });
+        let described = shape(&answer);
+        assert_eq!(
+            described,
+            "{creator: null, <key>: number, id: string, name: string, nested: {deeper: {deepest: {…}}}, \
+             records: [{id: string, name: string}], subed: bool, tags: [], trackCount: number}"
+        );
+        for value in ["0123456789abcdef", "Someone", "secret", "Private", "fedcba"] {
+            assert!(!described.contains(value), "{value} in {described}");
+        }
+        assert_eq!(shape(&json!(null)), "null");
+        let wide: serde_json::Map<String, Value> =
+            (0..500).map(|i| (format!("field{i}"), json!(i))).collect();
+        assert!(shape(&Value::Object(wide)).len() <= SHAPE_MAX + '…'.len_utf8());
     }
 
     #[test]

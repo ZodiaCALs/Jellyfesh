@@ -9,7 +9,14 @@
 //! Favourites and Playlists pages. Streams use the level the app asks for;
 //! the plugin has no quality setting of its own (ADR-0026).
 //!
-//! Search, recommendations, comments and lyrics wait for NetEase's API
+//! Search (ADR-0027 §5): songs, albums, artists and playlists, on the paths
+//! that independent public clients of the open platform call (NetEase's
+//! official client documents `ncm-cli search song --keyword`). An album
+//! opens to its songs, an artist to their popular songs. An answer the
+//! plugin cannot read is an error in plain words, never an empty page, and
+//! its shape (keys and types, never values) goes to the log.
+//!
+//! Recommendations, comments and lyrics wait for NetEase's API
 //! documentation: their paths were not in what the research could read (the
 //! official client gets them from a server-side list of commands).
 //! Tested only against a mock server written from the research, not yet
@@ -54,8 +61,49 @@ const STAR: &str = "/openapi/music/basic/playlist/star/get/v2";
 const PLAYLIST: &str = "/openapi/music/basic/playlist/detail/get/v2";
 const SONGS: &str = "/openapi/music/basic/playlist/song/list/get/v3";
 const DETAIL: &str = "/openapi/music/basic/song/detail/get/v2";
+/// An album's songs, with `albumId`, `limit` and `offset` as public clients
+/// send them.
+const ALBUM_SONGS: &str = "/openapi/music/basic/album/song/list/get/v2";
+/// An artist's popular songs. Public clients name the path but not its
+/// parameter; `artistId` is the one they send to the artist's details
+/// (`artist/detail/get/v2`).
+const ARTIST_SONGS: &str = "/openapi/music/basic/artists/hotsong/list/get/v2";
 /// Items on a Discover shelf.
 const SHELF: u32 = 20;
+
+/// How a search record reads as an item.
+type Reader = fn(&Value) -> Option<Item>;
+
+/// The searches by kind, as independent public clients of the open platform
+/// call them: `keyword`, `limit` and `offset`, all three required (without
+/// `offset` NetEase answers HTTP 400). Each with what its answer lists, for
+/// errors and the log.
+const SEARCHES: [(ItemKind, &str, &str, Reader); 4] = [
+    (
+        ItemKind::Track,
+        "/openapi/music/basic/search/song/get/v3",
+        "the songs it found",
+        items::song,
+    ),
+    (
+        ItemKind::Album,
+        "/openapi/music/basic/search/album/get/v2",
+        "the albums it found",
+        items::album,
+    ),
+    (
+        ItemKind::Artist,
+        "/openapi/music/basic/search/artists/get/v2",
+        "the artists it found",
+        items::artist,
+    ),
+    (
+        ItemKind::Playlist,
+        "/openapi/music/basic/search/playlist/get/v2",
+        "the playlists it found",
+        items::playlist,
+    ),
+];
 
 /// The `bitrate` NetEase is asked for at the level the app asks for: 128
 /// kbit/s (its lowest) for Low and Normal, 320 for High, 999 for lossless.
@@ -74,19 +122,60 @@ fn offset(page: &PageRequest) -> Result<u32> {
     })
 }
 
-/// A page from a list answer: `next` when NetEase says there is more, or
-/// (when it does not say) when the page came back full.
-fn page_of(data: &Value, offset: u32, limit: u32, item: impl Fn(&Value) -> Option<Item>) -> ItemPage {
-    let list = items::list(data);
-    let more = items::has_more(data).unwrap_or(list.len() as u32 >= limit);
-    ItemPage {
-        items: list.iter().filter_map(item).collect(),
-        next: (more && !list.is_empty()).then(|| (offset + list.len() as u32).to_string()),
-        total: ["recordCount", "total", "count"]
-            .iter()
-            .find_map(|k| data.get(*k).and_then(Value::as_u64))
-            .and_then(|n| u32::try_from(n).ok()),
+/// The error for an answer with `what` that Jellyfesh cannot read, in plain
+/// words; the answer's shape (its keys and their types, never the values)
+/// goes to the log.
+fn unreadable(what: &str, data: &Value) -> PluginError {
+    jf_plugin_sdk::warn!("cannot read NetEase's answer with {what}: {}", items::shape(data));
+    PluginError::service(format!(
+        "NetEase Cloud Music sent {what} in a form Jellyfesh cannot read."
+    ))
+}
+
+/// "your created playlists" for a list's title.
+fn yours(title: &str) -> String {
+    format!("your {}", title.to_lowercase())
+}
+
+/// A page from a list answer: `next` when NetEase says there is more
+/// (`hasMore`, or a count beyond this page), or, when it does not say, when
+/// the page came back full (a page longer than asked for is the whole
+/// list). `None`, never an empty page, when the answer has no list
+/// Jellyfesh can read, an empty one where NetEase counts entries from
+/// `offset` on, or entries none of which Jellyfesh can read.
+fn read_page(
+    data: &Value,
+    offset: u32,
+    limit: u32,
+    item: impl Fn(&Value) -> Option<Item>,
+) -> Option<ItemPage> {
+    let count = items::count(data);
+    let list = items::listing(data)
+        .filter(|list| !list.is_empty() || count.is_none_or(|n| n <= u64::from(offset)))?;
+    let found: Vec<Item> = list.iter().filter_map(item).collect();
+    if found.is_empty() && !list.is_empty() {
+        return None;
     }
+    let len = u32::try_from(list.len()).unwrap_or(u32::MAX);
+    let end = offset.saturating_add(len);
+    let more = len <= limit
+        && items::has_more(data).unwrap_or_else(|| count.map_or(len == limit, |n| u64::from(end) < n));
+    Some(ItemPage {
+        items: found,
+        next: (more && len > 0).then(|| end.to_string()),
+        total: count.and_then(|n| u32::try_from(n).ok()),
+    })
+}
+
+/// [`read_page`] of an answer with `what`, or an error in plain words.
+fn page_of(
+    data: &Value,
+    offset: u32,
+    limit: u32,
+    what: &str,
+    item: impl Fn(&Value) -> Option<Item>,
+) -> Result<ItemPage> {
+    read_page(data, offset, limit, item).ok_or_else(|| unreadable(what, data))
 }
 
 /// The account's playlists for the library (`library.playlists`): the
@@ -113,10 +202,10 @@ fn library_playlists(page: &PageRequest) -> Result<PlaylistPage> {
     };
     let mut entries = Vec::new();
     loop {
-        let (id, _, path) = LISTS[list];
+        let (id, title, path) = LISTS[list];
         let want = limit - entries.len() as u32;
         let data = api::call(path, &json!({ "limit": want, "offset": offset }))?;
-        let found = page_of(&data, offset, want, items::playlist);
+        let found = page_of(&data, offset, want, &yours(title), items::playlist)?;
         let owned = id == "created";
         entries.extend(found.items.into_iter().map(|item| PlaylistEntry {
             item,
@@ -137,19 +226,38 @@ fn library_playlists(page: &PageRequest) -> Result<PlaylistPage> {
     }
 }
 
-/// The id of the liked songs' playlist, if the account has one.
-fn liked_playlist() -> Result<Option<String>> {
+/// The liked songs' playlist (NetEase's red-heart playlist, which every
+/// account has): its id, and how many songs NetEase says it holds. An error
+/// in plain words when the answer names no playlist.
+fn liked_playlist() -> Result<(String, Option<u64>)> {
     let data = api::call(STAR, &json!({}))?;
-    Ok(items::one(&data).and_then(items::playlist).map(|p| p.id))
+    items::liked(&data).ok_or_else(|| {
+        jf_plugin_sdk::warn!(
+            "NetEase's liked-songs answer names no playlist: {}",
+            items::shape(&data)
+        );
+        PluginError::service("NetEase Cloud Music didn't say which playlist holds your liked songs.")
+    })
 }
 
-/// A page of a playlist's songs.
-fn songs(playlist: &str, offset: u32, limit: u32) -> Result<ItemPage> {
+/// A page of a playlist's songs; an error, not an empty page, when NetEase
+/// said the playlist holds songs from `offset` on (`said`) but sent none.
+fn songs(playlist: &str, offset: u32, limit: u32, what: &str, said: Option<u64>) -> Result<ItemPage> {
     let data = api::call(
         SONGS,
         &json!({ "playlistId": playlist, "limit": limit, "offset": offset }),
     )?;
-    Ok(page_of(&data, offset, limit, items::song))
+    let page = page_of(&data, offset, limit, what, items::song)?;
+    if page.items.is_empty() && said.is_some_and(|n| n > u64::from(offset)) {
+        return Err(unreadable(what, &data));
+    }
+    Ok(page)
+}
+
+/// A page of the liked songs (newest like first, as NetEase keeps them).
+fn liked_songs(offset: u32, limit: u32) -> Result<ItemPage> {
+    let (playlist, said) = liked_playlist()?;
+    songs(&playlist, offset, limit, "your liked songs", said)
 }
 
 /// Items for a shelf, or none when this list failed (the page goes on
@@ -171,11 +279,9 @@ fn optional(result: Result<Vec<Item>>, what: &str) -> Result<Vec<Item>> {
 /// playlists, as the open platform lists them.
 fn discover_shelves() -> Result<Vec<Shelf>> {
     let mut shelves = Vec::new();
-    let liked = liked_playlist().and_then(|id| match id {
-        Some(id) => songs(&id, 0, SHELF).map(|page| page.items),
-        None => Ok(Vec::new()),
-    });
-    let liked = optional(liked, LIKED.1)?;
+    // Liked songs that cannot be read leave their shelf out (the error is
+    // logged, and shown where they are listed: Favourites, the folder).
+    let liked = optional(liked_songs(0, SHELF).map(|page| page.items), LIKED.1)?;
     if !liked.is_empty() {
         shelves.push(Shelf {
             id: "liked".into(),
@@ -187,7 +293,8 @@ fn discover_shelves() -> Result<Vec<Shelf>> {
     }
     for (id, title, path) in LISTS {
         let listed = api::call(path, &json!({ "limit": SHELF, "offset": 0 }))
-            .map(|data| page_of(&data, 0, SHELF, items::playlist).items);
+            .and_then(|data| page_of(&data, 0, SHELF, &yours(title), items::playlist))
+            .map(|page| page.items);
         let listed = optional(listed, title)?;
         if !listed.is_empty() {
             shelves.push(Shelf {
@@ -200,6 +307,39 @@ fn discover_shelves() -> Result<Vec<Shelf>> {
         }
     }
     Ok(shelves)
+}
+
+/// Search results. The core asks for one kind at a time; when several are
+/// asked (none means every kind), they share the page and each goes on from
+/// the same offset. The cursor is the offset.
+fn search(query: &str, filters: &SearchFilters, page: &PageRequest) -> Result<ItemPage> {
+    let keyword = query.trim();
+    let asked: Vec<_> = SEARCHES
+        .iter()
+        .filter(|(kind, ..)| filters.kinds.is_empty() || filters.kinds.contains(kind))
+        .collect();
+    if keyword.is_empty() || asked.is_empty() {
+        return Ok(ItemPage::new(Vec::new()));
+    }
+    let offset = offset(page)?;
+    let limit = (page.limit.clamp(1, PAGE_MAX) / asked.len() as u32).max(1);
+    let mut pages = Vec::new();
+    for (_, path, what, read) in asked {
+        let data = api::call(
+            path,
+            &json!({ "keyword": keyword, "limit": limit, "offset": offset }),
+        )?;
+        pages.push(page_of(&data, offset, limit, what, read)?);
+    }
+    if pages.len() == 1 {
+        return Ok(pages.remove(0));
+    }
+    let more = pages.iter().any(|p| p.next.is_some());
+    Ok(ItemPage {
+        items: pages.into_iter().flat_map(|p| p.items).collect(),
+        next: more.then(|| offset.saturating_add(limit).to_string()),
+        total: None,
+    })
 }
 
 /// Codec hint from the stream URL's file extension.
@@ -215,7 +355,12 @@ fn codec(url: &str) -> Option<String> {
 
 impl Plugin for NetEase {
     fn capabilities() -> Vec<Capability> {
-        vec![Capability::Auth, Capability::Browse, Capability::ResolveStream]
+        vec![
+            Capability::Auth,
+            Capability::Search,
+            Capability::Browse,
+            Capability::ResolveStream,
+        ]
     }
 
     fn settings_changed(settings: &Value) -> Result<()> {
@@ -228,6 +373,10 @@ impl Plugin for NetEase {
                 .filter(|s| !s.is_empty()),
         );
         Ok(())
+    }
+
+    fn search(query: String, filters: SearchFilters, page: PageRequest) -> Result<ItemPage> {
+        search(&query, &filters, &page)
     }
 
     fn auth_begin(flow: Flow) -> Result<FlowStep> {
@@ -262,19 +411,33 @@ impl Plugin for NetEase {
         let offset = offset(&page)?;
         let limit = page.limit.clamp(1, PAGE_MAX);
         match node.kind {
-            ItemKind::Folder if node.id == LIKED.0 => match liked_playlist()? {
-                Some(playlist) => songs(&playlist, offset, limit),
-                None => Ok(ItemPage::new(Vec::new())),
-            },
+            ItemKind::Folder if node.id == LIKED.0 => liked_songs(offset, limit),
             ItemKind::Folder => {
-                let (_, _, path) = LISTS
+                let (_, title, path) = LISTS
                     .iter()
                     .find(|(id, _, _)| *id == node.id)
                     .ok_or(PluginError::NotFound)?;
                 let data = api::call(path, &json!({ "limit": limit, "offset": offset }))?;
-                Ok(page_of(&data, offset, limit, items::playlist))
+                page_of(&data, offset, limit, &yours(title), items::playlist)
             }
-            ItemKind::Playlist => songs(&node.id, offset, limit),
+            ItemKind::Playlist => songs(&node.id, offset, limit, "this playlist's songs", None),
+            ItemKind::Album => {
+                let album = node.id.strip_prefix(items::ALBUM).unwrap_or(&node.id);
+                let data = api::call(
+                    ALBUM_SONGS,
+                    &json!({ "albumId": album, "limit": limit, "offset": offset }),
+                )?;
+                page_of(&data, offset, limit, "this album's songs", items::song)
+            }
+            // The popular songs are one list: whether NetEase pages it is
+            // not known.
+            ItemKind::Artist if offset == 0 => {
+                let artist = node.id.strip_prefix(items::ARTIST).unwrap_or(&node.id);
+                let data = api::call(ARTIST_SONGS, &json!({ "artistId": artist }))?;
+                let page = page_of(&data, 0, limit, "this artist's popular songs", items::song)?;
+                Ok(ItemPage { next: None, ..page })
+            }
+            ItemKind::Artist => Ok(ItemPage::new(Vec::new())),
             _ => Err(PluginError::NotFound),
         }
     }
@@ -289,11 +452,7 @@ impl Plugin for NetEase {
         if kind != ItemKind::Track {
             return Err(PluginError::Unsupported);
         }
-        let offset = offset(&page)?;
-        match liked_playlist()? {
-            Some(playlist) => songs(&playlist, offset, page.limit.clamp(1, PAGE_MAX)),
-            None => Ok(ItemPage::new(Vec::new())),
-        }
+        liked_songs(offset(&page)?, page.limit.clamp(1, PAGE_MAX))
     }
 
     fn library_playlists(page: PageRequest) -> Result<PlaylistPage> {
@@ -387,14 +546,54 @@ mod tests {
         assert_eq!(codec("https://m7.music.126.net/a/b"), None);
     }
 
+    fn any(_: &Value) -> Option<Item> {
+        Some(Item::new(ItemKind::Track, "x", "y"))
+    }
+
+    fn next(data: Value, offset: u32, limit: u32) -> Option<String> {
+        read_page(&data, offset, limit, any).unwrap().next
+    }
+
     #[test]
     fn pages_continue_when_netease_says_so_or_the_page_is_full() {
-        let full = json!({ "records": [{}, {}] });
-        assert_eq!(page_of(&full, 4, 2, |_| None).next.as_deref(), Some("6"));
-        let short = json!([{}]);
-        assert_eq!(page_of(&short, 0, 2, |_| None).next, None);
+        assert_eq!(next(json!({ "records": [{}, {}] }), 4, 2).as_deref(), Some("6"));
+        assert_eq!(next(json!([{}]), 0, 2), None);
         let said = json!({ "list": [{}], "hasMore": true, "total": 9 });
-        let page = page_of(&said, 0, 50, |_| None);
+        let page = read_page(&said, 0, 50, any).unwrap();
         assert_eq!((page.next.as_deref(), page.total), (Some("1"), Some(9)));
+        // A count says whether a full page is the last one.
+        assert_eq!(next(json!({ "records": [{}, {}], "recordCount": 4 }), 2, 2), None);
+        assert_eq!(
+            next(json!({ "records": [{}, {}], "recordCount": 25 }), 20, 2).as_deref(),
+            Some("22")
+        );
+        assert_eq!(
+            next(json!({ "records": [{}], "recordCount": 25 }), 0, 20).as_deref(),
+            Some("1")
+        );
+        // More entries than asked for: NetEase sent the whole list.
+        assert_eq!(next(json!([{}, {}, {}]), 0, 2), None);
+        // Nothing to read is no page at all, not a last one.
+        assert_eq!(next(json!({ "records": [], "recordCount": 0 }), 0, 20), None);
+        assert_eq!(next(json!({ "records": [], "recordCount": 5 }), 5, 20), None);
+    }
+
+    /// The plain words and the log (the plugin host's) are checked in
+    /// tests/netease.rs.
+    #[test]
+    fn answers_that_cannot_be_read_are_no_page() {
+        for unreadable in [
+            json!({ "result": { "songs": [{}] } }),
+            json!({ "recordCount": 3 }),
+            json!({ "records": [], "recordCount": 6 }),
+            json!("text"),
+        ] {
+            assert!(read_page(&unreadable, 0, 20, any).is_none(), "{unreadable}");
+        }
+        // Entries none of which read; some that do not read are left out.
+        let records = json!({ "records": [{ "name": "a" }, {}] });
+        assert!(read_page(&records, 0, 20, |_| None).is_none());
+        let named = |v: &Value| v.get("name").and_then(|_| any(v));
+        assert_eq!(read_page(&records, 0, 20, named).unwrap().items.len(), 1);
     }
 }

@@ -8,7 +8,9 @@
 //! `k=v` joined with `&`) and verifies `sign` (base64, RSASSA-PKCS1-v1_5 with
 //! SHA-256) with the public key. Where the research has no shape (the
 //! playlist lists, the profile, the refresh answer, the code for a bad
-//! signature), the mock's choice is marked.
+//! signature), the mock's choice is marked. Search follows what independent
+//! public clients of the open platform send and read (ADR-0027), not
+//! NetEase's documentation.
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
@@ -33,6 +35,12 @@ pub const ALBUM_ONLY: &str = "0123456789abcdef0123456789abc006";
 pub const NO_URL: &str = "0123456789abcdef0123456789abc007";
 pub const CAPPED: &str = "0123456789abcdef0123456789abc008";
 
+/// What a search for "tide" finds: 25 songs, two albums, an artist and a
+/// playlist.
+pub const SEARCH_SONGS: u64 = 25;
+pub const SEARCH_ALBUM: &str = "a1b00000000000000000000000000001";
+pub const SEARCH_ARTIST: &str = "a7000000000000000000000000000001";
+
 #[derive(Debug, Default)]
 pub struct State {
     /// QR polls answered so far, by QR key.
@@ -44,6 +52,10 @@ pub struct State {
     pub issued: u32,
     /// Requests whose signature did not verify.
     pub bad_signatures: usize,
+    /// The data of the liked-songs playlist's answer, instead of the usual.
+    pub star: Option<Value>,
+    /// The data of the answers with the liked songs, instead of the songs.
+    pub liked_songs: Option<Value>,
 }
 
 pub struct Mock {
@@ -128,6 +140,66 @@ pub fn playlist_songs() -> Vec<Value> {
         song(HIDDEN, "Elsewhere", json!({ "visible": false })),
         song(ALBUM_ONLY, "Boxed Set", json!({ "songFee": 4 })),
     ]
+}
+
+/// A song a search finds, with the fields public clients read from search
+/// records (the cover under `album` is the mock's choice). The second is a
+/// VIP song.
+fn search_song(i: u64) -> Value {
+    let mut song = json!({
+        "id": format!("5eac{i:028}"), "originalId": 1_000 + i, "name": format!("Tide Song {i}"), "duration": 200_000,
+        "artists": [{ "id": SEARCH_ARTIST, "originalId": 31, "name": "Mei Example" }],
+        "album": { "id": SEARCH_ALBUM, "originalId": 41, "name": "Tide Tables", "picUrl": "http://p1.music.126.net/mock/album.jpg" },
+        "playFlag": true, "visible": true
+    });
+    if i == 1 {
+        song["playFlag"] = json!(false);
+        song["songFee"] = json!(1);
+    }
+    song
+}
+
+/// `search/{kind}/get`: `keyword`, `limit` and `offset` are all required;
+/// without one NetEase answers HTTP 400 with an empty body (as public
+/// clients report). The answer is `recordCount` and a page of `records`.
+fn search(path: &str, biz: &Value) -> Response {
+    let (Some(keyword), Some(limit), Some(offset)) = (
+        biz["keyword"].as_str(),
+        biz["limit"].as_u64(),
+        biz["offset"].as_u64(),
+    ) else {
+        return Response::new(400, "");
+    };
+    let artists = json!([{ "id": SEARCH_ARTIST, "name": "Mei Example" }]);
+    let records: Vec<Value> = match (keyword, path) {
+        // An answer in a shape the plugin does not know.
+        ("garbled", _) => {
+            return data(json!({ "result": { "songs": [{ "id": FULL, "name": "Tidal Clock" }] } }));
+        }
+        ("slow down", _) => return code(-447, "操作太频繁 (mock)"),
+        ("tide", "/search/song/get/v3") => (0..SEARCH_SONGS).map(search_song).collect(),
+        ("tide", "/search/album/get/v2") => vec![
+            json!({ "id": SEARCH_ALBUM, "originalId": 41, "name": "Tide Tables", "artists": artists,
+                    "coverImgUrl": "http://p1.music.126.net/mock/album.jpg" }),
+            json!({ "id": "a1b00000000000000000000000000002", "originalId": 42, "name": "Low Tide Live",
+                    "artists": artists, "picUrl": "http://p1.music.126.net/mock/live.jpg" }),
+        ],
+        ("tide", "/search/artists/get/v2") => vec![
+            json!({ "id": SEARCH_ARTIST, "originalId": 31, "name": "Mei Example", "picUrl": "http://p1.music.126.net/mock/artist.jpg" }),
+        ],
+        ("tide", "/search/playlist/get/v2") => vec![json!({
+            "id": "pl-created-0", "originalId": 7_000, "name": "created list 0", "trackCount": 6,
+            "coverImgUrl": "http://p1.music.126.net/mock/cover.jpg", "creatorNickName": "Mock Listener"
+        })],
+        _ => Vec::new(),
+    };
+    let found = records.len();
+    let page: Vec<Value> = records
+        .into_iter()
+        .skip(offset as usize)
+        .take(limit as usize)
+        .collect();
+    data(json!({ "recordCount": found, "records": page }))
 }
 
 fn answer(state: &Mutex<State>, public: &rsa::PublicKey, request: &Request) -> Response {
@@ -244,6 +316,7 @@ fn answer(state: &Mutex<State>, public: &rsa::PublicKey, request: &Request) -> R
         }
         // One playlist: the liked songs (the official client reads `data` as
         // a playlist, with these field names).
+        "/playlist/star/get/v2" if s.star.is_some() => data(s.star.clone().unwrap_or_default()),
         "/playlist/star/get/v2" => data(json!({
             "id": "pl-liked", "name": "Mock Listener's liked songs", "describe": "",
             "coverImgUrl": "http://p1.music.126.net/mock/liked.jpg", "creatorNickName": "Mock Listener",
@@ -264,12 +337,40 @@ fn answer(state: &Mutex<State>, public: &rsa::PublicKey, request: &Request) -> R
             if biz["playlistId"] != "pl-created-0" && biz["playlistId"] != "pl-liked" {
                 return code(404, "no such playlist (mock)");
             }
+            if let Some(liked) = s.liked_songs.clone().filter(|_| biz["playlistId"] == "pl-liked") {
+                return data(liked);
+            }
             let (limit, offset) = (
                 biz["limit"].as_u64().unwrap_or(0) as usize,
                 biz["offset"].as_u64().unwrap_or(0) as usize,
             );
             let songs: Vec<Value> = playlist_songs().into_iter().skip(offset).take(limit).collect();
             data(json!({ "records": songs }))
+        }
+        "/search/song/get/v3"
+        | "/search/album/get/v2"
+        | "/search/artists/get/v2"
+        | "/search/playlist/get/v2" => search(path, &biz),
+        // An album's songs as public clients ask for them; the answer's
+        // shape is the mock's choice (as the playlists' songs).
+        "/album/song/list/get/v2" => {
+            if biz["albumId"] != SEARCH_ALBUM {
+                return code(404, "no such album (mock)");
+            }
+            let (limit, offset) = (
+                biz["limit"].as_u64().unwrap_or(0) as usize,
+                biz["offset"].as_u64().unwrap_or(0) as usize,
+            );
+            let songs: Vec<Value> = playlist_songs().into_iter().skip(offset).take(limit).collect();
+            data(json!({ "records": songs, "recordCount": 6 }))
+        }
+        // An artist's popular songs: the parameter and the answer (a bare
+        // list) are the mock's choice.
+        "/artists/hotsong/list/get/v2" => {
+            if biz["artistId"] != SEARCH_ARTIST {
+                return code(404, "no such artist (mock)");
+            }
+            data(json!(playlist_songs()))
         }
         "/song/detail/get/v2" => {
             let id = biz["songId"].as_str().unwrap_or_default();
