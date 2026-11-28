@@ -1,6 +1,8 @@
-// v0.0.9: cards' play buttons and menus (docs/ui.md, "Rows and cards").
+// v0.0.9: cards' play buttons and menus, and source songs that keep their album, artist and link
+// wherever they show (docs/ui.md, "Rows and cards"; ADR-0027 §2).
 
 import XCTest
+import JellyfeshFFI
 @testable import Jellyfesh
 
 final class SourceCardTests: XCTestCase {
@@ -32,3 +34,59 @@ final class SourceCardTests: XCTestCase {
         XCTAssertNil(SourcePage.artist(of: item(.track, artistID: "ar-1")), "a song's menu has its own")
     }
 }
+
+final class SourceRowTests: XCTestCase {
+    private func song(artistID: String? = nil, albumID: String? = nil) -> SourceSong {
+        SourceSong(plugin: "org.jellyfesh.subsonic", id: "t1", title: "Song", artist: "Artist", album: "Album",
+                   durationMs: nil, artworkURL: nil, isrc: nil, artistID: artistID, albumID: albumID)
+    }
+
+    private func row(_ track: TrackReference, artistID: String? = nil, albumID: String? = nil,
+                     link: String? = nil) -> SongRow {
+        SongRow(track: track, title: "Song", artist: "Artist", album: "Album", durationMs: nil, artwork: nil,
+                artworkHash: nil, favorite: true, missing: false, artistID: artistID, albumID: albumID, link: link)
+    }
+
+    func testASourceRowKeepsItsAlbumArtistAndLink() {
+        let item = TrackItem(row: row(.source(song()), artistID: "ar1", albumID: "al1",
+                                      link: "https://music.example.com/t1"), id: "f0")
+        XCTAssertEqual(item.source, "org.jellyfesh.subsonic")
+        XCTAssertEqual(item.sourceArtistID, "ar1")
+        XCTAssertEqual(item.sourceAlbumID, "al1")
+        XCTAssertEqual(item.link, "https://music.example.com/t1")
+    }
+
+    func testARowWithoutIdsUsesThoseItsSongWasQueuedWith() {
+        let item = TrackItem(row: row(.source(song(artistID: "ar2", albumID: "al2"))), id: "h0")
+        XCTAssertEqual(item.sourceArtistID, "ar2")
+        XCTAssertEqual(item.sourceAlbumID, "al2")
+        let stored = TrackItem(row: row(.source(song())), id: "h1")
+        XCTAssertEqual(stored.source, "org.jellyfesh.subsonic", "a row stored before still names its source")
+        XCTAssertNil(stored.sourceArtistID)
+        XCTAssertNil(stored.link)
+    }
+
+    func testALibraryRowHasNoSource() {
+        let item = TrackItem(row: row(.library(id: 4)), id: "f1")
+        XCTAssertNil(item.source)
+        XCTAssertNil(item.sourceArtistID)
+        XCTAssertNil(item.sourceAlbumID)
+    }
+
+    func testTheQueueAndNowPlayingKeepTheSongsIds() {
+        var item = TrackItem(id: "q1", track: .source(song(artistID: "ar3", albumID: "al3")), title: "Song",
+                             artist: "Artist", album: nil, durationMs: nil, artwork: nil)
+        item.keepSource(of: item.track)
+        XCTAssertEqual(item.source, "org.jellyfesh.subsonic")
+        XCTAssertEqual(item.sourceArtistID, "ar3")
+        XCTAssertEqual(item.sourceAlbumID, "al3")
+    }
+
+    func testASourceSongKeepsItsIdsThroughTheCore() {
+        let original = song(artistID: "ar4", albumID: "al4")
+        XCTAssertEqual(original.ffi.artistId, "ar4")
+        XCTAssertEqual(original.ffi.albumId, "al4")
+        XCTAssertEqual(SourceSong(original.ffi), original, "played, queued or added to a playlist, it keeps them")
+    }
+}
+

@@ -182,10 +182,10 @@ private struct QueueRowMenu: View {
 extension QueueRow {
     /// The entry as a song's row shows it, and as its menu acts on it.
     var trackItem: TrackItem {
-        var source: String?
-        if case .source(let song) = entry.track { source = song.plugin }
-        return TrackItem(id: "q\(id)", track: entry.track, title: resolved ? title : String(localized: "Loading…"),
-                         artist: subtitle, album: nil, durationMs: durationMs, artwork: artwork, source: source)
+        var item = TrackItem(id: "q\(id)", track: entry.track, title: resolved ? title : String(localized: "Loading…"),
+                             artist: subtitle, album: nil, durationMs: durationMs, artwork: artwork)
+        item.keepSource(of: entry.track)
+        return item
     }
 }
 

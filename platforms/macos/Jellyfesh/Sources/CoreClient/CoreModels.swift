@@ -27,6 +27,11 @@ struct SourceSong: Hashable, Sendable {
     var durationMs: UInt64?
     var artworkURL: String?
     var isrc: String?
+    /// The source's ids of its artist and album (Go to Artist, Go to Album), kept with it in the
+    /// queue, history, favourites and playlists (ADR-0027 §2); nil when the source gave none, and in
+    /// entries stored before.
+    var artistID: String? = nil
+    var albumID: String? = nil
 }
 
 /// A group of tracks that plays as a unit (`Collection`).
@@ -122,6 +127,11 @@ struct SongRow: Hashable, Sendable {
     var missing: Bool
     /// A source song with a finished download (it plays the file): the Downloaded mark.
     var downloaded = false
+    /// A source song: the source's ids of its artist and album (Go to Artist, Go to Album) and the
+    /// link that opens it in its service (Open in {Service}), wherever the row shows (ADR-0027 §2).
+    var artistID: String? = nil
+    var albumID: String? = nil
+    var link: String? = nil
 }
 
 /// A playlist in the library (`PlaylistSummary`).

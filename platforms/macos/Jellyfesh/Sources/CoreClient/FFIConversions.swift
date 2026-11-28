@@ -28,12 +28,12 @@ extension SourceSong {
     init(_ track: SourceTrack) {
         self.init(plugin: track.plugin, id: track.id, title: track.title, artist: track.artist,
                   album: track.album, durationMs: track.durationMs, artworkURL: track.artworkUrl,
-                  isrc: track.isrc)
+                  isrc: track.isrc, artistID: track.artistId, albumID: track.albumId)
     }
 
     var ffi: SourceTrack {
         SourceTrack(plugin: plugin, id: id, title: title, artist: artist, album: album,
-                    durationMs: durationMs, artworkUrl: artworkURL, isrc: isrc)
+                    durationMs: durationMs, artworkUrl: artworkURL, isrc: isrc, artistId: artistID, albumId: albumID)
     }
 }
 
@@ -120,7 +120,8 @@ extension SongRow {
     init(_ r: TrackRow) {
         self.init(track: TrackReference(r.track), title: r.title, artist: r.artist, album: r.album,
                   durationMs: r.durationMs, artwork: r.artwork.map(ArtworkLocation.init),
-                  artworkHash: r.artworkHash, favorite: r.favorite, missing: r.missing, downloaded: r.downloaded)
+                  artworkHash: r.artworkHash, favorite: r.favorite, missing: r.missing, downloaded: r.downloaded,
+                  artistID: r.artistId, albumID: r.albumId, link: r.link)
     }
 }
 

@@ -60,8 +60,9 @@ extension TrackItem {
     init(row: SongRow, id: String) {
         self.init(id: id, track: row.track, title: row.title, artist: row.artist, album: row.album,
                   durationMs: row.durationMs, artwork: ArtworkSource(hash: row.artworkHash, location: row.artwork),
-                  favorite: row.favorite, missing: row.missing)
+                  favorite: row.favorite, missing: row.missing, link: row.link)
         downloaded = row.downloaded
+        keepSource(of: row.track, artistID: row.artistID, albumID: row.albumID)
     }
 
     init(result: SourceResult, artwork: ArtworkSource?) {
@@ -81,6 +82,17 @@ extension TrackItem {
         self.init(id: "now\(now.uid)", track: now.track, title: now.title, artist: now.artist, album: now.album,
                   durationMs: now.durationMs, artwork: now.artwork.flatMap { ArtworkSource(hash: nil, location: $0) },
                   path: now.path, link: now.link, source: source)
+        keepSource(of: now.track)
+    }
+
+    /// A source's song keeps its source and the source's ids of its artist and album wherever it
+    /// shows (Home, Favourites, playlists, the queue), so its menu offers Go to Artist and Go to
+    /// Album (ADR-0027 §2). The row's own ids come first; the track's are those it was queued with.
+    mutating func keepSource(of track: TrackReference?, artistID: String? = nil, albumID: String? = nil) {
+        guard case .source(let song)? = track else { return }
+        source = song.plugin
+        sourceArtistID = artistID ?? song.artistID
+        sourceAlbumID = albumID ?? song.albumID
     }
 }
 
