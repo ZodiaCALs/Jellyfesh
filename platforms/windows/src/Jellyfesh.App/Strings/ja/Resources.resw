@@ -458,6 +458,9 @@
   <data name="Browse_More.Content" xml:space="preserve">
     <value>続きを読む</value>
   </data>
+  <data name="Card_Play" xml:space="preserve">
+    <value>{0} を再生</value>
+  </data>
   <data name="Comments_Days_One" xml:space="preserve">
     <value>{0} 日前</value>
   </data>

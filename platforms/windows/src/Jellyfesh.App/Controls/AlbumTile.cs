@@ -15,8 +15,10 @@ namespace Jellyfesh.App.Controls;
 /// An album in the grid (after Apple Music and Media Player; Luminous): the cover at
 /// artwork.radius-grid (16) on shadow-2, with its title and artist below. Pointing at it or giving
 /// its tile keyboard focus lifts the cover by 4 epx onto a deeper shadow and shows a 36 px glass
-/// play button in its bottom start corner that plays the album; a press scales the cover to 97 %.
-/// Motion runs on the compositor (dur-1 Fluid) and becomes instant with reduced motion.
+/// play button in its bottom start corner that plays the album, and More in its top end corner,
+/// which opens the menu right-click opens (docs/ui.md, "Rows and cards"; RowMoreButton); a press
+/// scales the cover to 97 %. Motion runs on the compositor (dur-1 Fluid) and becomes instant with
+/// reduced motion.
 /// </summary>
 public sealed partial class AlbumTile : StackPanel
 {
@@ -79,6 +81,15 @@ public sealed partial class AlbumTile : StackPanel
         ToolTipService.SetToolTip(_play, AppHost.L.Get("Album_PlayAlbum"));
         _play.Click += OnPlayClick;
         _cover.Children.Add(_play);
+        _cover.Children.Add(new RowMoreButton
+        {
+            Style = (Style)resources["JfGlassPlayButtonStyle"],
+            Width = 36,
+            Height = 36,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(8),
+        });
         _title.Style = (Style)resources["JfListTitleText"];
         _subtitle.Style = (Style)resources["JfListSecondaryText"];
         Children.Add(_cover);

@@ -10,6 +10,8 @@
     focus, a song row shows its play button over its artwork or its number (the row's own: it plays
     from there as choosing the row does) and every row More at its end, which opens the menu
     right-click opens (Controls/RowPlayGlyph, RowMoreButton; Shell/Lists gives each row its menu).
+    Cards show, the same way, a play button on the cover of an album or playlist that plays here
+    and More in the cover's top end corner (Controls/AlbumTile, CardPlayButton).
 -->
 <ResourceDictionary
     x:Class="Jellyfesh.App.Styles.Templates"
@@ -190,18 +192,25 @@
     <!-- Discover's tiles (row and grid shelves): a source's album, artist or playlist, or a song. -->
     <DataTemplate x:Key="SourceTileTemplate" x:DataType="vm:SourceEntryItem">
         <StackPanel Width="150" Spacing="6" AutomationProperties.Name="{x:Bind AccessibleName}">
-            <Border Width="150" Height="150" CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}" Background="{ThemeResource JfFill}">
-                <Image controls:Artwork.DecodeSize="300" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
-            </Border>
+            <Grid Width="150" Height="150">
+                <Border CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}" Background="{ThemeResource JfFill}">
+                    <Image controls:Artwork.DecodeSize="300" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+                </Border>
+                <controls:CardPlayButton />
+                <controls:RowMoreButton Width="36" Height="36" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource JfGlassPlayButtonStyle}" />
+            </Grid>
             <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Title}" />
             <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle}" />
         </StackPanel>
     </DataTemplate>
     <DataTemplate x:Key="TrackTileTemplate" x:DataType="vm:TrackItem">
         <StackPanel Width="150" Spacing="6" AutomationProperties.Name="{x:Bind AccessibleName, Mode=OneWay}">
-            <Border Width="150" Height="150" CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}" Background="{ThemeResource JfFill}">
-                <Image controls:Artwork.DecodeSize="300" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
-            </Border>
+            <Grid Width="150" Height="150">
+                <Border CornerRadius="{th:Token Key=Radius.Lg, Kind=Corner}" Background="{ThemeResource JfFill}">
+                    <Image controls:Artwork.DecodeSize="300" controls:Artwork.Uri="{x:Bind ArtworkUri, Mode=OneWay}" Stretch="UniformToFill" />
+                </Border>
+                <controls:RowMoreButton Width="36" Height="36" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource JfGlassPlayButtonStyle}" />
+            </Grid>
             <TextBlock Style="{StaticResource JfListTitleText}" Text="{x:Bind Title, Mode=OneWay}" />
             <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Subtitle, Mode=OneWay}" />
         </StackPanel>

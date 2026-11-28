@@ -458,6 +458,9 @@
   <data name="Browse_More.Content" xml:space="preserve">
     <value>More</value>
   </data>
+  <data name="Card_Play" xml:space="preserve">
+    <value>Play {0}</value>
+  </data>
   <data name="Comments_Days_One" xml:space="preserve">
     <value>{0} day ago</value>
   </data>
