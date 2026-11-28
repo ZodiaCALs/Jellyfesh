@@ -63,6 +63,24 @@ object SeekGeometry {
     /** Page Up and Page Down seek this far, in milliseconds. */
     const val LARGE_STEP_MS = 30_000L
 
+    /**
+     * What the line shows: dragged, then under a mouse ([hovered]) or holding keyboard focus
+     * ([focused]), else at rest. Focus shows by the line itself, never a focus ring (docs/ui.md,
+     * "The player bar", v0.0.9).
+     */
+    fun state(dragging: Boolean, hovered: Boolean, focused: Boolean): SeekBarState = when {
+        dragging -> SeekBarState.Drag
+        hovered || focused -> SeekBarState.Hover
+        else -> SeekBarState.Rest
+    }
+
+    /**
+     * Whether the line takes the touch look ([thickness], [showsThumb], [inset]): under a finger it
+     * does; under a mouse ([hovered]) or while keys move the focus ([keyboard], out of touch mode)
+     * it takes the pointer look, so keyboard focus thickens it from 4 to 6 dp and shows its thumb.
+     */
+    fun touchLook(hovered: Boolean, keyboard: Boolean): Boolean = !hovered && !keyboard
+
     fun thickness(state: SeekBarState, touch: Boolean): Float = if (touch) {
         if (state == SeekBarState.Drag) TRACK_TOUCH_DRAG else TRACK_TOUCH
     } else {

@@ -73,6 +73,27 @@ class DesignTest {
     }
 
     @Test
+    fun keyboardFocusThickensTheLineAndShowsItsThumb() {
+        // Keys move the focus: the pointer look, 4 dp at rest, 6 dp with the thumb when focused.
+        val rest = SeekGeometry.state(dragging = false, hovered = false, focused = false)
+        val focused = SeekGeometry.state(dragging = false, hovered = false, focused = true)
+        val keys = SeekGeometry.touchLook(hovered = false, keyboard = true)
+        assertEquals(SeekBarState.Rest, rest)
+        assertEquals(SeekBarState.Hover, focused)
+        assertFalse(keys)
+        assertEquals(4f, SeekGeometry.thickness(rest, keys))
+        assertEquals(6f, SeekGeometry.thickness(focused, keys))
+        assertFalse(SeekGeometry.showsThumb(rest, keys))
+        assertTrue(SeekGeometry.showsThumb(focused, keys))
+        // A finger keeps the touch look; a mouse over the line takes the pointer look.
+        assertTrue(SeekGeometry.touchLook(hovered = false, keyboard = false))
+        assertFalse(SeekGeometry.touchLook(hovered = true, keyboard = false))
+        // Dragging wins over hover and focus.
+        assertEquals(SeekBarState.Drag, SeekGeometry.state(dragging = true, hovered = true, focused = true))
+        assertEquals(SeekBarState.Hover, SeekGeometry.state(dragging = false, hovered = true, focused = false))
+    }
+
+    @Test
     fun theTrackIsInsetAndMirroredRightToLeft() {
         // 212 dp on touch: 6 dp at each end for the 12 dp drag line, a 200 dp line.
         assertEquals(200f, SeekGeometry.trackLength(212f, touch = true))

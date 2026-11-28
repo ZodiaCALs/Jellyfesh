@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -71,6 +72,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -89,7 +91,6 @@ import androidx.compose.ui.unit.dp
 import org.jellyfesh.android.R
 import org.jellyfesh.android.ui.components.JfIcon
 import org.jellyfesh.android.ui.components.JfText
-import org.jellyfesh.logic.seek.SeekBarState
 import org.jellyfesh.logic.seek.SeekGeometry
 import org.jellyfesh.logic.seek.SeekKey
 import org.jellyfesh.tokens.Tokens
@@ -250,7 +251,8 @@ fun PlayPauseGlyph(playing: Boolean, tint: Color, size: Dp) {
  * The seek bar of v0.0.4 (docs/design-controls.md): a straight line with round caps and times at
  * both ends, the played part ink-90 over ink-30 (the caller passes `line-strong` on plain
  * surfaces). On touch it is 6 dp and thickens to 12 dp while dragged, with no thumb; with a mouse
- * it is 4 dp, 6 dp with a 14 dp ringed thumb on hover or focus, 8 dp while dragged (Media Player).
+ * it is 4 dp, 6 dp with a 14 dp ringed thumb on hover or focus, 8 dp while dragged (Media Player);
+ * keys moving the focus get the mouse's look, so focus shows by the line, never a ring (v0.0.9).
  * Thickness and thumb change over dur-1 Fluid; nothing loops: [fraction] is read in the draw phase
  * and the ticker asks for a redraw only when the fill moves by a device pixel. TalkBack reads it as
  * a slider whose value is [valueText] ("1:23 of 3:45"). It takes keyboard focus: Left and Right
@@ -282,13 +284,11 @@ fun SeekBar(
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val focused by interaction.collectIsFocusedAsState()
-    // A mouse hovering is a pointer screen (desktop mode); fingers get the touch variant.
-    val touch = !hovered
-    val state = when {
-        dragging -> SeekBarState.Drag
-        hovered || focused -> SeekBarState.Hover
-        else -> SeekBarState.Rest
-    }
+    // A mouse hovering is a pointer screen (desktop mode), and so are keys moving the focus (out of
+    // touch mode): there focus thickens the line and shows its thumb, never a focus ring (v0.0.9).
+    // Fingers get the touch variant.
+    val touch = SeekGeometry.touchLook(hovered, keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard)
+    val state = SeekGeometry.state(dragging, hovered, focused)
     val thickness by animateFloatAsState(SeekGeometry.thickness(state, touch), JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "track")
     val thumb by animateFloatAsState(if (SeekGeometry.showsThumb(state, touch) && enabled) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "thumb")
     val played = colors.ink90
@@ -308,7 +308,6 @@ fun SeekBar(
                     onWidthPx(SeekGeometry.steps(widthPx, touch = true, density = density))
                 }
                 .hoverable(interaction)
-                .focusRing(interaction, RoundedCornerShape(12.dp))
                 .onKeyEvent { event ->
                     if (!enabled || event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     val step = seekKey(event.key, rtl) ?: return@onKeyEvent false
@@ -428,12 +427,9 @@ fun VolumeBar(
     val hovered by interaction.collectIsHoveredAsState()
     val focused by interaction.collectIsFocusedAsState()
     var dragging by remember { mutableStateOf(false) }
-    val touch = !hovered
-    val state = when {
-        dragging -> SeekBarState.Drag
-        hovered || focused -> SeekBarState.Hover
-        else -> SeekBarState.Rest
-    }
+    // As the seek bar: keyboard focus thickens the line and shows its thumb, never a focus ring.
+    val touch = SeekGeometry.touchLook(hovered, keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard)
+    val state = SeekGeometry.state(dragging, hovered, focused)
     val thickness by animateFloatAsState(SeekGeometry.thickness(state, touch), JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "volume")
     val thumb by animateFloatAsState(if (SeekGeometry.showsThumb(state, touch)) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "volume-thumb")
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -452,7 +448,6 @@ fun VolumeBar(
                 .height(TouchTarget)
                 .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
                 .hoverable(interaction)
-                .focusRing(interaction, RoundedCornerShape(12.dp))
                 .onKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                     val target = when (event.key) {
