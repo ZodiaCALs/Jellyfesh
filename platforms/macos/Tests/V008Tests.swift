@@ -119,10 +119,44 @@ final class SourceLibraryStoreTests: XCTestCase {
                 list(.likedSongs, []), list(.playlists, []),
             ]),
         ]))
-        XCTAssertEqual(store.likes.map(\.plugin), ["p"], "a source with nothing to show is left out")
-        XCTAssertEqual(store.likes.first?.lists.map(\.part), [.likedSongs], "and so is an empty list")
-        XCTAssertEqual(store.playlists.map(\.plugin), ["p"])
+        XCTAssertEqual(store.likes.map(\.id), ["p", "q"])
+        XCTAssertEqual(store.likes.first?.source.lists.map(\.part), [.likedSongs], "an empty list is left out")
+        XCTAssertEqual(store.likes.map(\.nothingLiked), [false, true], "a source that likes nothing says so")
+        XCTAssertTrue(store.anyLiked)
+        XCTAssertEqual(store.playlists.map(\.plugin), ["p"], "a source with no playlists is left out")
         XCTAssertEqual(store.playlists.first?.lists.map(\.part), [.playlists])
+    }
+
+    func testASourceWhoseLikesCameBackEmptyStillShowsItsName() {
+        let store = SourceLibraryStore(client: FakeCoreClient(), tracker: CommandTracker(), toasts: ToastCenter())
+        var notYet = list(.likedSongs, [])
+        notYet.refreshedAtMs = nil
+        store.apply(SourceLibraryState(version: 1, sources: [
+            SourceLibraryInfo(plugin: "empty", name: "Jellyfin", attribution: nil,
+                              lists: [list(.likedSongs, []), list(.likedAlbums, []), list(.playlists, [entry("pl1")])]),
+            SourceLibraryInfo(plugin: "new", name: "Navidrome", attribution: nil, lists: [notYet]),
+        ]))
+        XCTAssertEqual(store.likes.map(\.id), ["empty"], "likes that have not come back yet show nothing")
+        XCTAssertEqual(store.likes.first?.nothingLiked, true)
+        XCTAssertEqual(store.likes.first?.source.lists.map(\.part), [.likedSongs, .likedAlbums],
+                       "its empty lists, which say when they were updated")
+        XCTAssertFalse(store.anyLiked, "Favourites is still empty")
+
+        var loading = list(.likedSongs, [])
+        loading.loading = true
+        var failed = list(.likedSongs, [])
+        failed.error = "Sign in to NetEase Cloud Music again."
+        store.apply(SourceLibraryState(version: 2, sources: [
+            SourceLibraryInfo(plugin: "loading", name: "Jellyfin", attribution: nil,
+                              lists: [loading, list(.likedAlbums, [])]),
+            SourceLibraryInfo(plugin: "failed", name: "NetEase Cloud Music", attribution: nil, lists: [failed]),
+        ]))
+        XCTAssertEqual(store.likes.map(\.id), ["loading", "failed"])
+        XCTAssertEqual(store.likes.map(\.nothingLiked), [false, false])
+        XCTAssertEqual(store.likes.first?.source.lists.map(\.part), [.likedSongs], "a loading list shows, with a spinner")
+        XCTAssertEqual(store.likes.last?.source.lists.first?.error, "Sign in to NetEase Cloud Music again.",
+                       "a failed one shows why")
+        XCTAssertTrue(store.anyLiked)
     }
 
     func testMoreJoinsItsListOnce() {

@@ -6793,6 +6793,28 @@
         }
       }
     },
+    "Nothing liked in %@ yet.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ でお気に入りにしたものはまだありません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你在 %@ 中还没有喜欢的内容。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你在 %@ 中還沒有喜歡的內容。"
+          }
+        }
+      }
+    },
     "Now Playing": {
       "localizations": {
         "ja": {

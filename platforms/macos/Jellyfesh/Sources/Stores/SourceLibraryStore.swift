@@ -56,27 +56,48 @@ final class SourceLibraryStore {
 
     // MARK: What the pages show
 
-    /// The sources with likes to show (Favourites): each with its liked songs, albums and artists
-    /// that have entries, or that are loading or failed.
-    var likes: [SourceLibraryInfo] {
+    /// The sources Favourites shows (docs/ui.md, "Favourites"): each with its liked songs, albums
+    /// and artists that have entries, are loading (a spinner) or failed (why). A source whose likes
+    /// all came back empty still shows its name, saying it likes nothing yet; one whose lists have
+    /// not come back yet shows nothing.
+    var likes: [SourceLikes] {
         state.sources.compactMap { source in
-            let lists = source.lists.filter { $0.part != .playlists && Self.shows($0) }
-            return lists.isEmpty ? nil : SourceLibraryInfo(plugin: source.plugin, name: source.name,
-                                                          attribution: source.attribution, lists: lists)
+            let own = source.lists.filter { $0.part != .playlists }
+            let shown = own.filter { Self.shows($0) }
+            if !shown.isEmpty {
+                return SourceLikes(source: Self.source(source, lists: shown), nothingLiked: false)
+            }
+            let empty = own.filter { Self.cameBackEmpty($0) }
+            return empty.isEmpty ? nil : SourceLikes(source: Self.source(source, lists: empty), nothingLiked: true)
         }
+    }
+
+    /// Some source shows likes on Favourites (or that they load, or why they failed), not only that
+    /// it likes nothing yet: Favourites is not empty.
+    var anyLiked: Bool {
+        likes.contains { !$0.nothingLiked }
     }
 
     /// The sources with playlists to show (Playlists).
     var playlists: [SourceLibraryInfo] {
         state.sources.compactMap { source in
             let lists = source.lists.filter { $0.part == .playlists && Self.shows($0) }
-            return lists.isEmpty ? nil : SourceLibraryInfo(plugin: source.plugin, name: source.name,
-                                                          attribution: source.attribution, lists: lists)
+            return lists.isEmpty ? nil : Self.source(source, lists: lists)
         }
     }
 
+    /// A page shows a list that has entries, is loading or failed.
     private static func shows(_ list: SourceList) -> Bool {
         !list.entries.isEmpty || list.loading || list.error != nil
+    }
+
+    /// A list that came back from its refresh with nothing in it.
+    private static func cameBackEmpty(_ list: SourceList) -> Bool {
+        list.entries.isEmpty && !list.loading && list.error == nil && list.refreshedAtMs != nil
+    }
+
+    private static func source(_ source: SourceLibraryInfo, lists: [SourceList]) -> SourceLibraryInfo {
+        SourceLibraryInfo(plugin: source.plugin, name: source.name, attribution: source.attribution, lists: lists)
     }
 
     /// "Updated 5 minutes ago" for a list from the cache; nil while it loads or before it ever has.
@@ -145,4 +166,15 @@ final class SourceLibraryStore {
         }
         return command
     }
+}
+
+/// A source as Favourites shows it (docs/ui.md, "Favourites").
+struct SourceLikes: Hashable, Identifiable {
+    /// The source with the lists to show; when it likes nothing yet, those that came back empty
+    /// (they say when they were updated).
+    var source: SourceLibraryInfo
+    /// Every list came back empty: its name, then "Nothing liked in {Service} yet.".
+    var nothingLiked: Bool
+
+    var id: String { source.plugin }
 }

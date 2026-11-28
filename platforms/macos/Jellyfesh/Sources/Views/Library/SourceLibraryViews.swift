@@ -3,12 +3,15 @@
 // one ("Content from Spotify"), and when the cached lists were updated ("Updated 5 minutes ago");
 // then its lists: songs as rows that play, albums as cards, artists and playlists as rows that open
 // their pages (a playlist whose songs its service doesn't list says so there), each with Show More
-// while the source has more. They are read-only: the heart marks a song in Jellyfesh only.
+// while the source has more; or "Nothing liked in {Service} yet.". They are read-only: the heart
+// marks a song in Jellyfesh only.
 
 import SwiftUI
 
 struct SourceLibrarySection: View {
     var source: SourceLibraryInfo
+    /// Its likes all came back empty (Favourites): it says so instead of showing its lists.
+    var nothingLiked = false
 
     @Environment(SourceLibraryStore.self) private var store
     @Environment(SourcesStore.self) private var sources
@@ -29,8 +32,14 @@ struct SourceLibrarySection: View {
                         .foregroundStyle(palette[Tokens.Ink.ink50])
                 }
             }
-            ForEach(source.lists, id: \.part) { list in
-                SourceListView(plugin: source.plugin, list: list, showsTitle: source.lists.count > 1)
+            if nothingLiked {
+                Text("Nothing liked in \(source.name) yet.")
+                    .lookFont(size: 13)
+                    .foregroundStyle(palette[Tokens.Ink.ink70])
+            } else {
+                ForEach(source.lists, id: \.part) { list in
+                    SourceListView(plugin: source.plugin, list: list, showsTitle: source.lists.count > 1)
+                }
             }
         }
         .padding(.vertical, Tokens.Space.s3)

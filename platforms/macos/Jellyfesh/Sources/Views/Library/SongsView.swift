@@ -106,6 +106,8 @@ struct FavoritesView: View {
     var body: some View {
         let list = model.pages.favorites
         let items = list.items.enumerated().map { TrackItem(row: $0.element.row, id: "f\($0.offset)") }
+        // "No Favourites Yet": no song has the heart and no source likes anything.
+        let empty = list.items.isEmpty && !sourceLibrary.anyLiked && (list.loadedRevision != nil || list.error != nil)
         List(selection: $selection) {
             PageHeader(title: String(localized: "Favourites"),
                        subtitle: list.items.isEmpty ? nil : CountText.songs(list.items.count)) {
@@ -122,9 +124,15 @@ struct FavoritesView: View {
                     .tag(item.id)
                     .onAppear { list.rowAppeared(index: index) }
             }
+            // Nothing hearted and nothing liked anywhere, above the sources that like nothing yet.
+            if empty && !sourceLibrary.likes.isEmpty {
+                emptyState(error: list.error)
+                    .trackListRow()
+                    .selectionDisabled()
+            }
             // Each signed-in source's likes, in its own section (ADR-0024).
-            ForEach(sourceLibrary.likes) { source in
-                SourceLibrarySection(source: source)
+            ForEach(sourceLibrary.likes) { shown in
+                SourceLibrarySection(source: shown.source, nothingLiked: shown.nothingLiked)
                     .trackListRow()
                     .selectionDisabled()
             }
@@ -134,9 +142,8 @@ struct FavoritesView: View {
             playback.play(.favorites, from: index)
         }
         .overlay {
-            if list.items.isEmpty, sourceLibrary.likes.isEmpty, list.loadedRevision != nil || list.error != nil {
-                EmptyState(title: "No Favourites Yet", symbol: "heart",
-                           message: "Songs you mark with the heart appear here.", error: list.error)
+            if empty && sourceLibrary.likes.isEmpty {
+                emptyState(error: list.error)
             }
         }
         .onAppear {
@@ -146,5 +153,10 @@ struct FavoritesView: View {
         .task(id: library.revision) {
             await list.load(revision: library.revision)
         }
+    }
+
+    private func emptyState(error: String?) -> some View {
+        EmptyState(title: "No Favourites Yet", symbol: "heart", message: "Songs you mark with the heart appear here.",
+                   error: error)
     }
 }
