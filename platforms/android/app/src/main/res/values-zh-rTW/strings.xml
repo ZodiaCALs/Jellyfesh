@@ -373,7 +373,8 @@
     </plurals>
 
     <!-- v0.0.4: the player bar, the album page, Appearance (docs/design-controls.md). -->
-    <string name="album_play">播放專輯</string>
+    <string name="card_play">播放 %1$s</string>
+    <string name="card_more">%1$s 的更多操作</string>
     <string name="album_footer">%1$s，%2$s</string>
     <string name="length_hours_minutes">%1$s %2$s</string>
     <string name="appearance_theme">主題</string>

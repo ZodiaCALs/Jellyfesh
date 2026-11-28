@@ -373,7 +373,8 @@
     </plurals>
 
     <!-- v0.0.4: the player bar, the album page, Appearance (docs/design-controls.md). -->
-    <string name="album_play">アルバムを再生</string>
+    <string name="card_play">%1$s を再生</string>
+    <string name="card_more">%1$s のその他の操作</string>
     <string name="album_footer">%1$s、%2$s</string>
     <string name="length_hours_minutes">%1$s %2$s</string>
     <string name="appearance_theme">テーマ</string>

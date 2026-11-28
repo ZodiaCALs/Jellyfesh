@@ -414,7 +414,8 @@
     <string name="allow_community_desc">Official sources are signed by Jellyfesh. Community plugins are made by others and are off unless you allow them.</string>
 
     <!-- v0.0.4: the player bar, the album page, Appearance (docs/design-controls.md). -->
-    <string name="album_play">Play the Album</string>
+    <string name="card_play">Play %1$s</string>
+    <string name="card_more">More for %1$s</string>
     <string name="album_footer">%1$s, %2$s</string>
     <string name="length_hours_minutes">%1$s %2$s</string>
     <string name="appearance_theme">Theme</string>

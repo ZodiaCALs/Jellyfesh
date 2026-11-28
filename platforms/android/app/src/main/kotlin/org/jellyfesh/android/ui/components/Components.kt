@@ -35,10 +35,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -298,11 +301,12 @@ fun InitialTile(text: String, size: Dp = 44.dp, icon: Int? = null) {
 
 /**
  * An album card for grids and shelves (Luminous): square artwork with artwork.radius-grid (16)
- * and shadow-2, title and artist. Hovering with a mouse (desktop mode) or keyboard focus lifts the
- * cover 4 dp and shows a 36 dp glass play button in its bottom start corner ([onPlay]); a press
- * scales it to 97 % (after Apple Music). A tap opens it; a long press or a right-click opens its
- * menu ([onMenu]: Play, Shuffle, Play Next, Play Last, Add to Playlist…, Go to Artist, Download
- * and Open in {Service}, as the item allows; docs/ui.md, "Rows and cards").
+ * and shadow-2, title and artist. Hovering with a mouse (desktop mode) or keyboard focus on the
+ * card or a button in it lifts the cover 4 dp and shows a 36 dp glass play button in its bottom
+ * start corner ([onPlay]) and More in its top end corner; a press scales it to 97 % (after Apple
+ * Music). A tap opens it; More, a long press or a right-click opens its menu ([onMenu]: Play,
+ * Shuffle, Play Next, Play Last, Add to Playlist…, Go to Artist, Download and Open in {Service},
+ * as the item allows; docs/ui.md, "Rows and cards").
  */
 @Composable
 fun AlbumCard(
@@ -320,17 +324,19 @@ fun AlbumCard(
     val reduce = Jf.effects.reduceMotion
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    val focused by interaction.collectIsFocusedAsState()
     val pressed by interaction.collectIsPressedAsState()
-    val raised = hovered || focused
+    // Focus on the card or on its play button or More: the buttons stay while keys move between them.
+    var focusWithin by remember { mutableStateOf(false) }
+    val raised = hovered || focusWithin
     val lift by animateDpAsState(if (raised) 4.dp else 0.dp, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "lift")
     val press by animateFloatAsState(if (pressed) 0.97f else 1f, JfMotion.spring(Tokens.Motion.dur0Ms, reduce), label = "press")
-    val playAlpha by animateFloatAsState(if (raised && onPlay != null) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "play")
+    val controls by animateFloatAsState(if (raised && (onPlay != null || onMenu != null)) 1f else 0f, JfMotion.fluid(Tokens.Motion.dur1Ms, reduce), label = "controls")
     val coverShape = rounded(Tokens.Artwork.radiusGrid.dp)
     Column(
         modifier
             .clip(rounded(Tokens.Radius.rLg.dp))
             .hoverable(interaction)
+            .onFocusChanged { focusWithin = it.hasFocus }
             .onSecondaryClick(onMenu)
             .combinedClickable(
                 interaction,
@@ -354,14 +360,14 @@ fun AlbumCard(
                 .jfShadow(if (raised) 3 else 2, coverShape),
         ) {
             ArtworkFill(art, title, coverShape, sizePx)
-            if (onPlay != null && playAlpha > 0f) {
-                val playLabel = stringResource(R.string.album_play)
+            if (onPlay != null && controls > 0f) {
+                val playLabel = stringResource(R.string.card_play, title)
                 GlassSurface(
                     Modifier
                         .align(Alignment.BottomStart)
                         .padding(8.dp)
                         .size(36.dp)
-                        .graphicsLayer { alpha = playAlpha }
+                        .graphicsLayer { alpha = controls }
                         .clickable(role = Role.Button, onClick = onPlay)
                         .semantics { contentDescription = playLabel },
                     grade = GlassGrade.Mist,
@@ -370,6 +376,23 @@ fun AlbumCard(
                     blur = false,
                 ) {
                     JfIcon(R.drawable.ic_play, colors.ink90, Modifier.align(Alignment.Center), size = 16.dp)
+                }
+            }
+            if (onMenu != null && controls > 0f) {
+                val moreLabel = stringResource(R.string.card_more, title)
+                GlassSurface(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(36.dp)
+                        .graphicsLayer { alpha = controls }
+                        .clickable(role = Role.Button, onClick = onMenu)
+                        .semantics { contentDescription = moreLabel },
+                    grade = GlassGrade.Mist,
+                    shape = CircleShape,
+                    blur = false,
+                ) {
+                    JfIcon(R.drawable.ic_more, colors.ink90, Modifier.align(Alignment.Center), size = 18.dp)
                 }
             }
         }
