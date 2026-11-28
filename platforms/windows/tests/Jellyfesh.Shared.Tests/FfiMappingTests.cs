@@ -89,6 +89,22 @@ public class FfiMappingTests
     }
 
     [Fact]
+    public void A_source_songs_row_keeps_its_artist_album_and_link()
+    {
+        // ADR-0027 §2: the row's ids and link, and the stored track's ids, both ways.
+        using var contract = Contract.Read("ffi-types.json");
+        var row = contract.RootElement.GetProperty("samples").EnumerateArray()
+            .Where(s => s.GetProperty("name").GetString() == "TrackRow")
+            .Select(s => FfiMapping.ToModel(s.GetProperty("json").Deserialize(F.JellyfeshJsonContext.Default.TrackRow)!))
+            .Single(r => r.Track is M.TrackRef.Source);
+        Assert.Equal(("ar-3", "al-9", "https://music.example/song/tr-7"), (row.ArtistId, row.AlbumId, row.Link));
+        var track = Assert.IsType<M.TrackRef.Source>(row.Track).Track;
+        Assert.Equal(("ar-3", "al-9"), (track.ArtistId, track.AlbumId));
+        var back = Assert.IsType<F.TrackRef.Source>(FfiMapping.ToFfi(row.Track)).Track;
+        Assert.Equal(("ar-3", "al-9"), (back.ArtistId, back.AlbumId)); // played, queued or saved, it keeps them
+    }
+
+    [Fact]
     public void Remote_actions_serialise_as_the_core_expects()
     {
         string Json(M.CoreCommand c) => JsonSerializer.Serialize(FfiMapping.ToFfi(c), F.JellyfeshJsonContext.Default.Command);

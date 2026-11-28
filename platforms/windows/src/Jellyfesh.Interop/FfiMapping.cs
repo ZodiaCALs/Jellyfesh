@@ -100,7 +100,7 @@ public static class FfiMapping
     };
 
     public static M.SourceTrack ToModel(F.SourceTrack s) =>
-        new(s.Plugin, s.Id, s.Title, s.Artist, s.Album, s.DurationMs, s.ArtworkUrl, s.Isrc);
+        new(s.Plugin, s.Id, s.Title, s.Artist, s.Album, s.DurationMs, s.ArtworkUrl, s.Isrc, s.ArtistId, s.AlbumId);
 
     public static M.RepeatMode ToModel(F.RepeatMode r) => r switch
     {
@@ -392,7 +392,8 @@ public static class FfiMapping
 
     public static M.TrackRow ToModel(F.TrackRow r) => new(
         ToModel(r.Track), r.Title, r.Artist, r.Album, r.DurationMs,
-        r.Artwork is null ? null : ToModel(r.Artwork), r.ArtworkHash, r.Favorite, r.Missing, r.Downloaded);
+        r.Artwork is null ? null : ToModel(r.Artwork), r.ArtworkHash, r.Favorite, r.Missing, r.Downloaded,
+        r.ArtistId, r.AlbumId, r.Link);
 
     public static M.PlaylistSummary ToModel(F.PlaylistSummary p) =>
         new(p.Id, p.Name, p.EntryCount, p.DurationMs, p.UpdatedAtMs, p.ArtworkHash);
@@ -873,7 +874,7 @@ public static class FfiMapping
         M.TrackRef.File f => new F.TrackRef.File(f.Path),
         M.TrackRef.Source s => new F.TrackRef.Source(new F.SourceTrack(
             s.Track.Plugin, s.Track.Id, s.Track.Title, s.Track.Artist, s.Track.Album, s.Track.DurationMs,
-            s.Track.ArtworkUrl, s.Track.Isrc)),
+            s.Track.ArtworkUrl, s.Track.Isrc, s.Track.ArtistId, s.Track.AlbumId)),
         _ => throw new ArgumentOutOfRangeException(nameof(t), t, "unknown track reference"),
     };
 
