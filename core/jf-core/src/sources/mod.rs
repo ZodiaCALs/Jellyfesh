@@ -1202,9 +1202,12 @@ impl Sources {
 
     // ---- search and browse ------------------------------------------------
 
-    /// Plugins a search of everything asks: on, callable and searchable,
-    /// each with whether its terms allow merging its results with others'
-    /// (ADR-0024 §4: the others answer in sections of their own).
+    /// Plugins a search of everything asks: on, callable, searchable and
+    /// ready, that is signed in when they need a sign-in (ADR-0027 §3, the
+    /// rule `library_sources` uses: a source that isn't set up yet is left
+    /// out instead of answering with an error). Each comes with whether its
+    /// terms allow merging its results with others' (ADR-0024 §4: the others
+    /// answer in sections of their own).
     pub(crate) fn search_plugins(&self) -> Vec<(String, bool)> {
         let Some(ctx) = &self.ctx else {
             return Vec::new();
@@ -1214,7 +1217,10 @@ impl Sources {
             .plugins()
             .into_iter()
             .filter(|p| {
-                p.enabled && (p.official || community) && p.capabilities.contains(&Capability::Search)
+                p.enabled
+                    && (p.official || community)
+                    && p.capabilities.contains(&Capability::Search)
+                    && (p.account.is_some() || !p.capabilities.contains(&Capability::Auth))
             })
             .map(|p| (p.id, p.content_policy.unified_search))
             .collect()

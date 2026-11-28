@@ -1311,6 +1311,24 @@ fn echo_server() -> TestServer {
     })
 }
 
+/// Signs `plugin` in with the test plugin's QR flow, which confirms by itself.
+fn qr_sign_in(env: &Env, plugin: &str) {
+    env.core.send(Command::BeginLogin {
+        plugin: plugin.into(),
+        method: AuthMethod::Qr,
+    });
+    let steps = auth_steps(env, plugin, |s| {
+        matches!(s, AuthStep::Done { .. } | AuthStep::Failed { .. })
+    });
+    assert!(
+        matches!(steps.last(), Some((_, AuthStep::Done { .. }))),
+        "{steps:?}"
+    );
+    wait_for(&env.events, Duration::from_secs(10), |e| {
+        plugin_in(e, plugin).is_some_and(|p| p.account.is_some())
+    });
+}
+
 fn auth_steps(env: &Env, plugin: &str, until: impl Fn(&AuthStep) -> bool) -> Vec<(u64, AuthStep)> {
     let events = wait_for(
         &env.events,
@@ -1613,6 +1631,16 @@ fn community_plugins_wait_for_the_disclosure() {
     env.run(Command::AcknowledgeUnofficial { id: ECHO.into() }, |e| {
         plugin_in(e, ECHO).is_some_and(|p| p.enabled && !p.needs_disclosure)
     });
+    // It needs a sign-in, so a search of everything leaves it out until it
+    // has one (ADR-0027 §3), instead of showing its error.
+    let asked = server.count("/search");
+    assert_eq!(
+        searched(&env, "x", SearchScope::All).len(),
+        1,
+        "a source that needs a sign-in and has none is not searched"
+    );
+    assert_eq!(server.count("/search"), asked, "nor asked");
+    qr_sign_in(&env, ECHO);
     let updates = searched(&env, "x", SearchScope::All);
     assert_eq!(updates.last().unwrap().source, ECHO);
 
