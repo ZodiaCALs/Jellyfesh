@@ -699,6 +699,13 @@ message instead; `import JellyfeshFFIFFI` is behind `#if canImport`, so a wrong
 include path shows up as missing `RustBuffer` declarations rather than a
 missing module.
 
+**v0.0.9 additions** (ADR-0027 §2, from `core/jf-ffi` at baa1ffd and ffa47e0, UniFFI 0.32; not
+yet checked against a generated file): `SourceTrack.artistId`/`albumId: String?`, the
+initialiser's last two labels `artistId:albumId:` with `nil` defaults; `TrackRow.artistId`/
+`albumId`/`link: String?`, after `downloaded` (which still has no default), with `nil` defaults.
+`SourceSong` carries the ids both ways and `TrackItem(row:)` reads all three, so a source song's
+menu offers Go to Album, Go to Artist and Open in {Service} on Home, Favourites and playlists.
+
 **v0.0.8 additions** (assumed from `core/jf-ffi` at the M1 commits, not yet checked against a
 generated file): `Settings.streamingQuality: StreamingQuality` (`.auto`, `.lossless`, `.high`,
 `.normal`, `.low`), `Settings.downloads: DownloadSettings` (`folder`, `quality`, `nameTemplate`,
