@@ -476,6 +476,7 @@
   "{service} lists this playlist’s songs only in {service}.": "{service} はこのプレイリストの曲を {service} でのみ表示します。",
   "Updated just now": "たった今更新",
   "Updated {age}": "{age}に更新",
+  "Nothing liked in {service} yet.": "{service} でお気に入りにしたものはまだありません。",
   "Download": "ダウンロード",
   "The server answered {status}.": "サーバーが {status} を返しました。",
   "Downloading “{title}”…": "「{title}」をダウンロードしています…",

@@ -476,6 +476,7 @@
   "{service} lists this playlist’s songs only in {service}.": "{service} 只在 {service} 中列出這個播放清單的歌曲。",
   "Updated just now": "剛剛更新",
   "Updated {age}": "更新於{age}",
+  "Nothing liked in {service} yet.": "你在 {service} 中還沒有喜歡的內容。",
   "Download": "下載",
   "The server answered {status}.": "伺服器回應了 {status}。",
   "Downloading “{title}”…": "正在下載「{title}」…",

@@ -1,6 +1,7 @@
 // A mock OpenSubsonic server (Navidrome-like) for Jellyfesh Web's end-to-end tests. It answers the
 // requests the official Subsonic plugin makes, in the shapes of the OpenSubsonic documentation,
 // with token authentication (t = md5(password + salt)) and the invented library of ./library.mjs.
+// Two invented accounts: "demo", with the stars of ./library.mjs, and "newcomer", with none.
 // CORS is on unless `cors: false` (to test the page's diagnosis).
 
 import { createHash } from 'node:crypto';
@@ -21,6 +22,9 @@ import {
 import { png, wav } from './media.mjs';
 
 export const SUBSONIC_USER = { name: 'demo', password: 'invented-password' };
+/** A second account, which has starred nothing (Favourites: "Nothing liked in Subsonic yet."). */
+export const SUBSONIC_NEWCOMER = { name: 'newcomer', password: 'invented-password' };
+const ACCOUNTS = [SUBSONIC_USER, SUBSONIC_NEWCOMER];
 
 const COVERS = new Map();
 const AUDIO = new Map();
@@ -131,7 +135,8 @@ export function startSubsonic({ port = 0, cors = true, host = '127.0.0.1' } = {}
       const salt = p('s');
       if (p('p')) return fail(42, 'Password authentication is not allowed');
       if (!user || !token || !salt) return fail(10, 'Required parameter is missing');
-      if (user !== SUBSONIC_USER.name || salt.length < 6 || token !== md5(SUBSONIC_USER.password + salt)) {
+      const account = ACCOUNTS.find((a) => a.name === user);
+      if (!account || salt.length < 6 || token !== md5(account.password + salt)) {
         return fail(40, 'Wrong username or password');
       }
       if (p('f') !== 'json' && method !== 'stream' && method !== 'getCoverArt') {
@@ -204,6 +209,8 @@ export function startSubsonic({ port = 0, cors = true, host = '127.0.0.1' } = {}
           });
         }
         case 'getStarred2': {
+          // Nothing starred: the server leaves the lists out, as Navidrome does.
+          if (user === SUBSONIC_NEWCOMER.name) return ok({ starred2: {} });
           // In the server's own order, not by date: the plugin sorts them newest first.
           const starred = (list, of) => list.map(({ id: key, at }) => ({ ...of(key), starred: at }));
           return ok({

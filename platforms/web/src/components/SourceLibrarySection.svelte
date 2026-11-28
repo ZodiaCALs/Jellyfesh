@@ -3,15 +3,17 @@
   // its terms ask for ("Content from Spotify"), when the kept lists were updated ("Updated 5
   // minutes ago"), then its lists: songs as rows that play, albums, artists and playlists as cards
   // that open their pages (a playlist whose songs the service lists only in its own app says so
-  // there), each with Show More while the source has more. Read-only: the heart marks a song in
-  // Jellyfesh only.
+  // there), each with Show More while the source has more. A source whose likes all came back
+  // empty says "Nothing liked in {Service} yet." (the state's rule, `shownOn`). Read-only: the
+  // heart marks a song in Jellyfesh only.
   import { useApp } from '../lib/app';
-  import type { Item, SourceLibrary, SourceLibraryPart } from '../lib/core/types';
+  import type { Item, SourceLibraryPart } from '../lib/core/types';
   import { t, updatedText } from '../lib/i18n/index.svelte';
+  import type { ShownSourceLibrary } from '../lib/state/sourceLibrary.svelte';
   import Icon from './Icon.svelte';
   import ItemList from './ItemList.svelte';
 
-  let { source }: { source: SourceLibrary } = $props();
+  let { source }: { source: ShownSourceLibrary } = $props();
   const app = useApp();
 
   // The age line ticks with the minute, while the page shows.
@@ -46,28 +48,32 @@
     <p class="note">{t('Content from {service}', { service: source.name })}</p>
   {/if}
   {#if updated}<p class="note quiet">{updated}</p>{/if}
-  {#each source.lists as list (list.part)}
-    {@const key = `${source.plugin}|${list.part}`}
-    {@const loadingMore = app.sourceLibraries.loadingMore.has(key)}
-    {@const listed = new Map(list.entries.map((e) => [e.item, e.songs_listed]))}
-    <div class="list" role="group" aria-label={title(list.part)}>
-      {#if source.lists.length > 1}<h3>{title(list.part)}</h3>{/if}
-      {#if list.error}
-        <p class="problem"><Icon name="alert" size={18} />{list.error}</p>
-      {/if}
-      {#if list.entries.length === 0 && list.loading}
-        <p class="note">{t('Loading…')}</p>
-      {/if}
-      <ItemList plugin={source.plugin} items={list.entries.map((e) => e.item)} listed={(item: Item) => listed.get(item) ?? true} />
-      {#if list.next}
-        <div class="show-more">
-          <button class="pill secondary" disabled={loadingMore} onclick={() => app.sourceLibraries.more(source.plugin, list.part)}
-            >{loadingMore ? t('Loading…') : t('Show More')}</button
-          >
-        </div>
-      {/if}
-    </div>
-  {/each}
+  {#if source.empty}
+    <p class="nothing">{t('Nothing liked in {service} yet.', { service: source.name })}</p>
+  {:else}
+    {#each source.lists as list (list.part)}
+      {@const key = `${source.plugin}|${list.part}`}
+      {@const loadingMore = app.sourceLibraries.loadingMore.has(key)}
+      {@const listed = new Map(list.entries.map((e) => [e.item, e.songs_listed]))}
+      <div class="list" role="group" aria-label={title(list.part)}>
+        {#if source.lists.length > 1}<h3>{title(list.part)}</h3>{/if}
+        {#if list.error}
+          <p class="problem"><Icon name="alert" size={18} />{list.error}</p>
+        {/if}
+        {#if list.entries.length === 0 && list.loading}
+          <p class="note">{t('Loading…')}</p>
+        {/if}
+        <ItemList plugin={source.plugin} items={list.entries.map((e) => e.item)} listed={(item: Item) => listed.get(item) ?? true} />
+        {#if list.next}
+          <div class="show-more">
+            <button class="pill secondary" disabled={loadingMore} onclick={() => app.sourceLibraries.more(source.plugin, list.part)}
+              >{loadingMore ? t('Loading…') : t('Show More')}</button
+            >
+          </div>
+        {/if}
+      </div>
+    {/each}
+  {/if}
 </section>
 
 <style>
@@ -84,6 +90,10 @@
   }
   .quiet {
     color: var(--jf-ink-50);
+  }
+  .nothing {
+    margin: var(--jf-space-s4) 0 0;
+    color: var(--jf-ink-70);
   }
   .list {
     margin-top: var(--jf-space-s4);

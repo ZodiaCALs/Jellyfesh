@@ -6,6 +6,8 @@ export const SUBSONIC = 'http://127.0.0.1:4610';
 export const JELLYFIN = 'http://127.0.0.1:4620';
 export const SUBSONIC_NO_CORS = 'http://127.0.0.1:4630';
 export const USER = 'demo';
+/** The mock Subsonic server's second account, which has starred nothing. */
+export const NEWCOMER = 'newcomer';
 export const PASSWORD = 'invented-password';
 
 /** What the app's state says, through the ?e2e handle. */
@@ -89,15 +91,15 @@ export async function openSignIn(page: Page, source: string) {
 }
 
 /** Signs in to the mock Subsonic server with `source` (the bundled Subsonic plugin, or a test plugin made from it). */
-export async function signInSubsonic(page: Page, server = SUBSONIC, source = 'Subsonic') {
+export async function signInSubsonic(page: Page, server = SUBSONIC, source = 'Subsonic', user = USER) {
   const sheet = await openSignIn(page, source);
   await sheet.getByLabel('Server Address').fill(server);
   await sheet.getByRole('button', { name: 'Continue' }).click();
   await sheet.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await sheet.getByLabel('User Name').fill(USER);
+  await sheet.getByLabel('User Name').fill(user);
   await sheet.getByLabel('Password').fill(PASSWORD);
   await sheet.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await expect(sheet.getByText(`Signed in as ${USER}.`)).toBeVisible();
+  await expect(sheet.getByText(`Signed in as ${user}.`)).toBeVisible();
   await sheet.getByRole('button', { name: 'Done' }).click();
 }
 

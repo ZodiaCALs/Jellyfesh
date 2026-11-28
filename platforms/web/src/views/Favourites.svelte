@@ -2,7 +2,8 @@
   // Favourites (docs/ui.md): the songs marked with the heart, the latest first, from the library
   // and every source, with Play and Shuffle; kept in this browser. Then one section per signed-in
   // source that keeps likes (API 1.3): its liked songs, albums and artists, refreshed when the
-  // page opens. Empty: "No Favourites Yet".
+  // page opens, or "Nothing liked in {Service} yet.", or why its likes failed. With nothing
+  // hearted and nothing liked anywhere: "No Favourites Yet", then the sources that like nothing.
   import EmptyState from '../components/EmptyState.svelte';
   import Icon from '../components/Icon.svelte';
   import SongList from '../components/SongList.svelte';
@@ -36,7 +37,7 @@
 
 <section class="page" aria-labelledby="favourites-title">
   <h1 id="favourites-title" class="page-title">{t('Favourites')}</h1>
-  {#if rows.length === 0 && sources.length === 0}
+  {#if rows.length === 0 && !app.sourceLibraries.anyLiked}
     <EmptyState title={t('No Favourites Yet')} text={t('Songs you mark with the heart appear here.')} />
   {:else if rows.length > 0}
     <div class="page-actions">

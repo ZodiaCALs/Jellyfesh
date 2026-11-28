@@ -4,7 +4,9 @@
 // each and more a page at a time. The lists are kept in this browser, so they show at once (offline
 // too) with their age. Favourites refreshes the likes and Playlists the playlists: all of them the
 // first time the page opens in a visit, then those older than ten minutes when it opens or shows
-// again; nothing polls. Read-only: nothing changes on the services.
+// again; nothing polls. Read-only: nothing changes on the services. On Favourites, a source whose
+// likes all came back empty still shows its name, with "Nothing liked in {Service} yet.", and one
+// whose likes failed shows why (`shownOn`).
 
 import { untrack } from 'svelte';
 import type { App } from '../app';
@@ -33,13 +35,44 @@ function shows(list: SourceLibraryList): boolean {
   return list.entries.length > 0 || list.loading || list.error !== null;
 }
 
+/** A list that came back from its refresh with nothing in it. */
+function cameBackEmpty(list: SourceLibraryList): boolean {
+  return list.entries.length === 0 && !list.loading && list.error === null && list.refreshed_at_ms !== null;
+}
+
+/** A source as Favourites or Playlists shows it. */
+export interface ShownSourceLibrary extends SourceLibrary {
+  /**
+   * Every list it keeps for the page came back empty (Favourites): it shows its name with
+   * "Nothing liked in {Service} yet." instead of its lists, which are those empty lists.
+   */
+  empty: boolean;
+}
+
+/**
+ * How `page` shows `source` (docs/ui.md, "Favourites" and "Playlists"), or null when it shows
+ * nothing of it: the page's lists that have entries, are loading or failed (with why). On
+ * Favourites, a source whose likes all came back empty still shows, as `empty`; a list it does not
+ * keep, or has not asked for yet, makes it show nothing.
+ */
+export function shownOn(page: SourceLibraryPage, source: SourceLibrary): ShownSourceLibrary | null {
+  const own = source.lists.filter((list) => pageOf(list.part) === page);
+  const lists = own.filter(shows);
+  if (lists.length > 0) return { ...source, lists, empty: false };
+  const empty = own.filter(cameBackEmpty);
+  if (page === 'favourites' && empty.length > 0) return { ...source, lists: empty, empty: true };
+  return null;
+}
+
 export class SourceLibraries {
   /** Every covered source with its lists, in the order of the sources. */
   all = $state.raw<SourceLibrary[]>([]);
   /** More of a list on its way, by `plugin|part`. */
   loadingMore = $state.raw<ReadonlySet<string>>(new Set());
-  /** The sources with likes to show (Favourites): their liked songs, albums and artists. */
+  /** The sources Favourites shows: their liked songs, albums and artists, or that they like nothing yet. */
   readonly likes = $derived(this.forPage('favourites'));
+  /** Some source shows likes on Favourites (or their refresh, or why it failed), not only that it likes nothing yet. */
+  readonly anyLiked = $derived(this.likes.some((source) => !source.empty));
   /** The sources with playlists to show (Playlists). */
   readonly playlists = $derived(this.forPage('playlists'));
   private inner: InstanceType<Jf['SourceLibraries']>;
@@ -137,11 +170,8 @@ export class SourceLibraries {
     }
   }
 
-  private forPage(page: SourceLibraryPage): SourceLibrary[] {
-    return this.all.flatMap((source) => {
-      const lists = source.lists.filter((list) => pageOf(list.part) === page && shows(list));
-      return lists.length > 0 ? [{ ...source, lists }] : [];
-    });
+  private forPage(page: SourceLibraryPage): ShownSourceLibrary[] {
+    return this.all.flatMap((source) => shownOn(page, source) ?? []);
   }
 
   private publish() {
