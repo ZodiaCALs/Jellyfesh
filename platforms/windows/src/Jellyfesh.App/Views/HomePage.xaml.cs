@@ -14,7 +14,7 @@ public sealed partial class HomePage : JfPage
         ViewModel = AppHost.App.CreateHome();
         PageModel = ViewModel;
         InitializeComponent();
-        Lists.Attach(AddedShelf, 168, menu: new CollectionMenu(AppHost.Services, o => o is AlbumItem a ? new Collection.Album(a.Id) : null).Flyout);
+        Lists.Attach(AddedShelf, 168, menu: new CollectionMenu(AppHost.Services, o => o is AlbumItem a ? new Collection.Album(a.Id) : null, goToArtist: true).Flyout);
         var songs = new TrackMenu(AppHost.Services).Flyout;
         foreach (var list in new[] { PlayedList, MostList })
         {

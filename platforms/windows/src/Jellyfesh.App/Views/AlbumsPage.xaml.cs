@@ -17,7 +17,7 @@ public sealed partial class AlbumsPage : JfPage
         PageModel = ViewModel;
         InitializeComponent();
         _ = new SortMenu<AlbumSort>(SortButton, SortText, ViewModel.Sorts, () => ViewModel.Sort, s => ViewModel.Sort = s, () => ViewModel.Descending, d => ViewModel.Descending = d);
-        var menu = new CollectionMenu(AppHost.Services, o => o is AlbumItem { IsLoaded: true } a ? new Collection.Album(a.Id) : null);
+        var menu = new CollectionMenu(AppHost.Services, o => o is AlbumItem { IsLoaded: true } a ? new Collection.Album(a.Id) : null, goToArtist: true);
         Lists.Attach(AlbumGrid, () => _grid.Cover, i => ViewModel.Albums?.Realize(i), menu.Flyout);
         AlbumGrid.ContainerContentChanging += (_, args) =>
         {

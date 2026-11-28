@@ -107,8 +107,73 @@ public static class PlaylistActions
             case Collection.Playlist playlist:
                 var entries = await s.QueryAsync(c => c.PlaylistEntries(playlist.Id, 0, MaxTracks));
                 return entries.Value?.Select(e => e.Row.Track).ToArray() ?? [];
+            case Collection.Source source:
+                return await SourceTracksAsync(s, source);
             default:
                 return [];
+        }
+    }
+
+    /// <summary>The most pages Add to Playlist… reads of a source's album or playlist.</summary>
+    internal const int MaxSourcePages = 50;
+
+    /// <summary>How long Add to Playlist… waits for each page of a source's album or playlist.</summary>
+    internal static TimeSpan SourcePageWait { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// The songs of a source's album or playlist that play here (an album or playlist card's Add to
+    /// Playlist…), page by page as the core browses it; what came before a page that failed or did
+    /// not come.
+    /// </summary>
+    private static async Task<IReadOnlyList<TrackRef>> SourceTracksAsync(ShellServices s, Collection.Source source)
+    {
+        var tracks = new List<TrackRef>();
+        uint? page = 0;
+        for (var read = 0; page is { } next && read < MaxSourcePages && tracks.Count < MaxTracks; read++)
+        {
+            if (await BrowseAsync(s, source, next) is not { Error: null } update)
+            {
+                break;
+            }
+
+            tracks.AddRange(update.Items.Where(i => i is { Kind: ItemKind.Track, Playable: true }).Select(i => i.Track).OfType<TrackRef>());
+            page = update.NextPage;
+        }
+
+        return tracks;
+    }
+
+    /// <summary>One page of a source's album or playlist, or null when the core refused or it did not come.</summary>
+    private static async Task<BrowseUpdate?> BrowseAsync(ShellServices s, Collection.Source source, uint page)
+    {
+        var answer = new TaskCompletionSource<BrowseUpdate?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        ulong request = 0;
+        void OnNotification(CoreEvent e)
+        {
+            // Its answer: by its request once known (an answer may come before Send returns).
+            if (e is CoreEvent.BrowsePage { Update: var u } && (request == 0 || u.Request == request) && u.Plugin == source.Plugin && u.Node == source.Id)
+            {
+                answer.TrySetResult(u);
+            }
+            else if (e is CoreEvent.CommandFailed f && request != 0 && f.Id == request)
+            {
+                answer.TrySetResult(null);
+            }
+        }
+
+        s.Hub.Notification += OnNotification;
+        try
+        {
+            request = s.SendHandled(new CoreCommand.Browse(source.Plugin, source.Id, page));
+            return await answer.Task.WaitAsync(SourcePageWait);
+        }
+        catch (TimeoutException)
+        {
+            return null;
+        }
+        finally
+        {
+            s.Hub.Notification -= OnNotification;
         }
     }
 
