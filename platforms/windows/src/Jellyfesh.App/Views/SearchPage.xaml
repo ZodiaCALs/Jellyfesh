@@ -3,13 +3,13 @@
     Search (docs/ui.md, ADR-0024 §4), as Jellyfesh Web shows it: one field ("Songs, albums and
     artists", a pill as wide as the reading measure), then the tabs All, Library and one per source
     that found something, pills on a fill track. All: the library's Songs, Albums and Artists (as
-    rows), From Your Sources with each source's section ("Searching…" until it answers, "This Source
-    Did Not Answer" with its words, or its results; "Content from {Service}" for one that asks for
-    credit; an item the core merged names the others, "Also in …"), then "Results from {Service}"
-    for each source that keeps its results apart. Library: the library's results. A source's tab:
-    its Songs, Albums, Artists and Playlists, each with Show More. A source's album, artist, playlist
-    or folder opens its page. Before anything is typed: "Search Your Music"; nothing found: "No
-    Results".
+    rows), From Your Sources with each source's section ("Searching…" until it answers, a warning
+    sign and "This Source Did Not Answer" with the reason in the core's plain words, or its results;
+    "Content from {Service}" for one that asks for credit; an item the core merged names the others,
+    "Also in …"), then "Results from {Service}" for each source that keeps its results apart.
+    Library: the library's results. A source's tab: its Songs, Albums, Artists and Playlists, each
+    with Show More. A source's album, artist, playlist or folder opens its page. Before anything is
+    typed: "Search Your Music"; nothing found: "No Results".
 -->
 <shell:JfPage
     x:Class="Jellyfesh.App.Views.SearchPage"
@@ -117,7 +117,14 @@
                                     <TextBlock AutomationProperties.HeadingLevel="Level3" Style="{StaticResource JfSectionText}" Text="{x:Bind Name}" />
                                     <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Attribution}" Visibility="{x:Bind shell:Bind.Visible(HasAttribution)}" />
                                     <TextBlock x:Uid="Search_Searching" Style="{StaticResource JfSecondaryBodyText}" Text="Searching…" Visibility="{x:Bind shell:Bind.Visible(IsSearching), Mode=OneWay}" />
-                                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind shell:Bind.Format('Search_NoAnswer', Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(HasError), Mode=OneWay}" />
+                                    <Grid ColumnSpacing="8" Visibility="{x:Bind shell:Bind.Visible(HasError), Mode=OneWay}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <controls:StrokeIcon Margin="0,1,0,0" VerticalAlignment="Top" AutomationProperties.AccessibilityView="Raw" Data="{StaticResource IconAlert}" Foreground="{ThemeResource JfWarning}" Size="18" />
+                                        <TextBlock Grid.Column="1" IsTextSelectionEnabled="True" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind shell:Bind.Format('Search_NoAnswer', Error), Mode=OneWay}" TextWrapping="Wrap" />
+                                    </Grid>
                                     <ListView AutomationProperties.Name="{x:Bind Name}" ItemClick="OnOnlineTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind Tracks}" Loaded="OnOnlineTracksLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(HasTracks), Mode=OneWay}" />
                                     <ListView AutomationProperties.Name="{x:Bind Name}" ItemClick="OnEntryClick" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind Entries}" Loaded="OnOnlineEntriesLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(HasEntries), Mode=OneWay}" />
                                 </StackPanel>
@@ -140,7 +147,14 @@
                 <!-- A source's tab: its results kind by kind, each with Show More. -->
                 <StackPanel Spacing="24" Visibility="{x:Bind shell:Bind.Visible(ViewModel.ShowsSource), Mode=OneWay}">
                     <TextBlock x:Uid="Search_Searching" Style="{StaticResource JfSecondaryBodyText}" Text="Searching…" Visibility="{x:Bind shell:Bind.Visible(ViewModel.SelectedSource.IsSearching), Mode=OneWay}" />
-                    <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind shell:Bind.Format('Search_NoAnswer', ViewModel.SelectedSource.Error), Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(ViewModel.SelectedSource.HasError), Mode=OneWay}" />
+                    <Grid ColumnSpacing="8" Visibility="{x:Bind shell:Bind.Visible(ViewModel.SelectedSource.HasError), Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <controls:StrokeIcon Margin="0,1,0,0" VerticalAlignment="Top" AutomationProperties.AccessibilityView="Raw" Data="{StaticResource IconAlert}" Foreground="{ThemeResource JfWarning}" Size="18" />
+                        <TextBlock Grid.Column="1" IsTextSelectionEnabled="True" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind shell:Bind.Format('Search_NoAnswer', ViewModel.SelectedSource.Error), Mode=OneWay}" TextWrapping="Wrap" />
+                    </Grid>
                     <ItemsRepeater ItemsSource="{x:Bind ViewModel.SelectedSource.Kinds, Mode=OneWay}">
                         <ItemsRepeater.Layout>
                             <StackLayout Spacing="24" />

@@ -36,6 +36,8 @@
     <x:String x:Key="IconClose">M6 6 l12 12 M18 6 L6 18</x:String>
     <x:String x:Key="IconChevronDown">M6 9 l6 6 l6 -6</x:String>
     <x:String x:Key="IconInfo">M12 21 a9 9 0 1 0 0 -18 a9 9 0 0 0 0 18 z M12 11 v5 M12 8 h0.01</x:String>
+    <!-- A failure's reason (a source that did not answer), as the web's alert. -->
+    <x:String x:Key="IconAlert">M12 4 L21 19.5 H3 Z M12 10 v4.5 M12 17 h0.01</x:String>
     <x:String x:Key="IconMiniPlayer">M4 6 h16 v12 H4 z M12 12 h6 v4 h-6 z</x:String>
     <x:String x:Key="IconExpand">M14 4 h6 v6 M20 4 l-7 7 M10 20 H4 v-6 M4 20 l7 -7</x:String>
     <!-- Devices a remote source plays on (Devices, the device button); speakers use IconSpeaker. -->
