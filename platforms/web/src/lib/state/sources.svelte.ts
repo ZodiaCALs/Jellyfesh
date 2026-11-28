@@ -38,6 +38,25 @@ export interface SourceView {
   relayed: boolean;
 }
 
+/** What the ready rule reads of a source (a `Plugin`). */
+export interface ReadySource {
+  /** Why calls are refused now (turned off, a community plugin while they are not allowed, not loaded), or null. */
+  readonly blocked: unknown;
+  declares(capability: Capability): boolean;
+  readonly state: { readonly account: string | null };
+}
+
+/**
+ * Whether a source is ready to be asked for `capability` (ADR-0027 §3, the rule the core's
+ * `SourceLibrary` uses): switched on and allowed (official, or community while community plugins
+ * are allowed), declaring the capability, and signed in when it needs a sign-in (it declares
+ * `Auth`). Search asks only ready sources; one that isn't set up yet is left out, and Settings ›
+ * Sources says what it needs.
+ */
+export function isReady(source: ReadySource, capability: Capability): boolean {
+  return source.blocked === null && source.declares(capability) && (source.state.account !== null || !source.declares('Auth'));
+}
+
 /** The server address in a plugin's settings, if it has one. */
 export function serverOf(plugin: Plugin): string | null {
   const value = plugin.settings.server_url;
@@ -250,14 +269,9 @@ export class Sources {
     return this.host.get(id);
   }
 
-  /** Sources that can answer `capability` now: on, signed in (or needing no sign-in). */
+  /** The sources ready to answer `capability` now (`isReady`): on, allowed, and signed in when they need it. */
   usable(capability: Capability): Plugin[] {
-    return this.host.plugins.filter(
-      (p) =>
-        p.blocked === null &&
-        p.declares(capability) &&
-        (p.state.account !== null || !p.declares('Auth')),
-    );
+    return this.host.plugins.filter((p) => isReady(p, capability));
   }
 
   async signOut(plugin: Plugin) {

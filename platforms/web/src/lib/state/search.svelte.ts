@@ -1,6 +1,8 @@
 // Search by source (ADR-0024 §4), with the core's rules (jf-web's SearchResults): the library at
-// once, then every source that can search, each kind on its own (songs, albums, artists and
-// playlists, 20 of each), every source within the 8-second deadline. A source whose terms allow it
+// once, then every source that is ready to search (ADR-0027 §3, `isReady`: on, allowed, declaring
+// search, and signed in when it needs a sign-in; one that isn't set up yet is not asked), each kind
+// on its own (songs, albums, artists and playlists, 20 of each), every source within the 8-second
+// deadline. A source that fails shows why in plain words. A source whose terms allow it
 // is merged with the library and the merging sources before it (From Your Sources on the All tab);
 // the others keep their results apart, on a tab of their own, which the All tab links to. Every
 // source that answered has a tab with its results kind by kind, each with Show More while it has

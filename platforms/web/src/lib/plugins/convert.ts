@@ -233,7 +233,11 @@ export function pluginErrorFromJco(e: Jco): PluginError {
   return e.val === undefined ? (name as PluginError) : ({ [name]: String(e.val) } as PluginError);
 }
 
-/** Text for a plugin error, for people (as `jf_plugin_host::plugin_error_text`). */
+/**
+ * Text for a plugin error, for people (as `jf_plugin_model::plugin_error_text`). The text a plugin
+ * writes for people (`invalid-input`, `service`) shows as it is, without a code's prefix
+ * (ADR-0027 §4).
+ */
 export function pluginErrorText(e: PluginError): string {
   if (typeof e === 'string') {
     switch (e) {
@@ -247,7 +251,7 @@ export function pluginErrorText(e: PluginError): string {
         return 'the service asked to slow down';
     }
   }
-  if ('InvalidInput' in e) return `invalid input: ${e.InvalidInput}`;
+  if ('InvalidInput' in e) return e.InvalidInput;
   if ('Network' in e) return `network error: ${e.Network}`;
   if ('Service' in e) return e.Service;
   return `plugin error: ${e.Internal}`;
