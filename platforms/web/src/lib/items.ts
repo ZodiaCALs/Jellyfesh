@@ -152,6 +152,24 @@ export function artistOf(item: Item): Item | null {
   return item.artist_id ? stub('Artist', item.artist_id, item.artist ?? t('Unknown Artist'), null) : null;
 }
 
+/** Go to Album, when the song knows its album. */
+function albumEntry(app: App, plugin: string, item: Item): MenuEntry[] {
+  const album = albumOf(item);
+  return album ? [{ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) }] : [];
+}
+
+/** Go to Artist, when the item knows its artist. */
+function artistEntry(app: App, plugin: string, item: Item): MenuEntry[] {
+  const artist = item.kind !== 'Artist' ? artistOf(item) : null;
+  return artist ? [{ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) }] : [];
+}
+
+/** Go to Album, Go to Artist and Open in {Service} for a song, those it has. */
+function songLinks(app: App, plugin: string, item: Item): MenuEntry[] {
+  const link = linkOf(app, plugin, item);
+  return [...albumEntry(app, plugin, item), ...artistEntry(app, plugin, item), ...(link ? [openInEntry(link)] : [])];
+}
+
 /**
  * The "More" menu of a row or page (docs/ui.md, "Song menu"): Play Next and Play Last (left out
  * with `queue: false`, for a page with nothing to play), Add to Playlist…, the heart (songs), Go to
@@ -190,8 +208,7 @@ export function itemMenu(
     );
     // Download (ADR-0025 §5): one file through the browser, from a source that allows it.
     if (canDownload(app, plugin, item)) menu.push({ label: t('Download'), action: () => void downloadSong(app, plugin, item, toast) });
-    const album = albumOf(item);
-    if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
+    menu.push(...albumEntry(app, plugin, item));
   } else if (queue) {
     menu.push(
       { label: t('Play Next'), action: () => void queueContainer(app, plugin, item, true, toast) },
@@ -202,12 +219,31 @@ export function itemMenu(
   } else {
     menu.push(...extra);
   }
-  const artist = item.kind !== 'Artist' ? artistOf(item) : null;
-  if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
+  menu.push(...artistEntry(app, plugin, item));
   if (offersInfo(app, plugin, item)) menu.push({ label: t('Get Info'), action: () => (app.nav.info = { plugin, item }) });
   const link = linkOf(app, plugin, item);
   if (link) menu.push(openInEntry(link));
   return menu;
+}
+
+/** A queue entry's song for hearts and playlists (`Saved`): the library's as the catalogue lists it now. */
+function songOf(app: App, row: Row): Saved | null {
+  const saved = JSON.parse(app.core.saved(row.uid)) as Saved | null;
+  return saved ? app.collections.current([saved])[0] : null;
+}
+
+/**
+ * Go to Album, Go to Artist and Open in {Service} for a queue entry (Up Next, Now Playing): a
+ * library song's album and artist; a source's song's, which the queue keeps (ADR-0027 §2), and its
+ * link. A dropped file has none.
+ */
+export function rowLinks(app: App, row: Row): MenuEntry[] {
+  if (row.kind === 'source') {
+    const found = app.player.sourceItem(row);
+    return found ? songLinks(app, found.plugin.id, found.item) : [];
+  }
+  const song = songOf(app, row);
+  return song?.plugin === LIBRARY ? songLinks(app, LIBRARY, song.item) : [];
 }
 
 /** Get Info is offered for songs, and for albums and artists the library or the source describes. */
@@ -225,28 +261,10 @@ function offersInfo(app: App, plugin: string, item: Item): boolean {
  */
 export function nowPlayingMenu(app: App, row: Row | null, toast: (text: string) => void = () => {}): MenuEntry[] {
   const menu: MenuEntry[] = [];
-  const saved = row ? (JSON.parse(app.core.saved(row.uid)) as Saved | null) : null;
-  if (saved) {
-    // The library's songs as the catalogue lists them now (with their album and artist).
-    const [song] = app.collections.current([saved]);
-    menu.push(addToPlaylistEntry(async () => [song]), heartEntry(app, song.plugin, song.item, toast));
-    if (song.plugin === LIBRARY) {
-      const album = albumOf(song.item);
-      if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin: LIBRARY, item: album }) });
-      const artist = artistOf(song.item);
-      if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin: LIBRARY, item: artist }) });
-    }
-  }
-  const found = row ? app.player.sourceItem(row) : null;
-  if (found) {
-    const plugin = found.plugin.id;
-    const album = albumOf(found.item);
-    if (album) menu.push({ label: t('Go to Album'), action: () => app.nav.open({ view: 'browse', plugin, item: album }) });
-    const artist = artistOf(found.item);
-    if (artist) menu.push({ label: t('Go to Artist'), action: () => app.nav.open({ view: 'browse', plugin, item: artist }) });
-    const link = linkOf(app, plugin, found.item);
-    if (link) menu.push(openInEntry(link));
-  }
+  // The library's songs as the catalogue lists them now (with their album and artist).
+  const song = row ? songOf(app, row) : null;
+  if (song) menu.push(addToPlaylistEntry(async () => [song]), heartEntry(app, song.plugin, song.item, toast));
+  if (row) menu.push(...rowLinks(app, row));
   // Made lyrics: Make Again, and Delete Made Lyrics (asks first, in Now Playing).
   if (row && app.aiLyrics.hasMade(row)) {
     menu.push(

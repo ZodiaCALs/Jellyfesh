@@ -1,18 +1,35 @@
 <script lang="ts">
-  // Up Next: the rest of the queue in playback order, lazily; play, move or remove an entry.
+  // Up Next: the rest of the queue in playback order, lazily; play, move or remove an entry, or go
+  // to its album or artist, or open it in its service (a source's song keeps them, ADR-0027 §2).
+  // Right-click or a long press opens an entry's menu, as its More does.
   import Art from '../components/Art.svelte';
   import Menu from '../components/Menu.svelte';
   import Sheet from '../components/Sheet.svelte';
   import VirtualList from '../components/VirtualList.svelte';
   import { useApp } from '../lib/app';
+  import { contextMenu } from '../lib/contextMenu';
   import type { Row } from '../lib/core/types';
   import { formatTime, t } from '../lib/i18n/index.svelte';
+  import { type MenuEntry, rowLinks } from '../lib/items';
 
   const app = useApp();
   const player = app.player;
   const offset = $derived((player.queue.position ?? -1) + 1);
   const count = $derived(Math.max(0, player.queue.length - offset));
   let confirming = $state(false);
+  /** The entries' main buttons and menus, by uid, for right-clicks. */
+  const mains: Record<number, HTMLButtonElement | null> = {};
+  const menus: Record<number, ReturnType<typeof Menu> | null> = {};
+
+  function entryMenu(entry: Row, index: number): MenuEntry[] {
+    return [
+      { label: t('Play'), action: () => player.jumpTo(entry.uid) },
+      { label: t('Move Up'), disabled: index === 0, action: () => player.move(entry.uid, offset + index - 1) },
+      { label: t('Move Down'), disabled: index === count - 1, action: () => player.move(entry.uid, offset + index + 1) },
+      { label: t('Remove'), action: () => player.remove(entry.uid) },
+      ...rowLinks(app, entry),
+    ];
+  }
 
   function art(row: Row) {
     if (row.kind === 'file') return { plugin: null, item: null };
@@ -45,8 +62,13 @@
       >
         {#snippet row(entry: Row, index: number)}
           {@const shown = art(entry)}
-          <div class="entry">
-            <button class="main" onclick={() => player.jumpTo(entry.uid)} aria-label={t('Play {title}', { title: entry.title })}>
+          <div class="entry" use:contextMenu={(place) => menus[entry.uid]?.openAt(place, mains[entry.uid] ?? null)}>
+            <button
+              class="main"
+              bind:this={mains[entry.uid]}
+              onclick={() => player.jumpTo(entry.uid)}
+              aria-label={t('Play {title}', { title: entry.title })}
+            >
               <Art plugin={shown.plugin} item={shown.item} src={entry.artwork_url} size={40} />
               <span class="text">
                 <span class="name">{entry.title}</span>
@@ -54,15 +76,7 @@
               </span>
               <span class="length">{entry.duration_ms ? formatTime(entry.duration_ms) : ''}</span>
             </button>
-            <Menu
-              label={t('More for {title}', { title: entry.title })}
-              items={[
-                { label: t('Play'), action: () => player.jumpTo(entry.uid) },
-                { label: t('Move Up'), disabled: index === 0, action: () => player.move(entry.uid, offset + index - 1) },
-                { label: t('Move Down'), disabled: index === count - 1, action: () => player.move(entry.uid, offset + index + 1) },
-                { label: t('Remove'), action: () => player.remove(entry.uid) },
-              ]}
-            />
+            <Menu bind:this={menus[entry.uid]} label={t('More for {title}', { title: entry.title })} items={() => entryMenu(entry, index)} />
           </div>
         {/snippet}
       </VirtualList>
