@@ -5,7 +5,10 @@
 //! Android Keystore, or a Swift or C# implementation through the FFI);
 //! otherwise macOS, Windows and Linux use the system keystore through
 //! `keyring` (Keychain, Credential Manager, the Secret Service over D-Bus),
-//! and other platforms have none.
+//! and other platforms have none. Windows and Linux keep one entry per
+//! secret; macOS keeps every secret in one Keychain item, read once per run
+//! (`secrets/bundle.rs`, ADR-0027 §1), so an update of an ad-hoc signed
+//! build asks at most once.
 //!
 //! Whichever store is chosen is checked once, off the actor thread, by
 //! reading an entry no plugin can name ([`PROBE_KEY`]). Until the check is
@@ -27,7 +30,11 @@ use crate::types::SecretStorage;
 /// and plugin ids never start with `~`, so no plugin can own it.
 pub(crate) const PROBE_KEY: &str = "jellyfesh/~probe";
 
-/// Longest a secret call waits for the check before using memory.
+/// Longest a secret call waits for the check before using memory. On macOS
+/// the check may be waiting for the person to answer the Keychain's prompt.
+#[cfg(target_os = "macos")]
+const CHECK_WAIT: Duration = Duration::from_secs(10 * 60);
+#[cfg(not(target_os = "macos"))]
 const CHECK_WAIT: Duration = Duration::from_secs(60);
 
 /// The outcome of the check.
@@ -147,10 +154,13 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 /// The system keystore through `keyring` (macOS, Windows, Linux and the
-/// BSDs), or `None`.
+/// BSDs), or `None`. On macOS every secret goes in one item.
 fn platform_store() -> Option<Arc<dyn SecretStore>> {
+    #[cfg(target_os = "macos")]
+    {
+        Some(Arc::new(bundle::Bundled::new(keystore::Keystore)))
+    }
     #[cfg(any(
-        target_os = "macos",
         target_os = "windows",
         all(unix, not(any(target_os = "macos", target_os = "ios", target_os = "android")))
     ))]
@@ -166,6 +176,9 @@ fn platform_store() -> Option<Arc<dyn SecretStore>> {
         None
     }
 }
+
+#[cfg(any(target_os = "macos", test))]
+mod bundle;
 
 #[cfg(any(
     target_os = "macos",
