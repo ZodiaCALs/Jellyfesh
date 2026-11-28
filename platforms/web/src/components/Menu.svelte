@@ -11,8 +11,11 @@
 <script lang="ts">
   // A "More" menu: a popover (light dismiss, Esc) placed next to its button, growing out of it;
   // arrow keys move. Its items can be given as a function, which runs when it opens (a long list's
-  // rows then make no menus until one is opened).
+  // rows then make no menus until one is opened). `openAt` opens the same menu without the button:
+  // at the pointer for a right-click or a long press, under an element for the keyboard's menu key
+  // (docs/ui.md, "Rows and cards"). Closing it returns the focus to where the person was.
   import { tick } from 'svelte';
+  import type { MenuPlace } from '../lib/contextMenu';
   import { t } from '../lib/i18n/index.svelte';
   import Icon from './Icon.svelte';
 
@@ -26,8 +29,11 @@
   let open = $state(false);
   let opened = $state.raw<MenuItem[]>([]);
   const shown = $derived(typeof items === 'function' ? opened : items);
+  /** Where the focus goes back to when the menu closes: the button, or what was right-clicked. */
+  let back: HTMLElement | null = null;
 
-  function place() {
+  /** Next to the button, its end edge on the button's, below it where it fits. */
+  function placeByButton() {
     if (!button || !menu) return;
     const box = button.getBoundingClientRect();
     const width = menu.offsetWidth;
@@ -40,22 +46,82 @@
     menu.style.transformOrigin = `${box.right - left}px ${below ? 0 : height}px`;
   }
 
+  /** At a point (below it where it fits, else above), or under an element's start corner. */
+  function placeAt(place: MenuPlace) {
+    if (!menu) return;
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    let x: number;
+    let low: number;
+    let high: number;
+    if ('element' in place) {
+      const box = place.element.getBoundingClientRect();
+      x = box.left;
+      low = box.bottom + 4;
+      high = box.top - 4;
+    } else {
+      // A finger would hide what is right under it.
+      const gap = place.touch ? 12 : 0;
+      x = place.x;
+      low = place.y + gap;
+      high = place.y - gap;
+    }
+    const left = Math.min(innerWidth - width - 8, Math.max(8, x));
+    const below = low + height <= innerHeight - 8;
+    const top = below ? low : Math.max(8, high - height);
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+    // It grows out of the point.
+    menu.style.transformOrigin = `${Math.min(width, Math.max(0, x - left))}px ${below ? 0 : height}px`;
+  }
+
+  async function show(place: MenuPlace | null) {
+    if (!menu) return;
+    if (typeof items === 'function') {
+      opened = items();
+      await tick();
+    }
+    if (shown.length === 0) return;
+    menu.showPopover();
+    if (place) placeAt(place);
+    else placeByButton();
+    menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+  }
+
   async function toggle(event: MouseEvent) {
     event.stopPropagation();
     if (!menu) return;
     if (open) menu.hidePopover();
     else {
-      if (typeof items === 'function') {
-        opened = items();
-        await tick();
-      }
-      menu.showPopover();
-      place();
-      menu.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
+      back = button ?? null;
+      await show(null);
     }
   }
 
+  /**
+   * Opens the menu without its button: at `place`, with the same items. The focus returns to
+   * `returnTo` (what was right-clicked or long-pressed) when it closes.
+   */
+  export async function openAt(place: MenuPlace, returnTo: HTMLElement | null = null) {
+    if (!menu) return;
+    if (open) menu.hidePopover();
+    back = returnTo ?? button ?? null;
+    await show(place);
+  }
+
+  /** Closes it; the focus goes back to where it was. */
+  function close() {
+    menu?.hidePopover();
+    const to = back?.isConnected ? back : button;
+    to?.focus({ preventScroll: true });
+  }
+
   function keys(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      close();
+      return;
+    }
     const buttons = [...(menu?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])];
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
     let next = -1;
@@ -69,8 +135,7 @@
   }
 
   function run(item: MenuItem) {
-    menu?.hidePopover();
-    button?.focus();
+    close();
     item.action();
   }
 </script>

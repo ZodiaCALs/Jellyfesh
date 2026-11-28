@@ -167,9 +167,20 @@
   /** macOS keeps ⌘M for minimising, so the mini player is ⌥⌘M there (docs/ui.md, Keyboard). */
   const MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
+  /** A menu or other popover that is open: Esc closes it and nothing else. */
+  function popoverOpen(): boolean {
+    try {
+      return document.querySelector(':popover-open') !== null;
+    } catch {
+      return false;
+    }
+  }
+
   function key(event: KeyboardEvent) {
     const mod = event.ctrlKey || event.metaKey;
     if (event.key === 'Escape') {
+      // A menu took it (and closed), or a popover is about to close with it.
+      if (event.defaultPrevented || popoverOpen()) return;
       if (nav.nowPlaying) {
         nav.closeNowPlaying();
         event.preventDefault();

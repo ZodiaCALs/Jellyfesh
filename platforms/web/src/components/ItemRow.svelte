@@ -1,11 +1,16 @@
 <script lang="ts">
   // One item in a list: artwork (or the track number), two lines of type, the length or a
-  // chevron, and "More". After Apple Music and Media Player: hover fills the row, a track number
-  // turns into a play glyph, and the playing row is accent-soft with accent text and a level glyph
-  // that moves only while playing. A song that cannot play here but has a link (API 1.1) opens it
-  // in its service instead, next to its reason (docs/ui.md, Open in {Service}). A favourite shows
-  // a small filled heart beside its length.
+  // chevron, and "More". After Apple Music and Media Player: hover fills the row, and the playing
+  // row is accent-soft with accent text and a level glyph that moves only while playing. A song
+  // that cannot play here but has a link (API 1.1) opens it in its service instead, next to its
+  // reason (docs/ui.md, Open in {Service}). A favourite shows a small filled heart beside its
+  // length. Rows and cards (v0.0.9): while the pointer is over the row or it has keyboard focus,
+  // a play button shows over its artwork (or its number) and More at its end; the play button is
+  // the row's own, so it plays from that row as activating the row does. Touch screens have no
+  // hover and show More on every row. Right-click opens the More menu at the pointer, and so does
+  // a long press on a touch screen (src/lib/contextMenu.ts).
   import { useApp } from '../lib/app';
+  import { contextMenu } from '../lib/contextMenu';
   import type { Item } from '../lib/core/types';
   import { formatTime, t } from '../lib/i18n/index.svelte';
   import { itemMenu, linkOf, type MenuEntry, openLink, secondary } from '../lib/items';
@@ -60,6 +65,11 @@
   );
 
   const favourite = $derived(item.kind === 'Track' && (void app.collections.revision, app.collections.isFavorite(plugin, item.id)));
+  /** Its main action plays it here: the play button shows over its artwork on hover or focus. */
+  const plays = $derived(item.kind === 'Track' && !unplayable);
+
+  let main: HTMLButtonElement | undefined = $state();
+  let menu: ReturnType<typeof Menu> | undefined = $state();
 
   function activate() {
     if (opensLink && link) openLink(link.url);
@@ -67,9 +77,18 @@
   }
 </script>
 
-<div class="row" class:playing class:unplayable class:linked={opensLink} class:enter={enter !== null} style:--i={enter}>
+<div
+  class="row"
+  class:playing
+  class:unplayable
+  class:linked={opensLink}
+  class:enter={enter !== null}
+  style:--i={enter}
+  use:contextMenu={(place) => menu?.openAt(place, main ?? null)}
+>
   <button
     class="main"
+    bind:this={main}
     onclick={activate}
     disabled={unplayable && !opensLink}
     aria-label={label}
@@ -87,7 +106,11 @@
     {:else if showArt}
       <span class="art">
         <Art {plugin} {item} size={40} />
-        {#if playing}<span class="art-level"><Level moving={app.player.playing} /></span>{/if}
+        {#if playing}
+          <span class="art-level"><Level moving={app.player.playing} /></span>
+        {:else if plays}
+          <span class="art-play" aria-hidden="true"><Icon name="play" size={18} /></span>
+        {/if}
       </span>
     {/if}
     <span class="text">
@@ -109,7 +132,13 @@
       <span class="chevron" aria-hidden="true"><Icon name="forward" size={18} /></span>
     {/if}
   </button>
-  <Menu items={() => itemMenu(app, plugin, item, toast, { extra: extra?.() ?? [] })} label={t('More for {title}', { title: item.title })} />
+  <span class="more">
+    <Menu
+      bind:this={menu}
+      items={() => itemMenu(app, plugin, item, toast, { extra: extra?.() ?? [] })}
+      label={t('More for {title}', { title: item.title })}
+    />
+  </span>
 </div>
 
 <style>
@@ -176,12 +205,10 @@
     color: var(--jf-ink-90);
   }
   /* The number turns into a play glyph on hover or keyboard focus. */
-  .row:not(.unplayable):hover .digit,
-  .main:focus-visible .digit {
+  .row:not(.unplayable) .main:focus-visible .digit {
     display: none;
   }
-  .row:not(.unplayable):hover .glyph,
-  .main:focus-visible .glyph {
+  .row:not(.unplayable) .main:focus-visible .glyph {
     display: grid;
   }
   .art {
@@ -189,7 +216,8 @@
     flex: none;
     display: grid;
   }
-  .art-level {
+  .art-level,
+  .art-play {
     position: absolute;
     inset: 0;
     display: grid;
@@ -199,6 +227,48 @@
   }
   .art-level :global(.level) {
     color: var(--jf-on-accent);
+  }
+  /* The play button over the artwork, on hover or keyboard focus. */
+  .art-play {
+    color: var(--jf-on-accent);
+    opacity: 0;
+    transition: opacity var(--jf-motion-dur-1) var(--jf-motion-ease-fluid);
+  }
+  .main:focus-visible .art-play {
+    opacity: 1;
+  }
+  .more {
+    flex: none;
+    display: grid;
+  }
+  /* Pointer screens: the play button and More show while the pointer is over the row, or it has
+     the focus (More's menu open included). */
+  @media (hover: hover) {
+    .row:not(.unplayable):hover .digit {
+      display: none;
+    }
+    .row:not(.unplayable):hover .glyph {
+      display: grid;
+    }
+    .row:hover .art-play {
+      opacity: 1;
+    }
+    .more {
+      opacity: 0;
+      transition: opacity var(--jf-motion-dur-1) var(--jf-motion-ease-fluid);
+    }
+    .row:hover .more,
+    .row:focus-within .more {
+      opacity: 1;
+    }
+  }
+  /* Touch screens: a long press opens the menu, so it selects no text and shows no callout. */
+  @media (hover: none) {
+    .row {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
   }
   .text {
     flex: 1;
