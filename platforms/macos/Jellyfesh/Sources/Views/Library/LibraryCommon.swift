@@ -1,12 +1,119 @@
-// Pieces the library pages share: album cards, a track list that plays on double-click or Return,
-// and the empty and loading states.
+// Pieces the library pages share: cards (albums, and the sources' items in SearchView), a track
+// list that plays on double-click or Return, and the empty and loading states.
 
 import SwiftUI
 
-/// An album in a grid or shelf: artwork (`artwork.radius-grid`, Luminous 16 pt on `shadow-2`),
-/// title and artist (and in Search the other sources that have it). Opens the album. Hovering or
-/// focusing lifts the cover 4 pt onto `shadow-3` and shows a 40 pt play button in its bottom start
-/// corner; a press scales it to 97 %.
+/// A card in a grid or shelf: the cover (`artwork.radius-grid`, Luminous 16 pt on `shadow-2`), the
+/// title and a second line. Hovering or focusing lifts the cover 4 pt onto `shadow-3` and shows, on
+/// it, a 40 pt play button in its bottom start corner (a card that plays) and More in its top end
+/// corner; a press scales it to 97 %. Right-click opens the same menu as More (docs/ui.md, "Rows
+/// and cards", v0.0.9).
+struct CoverCard<Items: View>: View {
+    var artwork: ArtworkSource?
+    var placeholder = "square.stack"
+    /// Artwork side in points; nil fills the grid cell.
+    var size: CGFloat?
+    var title: String
+    var subtitle: String?
+    /// What VoiceOver reads for the card.
+    var accessibilityText: String
+    /// The card's main action: opens its page, or plays it where it has none.
+    var action: () -> Void
+    /// The play button; nil for a card that does not play from its cover (an artist, a song).
+    var play: (() -> Void)?
+    /// The card's menu, for More and right-click.
+    @ViewBuilder var menu: Items
+
+    @Environment(\.palette) private var palette
+    @Environment(\.effects) private var effects
+    @State private var hovering = false
+    /// The cover, the play button or More has keyboard focus: the card stays lifted.
+    @FocusState private var focus: CardControl?
+
+    var body: some View {
+        let lifted = hovering || focus != nil
+        VStack(alignment: .leading, spacing: Tokens.Space.s2) {
+            Button(action: action) {
+                ArtworkView(source: artwork, size: size, cornerRadius: Tokens.Artwork.radiusGrid,
+                            placeholder: placeholder)
+                    .elevation(lifted ? Tokens.Elevation.shadow3 : Tokens.Elevation.shadow2)
+            }
+            .buttonStyle(PressScaleStyle(scale: 0.97))
+            .focused($focus, equals: .cover)
+            .overlay(alignment: .bottomLeading) {
+                if lifted, let play {
+                    Button(action: play) {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(palette[Tokens.Ink.ink90])
+                            .frame(width: 40, height: 40)
+                            .surface(in: Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(PressScaleStyle(scale: 0.92))
+                    .focused($focus, equals: .play)
+                    .padding(Tokens.Space.s2)
+                    .accessibilityLabel(Text("Play \(title)"))
+                    .help(Text("Play \(title)"))
+                    .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if lifted {
+                    MoreMenuButton(title: title, onCover: true) { menu }
+                        .focused($focus, equals: .more)
+                        .padding(Tokens.Space.s2)
+                        .transition(.opacity)
+                }
+            }
+            .offset(y: lifted && effects.animates ? -LuminousGeometry.coverLift : 0)
+            .animation(Motion.unless(!effects.animates, Motion.hover), value: lifted)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .typography(Tokens.TypeRoles.listTitle)
+                    .foregroundStyle(palette[Tokens.Ink.ink90])
+                    .lineLimit(1)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .typography(Tokens.TypeRoles.listSecondary)
+                        .foregroundStyle(palette[Tokens.Ink.ink70])
+                        .lineLimit(1)
+                }
+            }
+        }
+        .frame(width: size)
+        .onHover { hovering = $0 }
+        .contextMenu { menu }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(accessibilityText))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
+        .modifier(CardPlayAction(title: title, play: play))
+    }
+}
+
+/// A card's controls that keep it lifted while one has keyboard focus.
+enum CardControl: Hashable {
+    case cover, play, more
+}
+
+/// "Play {title}" among VoiceOver's actions on a card that plays, which shows its play button only
+/// on hover or focus; VoiceOver's Show Menu opens the card's menu.
+private struct CardPlayAction: ViewModifier {
+    var title: String
+    var play: (() -> Void)?
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if let play {
+            content.accessibilityAction(named: Text("Play \(title)"), play)
+        } else {
+            content
+        }
+    }
+}
+
+/// An album in a grid or shelf (CoverCard): title and artist (and in Search the other sources that
+/// have it). Opens the album; its play button plays it.
 struct AlbumCard: View {
     var album: AlbumSummary
     /// Artwork side in points; nil fills the grid cell.
@@ -16,69 +123,47 @@ struct AlbumCard: View {
 
     @Environment(Router.self) private var router
     @Environment(PlaybackStore.self) private var playback
-    @Environment(\.palette) private var palette
-    @Environment(\.effects) private var effects
-    @State private var hovering = false
-    @FocusState private var focused: Bool
 
     var body: some View {
-        let lifted = hovering || focused
-        VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-            Button {
-                router.open(.album(album))
-            } label: {
-                ArtworkView(source: album.artworkHash.map(ArtworkSource.hash), size: size,
-                            cornerRadius: Tokens.Artwork.radiusGrid, placeholder: "square.stack")
-                    .elevation(lifted ? Tokens.Elevation.shadow3 : Tokens.Elevation.shadow2)
-            }
-            .buttonStyle(PressScaleStyle(scale: 0.97))
-            .focused($focused)
-            .overlay(alignment: .bottomLeading) {
-                if hovering {
-                    Button {
-                        playback.play(.album(id: album.id))
-                    } label: {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(palette[Tokens.Ink.ink90])
-                            .frame(width: 40, height: 40)
-                            .surface(in: Circle())
-                            .contentShape(Circle())
-                    }
-                    .buttonStyle(PressScaleStyle(scale: 0.92))
-                    .padding(Tokens.Space.s2)
-                    .accessibilityLabel(Text("Play \(album.title)"))
-                    .help(Text("Play \(album.title)"))
-                    .transition(.opacity)
-                }
-            }
-            .offset(y: lifted && effects.animates ? -LuminousGeometry.coverLift : 0)
-            .animation(Motion.unless(!effects.animates, Motion.hover), value: lifted)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(album.title.isEmpty ? String(localized: "Unknown Album") : album.title)
-                    .typography(Tokens.TypeRoles.listTitle)
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .lineLimit(1)
-                Text(CountText.joined([album.albumArtist ?? String(localized: "Unknown Artist"), alsoIn]))
-                    .typography(Tokens.TypeRoles.listSecondary)
-                    .foregroundStyle(palette[Tokens.Ink.ink70])
-                    .lineLimit(1)
+        CoverCard(artwork: album.artworkHash.map(ArtworkSource.hash), size: size,
+                  title: album.title.isEmpty ? String(localized: "Unknown Album") : album.title,
+                  subtitle: CountText.joined([album.albumArtist ?? String(localized: "Unknown Artist"), alsoIn]),
+                  accessibilityText: [album.title, album.albumArtist, alsoIn].compactMap { $0 }.joined(separator: ", "),
+                  action: { router.open(.album(album)) },
+                  play: { playback.play(.album(id: album.id)) }) {
+            AlbumCardMenu(album: album)
+        }
+    }
+}
+
+/// A library album card's menu, its More and its right-click alike (docs/ui.md, "Rows and cards"):
+/// Play and Shuffle, then the album page's More (Play Next, Play Last, Add to Playlist…) with Go to
+/// Artist, then Get Info.
+struct AlbumCardMenu: View {
+    var album: AlbumSummary
+
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(LibraryStore.self) private var library
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        Button("Play") { playback.play(.album(id: album.id)) }
+        Button("Shuffle") { playback.play(.album(id: album.id), shuffle: true) }
+        Divider()
+        CollectionMenuItems(collection: .album(id: album.id)) {
+            if let artist = album.albumArtist, !artist.isEmpty {
+                Button("Go to Artist") { goToArtist(named: artist) }
             }
         }
-        .frame(width: size)
-        .onHover { hovering = $0 }
-        .contextMenu {
-            Button("Play") { playback.play(.album(id: album.id)) }
-            Button("Shuffle") { playback.play(.album(id: album.id), shuffle: true) }
-            Divider()
-            Button("Play Next") { playback.enqueue(.album(id: album.id), next: true) }
-            Button("Play Last") { playback.enqueue(.album(id: album.id), next: false) }
-            AddToPlaylistMenu(collection: .album(id: album.id))
+    }
+
+    /// The library's artist with this name, if it has one.
+    private func goToArtist(named name: String) {
+        Task { @MainActor in
+            if let artist = await library.artist(named: name) {
+                router.open(.artist(artist))
+            }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text([album.title, album.albumArtist, alsoIn].compactMap { $0 }.joined(separator: ", ")))
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { router.open(.album(album)) }
     }
 }
 

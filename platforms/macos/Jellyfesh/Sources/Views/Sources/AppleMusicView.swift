@@ -230,40 +230,21 @@ struct AppleMusicResultsView: View {
     }
 }
 
-/// An Apple Music album: plays it whole (there is no album page for the catalogue).
+/// An Apple Music album (CoverCard): plays it whole, as its play button does (there is no album
+/// page for the catalogue); More and right-click open Play, Shuffle and Open in Apple Music.
 private struct AppleMusicAlbumCard: View {
     var album: AppleMusicAlbum
 
     @Environment(PlaybackStore.self) private var playback
-    @Environment(\.palette) private var palette
 
     var body: some View {
-        Button {
-            playback.play(album.collection)
-        } label: {
-            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                ArtworkView(source: album.artworkURL.map(ArtworkSource.url), size: nil,
-                            cornerRadius: Tokens.Artwork.radiusGrid, placeholder: "square.stack")
-                    .elevation(Tokens.Elevation.shadow2)
-                Text(album.title)
-                    .typography(Tokens.TypeRoles.listTitle)
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .lineLimit(1)
-                if let artist = album.artist {
-                    Text(artist)
-                        .typography(Tokens.TypeRoles.listSecondary)
-                        .foregroundStyle(palette[Tokens.Ink.ink70])
-                        .lineLimit(1)
-                }
-            }
-        }
-        .buttonStyle(PressScaleStyle(scale: 0.97))
-        .contextMenu {
+        CoverCard(artwork: album.artworkURL.map(ArtworkSource.url), title: album.title, subtitle: album.artist,
+                  accessibilityText: album.artist.map { "\(album.title), \($0)" } ?? album.title,
+                  action: { playback.play(album.collection) }, play: { playback.play(album.collection) }) {
             Button("Play") { playback.play(album.collection) }
             Button("Shuffle") { playback.play(album.collection, shuffle: true) }
             OpenInServiceButton(link: album.link, source: AppleMusicIDs.source)
         }
-        .accessibilityLabel(Text(album.artist.map { "\(album.title), \($0)" } ?? album.title))
         .accessibilityHint(Text("Plays the album"))
     }
 }

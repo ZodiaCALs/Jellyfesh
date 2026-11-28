@@ -629,33 +629,18 @@ struct AddToPlaylistMenu: View {
     }
 }
 
-/// The More menu of an album, artist or playlist page (docs/ui.md): Play Next, Play Last and Add
-/// to Playlist…, then what the page adds (a playlist's Rename…, Export Playlist… and Delete
+/// The More menu of an album, artist or playlist page (docs/ui.md): the collection's entries
+/// (CollectionMenuItems) with what the page adds (a playlist's Rename…, Export Playlist… and Delete
 /// Playlist…).
 struct CollectionMoreMenu<Extra: View>: View {
     var collection: CollectionReference
     /// The playlist whose page this is, left out of Add to Playlist….
     var playlistID: Int64?
     @ViewBuilder var extra: Extra
-    @Environment(PlaybackStore.self) private var playback
-    @Environment(Router.self) private var router
 
     var body: some View {
         Menu {
-            Button("Play Next") {
-                playback.enqueue(collection, next: true)
-            }
-            Button("Play Last") {
-                playback.enqueue(collection, next: false)
-            }
-            AddToPlaylistMenu(collection: collection, excluding: playlistID)
-            extra
-            if let request = Self.info(for: collection) {
-                Divider()
-                Button("Get Info") {
-                    router.infoRequest = request
-                }
-            }
+            CollectionMenuItems(collection: collection, playlistID: playlistID) { extra }
         } label: {
             Label("More", systemImage: "ellipsis")
         }
@@ -673,9 +658,36 @@ extension CollectionMoreMenu where Extra == EmptyView {
     }
 }
 
-extension CollectionMoreMenu {
-    /// Get Info for an album's or an artist's page.
-    static func info(for collection: CollectionReference) -> InfoRequest? {
+/// A collection's entries, in its page's More and its card's menu: Play Next, Play Last and Add to
+/// Playlist…, then what the caller adds (a playlist page's Rename… and the rest, a card's Go to
+/// Artist), then Get Info for an album or an artist.
+struct CollectionMenuItems<Extra: View>: View {
+    var collection: CollectionReference
+    /// The playlist whose page this is, left out of Add to Playlist….
+    var playlistID: Int64? = nil
+    @ViewBuilder var extra: Extra
+    @Environment(PlaybackStore.self) private var playback
+    @Environment(Router.self) private var router
+
+    var body: some View {
+        Button("Play Next") {
+            playback.enqueue(collection, next: true)
+        }
+        Button("Play Last") {
+            playback.enqueue(collection, next: false)
+        }
+        AddToPlaylistMenu(collection: collection, excluding: playlistID)
+        extra
+        if let request = info {
+            Divider()
+            Button("Get Info") {
+                router.infoRequest = request
+            }
+        }
+    }
+
+    /// Get Info for an album or an artist.
+    private var info: InfoRequest? {
         switch collection {
         case .album(let id): return InfoRequest(item: .album(id: id), kind: .album, known: KnownDetails())
         case .artist(let id): return InfoRequest(item: .artist(id: id), kind: .artist, known: KnownDetails())

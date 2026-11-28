@@ -322,62 +322,58 @@ private struct SearchKindView: View {
     }
 }
 
-/// A source's album or container as a card; opens its page, or its service when it cannot play
-/// here and has a link. The second line names the other sources that have it ("Also in …").
+/// A source's album or other container as a card (CoverCard), in Search, Discover and the sources'
+/// likes; opens its page, or its service when it cannot play here and has a link. An album or
+/// playlist that plays here has the play button. The second line names the other sources that
+/// have it ("Also in …").
 struct SourceCard: View {
     var item: SourceResult
     var artwork: ArtworkSource?
 
     @Environment(Router.self) private var router
     @Environment(SourcesStore.self) private var sources
-    @Environment(\.palette) private var palette
+    @Environment(PlaybackStore.self) private var playback
 
     var body: some View {
-        Button {
-            if ServiceLink.isMainAction(canPlay: item.playable, link: item.link) {
-                ServiceLink.open(item.link)
-            } else {
-                router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link,
-                                    item: item))
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                ArtworkView(source: artwork, size: nil, cornerRadius: Tokens.Artwork.radiusGrid,
-                            placeholder: "square.stack")
-                Text(item.title)
-                    .typography(Tokens.TypeRoles.listTitle)
-                    .foregroundStyle(palette[Tokens.Ink.ink90])
-                    .lineLimit(1)
-                if let line = secondLine {
-                    Text(line)
-                        .typography(Tokens.TypeRoles.listSecondary)
-                        .foregroundStyle(palette[Tokens.Ink.ink70])
-                        .lineLimit(1)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
+        let line = secondLine
+        CoverCard(artwork: artwork, placeholder: SourcePage.placeholder(item.kind), title: item.title, subtitle: line,
+                  accessibilityText: [item.title, line].compactMap { $0 }.joined(separator: ", "),
+                  action: openItem, play: playAction) {
             SourceContainerActions(item: item)
         }
-        .accessibilityLabel(Text([item.title, secondLine].compactMap { $0 }.joined(separator: ", ")))
     }
 
     /// The artist, and the other sources that have it.
     private var secondLine: String? {
         CountText.joined([item.subtitle, sources.alsoIn(item.alsoIn)]).nilIfEmpty
     }
+
+    /// The play button, on an album or playlist that plays here.
+    private var playAction: (() -> Void)? {
+        guard let collection = SourcePage.playsWhole(item) else { return nil }
+        return { playback.play(collection) }
+    }
+
+    private func openItem() {
+        if ServiceLink.isMainAction(canPlay: item.playable, link: item.link) {
+            ServiceLink.open(item.link)
+        } else {
+            router.open(.browse(plugin: item.source, node: item.itemID, title: item.title, link: item.link, item: item))
+        }
+    }
 }
 
-/// A source container's menu: Play, Shuffle, Play Next and Play Last (not for a remote source,
-/// whose songs never join the queue), Download (an album or playlist of a source that offers
-/// downloads), then Open in {Service}.
+/// A source container's menu, its card's More and right-click alike (docs/ui.md, "Rows and
+/// cards"): Play, Shuffle, Play Next and Play Last (not for a remote source, whose songs never join
+/// the queue), Go to Artist (an album whose source names its artist), Download (an album or
+/// playlist of a source that offers downloads), then Open in {Service}.
 struct SourceContainerActions: View {
     var item: SourceResult
 
     @Environment(PlaybackStore.self) private var playback
     @Environment(SourcesStore.self) private var sources
     @Environment(DownloadsStore.self) private var downloads
+    @Environment(Router.self) private var router
 
     var body: some View {
         if item.playable && item.kind != .track {
@@ -388,6 +384,11 @@ struct SourceContainerActions: View {
                 Divider()
                 Button("Play Next") { playback.enqueue(collection, next: true) }
                 Button("Play Last") { playback.enqueue(collection, next: false) }
+            }
+        }
+        if let artist = SourcePage.artist(of: item) {
+            Button("Go to Artist") {
+                router.open(.browse(plugin: item.source, node: artist.itemID, title: artist.title, item: artist))
             }
         }
         if let download = SourcePage.downloadRequest(plugin: item.source, item: item,

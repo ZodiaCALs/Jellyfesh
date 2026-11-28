@@ -126,40 +126,21 @@ private struct ShelfView: View {
 }
 
 /// An item of a row or grid shelf: a container opens its page (SourceCard); a song plays the
-/// shelf's songs from it.
+/// shelf's songs from it, and its More and right-click open the song menu.
 private struct ShelfItemCard: View {
     var item: SourceResult
     var shelf: DiscoverShelf
 
     @Environment(PlaybackStore.self) private var playback
-    @Environment(\.palette) private var palette
 
     var body: some View {
         let artwork = item.artwork.flatMap { ArtworkSource(hash: nil, location: $0) }
         if item.kind == .track {
-            Button {
-                ShelfPlay.play(item, of: shelf, playback: playback)
-            } label: {
-                VStack(alignment: .leading, spacing: Tokens.Space.s2) {
-                    ArtworkView(source: artwork, size: nil, cornerRadius: Tokens.Artwork.radiusGrid)
-                    Text(item.title)
-                        .typography(Tokens.TypeRoles.listTitle)
-                        .foregroundStyle(palette[Tokens.Ink.ink90])
-                        .lineLimit(1)
-                    if let artist = item.subtitle, !artist.isEmpty {
-                        Text(artist)
-                            .typography(Tokens.TypeRoles.listSecondary)
-                            .foregroundStyle(palette[Tokens.Ink.ink70])
-                            .lineLimit(1)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .contextMenu {
+            CoverCard(artwork: artwork, placeholder: SourcePage.placeholder(.track), title: item.title,
+                      subtitle: item.subtitle, accessibilityText: CountText.joined([item.title, item.subtitle]),
+                      action: { ShelfPlay.play(item, of: shelf, playback: playback) }, play: nil) {
                 TrackActionsMenu(items: [TrackItem(result: item, artwork: nil)])
             }
-            .accessibilityLabel(Text(CountText.joined([item.title, item.subtitle])))
         } else {
             SourceCard(item: item, artwork: artwork)
         }

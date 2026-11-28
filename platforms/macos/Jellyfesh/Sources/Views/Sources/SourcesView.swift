@@ -502,6 +502,20 @@ enum SourcePage {
                      unplayableReason: nil, track: nil, alsoIn: [])
     }
 
+    /// What a source card's play button plays: an album or a playlist that plays here, whole
+    /// (docs/ui.md, "Rows and cards"). Other cards have no play button.
+    static func playsWhole(_ item: SourceResult) -> CollectionReference? {
+        guard item.playable, item.kind == .album || item.kind == .playlist else { return nil }
+        return .source(plugin: item.source, id: item.itemID, kind: item.kind)
+    }
+
+    /// Go to Artist on a source's album (or other container) card or row: its artist's page, when
+    /// the source names the artist.
+    static func artist(of item: SourceResult) -> SourceResult? {
+        guard item.kind != .artist, item.kind != .track, let id = item.artistID else { return nil }
+        return artist(plugin: item.source, id: id, name: item.subtitle)
+    }
+
     /// Download, for an album or a playlist of a source that offers downloads (ADR-0025): every
     /// song of it, which the core lists and queues.
     static func downloadRequest(plugin: String, item: SourceResult, offered: Bool) -> DownloadRequest? {
