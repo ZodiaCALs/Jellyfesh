@@ -394,6 +394,8 @@ mirror_struct!(jf_session::SourceTrack => SourceTrack {
     duration_ms,
     artwork_url,
     isrc,
+    artist_id,
+    album_id,
 });
 
 use jf::Collection as CoreCollection;

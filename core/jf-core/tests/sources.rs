@@ -1214,6 +1214,8 @@ fn songs_download_from_a_source_that_offers_it_and_play_offline() {
             duration_ms: Some(1_500),
             artwork_url: None,
             isrc: None,
+            artist_id: None,
+            album_id: None,
         })
     };
     let state =

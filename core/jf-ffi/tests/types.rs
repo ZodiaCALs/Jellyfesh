@@ -175,6 +175,25 @@ fn configs_without_resume_on_start_let_playback_resume() {
     assert!(jf::Config::from(read).resume_on_start);
 }
 
+/// A source track from before v0.0.9, without artist and album ids (an older app's JSON over
+/// the C ABI), reads with them empty; the new values cross both ways.
+#[test]
+fn source_tracks_without_ids_read() {
+    let mut json = serde_json::to_value(SourceTrack::from(common::source_track())).unwrap();
+    for key in ["artist_id", "album_id"] {
+        assert!(
+            json.as_object_mut().unwrap().remove(key).is_some(),
+            "{key} is written"
+        );
+    }
+    let read: SourceTrack = serde_json::from_value(json).unwrap();
+    assert_eq!(
+        (read.artist_id.as_deref(), read.album_id.as_deref()),
+        (None, None)
+    );
+    assert_eq!(read.title, "Tidal Hymn");
+}
+
 /// Settings JSON from an older app or file, without the newer fields, reads with their
 /// defaults: Check for Updates and Show Lyrics Bar on, Desktop Lyrics off.
 #[test]

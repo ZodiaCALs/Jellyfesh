@@ -504,6 +504,8 @@ impl Session {
                     duration_ms: meta.and_then(|m| m.duration_ms),
                     artwork_url: None,
                     isrc: None,
+                    artist_id: None,
+                    album_id: None,
                 });
                 Some(Saved {
                     plugin: collections::LIBRARY.to_owned(),
@@ -623,6 +625,8 @@ pub fn source_track(plugin: &str, item: &Item) -> SourceTrack {
         duration_ms: item.duration_ms.map(u64::from),
         artwork_url: item.artwork.as_ref().map(|a| a.url.clone()),
         isrc: item.isrc.clone(),
+        artist_id: item.artist_id.clone(),
+        album_id: item.album_id.clone(),
     }
 }
 
@@ -634,8 +638,8 @@ fn item_from(track: &SourceTrack) -> Item {
         title: track.title.clone(),
         artist: track.artist.clone(),
         album: track.album.clone(),
-        album_id: None,
-        artist_id: None,
+        album_id: track.album_id.clone(),
+        artist_id: track.artist_id.clone(),
         duration_ms: track.duration_ms.and_then(|d| u32::try_from(d).ok()),
         track_number: None,
         disc_number: None,
@@ -735,6 +739,22 @@ mod tests {
         assert_eq!(s.snapshot().length, 1);
         assert_eq!(s.current().unwrap().id, "ok");
         assert!(s.play(vec![], 0, false).is_err());
+    }
+
+    #[test]
+    fn a_queued_songs_artist_and_album_stay_with_it() {
+        let mut song = item("a", "X", 1000);
+        song.artist_id = Some("ar-1".into());
+        song.album_id = Some("al-1".into());
+        let track = source_track("org.example.p", &song);
+        assert_eq!(
+            (track.artist_id.as_deref(), track.album_id.as_deref()),
+            (Some("ar-1"), Some("al-1"))
+        );
+        // Rebuilt from the queue's data (a restored queue): Go to Artist and Go to Album
+        // still lead somewhere.
+        let back = item_from(&track);
+        assert_eq!((back.artist_id, back.album_id), (song.artist_id, song.album_id));
     }
 
     #[test]

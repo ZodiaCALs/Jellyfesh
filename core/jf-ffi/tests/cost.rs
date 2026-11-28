@@ -283,6 +283,8 @@ fn what_playback_and_idle_cost() {
                 duration_ms: Some(600_000),
                 artwork_url: None,
                 isrc: None,
+                artist_id: None,
+                album_id: None,
             },
         }],
         start: 0,

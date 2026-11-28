@@ -112,6 +112,8 @@ fn track(id: &str, title: &str) -> TrackRef {
         duration_ms: Some(180_000),
         artwork_url: None,
         isrc: None,
+        artist_id: None,
+        album_id: None,
     })
 }
 

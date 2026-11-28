@@ -479,6 +479,10 @@ pub enum RemoteAction {
 /// What a queue entry plays.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, uniffi::Enum)]
 #[serde(tag = "type")]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "UniFFI enums cannot hold boxes; source tracks are common in queues and lists"
+)]
 pub enum TrackRef {
     /// A track in the library, by its library id.
     Library { id: i64 },
@@ -502,6 +506,15 @@ pub struct SourceTrack {
     /// Artwork URL as the source gave it.
     pub artwork_url: Option<String>,
     pub isrc: Option<String>,
+    /// The source's id of the track's artist, for Go to Artist (from v0.0.9). `None` when the
+    /// source gave none, and in entries stored before.
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub artist_id: Option<String>,
+    /// The source's id of the track's album, for Go to Album (from v0.0.9).
+    #[serde(default)]
+    #[uniffi(default = None)]
+    pub album_id: Option<String>,
 }
 
 /// A group of tracks that plays as a unit.

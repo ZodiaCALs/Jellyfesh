@@ -75,6 +75,8 @@ pub fn source_track() -> SourceTrack {
         duration_ms: Some(201_000),
         artwork_url: Some("https://music.example/art/7.jpg".into()),
         isrc: Some("XX0000000007".into()),
+        artist_id: Some("ar-3".into()),
+        album_id: Some("al-9".into()),
     }
 }
 

@@ -909,6 +909,8 @@ mod tests {
             duration_ms: None,
             artwork_url: None,
             isrc: None,
+            artist_id: None,
+            album_id: None,
         }
     }
 

@@ -543,6 +543,8 @@ fn an_external_player_takes_a_remote_session() {
             duration_ms: Some(120_000),
             artwork_url: None,
             isrc: None,
+            artist_id: None,
+            album_id: None,
         },
     };
     core.send(Command::PlayTracks {

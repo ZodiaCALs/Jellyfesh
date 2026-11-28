@@ -28,6 +28,10 @@ use serde::{Deserialize, Serialize};
 /// What a queue entry plays.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "source tracks are common in queues and lists; a box would cost an allocation each"
+)]
 pub enum TrackRef {
     /// A track in the local library catalogue, by its library id.
     Library(i64),
@@ -53,6 +57,14 @@ pub struct SourceTrack {
     /// Artwork URL as the source gave it.
     pub artwork_url: Option<String>,
     pub isrc: Option<String>,
+    /// The source's id of the track's artist, for Go to Artist (ADR-0027
+    /// §2). `None` when the source gave none, and in entries stored before
+    /// v0.0.9 (which still read).
+    #[serde(default)]
+    pub artist_id: Option<String>,
+    /// The source's id of the track's album, for Go to Album.
+    #[serde(default)]
+    pub album_id: Option<String>,
 }
 
 /// One entry in the queue.
@@ -1079,5 +1091,27 @@ mod tests {
         let mut r = Queue::from_state(repaired).unwrap();
         let new = r.append(lib([4]));
         assert!(new[0] > 3, "new uids never collide with restored ones");
+    }
+
+    #[test]
+    fn source_tracks_stored_before_v0_0_9_still_read() {
+        // As v0.0.8 wrote a source entry: no artist or album ids.
+        let old = r#"{"plugin":"org.example.music","id":"t1","title":"A Song","artist":"Someone",
+            "album":"An Album","duration_ms":201000,"artwork_url":null,"isrc":null}"#;
+        let track: SourceTrack = serde_json::from_str(old).unwrap();
+        assert_eq!(
+            (track.plugin.as_str(), track.id.as_str()),
+            ("org.example.music", "t1")
+        );
+        assert_eq!(track.album.as_deref(), Some("An Album"));
+        assert_eq!((track.artist_id, track.album_id), (None, None));
+
+        let new = SourceTrack {
+            artist_id: Some("ar-9".into()),
+            album_id: Some("al-3".into()),
+            ..serde_json::from_str(old).unwrap()
+        };
+        let json = serde_json::to_string(&new).unwrap();
+        assert_eq!(serde_json::from_str::<SourceTrack>(&json).unwrap(), new);
     }
 }

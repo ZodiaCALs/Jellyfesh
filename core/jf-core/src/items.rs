@@ -55,6 +55,8 @@ fn source_track(plugin: &str, id: &str, meta_json: &str) -> SourceTrack {
             duration_ms: None,
             artwork_url: None,
             isrc: None,
+            artist_id: None,
+            album_id: None,
         })
 }
 
@@ -187,6 +189,8 @@ mod tests {
             duration_ms: Some(180_000),
             artwork_url: Some("https://example.org/a.jpg".into()),
             isrc: None,
+            artist_id: None,
+            album_id: None,
         }
     }
 

@@ -473,6 +473,9 @@ public abstract record TrackRef
 }
 
 /// <summary>A track from an online source, with the display data the source gave.</summary>
+/// <param name="ArtistId">The source's id of the track's artist, for Go to Artist (from v0.0.9;
+/// null when the source gave none, and in entries stored before).</param>
+/// <param name="AlbumId">The source's id of the track's album, for Go to Album (from v0.0.9).</param>
 public sealed record SourceTrack(
     string Plugin,
     string Id,
@@ -481,7 +484,9 @@ public sealed record SourceTrack(
     string? Album,
     ulong? DurationMs,
     string? ArtworkUrl,
-    string? Isrc);
+    string? Isrc,
+    string? ArtistId = null,
+    string? AlbumId = null);
 
 /// <summary>A group of tracks that plays as a unit.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]

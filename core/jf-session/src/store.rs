@@ -392,6 +392,8 @@ mod tests {
             duration_ms: Some(201_000),
             artwork_url: Some("https://music.example/art/7.jpg".into()),
             isrc: None,
+            artist_id: Some("artist-3".into()),
+            album_id: None,
         })]);
         q.set_shuffle(true);
         q.set_repeat(RepeatMode::One);

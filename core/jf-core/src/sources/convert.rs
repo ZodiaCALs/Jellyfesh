@@ -82,6 +82,8 @@ pub(crate) fn source_track(plugin: &str, item: &Item) -> SourceTrack {
         duration_ms: item.duration_ms.map(u64::from),
         artwork_url: item.artwork.as_ref().map(|a| a.url.clone()),
         isrc: item.isrc.clone(),
+        artist_id: item.artist_id.clone(),
+        album_id: item.album_id.clone(),
     }
 }
 
@@ -119,6 +121,8 @@ pub(crate) fn track_item(track: &SourceTrack) -> Item {
     item.duration_ms = track.duration_ms.map(|d| u32::try_from(d).unwrap_or(u32::MAX));
     item.isrc.clone_from(&track.isrc);
     item.artwork = track.artwork_url.as_ref().map(|url| image(url));
+    item.artist_id.clone_from(&track.artist_id);
+    item.album_id.clone_from(&track.album_id);
     item
 }
 
@@ -737,9 +741,16 @@ mod tests {
         let mut item = track("t1", "Song", "Someone", 200_000, Some("USRC17607839"));
         item.album = Some("Album".into());
         item.artwork = Some(image("http://server/art/t1"));
+        item.artist_id = Some("ar1".into());
+        item.album_id = Some("al1".into());
         let t = source_track("p", &item);
         assert_eq!(t.duration_ms, Some(200_000));
         assert_eq!(t.artwork_url.as_deref(), Some("http://server/art/t1"));
+        assert_eq!(
+            (t.artist_id.as_deref(), t.album_id.as_deref()),
+            (Some("ar1"), Some("al1")),
+            "the queue keeps where Go to Artist and Go to Album lead"
+        );
         let back = track_item(&t);
         assert_eq!(
             (back.id.as_str(), back.kind, back.title.as_str()),
@@ -747,6 +758,25 @@ mod tests {
         );
         assert_eq!(back.isrc, item.isrc);
         assert_eq!(back.album, item.album);
+        assert_eq!((back.artist_id, back.album_id), (item.artist_id, item.album_id));
         assert_eq!(back.artwork.map(|a| a.url), Some("http://server/art/t1".into()));
+    }
+
+    #[test]
+    fn a_source_items_track_keeps_its_artist_and_album() {
+        let mut item = track("t2", "Song", "Someone", 200_000, None);
+        item.artist_id = Some("ar2".into());
+        item.album_id = Some("al2".into());
+        let links = Links {
+            track: Some("https://music.example.com/song/{id}".into()),
+            ..Links::default()
+        };
+        let row = source_item("p", &item, &links);
+        let Some(TrackRef::Source(t)) = &row.track else {
+            panic!("a source track: {row:?}")
+        };
+        assert_eq!(t.artist_id, row.artist_id);
+        assert_eq!(t.album_id, row.album_id);
+        assert_eq!(row.link.as_deref(), Some("https://music.example.com/song/t2"));
     }
 }
