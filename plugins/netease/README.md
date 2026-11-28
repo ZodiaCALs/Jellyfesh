@@ -9,8 +9,10 @@ ships inside every Jellyfesh app and is also published as a separate
 **It has not yet been tested against the live service**: NetEase's API
 documentation was not reachable when it was written, so it follows what the
 official command-line client (`@music163/ncm-cli` 0.1.7) was found to send,
-and was tested against a mock server built from that. Some answers (the
-playlist lists, the profile, token renewal) are not documented anywhere we
+and was tested against a mock server built from that. Search, and the songs
+of an album or an artist, follow what independent public clients of the open
+platform send. Some answers (the playlist lists, the profile, token renewal,
+search, an album's and an artist's songs) are not documented anywhere we
 could read, and may differ.
 
 ## What it does
@@ -18,6 +20,9 @@ could read, and may differ.
 * **Browse** your created and collected playlists and your liked songs (the
   red-heart playlist; 0.0.6 listed it as Starred Playlists and, reading the
   answer as a list, showed nothing), with covers where NetEase names them.
+* **Search** songs, albums, artists and playlists (from Jellyfesh v0.0.9).
+  An album opens to its songs and an artist to their popular songs, and so
+  do Go to Album and Go to Artist on a song that names them.
 * **Discover** (plugin API 1.2): Liked Songs, Created Playlists and Collected
   Playlists. **Details** of a playlist: description, picture, plays, tags
   and creation date (`playlist/detail/get/v2`, read with the field names the
@@ -32,12 +37,12 @@ could read, and may differ.
   songs of which only a preview is free are not played at all (Jellyfesh
   does not play previews). Free full listens play in full.
 
-Not yet: **search** (it arrives once NetEase's API documentation is available
-to us), recommendations, comments and lyrics, whose paths were not
-found. Until it can search, NetEase Cloud Music is not offered in Add a
-Source; install the plugin and sign in from the Sources settings. There is
-no Open in NetEase Cloud Music either: a song has an encrypted id for the
-API and a numeric one for links, and Jellyfesh's links take one id.
+Not yet: recommendations, comments and lyrics, whose paths were not found,
+and details of albums and artists. NetEase Cloud Music is not yet offered in
+Add a Source, whose list of services is Jellyfesh's own: sign in from the
+installed plugins in the Sources settings. There is no Open in NetEase Cloud
+Music either: a song has an encrypted id for the API and a numeric one for
+links, and Jellyfesh's links take one id.
 
 ## What you need
 
@@ -77,7 +82,14 @@ this device.
 
 * NetEase limits plays per day and requests per moment; Jellyfesh shows
   NetEase's message when a limit is reached.
+* When Jellyfesh cannot read one of NetEase's answers (it differs from what
+  the research found), it says so instead of showing an empty list, for
+  example "NetEase Cloud Music didn't say which playlist holds your liked
+  songs.", and logs the answer's shape: its field names and the types of
+  their values, never the values.
 * Stream addresses outside `*.music.126.net` are refused by Jellyfesh's
   sandbox; whether NetEase serves audio from elsewhere is not known.
 * NetEase's terms for its open platform could not be read: whether
-  personal credentials may be used in a player like Jellyfesh is unverified.
+  personal credentials may be used in a player like Jellyfesh is unverified,
+  and nothing known in them keeps its search results apart, so they show
+  with the library's and other sources' (Jellyfesh's default).

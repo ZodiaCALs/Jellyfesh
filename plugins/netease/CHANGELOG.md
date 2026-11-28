@@ -1,5 +1,27 @@
 # Changelog: NetEase Cloud Music plugin
 
+## Unreleased
+
+* **Search** (ADR-0027 §5): songs, albums, artists and playlists, each kind
+  on the path that independent public clients of the open platform call
+  (`search/song/get/v3`, `search/album/get/v2`, `search/artists/get/v2`,
+  `search/playlist/get/v2`) with `keyword`, `limit` and `offset`; the cursor
+  is the offset. NetEase's terms could not be read, so `unified_search`
+  keeps its default. An album opens to its songs (`album/song/list/get/v2`),
+  an artist to their popular songs (`artists/hotsong/list/get/v2`; its
+  parameter `artistId` is inferred from the artist detail's). Songs keep
+  their album and first artist (`al:` and `ar:` before NetEase's ids) for Go
+  to Album and Go to Artist.
+* **Liked songs**: an answer that names no playlist is the error "NetEase
+  Cloud Music didn't say which playlist holds your liked songs." instead of
+  an empty Favourites, and so are songs NetEase says are there but does not
+  send in a form the plugin can read. The playlist needs only its id (`id`,
+  `playlistId` or `encryptedId`, also under `playlist` or first in a list).
+* Every list the plugin cannot read is an error in plain words, logged with
+  the answer's shape (field names and value types, never values); Discover
+  leaves such a shelf out. Pages end where NetEase's `recordCount` says.
+* Not yet tested against the live service.
+
 ## 0.0.8 — unreleased
 
 * With Jellyfesh v0.0.8: plugin API 1.3 (the package needs Jellyfesh

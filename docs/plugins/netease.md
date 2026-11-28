@@ -12,7 +12,8 @@ signed with the Jellyfesh release key). What it stores and where:
 NetEase's open-platform documentation was not reachable when the plugin was
 written. It follows what NetEase's official command-line client
 (`@music163/ncm-cli` 0.1.7) was found to send, and was tested against a mock
-server built from that, **not yet against the live service**.
+server built from that, **not yet against the live service**. Search follows
+what independent public clients of the open platform send.
 
 * **Yes**: sign-in with your App ID, private key and a QR code; your
   created and collected playlists and your liked songs (NetEase's red-heart
@@ -20,13 +21,14 @@ server built from that, **not yet against the live service**.
   play. From Jellyfesh v0.0.7: a **Discover** page of those lists (Liked
   Songs, Created Playlists, Collected Playlists, with covers) and **Get
   Info** on a playlist (its description, picture, plays, tags and creation
-  date).
-* **Not yet**: search ("Search arrives once NetEase's API documentation is
-  available to us"), recommendations such as the daily picks, comments and
+  date). From Jellyfesh v0.0.9: **search** of songs, albums, artists and
+  playlists.
+* **Not yet**: recommendations such as the daily picks, comments and
   lyrics: their paths were not in what could be read (the official client
-  gets them from a list of commands on NetEase's server). Because it cannot search, NetEase Cloud
-  Music is **not offered in Add a Source** yet; set it up from the installed
-  plugins in Sources.
+  gets them from a list of commands on NetEase's server). Get Info on an
+  album or an artist is not there either. NetEase Cloud Music is **not
+  offered in Add a Source** yet (that list is Jellyfesh's own); set it up
+  from the installed plugins in Sources.
 * **No Open in NetEase Cloud Music**: a song has an encrypted id for the API
   and a numeric one for NetEase's links, and Jellyfesh's link templates take
   one id.
@@ -68,12 +70,37 @@ once, as Jellyfesh's.
 | high | 320 kbit/s |
 | lossless | its lossless files (999), where your account may play them |
 
+## Search
+
+From Jellyfesh v0.0.9, a search asks NetEase Cloud Music for songs, albums,
+artists and playlists, each on its own, and shows them with the library's
+results and other sources'. NetEase's own client documents only
+`ncm-cli search song --keyword`; the paths are the ones that independent
+public clients of the open platform call:
+
+| Results | Path (`/openapi/music/basic/…`) |
+| --- | --- |
+| songs | `search/song/get/v3` |
+| albums | `search/album/get/v2` |
+| artists | `search/artists/get/v2` |
+| playlists | `search/playlist/get/v2` |
+
+An album opens to its songs (`album/song/list/get/v2`), and an artist to
+their popular songs (`artists/hotsong/list/get/v2`, one list); Go to Album
+and Go to Artist on a song lead there when NetEase names its album and
+artist. The songs found follow NetEase's rules below.
+
+NetEase's terms for the open platform could not be read, so nothing known in
+them keeps its results apart: they mix with the others, as Jellyfesh does by
+default.
+
 ## Favourites and Playlists
 
 From Jellyfesh v0.0.8, Favourites shows your liked songs (the red-heart
 playlist, newest first, as NetEase keeps it) and Playlists shows your
 created playlists, then the ones you collected. The open platform offers no
-liked albums or artists.
+liked albums or artists. When NetEase's answer does not let Jellyfesh find or
+read your liked songs, Favourites says so instead of showing nothing.
 
 ## What plays and what does not
 
@@ -102,6 +129,11 @@ device. The next sign-in asks for them again.
 | Too many requests (the source pauses) | NetEase asks to slow down; wait a moment. |
 | Jellyfesh cannot sign with your private key … | Sign out and sign in again with the key from the console. |
 | Sign in again. | The sign-in expired and could not be renewed. |
+| NetEase Cloud Music didn't say which playlist holds your liked songs. | NetEase's answer named no playlist Jellyfesh could find. Report it with the log line "NetEase's liked-songs answer names no playlist". |
+| NetEase Cloud Music sent … in a form Jellyfesh cannot read. | The answer differs from what the research found. Report it with the log line "cannot read NetEase's answer with …". |
+
+Those log lines show only the answer's field names and the types of their
+values, never the values.
 
 ## Privacy
 
