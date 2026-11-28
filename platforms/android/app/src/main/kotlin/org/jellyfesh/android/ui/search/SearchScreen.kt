@@ -304,6 +304,8 @@ private fun LazyListScope.libraryResults(
                 pluralStringResource(R.plurals.count_songs, artist.trackCount, artist.trackCount),
                 onClick = { nav.openArtist(artist.id, artist.name) },
                 leading = { InitialTile(artist.name) },
+                // More on every row (phones have no hover), as in the library's Artists.
+                onMore = { actions.showForCollection(artist.name, null, CollectionRef.Artist(artist.id)) },
             )
         }
     }
