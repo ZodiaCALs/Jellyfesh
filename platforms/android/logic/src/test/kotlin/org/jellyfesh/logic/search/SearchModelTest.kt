@@ -125,6 +125,19 @@ class SearchModelTest {
     }
 
     @Test
+    fun fromYourSourcesHeadsOnlyWhatIsUnderIt() {
+        // A merging source's results, or its failure: the heading.
+        assertTrue(SearchModel.showsFromSources(searched(bySource, apart), unavailable = false))
+        assertTrue(SearchModel.showsFromSources(searched(update(7, subsonic, emptyList(), error = "Enter your server's address.")), unavailable = false))
+        // Only a separate source's link, or a merging source that found nothing: no heading.
+        assertFalse(SearchModel.showsFromSources(searched(apart), unavailable = false))
+        assertFalse(SearchModel.showsFromSources(searched(update(7, subsonic, emptyList(), done = true)), unavailable = false))
+        assertFalse(SearchModel.showsFromSources(searched(), unavailable = false))
+        // The note that the sources could not be searched has it.
+        assertTrue(SearchModel.showsFromSources(searched(), unavailable = true))
+    }
+
+    @Test
     fun showMoreAddsTheNextPageOnceAndKeepsItsCursor() {
         var state = searched(bySource)
         val command = SearchModel.showMore(state, subsonic, ItemKind.Track)

@@ -152,6 +152,13 @@ object SearchModel {
      */
     fun mergedSections(state: SearchState): List<SourceSection> = state.sources.filter { it.merged && (it.items.isNotEmpty() || it.error != null) }
 
+    /**
+     * Whether the All tab shows the From Your Sources heading: over a merging source's results or
+     * failure, or the note that the sources could not be searched ([unavailable]); never over
+     * nothing, nor over the links to the separate sources' tabs alone (docs/ui.md, "Search").
+     */
+    fun showsFromSources(state: SearchState, unavailable: Boolean): Boolean = unavailable || mergedSections(state).isNotEmpty()
+
     /** The sources whose terms forbid merging and that found something: the All tab links to their tabs. */
     fun separateSections(state: SearchState): List<SourceSection> = state.sources.filter { !it.merged && it.tabGroups.isNotEmpty() }
 

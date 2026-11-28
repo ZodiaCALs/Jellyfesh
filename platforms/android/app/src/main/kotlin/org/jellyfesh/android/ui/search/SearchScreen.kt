@@ -186,10 +186,11 @@ fun SearchScreen(state: CoreState) {
                 }
                 libraryResults(library, playing, cardPx, graph::send, nav, actions)
                 // Then From Your Sources: one group per source that allows merging, as each answers,
-                // then a link to the tab of each source whose terms keep its results apart.
+                // then a link to the tab of each source whose terms keep its results apart. The
+                // heading shows only over a group or the note, never over nothing.
                 val merged = SearchModel.mergedSections(search)
                 val separate = SearchModel.separateSections(search)
-                if (sourcesUnavailable || merged.isNotEmpty() || separate.isNotEmpty()) {
+                if (SearchModel.showsFromSources(search, sourcesUnavailable)) {
                     item(key = "src-h") { SectionHeader(stringResource(R.string.search_from_sources)) }
                 }
                 if (sourcesUnavailable) {
