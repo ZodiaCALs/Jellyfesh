@@ -17,6 +17,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.layout.Measurable
+import androidx.compose.ui.layout.MeasureResult
+import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.node.LayoutModifierNode
+import androidx.compose.ui.node.ModifierNodeElement
+import androidx.compose.ui.node.invalidateDraw
+import androidx.compose.ui.node.invalidateMeasurement
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -24,6 +41,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -48,6 +66,68 @@ import org.jellyfesh.tokens.Tokens
 
 /** The lyrics bar's height: one line, or two with the line's translation. */
 fun lyricsBarHeight(withTranslation: Boolean): Dp = if (withTranslation) 58.dp else 42.dp
+
+/**
+ * One line that may be wider than its column (the bar's sung line; docs/ui.md, "The player bar",
+ * v0.0.9): laid out at its own width, it shows its start (the right end of a right-to-left line,
+ * [rtl]) and, when it is too long, fades out at the other edge instead of ending with "…": over
+ * its last [fade], or its last 40 % in a narrow column, as Jellyfesh Web's mask. Nothing of it
+ * draws outside the column, so it never reaches the controls or the times.
+ */
+internal fun Modifier.fadeOverflow(rtl: Boolean, fade: Dp = Tokens.Space.s7.dp): Modifier = this then FadeOverflowElement(rtl, fade)
+
+/** The most of a narrow column the fade takes. */
+private const val MAX_FADE_FRACTION = 0.4f
+
+private data class FadeOverflowElement(val rtl: Boolean, val fade: Dp) : ModifierNodeElement<FadeOverflowNode>() {
+    override fun create(): FadeOverflowNode = FadeOverflowNode(rtl, fade)
+
+    override fun update(node: FadeOverflowNode) {
+        if (node.rtl != rtl) {
+            node.rtl = rtl
+            node.invalidateMeasurement()
+        }
+        node.fade = fade
+        node.invalidateDraw()
+    }
+}
+
+private class FadeOverflowNode(var rtl: Boolean, var fade: Dp) : Modifier.Node(), LayoutModifierNode, DrawModifierNode {
+    private var overflows = false
+
+    override fun MeasureScope.measure(measurable: Measurable, constraints: Constraints): MeasureResult {
+        val line = measurable.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity))
+        val width = if (constraints.hasBoundedWidth) line.width.coerceIn(constraints.minWidth, constraints.maxWidth) else maxOf(line.width, constraints.minWidth)
+        val over = line.width > width
+        if (over != overflows) {
+            overflows = over
+            invalidateDraw()
+        }
+        return layout(width, line.height) {
+            // By the line's own direction: its start stays in view.
+            line.place(if (rtl) width - line.width else 0, 0)
+        }
+    }
+
+    override fun ContentDrawScope.draw() {
+        clipRect {
+            if (!overflows || size.width <= 0f) {
+                this@draw.drawContent()
+                return@clipRect
+            }
+            val edge = (fade.toPx() / size.width).coerceIn(0f, MAX_FADE_FRACTION)
+            val mask = if (rtl) {
+                Brush.horizontalGradient(0f to Color.Transparent, edge to Color.Black, 1f to Color.Black)
+            } else {
+                Brush.horizontalGradient(0f to Color.Black, 1f - edge to Color.Black, 1f to Color.Transparent)
+            }
+            drawIntoCanvas { it.saveLayer(Rect(Offset.Zero, size), Paint()) }
+            this@draw.drawContent()
+            drawRect(mask, blendMode = BlendMode.DstIn)
+            drawIntoCanvas { it.restore() }
+        }
+    }
+}
 
 /** Whether the lyrics bar shows a translation line under the current one. */
 fun lyricsBarTranslates(state: CoreState): Boolean =
@@ -116,7 +196,7 @@ fun LyricsBarStrip(state: CoreState, onOpen: () -> Unit, modifier: Modifier = Mo
                     sung = sung,
                     unsung = colors.ink70,
                     rtl = rtl,
-                    maxLines = 1,
+                    fadesOut = true,
                 )
                 row.translation?.let {
                     BasicText(it, style = JfType.caption.copy(color = colors.ink70, textAlign = TextAlign.Center), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -166,7 +246,7 @@ fun BarLyricsLine(state: CoreState, modifier: Modifier = Modifier) {
                 sung = sung,
                 unsung = colors.ink70,
                 rtl = rtl,
-                maxLines = 1,
+                fadesOut = true,
             )
             row.translation?.let {
                 BasicText(it, style = JfType.caption.copy(fontSize = 11.sp, color = colors.ink70), maxLines = 1, overflow = TextOverflow.Ellipsis)

@@ -338,7 +338,8 @@ private fun LyricLine(
  * A line being sung: drawn in the unsung ink, then again in the sung ink clipped to the words
  * already sung plus the sung part of the current word. Reads [sweep] in the draw phase, so a
  * moving sweep redraws this one line and recomposes nothing (Now Playing's active line, and the
- * lyrics bar's).
+ * lyrics bar's). With [fadesOut] it is one line that fades out at its column's edge rather than
+ * ending with "…", and nothing of it draws outside that column (the bar's sung line, v0.0.9).
  */
 @Composable
 internal fun SweepText(
@@ -350,15 +351,17 @@ internal fun SweepText(
     rtl: Boolean,
     modifier: Modifier = Modifier,
     maxLines: Int = Int.MAX_VALUE,
+    fadesOut: Boolean = false,
 ) {
     val layout = remember(row) { mutableStateOf<TextLayoutResult?>(null) }
     BasicText(
         row.text,
         style = style.copy(color = unsung),
         onTextLayout = { layout.value = it },
-        maxLines = maxLines,
-        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        modifier = modifier.drawWithContent {
+        maxLines = if (fadesOut) 1 else maxLines,
+        softWrap = !fadesOut,
+        overflow = if (fadesOut) androidx.compose.ui.text.style.TextOverflow.Clip else androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        modifier = modifier.then(if (fadesOut) Modifier.fadeOverflow(rtl) else Modifier).drawWithContent {
             drawContent()
             val l = layout.value ?: return@drawWithContent
             val sweep = sweep()
