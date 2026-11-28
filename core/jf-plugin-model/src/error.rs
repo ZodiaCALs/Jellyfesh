@@ -124,16 +124,45 @@ impl CallError {
     }
 }
 
-/// Text for a plugin error, for people.
+/// Text for a plugin error, for people. A plugin writes its `invalid-input`
+/// and `service` texts for people ("Enter your server's address in this
+/// source's settings first."), so they show as written (ADR-0027 §4).
 pub fn plugin_error_text(error: &PluginError) -> String {
     match error {
         PluginError::Unsupported => "not supported by this plugin".into(),
         PluginError::AuthRequired => "you need to log in".into(),
         PluginError::NotFound => "not found".into(),
-        PluginError::InvalidInput(text) => format!("invalid input: {text}"),
+        PluginError::InvalidInput(text) => text.clone(),
         PluginError::RateLimited => "the service asked to slow down".into(),
         PluginError::Network(text) => format!("network error: {text}"),
         PluginError::Service(text) => text.clone(),
         PluginError::Internal(text) => format!("plugin error: {text}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn plugin_texts_show_as_the_plugin_wrote_them() {
+        let address = "Enter your server's address in this source's settings first.";
+        assert_eq!(
+            plugin_error_text(&PluginError::InvalidInput(address.into())),
+            address
+        );
+        assert_eq!(
+            CallError::Plugin(PluginError::InvalidInput(address.into())).to_string(),
+            address,
+            "a call error shows the same text"
+        );
+        assert_eq!(
+            plugin_error_text(&PluginError::Service("Daily limit reached.".into())),
+            "Daily limit reached."
+        );
+        assert_eq!(
+            plugin_error_text(&PluginError::Network("timed out".into())),
+            "network error: timed out"
+        );
     }
 }
