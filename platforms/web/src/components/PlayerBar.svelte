@@ -201,6 +201,17 @@
     font-size: calc(13px * var(--jf-text-scale, 1));
     font-weight: 600;
   }
+  /* The sung line fades out at its column's edge rather than ending with "…" (v0.0.9): over its
+     last 32 px, or its last 40 % in a narrow column. */
+  .lyric-line :global(.bar-line) {
+    text-overflow: clip;
+    -webkit-mask-image: linear-gradient(to right, #000 max(60%, calc(100% - 32px)), transparent);
+    mask-image: linear-gradient(to right, #000 max(60%, calc(100% - 32px)), transparent);
+  }
+  .lyric-line :global(.bar-line[dir='rtl']) {
+    -webkit-mask-image: linear-gradient(to left, #000 max(60%, calc(100% - 32px)), transparent);
+    mask-image: linear-gradient(to left, #000 max(60%, calc(100% - 32px)), transparent);
+  }
   .translation {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -215,8 +226,10 @@
     justify-content: center;
     gap: 2px;
   }
+  /* Never narrower than its controls: a narrower track would push them into the scrubber's
+     column (v0.0.9: nothing in the bar overlaps). The title's column gives way instead. */
   .end {
-    min-width: 0;
+    min-width: max-content;
     display: flex;
     align-items: center;
     justify-content: flex-end;

@@ -2,8 +2,9 @@
   // The seek bar (v0.0.4, after Apple Music and Media Player): a straight line with round caps, the
   // played part ink-90 and the rest ink-30 (line-strong on plain surfaces), elapsed and remaining
   // times at its ends. No thumb at rest. Pointer screens: hovering or focusing thickens the line to
-  // 6 px and shows a 14 px ringed thumb; dragging thickens it to 8 px and the times follow the
-  // thumb. Touch screens (pointer: coarse): a 6 px line, no thumb, 12 px while dragging. The fill
+  // 6 px and shows a 14 px ringed thumb (keyboard focus shows no focus ring, v0.0.9); dragging
+  // thickens it to 8 px and the times follow the thumb. Touch screens (pointer: coarse): a 6 px
+  // line, no thumb (but for keyboard focus), 12 px while dragging. The fill
   // redraws only when it moves by a device pixel or a time label's second changes (the
   // DisplayClock), never per frame, never while paused, hidden or inactive.
   import { untrack } from 'svelte';
@@ -176,9 +177,9 @@
     touch-action: none;
     border-radius: var(--jf-radius-r-full);
   }
+  /* Keyboard focus thickens the line and shows the thumb (below), never a focus ring (v0.0.9). */
   .track:focus-visible {
     outline: none;
-    box-shadow: var(--jf-elevation-focus);
   }
   .off .track {
     cursor: default;
@@ -265,6 +266,10 @@
     }
     .thumb {
       display: none;
+    }
+    /* With a keyboard, the thumb still shows where the focus is. */
+    .seek:not(.off) .track:focus-visible .thumb {
+      display: block;
     }
     .track::before {
       content: '';
