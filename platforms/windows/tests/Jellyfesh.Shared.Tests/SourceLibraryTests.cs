@@ -74,6 +74,51 @@ public class SourceLibraryTests
     }
 
     [Fact]
+    public void A_source_whose_likes_came_back_empty_says_so_and_one_whose_likes_failed_says_why()
+    {
+        using var h = new AppHarness(English.Instance).Started();
+        var likes = new SourceLibrarySections(h.S, SourceLibraryPage.Favourites, () => Now);
+        var playlists = new SourceLibrarySections(h.S, SourceLibraryPage.Playlists, () => Now);
+        var state = new SourceLibraryState(2, [
+            new SourceLibrary("org.navi", "Navidrome", null, [
+                List(SourceLibraryPart.LikedSongs, [], refreshed: Now - 2 * 60_000),
+                List(SourceLibraryPart.LikedAlbums, [], refreshed: Now - 5 * 60_000),
+                List(SourceLibraryPart.Playlists, [], refreshed: Now - 20_000),
+            ]),
+            new SourceLibrary("org.qq", "QQ Music", null, [
+                List(SourceLibraryPart.LikedSongs, [], refreshed: Now - 60_000) with { Error = "Sign in to QQ Music again." },
+            ]),
+            new SourceLibrary("org.half", "Half", null, [
+                List(SourceLibraryPart.LikedSongs, [], refreshed: Now),
+                List(SourceLibraryPart.LikedArtists, []), // not back yet: nothing is known of its likes
+            ]),
+        ]);
+        likes.Update(state);
+        playlists.Update(state);
+
+        Assert.Equal(["Navidrome", "QQ Music"], likes.Sections.Select(s => s.Name));
+        var empty = likes.Sections[0];
+        Assert.True(empty.IsEmpty);
+        Assert.Equal("Nothing liked in Navidrome yet.", empty.EmptyText);
+        Assert.Empty(empty.Lists);
+        Assert.Equal("Updated 2 minutes ago", empty.UpdatedText); // the newest of its likes
+
+        var failed = likes.Sections[1];
+        Assert.False(failed.IsEmpty);
+        Assert.Equal("Sign in to QQ Music again.", Assert.Single(failed.Lists).Error);
+        Assert.False(playlists.HasSections); // an empty list of playlists says nothing
+
+        // A like comes: its list shows, and the words go.
+        likes.Update(new SourceLibraryState(3, [new SourceLibrary("org.navi", "Navidrome", null, [
+            List(SourceLibraryPart.LikedSongs, [Song("org.navi", "s1")], refreshed: Now),
+            List(SourceLibraryPart.LikedAlbums, [], refreshed: Now - 5 * 60_000),
+        ])]));
+        Assert.Same(empty, Assert.Single(likes.Sections));
+        Assert.False(empty.IsEmpty);
+        Assert.Equal(SourceLibraryPart.LikedSongs, Assert.Single(empty.Lists).Part);
+    }
+
+    [Fact]
     public void Show_More_adds_a_page_which_stays_until_the_list_is_loaded_again()
     {
         using var h = new AppHarness(English.Instance).Started();

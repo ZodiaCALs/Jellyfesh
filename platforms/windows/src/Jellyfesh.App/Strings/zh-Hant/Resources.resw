@@ -2054,6 +2054,9 @@
   <data name="SourceLibrary_Loading.Text" xml:space="preserve">
     <value>正在載入…</value>
   </data>
+  <data name="SourceLibrary_NothingLiked" xml:space="preserve">
+    <value>你在 {0} 中還沒有喜歡的內容。</value>
+  </data>
   <data name="SourceLibrary_Save" xml:space="preserve">
     <value>儲存</value>
   </data>

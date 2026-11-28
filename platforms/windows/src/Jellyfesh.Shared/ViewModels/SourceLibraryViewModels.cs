@@ -18,7 +18,10 @@ public enum SourceLibraryPage
 /// after the page's own rows: one section per signed-in source with the library capability, from the
 /// core's SourceLibrary slice, each list with Show More while the source has more. The page asks the
 /// core to refresh them when it opens, and again when it opens ten minutes later; nothing polls.
-/// Read-only: the heart marks songs in Jellyfesh only.
+/// Read-only: the heart marks songs in Jellyfesh only. On Favourites (v0.0.9), a source whose likes
+/// are loading says so and one whose likes failed says why; one whose likes all came back empty
+/// still shows its name, with "Nothing liked in {Service} yet.". Until each of its likes has come
+/// back once, nothing is known of them, and a source with none loading shows nothing.
 /// </summary>
 public sealed partial class SourceLibrarySections : ObservableObject
 {
@@ -66,15 +69,18 @@ public sealed partial class SourceLibrarySections : ObservableObject
         var shown = new List<SourceLibrarySection>();
         foreach (var source in state.Sources)
         {
-            var lists = source.Lists.Where(l => OnThisPage(l.Part) && (l.Entries.Count > 0 || l.Loading || l.Error is not null)).ToList();
-            if (lists.Count == 0)
+            var own = source.Lists.Where(l => OnThisPage(l.Part)).ToList();
+            var lists = own.Where(Shows).ToList();
+            var nothingLiked = lists.Count == 0 && NothingLiked(own);
+            if (lists.Count == 0 && !nothingLiked)
             {
                 continue;
             }
 
             var section = Sections.FirstOrDefault(s => s.Plugin == source.Plugin)
                 ?? new SourceLibrarySection(source.Plugin, source.Name, source.Attribution is null ? null : _s.L.Format("Source_Attribution", source.Name));
-            section.Update(lists, _s.L, ShowMore, now);
+            section.Update(lists, own, _s.L, ShowMore, now);
+            section.EmptyText = nothingLiked ? _s.L.Format("SourceLibrary_NothingLiked", source.Name) : null;
             shown.Add(section);
         }
 
@@ -154,6 +160,16 @@ public sealed partial class SourceLibrarySections : ObservableObject
     private bool OnThisPage(SourceLibraryPart part) =>
         _page == SourceLibraryPage.Playlists ? part == SourceLibraryPart.Playlists : part != SourceLibraryPart.Playlists;
 
+    /// <summary>A list the page shows: it has entries, or something to say (it is loading, or why it failed).</summary>
+    private static bool Shows(SourceLibraryList list) => list.Entries.Count > 0 || list.Loading || list.Error is not null;
+
+    /// <summary>
+    /// Favourites: every list of likes the source keeps came back from its refresh with nothing in it
+    /// (none shows, and none is still to come back the first time).
+    /// </summary>
+    private bool NothingLiked(IReadOnlyList<SourceLibraryList> likes) =>
+        _page == SourceLibraryPage.Favourites && likes.Count > 0 && likes.All(l => !Shows(l) && l.RefreshedAtMs is not null);
+
     private void ShowMore(SourceLibraryListView list)
     {
         if (list is not { Next: { } cursor, IsLoadingMore: false })
@@ -172,13 +188,19 @@ public sealed partial class SourceLibrarySections : ObservableObject
 
 /// <summary>
 /// One source's section: its name, the credit its terms ask for ("Content from Spotify"), how old
-/// the kept lists are ("Updated 5 minutes ago"), then its lists.
+/// the kept lists are ("Updated 5 minutes ago"), then its lists, or on Favourites "Nothing liked in
+/// {Service} yet." when its likes came back empty.
 /// </summary>
 public sealed partial class SourceLibrarySection(string plugin, string name, string? attribution) : ObservableObject
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdated))]
     private string _updatedText = string.Empty;
+
+    /// <summary>"Nothing liked in {Service} yet." (Favourites: its likes came back empty), or null when it has lists to show.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEmpty))]
+    private string? _emptyText;
 
     public string Plugin { get; } = plugin;
 
@@ -190,6 +212,9 @@ public sealed partial class SourceLibrarySection(string plugin, string name, str
 
     public bool HasUpdated => UpdatedText.Length > 0;
 
+    /// <summary>It shows "Nothing liked in {Service} yet." instead of lists.</summary>
+    public bool IsEmpty => EmptyText is not null;
+
     public ObservableCollection<SourceLibraryListView> Lists { get; } = [];
 
     /// <summary>"Updated 5 minutes ago": the newest list the source finished loading.</summary>
@@ -198,7 +223,11 @@ public sealed partial class SourceLibrarySection(string plugin, string name, str
             ? l.Get("SourceLibrary_UpdatedNow")
             : l.Format("SourceLibrary_Updated", CommentsViewModel.Age(nowMs - refreshedAtMs, l));
 
-    internal void Update(IReadOnlyList<SourceLibraryList> lists, ILocalizer l, Action<SourceLibraryListView> showMore, long nowMs)
+    /// <summary>
+    /// Shows <paramref name="lists"/>, with the age of the newest of the page's lists
+    /// (<paramref name="own"/>, which also holds those that came back empty).
+    /// </summary>
+    internal void Update(IReadOnlyList<SourceLibraryList> lists, IReadOnlyList<SourceLibraryList> own, ILocalizer l, Action<SourceLibraryListView> showMore, long nowMs)
     {
         var views = lists.Select(list =>
         {
@@ -220,7 +249,7 @@ public sealed partial class SourceLibrarySection(string plugin, string name, str
             view.ShowsTitle = Lists.Count > 1;
         }
 
-        var refreshed = lists.Where(x => !x.Loading && x.RefreshedAtMs is not null).Select(x => x.RefreshedAtMs!.Value).DefaultIfEmpty().Max();
+        var refreshed = own.Where(x => !x.Loading && x.RefreshedAtMs is not null).Select(x => x.RefreshedAtMs!.Value).DefaultIfEmpty().Max();
         UpdatedText = refreshed > 0 ? Updated(refreshed, nowMs, l) : string.Empty;
     }
 }

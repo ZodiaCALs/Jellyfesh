@@ -2054,6 +2054,9 @@
   <data name="SourceLibrary_Loading.Text" xml:space="preserve">
     <value>読み込み中…</value>
   </data>
+  <data name="SourceLibrary_NothingLiked" xml:space="preserve">
+    <value>{0} でお気に入りにしたものはまだありません。</value>
+  </data>
   <data name="SourceLibrary_Save" xml:space="preserve">
     <value>保存</value>
   </data>

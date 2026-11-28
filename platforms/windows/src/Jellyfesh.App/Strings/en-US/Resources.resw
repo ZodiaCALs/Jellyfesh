@@ -2054,6 +2054,9 @@
   <data name="SourceLibrary_Loading.Text" xml:space="preserve">
     <value>Loading…</value>
   </data>
+  <data name="SourceLibrary_NothingLiked" xml:space="preserve">
+    <value>Nothing liked in {0} yet.</value>
+  </data>
   <data name="SourceLibrary_Save" xml:space="preserve">
     <value>Save</value>
   </data>

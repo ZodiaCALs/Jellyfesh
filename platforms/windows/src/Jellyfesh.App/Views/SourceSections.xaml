@@ -4,8 +4,10 @@
     "Favourites", "Playlists"), as Jellyfesh Web shows them: each source's name, "Content from
     {Service}" for one whose terms ask for credit, how old the kept lists are ("Updated 5 minutes
     ago"), then its lists, titled when there are several: songs as rows that play, albums, artists
-    and playlists as rows that open their pages, "Loading…" while a list loads, why one failed, and
-    Show More while the source has more. Read-only: the heart marks a song in Jellyfesh only.
+    and playlists as rows that open their pages, "Loading…" (with a spinner) while a list loads, why
+    one failed, and Show More while the source has more. On Favourites, a source whose likes came
+    back empty says "Nothing liked in {Service} yet." (the view model's rule) instead of lists.
+    Read-only: the heart marks a song in Jellyfesh only.
 -->
 <UserControl
     x:Class="Jellyfesh.App.Views.SourceSections"
@@ -34,6 +36,7 @@
                     <TextBlock AutomationProperties.HeadingLevel="Level2" Style="{StaticResource JfSectionText}" Text="{x:Bind Name}" />
                     <TextBlock Style="{StaticResource JfListSecondaryText}" Text="{x:Bind Attribution}" Visibility="{x:Bind shell:Bind.Visible(HasAttribution)}" />
                     <TextBlock Foreground="{ThemeResource JfInk50}" Style="{StaticResource JfListSecondaryText}" Text="{x:Bind UpdatedText, Mode=OneWay}" Visibility="{x:Bind shell:Bind.Visible(HasUpdated), Mode=OneWay}" />
+                    <TextBlock Margin="0,8,0,0" Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind EmptyText, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(IsEmpty), Mode=OneWay}" />
                     <ItemsRepeater ItemsSource="{x:Bind Lists}">
                         <ItemsRepeater.Layout>
                             <StackLayout Spacing="16" />
@@ -43,7 +46,10 @@
                                 <StackPanel Margin="0,8,0,0" Spacing="4">
                                     <TextBlock AutomationProperties.HeadingLevel="Level3" FontWeight="SemiBold" Foreground="{ThemeResource JfInk70}" Style="{StaticResource JfBodyText}" Text="{x:Bind Title}" Visibility="{x:Bind shell:Bind.Visible(ShowsTitle), Mode=OneWay}" />
                                     <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind Error, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(HasError), Mode=OneWay}" />
-                                    <TextBlock x:Uid="SourceLibrary_Loading" Style="{StaticResource JfSecondaryBodyText}" Text="Loading…" Visibility="{x:Bind shell:Bind.Visible(IsLoading), Mode=OneWay}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Visibility="{x:Bind shell:Bind.Visible(IsLoading), Mode=OneWay}">
+                                        <ProgressRing Width="16" Height="16" IsActive="{x:Bind IsLoading, Mode=OneWay}" />
+                                        <TextBlock x:Uid="SourceLibrary_Loading" VerticalAlignment="Center" Style="{StaticResource JfSecondaryBodyText}" Text="Loading…" />
+                                    </StackPanel>
                                     <ListView AutomationProperties.Name="{x:Bind Title}" ItemClick="OnTrackClick" ItemTemplate="{StaticResource TrackRowTemplate}" ItemsSource="{x:Bind Tracks}" Loaded="OnTracksLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Visible(IsSongs)}" />
                                     <ListView AutomationProperties.Name="{x:Bind Title}" ItemClick="OnEntryClick" ItemTemplate="{StaticResource SourceEntryTemplate}" ItemsSource="{x:Bind Entries}" Loaded="OnEntriesLoaded" Style="{StaticResource InlineListStyle}" Visibility="{x:Bind shell:Bind.Collapsed(IsSongs)}" />
                                     <TextBlock Style="{StaticResource JfSecondaryBodyText}" Text="{x:Bind MoreError, Mode=OneWay}" TextWrapping="Wrap" Visibility="{x:Bind shell:Bind.Visible(HasMoreError), Mode=OneWay}" />
